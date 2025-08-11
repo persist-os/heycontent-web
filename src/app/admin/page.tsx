@@ -30,7 +30,8 @@ import {
   Search,
   Filter,
   SortAsc,
-  SortDesc
+  SortDesc,
+  TrendingUp
 } from 'lucide-react';
 import { FeedbackDetailModal } from './components/FeedbackDetailModal';
 import { FeedbackFilters } from './components/FeedbackFilters';
@@ -588,7 +589,7 @@ export default function AdminPage() {
         </TabsContent>
 
         <TabsContent value="users" className="space-y-6">
-          {/* Platform Overview */}
+          {/* Platform Overview with Tabs */}
           <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
             <CardHeader>
               <CardTitle className="text-blue-900">Platform Overview</CardTitle>
@@ -597,120 +598,168 @@ export default function AdminPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-blue-600">
-                    {users?.length || 0}
-                  </div>
-                  <div className="text-sm text-blue-700">Total Users</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-green-600">
-                    {users?.filter(u => u.subscription?.status === 'active').length || 0}
-                  </div>
-                  <div className="text-sm text-green-700">Active Subscribers</div>
-                  <div className="text-xs text-green-600 mt-1">
-                    {users?.length ? Math.round((users.filter(u => u.subscription?.status === 'active').length / users.length) * 100) : 0}% conversion rate
-                  </div>
+              {/* Overview Tabs */}
+              <Tabs defaultValue="metrics" className="w-full">
+                <TabsList className="grid w-full grid-cols-4 mb-6">
+                  <TabsTrigger value="metrics" className="flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4" />
+                    Metrics
+                  </TabsTrigger>
+                  <TabsTrigger value="users" className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Users
+                  </TabsTrigger>
+                  <TabsTrigger value="referrals" className="flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4" />
+                    Referrals
+                  </TabsTrigger>
+                  <TabsTrigger value="revenue" className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4" />
+                    Revenue
+                  </TabsTrigger>
+                </TabsList>
 
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-purple-600">
-                    {referralData?.reduce((total, r) => total + r.totalReferred, 0) || 0}
+                {/* Metrics Tab */}
+                <TabsContent value="metrics" className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-blue-600">
+                        {users?.length || 0}
+                      </div>
+                      <div className="text-sm text-blue-700">Total Users</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-green-600">
+                        {users?.filter(u => u.subscription?.status === 'active').length || 0}
+                      </div>
+                      <div className="text-sm text-green-700">Active Subscribers</div>
+                      <div className="text-xs text-green-600 mt-1">
+                        {users?.length ? Math.round((users.filter(u => u.subscription?.status === 'active').length / users.length) * 100) : 0}% conversion rate
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-purple-600">
+                        {referralData?.reduce((total, r) => total + r.totalReferred, 0) || 0}
+                      </div>
+                      <div className="text-sm text-purple-700">Total Referrals</div>
+                      <div className="text-xs text-purple-600 mt-1">
+                        Across all users
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-sm text-purple-700">Total Referrals</div>
-                  <div className="text-xs text-purple-600 mt-1">
-                    Across all users
+                </TabsContent>
+
+                {/* Users Tab */}
+                <TabsContent value="users" className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {users?.filter(u => u.role === 'user').length || 0}
+                      </div>
+                      <div className="text-sm text-blue-700">Regular Users</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-purple-600">
+                        {users?.filter(u => ['admin', 'super_admin'].includes(u.role)).length || 0}
+                      </div>
+                      <div className="text-sm text-purple-700">Admin Users</div>
+                      <div className="text-xs text-purple-600 mt-1">
+                        Admin: {users?.filter(u => u.role === 'admin').length || 0} | 
+                        Super: {users?.filter(u => u.role === 'super_admin').length || 0}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-orange-600">
+                        {users?.filter(u => ['ambassador', 'affiliate', 'partner'].includes(u.role)).length || 0}
+                      </div>
+                      <div className="text-sm text-orange-700">Tier Users</div>
+                      <div className="text-xs text-orange-600 mt-1">
+                        A: {users?.filter(u => u.role === 'ambassador').length || 0} | 
+                        F: {users?.filter(u => u.role === 'affiliate').length || 0} | 
+                        P: {users?.filter(u => u.role === 'partner').length || 0}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </TabsContent>
+
+                {/* Referrals Tab */}
+                <TabsContent value="referrals" className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600">
+                        {referralData?.reduce((total, r) => total + r.totalReferred, 0) || 0}
+                      </div>
+                      <div className="text-sm text-green-700">Total Referrals</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {(() => {
+                          if (!users || !referralData) return 0;
+                          let totalReferredUsers = 0;
+                          let payingReferredUsers = 0;
+                          
+                          referralData.forEach(r => {
+                            r.referredUsers.forEach((ref: any) => {
+                              totalReferredUsers++;
+                              const referredUser = users.find(u => u._id === ref.userId);
+                              if (referredUser?.subscription?.status === 'active') {
+                                payingReferredUsers++;
+                              }
+                            });
+                          });
+                          
+                          return totalReferredUsers > 0 ? Math.round((payingReferredUsers / totalReferredUsers) * 100) : 0;
+                        })()}%
+                      </div>
+                      <div className="text-sm text-blue-700">Referral Conversion</div>
+                      <div className="text-xs text-blue-600 mt-1">
+                        % of referred users who subscribed
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-purple-600">
+                        {referralData?.length || 0}
+                      </div>
+                      <div className="text-sm text-purple-700">Active Referrers</div>
+                      <div className="text-xs text-purple-600 mt-1">
+                        Users with referrals
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* Revenue Tab */}
+                <TabsContent value="revenue" className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600">
+                        {users?.filter(u => u.subscription?.status === 'active').length || 0}
+                      </div>
+                      <div className="text-sm text-green-700">Active Subscriptions</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {users?.filter(u => u.subscription?.status === 'active' && u.subscription?.plan?.includes('pro')).length || 0}
+                      </div>
+                      <div className="text-sm text-blue-700">Pro Plans</div>
+                      <div className="text-xs text-blue-600 mt-1">
+                        High-tier subscribers
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-purple-600">
+                        {users?.filter(u => u.subscription?.status === 'active' && u.subscription?.plan?.includes('basic')).length || 0}
+                      </div>
+                      <div className="text-sm text-purple-700">Basic Plans</div>
+                      <div className="text-xs text-purple-600 mt-1">
+                        Entry-level subscribers
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
-
-          {/* User Statistics */}
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{users?.length || 0}</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Subscribers</CardTitle>
-                <CheckCircle className="h-4 w-4 text-green-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">
-                  {users?.filter(u => u.subscription?.status === 'active').length || 0}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {users?.length ? Math.round((users.filter(u => u.subscription?.status === 'active').length / users.length) * 100) : 0}% conversion
-                </p>
-
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Trial/Inactive</CardTitle>
-                <Clock className="h-4 w-4 text-orange-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-orange-500">
-                  {users?.filter(u => !u.subscription || !['active', 'past_due'].includes(u.subscription.status)).length || 0}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  No active subscription
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Admins</CardTitle>
-                <Shield className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {users?.filter(u => u.role === 'admin').length || 0}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Super Admins</CardTitle>
-                <Shield className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {users?.filter(u => u.role === 'super_admin').length || 0}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Tier Users</CardTitle>
-                <BarChart3 className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {users?.filter(u => ['ambassador', 'affiliate', 'partner'].includes(u.role)).length || 0}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  A: {users?.filter(u => u.role === 'ambassador').length || 0} | 
-                  F: {users?.filter(u => u.role === 'affiliate').length || 0} | 
-                  P: {users?.filter(u => u.role === 'partner').length || 0}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
 
           {/* User List */}
           <Card>
