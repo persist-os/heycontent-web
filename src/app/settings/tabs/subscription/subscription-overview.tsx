@@ -177,7 +177,7 @@ export default function SubscriptionOverview() {
           matchedInterval = planObj[interval];
           planPrice = matchedInterval.amount;
           planInterval = matchedInterval.interval;
-          planIncludedRequests = matchedInterval.included_requests;
+          planIncludedRequests = matchedInterval.includedRequests;
           mappedSubscription = {
             ...status,
             plan: {
@@ -201,7 +201,7 @@ export default function SubscriptionOverview() {
             matchedInterval = intervalObj;
             planPrice = matchedInterval.amount;
             planInterval = matchedInterval.interval;
-            planIncludedRequests = matchedInterval.included_requests;
+            planIncludedRequests = matchedInterval.includedRequests;
             mappedSubscription = {
               ...status,
               plan: {
@@ -220,7 +220,7 @@ export default function SubscriptionOverview() {
       mappedSubscription.plan.price = status.price;
     }
     setCurrentSubscription(mappedSubscription);
-    // Update usageSummary.included to match the plan's included_requests if available
+    // Update usageSummary.included to match the plan's includedRequests if available
     if (planIncludedRequests !== undefined) {
       setUsageSummary(prev => ({ ...prev, included: planIncludedRequests }));
     }

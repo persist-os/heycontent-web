@@ -23,7 +23,7 @@ interface IntervalPlan {
   currency: string;
   interval: string;
   amount: number;
-  included_requests: number;
+  includedRequests: number;
   overage: number;
   features: string[];
 }
@@ -126,7 +126,7 @@ export default function UpgradeModal({
       // If still no features, create default ones
       if (features.length === 0) {
         features = [
-          `${intervalPlan.included_requests?.toLocaleString() || '0'} ${billingInterval === 'yearly' ? 'yearly' : 'monthly'} requests`,
+          `${intervalPlan.includedRequests?.toLocaleString() || '0'} ${billingInterval === 'yearly' ? 'yearly' : 'monthly'} requests`,
           `$${intervalPlan.overage || '0.00'} per additional request`,
           billingInterval === 'yearly' ? '17% discount' : 'Flexible monthly billing'
         ];
@@ -140,7 +140,7 @@ export default function UpgradeModal({
         currency: intervalPlan.currency || 'usd',
         interval: intervalPlan.interval || billingInterval,
         amount: intervalPlan.amount || 0,
-        included_requests: intervalPlan.included_requests || 0,
+        includedRequests: intervalPlan.includedRequests || 0,
         overage: intervalPlan.overage || 0,
         features
       };
@@ -254,7 +254,7 @@ export default function UpgradeModal({
                   displayedPrice = 249; // Discounted price
                   discountPercent = 17;
                 }
-                const includedRequests = plan.included_requests;
+                const includedRequests = plan.includedRequests;
                 const overagePrice = plan.overage;
                 return (
                   <div

@@ -225,7 +225,7 @@ export const checkApiRequestLimit = query({
     const subscription = await getSubscriptionDetails(ctx, args.userId);
     
     // Get monthly limits based on subscription tier
-    const monthlyLimit = PRICE_CONFIG[subscription.tier].monthly.included_requests;
+    const monthlyLimit = PRICE_CONFIG[subscription.tier].monthly.includedRequests;
     const currentUsage = user.apiRequestsUsed.totalRequests + user.apiRequestsUsed.pointsExtensions;
     
     return {

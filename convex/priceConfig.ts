@@ -4,17 +4,17 @@
 export const PRICE_CONFIG = {
   "basic": {
     "monthly": {
-      "included_requests": 100,
+      "includedRequests": 100,
       "overage_rate": 0.025,
     },
   },
   "pro": {
     "monthly": {
-      "included_requests": 1000,
+      "includedRequests": 1000,
       "overage_rate": 0.020,
     },
     "yearly": {
-      "included_requests": 12000,
+      "includedRequests": 12000,
       "overage_rate": 0.020,
     },
   },

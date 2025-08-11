@@ -139,7 +139,7 @@ export const getUsageSummary = query({
           
           // Get included requests from price config
           const priceInfo = getPriceInfo(plan, interval as 'monthly' | 'yearly');
-          included = priceInfo.included_requests;
+          included = priceInfo.includedRequests;
           
           console.log(`Using included requests: ${included} for plan: ${plan} (${interval})`);
         } catch (error) {
