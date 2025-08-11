@@ -6,7 +6,7 @@ import { api } from '@/convex/_generated/api';
 import { useAuth } from '@/app/context/auth-context';
 import { useAdminAuth } from '@/app/lib/admin-auth';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -81,6 +81,7 @@ export default function AdminPage() {
   // User management filters
   const [userSearch, setUserSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [subscriptionFilter, setSubscriptionFilter] = useState('all');
   const [userSortBy, setUserSortBy] = useState<'createdAt' | 'name' | 'totalReferred'>('createdAt');
   const [userSortOrder, setUserSortOrder] = useState<'asc' | 'desc'>('desc');
 
@@ -112,7 +113,15 @@ export default function AdminPage() {
       // Role filter
       const matchesRole = roleFilter === 'all' || user.role === roleFilter;
       
-      return matchesSearch && matchesRole;
+      // Subscription filter
+      let matchesSubscription = true;
+      if (subscriptionFilter === 'subscribed') {
+        matchesSubscription = user.subscription?.status === 'active';
+      } else if (subscriptionFilter === 'not_subscribed') {
+        matchesSubscription = !user.subscription || user.subscription.status !== 'active';
+      }
+      
+      return matchesSearch && matchesRole && matchesSubscription;
     });
     
     // Sort users
@@ -579,8 +588,47 @@ export default function AdminPage() {
         </TabsContent>
 
         <TabsContent value="users" className="space-y-6">
+          {/* Platform Overview */}
+          <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+            <CardHeader>
+              <CardTitle className="text-blue-900">Platform Overview</CardTitle>
+              <CardDescription className="text-blue-700">
+                Key metrics for your HeyContent platform
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-blue-600">
+                    {users?.length || 0}
+                  </div>
+                  <div className="text-sm text-blue-700">Total Users</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-green-600">
+                    {users?.filter(u => u.subscription?.status === 'active').length || 0}
+                  </div>
+                  <div className="text-sm text-green-700">Active Subscribers</div>
+                  <div className="text-xs text-green-600 mt-1">
+                    {users?.length ? Math.round((users.filter(u => u.subscription?.status === 'active').length / users.length) * 100) : 0}% conversion rate
+                  </div>
+
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-purple-600">
+                    {referralData?.reduce((total, r) => total + r.totalReferred, 0) || 0}
+                  </div>
+                  <div className="text-sm text-purple-700">Total Referrals</div>
+                  <div className="text-xs text-purple-600 mt-1">
+                    Across all users
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* User Statistics */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -588,6 +636,37 @@ export default function AdminPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{users?.length || 0}</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Active Subscribers</CardTitle>
+                <CheckCircle className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">
+                  {users?.filter(u => u.subscription?.status === 'active').length || 0}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {users?.length ? Math.round((users.filter(u => u.subscription?.status === 'active').length / users.length) * 100) : 0}% conversion
+                </p>
+
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Trial/Inactive</CardTitle>
+                <Clock className="h-4 w-4 text-orange-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-orange-500">
+                  {users?.filter(u => !u.subscription || !['active', 'past_due'].includes(u.subscription.status)).length || 0}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  No active subscription
+                </p>
               </CardContent>
             </Card>
 
@@ -625,9 +704,9 @@ export default function AdminPage() {
                   {users?.filter(u => ['ambassador', 'affiliate', 'partner'].includes(u.role)).length || 0}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Ambassador: {users?.filter(u => u.role === 'ambassador').length || 0} | 
-                  Affiliate: {users?.filter(u => u.role === 'affiliate').length || 0} | 
-                  Partner: {users?.filter(u => u.role === 'partner').length || 0}
+                  A: {users?.filter(u => u.role === 'ambassador').length || 0} | 
+                  F: {users?.filter(u => u.role === 'affiliate').length || 0} | 
+                  P: {users?.filter(u => u.role === 'partner').length || 0}
                 </p>
               </CardContent>
             </Card>
@@ -675,6 +754,21 @@ export default function AdminPage() {
                     </Select>
                   </div>
                   
+                  {/* Subscription Filter */}
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                    <Select value={subscriptionFilter} onValueChange={setSubscriptionFilter}>
+                      <SelectTrigger className="w-36">
+                        <SelectValue placeholder="All Users" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Users</SelectItem>
+                        <SelectItem value="subscribed">Subscribers Only</SelectItem>
+                        <SelectItem value="not_subscribed">Non-Subscribers</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
                   {/* Sort By */}
                   <div className="flex items-center gap-2">
                     <SortAsc className="h-4 w-4 text-muted-foreground" />
@@ -708,6 +802,7 @@ export default function AdminPage() {
                     onClick={() => {
                       setUserSearch('');
                       setRoleFilter('all');
+                      setSubscriptionFilter('all');
                       setUserSortBy('createdAt');
                       setUserSortOrder('desc');
                     }}
@@ -751,6 +846,19 @@ export default function AdminPage() {
                         </div>
 
                         <div className="flex items-center gap-4">
+                          {/* Subscription Status */}
+                          {user.subscription?.status === 'active' ? (
+                            <Badge className="bg-green-100 text-green-800 text-xs">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Subscribed
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-gray-100 text-gray-600 text-xs">
+                              <Clock className="h-3 w-3 mr-1" />
+                              {user.subscription ? user.subscription.status : 'No Plan'}
+                            </Badge>
+                          )}
+                          
                           <Badge className={roleColors[user.role as keyof typeof roleColors]}>
                             {user.role.replace('_', ' ')}
                           </Badge>
@@ -847,16 +955,70 @@ export default function AdminPage() {
                     </div>
                   </div>
                   
+                  {/* Subscription Status */}
+                  <div className="border-t pt-4">
+                    <h3 className="text-lg font-medium mb-3 text-white">Subscription Status</h3>
+                    {selectedUser.subscription ? (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-gray-300">Status</label>
+                          <div className="flex items-center gap-2">
+                            {selectedUser.subscription.status === 'active' ? (
+                              <Badge className="bg-green-600 text-white">
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Active
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-gray-600 text-white">
+                                <Clock className="h-3 w-3 mr-1" />
+                                {selectedUser.subscription.status}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-300">Plan</label>
+                          <p className="text-sm text-white">{selectedUser.subscription.plan?.replace('_', ' ')}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-300">Current Period</label>
+                          <p className="text-sm text-white">
+                            {formatDate(selectedUser.subscription.currentPeriodStart)} - {formatDate(selectedUser.subscription.currentPeriodEnd)}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-300">Usage</label>
+                          <p className="text-sm text-white">
+                            {selectedUser.subscription.usedRequests} / {selectedUser.subscription.includedRequests} requests
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-4">
+                        <Clock className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                        <p className="text-gray-400">No active subscription</p>
+                      </div>
+                    )}
+                  </div>
+                  
                   {/* Referral Stats */}
                   {(() => {
                     // Find referral data for this user
                     const userReferralData = referralData?.find(r => r.referrerId === selectedUser._id);
                     
                     if (userReferralData && userReferralData.totalReferred > 0) {
+                      // Calculate referral quality metrics
+                      const referredUsers = userReferralData.referredUsers;
+                      const payingReferrals = referredUsers.filter((ref: any) => {
+                        const referredUser = users?.find(u => u._id === ref.userId);
+                        return referredUser?.subscription?.status === 'active';
+                      });
+                      const conversionRate = Math.round((payingReferrals.length / referredUsers.length) * 100);
+                      
                       return (
                         <div className="border-t pt-4">
-                          <h3 className="text-lg font-medium mb-3">Referral Statistics</h3>
-                          <div className="grid grid-cols-3 gap-4 mb-4">
+                          <h3 className="text-lg font-medium mb-3 text-white">Referral Statistics</h3>
+                          <div className="grid grid-cols-4 gap-4 mb-4">
                             <div className="text-center">
                               <div className="text-2xl font-bold text-green-400">
                                 {userReferralData.totalReferred}
@@ -864,12 +1026,16 @@ export default function AdminPage() {
                               <div className="text-sm text-gray-300">Total Referrals</div>
                             </div>
                             <div className="text-center">
-                              <div className="text-sm text-gray-300">
-                                {userReferralData.firstReferralDate ? 
-                                  formatDate(userReferralData.firstReferralDate) : 'N/A'
-                                }
+                              <div className="text-2xl font-bold text-blue-400">
+                                {payingReferrals.length}
                               </div>
-                              <div className="text-sm text-gray-300">First Referral</div>
+                              <div className="text-sm text-gray-300">Paying Users</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-2xl font-bold text-purple-400">
+                                {conversionRate}%
+                              </div>
+                              <div className="text-sm text-gray-300">Conversion Rate</div>
                             </div>
                             <div className="text-center">
                               <div className="text-sm text-gray-300">
@@ -884,25 +1050,43 @@ export default function AdminPage() {
                           {/* Referred Users List */}
                           <div className="mt-4">
                             <h4 className="text-md font-medium mb-2 text-white">Referred Users:</h4>
-                            <div className="space-y-2">
-                              {userReferralData.referredUsers.map((referredUser: any, index: number) => (
-                                <div key={index} className="bg-gray-800 border border-gray-700 p-3 rounded-lg">
-                                  <div className="flex items-center justify-between">
-                                    <div>
-                                      <div className="font-medium text-white">{referredUser.userName}</div>
-                                      <div className="text-sm text-gray-300">{referredUser.userEmail}</div>
-                                    </div>
-                                    <div className="text-right">
-                                      <div className="text-sm text-gray-300">
-                                        {formatDate(referredUser.referredAt)}
+                            <div className="space-y-2 max-h-60 overflow-y-auto">
+                              {userReferralData.referredUsers.map((referredUser: any, index: number) => {
+                                const referredUserData = users?.find(u => u._id === referredUser.userId);
+                                const isPaying = referredUserData?.subscription?.status === 'active';
+                                
+                                return (
+                                  <div key={index} className="bg-gray-800 border border-gray-700 p-3 rounded-lg">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <div className="font-medium text-white">{referredUser.userName}</div>
+                                          {isPaying ? (
+                                            <Badge className="bg-green-600 text-white text-xs">
+                                              <CheckCircle className="h-3 w-3 mr-1" />
+                                              Paying
+                                            </Badge>
+                                          ) : (
+                                            <Badge className="bg-green-600 text-white text-xs">
+                                              <Clock className="h-3 w-3 mr-1" />
+                                              {referredUserData?.subscription?.status || 'No Plan'}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        <div className="text-sm text-gray-300">{referredUser.userEmail}</div>
+                                        <div className="text-xs text-gray-400 mt-1">
+                                          Referred: {formatDate(referredUser.referredAt)}
+                                        </div>
                                       </div>
-                                      <div className="text-xs text-gray-400">
-                                        Code: {referredUser.referralCode}
+                                      <div className="text-right">
+                                        <div className="text-sm text-gray-300">
+                                          Code: {referredUser.referralCode}
+                                        </div>
                                       </div>
                                     </div>
                                   </div>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
                         </div>
