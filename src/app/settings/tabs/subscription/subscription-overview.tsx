@@ -16,13 +16,13 @@ import { QuantityChangeDialog } from './cards/QuantityChangeDialog';
 import UpgradeModal from './upgrade-modal';
 import { useAuth } from "@/app/context/auth-context";
 import { useAdminAuth } from "@/app/lib/admin-auth";
-import { getApiKey } from '@/app/lib/api-helpers';
+import { getApiKey, getCurrentUserId } from '@/app/lib/api-helpers';
 
 // Convex imports
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/../convex/_generated/api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 // Utils
 import { DeleteAccountButton } from '../../utils/DeleteAccountButton';
@@ -32,8 +32,8 @@ export default function SubscriptionOverview() {
   const { firebaseUser, authLoading } = useAuth();
   const { isAdmin, isSuperAdmin } = useAdminAuth();
   const canSeeAdminUsage = Boolean(isAdmin || isSuperAdmin);
-  const userId = firebaseUser?.uid || '';
-
+  const userId = getCurrentUserId() || '';
+  
   // API data state
   const [plans, setPlans] = useState<Record<string, any>>({});
   const [currentSubscription, setCurrentSubscription] = useState<any>(null);
@@ -59,6 +59,8 @@ export default function SubscriptionOverview() {
   );
   // Convex overage settings
   const overageSettings = useQuery(api.usageEvents.getOverageSettings, userId ? { userId } : "skip");
+  
+
   const mutateOverageSettings = useMutation(api.usageEvents.updateOverageSettings);
   
   // Update usage summary when convex data changes
@@ -72,24 +74,29 @@ export default function SubscriptionOverview() {
     }
   }, [convexUsageSummary]);
 
-  // Overage controls state
-  const [ubpEnabled, setUbpEnabled] = useState(currentSubscription?.ubpEnabled ?? true);
-  // Removed second toggle (premiumEnabled) per UX simplification
-  const [monthlyLimit, setMonthlyLimit] = useState(currentSubscription?.monthlyLimit ?? 25);
+  // Overage controls state - Initialize with null to avoid showing defaults before Convex data loads
+  const [ubpEnabled, setUbpEnabled] = useState<boolean | null>(null);
+  const [monthlyLimit, setMonthlyLimit] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Sync overage settings from Convex when loaded
   useEffect(() => {
     if (overageSettings && typeof overageSettings === 'object') {
-      if (typeof overageSettings.ubpEnabled === 'boolean') setUbpEnabled(overageSettings.ubpEnabled);
-      if (typeof overageSettings.monthlyLimit === 'number') setMonthlyLimit(overageSettings.monthlyLimit);
+      // Only set if we haven't initialized yet or if the values are different
+      if (typeof overageSettings.ubpEnabled === 'boolean') {
+        setUbpEnabled(overageSettings.ubpEnabled);
+      }
+      if (typeof overageSettings.monthlyLimit === 'number') {
+        setMonthlyLimit(overageSettings.monthlyLimit);
+      }
     }
   }, [overageSettings]);
 
   // Fetch plans and subscription status from API
   useEffect(() => {
     async function fetchData() {
-      if (!firebaseUser?.uid) return;
+      const currentUserId = getCurrentUserId();
+      if (!currentUserId) return;
       setLoading(true);
       try {
         const apiKey = await getApiKey();
@@ -145,7 +152,7 @@ export default function SubscriptionOverview() {
       }
     }
     fetchData();
-  }, [firebaseUser?.uid]);
+  }, [userId]);
 
   // Map plan using plan_type whenever plans or status changes
   useEffect(() => {
@@ -251,7 +258,8 @@ export default function SubscriptionOverview() {
   
   // Handle manage subscription (redirect to Stripe Customer Portal)
   const handleManageSubscription = async () => {
-    if (!firebaseUser?.uid) return;
+    const currentUserId = getCurrentUserId();
+    if (!currentUserId) return;
     setRedirectingToPortal(true);
     try {
       const apiKey = await getApiKey();
@@ -259,7 +267,7 @@ export default function SubscriptionOverview() {
         throw new Error('No API key found. Please log in again.');
       }
       const returnUrl = window.location.origin + '/settings';
-      const response = await createCustomerPortalSession(apiKey, firebaseUser.uid, firebaseUser.email, returnUrl);
+      const response = await createCustomerPortalSession(apiKey, currentUserId, firebaseUser?.email || '', returnUrl);
       if (response.success && response.data?.url) {
         window.location.href = response.data.url;
       } else {
@@ -286,13 +294,27 @@ export default function SubscriptionOverview() {
   };
   const handleCloseQuantityModal = () => setShowQuantityModal(false);
 
-  const handleSaveUbp = async () => {
-    if (!firebaseUser?.uid) return;
+  const handleSaveUbp = async (newUbpEnabled: boolean, newMonthlyLimit: number) => {
+    const currentUserId = getCurrentUserId();
+    if (!currentUserId) {
+      console.error('Cannot save: missing userId from API key');
+      return;
+    }
+    
     try {
       setSaving(true);
-      await mutateOverageSettings({ userId: firebaseUser.uid, ubpEnabled, monthlyLimit });
+      // Sanitize the limit before saving
+      const safeLimit = Number.isFinite(newMonthlyLimit) ? Math.max(0, Math.floor(Number(newMonthlyLimit))) : 25;
+      
+      await mutateOverageSettings({ 
+        userId: currentUserId, 
+        ubpEnabled: newUbpEnabled, 
+        monthlyLimit: safeLimit 
+      });
+      
     } catch (e) {
-      console.error('Failed to save overage settings', e);
+      console.error('Failed to save overage settings to Convex:', e);
+      throw e; // Re-throw so the UI can handle the error
     } finally {
       setSaving(false);
     }
@@ -421,14 +443,32 @@ export default function SubscriptionOverview() {
           <div className="w-full md:w-2/3 max-w-xl mx-auto md:mx-0 flex flex-col gap-6">
             <UsageAndBillingCard usage={usageSummary} />
             {/* Extra requests lives with usage for better context */}
-            <OverageControlsCard
-              ubpEnabled={ubpEnabled}
-              monthlyLimit={monthlyLimit}
-              saving={saving}
-              setUbpEnabled={setUbpEnabled}
-              setMonthlyLimit={setMonthlyLimit}
-              handleSaveUbp={handleSaveUbp}
-            />
+            {ubpEnabled !== null && monthlyLimit !== null ? (
+              <OverageControlsCard
+                ubpEnabled={ubpEnabled}
+                monthlyLimit={monthlyLimit}
+                saving={saving}
+                setUbpEnabled={setUbpEnabled}
+                setMonthlyLimit={setMonthlyLimit}
+                handleSaveUbp={handleSaveUbp}
+              />
+            ) : (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Extra requests</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-pulse bg-muted h-4 w-4 rounded"></div>
+                    <div className="animate-pulse bg-muted h-4 w-32 rounded"></div>
+                  </div>
+                  <div className="mt-2 flex items-center space-x-2">
+                    <div className="animate-pulse bg-muted h-4 w-24 rounded"></div>
+                    <div className="animate-pulse bg-muted h-4 w-8 rounded"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             {canSeeAdminUsage && (
               <RecentUsageEventsCard usageEvents={usageEvents} />
             )}
@@ -436,7 +476,10 @@ export default function SubscriptionOverview() {
           {/* Right Column: Account and Controls */}
           <div className="w-full md:w-1/3 max-w-md mx-auto md:mx-0 flex flex-col gap-6">
             <AccountSubscriptionCard
-              user={firebaseUser}
+              user={{
+                displayName: firebaseUser?.displayName || 'User',
+                email: firebaseUser?.email || 'No email provided'
+              }}
               currentSubscription={currentSubscription}
               handleUpgrade={handleOpenUpgradeModal}
               handleOpenQuantityModal={() => handleOpenQuantityModal(currentSubscription?.quantity || 1)}
