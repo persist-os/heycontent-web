@@ -45,8 +45,11 @@ export default function AmbassadorPage() {
 
 
   return (
-    <MorphingBackground>
-      <main className="relative min-h-screen snap-y snap-mandatory overflow-y-scroll h-screen">
+    <div 
+      className="relative min-h-screen bg-cover bg-center bg-fixed"
+      style={{ backgroundImage: 'url(/clouds.jpg)' }}
+    >
+      <main className="relative min-h-screen snap-y snap-mandatory overflow-y-scroll h-screen bg-background/60 backdrop-blur-sm">
         {/* Intro Screen with Typewriter */}
         <motion.section 
           className="fixed inset-0 z-50 flex items-center justify-center bg-background"
@@ -256,6 +259,6 @@ export default function AmbassadorPage() {
           </Section>
         </motion.div>
       </main>
-    </MorphingBackground>
+    </div>
   );
 }
