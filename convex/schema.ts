@@ -18,7 +18,10 @@ export default defineSchema({
     role: v.optional(v.union(
       v.literal("user"),
       v.literal("admin"),
-      v.literal("super_admin")
+      v.literal("super_admin"),
+      v.literal("ambassador"),
+      v.literal("affiliate"),
+      v.literal("partner")
     )),
     permissions: v.optional(v.array(v.string())),
     // Stripe integration
@@ -76,6 +79,12 @@ export default defineSchema({
     lastGmailFetch: v.optional(v.number()),
     // Email preferences
     emailUnsubscribed: v.optional(v.boolean()),
+    // Referral statistics
+    referralStats: v.optional(v.object({
+      totalReferred: v.number(),
+      firstReferralDate: v.optional(v.number()),
+      lastReferralDate: v.optional(v.number())
+    })),
   })
   .index("by_userId", ["userId"])
   .index("by_email", ["email"])
@@ -1106,4 +1115,19 @@ export default defineSchema({
   .index("by_assigned", ["assignedTo"])
   .index("by_user_status", ["userId", "status"])
   .index("by_type_status", ["type", "status"]),
+
+  // Referrals tracking
+  referrals: defineTable({
+    referrerId: v.id("users"),
+    referredUsers: v.array(v.object({
+      userId: v.id("users"),
+      referralCode: v.string(),
+      referredAt: v.number(),
+    })),
+    totalReferred: v.number(),
+    firstReferralDate: v.optional(v.number()),
+    lastReferralDate: v.optional(v.number()),
+  })
+  .index("by_referrer", ["referrerId"])
+  .index("by_total_referred", ["totalReferred"]),
 });

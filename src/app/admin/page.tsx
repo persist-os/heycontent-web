@@ -36,12 +36,18 @@ const roleColors = {
   user: 'bg-gray-100 text-gray-800',
   admin: 'bg-purple-100 text-purple-800',
   super_admin: 'bg-red-100 text-red-800',
+  ambassador: 'bg-green-100 text-green-800',
+  affiliate: 'bg-blue-100 text-blue-800',
+  partner: 'bg-yellow-100 text-yellow-800',
 };
 
 const roleIcons = {
   user: User,
   admin: Shield,
   super_admin: Shield,
+  ambassador: Users,
+  affiliate: BarChart3,
+  partner: BarChart3,
 };
 
 export default function AdminPage() {
@@ -54,6 +60,10 @@ export default function AdminPage() {
   // Feedback modal state
   const [selectedFeedback, setSelectedFeedback] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // User detail modal state
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   
   // Filter and sort state
   const [search, setSearch] = useState('');
@@ -76,6 +86,10 @@ export default function AdminPage() {
   const users = useQuery(api.auth.getUsersWithRoles, 
     firebaseUser?.uid ? { adminUserId: firebaseUser.uid } : "skip"
   );
+  
+  // Fetch referral data for all users
+  const referralData = useQuery(api.referrals.getAllReferralData);
+
 
   // Mutations
   const updateStatus = useMutation(api.feedback.updateFeedbackStatus);
@@ -143,6 +157,16 @@ export default function AdminPage() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedFeedback(null);
+  };
+  
+  const handleUserClick = (user: any) => {
+    setSelectedUser(user);
+    setIsUserModalOpen(true);
+  };
+  
+  const handleCloseUserModal = () => {
+    setIsUserModalOpen(false);
+    setSelectedUser(null);
   };
 
   const handleClearFilters = () => {
@@ -558,7 +582,11 @@ export default function AdminPage() {
                   const RoleIcon = roleIcons[user.role as keyof typeof roleIcons] || User;
                   
                   return (
-                    <div key={user._id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div 
+                      key={user._id} 
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                      onClick={() => handleUserClick(user)}
+                    >
                       <div className="flex items-center gap-4">
                         <RoleIcon className="h-5 w-5 text-muted-foreground" />
                         <div>
@@ -574,23 +602,46 @@ export default function AdminPage() {
                         <Badge className={roleColors[user.role as keyof typeof roleColors]}>
                           {user.role.replace('_', ' ')}
                         </Badge>
+                        
+                        {/* Show referral stats if they exist */}
+                        {(() => {
+                          const userReferralData = referralData?.find(r => r.referrerId === user._id);
+                          if (userReferralData && userReferralData.totalReferred > 0) {
+                            return (
+                              <div className="flex items-center gap-2 text-sm">
+                                <span className="text-green-600 font-medium">
+                                  {userReferralData.totalReferred} referrals
+                                </span>
+                                {userReferralData.lastReferralDate && (
+                                  <span className="text-muted-foreground">
+                                    {formatDate(userReferralData.lastReferralDate)}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
 
-                                                 {isSuperAdmin && (
-                           <Select
-                             value={user.role}
-                             onValueChange={(value) => handleRoleUpdate(user._id, value)}
-                             disabled={updatingUser === user._id}
-                           >
-                             <SelectTrigger className="w-32">
-                               <SelectValue />
-                             </SelectTrigger>
-                             <SelectContent>
-                               <SelectItem value="user">User</SelectItem>
-                               <SelectItem value="admin">Admin</SelectItem>
-                               <SelectItem value="super_admin">Super Admin</SelectItem>
-                             </SelectContent>
-                           </Select>
-                         )}
+                        {isSuperAdmin && (
+                          <Select
+                            value={user.role}
+                            onValueChange={(value) => handleRoleUpdate(user._id, value)}
+                            disabled={updatingUser === user._id}
+                          >
+                            <SelectTrigger className="w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="user">User</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
+                              <SelectItem value="super_admin">Super Admin</SelectItem>
+                              <SelectItem value="ambassador">Ambassador</SelectItem>
+                              <SelectItem value="affiliate">Affiliate</SelectItem>
+                              <SelectItem value="partner">Partner</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
 
                         {updatingUser === user._id && (
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -611,7 +662,132 @@ export default function AdminPage() {
               </div>
             </CardContent>
           </Card>
+          
+          {/* User Detail Modal */}
+          {selectedUser && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-white">User Details: {selectedUser.name}</h2>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleCloseUserModal}
+                    className="text-gray-400 hover:text-white hover:bg-gray-800"
+                  >
+                    ✕
+                  </Button>
+                </div>
+                
+                <div className="space-y-4">
+                  {/* Basic Info */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-300">Name</label>
+                      <p className="text-sm text-white">{selectedUser.name}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-300">Email</label>
+                      <p className="text-sm text-white">{selectedUser.email}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-300">Role</label>
+                      <p className="text-sm text-white">{selectedUser.role?.replace('_', ' ') || 'user'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-300">Joined</label>
+                      <p className="text-sm text-white">{formatDate(selectedUser.createdAt)}</p>
+                    </div>
+                  </div>
+                  
+                  {/* Referral Stats */}
+                  {(() => {
+                    // Find referral data for this user
+                    const userReferralData = referralData?.find(r => r.referrerId === selectedUser._id);
+                    
+                    if (userReferralData && userReferralData.totalReferred > 0) {
+                      return (
+                        <div className="border-t pt-4">
+                          <h3 className="text-lg font-medium mb-3">Referral Statistics</h3>
+                          <div className="grid grid-cols-3 gap-4 mb-4">
+                            <div className="text-center">
+                              <div className="text-2xl font-bold text-green-400">
+                                {userReferralData.totalReferred}
+                              </div>
+                              <div className="text-sm text-gray-300">Total Referrals</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-sm text-gray-300">
+                                {userReferralData.firstReferralDate ? 
+                                  formatDate(userReferralData.firstReferralDate) : 'N/A'
+                                }
+                              </div>
+                              <div className="text-sm text-gray-300">First Referral</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-sm text-gray-300">
+                                {userReferralData.lastReferralDate ? 
+                                  formatDate(userReferralData.lastReferralDate) : 'N/A'
+                                }
+                              </div>
+                              <div className="text-sm text-gray-300">Last Referral</div>
+                            </div>
+                          </div>
+                          
+                          {/* Referred Users List */}
+                          <div className="mt-4">
+                            <h4 className="text-md font-medium mb-2 text-white">Referred Users:</h4>
+                            <div className="space-y-2">
+                              {userReferralData.referredUsers.map((referredUser: any, index: number) => (
+                                <div key={index} className="bg-gray-800 border border-gray-700 p-3 rounded-lg">
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <div className="font-medium text-white">{referredUser.userName}</div>
+                                      <div className="text-sm text-gray-300">{referredUser.userEmail}</div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="text-sm text-gray-300">
+                                        {formatDate(referredUser.referredAt)}
+                                      </div>
+                                      <div className="text-xs text-gray-400">
+                                        Code: {referredUser.referralCode}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                  
+                  {/* Referral Code */}
+                  {selectedUser.referralCode && (
+                    <div className="border-t border-gray-700 pt-4">
+                      <h3 className="text-lg font-medium mb-3 text-white">Referral Code</h3>
+                      <div className="bg-gray-800 border border-gray-700 p-3 rounded-lg">
+                        <code className="text-lg font-mono text-green-400">{selectedUser.referralCode}</code>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Referred By */}
+                  {selectedUser.referredBy && (
+                    <div className="border-t border-gray-700 pt-4">
+                      <h3 className="text-lg font-medium mb-3 text-white">Referred By</h3>
+                      <p className="text-sm text-gray-300">{selectedUser.referredBy}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </TabsContent>
+
+
       </Tabs>
         </div>
       </main>
