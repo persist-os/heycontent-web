@@ -4,21 +4,39 @@ import { internalMutation, mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { getPriceInfo } from "./priceConfig";
 
+/**
+ * Usage Tracking and Analytics System
+ * 
+ * This module handles tracking of API usage, request logging, and usage analytics
+ * for subscription management and billing purposes.
+ * 
+ * Key Features:
+ * - Log individual API requests and usage events
+ * - Track usage against subscription limits
+ * - Provide usage analytics and reporting
+ * - Support subscription enforcement and overage tracking
+ */
+
+/**
+ * Log a usage event for API request tracking
+ * 
+ * Records detailed information about each API request including endpoint,
+ * method, status, and user context for analytics and billing purposes.
+ */
 export const logUsageEvent = mutation({
   args: {
-    userId: v.string(),
-    timestamp: v.number(),
-    model: v.string(),
-    status: v.string(),
-    qty: v.number(),
-    // New fields for better tracking
-    endpoint: v.optional(v.string()),
-    method: v.optional(v.string()),
-    path: v.optional(v.string()),
-    statusCode: v.optional(v.number()),
-    userAgent: v.optional(v.string()),
-    ip: v.optional(v.string()),
-    requestId: v.optional(v.string()),  // Add requestId to the schema
+    userId: v.string(),           // User making the request
+    timestamp: v.number(),        // When the request occurred
+    model: v.string(),            // AI model or service used
+    status: v.string(),           // Request status (success, error, etc.)
+    qty: v.number(),              // Quantity of units consumed
+    endpoint: v.optional(v.string()), // API endpoint base URL
+    method: v.optional(v.string()),   // HTTP method (GET, POST, etc.)
+    path: v.optional(v.string()),     // API path/route
+    statusCode: v.optional(v.number()), // HTTP status code
+    userAgent: v.optional(v.string()),  // User agent string
+    ip: v.optional(v.string()),        // Client IP address
+    requestId: v.optional(v.string()),  // Unique request identifier
   },
   handler: async (ctx, args) => {
     // Prepare the event data with default values for optional fields
@@ -91,7 +109,16 @@ export const listUsageEvents = query({
   },
 });
 
-// Aggregate usage for a user for the current period
+/**
+ * Get usage summary for a user including current period usage and limits
+ * 
+ * This function calculates the user's API usage for the current billing period
+ * and compares it against their subscription limits. It integrates with the
+ * pricing configuration to determine included requests and overage calculations.
+ * 
+ * @param userId - The user ID to get usage summary for
+ * @returns Object containing total usage, included requests, and overage amount
+ */
 export const getUsageSummary = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
@@ -138,6 +165,7 @@ export const getUsageSummary = query({
           const interval = user.subscription.interval?.toLowerCase() || 'monthly';
           
           // Get included requests from price config
+          // This integrates with the pricing system to determine user limits
           const priceInfo = getPriceInfo(plan, interval as 'monthly' | 'yearly');
           included = priceInfo.includedRequests;
           
