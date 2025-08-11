@@ -40,6 +40,8 @@ export function middleware(request: NextRequest) {
     "https://whimsical-clownfish-162.convex.cloud",
     "wss://lovely-koala-465.convex.cloud",
     "https://lovely-koala-465.convex.cloud",
+    "https://combative-lark-727.convex.cloud",
+    "wss://combative-lark-727.convex.cloud",
     "https://backend.hicontent.co",
     "https://content-backend-216038426364.us-central1.run.app",
     "https://content-backend-216038426364.us-east1.run.app",
