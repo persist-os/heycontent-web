@@ -12,7 +12,10 @@ export const getUserRole = query({
       v.literal("user"),
       v.literal("developer"),
       v.literal("admin"),
-      v.literal("super_admin")
+      v.literal("super_admin"),
+      v.literal("ambassador"),
+      v.literal("affiliate"),
+      v.literal("partner")
     ),
     permissions: v.array(v.string()),
     email: v.string(),
@@ -108,7 +111,10 @@ export const updateUserRole = mutation({
       v.literal("user"),
       v.literal("developer"),
       v.literal("admin"),
-      v.literal("super_admin")
+      v.literal("super_admin"),
+      v.literal("ambassador"),
+      v.literal("affiliate"),
+      v.literal("partner")
     ),
     adminUserId: v.string(), // The admin making the change
   },
@@ -165,7 +171,10 @@ export const getUsersWithRoles = query({
       v.literal("user"),
       v.literal("developer"),
       v.literal("admin"),
-      v.literal("super_admin")
+      v.literal("super_admin"),
+      v.literal("ambassador"),
+      v.literal("affiliate"),
+      v.literal("partner")
     ),
     createdAt: v.number(),
   })),
@@ -181,7 +190,7 @@ export const getUsersWithRoles = query({
 
     const users = await ctx.db.query("users").collect();
     
-    return users.map(user => ({
+    return users.filter(user => user.name && user.email).map(user => ({
       _id: user._id,
       name: user.name,
       email: user.email,

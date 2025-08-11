@@ -113,6 +113,69 @@ export const create_user = mutation(async ({ db }, { name, email, image, userId,
     createdAt: now,
     updatedAt: now,
   });
+  
+  // Process referral if user was referred by someone
+  if (referredBy && referredBy.trim()) {
+    try {
+      // Find the referrer by their userId (Firebase ID)
+      const referrer = await db
+        .query("users")
+        .withIndex("by_userId", (q) => q.eq("userId", referredBy))
+        .unique();
+      
+      if (referrer) {
+        // Create referral record directly
+        const existingReferral = await db
+          .query("referrals")
+          .withIndex("by_referrer", (q) => q.eq("referrerId", referrer._id))
+          .unique();
+        
+        if (existingReferral) {
+          // Update existing record
+          const updatedReferredUsers = [
+            ...existingReferral.referredUsers,
+            {
+              userId: id,
+              referralCode: referrer.referralCode, // Use referrer's actual referral code
+              referredAt: now
+            }
+          ];
+          
+          await db.patch(existingReferral._id, {
+            referredUsers: updatedReferredUsers,
+            totalReferred: updatedReferredUsers.length,
+            lastReferralDate: now
+          });
+        } else {
+          // Create new record
+          await db.insert("referrals", {
+            referrerId: referrer._id,
+            referredUsers: [{
+              userId: id,
+              referralCode: referrer.referralCode, // Use referrer's actual referral code
+              referredAt: now
+            }],
+            totalReferred: 1,
+            firstReferralDate: now,
+            lastReferralDate: now
+          });
+        }
+        
+        // Update referrer's stats in users table
+        await db.patch(referrer._id, {
+          referralStats: {
+            totalReferred: (existingReferral?.totalReferred || 0) + 1,
+            firstReferralDate: existingReferral?.firstReferralDate || now,
+            lastReferralDate: now
+          }
+        });
+      }
+    } catch (error) {
+      // Log error but don't fail user creation
+      console.error("Failed to process referral:", error);
+    }
+  }
+  
   return { success: true, userId: id, alreadyExisted: false };
 });
 

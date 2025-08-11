@@ -8,7 +8,10 @@ export const setAdminRole = mutation({
     role: v.union(
       v.literal("user"),
       v.literal("admin"),
-      v.literal("super_admin")
+      v.literal("super_admin"),
+      v.literal("ambassador"),
+      v.literal("affiliate"),
+      v.literal("partner")
     ),
   },
   returns: v.boolean(),

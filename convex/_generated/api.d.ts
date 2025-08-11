@@ -39,6 +39,7 @@ import type * as priceConfig from "../priceConfig.js";
 import type * as projectsMutations from "../projectsMutations.js";
 import type * as projectsQueries from "../projectsQueries.js";
 import type * as rateLimiting from "../rateLimiting.js";
+import type * as referrals from "../referrals.js";
 import type * as setAdminRole from "../setAdminRole.js";
 import type * as subscriptionActions from "../subscriptionActions.js";
 import type * as subscriptionQueries from "../subscriptionQueries.js";
@@ -87,6 +88,7 @@ declare const fullApi: ApiFromModules<{
   projectsMutations: typeof projectsMutations;
   projectsQueries: typeof projectsQueries;
   rateLimiting: typeof rateLimiting;
+  referrals: typeof referrals;
   setAdminRole: typeof setAdminRole;
   subscriptionActions: typeof subscriptionActions;
   subscriptionQueries: typeof subscriptionQueries;
