@@ -155,7 +155,7 @@ export default function AdminPage() {
     });
     
     return filtered;
-  }, [users, referralData, userSearch, roleFilter, userSortBy, userSortOrder]);
+  }, [users, referralData, userSearch, roleFilter, subscriptionFilter, userSortBy, userSortOrder]);
 
 
   // Mutations
@@ -347,7 +347,11 @@ export default function AdminPage() {
   };
 
   const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString('en-US', {
+    // Handle both seconds and milliseconds
+    // If timestamp is less than 10000000000, it's likely in seconds
+    const timestampInMs = timestamp < 10000000000 ? timestamp * 1000 : timestamp;
+    
+    return new Date(timestampInMs).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -590,30 +594,42 @@ export default function AdminPage() {
 
         <TabsContent value="users" className="space-y-6">
           {/* Platform Overview with Tabs */}
-          <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
-            <CardHeader>
-              <CardTitle className="text-blue-900">Platform Overview</CardTitle>
-              <CardDescription className="text-blue-700">
+          <Card className="bg-card border-border shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-foreground text-xl font-semibold">Platform Overview</CardTitle>
+              <CardDescription className="text-muted-foreground">
                 Key metrics for your HeyContent platform
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               {/* Overview Tabs */}
               <Tabs defaultValue="metrics" className="w-full">
-                <TabsList className="grid w-full grid-cols-4 mb-6">
-                  <TabsTrigger value="metrics" className="flex items-center gap-2">
+                <TabsList className="grid w-full grid-cols-4 mb-6 bg-muted border border-border">
+                  <TabsTrigger 
+                    value="metrics" 
+                    className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
+                  >
                     <BarChart3 className="h-4 w-4" />
                     Metrics
                   </TabsTrigger>
-                  <TabsTrigger value="users" className="flex items-center gap-2">
+                  <TabsTrigger 
+                    value="users" 
+                    className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
+                  >
                     <Users className="h-4 w-4" />
                     Users
                   </TabsTrigger>
-                  <TabsTrigger value="referrals" className="flex items-center gap-2">
+                  <TabsTrigger 
+                    value="referrals" 
+                    className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
+                  >
                     <TrendingUp className="h-4 w-4" />
                     Referrals
                   </TabsTrigger>
-                  <TabsTrigger value="revenue" className="flex items-center gap-2">
+                  <TabsTrigger 
+                    value="revenue" 
+                    className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
+                  >
                     <CheckCircle className="h-4 w-4" />
                     Revenue
                   </TabsTrigger>
@@ -622,27 +638,27 @@ export default function AdminPage() {
                 {/* Metrics Tab */}
                 <TabsContent value="metrics" className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-blue-600">
+                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
+                      <div className="text-3xl font-bold text-foreground">
                         {users?.length || 0}
                       </div>
-                      <div className="text-sm text-blue-700">Total Users</div>
+                      <div className="text-sm text-muted-foreground">Total Users</div>
                     </div>
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-green-600">
+                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
+                      <div className="text-3xl font-bold text-primary">
                         {users?.filter(u => u.subscription?.status === 'active').length || 0}
                       </div>
-                      <div className="text-sm text-green-700">Active Subscribers</div>
-                      <div className="text-xs text-green-600 mt-1">
+                      <div className="text-sm text-muted-foreground">Active Subscribers</div>
+                      <div className="text-xs text-primary mt-1 font-medium">
                         {users?.length ? Math.round((users.filter(u => u.subscription?.status === 'active').length / users.length) * 100) : 0}% conversion rate
                       </div>
                     </div>
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-purple-600">
+                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
+                      <div className="text-3xl font-bold text-accent">
                         {referralData?.reduce((total, r) => total + r.totalReferred, 0) || 0}
                       </div>
-                      <div className="text-sm text-purple-700">Total Referrals</div>
-                      <div className="text-xs text-purple-600 mt-1">
+                      <div className="text-sm text-muted-foreground">Total Referrals</div>
+                      <div className="text-xs text-muted-foreground mt-1">
                         Across all users
                       </div>
                     </div>
@@ -652,28 +668,28 @@ export default function AdminPage() {
                 {/* Users Tab */}
                 <TabsContent value="users" className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-600">
+                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
+                      <div className="text-2xl font-bold text-foreground">
                         {users?.filter(u => u.role === 'user').length || 0}
                       </div>
-                      <div className="text-sm text-blue-700">Regular Users</div>
+                      <div className="text-sm text-muted-foreground">Regular Users</div>
                     </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-purple-600">
+                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
+                      <div className="text-2xl font-bold text-accent">
                         {users?.filter(u => ['admin', 'super_admin'].includes(u.role)).length || 0}
                       </div>
-                      <div className="text-sm text-purple-700">Admin Users</div>
-                      <div className="text-xs text-purple-600 mt-1">
+                      <div className="text-sm text-muted-foreground">Admin Users</div>
+                      <div className="text-xs text-accent mt-1 font-medium">
                         Admin: {users?.filter(u => u.role === 'admin').length || 0} | 
                         Super: {users?.filter(u => u.role === 'super_admin').length || 0}
                       </div>
                     </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-orange-600">
+                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
+                      <div className="text-2xl font-bold text-primary">
                         {users?.filter(u => ['ambassador', 'affiliate', 'partner'].includes(u.role)).length || 0}
                       </div>
-                      <div className="text-sm text-orange-700">Tier Users</div>
-                      <div className="text-xs text-orange-600 mt-1">
+                      <div className="text-sm text-muted-foreground">Tier Users</div>
+                      <div className="text-xs text-primary mt-1 font-medium">
                         A: {users?.filter(u => u.role === 'ambassador').length || 0} | 
                         F: {users?.filter(u => u.role === 'affiliate').length || 0} | 
                         P: {users?.filter(u => u.role === 'partner').length || 0}
@@ -685,14 +701,14 @@ export default function AdminPage() {
                 {/* Referrals Tab */}
                 <TabsContent value="referrals" className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-600">
+                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
+                      <div className="text-2xl font-bold text-foreground">
                         {referralData?.reduce((total, r) => total + r.totalReferred, 0) || 0}
                       </div>
-                      <div className="text-sm text-green-700">Total Referrals</div>
+                      <div className="text-sm text-muted-foreground">Total Referrals</div>
                     </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-600">
+                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
+                      <div className="text-2xl font-bold text-primary">
                         {(() => {
                           if (!users || !referralData) return 0;
                           let totalReferredUsers = 0;
@@ -711,17 +727,17 @@ export default function AdminPage() {
                           return totalReferredUsers > 0 ? Math.round((payingReferredUsers / totalReferredUsers) * 100) : 0;
                         })()}%
                       </div>
-                      <div className="text-sm text-blue-700">Referral Conversion</div>
-                      <div className="text-xs text-blue-600 mt-1">
+                      <div className="text-sm text-muted-foreground">Referral Conversion</div>
+                      <div className="text-xs text-primary mt-1 font-medium">
                         % of referred users who subscribed
                       </div>
                     </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-purple-600">
+                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
+                      <div className="text-2xl font-bold text-accent">
                         {referralData?.length || 0}
                       </div>
-                      <div className="text-sm text-purple-700">Active Referrers</div>
-                      <div className="text-xs text-purple-600 mt-1">
+                      <div className="text-sm text-muted-foreground">Active Referrers</div>
+                      <div className="text-xs text-muted-foreground mt-1">
                         Users with referrals
                       </div>
                     </div>
@@ -731,27 +747,27 @@ export default function AdminPage() {
                 {/* Revenue Tab */}
                 <TabsContent value="revenue" className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-600">
+                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
+                      <div className="text-2xl font-bold text-primary">
                         {users?.filter(u => u.subscription?.status === 'active').length || 0}
                       </div>
-                      <div className="text-sm text-green-700">Active Subscriptions</div>
+                      <div className="text-sm text-muted-foreground">Active Subscriptions</div>
                     </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-600">
+                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
+                      <div className="text-2xl font-bold text-accent">
                         {users?.filter(u => u.subscription?.status === 'active' && u.subscription?.plan?.includes('pro')).length || 0}
                       </div>
-                      <div className="text-sm text-blue-700">Pro Plans</div>
-                      <div className="text-xs text-blue-600 mt-1">
+                      <div className="text-sm text-muted-foreground">Pro Plans</div>
+                      <div className="text-xs text-accent mt-1 font-medium">
                         High-tier subscribers
                       </div>
                     </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-purple-600">
+                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
+                      <div className="text-2xl font-bold text-foreground">
                         {users?.filter(u => u.subscription?.status === 'active' && u.subscription?.plan?.includes('basic')).length || 0}
                       </div>
-                      <div className="text-sm text-purple-700">Basic Plans</div>
-                      <div className="text-xs text-purple-600 mt-1">
+                      <div className="text-sm text-muted-foreground">Basic Plans</div>
+                      <div className="text-xs text-muted-foreground mt-1">
                         Entry-level subscribers
                       </div>
                     </div>
