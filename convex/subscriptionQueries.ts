@@ -90,10 +90,14 @@ export const saveSubscription = mutation({
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .unique();
     if (!user) throw new Error("User not found");
+    const prevSub = user.subscription ?? {} as any;
     const updates = {
       stripeSubscriptionId: args.stripeSubscriptionId,
       stripeCustomerId: args.stripeCustomerId,
       subscription: {
+        // Preserve any existing fields first (e.g., ubpEnabled, monthlyLimit)
+        ...prevSub,
+        // Then overwrite with the latest Stripe-derived fields
         status: args.status,
         plan: args.plan,
         priceId: args.priceId,
@@ -102,16 +106,17 @@ export const saveSubscription = mutation({
         currentPeriodEnd: args.currentPeriodEnd,
         cancelAtPeriodEnd: args.cancelAtPeriodEnd,
         includedRequests: args.includedRequests,
-        usedRequests: args.usedRequests ?? user.subscription?.usedRequests ?? 0,
+        usedRequests: args.usedRequests ?? prevSub.usedRequests ?? 0,
         lastSyncedAt: Date.now(),
         ...(typeof args.subscriptionItemId !== 'undefined'
           ? { subscriptionItemId: args.subscriptionItemId }
-          : user.subscription?.subscriptionItemId
-            ? { subscriptionItemId: user.subscription.subscriptionItemId }
+          : prevSub?.subscriptionItemId
+            ? { subscriptionItemId: prevSub.subscriptionItemId }
             : {}),
         canceledAt: typeof args.canceledAt === 'number'
           ? args.canceledAt * 1000
-          : (["canceled", "incomplete_expired"].includes(args.status) ? Date.now() : undefined),
+          : ([
+"canceled", "incomplete_expired"].includes(args.status) ? Date.now() : undefined),
         ...(args.interval ? { interval: args.interval } : {}),
       },
       updatedAt: Date.now()

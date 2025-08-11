@@ -223,11 +223,14 @@ export const getOverageSettings = query({
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .first();
     if (!user || !user.subscription) {
+      // Only return defaults if user or subscription doesn't exist at all
       return { ubpEnabled: true, monthlyLimit: 25 };
     }
     const sub = user.subscription as any;
-    const ubpEnabled = typeof sub.ubpEnabled === 'boolean' ? sub.ubpEnabled : true;
-    const monthlyLimit = typeof sub.monthlyLimit === 'number' ? sub.monthlyLimit : 25;
+    // Only use defaults if the specific fields have never been set (are undefined)
+    // If they were explicitly set to false/0, respect those values
+    const ubpEnabled = sub.ubpEnabled !== undefined ? sub.ubpEnabled : true;
+    const monthlyLimit = sub.monthlyLimit !== undefined ? sub.monthlyLimit : 25;
     return { ubpEnabled, monthlyLimit };
   }
 });
@@ -250,10 +253,9 @@ export const updateOverageSettings = mutation({
         ...currentSub,
         ubpEnabled: args.ubpEnabled,
         monthlyLimit: cappedLimit,
-        lastUpdatedAt: Date.now(),
       },
     });
-    return { success: true };
+    return { success: true, ubpEnabled: args.ubpEnabled, monthlyLimit: cappedLimit };
   }
 });
 
