@@ -306,16 +306,210 @@ export async function resolveAllLinkContent(
             if (gmailThreads.status === 'fulfilled') {
               foundContent = gmailThreads.value.page.find((thread: any) => thread.threadId === id);
               if (foundContent) {
+                // Extract comprehensive Gmail content similar to link-content-resolver
+                const threadData = foundContent.data || {};
+                const messages = threadData.messages || foundContent.messages || [];
+                
+                let gmailContent = '';
+                if (messages && messages.length > 0) {
+                  const contentParts = [];
+                  const subject = threadData.subject || foundContent.subject || (messages[0]?.subject) || 'No Subject';
+                  const from = threadData.from || foundContent.from || (messages[0]?.from) || 'Unknown Sender';
+                  
+                  contentParts.push(`Subject: ${subject}`);
+                  contentParts.push(`From: ${from}`);
+                  contentParts.push('\n--- Email Content ---');
+                  
+                  messages.forEach((message: any, index: number) => {
+                    contentParts.push(`\nMessage ${index + 1}:`);
+                    if (message.from) {
+                      contentParts.push(`From: ${message.from}`);
+                    }
+                    if (message.subject) {
+                      contentParts.push(`Subject: ${message.subject}`);
+                    }
+                    
+                    // Extract the actual message content - check multiple possible fields
+                    let messageContent = '';
+                    if (message.snippet) {
+                      messageContent = message.snippet;
+                    } else if (message.body) {
+                      messageContent = message.body;
+                    } else if (message.content) {
+                      messageContent = message.content;
+                    } else if (message.data?.snippet) {
+                      messageContent = message.data.snippet;
+                    } else if (message.data?.body) {
+                      messageContent = message.data.body;
+                    }
+                    
+                    if (messageContent) {
+                      contentParts.push(`Content: ${messageContent}`);
+                    }
+                  });
+                  
+                  gmailContent = contentParts.join('\n');
+                } else {
+                  // Fall back to snippet if no messages are available
+                  gmailContent = foundContent.snippet || foundContent.data?.snippet || 'No content available';
+                }
+                
                 resolvedContent.push({
                   type: 'gmail',
                   id: contentId,
                   title: foundContent.subject || foundContent.data?.subject || 'No Subject',
-                  content: foundContent.snippet || foundContent.data?.snippet || '',
+                  content: gmailContent,
                   platform: 'gmail',
                   createdAt: foundContent.createdAt || Date.now(),
                   from: foundContent.from || foundContent.data?.from || 'Unknown Sender',
                   messageCount: foundContent.message_count || foundContent.data?.message_count || 1,
                 });
+              }
+            }
+            break;
+            
+          case 'insight':
+          case 'insights':
+            // Handle insight content
+            console.log('🔍 [CONTENT RESOLVER] Processing insight:', contentId);
+            
+            // Parse the insight ID to get platform, analysisId, and index
+            const insightParts = contentId.split(':');
+            if (insightParts.length >= 4) {
+              const platform = insightParts[1];
+              const analysisId = insightParts[2];
+              const indexStr = insightParts[3];
+              const index = parseInt(indexStr, 10);
+              
+              if (!isNaN(index)) {
+                // Try to find the insight in the content store or fetch it
+                try {
+                  let insightData = null;
+                  
+                  // Try to fetch the insight based on platform
+                  if (platform === 'youtube') {
+                    const youtubeAnalyses = await convex.query(api.youtubeQueries.getVideoAnalyses, { userId });
+                    if (youtubeAnalyses?.analyses) {
+                      const video = youtubeAnalyses.analyses.find((v: any) => v.id === analysisId);
+                      if (video && video.analysis) {
+                        // Build comprehensive YouTube insight content
+                        const insightContent = [
+                          `Title: ${video.title || 'Untitled Video'}`,
+                          '',
+                          'Analysis:',
+                          video.analysisMarkdown || video.analysis?.summary || video.analysis || 'YouTube video analysis'
+                        ].join('\n');
+                        
+                        insightData = {
+                          id: contentId,
+                          title: `${video.title} - Analysis`,
+                          type: 'insight',
+                          contentType: 'youtube_analysis',
+                          platform: 'insights',
+                          analysis: video.analysis,
+                          content: insightContent
+                        };
+                      }
+                    }
+                  } else if (platform === 'instagram') {
+                    const instagramAccount = await convex.query(api.instagramQueries.getInstagramAccount, { userId });
+                    if (instagramAccount?.instagramAccountId) {
+                      const instagramAnalysis = await convex.query(api.instagramQueries.getInstagramBatchAnalysis, { userId, instagramAccountId: instagramAccount.instagramAccountId });
+                      if (instagramAnalysis?.insights?.insights && instagramAnalysis.insights.insights[index]) {
+                        const insight = instagramAnalysis.insights.insights[index];
+                        
+                        // Build comprehensive insight content with all available fields
+                        const insightContent = [
+                          `Title: ${insight.title || 'Untitled Insight'}`,
+                          '',
+                          'Action Steps:',
+                          ...(insight.actionSteps || []).map((step: string, i: number) => `${i + 1}. ${step}`),
+                          '',
+                          `Expected Outcome: ${insight.expectedOutcome || 'Not specified'}`,
+                          '',
+                          `Impact: ${insight.impact || 'Not specified'}`,
+                          '',
+                          'Why Now:',
+                          ...(insight.whyNow || []).map((reason: string, i: number) => `${i + 1}. ${reason}`),
+                          '',
+                          'Source Details:',
+                          ...(insight.sourceDetails || []).map((detail: string, i: number) => `${i + 1}. ${detail}`),
+                          '',
+                          'Related Items:',
+                          ...(insight.relatedItems || []).map((item: any) => `${item.label}: ${item.value}`),
+                          '',
+                          `Platform: ${insight.platform || 'instagram'}`,
+                          '',
+                          `Highlight Color: ${insight.highlightColor || 'Not specified'}`,
+                          `Outcome Color: ${insight.outcomeColor || 'Not specified'}`
+                        ].join('\n');
+                        
+                        insightData = {
+                          id: contentId,
+                          title: insight.title || insight.heading || 'Instagram Insight',
+                          type: 'insight',
+                          contentType: 'instagram_analysis',
+                          platform: 'insights',
+                          analysis: insight,
+                          content: insightContent
+                        };
+                      }
+                    }
+                  } else if (platform === 'gmail') {
+                    const gmailAccounts = await convex.query(api.gmailQueries.getGmailAccounts, { userId });
+                    if (gmailAccounts.length > 0) {
+                      const gmailAnalysis = await convex.query(api.gmailQueries.getGmailBatchAnalysis, { userId, gmailAccountId: gmailAccounts[0]._id });
+                      if (gmailAnalysis?.insights?.insights && gmailAnalysis.insights.insights[index]) {
+                        const insight = gmailAnalysis.insights.insights[index];
+                        
+                        // Build comprehensive Gmail insight content
+                        const insightContent = [
+                          `Title: ${insight.title || 'Gmail Insight'}`,
+                          '',
+                          'Analysis:',
+                          insight.analysis || insight.content || insight.description || 'Gmail analysis insight'
+                        ].join('\n');
+                        
+                        insightData = {
+                          id: contentId,
+                          title: insight.title || 'Gmail Insight',
+                          type: 'insight',
+                          contentType: 'gmail_insight',
+                          platform: 'insights',
+                          analysis: insight,
+                          content: insightContent
+                        };
+                      }
+                    }
+                  }
+                  
+                  if (insightData) {
+                    resolvedContent.push(insightData);
+                  } else {
+                    // If insight not found, create a placeholder
+                    resolvedContent.push({
+                      id: contentId,
+                      title: `${platform} Insight`,
+                      type: 'insight',
+                      contentType: `${platform}_analysis`,
+                      platform: 'insights',
+                      analysis: null,
+                      content: `Insight not found for ${platform} analysis ${analysisId} at index ${index}`
+                    });
+                  }
+                } catch (error) {
+                  console.warn('Failed to fetch insight:', error);
+                  // Add a placeholder insight even if fetching fails
+                  resolvedContent.push({
+                    id: contentId,
+                    title: `${platform} Insight`,
+                    type: 'insight',
+                    contentType: `${platform}_analysis`,
+                    platform: 'insights',
+                    analysis: null,
+                    content: `Failed to fetch insight: ${error}`
+                  });
+                }
               }
             }
             break;

@@ -237,7 +237,7 @@ export function useInfiniteContent(
   } = {}
 ) {
   const {
-    platforms = ['notes', 'youtube', 'instagram', 'gmail', 'insights'],
+    platforms = ['notes', 'youtube', 'instagram', 'gmail', 'insights', 'conversations'],
     autoInitialize = true,
   } = options;
 

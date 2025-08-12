@@ -4,7 +4,7 @@ import { ConvexReactClient } from 'convex/react';
 export interface UnifiedContent {
   id: string;
   title: string;
-  type: 'note' | 'youtube' | 'instagram' | 'gmail' | 'insight';
+  type: 'note' | 'youtube' | 'instagram' | 'gmail' | 'insight' | 'conversation';
   contentType: string;
   platform: string;
   createdAt: number;
@@ -29,6 +29,9 @@ export interface UnifiedContent {
   from?: string;
   messageCount?: number;
   category?: string;
+  // Conversation specific
+  messages?: any[];
+  recommendations?: any[];
 }
 
 // Infinite scroll state per platform
@@ -55,6 +58,7 @@ export interface PlatformLoadingState {
   instagram: boolean;
   gmail: boolean;
   insights: boolean;
+  conversations: boolean;
 }
 
 // Error states per platform
@@ -64,6 +68,7 @@ export interface PlatformErrorState {
   instagram: string | null;
   gmail: string | null;
   insights: string | null;
+  conversations: string | null;
 }
 
 // Content data per platform with infinite scroll support
@@ -73,6 +78,7 @@ export interface PlatformContentData {
   instagram: InfiniteScrollState;
   gmail: InfiniteScrollState;
   insights: InfiniteScrollState;
+  conversations: InfiniteScrollState;
 }
 
 // Legacy flat content arrays for backward compatibility
@@ -82,6 +88,7 @@ export interface LegacyPlatformContentData {
   instagram: UnifiedContent[];
   gmail: UnifiedContent[];
   insights: UnifiedContent[];
+  conversations: UnifiedContent[];
 }
 
 export interface ContentStoreState {
@@ -153,6 +160,7 @@ export const initialPlatformLoadingState: PlatformLoadingState = {
   instagram: false,
   gmail: false,
   insights: false,
+  conversations: false,
 };
 
 export const initialPlatformErrorState: PlatformErrorState = {
@@ -161,6 +169,7 @@ export const initialPlatformErrorState: PlatformErrorState = {
   instagram: null,
   gmail: null,
   insights: null,
+  conversations: null,
 };
 
 export const initialContentState: PlatformContentData = {
@@ -169,4 +178,5 @@ export const initialContentState: PlatformContentData = {
   instagram: createInitialInfiniteScrollState(),
   gmail: createInitialInfiniteScrollState(),
   insights: createInitialInfiniteScrollState(),
+  conversations: createInitialInfiniteScrollState(),
 }; 

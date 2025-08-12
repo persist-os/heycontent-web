@@ -68,7 +68,13 @@ export function MessageBubble({
   const accentBorder = isDark ? 'border-primary' : 'border-primary'
 
   // Check if the message contains linked content
-  const hasLinkedContent = message.content && message.content.includes('@[')
+  const hasLinkedContent = Boolean(
+    message.content && (
+      message.content.includes('@[') ||
+      // Also detect backend-processed titles like [Title]
+      (message.content.includes('[') && message.content.includes(']'))
+    )
+  )
   
   // Debug logging for linked content
   if (hasLinkedContent) {

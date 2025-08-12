@@ -111,7 +111,7 @@ export const getDisplayContent = (
           continue
         }
         continue
-      } else if (contentType === 'insights') {
+      } else if (contentType === 'insights' || contentType === 'insight') {
         // Handle insight display format
         console.log('🔍 Processing insight for display:', { noteId, title: fetchedContentTitles[noteId] });
         const title = fetchedContentTitles[noteId]

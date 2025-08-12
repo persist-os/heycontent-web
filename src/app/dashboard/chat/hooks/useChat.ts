@@ -225,6 +225,13 @@ export const useChat = (
       // CRITICAL DEBUG: Check the raw backend response for persona flags
       console.log('🔍 useChat: RAW BACKEND RESPONSE:', JSON.stringify(data, null, 2));
       
+      // Debug: Check if user_message is present
+      console.log('🔗 useChat: Backend response debug:', {
+        hasUserMessage: !!data.user_message,
+        userMessageContent: data.user_message,
+        userMessageLength: data.user_message?.length
+      });
+      
       // Log vector search results if available
       if (data.vector_search_metadata) {
         console.log('📊 Vector Search Results Applied:', {
@@ -274,8 +281,24 @@ export const useChat = (
 
       // Update messages with the response
       setMessages(prev => {
+        console.log('🔗 useChat: Updating messages with backend response:', {
+          totalMessages: prev.length,
+          userMessages: prev.filter(msg => msg.role === 'user'),
+          hasUserMessage: !!data.user_message,
+          userMessagePreview: data.user_message?.substring(0, 100)
+        });
+        
         // Transform the typing message into the final response message
-        const updatedMessages = prev.map(msg => {
+        const updatedMessages = prev.map((msg: Message) => {
+          console.log('🔗 useChat: Processing message:', {
+            id: msg.id,
+            role: msg.role,
+            status: msg.status,
+            hasContentLinks: msg.content.includes('@['),
+            contentPreview: msg.content.substring(0, 100),
+            shouldUpdate: msg.role === 'user' && data.user_message && msg.content.includes('@[')
+          });
+          
           if (msg.status === 'typing') {
             return { 
               ...msg, 
@@ -308,6 +331,15 @@ export const useChat = (
               content: data.user_message, // Use the cleaned user message with titles
               chat_response: data.user_message
             };
+          } else if (msg.role === 'user' && data.user_message) {
+            // Debug: log why the message update condition didn't match
+            console.log('🔗 useChat: Message update condition debug:', {
+              role: msg.role,
+              hasUserMessage: !!data.user_message,
+              hasContentLinks: msg.content.includes('@['),
+              contentPreview: msg.content.substring(0, 100),
+              userMessagePreview: data.user_message.substring(0, 100)
+            });
           }
           return msg;
         });

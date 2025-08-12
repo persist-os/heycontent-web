@@ -13,7 +13,7 @@ import { NoteContentRenderer } from '@/app/dashboard/notes/components/NoteConten
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 
 interface ChatOverlayProps {
-  contentType: 'youtube' | 'instagram' | 'gmail' | 'insight' | 'note';
+  contentType: 'youtube' | 'instagram' | 'gmail' | 'insight' | 'note' | 'smart_note';
   contentId: string;
   onClose: () => void;
   insightData?: any;
@@ -29,10 +29,41 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
   const router = useRouter();
   const searchParams = useSearchParams();
   const userId = getCurrentUserId() || '';
+  // Extract the actual note ID (remove note: or notes: prefix if present)
+  const actualNoteId = (contentType === 'note' || contentType === 'smart_note') && contentId.startsWith('note') 
+    ? contentId.replace(/^(note|notes):/, '') 
+    : contentId;
+
   const note = useQuery(
     api.notes.getNote,
-    contentType === 'note' ? { noteId: contentId, userId } : 'skip'
+    (contentType === 'note' || contentType === 'smart_note') ? { noteId: actualNoteId, userId } : 'skip'
   );
+
+  // Add debugging for note query
+  React.useEffect(() => {
+    if (contentType === 'note' || contentType === 'smart_note') {
+      console.log('🔗 ChatOverlay: Note query debug:', {
+        contentType,
+        originalContentId: contentId,
+        actualNoteId,
+        userId,
+        noteExists: !!note,
+        noteData: note ? {
+          id: note._id,
+          title: note.title,
+          type: note.type
+        } : null,
+        // Add validation for note ID format
+        noteIdValidation: {
+          originalLength: contentId?.length || 0,
+          actualLength: actualNoteId?.length || 0,
+          originalFormat: contentId?.match(/^[a-zA-Z0-9]{20,}$/) ? 'valid' : 'invalid',
+          actualFormat: actualNoteId?.match(/^[a-zA-Z0-9]{20,}$/) ? 'valid' : 'invalid',
+          startsWithPrefix: contentId?.startsWith('note:') || contentId?.startsWith('notes:') ? 'yes' : 'no'
+        }
+      });
+    }
+  }, [contentType, contentId, actualNoteId, userId, note]);
 
   const chatId = searchParams.get('id');
 
@@ -107,13 +138,27 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
         </div>
       );
     }
-
+    // Show positive unsupported message instead of loading
     return (
-      <InsightOverlay
-        insightId={contentId}
-        onClose={onClose}
-        showAnalysis={true}
-      />
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-background rounded-lg shadow-xl max-w-md w-full p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold">Preview Unavailable</h2>
+            <button
+              title="Close"
+              onClick={onClose}
+              className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <p className="text-muted-foreground">
+            We’re actively expanding previews. For insights, you can still open the full analysis from your dashboard to explore the details.
+          </p>
+        </div>
+      </div>
     );
   };
 
@@ -138,15 +183,24 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
                 <p className="text-muted-foreground text-sm">Full note preview (read-only)</p>
               </div>
             </div>
-            <button
-              title="Close"
-              onClick={handleCloseToSmartNotes}
-              className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                title="Go to Smart Notes"
+                onClick={handleCloseToSmartNotes}
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-md transition-colors"
+              >
+                Go to Smart Notes
+              </button>
+              <button
+                title="Close"
+                onClick={onClose}
+                className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Main content */}
@@ -199,10 +253,20 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
                 <div className="max-w-none">
                   <NoteContentRenderer content={note.content} />
                 </div>
-              ) : (
+              ) : note === undefined ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
                   <p className="text-muted-foreground">Loading note...</p>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-red-500 mb-4">
+                    <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                  </div>
+                  <p className="text-muted-foreground">Note not found or access denied.</p>
+                  <p className="text-sm text-muted-foreground mt-2">Note ID: {contentId}</p>
                 </div>
               )}
             </div>
@@ -227,7 +291,9 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
             </svg>
           </button>
         </div>
-        <p className="text-muted-foreground">Content type "{contentType}" not supported yet.</p>
+        <p className="text-muted-foreground">
+          We’re actively expanding previews. This content isn’t available for in-chat preview yet, but you can open it from your dashboard.
+        </p>
       </div>
     </div>
   );
@@ -243,6 +309,7 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
     case 'insight':
       return renderInsightOverlay();
     case 'note':
+    case 'smart_note':
       return renderNoteOverlay();
     default:
       return renderFallback();

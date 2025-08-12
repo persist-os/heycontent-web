@@ -67,6 +67,7 @@ export const useContentStore = create<ContentStoreState>()(
             instagram: true,
             gmail: true,
             insights: true,
+            conversations: true,
           },
           errors: initialPlatformErrorState,
           lastFetchedUserId: userId 
@@ -80,6 +81,7 @@ export const useContentStore = create<ContentStoreState>()(
             get().initializePlatform(userId, 'instagram', convex),
             get().initializePlatform(userId, 'gmail', convex),
             get().initializePlatform(userId, 'insights', convex),
+            get().initializePlatform(userId, 'conversations', convex),
           ]);
 
           // Update allContent after all platforms are initialized
@@ -90,7 +92,23 @@ export const useContentStore = create<ContentStoreState>()(
             ...currentState.content.instagram.items,
             ...currentState.content.gmail.items,
             ...currentState.content.insights.items,
+            ...currentState.content.conversations.items,
           ];
+
+          // Debug logging for Gmail content
+          if (process.env.NODE_ENV === 'development') {
+            console.log('🚀 [CONTENT STORE] Gmail content debug:', {
+              gmailItemsCount: currentState.content.gmail.items.length,
+              gmailItems: currentState.content.gmail.items.slice(0, 3).map(item => ({
+                id: item.id,
+                title: item.title,
+                type: item.type,
+                platform: item.platform
+              })),
+              allContentGmailCount: allContent.filter(item => item.id?.startsWith('gmail:')).length,
+              allContentGmailIds: allContent.filter(item => item.id?.startsWith('gmail:')).map(item => item.id).slice(0, 5)
+            });
+          }
 
           set({
             allContent,
@@ -302,6 +320,7 @@ export const useContentStore = create<ContentStoreState>()(
             instagram: true,
             gmail: true,
             insights: true,
+            conversations: true,
           },
           errors: initialPlatformErrorState,
           lastFetchedUserId: userId,
@@ -355,6 +374,7 @@ export const useContentStore = create<ContentStoreState>()(
           ...updatedState.content.instagram.items,
           ...updatedState.content.gmail.items,
           ...updatedState.content.insights.items,
+          ...updatedState.content.conversations.items,
         ];
 
         set({ allContent, cacheTimestamp: Date.now() });

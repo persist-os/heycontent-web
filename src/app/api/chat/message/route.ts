@@ -102,17 +102,125 @@ export async function POST(request: Request) {
     }
 
     // Process and inject link content into the query context
-    if (link_content && Array.isArray(link_content) && link_content.length > 0) {
+    let resolvedLinkContent = body.link_content; // Get from request body if provided
+    
+    // If no link content provided but query contains @ patterns, resolve them
+    // OR if Gmail content is referenced, always re-resolve to get full content
+    if ((!resolvedLinkContent || !Array.isArray(resolvedLinkContent) || resolvedLinkContent.length === 0) && query.includes('@[')) {
+      console.log(`[${requestId}] No link content provided but query contains @ patterns, resolving...`);
+      
+      try {
+        // Import and use the server-side link content resolver
+        const { resolveAllLinkContentServer } = await import('@/app/dashboard/chat/utils/link-content-resolver');
+        
+        // Create a Convex client for server-side use
+        const { ConvexHttpClient } = await import('convex/browser');
+        const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+        
+        // Resolve link content
+        const serverResolvedContent = await resolveAllLinkContentServer(query, user_id, convex);
+        
+        if (serverResolvedContent && serverResolvedContent.length > 0) {
+          console.log(`[${requestId}] Successfully resolved link content:`, {
+            count: serverResolvedContent.length,
+            types: serverResolvedContent.map((item: any) => item.type)
+          });
+          resolvedLinkContent = serverResolvedContent;
+        } else {
+          console.log(`[${requestId}] No link content resolved from @ patterns`);
+        }
+      } catch (error) {
+        console.error(`[${requestId}] Error resolving link content:`, error);
+        // Continue without link content if resolution fails
+      }
+    } else if (resolvedLinkContent && Array.isArray(resolvedLinkContent) && resolvedLinkContent.length > 0 && query.includes('@[')) {
+      // Check if any Gmail content needs to be re-resolved for full content
+      const hasGmailContent = resolvedLinkContent.some(item => item.type === 'gmail');
+      const hasGmailReference = query.includes('@[gmail:');
+      
+      if (hasGmailContent && hasGmailReference) {
+        console.log(`[${requestId}] Gmail content detected, re-resolving to get full content...`);
+        
+        try {
+          // Import and use the server-side link content resolver
+          const { resolveAllLinkContentServer } = await import('@/app/dashboard/chat/utils/link-content-resolver');
+          
+          // Create a Convex client for server-side use
+          const { ConvexHttpClient } = await import('convex/browser');
+          const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+          
+          // Re-resolve Gmail content to get full data
+          const serverResolvedContent = await resolveAllLinkContentServer(query, user_id, convex);
+          
+          if (serverResolvedContent && serverResolvedContent.length > 0) {
+            console.log(`[${requestId}] Successfully re-resolved Gmail content:`, {
+              count: serverResolvedContent.length,
+              types: serverResolvedContent.map((item: any) => item.type),
+              gmailContent: serverResolvedContent.filter(item => item.type === 'gmail').map(item => ({
+                title: item.title,
+                contentLength: item.content?.length || 0,
+                contentPreview: item.content?.substring(0, 200) || ''
+              }))
+            });
+            resolvedLinkContent = serverResolvedContent;
+          }
+        } catch (error) {
+          console.error(`[${requestId}] Error re-resolving Gmail content:`, error);
+          // Continue with existing content if re-resolution fails
+        }
+      }
+    }
+    
+    // Add resolved link content to backend request body
+    if (resolvedLinkContent && Array.isArray(resolvedLinkContent) && resolvedLinkContent.length > 0) {
+      backendRequestBody.link_content = resolvedLinkContent;
+      backendRequestBody.link_content_count = resolvedLinkContent.length;
+      backendRequestBody.link_content_types = resolvedLinkContent.map((item: any) => item.type);
+    }
+    
+    if (resolvedLinkContent && Array.isArray(resolvedLinkContent) && resolvedLinkContent.length > 0) {
       console.log(`[${requestId}] Processing link content:`, {
-        count: link_content.length,
-        types: link_content.map((item: any) => item.type)
+        count: resolvedLinkContent.length,
+        types: resolvedLinkContent.map((item: any) => item.type)
       });
 
+      // Debug: log the actual structure of resolved content
+      console.log(`[${requestId}] Resolved content structure:`, resolvedLinkContent.map((item: any) => ({
+        type: item.type,
+        title: item.title,
+        contentId: item.contentId,
+        id: item.id,
+        hasContentId: 'contentId' in item,
+        hasId: 'id' in item
+      })));
+
       // Create a context message with all linked content
-      const linkContextMessages = link_content.map((item: any) => {
-        const contentType = item.type === 'smart_note' ? 'Smart Note' : 
-                           item.type === 'youtube' ? 'YouTube Video Analysis' : 
-                           item.type === 'insight' ? 'AI Insight' : 'Content';
+      const linkContextMessages = resolvedLinkContent.map((item: any) => {
+        let contentType = 'Content';
+        
+        // Map content types to human-readable labels
+        switch (item.type) {
+          case 'smart_note':
+            contentType = 'Smart Note';
+            break;
+          case 'youtube':
+            contentType = 'YouTube Video Analysis';
+            break;
+          case 'instagram':
+            contentType = 'Instagram Post Analysis';
+            break;
+          case 'gmail':
+            contentType = 'Gmail Thread';
+            break;
+          case 'insight':
+            contentType = 'AI Insight';
+            break;
+          case 'conversation':
+            contentType = 'Conversation';
+            break;
+          default:
+            contentType = item.type ? `${item.type.charAt(0).toUpperCase() + item.type.slice(1)}` : 'Content';
+        }
         
         // Debug: log the content to see what we're working with
         console.log(`[${requestId}] Processing ${contentType} content:`, {
@@ -120,7 +228,7 @@ export async function POST(request: Request) {
           title: item.title,
           contentType: typeof item.content,
           contentLength: item.content?.length || 0,
-          contentPreview: typeof item.content === 'string' ? item.content.substring(0, 100) : JSON.stringify(item.content).substring(0, 100)
+          contentPreview: typeof item.content === 'string' ? item.content.substring(0, 200) : JSON.stringify(item.content).substring(0, 200)
         });
         
         // Ensure content is a string
@@ -132,7 +240,7 @@ export async function POST(request: Request) {
       const linkContextText = linkContextMessages.join('\n\n');
       
       // Replace link tokens in the user message with titles using the already resolved link content
-      let userMessageWithTitles = query;
+      // Note: userMessageWithTitles is already declared globally above
       
       // Create a mapping of content IDs to titles from the resolved link content
       const contentIdToTitle = new Map();
@@ -147,25 +255,109 @@ export async function POST(request: Request) {
       
       console.log(`[${requestId}] Extracted content IDs:`, contentIds);
       
+      // Debug: log the query content for context
+      console.log(`[${requestId}] Query content:`, query.substring(0, 200) + '...');
+      
       // Create a mapping by matching content IDs to resolved content
       // More robust mapping: try to match by contentId first, then by index
       for (const contentId of contentIds) {
+        console.log(`[${requestId}] Looking for content ID: ${contentId}`);
+        
         // First try to find by exact contentId match
-        let resolvedItem = link_content.find(item => item.contentId === contentId);
+        let resolvedItem = resolvedLinkContent.find(item => item.contentId === contentId);
+        
+        if (!resolvedItem) {
+          // Try to find by id field (some resolvers use 'id' instead of 'contentId')
+          resolvedItem = resolvedLinkContent.find(item => item.id === contentId);
+        }
+        
+        if (!resolvedItem) {
+          // Try to find by removing prefixes and matching
+          const cleanContentId = contentId.replace(/^(conversations?|notes?|insights?|youtube|instagram|gmail):/, '');
+          resolvedItem = resolvedLinkContent.find(item => 
+            item.contentId === cleanContentId || 
+            item.id === cleanContentId ||
+            item.contentId === contentId || 
+            item.id === contentId
+          );
+        }
         
         if (!resolvedItem) {
           // If not found by exact match, try to find by type and partial match
           if (contentId.startsWith('notes:') || contentId.startsWith('note:')) {
             const actualNoteId = contentId.replace(/^(notes?):/, '');
-            resolvedItem = link_content.find(item => 
+            resolvedItem = resolvedLinkContent.find(item => 
               item.type === 'smart_note' && 
-              (item.contentId === actualNoteId || item.contentId === contentId || item.contentId === `note:${actualNoteId}` || item.contentId === `notes:${actualNoteId}`)
+              (item.contentId === actualNoteId || item.contentId === contentId || item.contentId === `note:${actualNoteId}` || item.contentId === `notes:${actualNoteId}` ||
+               item.id === actualNoteId || item.id === contentId || item.id === `note:${actualNoteId}` || item.id === `notes:${actualNoteId}`)
+            );
+          } else if (contentId.startsWith('insights:') || contentId.startsWith('insight:')) {
+            // Handle insight IDs: insights:platform:analysisId:index
+            const insightParts = contentId.split(':');
+            if (insightParts.length >= 4) {
+              const platform = insightParts[1];
+              const analysisId = insightParts[2];
+              const index = insightParts[3];
+              resolvedItem = resolvedLinkContent.find(item => 
+                item.type === 'insight' && 
+                (item.contentId === contentId || 
+                 item.contentId === `${platform}:${analysisId}:${index}` ||
+                 item.contentId === `insight:${platform}:${analysisId}:${index}` ||
+                 item.id === contentId || 
+                 item.id === `${platform}:${analysisId}:${index}` ||
+                 item.id === `insight:${platform}:${analysisId}:${index}`)
+              );
+            }
+          } else if (contentId.startsWith('conversations:') || contentId.startsWith('conversation:')) {
+            // Handle conversation IDs: conversations:conversationId
+            const actualConversationId = contentId.replace(/^conversations?:/, '');
+            resolvedItem = resolvedLinkContent.find(item => 
+              item.type === 'conversation' && 
+              (item.contentId === contentId || 
+               item.contentId === actualConversationId ||
+               item.contentId === `conversation:${actualConversationId}` ||
+               item.id === contentId || 
+               item.id === actualConversationId ||
+               item.id === `conversation:${actualConversationId}`)
+            );
+          } else if (contentId.startsWith('youtube:')) {
+            // Handle YouTube IDs
+            const actualVideoId = contentId.replace(/^youtube:/, '');
+            resolvedItem = resolvedLinkContent.find(item => 
+              item.type === 'youtube' && 
+              (item.contentId === contentId || item.contentId === actualVideoId ||
+               item.id === contentId || item.id === actualVideoId)
+            );
+          } else if (contentId.startsWith('instagram:')) {
+            // Handle Instagram IDs
+            const actualPostId = contentId.replace(/^instagram:/, '');
+            resolvedItem = resolvedLinkContent.find(item => 
+              item.type === 'instagram' && 
+              (item.contentId === contentId || item.contentId === actualPostId ||
+               item.id === contentId || item.id === actualPostId)
+            );
+          } else if (contentId.startsWith('gmail:')) {
+            // Handle Gmail IDs
+            const actualThreadId = contentId.replace(/^gmail:/, '');
+            resolvedItem = resolvedLinkContent.find(item => 
+              item.type === 'gmail' && 
+              (item.contentId === contentId || item.contentId === actualThreadId ||
+               item.id === contentId || item.id === actualThreadId)
             );
           }
         }
         
         if (resolvedItem) {
-          contentIdToTitle.set(contentId, resolvedItem.title || 'Untitled Note');
+          contentIdToTitle.set(contentId, resolvedItem.title || 'Untitled Content');
+          console.log(`[${requestId}] ✅ Mapped content ID ${contentId} to title: ${resolvedItem.title}`);
+        } else {
+          console.warn(`[${requestId}] ❌ Could not resolve content ID: ${contentId}`);
+          console.warn(`[${requestId}] Available resolved content:`, resolvedLinkContent.map(item => ({
+            type: item.type,
+            title: item.title,
+            contentId: item.contentId,
+            id: item.id
+          })));
         }
       }
       
@@ -187,7 +379,7 @@ export async function POST(request: Request) {
       console.log(`[${requestId}] Enhanced query with link content:`, {
         originalLength: query.length,
         enhancedLength: enhancedQuery.length,
-        linkContentCount: link_content.length,
+        linkContentCount: resolvedLinkContent.length,
         userMessageWithTitles
       });
 
@@ -198,8 +390,8 @@ export async function POST(request: Request) {
       backendRequestBody.query = query;
     }
 
-    // Log the full request body
-    console.debug(`[${requestId}] Sending request to backend`, {
+    // Send the request to the backend
+    console.log(`[${requestId}] Sending request to backend:`, {
       url: `${BACKEND_URL}/api/v1/chat`,
       headers: {
         'Content-Type': 'application/json',
@@ -207,9 +399,7 @@ export async function POST(request: Request) {
         'Authorization': `Bearer ${apiKey}`
       },
       body: {
-        ...backendRequestBody,
-        link_content_count: link_content?.length || 0,
-        link_content_types: link_content?.map((item: any) => item.type) || []
+        ...backendRequestBody
       }
     });
 

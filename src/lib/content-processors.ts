@@ -164,6 +164,12 @@ export function processGmailData(result: PromiseSettledResult<any[]>): UnifiedCo
 
   if (process.env.NODE_ENV === 'development') {
     console.log('📧 [CONTENT PROCESSORS] processGmailData: Processing', result.value.length, 'threads');
+    console.log('📧 [CONTENT PROCESSORS] processGmailData: Sample raw threads:', result.value.slice(0, 2).map(thread => ({
+      threadId: thread.threadId,
+      subject: thread.subject,
+      from: thread.from,
+      snippet: thread.snippet?.substring(0, 50)
+    })));
   }
 
   const processed = result.value.map(thread => ({
@@ -185,6 +191,12 @@ export function processGmailData(result: PromiseSettledResult<any[]>): UnifiedCo
 
   if (process.env.NODE_ENV === 'development') {
     console.log('📧 [CONTENT PROCESSORS] processGmailData: Processed', processed.length, 'threads successfully');
+    console.log('📧 [CONTENT PROCESSORS] processGmailData: Sample processed items:', processed.slice(0, 2).map(item => ({
+      id: item.id,
+      title: item.title,
+      type: item.type,
+      platform: item.platform
+    })));
   }
 
   return processed;
@@ -204,6 +216,14 @@ export function processAllInsightsData(results: {
     if (Array.isArray(ytAnalyses)) {
       ytAnalyses.forEach((video: any, index: number) => {
         if (video.analysis || video.analysisMarkdown) {
+          // Build comprehensive YouTube insight content
+          const insightContent = [
+            `Title: ${video.title || 'Untitled Video'}`,
+            '',
+            'Analysis:',
+            video.analysisMarkdown || video.analysis?.summary || video.analysis || 'YouTube video analysis'
+          ].join('\n');
+          
           allInsights.push({
             id: `insight:youtube:${video.id}:${index}`,
             title: `${video.title} - Analysis`,
@@ -215,7 +235,7 @@ export function processAllInsightsData(results: {
             important: false,
             tags: ['youtube', 'analysis'],
             analysis: video.analysis,
-            content: video.analysisMarkdown || video.analysis?.summary || 'YouTube video analysis'
+            content: insightContent
           });
         }
       });
@@ -238,6 +258,32 @@ export function processAllInsightsData(results: {
     
     if (insightArray.length > 0) {
       insightArray.forEach((insight: any, index: number) => {
+        // Build comprehensive insight content with all available fields
+        const insightContent = [
+          `Title: ${insight.title || 'Untitled Insight'}`,
+          '',
+          'Action Steps:',
+          ...(insight.actionSteps || []).map((step: string, i: number) => `${i + 1}. ${step}`),
+          '',
+          `Expected Outcome: ${insight.expectedOutcome || 'Not specified'}`,
+          '',
+          `Impact: ${insight.impact || 'Not specified'}`,
+          '',
+          'Why Now:',
+          ...(insight.whyNow || []).map((reason: string, i: number) => `${i + 1}. ${reason}`),
+          '',
+          'Source Details:',
+          ...(insight.sourceDetails || []).map((detail: string, i: number) => `${i + 1}. ${detail}`),
+          '',
+          'Related Items:',
+          ...(insight.relatedItems || []).map((item: any) => `${item.label}: ${item.value}`),
+          '',
+          `Platform: ${insight.platform || 'instagram'}`,
+          '',
+          `Highlight Color: ${insight.highlightColor || 'Not specified'}`,
+          `Outcome Color: ${insight.outcomeColor || 'Not specified'}`
+        ].join('\n');
+        
         allInsights.push({
           id: `insight:instagram:${igAnalysis._id}:${index}`,
           title: insight.title || insight.heading || 'Instagram Insight',
@@ -249,7 +295,7 @@ export function processAllInsightsData(results: {
           important: false,
           tags: ['instagram', insight.category || 'engagement'],
           analysis: insight,
-          content: insight.analysis || insight.content || insight.description || 'Instagram batch analysis insight'
+          content: insightContent
         });
       });
     } else {
@@ -275,6 +321,14 @@ export function processAllInsightsData(results: {
     const gmailAnalysis = results.gmailBatchAnalysis.value;
     if (gmailAnalysis.insights.insights && Array.isArray(gmailAnalysis.insights.insights)) {
       gmailAnalysis.insights.insights.forEach((insight: any, index: number) => {
+        // Build comprehensive Gmail insight content
+        const insightContent = [
+          `Title: ${insight.title || 'Gmail Insight'}`,
+          '',
+          'Analysis:',
+          insight.analysis || insight.content || insight.description || 'Gmail analysis insight'
+        ].join('\n');
+        
         allInsights.push({
           id: `insight:gmail:${gmailAnalysis._id}:${index}`,
           title: insight.title || 'Gmail Insight',
@@ -286,7 +340,7 @@ export function processAllInsightsData(results: {
           important: false,
           tags: ['gmail', insight.category || 'communication'],
           analysis: insight,
-          content: insight.analysis || insight.content || ''
+          content: insightContent
         });
       });
     }

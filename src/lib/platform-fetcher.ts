@@ -93,10 +93,17 @@ export async function initializePlatform(
           console.log(`📧 [PLATFORM FETCHER] Gmail raw result:`, { 
             pageCount: gmailResult?.page?.length || 0,
             isDone: gmailResult?.isDone,
-            sample: gmailResult?.page?.slice(0, 2)
+            sample: gmailResult?.page?.slice(0, 2),
+            sampleThreadIds: gmailResult?.page?.slice(0, 3).map(thread => thread.threadId)
           });
         }
         newItems = processGmailData({ status: 'fulfilled', value: gmailResult.page });
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`📧 [PLATFORM FETCHER] Gmail processed items:`, {
+            processedCount: newItems.length,
+            sampleProcessedIds: newItems.slice(0, 3).map(item => item.id)
+          });
+        }
         hasMore = !gmailResult.isDone;
         nextCursor = gmailResult.continueCursor;
         break;
@@ -180,6 +187,45 @@ export async function initializePlatform(
         });
         
         hasMore = false; // Insights don't have pagination yet
+        break;
+      
+      case 'conversations':
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`💬 [PLATFORM FETCHER] Fetching conversations for user: ${userId}`);
+        }
+        
+        const conversationsResult = await convex.query(api.chatQueries.getHistory, { userId, limit: 100 });
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`💬 [PLATFORM FETCHER] Conversations raw result:`, { 
+            count: conversationsResult?.length || 0, 
+            sample: conversationsResult?.slice(0, 2) 
+          });
+        }
+        
+        // Process conversations data
+        newItems = (conversationsResult || []).map(conv => ({
+          id: `conversations:${conv._id}`,
+          platform: 'conversations',
+          contentType: 'conversation',
+          title: conv.title || 'Untitled Conversation',
+          content: `${conv.title || ''}\n\n${(conv.messages || [])
+            .map((m: any) => `${m.role || 'unknown'}: ${m.content || ''}`)
+            .join('\n')}`,
+          metadata: {
+            createdAt: conv.createdAt || Date.now(),
+            updatedAt: conv.updatedAt,
+            messageCount: conv.messages?.length || 0,
+            messages: conv.messages,
+            analysis: conv.analysis,
+            insights: conv.insights,
+            recommendations: conv.recommendations,
+            tags: conv.tags
+          },
+          originalDocument: conv
+        }));
+        
+        hasMore = false; // Conversations don't have pagination yet
         break;
       
       default:
