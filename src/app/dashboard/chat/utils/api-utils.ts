@@ -12,6 +12,7 @@ import { resolveContentTitles, resolveAllLinkContent } from '@/lib/content-resol
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
 import { AuthenticationError } from '@/app/lib/errors';
+import { resolveAllLinkContentServer } from './link-content-resolver';
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
@@ -1572,7 +1573,15 @@ export async function sendChatMessage(
     
     try {
       // Use the new resolver function
-      const resolvedLinkContent = await resolveAllLinkContent(content, userId, convex);
+      const resolvedLinkContent = await resolveAllLinkContentServer(content, userId, convex);
+      
+      console.log('🔗 [LINK RESOLUTION] resolveAllLinkContent result:', {
+        resolvedCount: resolvedLinkContent.length,
+        resolvedTypes: resolvedLinkContent.map((item: any) => item.type),
+        resolvedIds: resolvedLinkContent.map((item: any) => item.id),
+        resolvedTitles: resolvedLinkContent.map((item: any) => item.title),
+        resolvedContentLengths: resolvedLinkContent.map((item: any) => item.content?.length || 0)
+      });
       
       if (resolvedLinkContent.length > 0) {
         console.log('🔗 [LINK RESOLUTION] Resolved link content:', {

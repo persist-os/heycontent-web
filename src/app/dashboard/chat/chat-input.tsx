@@ -136,140 +136,46 @@ export function ChatInput({
     }
   }
 
-  // Shadow state for the actual message content (with @[1]@, @[2]@ format)
-  const [shadowInput, setShadowInput] = useState('')
-  
-  // State to track links in order: [{index: 1, contentId: "note:123"}, {index: 2, contentId: "youtube:456"}]
-  const [linkRegistry, setLinkRegistry] = useState<Array<{index: number, contentId: string}>>([])
+  // Handle linking content from the selector
+  const handleLinkContent = useCallback((contentId: string) => {
+    if (!textareaRef.current) return
+    const textarea = textareaRef.current
+    const cursorPos = textarea.selectionStart
+    const textBeforeCursor = textarea.value.substring(0, cursorPos)
+    const atSymbolIndex = textBeforeCursor.lastIndexOf('@')
+    if (atSymbolIndex === -1) return
+    
+    const linkedContent = allLinkableContent?.find(item => item.id === contentId)
+    if (!linkedContent) return
+    
+    // Get the title and create a truncated version for display with brackets
+    const title = linkedContent.title || 'Untitled'
+    const truncatedTitle = title.replace(/\n/g, ' ').substring(0, 20) + (title.length > 20 ? '...' : '')
+    
+    // Replace the @ symbol with the truncated title in brackets for better clarity
+    const textAfterCursor = textarea.value.substring(cursorPos)
+    const newText = textarea.value.substring(0, atSymbolIndex) + `@[${truncatedTitle}]` + textAfterCursor
+    
+    setCurrentInput(newText)
+    
+    // Position cursor after the inserted content
+    const newCursorPos = atSymbolIndex + `@[${truncatedTitle}]`.length
+    textarea.setSelectionRange(newCursorPos, newCursorPos)
+    
+    setShowEnhancedContentSelector(false)
+    setContentSearchTerm('')
+  }, [textareaRef, allLinkableContent])
 
-  // Process display text to show titles using link registry
-  const getDisplayText = useCallback((rawText: string) => {
-    if (!allLinkableContent || linkRegistry.length === 0) return rawText
-    return rawText.replace(/@\[(\d+)\]@/g, (match, indexStr) => {
-      const index = parseInt(indexStr)
-      const linkEntry = linkRegistry.find(link => link.index === index)
-      if (!linkEntry) return match
-      
-      // Find content by standardized ID (platform:actualId format)
-      const linkedContent = allLinkableContent.find(item => item.id === linkEntry.contentId)
-      return linkedContent ? `@${linkedContent.title}\u200B` : match
-    })
-  }, [allLinkableContent, linkRegistry])
-
-  // Handle textarea changes with atomic link handling
+  // Handle textarea changes
   const handleTextareaChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value
-    const oldValue = currentInput
-    if (newValue.length < oldValue.length && linkRegistry.length > 0) {
-      let deletedIndex = -1
-      for (let i = 0; i < Math.min(oldValue.length, newValue.length); i++) {
-        if (oldValue[i] !== newValue[i]) {
-          deletedIndex = i
-          break
-        }
-      }
-      if (deletedIndex === -1) {
-        deletedIndex = newValue.length
-      }
-      const displayLinkPattern = /@([^@\n]+?)\u200B/g
-      let displayMatch
-      let linkIndex = 0
-      while ((displayMatch = displayLinkPattern.exec(oldValue)) !== null && linkIndex < linkRegistry.length) {
-        const displayStart = displayMatch.index
-        const displayEnd = displayStart + displayMatch[0].length
-        if (deletedIndex >= displayStart && deletedIndex <= displayEnd) {
-          const beforeLink = newValue.substring(0, displayStart)
-          const afterLink = newValue.substring(displayEnd)
-          const newDisplayValue = beforeLink + afterLink
-          const shadowLink = linkRegistry[linkIndex]
-          const shadowLinkPattern = new RegExp(`@\\[${shadowLink.index}\\]@`)
-          const newShadowValue = shadowInput.replace(shadowLinkPattern, '')
-          const deletedLinkIndex = shadowLink.index
-          const newLinkRegistry = linkRegistry.filter(link => link.index !== deletedLinkIndex)
-            .map((link, newIndex) => ({ ...link, index: newIndex + 1 }))
-          setLinkRegistry(newLinkRegistry)
-          let updatedShadowValue = newShadowValue
-          newLinkRegistry.forEach((link, index) => {
-            const oldIndex = link.index
-            const newIndex = index + 1
-            if (oldIndex !== newIndex) {
-              updatedShadowValue = updatedShadowValue.replace(
-                new RegExp(`@\\[${oldIndex}\\]@`, 'g'),
-                `@[${newIndex}]@`
-              )
-            }
-          })
-          setCurrentInput(newDisplayValue)
-          setShadowInput(updatedShadowValue)
-          setTimeout(() => {
-            if (textareaRef.current) {
-              textareaRef.current.selectionStart = displayStart
-              textareaRef.current.selectionEnd = displayStart
-            }
-          }, 0)
-          return
-        }
-        linkIndex++
-      }
-    }
     setCurrentInput(newValue)
-    let newShadowValue = newValue
-    linkRegistry.forEach((link) => {
-      const contentId = link.contentId
-      let actualContentId = contentId
-      let contentType = 'note'
-      if (contentId.includes(':')) {
-        const [prefix, id] = contentId.split(':', 2)
-        contentType = prefix
-        actualContentId = id
-      }
-      let linkedContent
-      if (contentType === 'note') {
-        linkedContent = allLinkableContent?.find(item => item.id === actualContentId) || allLinkableContent?.find(item => item.id === contentId)
-      } else {
-        linkedContent = allLinkableContent?.find(item => item.id === contentId)
-      }
-      if (linkedContent) {
-        const title = linkedContent.title || 'Untitled'
-        const displayTitle = `@${title}\u200B`
-        const shadowIndex = `@[${link.index}]@`
-        newShadowValue = newShadowValue.replace(displayTitle, shadowIndex)
-      }
-    })
-    setShadowInput(newShadowValue)
-  }, [currentInput, shadowInput, setCurrentInput, textareaRef, linkRegistry, allLinkableContent])
+  }, [setCurrentInput])
 
   // Handle textarea selection to prevent cursor inside links
   const handleTextareaSelect = useCallback((e: React.SyntheticEvent<HTMLTextAreaElement>) => {
-    const textarea = e.currentTarget
-    const cursorPos = textarea.selectionStart
-    
-    // If there's no shadow text with links, allow normal cursor positioning
-    if (!shadowInput || !shadowInput.includes('@[')) {
-      return
-    }
-    
-    // Find all @Title patterns in the display text
-    const displayText = currentInput
-    // Updated regex to handle spaces in titles - match @Title with spaces until the invisible character
-    const displayLinkPattern = /@([^@\n]+?)\u200B/g
-    let displayMatch
-    
-    while ((displayMatch = displayLinkPattern.exec(displayText)) !== null) {
-      const displayStart = displayMatch.index
-      const displayEnd = displayStart + displayMatch[0].length
-      
-      // Check if cursor is inside this link
-      if (cursorPos > displayStart && cursorPos < displayEnd) {
-        // Move cursor to the end of the link
-        setTimeout(() => {
-          textarea.selectionStart = displayEnd
-          textarea.selectionEnd = displayEnd
-        }, 0)
-        return
-      }
-    }
-  }, [shadowInput, currentInput])
+    // Simple cursor positioning - no complex link handling needed
+  }, [])
 
   // Use context-aware placeholders when analysis is available
   const activePlaceholders = hasAnalysis ? contextPlaceholders : placeholders
@@ -290,15 +196,6 @@ export function ChatInput({
   useEffect(() => {
     setPlaceholder(activePlaceholders[0])
   }, [hasAnalysis, activePlaceholders])
-
-  // Initialize shadow input when currentInput changes externally
-  useEffect(() => {
-    if (currentInput !== undefined && !shadowInput) {
-      // Only initialize shadow input if it's empty
-      // Don't convert display text to shadow text automatically
-      setShadowInput('')
-    }
-  }, [currentInput, shadowInput])
 
   // Auto-resize textarea and sync display div
   useEffect(() => {
@@ -359,25 +256,36 @@ export function ChatInput({
 
   // Function to convert numeric indices to content IDs
   const convertNumericIndicesToContentIds = (text: string): string => {
-    if (!linkRegistry.length) return text
-    return text.replace(/@\[(\d+)\]@/g, (match, indexStr) => {
-      const index = parseInt(indexStr)
-      const linkEntry = linkRegistry.find(link => link.index === index)
-      return linkEntry ? `@[${linkEntry.contentId}]@` : match
-    })
+    // No conversion needed - we use direct content IDs now
+    return text
   }
+
+  // Function to convert truncated titles back to content IDs
+  const convertTitlesToContentIds = useCallback((text: string): string => {
+    if (!allLinkableContent) return text
+    
+    // Find all @[Title] patterns and convert them back to @[contentId]@ format
+    let convertedText = text
+    
+    allLinkableContent.forEach(content => {
+      const title = content.title || 'Untitled'
+      const truncatedTitle = title.replace(/\n/g, ' ').substring(0, 20) + (title.length > 20 ? '...' : '')
+      
+      // Replace @[TruncatedTitle] with @[contentId]@
+      const titlePattern = new RegExp(`@\\[${truncatedTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\]`, 'g')
+      convertedText = convertedText.replace(titlePattern, `@[${content.id}]@`)
+    })
+    
+    return convertedText
+  }, [allLinkableContent])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const messageToSend = shadowInput || currentInput
-    if (messageToSend.trim() && !isLoading && currentInput.length <= maxLength) {
-      // Convert numeric indices to content IDs for backend processing
-      const processedMessage = convertNumericIndicesToContentIds(messageToSend.trim())
-      // Send the processed message (with content IDs) for backend context resolution
+    if (currentInput.trim() && !isLoading && currentInput.length <= maxLength) {
+      // Convert truncated titles back to content IDs before sending
+      const processedMessage = convertTitlesToContentIds(currentInput.trim())
       onSend(processedMessage)
       setCurrentInput('')
-      setShadowInput('')
-      setLinkRegistry([])
     }
   }
 
@@ -392,41 +300,6 @@ export function ChatInput({
     }
   }
 
-  // Handle linking content from the selector
-  const handleLinkContent = useCallback((contentId: string) => {
-    if (!textareaRef.current) return
-    const textarea = textareaRef.current
-    const cursorPos = textarea.selectionStart
-    const textBeforeCursor = textarea.value.substring(0, cursorPos)
-    const atSymbolIndex = textBeforeCursor.lastIndexOf('@')
-    if (atSymbolIndex === -1) return
-    
-    const linkedContent = allLinkableContent?.find(item => item.id === contentId)
-    if (!linkedContent) return
-    
-    // Content ID is already in standardized format: platform:actualId
-    const formattedContentId = contentId
-    const title = linkedContent.title || 'Untitled'
-    const newLinkIndex = linkRegistry.length + 1
-    
-    setLinkRegistry(prev => [...prev, { index: newLinkIndex, contentId: formattedContentId }])
-    
-    const textAfterCursor = textarea.value.substring(cursorPos)
-    const newDisplayText = textarea.value.substring(0, atSymbolIndex) + `@${title}\u200B` + textAfterCursor
-    setCurrentInput(newDisplayText)
-    
-    const currentShadowText = shadowInput || textarea.value
-    const shadowTextBeforeCursor = currentShadowText.substring(0, atSymbolIndex)
-    const shadowTextAfterCursor = currentShadowText.substring(cursorPos)
-    const newShadowText = shadowTextBeforeCursor + `@[${newLinkIndex}]@` + shadowTextAfterCursor
-    setShadowInput(newShadowText)
-    
-    const newCursorPos = atSymbolIndex + `@${title}\u200B`.length
-    textarea.setSelectionRange(newCursorPos, newCursorPos)
-    setShowEnhancedContentSelector(false)
-    setContentSearchTerm('')
-  }, [textareaRef, allLinkableContent, linkRegistry])
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter') {
       if (e.shiftKey) {
@@ -435,17 +308,12 @@ export function ChatInput({
       } else {
         // Send message with Enter
         e.preventDefault()
-        const messageToSend = shadowInput || currentInput
-        if (!messageToSend.trim() || isLoading || characterCount >= maxLength) return
+        if (!currentInput.trim() || isLoading || characterCount >= maxLength) return
         
-        // Convert numeric indices to content IDs for backend processing
-        const processedMessage = convertNumericIndicesToContentIds(messageToSend.trim())
-        // Send the processed message (with content IDs) for backend context resolution
+        // Convert truncated titles back to content IDs before sending
+        const processedMessage = convertTitlesToContentIds(currentInput.trim())
         onSend(processedMessage)
-        
         setCurrentInput('')
-        setShadowInput('')
-        setLinkRegistry([]) // Reset link registry after sending
       }
     }
 
