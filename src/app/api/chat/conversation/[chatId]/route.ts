@@ -25,10 +25,32 @@ async function cleanMessageContent(content: string, role: string, userId: string
     return content;
   }
 
-  // Check if the message starts with [Context] and remove everything up to the actual user message
-  const contextPattern = /^\[Context\][\s\S]*?\n\n/;
-  let cleanedContent = content.replace(contextPattern, '');
-  
+  let cleanedContent = content;
+
+  // Strategy 1: Extract after an explicit user label (case-insensitive), supporting multiple variants
+  const lower = cleanedContent.toLowerCase();
+  const labelVariants = [
+    'user message:',
+    'user question:',
+    "user's message:",
+    "user's question:",
+  ];
+  let bestIdx = -1;
+  let bestLabel = '';
+  for (const lbl of labelVariants) {
+    const idx = lower.lastIndexOf(lbl);
+    if (idx !== -1 && idx >= bestIdx) {
+      bestIdx = idx;
+      bestLabel = lbl;
+    }
+  }
+  if (bestIdx !== -1) {
+    cleanedContent = cleanedContent.slice(bestIdx + bestLabel.length).trimStart();
+  } else {
+    // Strategy 2: Remove any leading [Context ...] block up to the first double newline
+    cleanedContent = cleanedContent.replace(/^\[Context[^\]]*\][\s\S]*?\n\n/, '');
+  }
+
   // Extract content IDs and convert them to titles
   const contentIds = extractContentIds(cleanedContent);
   if (contentIds.length > 0) {
@@ -49,6 +71,12 @@ async function cleanMessageContent(content: string, role: string, userId: string
     }
   }
   
+  // Remove any trailing generic instruction blocks injected by backend prompts
+  cleanedContent = cleanedContent.replace(/\n+Please help[\s\S]*$/i, '');
+
+  // Remove leading markdown emphasis/bullets like "** " or "* " or "__ "
+  cleanedContent = cleanedContent.replace(/^\s*(\*{1,3}|_{1,3})\s+/, '');
+
   return cleanedContent.trim();
 }
 

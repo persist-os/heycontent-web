@@ -100,11 +100,8 @@ export const useChat = (
     const isFirstMessage = !sessionId;
     const backendSessionId = isFirstMessage ? null : sessionId;
 
-    // Inject AI analysis into the query if enabled and available
-    let enhancedQuery = content;
-    if (includeAnalysisInQuery && contentContext?.analysis) {
-      enhancedQuery = `Context for user question:\n\n${contentContext.analysis}\n\n Make sure to address user question in your response\n\n---\n\nUser question: ${content}`;
-    }
+    // Do NOT inject analysis/context into the user message. We pass context separately.
+    const userQuery = content;
 
     console.log('🔗 useChat: Creating message with:', {
       content: content.substring(0, 100) + '...',
@@ -190,7 +187,7 @@ export const useChat = (
         } else {
           await addMessageToConversationMutation({
             userId: userId || '',
-            conversationId: sessionId,
+            conversationId: sessionId as any,
             message: {
               content: trimmedContent,
               role: 'user',
@@ -205,16 +202,16 @@ export const useChat = (
       // Send the enhanced query to the backend (with analysis injected if enabled)
       // Now includes vector search with status updates
       console.log('🔗 useChat: Sending to backend:', {
-        enhancedQuery: enhancedQuery.substring(0, 100) + '...',
-        hasContentLinks: enhancedQuery.includes('@[')
+        userQueryPreview: userQuery.substring(0, 100) + '...',
+        hasContentLinks: userQuery.includes('@[')
       })
       
       const data = await sendChatMessage(
-        enhancedQuery, 
+        userQuery, 
         isFirstMessage, 
         backendSessionId, 
         contentContext, 
-        includeAnalysisInQuery && !!contentContext?.analysis,
+        false,
         handleStatusUpdate, // Pass status update callback
         useContextSearch // Pass context search toggle
       );
