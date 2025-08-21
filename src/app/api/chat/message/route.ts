@@ -194,51 +194,6 @@ export async function POST(request: Request) {
         hasId: 'id' in item
       })));
 
-      // Create a context message with all linked content
-      const linkContextMessages = resolvedLinkContent.map((item: any) => {
-        let contentType = 'Content';
-        
-        // Map content types to human-readable labels
-        switch (item.type) {
-          case 'smart_note':
-            contentType = 'Smart Note';
-            break;
-          case 'youtube':
-            contentType = 'YouTube Video Analysis';
-            break;
-          case 'instagram':
-            contentType = 'Instagram Post Analysis';
-            break;
-          case 'gmail':
-            contentType = 'Gmail Thread';
-            break;
-          case 'insight':
-            contentType = 'AI Insight';
-            break;
-          case 'conversation':
-            contentType = 'Conversation';
-            break;
-          default:
-            contentType = item.type ? `${item.type.charAt(0).toUpperCase() + item.type.slice(1)}` : 'Content';
-        }
-        
-        // Debug: log the content to see what we're working with
-        console.log(`[${requestId}] Processing ${contentType} content:`, {
-          type: item.type,
-          title: item.title,
-          contentType: typeof item.content,
-          contentLength: item.content?.length || 0,
-          contentPreview: typeof item.content === 'string' ? item.content.substring(0, 200) : JSON.stringify(item.content).substring(0, 200)
-        });
-        
-        // Ensure content is a string
-        const contentString = typeof item.content === 'string' ? item.content : JSON.stringify(item.content);
-        
-        return `[${contentType}: ${item.title}]\n${contentString}`;
-      });
-
-      const linkContextText = linkContextMessages.join('\n\n');
-      
       // Replace link tokens in the user message with titles using the already resolved link content
       // Note: userMessageWithTitles is already declared globally above
       
@@ -361,7 +316,7 @@ export async function POST(request: Request) {
         }
       }
       
-      // Replace each link token with its title
+      // Replace each link token with its title in the echoed user message only
       userMessageWithTitles = userMessageWithTitles.replace(/@\[([^\]]+)\]@/g, (match, contentId) => {
         const title = contentIdToTitle.get(contentId);
         return title ? `[${title}]` : match;
@@ -372,21 +327,42 @@ export async function POST(request: Request) {
         replaced: userMessageWithTitles,
         contentIdToTitle: Object.fromEntries(contentIdToTitle)
       });
-      
-      // Inject the link content context into the query
-      const enhancedQuery = `[Context from linked content]\n\n${linkContextText}\n\n---\n\nUser message: ${userMessageWithTitles}`;
-      
-      console.log(`[${requestId}] Enhanced query with link content:`, {
-        originalLength: query.length,
-        enhancedLength: enhancedQuery.length,
-        linkContentCount: resolvedLinkContent.length,
-        userMessageWithTitles
+    }
+
+    // If we have resolved link content, also construct a human-readable context and inject it into the query
+    if (resolvedLinkContent && Array.isArray(resolvedLinkContent) && resolvedLinkContent.length > 0) {
+      const linkContextMessages = resolvedLinkContent.map((item: any) => {
+        let contentType = 'Content';
+        switch (item.type) {
+          case 'smart_note':
+            contentType = 'Smart Note';
+            break;
+          case 'youtube':
+            contentType = 'YouTube Video Analysis';
+            break;
+          case 'instagram':
+            contentType = 'Instagram Post Analysis';
+            break;
+          case 'gmail':
+            contentType = 'Gmail Thread';
+            break;
+          case 'insight':
+            contentType = 'AI Insight';
+            break;
+          case 'conversation':
+            contentType = 'Conversation';
+            break;
+          default:
+            contentType = item.type ? `${item.type.charAt(0).toUpperCase() + item.type.slice(1)}` : 'Content';
+        }
+        const contentString = typeof item.content === 'string' ? item.content : JSON.stringify(item.content);
+        return `[${contentType}: ${item.title}]\n${contentString}`;
       });
 
-      // Update the query with the enhanced version
+      const linkContextText = linkContextMessages.join('\n\n');
+      const enhancedQuery = `[Context from linked content]\n\n${linkContextText}\n\n---\n\nUser message: ${userMessageWithTitles}`;
       backendRequestBody.query = enhancedQuery;
     } else {
-      // If no link content, use the original query
       backendRequestBody.query = query;
     }
 

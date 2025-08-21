@@ -165,6 +165,8 @@ export default defineSchema({
       content: v.string(),
       role: v.string(),
       timestamp: v.optional(v.number()),
+      // Optional hidden context used during generation, never shown in UI
+      context: v.optional(v.string()),
     })),
     createdAt: v.number(),
     updatedAt: v.number(),
