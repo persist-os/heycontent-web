@@ -11,6 +11,7 @@ export const createConversation = mutation({
         content: v.string(),
         role: v.union(v.literal("user"), v.literal("assistant")),
         timestamp: v.number(),
+        context: v.optional(v.string()),
       })),
     },
     handler: async (ctx, args) => {
@@ -35,9 +36,10 @@ args: {
     userId: v.string(),
     conversationId: v.id("conversations"),
     message: v.object({
-    content: v.string(),
-    role: v.union(v.literal("user"), v.literal("assistant")),
-    timestamp: v.number(),
+      content: v.string(),
+      role: v.union(v.literal("user"), v.literal("assistant")),
+      timestamp: v.number(),
+      context: v.optional(v.string()),
     }),
 },
 handler: async (ctx, args) => {
