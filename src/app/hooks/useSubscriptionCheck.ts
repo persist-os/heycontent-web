@@ -4,8 +4,8 @@ import { useQuery } from 'convex/react';
 import { api } from '@/../convex/_generated/api';
 
 type SubscriptionStatus = {
-  status: 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired' | 'dev' | 'tester' | 'trialing' | 'paused' | 'deleted' | 'unknown' | null;
-  plan?: 'monthly_basic' | 'monthly_pro' | 'yearly_basic' | 'yearly_pro' | null;
+  status: 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired' | 'dev' | 'tester' | 'trialing' | 'paused' | 'deleted' | 'unknown' | 'free' | null;
+  plan?: 'monthly_basic' | 'monthly_pro' | 'yearly_basic' | 'yearly_pro' | 'monthly_free' | null;
   currentPeriodEnd?: number;
   cancelAtPeriodEnd?: boolean;
   isSubscribed: boolean;
@@ -42,21 +42,16 @@ export function useSubscriptionCheck(requiredPlan: SubscriptionPlan = 'free') {
       }
       
       if (subscriptionData === null) {
-        // No subscription data - treat as not subscribed
-        const status = {
-          status: null,
-          isSubscribed: false
+        // No subscription data - treat as free tier user
+        const status: SubscriptionStatus = {
+          status: 'free',
+          isSubscribed: true,  // Free users are considered "subscribed" to the free tier
+          plan: 'monthly_free'
         };
         setSubscriptionStatus(status);
         
-        if (requiredPlan !== 'free') {
-          setIsSubscribed(false);
-          if (!window.location.pathname.startsWith('/dashboard/subscribe-tab/subscription')) {
-            window.location.href = '/dashboard/subscribe-tab/subscription';
-          }
-        } else {
-          setIsSubscribed(true);
-        }
+        // Free tier users can access basic features
+        setIsSubscribed(true);
         return;
       }
       
@@ -66,20 +61,31 @@ export function useSubscriptionCheck(requiredPlan: SubscriptionPlan = 'free') {
         plan: subscriptionData.plan || null,
         currentPeriodEnd: subscriptionData.currentPeriodEnd,
         cancelAtPeriodEnd: subscriptionData.cancelAtPeriodEnd,
-        isSubscribed: ['active', 'trialing', 'dev', 'tester'].includes(subscriptionData.status || ''),
+        isSubscribed: ['active', 'trialing', 'dev', 'tester', 'free'].includes(subscriptionData.status || ''),
         includedRequests: subscriptionData.includedRequests,
         usedRequests: subscriptionData.usedRequests
       };
       
       setSubscriptionStatus(status);
       
-      if (requiredPlan !== 'free' && !status.isSubscribed) {
-        setIsSubscribed(false);
+      // Check if user meets the required plan level
+      if (requiredPlan === 'free') {
+        // Free tier is always accessible
+        setIsSubscribed(true);
+      } else if (requiredPlan === 'basic') {
+        // Basic features require at least free tier
+        setIsSubscribed(status.isSubscribed);
+      } else if (requiredPlan === 'pro') {
+        // Pro features require pro subscription
+        const isProUser = status.plan?.includes('pro') || false;
+        setIsSubscribed(isProUser);
+      }
+      
+      // Only redirect if user doesn't meet the required plan level
+      if (!status.isSubscribed && requiredPlan !== 'free') {
         if (!window.location.pathname.startsWith('/dashboard/subscribe-tab/subscription')) {
           window.location.href = '/dashboard/subscribe-tab/subscription';
         }
-      } else {
-        setIsSubscribed(true);
       }
     } catch (err) {
       console.error('Error checking subscription:', err);

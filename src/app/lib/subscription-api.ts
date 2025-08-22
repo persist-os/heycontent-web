@@ -450,6 +450,39 @@ export async function checkRateLimit(
 }
 
 /**
+ * Creates a free tier subscription for a user
+ * 
+ * @param apiKey - The API key for authentication
+ * @param userId - The user ID
+ * @param email - The user's email
+ * @param name - The user's name
+ * @returns The free tier subscription response
+ */
+export async function createFreeTierSubscription(
+  apiKey: string,
+  userId: string,
+  email: string,
+  name: string
+): Promise<any> {
+  const { response, data } = await callSubscriptionAPI(
+    '/subscription/free-tier',
+    'POST',
+    apiKey,
+    {
+      user_id: userId,
+      email: email,
+      name: name
+    }
+  );
+  
+  if (!response.ok) {
+    throw new Error(data?.error || 'Failed to create free tier subscription');
+  }
+  
+  return data;
+}
+
+/**
  * Creates a customer portal session for managing subscriptions
  * 
  * @param apiKey - The API key for authentication
