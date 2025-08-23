@@ -59,7 +59,8 @@ export const saveSubscription = mutation({
       v.literal("monthly_basic"),
       v.literal("monthly_pro"),
       v.literal("yearly_basic"),
-      v.literal("yearly_pro")
+      v.literal("yearly_pro"),
+      v.literal("monthly_free")
     ),
     priceId: v.string(),
     meteredPriceId: v.optional(v.string()),

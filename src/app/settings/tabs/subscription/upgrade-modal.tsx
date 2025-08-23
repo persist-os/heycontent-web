@@ -155,6 +155,58 @@ export default function UpgradeModal({
     if (!selectedPlanData) {
       return;
     }
+    
+    // Handle free tier - create subscription via API
+    if (planId === 'free') {
+      setLoading(true);
+      try {
+        const apiKey = await getApiKey();
+        if (!apiKey) {
+          throw new Error('No API key found. Please log in again.');
+        }
+        
+        // Call the free tier subscription endpoint
+        const response = await fetch('/api/subscription/free-tier', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            userId: firebaseUser?.uid,
+            email: firebaseUser?.email || '',
+            name: firebaseUser?.displayName || ''
+          })
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to create free subscription: ${response.status} ${errorText}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          // Free subscription created successfully
+          if (context === 'registration') {
+            onSelectPlan('free');
+          } else {
+            onClose();
+            // Refresh the page to show updated subscription status
+            window.location.reload();
+          }
+        } else {
+          throw new Error(result.error || 'Failed to create free subscription');
+        }
+      } catch (error) {
+        console.error('Error creating free subscription:', error);
+        // Handle error - could show a toast notification here
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+    
     // Use the price_id from the selected interval plan
     const priceId = selectedPlanData.price_id;
     if (!priceId) {

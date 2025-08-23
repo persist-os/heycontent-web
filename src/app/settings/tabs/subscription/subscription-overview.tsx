@@ -374,8 +374,8 @@ export default function SubscriptionOverview() {
 
   if (error) return <div className="p-8 text-center text-red-600">{error}</div>;
 
-  // If user doesn't have an active subscription, show the checkout form
-  if (!status?.is_subscribed) {
+  // If user doesn't have any subscription (including free), show the checkout form
+  if (!status || (!status.is_subscribed && !status.plan_type)) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[300px] py-12 px-4 w-full">
         <div className="w-full max-w-4xl mx-auto">
