@@ -63,21 +63,46 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
   };
 
   const handleUpgradeClose = () => {
-    // Prevent accidental closing of the payment modal
-    // We'll keep this empty to ensure users complete the payment flow
-    // The modal will close automatically after successful payment
+    // Allow users to skip payment and access free tier
+    setStep('chat');
+    // Redirect to dashboard with a welcome parameter to trigger the onboarding message
+    router.push("/dashboard/chat?welcome=true");
+  };
+
+  const handleSelectPlan = (planId: string) => {
+    if (planId === 'free') {
+      // Free tier selected - redirect to dashboard
+      setStep('chat');
+      router.push("/dashboard/chat?welcome=true");
+    } else {
+      // Paid plan selected - continue to waitlist
+      setStep('waitlist');
+    }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background/80 via-muted/20 to-background/80 p-4">
       <div className="w-full max-w-md">
         {step === 'payment' && (
-          <UpgradeModal
-            open={true}
-            onClose={handleUpgradeClose}
-            onSelectPlan={() => setStep('waitlist')}
-            context="registration"
-          />
+          <div className="space-y-4">
+            <UpgradeModal
+              open={true}
+              onClose={handleUpgradeClose}
+              onSelectPlan={handleSelectPlan}
+              context="registration"
+            />
+            <div className="text-center">
+              <p className="text-muted-foreground mb-2 text-sm">
+                Want to try HeyContent first?
+              </p>
+              <button
+                className="text-blue-600 hover:text-blue-700 underline text-sm"
+                onClick={handleUpgradeClose}
+              >
+                Skip for now - Start with free tier
+              </button>
+            </div>
+          </div>
         )}
         
         {step === 'register' && !registrationSuccess && (

@@ -42,7 +42,7 @@ export default function DashboardLayout({
     isSubscribed, 
     isLoading: isSubscriptionLoading, 
     error: subscriptionError 
-  } = useSubscriptionCheck(isPublicPath ? 'free' : 'basic');
+  } = useSubscriptionCheck(isPublicPath ? 'free' : 'free');
 
   // Monitor API key validity (only when authenticated)
   useApiKeyMonitor(); // 🔒 ENABLED: Provides immediate logout when logged in elsewhere
