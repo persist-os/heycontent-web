@@ -12,6 +12,7 @@ import { useSidebar } from '@/app/context/sidebar-context'
 import { getApiKey } from '@/app/lib/api-helpers'
 import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDialog'
 import { useAdminAuth } from '@/app/lib/admin-auth'
+import { usePlatformConnections } from '@/app/hooks/usePlatformConnections'
 
 const navItems = [
   {
@@ -21,12 +22,21 @@ const navItems = [
     href: '/dashboard/chat',
     dataAttr: 'data-chat-link',
   },
+  // Timeline - completely hidden
+  // {
+  //   id: 'timeline',
+  //   label: 'Timeline',
+  //   icon: Clock,
+  //   href: '/dashboard/timeline',
+  //   dataAttr: 'data-timeline-link',
+  // },
   {
     id: 'content-hub',
     label: 'Content Hub',
     icon: BarChart3,
     href: '/dashboard/content-hub',
     dataAttr: 'data-content-hub-link',
+    requiresConnection: 'instagram_or_youtube', // Hidden until Instagram OR YouTube is connected
   },
   {
     id: 'notes',
@@ -41,6 +51,7 @@ const navItems = [
     icon: Handshake,
     href: '/dashboard/partnerships',
     dataAttr: 'data-partnerships-link',
+    requiresConnection: 'gmail', // Hidden until Gmail is connected
   },
 ]
 
@@ -79,13 +90,25 @@ export const DashboardNav = memo(function DashboardNav() {
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   
+  // Get platform connections for conditional navigation
+  const platformConnections = usePlatformConnections();
+  
   // Refs for throttling
   const lastMouseMoveTime = useRef(0);
   const mouseMoveThrottleMs = 100; // Throttle to 10fps max
 
-  // Build nav items based on user permissions
+  // Build nav items based on user permissions and platform connections
   const dynamicNavItems = [
-    ...navItems,
+    ...navItems.filter(item => {
+      // Filter out items based on connection requirements
+      if (item.requiresConnection === 'gmail') {
+        return platformConnections.gmail;
+      }
+      if (item.requiresConnection === 'instagram_or_youtube') {
+        return platformConnections.instagram || platformConnections.youtube;
+      }
+      return true; // Show items without connection requirements
+    }),
     // Only show admin to users with admin access
     ...(canAccessAdmin ? [{
       id: 'admin',

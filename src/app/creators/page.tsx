@@ -1,5 +1,6 @@
-import AmbassadorPage from './AmbassadorPage';
+// Creators page - completely hidden
+// import AmbassadorPage from './AmbassadorPage';
 
-export default function ReferralPage() {
-  return <AmbassadorPage />;
-}
+// export default function ReferralPage() {
+//   return <AmbassadorPage />;
+// }

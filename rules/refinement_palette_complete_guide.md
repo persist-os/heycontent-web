@@ -35,6 +35,8 @@ src/app/dashboard/notes/hooks/
 
 ### **Generation Mode (No Text Selected)**
 1. User presses `Cmd+K` or `/` → Command palette opens
+// Command+K shortcut - hidden since command palette is disabled
+// 1. User presses `Cmd+K` or `/` → Command palette opens
 2. Shows content creation commands (AI generation, formatting, etc.)
 3. User selects command → Content is inserted at cursor position
 4. Behavior identical to existing implementation
