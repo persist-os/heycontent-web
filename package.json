@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "next lint",
     "test": "node --max-old-space-size=4096 ./node_modules/.bin/jest",
-    "test:watch": "node --max-old-space-size=4096 ./node_modules/.bin/jest --watch"
+    "test:watch": "node --max-old-space-size=4096 ./node_modules/.bin/jest --watch",
+    "benchmark": "tsx src/benchmarking/cli.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.15.0",
