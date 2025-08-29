@@ -5,7 +5,6 @@ import React from 'react'
 import { ArrowRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { Logo } from './logo'
-import { WaitlistButton } from '@/app/waitlist/_components/WaitlistButton'
 
 console.log('[HeroSection] Module loaded');
 
@@ -21,7 +20,6 @@ export function HeroSection() {
   const [currentSuggestion, setCurrentSuggestion] = useState(0)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [showFloatingSearch, setShowFloatingSearch] = useState(false)
-  const [showWaitlist, setShowWaitlist] = useState(false)
   const [showCursor, setShowCursor] = useState(true)
   const router = useRouter()
 
@@ -55,14 +53,6 @@ export function HeroSection() {
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
-
-  const handleWaitlistComplete = () => {
-    setShowWaitlist(false)
-  }
-
-  const handleStageChange = (stage: 'register' | 'queue' | 'card') => {
-    console.log('Waitlist stage changed:', stage)
-  }
 
   return (
     <div className="bg-gradient-to-r from-background/80 via-muted/20 to-background/80 min-h-[80vh] flex flex-col">
@@ -197,12 +187,12 @@ export function HeroSection() {
 
         <div className="text-center">
           <p className="text-muted-foreground mb-4">Everything you want to think through, remember, or come back to, all in one place.</p>
-          <div
-            onClick={() => router.push('/waitlist')}
-            className="inline-block cursor-pointer"
+          <button
+            onClick={() => router.push('/auth/register')}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-medium transition-colors"
           >
-            <WaitlistButton size="large" />
-          </div>
+            Get Started
+          </button>
         </div>
       </div>
 

@@ -9,7 +9,7 @@ import { InlineReplyProvider } from './context/inline-reply-context'
 import { Analytics } from "@vercel/analytics/next"
 
 export const metadata: Metadata = {
-  title: 'HeyContent',
+  title: 'HeyContext',
   description: 'AI-powered platform for people',
 }
 

@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { getFirebaseAuth } from '@/app/lib/firebase';
-import { WaitlistButton } from '@/app/waitlist/_components/WaitlistButton';
+
 import { Logo } from '@/components/ui/logo';
 import { motion } from "framer-motion";
 import Cookies from 'js-cookie';
@@ -188,15 +188,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, reason }) => {
               <a href="/auth/register" className="text-sm text-muted-foreground hover:text-foreground">
                 Don't have an account? <span className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium">Sign up</span>
               </a>
-            </div>
-            <div className="pt-4 border-t border-border">
-              <p className="text-sm text-muted-foreground text-center mb-3">
-                Want to be a beta tester?<br />
-                Get early access to creator tools and mobile features below.
-              </p>
-              <div className="flex justify-center">
-                <WaitlistButton />
-              </div>
             </div>
           </div>
         </form>

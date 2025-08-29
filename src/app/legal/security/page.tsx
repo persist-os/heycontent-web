@@ -39,7 +39,7 @@ export default function Security() {
             Data Protection
           </h2>
           <p className="text-lg leading-8">
-            We take reasonable steps to protect your data and maintain the integrity of HeyContent. Only authorized personnel may access your data for support or technical reasons. No system is completely secure, and we cannot guarantee absolute security.
+            We take reasonable steps to protect your data and maintain the integrity of HeyContext. Only authorized personnel may access your data for support or technical reasons. No system is completely secure, and we cannot guarantee absolute security.
           </p>
         </section>
 
@@ -61,7 +61,7 @@ export default function Security() {
           <ul className="space-y-3 ml-6">
             <li className="flex items-start">
               <span className="w-2 h-2 bg-muted-foreground rounded-full mt-2.5 mr-3 flex-shrink-0"></span>
-              You control your account and data within HeyContent.
+              You control your account and data within HeyContext.
             </li>
             <li className="flex items-start">
               <span className="w-2 h-2 bg-muted-foreground rounded-full mt-2.5 mr-3 flex-shrink-0"></span>
@@ -78,7 +78,7 @@ export default function Security() {
         <section className="space-y-6 border-t border-border pt-12">
           <h2 className="text-3xl font-medium text-foreground border-b border-border pb-3">Cookie Policy</h2>
           <p>
-            This Cookie Policy explains how Divertissement AI, Inc. ("Company," "we," "us," and "our") uses cookies and similar technologies to recognize you when you visit our website at <a href="https://www.heycontent.co" className="text-blue-600 dark:text-blue-400 hover:underline">https://www.heycontent.co</a> ("Website"). It explains what these technologies are and why we use them, as well as your rights to control our use of them.
+            This Cookie Policy explains how Divertissement AI, Inc. ("Company," "we," "us," and "our") uses cookies and similar technologies to recognize you when you visit our website at <a href="https://www.HeyContext.co" className="text-blue-600 dark:text-blue-400 hover:underline">https://www.HeyContext.co</a> ("Website"). It explains what these technologies are and why we use them, as well as your rights to control our use of them.
           </p>
           <p>
             In some cases we may use cookies to collect personal information, or that becomes personal information if we combine it with other information.
@@ -105,7 +105,7 @@ export default function Security() {
               <tbody>
                 <tr>
                   <td className="px-4 py-2 border-b border-border">firebase-auth-token</td>
-                  <td className="px-4 py-2 border-b border-border">www.heycontent.co</td>
+                  <td className="px-4 py-2 border-b border-border">www.HeyContext.co</td>
                   <td className="px-4 py-2 border-b border-border">First-party cookie</td>
                   <td className="px-4 py-2 border-b border-border">Used to keep you signed in and authenticate your session securely.</td>
                   <td className="px-4 py-2 border-b border-border">1 week or until logout</td>
@@ -129,7 +129,7 @@ export default function Security() {
               </thead>
               <tbody>
                 <tr>
-                  <td className="px-4 py-2 border-b border-border">heycontent-sidebar-state</td>
+                  <td className="px-4 py-2 border-b border-border">HeyContext-sidebar-state</td>
                   <td className="px-4 py-2 border-b border-border">localStorage</td>
                   <td className="px-4 py-2 border-b border-border">Remembers if your sidebar is open or closed.</td>
                   <td className="px-4 py-2 border-b border-border">Persistent (until you clear your browser storage)</td>
@@ -139,7 +139,7 @@ export default function Security() {
           </div>
           <h3 className="text-xl font-medium text-foreground mt-8">How can I control cookies?</h3>
           <p>
-            You have the right to decide whether to accept or reject cookies. You can set your browser to refuse all cookies or to indicate when a cookie is being sent. However, if you do not accept our authentication cookie, you may not be able to use some parts of HeyContent.
+            You have the right to decide whether to accept or reject cookies. You can set your browser to refuse all cookies or to indicate when a cookie is being sent. However, if you do not accept our authentication cookie, you may not be able to use some parts of HeyContext.
           </p>
           <h3 className="text-xl font-medium text-foreground mt-8">Other tracking technologies</h3>
           <p>

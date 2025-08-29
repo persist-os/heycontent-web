@@ -26,8 +26,7 @@ export function useCommandPaletteState() {
 
   // Check if we're on a route where command palette should be disabled
   const isCommandPaletteDisabled = pathname === '/' || 
-                                   pathname.startsWith('/auth/') || 
-                                   pathname.startsWith('/waitlist');
+                                   pathname.startsWith('/auth/');
 
   // Debounced search effect with longer delay to prevent violations
   useEffect(() => {
