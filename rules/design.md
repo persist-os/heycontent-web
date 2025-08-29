@@ -1,29 +1,29 @@
 # Design & Styling Rules
 
-This document outlines the visual and styling conventions for the HeyContent frontend. Adhering to these rules ensures a consistent, accessible, and on-brand user experience.
+This document outlines the visual and styling conventions for HeyContext, a private AI workspace. Adhering to these rules ensures a consistent, accessible, and calming user experience.
 
 ## Core Principles
 
-- **Minimalism**: Prioritize whitespace, clarity, and a strong visual hierarchy.
-- **Typography-First**: Use typography to define structure and guide the user's attention.
-- **Mobile-First**: Design and build for mobile screens first, then scale up to larger viewports.
-- **Accessibility**: Ensure all components are accessible and follow best practices.
-- **Performance**: Optimize for fast, smooth animations and transitions.
-- **Consistency**: Maintain a consistent visual language across the app.
-- **Branding**: Ensure all components are on-brand and reflect the HeyContent identity.
-- **Responsiveness**: Design for a wide range of screen sizes and devices.
-- **Performance**: Optimize for fast, smooth animations and transitions.*
-- **Never use loading screens, always use skeletons.**: Ensure that all components use skeletons instead of loading screens. Use @skeleton.ts when possible.
+- **Calm & Supportive**: Design that feels safe and non-judgmental
+- **Human-Centered**: Accessible to everyone, regardless of technical background
+- **Privacy-First**: Visual design reinforces personal, private workspace
+- **Memory-Focused**: Design supports continuity and context across interactions
+- **Minimalism**: Prioritize clarity and reduce cognitive load
+- **Typography-First**: Use typography to create hierarchy and guide attention
+- **Mobile-First**: Design for mobile screens first, then scale up
+- **Accessibility**: Ensure all components work for users with different needs
+- **Performance**: Optimize for smooth, responsive interactions
+- **Never use loading screens, always use skeletons**: Use @skeleton.ts when possible
 
 ---
 
 ## Color System
 
-Our theming is built on `next-themes` and TailwindCSS, utilizing CSS variables for dynamic color switching.
+Our theming is built on `next-themes` and TailwindCSS, utilizing CSS variables for dynamic color switching. The color palette supports a calm, personal workspace aesthetic.
 
 ### Semantic Colors
 
-**NEVER use hardcoded colors.** Always use the semantic CSS variables provided. This is critical for theme consistency and future updates.
+**NEVER use hardcoded colors.** Always use the semantic CSS variables provided. This is critical for theme consistency and the calming user experience.
 
 | Class | CSS Variable | Light Mode (HSL) | Dark Mode (HSL) | Description |
 |---|---|---|---|---|
@@ -48,9 +48,9 @@ Our theming is built on `next-themes` and TailwindCSS, utilizing CSS variables f
 
 ### Custom Brand Colors
 
-Use these for specific, branded elements that don't fit the semantic model.
+Use these for specific elements that reinforce the personal workspace aesthetic.
 
-| Name | Class (`bg-heycontent-*`) | Hex |
+| Name | Class (`bg-heycontext-*`) | Hex |
 |---|---|---|
 | Yellow | `yellow` | `#FFDF39` |
 | Purple | `purple` | `#9046FF` |
@@ -63,61 +63,135 @@ Use these for specific, branded elements that don't fit the semantic model.
 
 ## Typography
 
-- **Default Fonts**: The project uses system fonts for the main UI to prioritize performance and a native feel.
-- **Chat Interface**: For the chat UI, use the `.chat-font` class to apply the "Söhne" font stack for a more polished, conversational feel.
+- **Default Fonts**: System fonts for main UI to prioritize performance and native feel
+- **Chat Interface**: Use `.chat-font` class for "Söhne" font stack for conversational warmth
+- **Tone**: All text should feel supportive and accessible, never intimidating or technical
+
+### Text Hierarchy
+
+- **Headers**: Clear hierarchy that guides understanding without overwhelming
+- **Body Text**: Comfortable reading size and line height for extended use
+- **Interface Text**: Clear labels that anyone can understand
 
 ---
 
 ## Sizing and Spacing
 
-- **Base Unit**: The base unit for spacing and sizing is `rem`.
-- **Container**: Use the `container` class for centered, max-width content layouts. It applies padding and has a max-width of `1400px` on `2xl` screens.
-- **Border Radius**: The border radius is controlled by the `--radius` CSS variable.
+- **Base Unit**: Use `rem` for consistent spacing across devices
+- **Container**: Use `container` class for centered, max-width content layouts (max-width: `1400px` on `2xl` screens)
+- **Border Radius**: Controlled by `--radius` CSS variable
   - `--radius`: `0.5rem`
   - `rounded-lg`: `var(--radius)`
   - `rounded-md`: `calc(var(--radius) - 2px)`
   - `rounded-sm`: `calc(var(--radius) - 4px)`
 
+### Spacing Philosophy
+
+- **Generous Whitespace**: Allow content to breathe and reduce cognitive load
+- **Consistent Patterns**: Predictable spacing that users can rely on
+- **Mobile Comfort**: Touch-friendly spacing on mobile devices
+
 ---
 
 ## Animations
 
-The following animations are available as Tailwind utility classes.
+Animations should feel calm and supportive, never jarring or attention-seeking.
 
 | Class (`animate-*`) | Keyframes | Description |
 |---|---|---|
-| `accordion-down` | `accordion-down` | Slides content down from a height of 0. |
-| `accordion-up` | `accordion-up` | Slides content up to a height of 0. |
-| `bounce-delay-*` | `bounce-delay-*` | A bouncing animation with staggered delays. |
-| `pulse-slow` | `pulse-slow` | A slow, subtle pulsing animation. |
-| `shine` | `shine` | A shimmering shine effect that moves across an element. |
-| `fade-in` | `fade-in` | Fades an element in. |
-| `float` / `float-subtle` | `float` | A gentle floating animation. |
+| `accordion-down` | `accordion-down` | Gentle slide down for expanding content |
+| `accordion-up` | `accordion-up` | Gentle slide up for collapsing content |
+| `bounce-delay-*` | `bounce-delay-*` | Subtle bouncing with staggered delays |
+| `pulse-slow` | `pulse-slow` | Gentle, slow pulsing for loading states |
+| `shine` | `shine` | Subtle shimmer effect for interactive elements |
+| `fade-in` | `fade-in` | Smooth fade-in for new content |
+| `float` / `float-subtle` | `float` | Gentle floating animation for accent elements |
+
+### Animation Principles
+
+- **Subtle Over Flashy**: Animations should support understanding, not distract
+- **Calm Timing**: Use slower, more natural timing curves
+- **Purposeful**: Every animation should serve a functional purpose
 
 ---
 
 ## Custom Utilities
 
-- `.line-clamp-[2|3|4]`: Truncates text to a specific number of lines.
-- `.hide-scrollbar`: Hides the scrollbar for an element.
-- `.custom-scrollbar`: Applies custom, minimal scrollbar styling.
-- `.text-wrap-balance`: Prevents single "orphan" words on the last line of a text block.
-
-### Theme Toggle
-
-The theme toggle component must:
-- Support Light, Dark, and System modes.
-- Use appropriate accessibility labels (`aria-label`).
-- Handle client-side hydration correctly to avoid theme flicker, typically by showing a loading state or placeholder.
+- `.line-clamp-[2|3|4]`: Truncates text to specific number of lines for clean layouts
+- `.hide-scrollbar`: Hides scrollbars for cleaner appearance
+- `.custom-scrollbar`: Applies minimal, unobtrusive scrollbar styling
+- `.text-wrap-balance`: Prevents awkward single words on final lines
 
 ---
 
-## Components
+## Component Guidelines
 
 ### Theme Toggle
 
-The theme toggle component is a critical piece of the UI and must adhere to the following rules:
+The theme toggle reinforces user control and personal preference:
 
-- **Modes**: Must support Light, Dark, and System settings.
-- **Accessibility**: Must use proper `aria-label` attributes for screen readers.
-- **Hydration**: Must handle client-side hydration correctly to avoid theme "flicker" on page load. This is typically done by showing a loading state or a placeholder icon until the theme is determined. 
+- **Modes**: Must support Light, Dark, and System settings
+- **Accessibility**: Proper `aria-label` attributes for all users
+- **Hydration**: Handle client-side hydration to avoid theme flicker
+- **Visual Feedback**: Clear indication of current theme state
+
+### Interactive Elements
+
+- **Touch-Friendly**: Minimum 44px touch targets on mobile
+- **Clear States**: Obvious hover, focus, and active states
+- **Consistent Behavior**: Predictable interaction patterns throughout
+
+### Content Areas
+
+- **Breathing Room**: Generous padding and margins for comfortable reading
+- **Logical Grouping**: Visual hierarchy that supports understanding
+- **Scannable Layout**: Easy to quickly understand and navigate
+
+---
+
+## Privacy-First Visual Design
+
+### No Social Elements
+
+- No profile pictures or avatars in main interface
+- No sharing buttons or social indicators
+- No public activity feeds or timelines
+- No follower counts or social metrics
+
+### Personal Workspace Metaphors
+
+- Use notebook, journal, and workspace visual metaphors
+- Emphasize personal organization over public performance
+- Design elements that feel private and contained
+- Avoid business or productivity tool aesthetics
+
+### Supportive Visual Language
+
+- Warm, approachable colors over corporate schemes
+- Gentle curves and soft edges over sharp, aggressive lines
+- Comfortable spacing that invites extended use
+- Visual cues that reinforce safety and privacy
+
+---
+
+## Accessibility Requirements
+
+### Universal Design
+
+- **Color Independence**: Information never conveyed by color alone
+- **Contrast Compliance**: Meet or exceed WCAG AA standards
+- **Keyboard Navigation**: All interactive elements keyboard accessible
+- **Screen Reader Support**: Proper semantic markup and ARIA labels
+
+### Language Accessibility
+
+- **Plain Language**: Avoid jargon, technical terms, or business speak
+- **Clear Instructions**: Simple, direct guidance for all interactions
+- **Error Messages**: Helpful, non-technical error explanations
+- **Consistent Terminology**: Same words for same concepts throughout
+
+---
+
+## Summary
+
+HeyContext's design should feel like a calm, private space that anyone can use comfortably. Every visual decision should support the core values of privacy, accessibility, and human-centered design. The interface should feel more like a trusted friend's notebook than a corporate productivity tool.
