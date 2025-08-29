@@ -15,31 +15,31 @@ interface ModeSelectorProps {
 // Note type configuration with icons and labels
 const NOTE_TYPE_CONFIG: Record<NoteType, { label: string; icon: React.ReactNode }> = {
   idea_bank: { 
-    label: 'Things On My Mind', 
+    label: 'Ideas', 
     icon: <Lightbulb className="w-4 h-4" /> 
   },
   content_script: { 
-    label: 'Things I\'m Writing Out', 
+    label: 'Writing', 
     icon: <FileText className="w-4 h-4" /> 
   },
   analytics_insight: { 
-    label: 'What I Don\'t Want to Forget', 
+    label: 'Insights', 
     icon: <BarChart3 className="w-4 h-4" /> 
   },
   collaboration_note: { 
-    label: 'Things About People I Care About', 
+    label: 'People', 
     icon: <Users className="w-4 h-4" /> 
   },
   reflection_journal: { 
-    label: 'Trying to Figure Something Out', 
+    label: 'Reflection', 
     icon: <BookOpen className="w-4 h-4" /> 
   },
   task_checklist: { 
-    label: 'Things I Need to Handle', 
+    label: 'Tasks', 
     icon: <CheckSquare className="w-4 h-4" /> 
   },
   email_draft: { 
-    label: 'Things I\'m Writing Out', 
+    label: 'Messages', 
     icon: <FileText className="w-4 h-4" /> 
   }
 };

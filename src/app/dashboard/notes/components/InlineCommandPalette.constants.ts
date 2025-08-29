@@ -2,13 +2,13 @@ import React from 'react';
 import { Lightbulb, FileText, Users, BarChart3, BookOpen, CheckSquare, Link } from 'lucide-react';
 
 export const NOTE_TYPES = [
-  { value: 'idea_bank', label: 'Things On My Mind', description: 'For whatever\'s floating around in your head - capture it before it disappears' },
-  { value: 'content_script', label: 'Things I\'m Writing Out', description: 'When you need to get your thoughts organized and flowing clearly' },
-  { value: 'analytics_insight', label: 'What I Don\'t Want to Forget', description: 'Hold onto something you learned or figured out so you can come back to it' },
-  { value: 'collaboration_note', label: 'Things About People I Care About', description: 'Keep track of the relationships and connections that matter to you' },
-  { value: 'reflection_journal', label: 'Trying to Figure Something Out', description: 'When you need space to work through something complicated step by step' },
-  { value: 'task_checklist', label: 'Things I Need to Handle', description: 'Sort out what needs to get done so you don\'t forget anything important' },
-  { value: 'email_draft', label: 'Things I\'m Writing Out', description: 'When you need to get your thoughts organized and flowing clearly' },
+  { value: 'idea_bank', label: 'Ideas', description: 'Capture thoughts, concepts, and inspiration as they come to you' },
+  { value: 'content_script', label: 'Writing', description: 'Draft and organize written content, messages, and documents' },
+  { value: 'analytics_insight', label: 'Insights', description: 'Record important learnings, observations, and discoveries' },
+  { value: 'collaboration_note', label: 'People', description: 'Track relationships, conversations, and collaboration details' },
+  { value: 'reflection_journal', label: 'Reflection', description: 'Work through complex thoughts and personal analysis' },
+  { value: 'task_checklist', label: 'Tasks', description: 'Organize what needs to be done and track progress' },
+  { value: 'email_draft', label: 'Messages', description: 'Prepare emails, responses, and important communications' },
 ];
 
 // Helper function to create icon components

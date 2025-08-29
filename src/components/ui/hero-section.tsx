@@ -154,7 +154,7 @@ export function HeroSection() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col items-center justify-center max-w-4xl mx-auto px-4 sm:px-6">
         <h1 className="text-4xl sm:text-5xl font-bold text-foreground mb-4 sm:mb-6 text-center">
-          Your private space with memory — finally.
+          Your private space with memory, finally.
         </h1>
         <p className="text-xl sm:text-2xl text-muted-foreground mb-8 sm:mb-12 text-center">
           AI that doesn't forget you. And never shares.
@@ -196,7 +196,7 @@ export function HeroSection() {
         </div>
 
         <div className="text-center">
-          <p className="text-muted-foreground mb-4">Everything you want to think through, remember, or come back to — all in one place.</p>
+          <p className="text-muted-foreground mb-4">Everything you want to think through, remember, or come back to, all in one place.</p>
           <div
             onClick={() => router.push('/waitlist')}
             className="inline-block cursor-pointer"

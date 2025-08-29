@@ -22,7 +22,7 @@ const featureCards = [
   },
   {
     title: "Completely Private",
-    description: "No feeds, no sharing, no social features. Just you and a space that's entirely yours. What you share here stays here — always.",
+    description: "No feeds, no sharing, no social features. Just you and a space that's entirely yours. What you share here stays here, always.",
     icon: Target,
     gradient: "bg-[radial-gradient(circle_at_60%_40%,_#f7971e_0%,_#ffd200_50%,_#21d4fd_100%)]",
     textColor: "text-black"

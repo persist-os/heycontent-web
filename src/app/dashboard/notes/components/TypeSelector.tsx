@@ -17,13 +17,13 @@ interface TypeSelectorProps {
 }
 
 const TYPE_LABELS: Record<NoteType, { label: string; description: string }> = {
-  idea_bank: { label: 'Things On My Mind', description: 'For whatever\'s floating around in your head' },
-  content_script: { label: 'Things I\'m Writing Out', description: 'Getting your thoughts organized and flowing' },
-  collaboration_note: { label: 'Things About People I Care About', description: 'Relationships and connections that matter' },
-  analytics_insight: { label: 'What I Don\'t Want to Forget', description: 'Something you learned or figured out' },
-  reflection_journal: { label: 'Trying to Figure Something Out', description: 'Working through something complicated' },
-  task_checklist: { label: 'Things I Need to Handle', description: 'What needs to get done' },
-  email_draft: { label: 'Things I\'m Writing Out', description: 'Getting your thoughts organized and flowing' }
+  idea_bank: { label: 'Ideas', description: 'Capture thoughts, concepts, and inspiration' },
+  content_script: { label: 'Writing', description: 'Draft and organize written content' },
+  collaboration_note: { label: 'People', description: 'Track relationships and collaborations' },
+  analytics_insight: { label: 'Insights', description: 'Record important learnings and discoveries' },
+  reflection_journal: { label: 'Reflection', description: 'Work through complex thoughts and analysis' },
+  task_checklist: { label: 'Tasks', description: 'Organize what needs to be done' },
+  email_draft: { label: 'Messages', description: 'Prepare emails and communications' }
 };
 
 export function TypeSelector({ noteId, userId, currentType, typeGenerated, onTypeChange }: TypeSelectorProps) {
@@ -210,13 +210,13 @@ export function MinimalTypeDisplay({ currentType }: { currentType: NoteType }) {
   };
 
   const TYPE_LABELS: Record<NoteType, string> = {
-    idea_bank: 'On My Mind',
-    content_script: 'Writing Out',
-    collaboration_note: 'People I Care About',
-    analytics_insight: 'Don\'t Want to Forget',
-    reflection_journal: 'Figuring Out',
-    task_checklist: 'Need to Handle',
-    email_draft: 'Writing Out'
+    idea_bank: 'Ideas',
+    content_script: 'Writing',
+    collaboration_note: 'People',
+    analytics_insight: 'Insights',
+    reflection_journal: 'Reflection',
+    task_checklist: 'Tasks',
+    email_draft: 'Messages'
   };
 
   // Set text color for yellow in dark mode and purple in light mode

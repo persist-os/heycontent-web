@@ -118,7 +118,7 @@ export function InlineCommandPalette({
           id: cmd.id,
           label: cmd.label,
           icon: cmd.icon,
-          action: () => handleRefinementSelect(cmd.id),
+          action: () => handleSuggestionSelect(cmd.label),
           category: cmd.category
         }));
       } else {
@@ -127,7 +127,7 @@ export function InlineCommandPalette({
           id: cmd.id,
           label: cmd.label,
           icon: cmd.icon,
-          action: () => handleRefinementSelect(cmd.id),
+          action: () => handleSuggestionSelect(cmd.label),
           category: cmd.category
         }));
       }
@@ -144,19 +144,19 @@ export function InlineCommandPalette({
           id: cmd.id,
           label: cmd.label,
           icon: cmd.icon,
-          action: () => handleUniversalCommand(cmd.id),
+          action: () => handleSuggestionSelect(cmd.label),
           category: cmd.category
         })));
         
         // Collect type-specific commands from all types
         const NOTE_TYPE_CONFIG: Record<NoteType, { label: string }> = {
-          idea_bank: { label: 'Idea Bank' },
-          content_script: { label: 'Content Script' },
-          analytics_insight: { label: 'Analytics Insight' },
-          collaboration_note: { label: 'Collaboration Note' },
-          reflection_journal: { label: 'Reflection Journal' },
-          task_checklist: { label: 'Task Checklist' },
-          email_draft: { label: 'Email Draft' }
+          idea_bank: { label: 'Ideas' },
+          content_script: { label: 'Writing' },
+          analytics_insight: { label: 'Insights' },
+          collaboration_note: { label: 'People' },
+          reflection_journal: { label: 'Reflection' },
+          task_checklist: { label: 'Tasks' },
+          email_draft: { label: 'Messages' }
         };
         
         for (const nt of allNoteTypes) {
@@ -165,7 +165,7 @@ export function InlineCommandPalette({
             id: `${nt}-${cmd.id}`,
             label: `${NOTE_TYPE_CONFIG[nt].label}: ${cmd.label}`,
             icon: cmd.icon,
-            action: () => handleGenerationCommandWithNoteType(nt, cmd.id, cmd.description),
+            action: () => handleSuggestionSelect(cmd.label),
             category: `${NOTE_TYPE_CONFIG[nt].label} Commands`
           })));
         }
@@ -180,14 +180,14 @@ export function InlineCommandPalette({
             id: cmd.id,
             label: cmd.label,
             icon: cmd.icon,
-            action: () => handleGenerationCommandWithNoteType(selectedNoteTypeForCommands as NoteType, cmd.id, cmd.description),
+            action: () => handleSuggestionSelect(cmd.label),
             category: cmd.category
           })),
           ...universalCommands.map(cmd => ({
             id: cmd.id,
             label: cmd.label,
             icon: cmd.icon,
-            action: () => handleUniversalCommand(cmd.id),
+            action: () => handleSuggestionSelect(cmd.label),
             category: cmd.category
           }))
         ];
@@ -208,6 +208,22 @@ export function InlineCommandPalette({
       cmd.label.toLowerCase().includes(searchTerm) ||
       cmd.category?.toLowerCase().includes(searchTerm)
     );
+  };
+
+  // Handle suggestion selection - populate text input instead of auto-executing
+  const handleSuggestionSelect = (suggestion: string) => {
+    // Remove "..." from the end of suggestions
+    const cleanSuggestion = suggestion.replace(/\.\.\.\s*$/, '');
+    setUserInput(cleanSuggestion);
+    
+    // Focus the input so user can edit if needed
+    setTimeout(() => {
+      const input = document.querySelector('input[type="text"]') as HTMLInputElement;
+      if (input) {
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+      }
+    }, 100);
   };
 
   // Handle custom user input execution from header

@@ -166,7 +166,7 @@ export function AgentsShowcase() {
           </h2>
           <p className="text-xl sm:text-2xl text-muted-foreground leading-relaxed max-w-4xl mx-auto">
             A safe space where you can work through anything. It holds onto every conversation, learns your patterns, 
-            and helps you understand yourself better — without ever sharing or judging.
+            and helps you understand yourself better, without ever sharing or judging.
           </p>
         </div>
 
@@ -341,7 +341,7 @@ export function AgentsShowcase() {
                 </div>
                 <p className="text-muted-foreground">
                   No feeds, no sharing, no social features. What you share here stays here, always. 
-                  It's built for you alone — a sanctuary for your thoughts.
+                  It's built for you alone, a sanctuary for your thoughts.
                 </p>
               </div>
             </div>
