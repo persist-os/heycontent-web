@@ -99,7 +99,7 @@ export default function AmbassadorPage() {
                 viewport={{ once: true }}
                 transition={{ delay: 0.2 }}
               >
-                We're looking for creators who want to try something that might actually help—and get paid while they figure it out.
+                We're looking for people who want to try something that might actually help—and get paid while they figure it out.
               </motion.p>
 
 

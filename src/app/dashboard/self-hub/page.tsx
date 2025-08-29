@@ -7,14 +7,11 @@ import { PersonaTab } from './PersonaTab';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 // import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-// Help system imports
-import { EnhancedHelpButton } from '@/components/ui/enhanced-help-button'
-import { InteractiveTooltip } from '@/components/ui/interactive-tooltip'
-import { interactiveTours } from '@/helpContent/interactiveTours'
+
 
 export default function SelfHubPage() {
   const [userId, setUserId] = useState<string | undefined>();
-  const [interactiveTourOpen, setInteractiveTourOpen] = useState(false);
+
 
   useEffect(() => {
     const currentUserId = getCurrentUserId();
@@ -31,14 +28,10 @@ export default function SelfHubPage() {
               Self
             </h1>
             <p className="text-sm text-muted-foreground">
-              Manage your persona and activity.
+              A private space to explore how you think and what works for you.
             </p>
           </div>
-          <div>
-            <EnhancedHelpButton 
-              onInteractiveTour={() => setInteractiveTourOpen(true)}
-            />
-          </div>
+
         </div>
         {/* Commented out tabs */}
         {/* <TabsList className="grid w-full grid-cols-3">
@@ -82,14 +75,7 @@ export default function SelfHubPage() {
         </TabsContent>
       </Tabs> */}
 
-      {/* Interactive Tour */}
-      <InteractiveTooltip
-        isOpen={interactiveTourOpen}
-        onClose={() => setInteractiveTourOpen(false)}
-        steps={interactiveTours.selfHub}
-        title="Self Hub Features Tour"
-        autoPlay={false}
-      />
+
     </div>
   );
 } 

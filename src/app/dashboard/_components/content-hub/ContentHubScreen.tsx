@@ -14,10 +14,7 @@ import { YouTubeBrandIcon } from '@/lib/YoutubeBrandIcon'
 import { useYouTubeRefresh } from '@/app/hooks/useYouTubeRefresh'
 import { toast } from 'react-hot-toast'
 
-// Help system imports
-import { EnhancedHelpButton } from '@/components/ui/enhanced-help-button'
-import { InteractiveTooltip } from '@/components/ui/interactive-tooltip'
-import { interactiveTours } from '@/helpContent/interactiveTours'
+
 
 // Analytics components and hooks
 import { YouTubePlatform as YouTubeAnalyticsPlatform } from '../../content-analytics/platforms/YouTubePlatform'
@@ -82,9 +79,7 @@ export function ContentHubScreen() {
   const [expandedInsight, setExpandedInsight] = useState<number | null>(null);
   const [expandHubInsight, setExpandHubInsight] = useState(false);
 
-  const [interactiveTourOpen, setInteractiveTourOpen] = useState(false);
-  const [quickStartOpen, setQuickStartOpen] = useState(false);
-  const [fullAppTourOpen, setFullAppTourOpen] = useState(false);
+
   const { refreshAll: refreshAllYouTube, loading: refreshingYouTube, error: refreshYouTubeError, success: refreshYouTubeSuccess } = useYouTubeRefresh();
   
   const { firebaseUser, authLoading } = useAuth()
@@ -418,9 +413,7 @@ export function ContentHubScreen() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <EnhancedHelpButton 
-              onInteractiveTour={() => setInteractiveTourOpen(true)}
-            />
+
             {/* Integration Links - Placeholder for tour */}
             <div data-integration-links className="absolute opacity-0 pointer-events-none -z-10 w-1 h-1">
               <p className="text-sm text-muted-foreground">Integration with Chat & Notes</p>
@@ -649,32 +642,7 @@ export function ContentHubScreen() {
 
 
 
-      {/* Interactive Tour */}
-      <InteractiveTooltip
-        isOpen={interactiveTourOpen}
-        onClose={() => setInteractiveTourOpen(false)}
-        steps={interactiveTours.contentHub}
-        title="Content Hub Tour"
-        autoPlay={false}
-      />
 
-      {/* Quick Start Tour */}
-      <InteractiveTooltip
-        isOpen={quickStartOpen}
-        onClose={() => setQuickStartOpen(false)}
-        steps={interactiveTours.quickStart}
-        title="Quick Start Guide"
-        autoPlay={true}
-      />
-
-      {/* Full App Tour */}
-      <InteractiveTooltip
-        isOpen={fullAppTourOpen}
-        onClose={() => setFullAppTourOpen(false)}
-        steps={interactiveTours.fullAppTour}
-        title="Complete App Tour"
-        autoPlay={false}
-      />
     </div>
   )
 } 

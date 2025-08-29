@@ -38,7 +38,7 @@ interface ChatInputProps {
 }
 
 const placeholders = [
-  "Ask about content strategy...",
+  "What should I focus on next?",
   "Analyze audience growth...",
   "Get partnership recommendations...",
   "Optimize engagement...",

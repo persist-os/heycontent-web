@@ -91,96 +91,96 @@ interface VectorSearchMetadata {
   }>;
 }
 
-// Helper function to get random casual status messages for content creators
+// Helper function to get random gentle status messages for thinking together
 function getRandomStatusMessage(stage: string): string {
   const statusPools = {
     // Intent analysis stage
     intent_analysis: [
-      "Figuring out what you're looking for...",
-      "Checking if I need to peek at your stuff...",
-      "Seeing what you're asking about...",
-      "Getting the vibe of your question...",
-      "Understanding what you need...",
-      "Piecing together your request...",
+      "Understanding what you're thinking about...",
+      "Getting a sense of what you need...",
+      "Seeing what's on your mind...",
+      "Figuring out how I can help...",
+      "Listening to what you're asking...",
+      "Taking in your question...",
     ],
     
     // Vector search stage
     vector_search: [
-      "Digging through your stuff...",
-      "Checking out your content...",
-      "Looking through your posts...",
-      "Browsing your stuff...",
-      "Scanning through your content...",
-      "Hunting through your materials...",
-      "Reviewing your content library...",
+      "Looking through our past conversations...",
+      "Checking what we've talked about before...",
+      "Remembering what you've shared...",
+      "Browsing through your thoughts...",
+      "Recalling our previous discussions...",
+      "Searching through what you've told me...",
+      "Looking back at what we've covered...",
     ],
     
     // Context grading stage
     context_grading: [
-      "Picking the good stuff...",
-      "Finding the best bits...",
+      "Finding what's most relevant...",
       "Sorting through what matters...",
-      "Grabbing the relevant pieces...",
-      "Selecting the cream of the crop...",
-      "Curating the perfect mix...",
-      "Finding the gems in your content...",
+      "Picking out the important bits...",
+      "Focusing on what helps most...",
+      "Choosing the most useful pieces...",
+      "Connecting the relevant dots...",
+      "Finding what fits best...",
     ],
     
     // Individual item examination
     item_examination: [
-      "Checking each piece...",
-      "Looking at your content...",
-      "Examining what you've got...",
-      "Reviewing each item...",
-      "Sizing up your stuff...",
+      "Looking at each piece carefully...",
+      "Considering what you've shared...",
+      "Thinking through each part...",
+      "Reviewing what's relevant...",
+      "Taking time with each detail...",
     ],
     
     // Response generation stage
     response_generation: [
-      "Putting it all together...",
-      "Cooking up your answer...",
-      "Crafting something cool...",
-      "Making magic happen...",
-      "Building your response...",
-      "Creating something awesome...",
-      "Pulling it all together...",
+      "Putting my thoughts together...",
+      "Working through this with you...",
+      "Thinking about how to help...",
+      "Considering the best way forward...",
+      "Bringing everything together...",
+      "Finding the right words...",
+      "Sorting through my thoughts...",
     ],
     
     // Success messages
     success: [
-      "Found some good stuff!",
-      "Got the perfect pieces!",
-      "Picked the cream of the crop!",
-      "Found the gems!",
-      "Nailed the best content!",
-      "Found the good stuff!",
+      "Found some helpful things!",
+      "Got some good insights!",
+      "Found what might help!",
+      "Gathered some useful pieces!",
+      "Found some relevant thoughts!",
+      "Got what we need!",
     ],
     
     // Filtering complete messages
     filtering_complete: [
       "Sorted through everything!",
-      "Picked the best pieces!",
-      "Curated the perfect mix!",
-      "Found the golden content!",
-      "Got the good stuff sorted!",
+      "Found the most helpful parts!",
+      "Got the relevant pieces together!",
+      "Picked out what matters most!",
+      "Found what's most useful!",
     ],
     
     // Skip messages
     skip_simple_query: [
-      "This one's easy - no digging needed!",
-      "Got this covered without searching!",
-      "Simple question, quick answer!",
-      "No need to check your stuff for this one!",
-      "Straight to the point!",
+      "I can work with this right away!",
+      "No need to look back for this one!",
+      "This is something I can help with directly!",
+      "I've got this covered!",
+      "Ready to dive right in!",
     ],
     
     // Fallback messages
     fallback: [
-      "Working on it...",
-      "Almost there...",
-      "Just a sec...",
+      "Working through this...",
+      "Taking a moment to think...",
+      "Just a moment...",
       "Thinking...",
-      "On it...",
+      "Processing this...",
     ]
   };
   
@@ -717,7 +717,7 @@ async function analyzeQueryIntent(
   }
 
   // Send a message the ProgressiveThinkingIndicator can recognize
-  onStatusUpdate?.('Analyzing whether your query needs context - figuring out what you\'re looking for...');
+  onStatusUpdate?.('Understanding what you\'re thinking about - taking in your question...');
 
   // ✅ CRITICAL: First check if this is an obviously simple query that should override backend
   const obviousSimpleQuery = isObviouslySimpleQuery(query);
@@ -1000,7 +1000,7 @@ async function gradeContextRelevance(
     throw new Error('Authentication required for context grading');
   }
 
-  onStatusUpdate?.('Analyzing relevance across your content - time to sort the good stuff from the great stuff!');
+  onStatusUpdate?.('Sorting through what we\'ve talked about - finding what\'s most relevant...');
 
   try {
     console.log('🔍 [CONTEXT GRADING] Starting relevance analysis', {
@@ -1155,7 +1155,7 @@ function validateAndFilterContextGrading(
   
   // ✅ CRITICAL: For complex queries, TRUST the backend grader much more
   console.log('🔍 [CONTEXT GRADING] Complex query - trusting backend grader with minimal filtering');
-  onStatusUpdate?.('Analyzing AI grading quality - checking each piece...');
+  onStatusUpdate?.('Looking at each piece carefully - taking time with each detail...');
   
   const filteredContent = gradingResponse.relevant_context.filter((item, index) => {
     const shortTitle = item.title.substring(0, 50) + (item.title.length > 50 ? '...' : '');
@@ -1257,7 +1257,7 @@ export async function sendChatMessage(
   // Get API key - make sure we have one before proceeding
   const apiKey = await getApiKey();
   if (!apiKey) {
-    throw new AuthenticationError('We need to verify your account to continue your creative journey. Please sign in again!');
+    throw new AuthenticationError('We need to verify your account to continue. Please sign in again!');
   }
 
   console.log('🐛 [DEBUG] Got API key, length:', apiKey.length);
@@ -1404,7 +1404,7 @@ export async function sendChatMessage(
 
   // STAGE 2: Chat generation with or without context
   console.log('🐛 [DEBUG] STARTING STAGE 2: Chat generation');
-  onStatusUpdate?.('Generating your response - putting it all together...');
+  onStatusUpdate?.('Putting my thoughts together - finding the right words...');
 
   // Always set is_first_message to true when isFirstMessage is true
   const isFirstMessageBool = isFirstMessage;
@@ -1733,11 +1733,11 @@ export async function sendChatMessage(
   });
 
   if (response.status === 401 || response.status === 403) {
-    throw new AuthenticationError('Your session has timed out. Please refresh the page to continue your creative work!');
+    throw new AuthenticationError('Your session has timed out. Please refresh the page to continue!');
   }
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    const errorMessage = errorData?.message || 'We hit a creative block while sending your message. Your work is safe - please try again in a moment!';
+    const errorMessage = errorData?.message || 'Something went wrong while sending your message. Everything is safe - please try again in a moment!';
     throw new Error(errorMessage);
   }
 
@@ -1804,7 +1804,7 @@ export async function loadConversation(id: string) {
     // Get API key for authentication - same pattern as sendChatMessage
     const apiKey = await getApiKey();
     if (!apiKey) {
-      throw new AuthenticationError('We need to verify your account to continue your creative journey. Please sign in again!');
+      throw new AuthenticationError('We need to verify your account to continue. Please sign in again!');
     }
 
     const response = await fetch(`/api/chat/conversation/${id}`, {
@@ -1814,7 +1814,7 @@ export async function loadConversation(id: string) {
     });
 
     if (!response.ok) {
-      const errorMessage = `We couldn't load this conversation (${response.status}). Your creative work is safe - please try refreshing the page!`;
+      const errorMessage = `We couldn't load this conversation (${response.status}). Everything is safe - please try refreshing the page!`;
     throw new Error(errorMessage);
     }
 

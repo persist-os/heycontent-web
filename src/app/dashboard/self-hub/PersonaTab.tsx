@@ -236,9 +236,9 @@ export const PersonaTab = React.memo(() => {
         <Dialog open={modalOpen} onOpenChange={setModalOpen}>
           <DialogContent className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-w-md w-full mx-4 z-50">
             <DialogHeader>
-              <DialogTitle>Time to Refresh Your Persona!</DialogTitle>
+              <DialogTitle>Time to Check In With Yourself</DialogTitle>
               <DialogDescription>
-                It's been 14 days since your last persona update. To keep your creative journey on track and your insights fresh, please update your persona before continuing.
+                It's been 14 days since you last reflected on how you work. To keep your self-understanding current and insights fresh, let's explore how you've grown.
               </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-4 mt-4">
@@ -248,7 +248,7 @@ export const PersonaTab = React.memo(() => {
                 size="sm"
                 className="text-purple-500 border-purple-500 hover:bg-purple-50 dark:text-accent dark:border-accent dark:hover:bg-accent/10 min-h-[44px] w-full sm:w-auto"
               >
-                Update Persona Now
+                Reflect on How I've Grown
               </Button>
             </div>
           </DialogContent>
@@ -269,7 +269,7 @@ export const PersonaTab = React.memo(() => {
                   >
                     {eligibility?.canGenerate
                       ? (currentPersona ? 'Update Persona' : 'Create Persona')
-                      : `Update available in ${eligibility?.daysRemaining ?? 'a few'} day${eligibility?.daysRemaining !== 1 ? 's' : ''}`}
+                      : `Next reflection in ${eligibility?.daysRemaining ?? 'a few'} day${eligibility?.daysRemaining !== 1 ? 's' : ''}`}
                   </Button>
                 )}
               />
@@ -296,7 +296,7 @@ export const PersonaTab = React.memo(() => {
             >
               {eligibility?.canGenerate
                 ? (currentPersona ? 'Update Persona' : 'Create Persona')
-                : `Update available in ${eligibility?.daysRemaining ?? 'a few'} day${eligibility?.daysRemaining !== 1 ? 's' : ''}`}
+                : `Next reflection in ${eligibility?.daysRemaining ?? 'a few'} day${eligibility?.daysRemaining !== 1 ? 's' : ''}`}
             </Button>
           )}
         />

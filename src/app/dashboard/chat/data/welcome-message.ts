@@ -1,22 +1,22 @@
 export const welcomeMessageSteps = [
   {
-    content: `🎉 **Welcome to HeyContent!**\n\nI'm thrilled you've joined our community of creators and content enthusiasts.`,
+    content: `**Welcome to your private space.**\n\nThis is yours. No one sees it but you. I remember everything so you don't have to.`,
     nextLabel: 'Tell me more',
   },
   {
-    content: `## What is HeyContent?\nHeyContent is your AI-powered content creation companion that helps you:\n- **Analyze and optimize** your content performance across platforms\n- **Generate fresh ideas** and content strategies tailored to your niche\n- **Create personalized personas** that guide your content direction\n- **Get intelligent insights** about your audience and engagement`,
+    content: `## Your space that remembers\nThis is where you can work through anything on your mind:\n- **Sort through your thoughts** - bring any topic, however it shows up\n- **Come back to anything** - I remember all our conversations\n- **Figure things out together** - no judgment, just space to think\n- **Help you move forward** - from wherever you are right now`,
     nextLabel: 'How does it work?',
   },
   {
-    content: `## How Personas Work\nYour persona is like your content DNA - it captures your unique voice, style, goals, and audience. Once created, it helps me:\n- Suggest content that aligns with your brand\n- Maintain consistency across all your platforms\n- Recommend strategic improvements for growth\n- Generate ideas that resonate with your specific audience`,
-    nextLabel: 'Show me features',
+    content: `## How I remember you\nI learn who you are through our conversations - your way of thinking, what matters to you, how you approach things. This helps me:\n- Understand your unique perspective and voice\n- Remember what we've talked about before\n- Help you think through decisions in your own style\n- Pick up right where we left off, anytime`,
+    nextLabel: 'Show me more',
   },
   {
-    content: `## Key Features You Can Use:\n- **Content Analysis**: Connect your social platforms for deep performance insights\n- **Smart Notes**: AI-powered content planning and ideation\n- **Chat Support**: Ask me anything about content strategy, trends, or specific advice\n- **Multi-Platform Integration**: Connect Instagram, YouTube, and more`,
+    content: `## What you can do here:\n- **Work through decisions**: Career moves, relationships, life changes\n- **Sort out ideas**: Projects, goals, things you're curious about\n- **Remember important stuff**: I keep track so you can focus on thinking\n- **Come back anytime**: Every conversation is here when you need it`,
     nextLabel: 'How do I start?',
   },
   {
-    content: `## 🚀 Ready to Get Started?\nTo unlock the full power of HeyContent, I recommend creating your personal content persona first. This will help me understand your unique style and goals.\n\n**Simply type: "hey content persona"** to begin the persona creation process!\n\nWhen you're done, type: "hey content write my persona" to generate your persona.\n\nFeel free to ask me anything - I'm here to help you create amazing content! ✨`,
+    content: `## Ready to start?\nNo pressure. Just bring whatever's on your mind.\n\nYou can start by telling me about yourself, or jump right into something you're thinking about.\n\nI'm here whenever you need to work through something. This space doesn't forget, so you can always come back. ✨`,
     nextLabel: 'Got it!',
   },
 ];
@@ -35,15 +35,15 @@ export function getWelcomeStepMessage(step = 0) {
 }
 
 export const welcomeSuggestions = [
-  'hey content persona',
-  'Tell me about content analysis',
-  'How do I connect my social accounts?',
-  'What content formats work best?',
+  'Tell me about yourself',
+  'What should I focus on next?',
+  'Help me think through a decision',
+  'What am I forgetting about this situation?',
 ];
 
 export const welcomeSuggestionsWithPersona = [
-  'hey content persona',
-  'Tell me about content analysis',
-  'How do I connect my social accounts?',
-  'What content formats work best?',
+  'Tell me about yourself',
+  'What should I focus on next?',
+  'Help me think through a decision',  
+  'What am I forgetting about this situation?',
 ]; 

@@ -39,10 +39,7 @@ import { usePersonaStore } from '@/store/persona-store'
 import { useConvex } from 'convex/react'
 import { useContentContext, useContentContextActions, useContentContextStore } from '@/store/content-context-store'
 
-// Help system imports
-import { EnhancedHelpButton } from '@/components/ui/enhanced-help-button'
-import { InteractiveTooltip } from '@/components/ui/interactive-tooltip'
-import { interactiveTours } from '@/helpContent/interactiveTours'
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { CreateNoteButton } from '@/components/ui/CreateNoteButton';
@@ -111,38 +108,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   // Context search state - enable by default regardless of context availability
   const [useContextSearch, setUseContextSearch] = useState(true)
   
-  // Interactive tour state
-  const [interactiveTourOpen, setInteractiveTourOpen] = useState(false)
-  const [quickStartOpen, setQuickStartOpen] = useState(false)
-  const [fullAppTourOpen, setFullAppTourOpen] = useState(false)
 
-  // Cleanup effect to ensure proper modal state management
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setInteractiveTourOpen(false)
-        setQuickStartOpen(false)
-        setFullAppTourOpen(false)
-      }
-    }
 
-    const resetBodyStyles = () => {
-      // Ensure body is interactive after modals close
-      document.body.style.pointerEvents = ''
-      document.body.style.overflow = ''
-    }
 
-    // Reset body styles when any modal closes
-    if (!interactiveTourOpen && !quickStartOpen && !fullAppTourOpen) {
-      resetBodyStyles()
-    }
-
-    document.addEventListener('keydown', handleEscape)
-    return () => {
-      document.removeEventListener('keydown', handleEscape)
-      resetBodyStyles()
-    }
-  }, [interactiveTourOpen, quickStartOpen, fullAppTourOpen])
 
   // Embedding sync heartbeat for active chat users  
   useEffect(() => {
@@ -161,33 +129,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     return () => clearInterval(heartbeatInterval);
   }, [authData.userId, userHeartbeat]);
 
-  // Enhanced close handlers with cleanup
-  const handleCloseInteractiveTour = () => {
-    setInteractiveTourOpen(false)
-    // Ensure no lingering overlay issues
-    setTimeout(() => {
-      document.body.style.pointerEvents = ''
-      document.body.style.overflow = ''
-    }, 100)
-  }
 
-  const handleCloseQuickStart = () => {
-    setQuickStartOpen(false)
-    // Ensure no lingering overlay issues
-    setTimeout(() => {
-      document.body.style.pointerEvents = ''
-      document.body.style.overflow = ''
-    }, 100)
-  }
-
-  const handleCloseFullAppTour = () => {
-    setFullAppTourOpen(false)
-    // Ensure no lingering overlay issues
-    setTimeout(() => {
-      document.body.style.pointerEvents = ''
-      document.body.style.overflow = ''
-    }, 100)
-  }
 
   // Note: Removed auto-disable of context search when content context is available
   // Users should be able to control both features independently
@@ -665,7 +607,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         {/* Header */}
         <ChatHeader 
           onNewChat={handleNewChat}
-          onInteractiveTour={() => setInteractiveTourOpen(true)}
         />
 
         {/* Main Content */}
@@ -843,14 +784,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       
 
 
-      {/* Interactive Tour */}
-      <InteractiveTooltip
-        isOpen={interactiveTourOpen}
-        onClose={handleCloseInteractiveTour}
-        steps={interactiveTours.chat}
-        title="Chat Features Tour"
-        autoPlay={false}
-      />
+
 
 
       {/* Chat Overlay */}

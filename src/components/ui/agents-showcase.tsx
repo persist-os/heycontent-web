@@ -10,124 +10,124 @@ import { PlatformCard } from './platform-card'
 const mockChatMessages = [
   {
     type: 'user',
-    message: "What Instagram content can I create based on my latest YouTube video 'How to Edit Like a Pro'?",
+    message: "I keep going back and forth on this job decision. Can you help me remember what I was thinking about it last week?",
     timestamp: '2:34 PM'
   },
   {
     type: 'system',
-    message: "Cross-referencing YouTube video with Instagram audience patterns...",
+    message: "Looking through your recent conversations and notes...",
     timestamp: '2:34 PM',
     loading: true
   },
     {
     type: 'agent',
-    message: "Perfect cross-platform opportunity! Your YouTube video had 15 key editing techniques. I found that your Instagram audience engages 340% more with carousel posts about tutorials. I've created 3 carousel concepts: '5 Quick Edit Tricks', 'Before/After Transformations', and 'Tools Every Creator Needs'.",
+    message: "You had a really insightful conversation about this on Tuesday. You mentioned feeling excited about the growth potential but worried about the commute affecting your evening routine. You also noted that the team seemed collaborative, which you said was your top priority after the last job.",
     timestamp: '2:34 PM',
     data: {
-      source_platform: "YouTube: 'How to Edit Like a Pro'",
-      target_platform: "Instagram carousel strategy",
-      engagement_boost: "+340% for tutorial carousels",
-      content_created: "3 carousel concepts ready",
-      audience_insight: "Prefers bite-sized tutorial content"
+      key_insight: "Growth potential vs. commute concerns",
+      priority_reminder: "Collaborative team environment",
+      emotional_state: "Excited but cautious",
+      previous_context: "Compared to challenges at last job",
+      decision_factors: "3 main considerations identified"
     }
   },
   {
     type: 'user',
-    message: "Should I reach out to any brands based on my content performance this month?",
+    message: "What patterns do you notice in how I handle stress?",
     timestamp: '2:35 PM'
   },
   {
     type: 'system',
-    message: "Analyzing performance data + Gmail partnership patterns...",
+    message: "Analyzing your conversations and notes for patterns...",
     timestamp: '2:35 PM',
     loading: true
   },
   {
     type: 'agent',
-    message: "Yes! Your editing tutorials are trending (+580% growth). I found 23 tech brands in your Gmail that sponsor similar creators. Adobe and Filmora would be perfect - your audience demographic matches their target. I've drafted personalized pitch emails with your best performance metrics.",
+    message: "I've noticed you tend to overthink decisions when you're stressed, but your best insights come when you talk through problems out loud. You also mentioned feeling calmer after organizing your thoughts in writing. When you're overwhelmed, you often benefit from breaking things into smaller steps.",
     timestamp: '2:35 PM',
     data: {
-      growth_trend: "+580% in editing content",
-      brand_matches: "23 tech brands identified",
-      top_targets: "Adobe, Filmora, Final Cut Pro",
-      pitch_ready: "3 personalized emails drafted",
-      success_probability: "High match (87% alignment)"
+      stress_response: "Tends to overthink decisions",
+      best_processing: "Talking through problems",
+      calming_activity: "Writing thoughts down",
+      helpful_strategy: "Breaking into smaller steps",
+      pattern_confidence: "Based on 12 conversations"
     }
   }
 ]
 
 const connectedPlatforms = [
   {
-    title: "Instagram",
-    description: "Deep analysis of your posts, stories, reels & engagement patterns",
-    icon: Instagram,
+    title: "Conversations",
+    description: "Remembers everything you've talked through and worked on",
+    icon: MessageCircle,
     iconProps: { className: "w-10 h-10 text-white" },
     color: "from-purple-500 to-pink-500",
     status: "connected",
     insights: [
-      "Analyzes every post for engagement patterns and content themes",
-      "Identifies what content formats work best for your audience",
-      "Tracks carousel vs reel performance to guide your strategy",
-      "Suggests specific improvements based on your actual data"
+      "Never loses track of decisions you're working through",
+      "Remembers context from weeks or months ago",
+      "Helps you pick up exactly where you left off",
+      "Connects ideas across different conversations"
     ]
   },
   {
-    title: "YouTube",
-    description: "Video performance analysis & audience insights from your channel",
-    icon: YouTubeBrandIcon,
-    iconProps: { className: "w-10 h-10" },
-    color: "from-red-500 to-red-600",
+    title: "Notes & Thoughts",
+    description: "Your personal thinking space that grows with you",
+    icon: Brain,
+    iconProps: { className: "w-10 h-10 text-white" },
+    color: "from-blue-500 to-cyan-500",
     status: "connected",
     insights: [
-      "Analyzes all your videos for performance patterns",
-      "Extracts captions and identifies key content themes",
-      "Suggests cross-platform content ideas from your best videos",
-      "Helps identify partnership-ready content and growth opportunities"
+      "Keeps track of your evolving thoughts and ideas",
+      "Helps you see patterns in how you think and decide",
+      "Never judges or pressures you to have it figured out",
+      "Creates a safe space for working through anything"
     ]
   },
   {
-    title: "Gmail",
-    description: "Partnership & business email organization and insights",
-    icon: "gmail-image",
-    iconProps: { className: "w-10 h-10" },
-    color: "from-blue-500 to-blue-600",
+    title: "Personal Patterns",
+    description: "Learns what works for you and how you process best",
+    icon: BarChart3,
+    iconProps: { className: "w-10 h-10 text-white" },
+    color: "from-green-500 to-emerald-500",
     status: "connected",
     insights: [
-      "Automatically categorizes partnership and business emails",
-      "Surfaces collaboration opportunities you might have missed",
-      "Helps draft professional responses to brand inquiries",
-      "Identifies patterns in successful partnership communications"
+      "Notices how you handle different types of decisions",
+      "Remembers what strategies work best for you",
+      "Helps you understand your own thinking patterns",
+      "Suggests approaches based on what's worked before"
     ]
   }
 ];
 
 const comingSoonPlatforms = [
   {
-    title: "TikTok",
-    description: "Viral trend analysis & content optimization",
-    icon: "tiktok-image",
+    title: "Voice Notes",
+    description: "Talk through ideas when typing feels too much",
+    icon: "voice",
     color: "from-pink-600 to-purple-600",
     status: "coming_soon"
   },
   {
-    title: "X (Twitter)",
-    description: "Real-time engagement & thread performance",
-    icon: "twitter",
+    title: "Journal Integration",
+    description: "Connect your existing journaling habits",
+    icon: "journal",
     color: "from-blue-400 to-blue-600", 
     status: "coming_soon"
   },
   {
-    title: "Google Calendar",
-    description: "Content scheduling & deadline management",
-    icon: "google-calendar-image",
-    color: "from-blue-500 to-green-500",
+    title: "Mood Tracking",
+    description: "Understand patterns in how you feel and think",
+    icon: "mood",
+    color: "from-green-500 to-emerald-500",
     status: "coming_soon"
   },
   {
-    title: "Notion",
-    description: "Content planning & knowledge management",
-    icon: "notion", 
-    color: "from-gray-600 to-gray-800",
+    title: "Goal Reflection",
+    description: "Check in with yourself and track what matters",
+    icon: "goals",
+    color: "from-orange-500 to-red-500",
     status: "coming_soon"
   }
 ]
@@ -158,15 +158,15 @@ export function AgentsShowcase() {
         <div className="text-center mb-16">
           <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500/10 to-purple-500/10 backdrop-blur-sm rounded-full border border-white/20 dark:border-border mb-6">
             <span className="text-sm font-medium bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              🏗️ The OS the next generation of creators will run on
+              🧠 Your Personal Memory System
             </span>
           </div>
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-foreground via-blue-800 dark:via-blue-400 to-purple-800 dark:to-purple-400 bg-clip-text text-transparent leading-relaxed tracking-tight py-2 mb-6">
-            A new layer on top of the entire creator stack
+            It remembers so you don't have to
           </h2>
           <p className="text-xl sm:text-2xl text-muted-foreground leading-relaxed max-w-4xl mx-auto">
-            HeyContent connects all your platforms and tools with deep AI insights. 
-            We build a smart memory of your content, analyze patterns across your data, and give you the exact strategies that work.
+            A safe space where you can work through anything. It holds onto every conversation, learns your patterns, 
+            and helps you understand yourself better, without ever sharing or judging.
           </p>
         </div>
 
@@ -290,7 +290,7 @@ export function AgentsShowcase() {
                 <div className="mt-4 p-3 bg-muted/50 rounded-lg">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Search className="w-4 h-4" />
-                    <span>Smart search through 847 videos, 1,247 posts, 342 emails...</span>
+                    <span>Searching through all your thoughts, decisions, and conversations...</span>
                     <div className="ml-auto flex space-x-1">
                       <div className="w-2 h-2 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full animate-pulse"></div>
                       <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
@@ -309,11 +309,11 @@ export function AgentsShowcase() {
               <div className="relative bg-background/60 backdrop-blur-sm rounded-xl border border-border p-6">
                 <div className="flex items-center gap-3 mb-3">
                   <MessageCircle className="w-6 h-6 text-blue-500" />
-                  <h3 className="text-xl font-bold text-foreground">Chat with your content</h3>
+                  <h3 className="text-xl font-bold text-foreground">Talk through anything</h3>
                 </div>
                 <p className="text-muted-foreground">
-                  Ask questions about your posts, get content suggestions, analyze your engagement patterns, 
-                  and understand what works best for your audience - all through natural conversation.
+                  Work through decisions, sort through feelings, or just think out loud. 
+                  It listens without judgment and helps you understand your own thoughts better.
                 </p>
               </div>
             </div>
@@ -323,11 +323,11 @@ export function AgentsShowcase() {
               <div className="relative bg-background/60 backdrop-blur-sm rounded-xl border border-border p-6">
                 <div className="flex items-center gap-3 mb-3">
                   <BarChart3 className="w-6 h-6 text-purple-500" />
-                  <h3 className="text-xl font-bold text-foreground">Real insights from your data</h3>
+                  <h3 className="text-xl font-bold text-foreground">Remembers your patterns</h3>
                 </div>
                 <p className="text-muted-foreground">
-                  Get personalized recommendations based on your actual content performance, engagement patterns, 
-                  and audience behavior - not generic advice that doesn't fit your niche.
+                  Notices how you think, what works for you, and what you care about. 
+                  Helps you understand yourself better by seeing patterns you might miss.
                 </p>
               </div>
             </div>
@@ -336,12 +336,12 @@ export function AgentsShowcase() {
               <div className="absolute -inset-4 bg-gradient-to-r from-orange-400 via-red-400 to-pink-400 rounded-2xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
               <div className="relative bg-background/60 backdrop-blur-sm rounded-xl border border-border p-6">
                 <div className="flex items-center gap-3 mb-3">
-                  <Mail className="w-6 h-6 text-orange-500" />
-                  <h3 className="text-xl font-bold text-foreground">Partnership intelligence</h3>
+                  <Globe className="w-6 h-6 text-orange-500" />
+                  <h3 className="text-xl font-bold text-foreground">Completely private</h3>
                 </div>
                 <p className="text-muted-foreground">
-                  Automatically organize partnership emails, identify collaboration opportunities, 
-                  and get help crafting professional responses to brands and fellow creators.
+                  No feeds, no sharing, no social features. What you share here stays here, always. 
+                  It's built for you alone, a sanctuary for your thoughts.
                 </p>
               </div>
             </div>
@@ -351,10 +351,10 @@ export function AgentsShowcase() {
         {/* Connected Platforms */}
         <div className="mb-16">
           <h3 className="text-3xl font-bold text-center mb-4 text-foreground">
-            Connect Your Platforms
+            How It Remembers
           </h3>
           <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto">
-            Deep analysis powered by your actual content and communications
+            Your personal memory system that learns from how you think and what you care about
           </p>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
@@ -378,7 +378,7 @@ export function AgentsShowcase() {
             Coming Soon
           </h3>
           <p className="text-center text-muted-foreground mb-8 max-w-2xl mx-auto">
-            More platforms to complete your creator stack + many more
+            More ways to work through what's on your mind
           </p>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -390,21 +390,25 @@ export function AgentsShowcase() {
                 <div className={`absolute -inset-1 bg-gradient-to-r ${platform.color} rounded-xl blur opacity-10 group-hover:opacity-20 transition-opacity`}></div>
                 <div className="relative bg-background/60 backdrop-blur-sm rounded-lg border border-border border-dashed p-4 h-full opacity-60">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className={`p-2 ${platform.title === 'TikTok' || platform.title === 'Google Calendar' ? 'bg-white' : `bg-gradient-to-r ${platform.color}`} rounded-lg flex items-center justify-center`}>
-                      {platform.icon === 'tiktok-image' && (
-                        <img src="/icons8-tiktok-500.png" alt="TikTok" className="w-6 h-6" />
-                      )}
-                      {platform.icon === 'twitter' && (
+                    <div className={`p-2 bg-gradient-to-r ${platform.color} rounded-lg flex items-center justify-center`}>
+                      {platform.icon === 'voice' && (
                         <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                          <path d="M12 2C13.1 2 14 2.9 14 4V10C14 11.1 13.1 12 12 12C10.9 12 10 11.1 10 10V4C10 2.9 10.9 2 12 2ZM19 10V12C19 15.9 15.9 19 12 19S5 15.9 5 12V10H7V12C7 14.8 9.2 17 12 17S17 14.8 17 12V10H19ZM11 21V23H13V21H11Z"/>
                         </svg>
                       )}
-                      {platform.icon === 'google-calendar-image' && (
-                        <img src="/icons8-google-calendar-240.png" alt="Google Calendar" className="w-6 h-6" />
-                      )}
-                      {platform.icon === 'notion' && (
+                      {platform.icon === 'journal' && (
                         <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.934zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z"/>
+                          <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                        </svg>
+                      )}
+                      {platform.icon === 'mood' && (
+                        <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12,2C13.1,2 14,2.9 14,4C14,5.1 13.1,6 12,6C10.9,6 10,5.1 10,4C10,2.9 10.9,2 12,2ZM21,9V7L15,13.5C14.8,13.8 14.4,14 14,14C13.6,14 13.2,13.8 13,13.5L10,10.5C9.8,10.2 9.4,10 9,10S8.2,10.2 8,10.5L3,16V18L8.5,12L12,16L21,9Z"/>
+                        </svg>
+                      )}
+                      {platform.icon === 'goals' && (
+                        <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2ZM12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4ZM12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6ZM12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/>
                         </svg>
                       )}
                     </div>
@@ -423,10 +427,10 @@ export function AgentsShowcase() {
             onClick={() => router.push('/auth/register')}
             className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full text-white font-bold text-lg hover:from-blue-600 hover:to-purple-600 transition-all duration-300 cursor-pointer group shadow-xl hover:shadow-2xl transform hover:scale-105"
           >
-            <span>Start chatting with your content</span>
+            <span>Find your space</span>
             <ArrowRight className="w-5 h-5 ml-3 group-hover:translate-x-1 transition-transform" />
           </div>
-         <p className="text-sm text-muted-foreground mt-4">Join countless creators building the future with HeyContent</p>
+         <p className="text-sm text-muted-foreground mt-4">A place where you can finally put down what you've been carrying</p>
         </div>
       </div>
     </section>

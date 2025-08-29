@@ -92,7 +92,7 @@ export const PersonaTip: React.FC<PersonaTipProps> = ({ onTipClick }) => {
                 )}<span className="font-semibold">{eligibility?.canGenerate ? 'Tap below when you feel inspired to create your persona!' : 'We\'ll help you evolve it soon!'}</span>
               </span>
               <span className="block text-xs text-yellow-700 mt-1">
-                Your creative journey starts with a single tap. No rush—when you’re ready, we’ll help you craft your unique story!
+                Your journey starts with a single conversation. No rush—when you're ready, I'll help you figure things out!
               </span>
             </div>
             <button
@@ -141,7 +141,7 @@ export const PersonaTip: React.FC<PersonaTipProps> = ({ onTipClick }) => {
           ) : (
             <>
               <p className="text-sm text-gray-600 mb-3">
-                🌱 Your persona is in its growth phase! We help creators evolve their personas every 2 weeks to track progress, capture new goals, and stay aligned with their creative journey.
+                🌱 How I remember you is growing! I help you update this every 2 weeks to track changes, capture new goals, and stay aligned with who you're becoming.
               </p>
               {eligibility?.daysRemaining && (
                                   <p className="text-xs text-emerald-600 mb-4 flex items-center">

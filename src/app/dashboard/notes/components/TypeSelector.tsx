@@ -17,13 +17,13 @@ interface TypeSelectorProps {
 }
 
 const TYPE_LABELS: Record<NoteType, { label: string; description: string }> = {
-  idea_bank: { label: 'Idea Bank', description: 'Early-stage ideas and brainstorming' },
-  content_script: { label: 'Content Script', description: 'Structured posts and video scripts' },
-  collaboration_note: { label: 'Collaboration', description: 'Brand deals and creator projects' },
-  analytics_insight: { label: 'Analytics', description: 'Performance analysis and insights' },
-  reflection_journal: { label: 'Reflection', description: 'Personal thoughts and creative process' },
-  task_checklist: { label: 'Task Checklist', description: 'Action items and to-do lists' },
-  email_draft: { label: 'Emails', description: 'Email compositions and drafts' }
+  idea_bank: { label: 'Ideas', description: 'Capture thoughts, concepts, and inspiration' },
+  content_script: { label: 'Writing', description: 'Draft and organize written content' },
+  collaboration_note: { label: 'People', description: 'Track relationships and collaborations' },
+  analytics_insight: { label: 'Insights', description: 'Record important learnings and discoveries' },
+  reflection_journal: { label: 'Reflection', description: 'Work through complex thoughts and analysis' },
+  task_checklist: { label: 'Tasks', description: 'Organize what needs to be done' },
+  email_draft: { label: 'Messages', description: 'Prepare emails and communications' }
 };
 
 export function TypeSelector({ noteId, userId, currentType, typeGenerated, onTypeChange }: TypeSelectorProps) {
@@ -210,13 +210,13 @@ export function MinimalTypeDisplay({ currentType }: { currentType: NoteType }) {
   };
 
   const TYPE_LABELS: Record<NoteType, string> = {
-    idea_bank: 'Idea Bank',
-    content_script: 'Content Script',
-    collaboration_note: 'Collaboration',
-    analytics_insight: 'Analytics',
+    idea_bank: 'Ideas',
+    content_script: 'Writing',
+    collaboration_note: 'People',
+    analytics_insight: 'Insights',
     reflection_journal: 'Reflection',
-    task_checklist: 'Task Checklist',
-    email_draft: 'Email'
+    task_checklist: 'Tasks',
+    email_draft: 'Messages'
   };
 
   // Set text color for yellow in dark mode and purple in light mode

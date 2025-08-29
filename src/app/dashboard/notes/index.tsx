@@ -14,10 +14,7 @@ import { GmailThreadCard } from './components/GmailThreadCard';
 import { InsightCard } from '../ai-insights/_components/InsightCard';
 import { InsightOverlay } from '@/components/content/overlays/InsightOverlay';
 
-// Help system imports
-import { EnhancedHelpButton } from '@/components/ui/enhanced-help-button';
-import { InteractiveTooltip } from '@/components/ui/interactive-tooltip';
-import { interactiveTours } from '@/helpContent/interactiveTours';
+
 import { buildNoteUpdate, validateNoteUpdate } from './NoteArea';
 
 export default function SmartNotes() {
@@ -55,10 +52,7 @@ export default function SmartNotes() {
   // Insight card state
   const [selectedInsightId, setSelectedInsightId] = useState<string | null>(null);
   
-  // Help modal state
 
-  const [interactiveTourOpen, setInteractiveTourOpen] = useState(false);
-  const [quickStartOpen, setQuickStartOpen] = useState(false);
   const noteAreaFlushRef = useRef<() => Promise<void>>();
   const [shouldForcePreview, setShouldForcePreview] = useState(false);
 
@@ -344,31 +338,11 @@ export default function SmartNotes() {
         onToggleImportant={handleToggleImportant}
         onUpdateNote={handleNoteUpdate}
         isLoading={notesIsLoading}
-        helpButton={
-          <EnhancedHelpButton 
-            onInteractiveTour={() => setInteractiveTourOpen(true)}
-          />
-        }
+
       />
 
 
-      {/* Interactive Tour */}
-      <InteractiveTooltip
-        isOpen={interactiveTourOpen}
-        onClose={() => setInteractiveTourOpen(false)}
-        steps={interactiveTours.notes}
-        title="Smart Notes Features Tour"
-        autoPlay={false}
-      />
 
-      {/* Quick Start Tour */}
-      <InteractiveTooltip
-        isOpen={quickStartOpen}
-        onClose={() => setQuickStartOpen(false)}
-        steps={interactiveTours.quickStart}
-        title="Quick Start Guide"
-        autoPlay={true}
-      />
     </div>
   );
 }
