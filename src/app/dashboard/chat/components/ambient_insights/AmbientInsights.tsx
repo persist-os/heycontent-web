@@ -191,7 +191,7 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
     return (
       <div className="space-y-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
         <div className="col-span-full text-center text-muted-foreground">
-          <p>Your insights are taking a creative break! 🎨</p>
+          <p>Your insights are taking a little break! 🌙</p>
           <p className="text-sm mt-2">No worries—great ideas take time to develop. Keep being awesome!</p>
         </div>
       </div>

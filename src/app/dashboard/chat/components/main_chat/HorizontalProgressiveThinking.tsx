@@ -79,98 +79,98 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
     }
   }, [vectorSearchMetadata?.foundRelevantContent, isCompleted])
 
-  // Pools of fun, creator-friendly phrases for each stage
+  // Pools of gentle, human-friendly phrases for each thinking stage
   const messagePools = {
     intentAnalysis: {
       main: [
-        "Figuring out what you're looking for",
-        "Getting the vibe of your question",
-        "Understanding what you need",
-        "Piecing together your request",
-        "Reading between the lines",
-        "Decoding your creative needs"
+        "Understanding what you're thinking about",
+        "Getting a sense of what you need",
+        "Seeing what's on your mind",
+        "Taking in your question",
+        "Listening to what you're asking",
+        "Figuring out how I can help"
       ],
       sub: [
-        "Checking if I need to peek at your stuff",
-        "Seeing if your content can help",
-        "Deciding whether to dig into your library",
-        "Figuring out if context would be useful",
-        "Checking if we need your content history",
+        "Checking if I need to look back at our conversations",
+        "Seeing if what we've talked about can help",
+        "Deciding whether to check our chat history",
+        "Figuring out if past conversations would be useful",
+        "Checking if we need what you've shared before",
         "Seeing what kind of help you need"
       ]
     },
     
     contextNeeded: {
       main: [
-        "You need some context",
-        "Your stuff will help with this",
-        "Time to check your content",
-        "Your library has the goods",
-        "Let's dig into your content"
+        "This would benefit from some context",
+        "What we've talked about before will help",
+        "Time to check our conversation history",
+        "Our past discussions have useful pieces",
+        "Let's look back at what you've shared"
       ],
       sub: [
-        "Your question would benefit from your content history",
-        "Your past work has some relevant gems",
-        "There's gold in your content library",
-        "Your creative history will help here",
-        "Your content has the perfect context"
+        "Your question would benefit from our conversation history",
+        "What you've shared before has some relevant pieces",
+        "There are helpful things in our past talks",
+        "Our conversation history will help here",
+        "What you've told me has the perfect context"
       ]
     },
     
     vectorSearch: {
       main: [
-        "Looking through all your content...",
-        "Scanning your creative library...",
-        "Digging through your archives...",
-        "Exploring your content history...",
-        "Searching your creative vault...",
-        "Hunting through your materials..."
+        "Looking through our past conversations...",
+        "Checking what we've talked about before...",
+        "Browsing through your thoughts...",
+        "Exploring our conversation history...",
+        "Searching through what you've shared...",
+        "Looking back at what we've covered..."
       ],
       sub: [
-        "Checking {count} items in your library",
-        "Scanning through {count} pieces of content",
-        "Analyzing {count} items for relevance",
-        "Processing {count} pieces from your collection",
-        "Examining {count} items in your archive",
-        "Reviewing {count} pieces of your work"
+        "Checking {count} things from our conversations",
+        "Looking through {count} pieces you've shared",
+        "Reviewing {count} items for relevance",
+        "Considering {count} pieces from our discussions",
+        "Examining {count} things we've talked about",
+        "Reviewing {count} pieces of our conversation"
       ]
     },
     
     grading: {
       main: [
-        "Separating the gold from the noise",
-        "Finding the most relevant gems",
-        "Quality control time",
-        "Picking the best pieces",
-        "Filtering for relevance",
-        "Curating the perfect context"
+        "Finding what's most relevant",
+        "Sorting through what matters",
+        "Picking out the important bits",
+        "Focusing on what helps most",
+        "Choosing the most useful pieces",
+        "Connecting the relevant dots"
       ],
       sub: [
-        "Making sure we get the good stuff",
-        "AI is being picky about quality",
-        "Only keeping the most relevant pieces",
-        "Filtering out the noise",
-        "Quality check in progress",
-        "Being selective about what matters"
+        "Making sure I find what helps",
+        "Focusing on what's most useful",
+        "Only keeping what's relevant",
+        "Sorting out what matters most",
+        "Finding the most helpful pieces",
+        "Being thoughtful about what fits"
       ]
     },
     
     generation: {
       main: [
-        "Crafting your answer",
-        "Creating something awesome",
-        "Working some magic",
-        "Putting it all together",
-        "Building your response",
-        "Cooking up something good"
+        "Putting my thoughts together",
+        "Working through this with you",
+        "Thinking about how to help",
+        "Considering the best way forward",
+        "Bringing everything together",
+        "Finding the right words"
       ],
       sub: [
-        "Putting together a great response",
-        "Mixing your content with AI magic",
-        "Creating something uniquely yours",
-        "Blending insights with creativity",
-        "Making something special happen",
-        "Turning ideas into gold"
+        "Putting together something helpful",
+        "Bringing our conversations together",
+        "Creating something that fits you",
+        "Blending what we've talked about",
+        "Making something that makes sense",
+        "Turning our thoughts into something useful"
       ]
     }
   };
@@ -207,7 +207,7 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
   }, [searchStatus, statusHistory, processedStatusCount])
 
   const processStatusUpdate = (searchStatus: string) => {
-    if (searchStatus.includes('Analyzing whether your query needs context') || 
+    if (searchStatus.includes('Understanding what you\'re thinking about') || 
         searchStatus.includes('Figuring out what you need')) {
       
       setSteps(prev => {
@@ -229,7 +229,7 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
     }
 
     if (searchStatus.includes('Query needs context - proceeding with vector search') ||
-        searchStatus.includes('Time to check your content')) {
+        searchStatus.includes('Time to check our conversation history')) {
       
       setSteps(prev => {
         const updatedSteps = prev.map(step => 
@@ -286,7 +286,7 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
     }
 
     // Handle grading and individual item processing
-    if (searchStatus.includes('Analyzing AI grading quality') ||
+    if (searchStatus.includes('Looking at each piece carefully') ||
         searchStatus.includes('Examining each item for relevance') ||
         searchStatus.includes('Quality filtering') ||
         searchStatus.includes('filtered')) {
@@ -380,7 +380,7 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
       })
     }
 
-    if (searchStatus.includes('Generating your response') ||
+    if (searchStatus.includes('Putting my thoughts together') ||
         searchStatus.includes('Crafting your answer')) {
       
       setSteps(prev => {

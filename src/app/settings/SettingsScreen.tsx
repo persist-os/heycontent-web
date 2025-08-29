@@ -117,7 +117,7 @@ const SettingsScreen = () => {
 
             <TabsTrigger value="account" className="flex-1 sm:flex-none"><Users className="w-4 h-4 mr-2" /><span className="hidden sm:inline">Account</span></TabsTrigger>
             <TabsTrigger value="subscription" className="flex-1 sm:flex-none"><CreditCard className="w-4 h-4 mr-2" /><span className="hidden sm:inline">Subscription</span></TabsTrigger>
-            <TabsTrigger value="integrations" className="flex-1 sm:flex-none"><Globe className="w-4 h-4 mr-2" /><span className="hidden sm:inline">Integrations</span></TabsTrigger>
+            {/* <TabsTrigger value="integrations" className="flex-1 sm:flex-none"><Globe className="w-4 h-4 mr-2" /><span className="hidden sm:inline">Integrations</span></TabsTrigger> */}
             <TabsTrigger value="data" className="flex-1 sm:flex-none"><Database className="w-4 h-4 mr-2" /><span className="hidden sm:inline">Data</span></TabsTrigger>
           </TabsList>
 

@@ -14,23 +14,23 @@ import Footer from '../components/ui/Footer'
 
 const featureCards = [
   {
-    title: "Powered by Real Insight",
-    description: "We don't guess. HeyContent is driven by your actual content, performance data, and goals, so every suggestion is rooted in you.",
-    icon: ChartBar,
+    title: "Remembers Everything",
+    description: "It holds onto every conversation, every idea, every decision you're working through. You never have to start over or wonder 'what was I thinking about?'",
+    icon: Brain,
     gradient: "bg-[radial-gradient(circle_at_60%_40%,_#43e97b_0%,_#38f9d7_50%,_#fa8bff_100%)]",
     textColor: "text-black"
   },
   {
-    title: "Built to Grow With You",
-    description: "From your first idea to your first brand deal, HeyContent evolves with your goals, not just to help you create, but to help you grow.",
-    icon: Clock,
+    title: "Completely Private",
+    description: "No feeds, no sharing, no social features. Just you and a space that's entirely yours. What you share here stays here, always.",
+    icon: Target,
     gradient: "bg-[radial-gradient(circle_at_60%_40%,_#f7971e_0%,_#ffd200_50%,_#21d4fd_100%)]",
     textColor: "text-black"
   },
   {
-    title: "Smarter With Every Use",
-    description: "The more you use it, the better it gets. HeyContent learns your rhythm, your wins, and what works for your audience, then helps you repeat it.",
-    icon: Brain,
+    title: "Learns How You Think",
+    description: "The more you use it, the better it understands your patterns, your concerns, and what matters to you. Like having someone who really gets you.",
+    icon: Clock,
     gradient: "bg-[radial-gradient(circle_at_60%_40%,_#f9d423_0%,_#ff4e50_100%)]",
     textColor: "text-black"
   }
@@ -61,34 +61,34 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 text-center">
           <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-500/10 to-blue-500/10 backdrop-blur-sm rounded-full border border-white/20 dark:border-border mb-6">
             <span className="text-sm font-medium bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-              ✨ The Future of Content Creation
+              🏠 Your Personal Sanctuary
             </span>
           </div>
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-foreground via-purple-800 dark:via-purple-400 to-blue-800 dark:to-blue-400 bg-clip-text text-transparent leading-relaxed tracking-tight py-2">
-            Where Creativity Meets Intelligence
+            A Place That Remembers You
           </h2>
           <p className="text-xl sm:text-2xl text-muted-foreground leading-relaxed mt-6 max-w-4xl mx-auto">
-            Experience the perfect blend of human creativity and AI intelligence. 
-            Transform your ideas into engaging content that resonates with your audience.
+            Finally, a space where you can put down all the thoughts you've been carrying. 
+            It remembers everything, understands you, and helps you work through whatever's on your mind.
           </p>
           
           {/* Compact Feature Badges */}
           <div className="flex flex-wrap justify-center gap-3 mt-8">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-background/30 backdrop-blur-sm rounded-full border border-border text-sm font-medium text-foreground">
               <div className="w-2 h-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
-              Smart Content Analysis
+              Never Forgets
             </div>
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-background/30 backdrop-blur-sm rounded-full border border-border text-sm font-medium text-foreground">
               <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full"></div>
-              Personalized Insights
+              Completely Private
             </div>
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-background/30 backdrop-blur-sm rounded-full border border-border text-sm font-medium text-foreground">
               <div className="w-2 h-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full"></div>
-              Growth Optimization
+              Picks Up Where You Left Off
             </div>
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-background/30 backdrop-blur-sm rounded-full border border-border text-sm font-medium text-foreground">
               <div className="w-2 h-2 bg-gradient-to-r from-orange-500 to-red-500 rounded-full"></div>
-              Real-time Feedback
+              Understands You
             </div>
           </div>
         </div>
@@ -147,7 +147,7 @@ export default function LandingPage() {
           <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 sm:px-6 mb-3 pt-8 sm:pt-12">
             <div>
               <h2 className="text-3xl sm:text-4xl font-extrabold mb-2 text-foreground">
-                Vibe. Create. Repeat.
+                Feel. Think. Remember.
               </h2>
             </div>
           </div>
@@ -186,10 +186,10 @@ export default function LandingPage() {
                               <path d="M12 14C8.13 14 5 17.13 5 21H7C7 18.24 9.24 16 12 16C14.76 16 17 18.24 17 21H19C19 17.13 15.87 14 12 14Z" fill="currentColor"/>
                             </svg>
                           </div>
-                          <h3 className="text-2xl font-bold text-black">Feels Like You</h3>
+                          <h3 className="text-2xl font-bold text-black">Knows You</h3>
                         </div>
                         <p className="text-black/90 text-lg font-semibold max-w-[90%]" style={{lineHeight: 1.7}}>
-                          Your vibe, your voice. HeyContent adapts to your style so your ideas come out sounding like you on your best day.
+                          It learns how you think, what you care about, and what patterns matter to you. Like having someone who really gets you.
                         </p>
                       </div>
                     </div>
@@ -224,10 +224,10 @@ export default function LandingPage() {
                               <path d="M12 6C8.69 6 6 8.69 6 12C6 15.31 8.69 18 12 18C15.31 18 18 15.31 18 12C18 8.69 15.31 6 12 6ZM12 16C9.79 16 8 14.21 8 12C8 9.79 9.79 8 12 8C14.21 8 16 9.79 16 12C16 14.21 14.21 16 12 16Z" fill="currentColor"/>
                             </svg>
                           </div>
-                          <h3 className="text-2xl font-bold text-black">Creative Intelligence</h3>
+                          <h3 className="text-2xl font-bold text-black">Never Judges</h3>
                         </div>
                         <p className="text-black/90 text-lg font-semibold max-w-[90%]" style={{lineHeight: 1.7}}>
-                          Fueled by your content, your goals, and real-world trends. HeyContent learns how you think and helps you think better.
+                          Bring anything, however it shows up. No pressure to be perfect or have it all figured out. Just space to work things out.
                         </p>
                       </div>
                     </div>
@@ -243,7 +243,7 @@ export default function LandingPage() {
           <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 sm:px-6 mb-3 pt-8 sm:pt-12">
             <div>
               <h2 className="text-3xl sm:text-4xl font-extrabold mb-2 text-foreground">
-                Always Evolving.
+                Always There.
               </h2>
             </div>
           </div>
@@ -307,14 +307,14 @@ export default function LandingPage() {
               >
                 <div className="relative rounded-3xl overflow-hidden bg-background/40 backdrop-blur-md p-8 sm:p-24 border border-border shadow-lg transition-all duration-300 group-hover:shadow-2xl group-hover:bg-background/60">
                   <h2 className="text-2xl sm:text-4xl font-medium mb-6 sm:mb-8 text-foreground transition-all duration-300 group-hover:text-foreground/90">
-                    Instant insights. Smarter strategy.{' '}
-                    <span className="block mt-2 text-foreground">Limitless growth for creators.</span>
+                    A place to put down what you're carrying.{' '}
+                    <span className="block mt-2 text-foreground">Come back to anything, anytime.</span>
                   </h2>
                   <button
                     onClick={() => router.push('/auth/register')}
                     className="mt-6 sm:mt-8 bg-foreground text-background px-6 py-3 rounded-xl hover:bg-foreground/80 transition-all duration-300 inline-flex items-center gap-2 group-hover:scale-105 transform"
                   >
-                    Try HeyContent
+                    Find Your Space
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>

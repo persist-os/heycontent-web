@@ -51,7 +51,8 @@ import {
   Briefcase,
   Settings,
   Camera,
-  X
+  X,
+  Heart
 } from 'lucide-react';
 
 // Re-export existing types for consistency
@@ -84,526 +85,608 @@ export type NoteType =
 const createIcon = (IconComponent: React.ComponentType<{ className?: string }>) => 
   React.createElement(IconComponent, { className: "w-4 h-4" });
 
-// GENERATION COMMANDS - Create new content from scratch
+// GENERATION COMMANDS - Create new ideas and approaches
 export const NOTE_TYPE_CONFIGS: Record<NoteType, TypeSpecificConfig> = {
-  // Idea Bank - Turn blank page into content goldmine
+  // Ideas - Capture thoughts, concepts, and inspiration
   idea_bank: {
     quickCommands: [
       {
-        id: 'trend-mining',
-        label: 'What\'s trending in my niche right now?',
-        description: 'Research current hot topics and trending conversations in your space',
-        icon: createIcon(TrendingUp),
-        category: 'Research'
+        id: 'idea-starter',
+        label: 'Help me brainstorm ideas about',
+        description: 'Generate initial thoughts and concepts to explore',
+        icon: createIcon(Lightbulb),
+        category: 'Generate'
       },
       {
-        id: 'audience-question-harvest',
-        label: 'What questions is my audience asking?',
-        description: 'Analyze your comments, DMs, and community to find common questions',
-        icon: createIcon(MessageCircle),
-        category: 'Research'
-      },
-      {
-        id: 'competitor-gap-finder',
-        label: 'What content gaps can I find and own?',
-        description: 'Identify topics and angles other creators in your space aren\'t covering',
+        id: 'curiosity-explorer',
+        label: 'What should I learn more about?',
+        description: 'Identify interesting areas worth exploring deeper',
         icon: createIcon(Search),
-        category: 'Research'
+        category: 'Explore'
       },
       {
-        id: 'viral-concept-builder',
-        label: 'How can I make this idea go viral?',
-        description: 'Transform your concept to maximize shareability and engagement',
-        icon: createIcon(Zap),
-        category: 'Generate'
-      },
-      {
-        id: 'series-multiplier',
-        label: 'How can I turn this into 10 pieces of content?',
-        description: 'Expand one concept into multiple pieces with different angles',
+        id: 'connection-finder',
+        label: 'How does this connect to other things I know?',
+        description: 'Find relationships between different concepts and ideas',
         icon: createIcon(Layers),
-        category: 'Generate'
+        category: 'Connect'
       },
       {
-        id: 'signature-series-creator',
-        label: 'How can I turn this into a signature series?',
-        description: 'Build a recurring, branded content series that becomes your trademark',
-        icon: createIcon(Star),
-        category: 'Generate'
+        id: 'question-generator',
+        label: 'What questions should I be asking?',
+        description: 'Generate thoughtful questions to guide your thinking',
+        icon: createIcon(MessageCircle),
+        category: 'Question'
       },
       {
-        id: 'seasonal-calendar',
-        label: 'What should I post in the next 3 months?',
-        description: 'Plan upcoming content around trends, holidays, and seasonal moments',
-        icon: createIcon(Calendar),
-        category: 'Plan'
+        id: 'perspective-shifter',
+        label: 'What are different ways to think about this?',
+        description: 'Explore various angles and viewpoints',
+        icon: createIcon(RefreshCw),
+        category: 'Explore'
       },
       {
-        id: 'pain-point-miner',
-        label: 'What problems can I solve with content?',
-        description: 'Identify your audience\'s biggest struggles and frustrations',
-        icon: createIcon(AlertTriangle),
+        id: 'idea-builder',
+        label: 'How can I develop this thought further?',
+        description: 'Expand and refine your initial ideas',
+        icon: createIcon(Zap),
+        category: 'Develop'
+      },
+      {
+        id: 'practical-applications',
+        label: 'How could I use or apply this?',
+        description: 'Find practical ways to implement or use your ideas',
+        icon: createIcon(Target),
+        category: 'Apply'
+      },
+      {
+        id: 'research-directions',
+        label: 'What should I research next?',
+        description: 'Identify specific areas or topics to investigate',
+        icon: createIcon(BookOpen),
         category: 'Research'
       },
       {
-        id: 'hook-variations',
-        label: 'How can I hook viewers in the first 3 seconds?',
-        description: 'Create multiple scroll-stopping opening options to test',
-        icon: createIcon(Megaphone),
-        category: 'Generate'
+        id: 'idea-organizer',
+        label: 'How can I organize these thoughts?',
+        description: 'Structure and categorize your ideas clearly',
+        icon: createIcon(List),
+        category: 'Organize'
       },
       {
-        id: 'engagement-bait',
-        label: 'How can I get more comments and shares?',
-        description: 'Design content that naturally encourages engagement and sharing',
-        icon: createIcon(MessageSquare),
-        category: 'Generate'
+        id: 'future-potential',
+        label: 'Where could this lead?',
+        description: 'Explore potential outcomes and future possibilities',
+        icon: createIcon(TrendingUp),
+        category: 'Envision'
       }
     ],
     defaultPrompts: [
-      'Research the top 10 trending topics in [my niche] right now and create 15 unique content angles I can own. Focus on topics gaining momentum in the last 30 days that align with my expertise. For each trend, give me: the core trend, why it\'s gaining traction, my unique angle, and 3 specific content ideas with hooks.',
-      'Analyze my last 100 comments, DMs, and community interactions to identify the top 10 questions my audience keeps asking. Turn each question into a viral content concept with: the question reframed as a hook, the core answer, 3 supporting points, and a call-to-action that drives engagement.',
-      'Find 5 major content gaps in my space that successful creators aren\'t covering yet. Research my top 10 competitors and identify: topics they\'re missing, angles they haven\'t explored, formats they\'re not using, and audience pain points they\'re not addressing. Give me specific content ideas for each gap.',
-      'Take this basic idea: [IDEA] and transform it into a viral concept designed for maximum shareability. Include: 5 scroll-stopping hook variations, emotional triggers that drive shares, pattern interrupts to maintain attention, and specific calls-to-action for comments, saves, and shares.',
-      'Transform this single concept: [CONCEPT] into a 10-part content series. Each piece should have: a unique hook that works standalone, a specific angle or sub-topic, optimal length for platform, and strategic sequencing to keep viewers coming back for more.',
-      'Turn this concept: [CONCEPT] into a signature series that becomes my trademark content. Design a recurring format with: a memorable series name and branding, consistent format structure (intro, main content, outro), weekly/monthly schedule that\'s sustainable, 12 episode topics that build on each other, unique visual elements and catchphrases, audience participation elements, monetization opportunities (sponsorships, products, courses), and a content calendar for the first quarter. Make this series so uniquely mine that when people see this format, they immediately think of me.',
-      'Create a detailed 3-month content calendar around upcoming trends, holidays, and seasonal moments. Include: specific posting dates, trend-based content ideas, holiday tie-ins for my niche, seasonal emotional triggers, and backup content for algorithm changes.'
+      'Help me brainstorm ideas about [topic/area of interest]. Generate diverse concepts and approaches I could explore, including: different angles to consider, interesting questions to investigate, potential connections to other topics, and ways to make this personally meaningful.',
+      'I\'m curious about [subject/topic]. Help me identify what aspects would be most interesting to learn about, including: fundamental concepts I should understand, practical applications, current developments, and how this connects to my other interests.',
+      'Take this initial thought: [IDEA] and help me develop it further. Explore: what makes this idea interesting, different ways to approach it, potential applications or uses, questions it raises, and how I could explore it more deeply.',
+      'I want to understand [concept/topic] better. Help me create a learning plan that includes: key areas to focus on, good starting points, resources to explore, ways to practice or apply what I learn, and how to track my progress.',
+      'Help me organize these scattered thoughts about [topic]. Structure them into: main themes or categories, relationships between ideas, areas that need more development, questions to explore further, and next steps for each area.',
+      'I\'m interested in [field/subject] but don\'t know where to start. Create a beginner-friendly exploration plan with: foundational concepts to learn first, interesting examples or case studies, hands-on activities to try, and ways to gradually build deeper understanding.',
+      'Turn this general interest in [topic] into specific, actionable learning goals. Include: what I want to understand or be able to do, timeline for learning, resources and methods to use, ways to measure progress, and how to stay motivated.'
     ],
-    categories: ['Research', 'Generate', 'Plan']
+    categories: ['Generate', 'Explore', 'Connect', 'Question', 'Develop', 'Apply', 'Research', 'Organize', 'Envision']
   },
 
-  // Content Script - From concept to scroll-stopping content
+  // Writing - Draft and organize written content and documents
   content_script: {
     quickCommands: [
       {
-        id: 'full-script-creator',
-        label: 'Can you write the full script for this concept?',
-        description: 'Create a complete, engaging script with natural flow',
-        icon: createIcon(FileText),
-        category: 'Create'
+        id: 'writing-starter',
+        label: 'Help me start writing about',
+        description: 'Get help beginning any piece of writing from scratch',
+        icon: createIcon(Edit3),
+        category: 'Start'
       },
       {
-        id: 'hook-generator',
-        label: 'What are 10 ways to hook viewers immediately?',
-        description: 'Generate multiple opening options to grab attention fast',
-        icon: createIcon(Megaphone),
-        category: 'Create'
+        id: 'thought-organizer',
+        label: 'Help me organize these thoughts clearly',
+        description: 'Structure scattered ideas into coherent writing',
+        icon: createIcon(List),
+        category: 'Organize'
       },
       {
-        id: 'retention-booster',
-        label: 'How can I keep people watching till the end?',
-        description: 'Add tactics to maintain attention and prevent drop-offs',
-        icon: createIcon(Activity),
-        category: 'Optimize'
+        id: 'clarity-improver',
+        label: 'Make this clearer and easier to understand',
+        description: 'Improve clarity and readability of your writing',
+        icon: createIcon(Eye),
+        category: 'Clarity'
       },
       {
-        id: 'platform-adapter',
-        label: 'How do I adapt this for different platforms?',
-        description: 'Reformat content for TikTok, Instagram, YouTube, and Twitter',
-        icon: createIcon(RefreshCw),
-        category: 'Adapt'
+        id: 'tone-adjuster',
+        label: 'Help me adjust the tone of this',
+        description: 'Modify the style and voice to match your needs',
+        icon: createIcon(Volume2),
+        category: 'Style'
       },
       {
-        id: 'hashtag-researcher',
-        label: 'What hashtags will my audience actually use?',
-        description: 'Find hashtags your specific followers engage with',
-        icon: createIcon(Hash),
-        category: 'Optimize'
+        id: 'structure-builder',
+        label: 'How should I structure this piece?',
+        description: 'Create a logical flow and organization',
+        icon: createIcon(Layers),
+        category: 'Structure'
       },
       {
-        id: 'cta-psychology',
-        label: 'What call-to-action will actually get results?',
-        description: 'Create CTAs that drive the specific action you want',
+        id: 'conclusion-writer',
+        label: 'Help me wrap this up effectively',
+        description: 'Create strong, satisfying endings',
         icon: createIcon(Target),
-        category: 'Optimize'
+        category: 'Finish'
       },
       {
-        id: 'thumbnail-concepts',
-        label: 'What thumbnail would make people stop scrolling?',
-        description: 'Design thumbnail ideas that grab attention and get clicks',
-        icon: createIcon(Camera),
-        category: 'Create'
+        id: 'example-generator',
+        label: 'Add examples to make this clearer',
+        description: 'Include concrete examples and illustrations',
+        icon: createIcon(Lightbulb),
+        category: 'Enhance'
       },
       {
-        id: 'story-structure',
-        label: 'How can I structure this as a compelling story?',
-        description: 'Apply storytelling frameworks to maximize engagement',
-        icon: createIcon(BookOpen),
-        category: 'Create'
+        id: 'length-adjuster',
+        label: 'Make this longer/shorter as needed',
+        description: 'Expand or condense your writing appropriately',
+        icon: createIcon(Scissors),
+        category: 'Edit'
       },
       {
-        id: 'algorithm-optimization',
-        label: 'How can I optimize this for the algorithm?',
-        description: 'Apply platform-specific optimization for maximum reach',
-        icon: createIcon(Settings),
-        category: 'Optimize'
+        id: 'format-converter',
+        label: 'Convert this to a different format',
+        description: 'Transform into essay, letter, report, etc.',
+        icon: createIcon(RefreshCw),
+        category: 'Format'
+      },
+      {
+        id: 'grammar-checker',
+        label: 'Check and improve the grammar',
+        description: 'Polish grammar, punctuation, and style',
+        icon: createIcon(CheckCircle),
+        category: 'Polish'
       }
     ],
     defaultPrompts: [
-      'Write a complete script from this concept: [CONCEPT]. Structure it with: a scroll-stopping hook in the first 3 seconds, natural flow that maintains attention, specific examples and concrete details, strategic pattern interrupts every 15-20 seconds, and a strong call-to-action. Make it sound conversational and authentic, like I\'m talking to my best friend.',
-      'Create 10 different hook variations for this content: [CONTENT TOPIC]. Each hook should: stop scrollers within 3 seconds, create curiosity or urgency, be under 10 words, work without sound, and rank them by scroll-stopping potential. Include visual, text, and verbal hook options.',
-      'Add retention tactics to keep viewers watching till the end. Include: curiosity gaps every 15 seconds, pattern interrupts (questions, surprises, conflicts), preview of what\'s coming, emotional peaks and valleys, and a payoff that rewards full viewing. Prevent drop-offs at typical exit points.',
-      'Adapt this script for multiple platforms with specific requirements: TikTok (15-60 seconds, trending audio, fast pace), Instagram Reels (30-90 seconds, save-worthy), YouTube Shorts (under 60 seconds, loop potential), and Twitter (text + video, news angle). Maintain core message while optimizing for each platform\'s algorithm.',
-      'Research 20 hashtags my specific audience actually follows and engages with. Avoid basic trending tags and find: niche-specific hashtags with 10K-500K posts, community hashtags my audience uses, location-based tags if relevant, branded hashtags from related creators, and mix of broad/medium/specific reach. Include engagement rates for each.',
-      'Write 5 different calls-to-action using psychology that will drive the specific engagement I want: [DESIRED ACTION]. Use persuasion principles like social proof, scarcity, reciprocity, and authority. Make each CTA feel natural, not pushy, and include specific language that triggers action.',
-      'Generate 5 thumbnail concepts that would make someone stop mid-scroll and click. Consider: high contrast colors, emotional faces, clear text overlay (under 6 words), curiosity-inducing elements, and platform-specific dimensions. Rank by click-through potential and explain the psychology behind each.'
+      'Help me write about [topic/subject]. Start from scratch and create: a clear introduction that explains what this is about, main points organized logically, specific examples to illustrate key ideas, and a conclusion that ties everything together. Make it easy to read and understand.',
+      'Take these scattered thoughts about [topic] and help me organize them into coherent writing. Structure them with: clear main themes, logical flow between ideas, smooth transitions, and appropriate depth for each point.',
+      'Improve this draft to make it clearer and more engaging. Focus on: simplifying complex sentences, adding concrete examples, improving transitions between paragraphs, and ensuring the main message is clear throughout.',
+      'Help me adjust the tone and style of this writing for [specific purpose/audience]. Modify: formality level, vocabulary choices, sentence structure, and overall approach while keeping the core message intact.',
+      'Transform this piece into [specific format]: essay, letter, report, summary, etc. Adapt: structure and organization, language and tone, length and detail level, and formatting conventions appropriate for the new format.',
+      'Add depth and detail to this writing by including: relevant examples and illustrations, supporting evidence or explanations, personal insights or observations, and connections to related topics or ideas.',
+      'Help me conclude this piece effectively. Create an ending that: summarizes the main points, provides closure, leaves the reader with something meaningful to think about, and feels natural and satisfying.'
     ],
-    categories: ['Create', 'Optimize', 'Adapt']
+    categories: ['Start', 'Organize', 'Clarity', 'Style', 'Structure', 'Finish', 'Enhance', 'Edit', 'Format', 'Polish']
   },
 
-  // Collaboration Note - Protect your brand and get paid fairly
+  // People - Track relationships, conversations, and collaboration details
   collaboration_note: {
     quickCommands: [
       {
-        id: 'scope-definer',
-        label: 'How can I prevent scope creep on this project?',
-        description: 'Define clear boundaries and deliverables to protect yourself',
-        icon: createIcon(Shield),
-        category: 'Protect'
-      },
-      {
-        id: 'rate-calculator',
-        label: 'What should I charge for this collaboration?',
-        description: 'Calculate fair pricing based on your metrics and market rates',
-        icon: createIcon(DollarSign),
-        category: 'Money'
-      },
-      {
-        id: 'contract-reviewer',
-        label: 'What red flags should I watch for in this contract?',
-        description: 'Identify terms you need to negotiate to protect your interests',
-        icon: createIcon(Eye),
-        category: 'Protect'
-      },
-      {
-        id: 'timeline-setter',
-        label: 'What\'s a realistic timeline for this project?',
-        description: 'Set deadlines that account for revisions and approval cycles',
-        icon: createIcon(Clock),
-        category: 'Plan'
-      },
-      {
-        id: 'payment-securer',
-        label: 'How can I protect myself from late payments?',
-        description: 'Structure payment terms and late fees to secure payment',
-        icon: createIcon(CheckCircle),
-        category: 'Money'
-      },
-      {
-        id: 'brand-alignment-checker',
-        label: 'Does this partnership align with my brand?',
-        description: 'Evaluate if this collaboration fits your values and audience',
-        icon: createIcon(UserCheck),
-        category: 'Strategy'
-      },
-      {
-        id: 'usage-rights-negotiator',
-        label: 'What usage rights should I retain?',
-        description: 'Understand and negotiate content ownership and usage terms',
-        icon: createIcon(FileCheck),
-        category: 'Protect'
-      },
-      {
-        id: 'deliverable-breakdown',
-        label: 'How should I break down these deliverables?',
-        description: 'Structure work into clear, measurable components',
-        icon: createIcon(List),
-        category: 'Plan'
-      }
-    ],
-    defaultPrompts: [
-      'Break this collaboration into specific, measurable deliverables to prevent scope creep. For each deliverable, define: exact specifications (dimensions, length, format), delivery timeline with milestones, revision rounds included (max 2-3), approval process and timeframes, and what\'s NOT included. Create bulletproof language that protects against "just one more thing" requests.',
-      'Calculate fair pricing for this collaboration. I have [X] followers, [Y]% engagement rate, [Z] average views, in the [NICHE] space. Research: industry standard rates for my metrics, value of deliverables requested, usage rights and exclusivity, timeline and rush fees, and comparable creator rates. Provide a rate range with justification.',
-      'Review this contract and flag terms I should negotiate to protect myself. Look for: payment timeline and late fees, content ownership and usage rights, exclusivity clauses, cancellation terms, liability limitations, revision limits, approval processes, and any language that favors the brand unfairly. Suggest specific negotiations.',
-      'Create a realistic timeline for this project with proper buffer time. Account for: initial concept development, first draft creation, brand feedback and revisions (2-3 rounds), final approvals, and content delivery. Add 20-30% buffer time for delays and build in milestone checkpoints for payment and approval.',
-      'Structure payment terms to protect against late payment and scope creep. Recommend: 50% upfront payment, milestone payments tied to deliverables, final payment on delivery, late payment fees (2-5% per week), kill fee if project cancelled, and additional charges for scope changes. Include specific payment timeline language.',
-      'Analyze if this brand partnership aligns with my values and audience expectations. Consider: brand reputation and controversies, product quality and price point, target audience overlap, message alignment with my content, long-term relationship potential, and impact on my credibility. Provide a recommendation with reasoning.'
-    ],
-    categories: ['Protect', 'Money', 'Strategy', 'Plan']
-  },
-
-  // Analytics Insight - Turn data into revenue decisions
-  analytics_insight: {
-    quickCommands: [
-      {
-        id: 'revenue-connector',
-        label: 'Which content is actually making me money?',
-        description: 'Connect your metrics to actual revenue and monetization',
-        icon: createIcon(DollarSign),
-        category: 'Money'
-      },
-      {
-        id: 'drop-off-analyzer',
-        label: 'Why are people leaving my content early?',
-        description: 'Identify exactly where and why viewers are dropping off',
-        icon: createIcon(BarChart),
-        category: 'Performance'
-      },
-      {
-        id: 'audience-profiler',
-        label: 'Who are my best followers and what do they want?',
-        description: 'Understand your most engaged audience and their preferences',
-        icon: createIcon(UserCheck),
-        category: 'Audience'
-      },
-      {
-        id: 'competitor-benchmarker',
-        label: 'How do I compare to other creators in my space?',
-        description: 'Benchmark your performance against similar creators',
-        icon: createIcon(BarChart3),
-        category: 'Strategy'
-      },
-      {
-        id: 'roi-calculator',
-        label: 'What content gives me the best ROI?',
-        description: 'Identify which content types give the best return on effort',
-        icon: createIcon(Percent),
-        category: 'Money'
-      },
-      {
-        id: 'growth-forecaster',
-        label: 'Where will my metrics be in 6 months?',
-        description: 'Predict your growth trajectory based on current trends',
-        icon: createIcon(TrendingUp),
-        category: 'Strategy'
-      },
-      {
-        id: 'engagement-optimizer',
-        label: 'How can I boost my engagement rate?',
-        description: 'Find specific ways to increase comments, shares, and saves',
-        icon: createIcon(Activity),
-        category: 'Performance'
-      },
-      {
-        id: 'monetization-spotter',
-        label: 'What monetization opportunities am I missing?',
-        description: 'Identify revenue opportunities you might be overlooking',
-        icon: createIcon(Star),
-        category: 'Money'
-      }
-    ],
-    defaultPrompts: [
-      'Analyze my content from the last 90 days and identify which pieces directly led to revenue opportunities. Connect specific posts/videos to: brand deal inquiries, product sales, email signups, course purchases, speaking opportunities, and affiliate commissions. Create a revenue attribution model showing which content types and topics drive the most monetary value.',
-      'Analyze my drop-off points and explain why viewers are leaving at those specific moments. Look for patterns in: hook effectiveness (first 3-5 seconds), content pacing and flow, topic transition points, call-to-action placement, content length vs. topic complexity, and seasonal/timing factors. Provide specific fixes for each drop-off pattern.',
-      'Profile my most engaged followers to understand who they are and what they want more of. Analyze: demographics and interests, content they engage with most, topics that drive their comments, sharing behavior patterns, purchase indicators, and content requests. Create an ideal follower persona and content strategy to attract more like them.',
-      'Compare my performance metrics to successful creators in my niche over the last 6 months. Benchmark: follower growth rate, engagement rates by platform, content frequency and consistency, monetization strategies, audience overlap, and content performance patterns. Identify where I\'m ahead, behind, and opportunities to differentiate.',
-      'Calculate ROI for different content types to identify what gives the best return on time invested. Measure: time spent creating vs. engagement received, reach per hour of work, monetization potential by format, production costs vs. performance, and long-term value creation. Recommend optimal content mix for maximum ROI.',
-      'Based on my current growth patterns and industry trends, predict where my metrics will be in 6 months. Forecast: follower growth trajectory, engagement rate trends, content performance evolution, monetization potential, market opportunities, and potential challenges. Include best-case, realistic, and conservative scenarios.'
-    ],
-    categories: ['Money', 'Performance', 'Audience', 'Strategy']
-  },
-
-  // Reflection Journal - Learn from wins and setbacks
-  reflection_journal: {
-    quickCommands: [
-      {
-        id: 'win-highlighter',
-        label: 'What progress am I not celebrating enough?',
-        description: 'Identify wins and growth you might be overlooking',
-        icon: createIcon(Award),
-        category: 'Growth'
-      },
-      {
-        id: 'lesson-extractor',
-        label: 'What can I learn from this setback?',
-        description: 'Extract valuable lessons and insights from challenges',
-        icon: createIcon(Lightbulb),
-        category: 'Learning'
-      },
-      {
-        id: 'pattern-spotter',
-        label: 'What patterns do I see in my creative process?',
-        description: 'Identify cycles in your creativity, productivity, and energy',
-        icon: createIcon(Activity),
-        category: 'Insight'
-      },
-      {
-        id: 'burnout-detector',
-        label: 'Am I showing signs of burnout?',
-        description: 'Check for early warning signs affecting your content',
-        icon: createIcon(AlertTriangle),
-        category: 'Wellness'
-      },
-      {
-        id: 'goal-realigner',
-        label: 'Do my goals still make sense?',
-        description: 'Evaluate if your objectives align with what you\'ve learned',
-        icon: createIcon(Target),
-        category: 'Strategy'
-      },
-      {
-        id: 'confidence-tracker',
-        label: 'What builds vs. kills my creative confidence?',
-        description: 'Understand what impacts your creative confidence',
-        icon: createIcon(TrendingUp),
-        category: 'Growth'
-      },
-      {
-        id: 'energy-analyzer',
-        label: 'When am I most creative and productive?',
-        description: 'Map your optimal creative and work patterns',
-        icon: createIcon(Gauge),
-        category: 'Insight'
-      },
-      {
-        id: 'relationship-evaluator',
-        label: 'How are my collaborations affecting my work?',
-        description: 'Assess how business relationships impact your creativity',
+        id: 'relationship-tracker',
+        label: 'Help me remember details about this person',
+        description: 'Organize important information about someone',
         icon: createIcon(Users),
-        category: 'Strategy'
-      }
-    ],
-    defaultPrompts: [
-      'Help me identify progress I\'ve made this month that I might be undervaluing or taking for granted. Look for: skill improvements that have become automatic, follower quality increases, brand perception shifts, content creation efficiency gains, financial progress (even small), and personal growth markers. Celebrate these wins properly.',
-      'Analyze what went wrong with this situation: [SITUATION] and extract valuable lessons for future success. Break down: what factors I could control vs. couldn\'t, decision points where different choices might have helped, external factors that influenced the outcome, skills or knowledge gaps revealed, and specific actions to prevent similar issues.',
-      'Identify patterns in my creative process, productivity cycles, and energy levels over the past 3 months. Look for: times of day when I\'m most creative, content types that energize vs. drain me, external factors that boost/hurt performance, seasonal or cyclical changes, and optimal work rhythms. Use this to optimize my schedule.',
-      'Assess whether I\'m showing early burnout signs and what I should change to protect my energy and creativity. Check for: decreased enthusiasm for content creation, quality decline in work, increased procrastination, physical exhaustion, cynicism about the industry, and social withdrawal. Provide specific recovery strategies.',
-      'Based on what I\'ve learned about myself and my audience over the past 6 months, how should I adjust my goals and priorities? Consider: what\'s working better than expected, what\'s harder than anticipated, new opportunities that have emerged, personal values shifts, and market changes. Realign goals with reality.',
-      'Analyze what consistently builds vs. undermines my creative confidence over time. Identify: types of feedback that motivate vs. discourage, comparison triggers that hurt confidence, content creation activities that boost self-belief, external validation dependencies, and internal confidence sources. Build a confidence protection plan.'
-    ],
-    categories: ['Growth', 'Learning', 'Insight', 'Wellness', 'Strategy']
-  },
-
-  // Task Checklist - Stop drowning in busywork
-  task_checklist: {
-    quickCommands: [
-      {
-        id: 'revenue-prioritizer',
-        label: 'Which tasks will actually make me money?',
-        description: 'Identify and prioritize tasks by direct revenue impact',
-        icon: createIcon(DollarSign),
-        category: 'Priority'
+        category: 'Remember'
       },
       {
-        id: 'batch-optimizer',
-        label: 'How can I group these tasks efficiently?',
-        description: 'Organize similar tasks into focused work sessions',
-        icon: createIcon(Layers),
-        category: 'Efficiency'
+        id: 'conversation-summarizer',
+        label: 'Summarize this conversation or interaction',
+        description: 'Capture key points from meetings or discussions',
+        icon: createIcon(MessageSquare),
+        category: 'Record'
       },
       {
-        id: 'delegation-spotter',
-        label: 'What should I stop doing myself?',
-        description: 'Find tasks to delegate, automate, or eliminate',
-        icon: createIcon(Users),
-        category: 'Strategy'
-      },
-      {
-        id: 'content-scheduler',
-        label: 'How do I turn tasks into a content calendar?',
-        description: 'Transform your task list into a strategic content schedule',
+        id: 'follow-up-planner',
+        label: 'What should I follow up on?',
+        description: 'Identify next steps and action items from interactions',
         icon: createIcon(Calendar),
         category: 'Plan'
       },
       {
-        id: 'energy-matcher',
-        label: 'When should I do each type of task?',
-        description: 'Match tasks to your natural energy levels throughout the day',
-        icon: createIcon(Gauge),
-        category: 'Efficiency'
+        id: 'relationship-analyzer',
+        label: 'Help me understand this relationship better',
+        description: 'Reflect on dynamics and communication patterns',
+        icon: createIcon(Brain),
+        category: 'Understand'
       },
       {
-        id: 'milestone-creator',
-        label: 'How can I break this into motivating wins?',
-        description: 'Create celebration checkpoints for big projects',
-        icon: createIcon(CheckCircle),
-        category: 'Motivation'
+        id: 'communication-improver',
+        label: 'How can I communicate better with this person?',
+        description: 'Find ways to improve understanding and connection',
+        icon: createIcon(MessageCircle),
+        category: 'Improve'
       },
       {
-        id: 'time-estimator',
-        label: 'How long will these actually take?',
-        description: 'Get realistic time estimates to prevent overcommitment',
-        icon: createIcon(Clock),
-        category: 'Plan'
-      },
-      {
-        id: 'procrastination-breaker',
-        label: 'How can I stop avoiding these tasks?',
-        description: 'Break overwhelming tasks into manageable steps',
-        icon: createIcon(Target),
-        category: 'Motivation'
-      }
-    ],
-    defaultPrompts: [
-      'Reorder these tasks by direct revenue impact, prioritizing money-making activities first. Categorize each task as: immediate revenue (client work, sales activities), medium-term revenue (content creation, lead generation), long-term revenue (relationship building, skill development), or non-revenue (admin, maintenance). Create a priority ranking with revenue potential for each.',
-      'Group these tasks into efficient 2-3 hour focused work batches. Organize by: similar energy requirements, shared tools or platforms, related cognitive load, natural workflow sequence, and minimal context switching. Create themed blocks like "Content Creation," "Business Admin," "Engagement & Community," etc.',
-      'Identify which tasks I should delegate, automate, or stop doing entirely. For each task, evaluate: my skill level vs. time cost, availability of alternatives (tools, VAs, freelancers), importance to core business, and ROI of doing vs. outsourcing. Provide specific delegation recommendations with cost estimates.',
-      'Transform this task list into a strategic content production calendar. Map tasks to: optimal posting times, content pillars and themes, seasonal opportunities, platform-specific requirements, and audience engagement patterns. Create a weekly/monthly rhythm that sustains consistent output.',
-      'Organize tasks by optimal energy levels and times of day. Match: high-creativity tasks to peak energy hours, routine admin to low-energy periods, relationship/communication tasks to midday energy, and planning/strategy to fresh morning hours. Account for my natural circadian rhythm and energy patterns.',
-      'Break these big goals and projects into weekly milestones worth celebrating. Create: specific achievement markers, reward systems for completion, progress tracking methods, and motivation checkpoints. Make each milestone feel significant enough to maintain momentum without being overwhelming.'
-    ],
-    categories: ['Priority', 'Efficiency', 'Strategy', 'Plan', 'Motivation']
-  },
-
-  // Email Draft - Professional communication that protects your interests
-  email_draft: {
-    quickCommands: [
-      {
-        id: 'brand-inquiry-responder',
-        label: 'How do I respond to this brand inquiry professionally?',
-        description: 'Craft a professional response that protects your interests',
-        icon: createIcon(Mail),
-        category: 'Response'
-      },
-      {
-        id: 'rate-negotiator',
-        label: 'How do I counter this lowball offer?',
-        description: 'Negotiate higher rates professionally with data backing',
-        icon: createIcon(DollarSign),
-        category: 'Negotiate'
-      },
-      {
-        id: 'polite-decliner',
-        label: 'How do I say no while keeping doors open?',
-        description: 'Decline professionally while maintaining future opportunities',
-        icon: createIcon(X),
-        category: 'Response'
-      },
-      {
-        id: 'scope-clarifier',
-        label: 'What questions should I ask about this project?',
-        description: 'Ask strategic questions to clarify scope and prevent issues',
-        icon: createIcon(FileCheck),
-        category: 'Protect'
-      },
-      {
-        id: 'follow-up-strategist',
-        label: 'How do I follow up without seeming desperate?',
-        description: 'Write professional follow-ups that show interest, not desperation',
-        icon: createIcon(Send),
-        category: 'Strategy'
-      },
-      {
-        id: 'payment-securer',
-        label: 'How do I secure payment terms upfront?',
-        description: 'Lock in favorable payment terms and late fees',
+        id: 'conflict-resolver',
+        label: 'Help me work through this disagreement',
+        description: 'Find constructive approaches to resolve conflicts',
         icon: createIcon(Shield),
-        category: 'Protect'
+        category: 'Resolve'
       },
       {
         id: 'boundary-setter',
-        label: 'How do I set professional boundaries?',
-        description: 'Communicate limits on revisions, timeline, and scope',
+        label: 'How can I set healthy boundaries?',
+        description: 'Establish clear, respectful limits in relationships',
         icon: createIcon(Target),
-        category: 'Protect'
+        category: 'Boundaries'
       },
       {
-        id: 'value-communicator',
-        label: 'How do I communicate my value without bragging?',
-        description: 'Articulate your worth and expertise professionally',
-        icon: createIcon(Award),
-        category: 'Strategy'
+        id: 'appreciation-expresser',
+        label: 'How can I show appreciation effectively?',
+        description: 'Find meaningful ways to express gratitude and recognition',
+        icon: createIcon(Star),
+        category: 'Connect'
+      },
+      {
+        id: 'collaboration-organizer',
+        label: 'How can we work together effectively?',
+        description: 'Plan and structure collaborative efforts',
+        icon: createIcon(UserCheck),
+        category: 'Collaborate'
+      },
+      {
+        id: 'networking-tracker',
+        label: 'Track connections and networking opportunities',
+        description: 'Organize professional and personal network information',
+        icon: createIcon(Layers),
+        category: 'Network'
       }
     ],
     defaultPrompts: [
-      'Draft a professional response to this brand inquiry that shows genuine interest while protecting my rates and setting proper boundaries. Include: enthusiasm for the brand and project, questions about deliverables and timeline, my rate range with justification, next steps for discussion, and professional tone that establishes credibility without desperation.',
-      'Counter this lowball offer professionally using data to justify higher rates. My metrics: [X] followers, [Y]% engagement rate, [Z] average views in [NICHE]. Include: appreciation for the opportunity, market rate research for my level, specific value I bring to their campaign, alternative package options, and willingness to discuss while maintaining rate integrity.',
-      'Politely decline this opportunity while keeping doors open for future collaborations that might be a better fit. Include: gratitude for thinking of me, specific reason for declining (timing, fit, budget), alternative suggestions if possible, invitation to connect for future opportunities, and warm, professional tone that maintains the relationship.',
-      'Draft strategic questions about this project to clarify scope and prevent misunderstandings. Ask about: specific deliverables and formats, timeline and deadline flexibility, usage rights and exclusivity, budget range and payment terms, revision rounds included, brand guidelines and approval process, and any requirements not mentioned in the initial brief.',
-      'Write a follow-up email that shows continued interest without appearing desperate or pushy. Include: reference to previous conversation, brief value reminder, understanding of their timeline, soft inquiry about status, additional relevant work or insights, and professional closing that doesn\'t pressure for immediate response.',
-      'Secure favorable payment terms by professionally requesting milestone payments and late fees. Propose: 50% payment upfront before work begins, 50% on final delivery, 5% late fee after 30 days, kill fee if project cancelled, and additional charges for scope changes. Frame as standard business practice, not personal preference.'
+      'Help me organize what I know about [person\'s name]. Include: basic information and background, how we met and our connection, important conversations or interactions, their interests and preferences, things to remember for future interactions, and any follow-up items or commitments.',
+      'Summarize this conversation/meeting with [person] and identify key takeaways. Capture: main topics discussed, decisions made or agreements reached, action items for me and for them, important insights or information learned, and any follow-up needed.',
+      'Help me reflect on my relationship with [person]. Consider: how our communication works, what I appreciate about them, any challenges or areas for improvement, how we can better support each other, and what I\'ve learned from this relationship.',
+      'I had a disagreement with [person] about [topic]. Help me think through: what each person\'s perspective might be, underlying concerns or needs, possible compromises or solutions, how to approach a constructive conversation, and ways to preserve the relationship.',
+      'Plan how to collaborate effectively with [person] on [project/goal]. Consider: each person\'s strengths and preferences, how to divide responsibilities, communication methods and frequency, timeline and milestones, and how to handle potential challenges.',
+      'Help me prepare for an important conversation with [person] about [topic]. Include: key points I want to communicate, questions I should ask, potential concerns they might have, how to approach this sensitively, and desired outcomes from the discussion.',
+      'Organize my network of [professional/personal] connections. For each person, track: how we\'re connected, their background and expertise, ways we might help each other, last interaction and follow-up needed, and opportunities for deeper connection.'
     ],
-    categories: ['Response', 'Negotiate', 'Protect', 'Strategy']
+    categories: ['Remember', 'Record', 'Plan', 'Understand', 'Improve', 'Resolve', 'Boundaries', 'Connect', 'Collaborate', 'Network']
+  },
+
+  // Insights - Record important learnings, observations, and discoveries
+  analytics_insight: {
+    quickCommands: [
+      {
+        id: 'insight-capturer',
+        label: 'Help me capture this important realization',
+        description: 'Record and organize a key insight or learning',
+        icon: createIcon(Lightbulb),
+        category: 'Capture'
+      },
+      {
+        id: 'pattern-identifier',
+        label: 'What patterns do I notice?',
+        description: 'Identify recurring themes or connections in your observations',
+        icon: createIcon(Activity),
+        category: 'Analyze'
+      },
+      {
+        id: 'lesson-extractor',
+        label: 'What can I learn from this experience?',
+        description: 'Extract meaningful lessons from events or situations',
+        icon: createIcon(BookOpen),
+        category: 'Learn'
+      },
+      {
+        id: 'knowledge-connector',
+        label: 'How does this connect to what I already know?',
+        description: 'Link new insights to existing knowledge and understanding',
+        icon: createIcon(Layers),
+        category: 'Connect'
+      },
+      {
+        id: 'application-finder',
+        label: 'How can I apply this insight?',
+        description: 'Find practical ways to use what you\'ve learned',
+        icon: createIcon(Target),
+        category: 'Apply'
+      },
+      {
+        id: 'understanding-deepener',
+        label: 'Help me understand this more deeply',
+        description: 'Explore the implications and nuances of an insight',
+        icon: createIcon(Brain),
+        category: 'Deepen'
+      },
+      {
+        id: 'mistake-analyzer',
+        label: 'What went wrong and why?',
+        description: 'Analyze mistakes or failures to extract valuable lessons',
+        icon: createIcon(AlertTriangle),
+        category: 'Learn'
+      },
+      {
+        id: 'success-analyzer',
+        label: 'What made this work well?',
+        description: 'Understand the factors behind successful outcomes',
+        icon: createIcon(CheckCircle),
+        category: 'Analyze'
+      },
+      {
+        id: 'trend-spotter',
+        label: 'What trends am I noticing?',
+        description: 'Identify developing patterns or changes over time',
+        icon: createIcon(TrendingUp),
+        category: 'Observe'
+      },
+      {
+        id: 'wisdom-organizer',
+        label: 'Help me organize these insights',
+        description: 'Structure and categorize multiple learnings or observations',
+        icon: createIcon(List),
+        category: 'Organize'
+      }
+    ],
+    defaultPrompts: [
+      'Help me capture and organize this important insight: [INSIGHT/REALIZATION]. Explain: why this matters, how it changes my understanding, what led to this realization, potential applications, and how it connects to other things I know.',
+      'Analyze this experience: [EXPERIENCE/SITUATION] and help me extract valuable lessons. Consider: what worked well and why, what didn\'t work and what I\'d do differently, patterns I notice, skills or knowledge I gained, and how this applies to future situations.',
+      'I\'ve been learning about [TOPIC/SUBJECT] and want to consolidate my understanding. Help me: summarize key concepts I\'ve grasped, identify connections between different ideas, note areas where I still have questions, and plan how to deepen my knowledge further.',
+      'Help me understand why [EVENT/OUTCOME] happened the way it did. Analyze: contributing factors and root causes, what I could control vs. what I couldn\'t, lessons for similar situations, and how this fits into larger patterns I\'ve observed.',
+      'Organize these scattered observations and insights about [TOPIC/AREA]. Structure them into: main themes or categories, supporting evidence or examples, relationships between different insights, gaps in my understanding, and actionable conclusions.',
+      'I made a mistake with [SITUATION]. Help me learn from it by analyzing: what decisions led to this outcome, warning signs I might have missed, what I\'d do differently, skills or knowledge I need to develop, and how to prevent similar issues.',
+      'Track my progress and growth in [AREA/SKILL] over time. Document: what I\'ve learned and improved, challenges I\'ve overcome, patterns in my development, areas of continued growth, and milestones worth celebrating.'
+    ],
+    categories: ['Capture', 'Analyze', 'Learn', 'Connect', 'Apply', 'Deepen', 'Observe', 'Organize']
+  },
+
+  // Reflection - Work through complex thoughts and personal analysis
+  reflection_journal: {
+    quickCommands: [
+      {
+        id: 'reflection-starter',
+        label: 'Help me think through this situation',
+        description: 'Start exploring your thoughts and feelings about something',
+        icon: createIcon(Brain),
+        category: 'Explore'
+      },
+      {
+        id: 'emotion-processor',
+        label: 'Help me understand what I\'m feeling',
+        description: 'Identify and work through complex emotions',
+        icon: createIcon(Heart),
+        category: 'Emotions'
+      },
+      {
+        id: 'decision-analyzer',
+        label: 'Help me think through this decision',
+        description: 'Weigh options and consider different perspectives',
+        icon: createIcon(Target),
+        category: 'Decisions'
+      },
+      {
+        id: 'growth-tracker',
+        label: 'How have I grown or changed?',
+        description: 'Reflect on personal development and progress',
+        icon: createIcon(TrendingUp),
+        category: 'Growth'
+      },
+      {
+        id: 'value-clarifier',
+        label: 'What matters most to me right now?',
+        description: 'Explore and clarify your values and priorities',
+        icon: createIcon(Star),
+        category: 'Values'
+      },
+      {
+        id: 'challenge-processor',
+        label: 'Help me work through this challenge',
+        description: 'Process difficult situations and find constructive approaches',
+        icon: createIcon(AlertTriangle),
+        category: 'Challenges'
+      },
+      {
+        id: 'gratitude-finder',
+        label: 'What am I grateful for?',
+        description: 'Identify positive aspects and things to appreciate',
+        icon: createIcon(Award),
+        category: 'Positivity'
+      },
+      {
+        id: 'pattern-recognizer',
+        label: 'What patterns do I notice in my life?',
+        description: 'Identify recurring themes, habits, or cycles',
+        icon: createIcon(Activity),
+        category: 'Patterns'
+      },
+      {
+        id: 'future-visioner',
+        label: 'What do I want for my future?',
+        description: 'Explore hopes, dreams, and future possibilities',
+        icon: createIcon(Eye),
+        category: 'Future'
+      },
+      {
+        id: 'self-compassion',
+        label: 'How can I be kinder to myself?',
+        description: 'Practice self-acceptance and gentle self-reflection',
+        icon: createIcon(Heart),
+        category: 'Self-Care'
+      }
+    ],
+    defaultPrompts: [
+      'Help me reflect on [situation/experience] and process my thoughts and feelings about it. Guide me through: what happened and how I experienced it, what emotions I\'m feeling and why, different perspectives I might consider, what this means for me personally, and how I want to move forward.',
+      'I\'m trying to make a decision about [DECISION]. Help me think through: the options I\'m considering, pros and cons of each choice, what my values and priorities suggest, potential outcomes and consequences, what my gut feeling tells me, and how to approach this decision thoughtfully.',
+      'Help me reflect on how I\'ve grown and changed over [time period]. Consider: new skills or knowledge I\'ve gained, challenges I\'ve overcome, ways my thinking has evolved, relationships that have developed, values that have become clearer, and areas where I still want to grow.',
+      'I\'m going through [challenge/difficult situation]. Help me process this by exploring: what makes this challenging for me, emotions I\'m experiencing, resources and strengths I have, different ways to approach this, lessons I might learn, and how to take care of myself through this.',
+      'Help me clarify what\'s most important to me right now in [area of life]. Explore: values that guide my decisions, priorities that feel most urgent, goals that excite me, things I want to let go of, and how to align my actions with what matters most.',
+      'I want to understand the patterns in my [behavior/relationships/work/etc.]. Help me identify: recurring themes I notice, what triggers certain responses, cycles that repeat, what\'s working well vs. what isn\'t, and changes I might want to make.',
+      'Help me practice gratitude and recognize positive aspects of my life. Guide me to notice: recent experiences I\'m grateful for, people who have supported me, personal strengths I appreciate, progress I\'ve made, and simple pleasures that bring me joy.'
+    ],
+    categories: ['Explore', 'Emotions', 'Decisions', 'Growth', 'Values', 'Challenges', 'Positivity', 'Patterns', 'Future', 'Self-Care']
+  },
+
+  // Tasks - Organize what needs to be done and track progress
+  task_checklist: {
+    quickCommands: [
+      {
+        id: 'task-organizer',
+        label: 'Help me organize these tasks',
+        description: 'Structure and prioritize your to-do items effectively',
+        icon: createIcon(List),
+        category: 'Organize'
+      },
+      {
+        id: 'priority-setter',
+        label: 'Which tasks should I focus on first?',
+        description: 'Identify what\'s most important and urgent',
+        icon: createIcon(Star),
+        category: 'Prioritize'
+      },
+      {
+        id: 'time-planner',
+        label: 'How should I schedule these tasks?',
+        description: 'Create a realistic timeline and schedule',
+        icon: createIcon(Calendar),
+        category: 'Schedule'
+      },
+      {
+        id: 'energy-matcher',
+        label: 'When do I have energy for each type of task?',
+        description: 'Match tasks to your natural energy levels',
+        icon: createIcon(Gauge),
+        category: 'Energy'
+      },
+      {
+        id: 'breakdown-helper',
+        label: 'Break this big task into smaller steps',
+        description: 'Make overwhelming tasks more manageable',
+        icon: createIcon(Scissors),
+        category: 'Simplify'
+      },
+      {
+        id: 'batch-organizer',
+        label: 'Group similar tasks together',
+        description: 'Organize related tasks for efficient completion',
+        icon: createIcon(Layers),
+        category: 'Efficiency'
+      },
+      {
+        id: 'motivation-booster',
+        label: 'How can I stay motivated to do this?',
+        description: 'Find ways to maintain motivation and momentum',
+        icon: createIcon(Zap),
+        category: 'Motivation'
+      },
+      {
+        id: 'procrastination-solver',
+        label: 'Why am I avoiding this task?',
+        description: 'Understand and overcome procrastination barriers',
+        icon: createIcon(AlertTriangle),
+        category: 'Overcome'
+      },
+      {
+        id: 'progress-tracker',
+        label: 'How can I track my progress?',
+        description: 'Set up systems to monitor and celebrate progress',
+        icon: createIcon(CheckCircle),
+        category: 'Track'
+      },
+      {
+        id: 'habit-builder',
+        label: 'Turn this into a regular habit',
+        description: 'Create sustainable routines and habits',
+        icon: createIcon(RefreshCw),
+        category: 'Habits'
+      }
+    ],
+    defaultPrompts: [
+      'Help me organize and prioritize this list of tasks: [TASK LIST]. Structure them by: importance and urgency levels, estimated time requirements, energy needed for each, dependencies between tasks, and realistic timeline for completion. Create a clear action plan.',
+      'I have limited time and energy. Help me decide which of these tasks deserve my attention: [TASK LIST]. Consider: impact on my goals, consequences of not doing them, whether they can be postponed or delegated, and what will give me the best return on my time and effort.',
+      'Take this overwhelming project: [PROJECT] and break it down into manageable steps. Create: specific actionable tasks, logical sequence and dependencies, realistic time estimates, milestones to track progress, and ways to maintain motivation throughout.',
+      'Help me create a schedule that works with my natural rhythms. I have these tasks: [TASKS]. Consider: when I have the most energy and focus, what types of work suit different times of day, how to batch similar activities, and realistic time blocks that account for breaks and transitions.',
+      'I keep procrastinating on [TASK/PROJECT]. Help me understand why and create a plan to move forward. Explore: what makes this task feel difficult or overwhelming, smaller first steps I could take, ways to make it more interesting or rewarding, and strategies to overcome my specific barriers.',
+      'Design a system to track progress on [GOAL/PROJECT] that will keep me motivated. Include: clear milestones and checkpoints, ways to measure progress, rewards for achievements, methods to stay accountable, and how to adjust the plan when things change.',
+      'Help me build sustainable habits around [AREA/ACTIVITY]. Create a plan for: starting small and building gradually, connecting new habits to existing routines, tracking consistency without being overwhelming, handling setbacks gracefully, and maintaining long-term motivation.'
+    ],
+    categories: ['Organize', 'Prioritize', 'Schedule', 'Energy', 'Simplify', 'Efficiency', 'Motivation', 'Overcome', 'Track', 'Habits']
+  },
+
+  // Messages - Prepare emails, responses, and important communications
+  email_draft: {
+    quickCommands: [
+      {
+        id: 'message-drafter',
+        label: 'Help me write this message',
+        description: 'Draft clear, appropriate messages for any situation',
+        icon: createIcon(Edit3),
+        category: 'Draft'
+      },
+      {
+        id: 'tone-setter',
+        label: 'What tone should I use for this?',
+        description: 'Choose the right level of formality and approach',
+        icon: createIcon(Volume2),
+        category: 'Tone'
+      },
+      {
+        id: 'response-crafter',
+        label: 'How should I respond to this message?',
+        description: 'Create thoughtful, appropriate responses',
+        icon: createIcon(Mail),
+        category: 'Respond'
+      },
+      {
+        id: 'boundary-communicator',
+        label: 'How can I say no politely?',
+        description: 'Decline requests while maintaining good relationships',
+        icon: createIcon(Shield),
+        category: 'Boundaries'
+      },
+      {
+        id: 'clarification-seeker',
+        label: 'What questions should I ask?',
+        description: 'Ask the right questions to get clear understanding',
+        icon: createIcon(MessageCircle),
+        category: 'Clarify'
+      },
+      {
+        id: 'difficult-conversation',
+        label: 'Help me address this sensitive topic',
+        description: 'Navigate challenging conversations with care',
+        icon: createIcon(AlertTriangle),
+        category: 'Sensitive'
+      },
+      {
+        id: 'follow-up-writer',
+        label: 'How can I follow up appropriately?',
+        description: 'Check in without being pushy or annoying',
+        icon: createIcon(Send),
+        category: 'Follow-up'
+      },
+      {
+        id: 'appreciation-expresser',
+        label: 'How can I express gratitude?',
+        description: 'Show appreciation in meaningful, genuine ways',
+        icon: createIcon(Heart),
+        category: 'Gratitude'
+      },
+      {
+        id: 'apology-crafter',
+        label: 'Help me apologize appropriately',
+        description: 'Take responsibility and make amends effectively',
+        icon: createIcon(CheckCircle),
+        category: 'Apologize'
+      },
+      {
+        id: 'professional-formatter',
+        label: 'Make this more professional',
+        description: 'Adjust language and format for professional contexts',
+        icon: createIcon(Briefcase),
+        category: 'Professional'
+      }
+    ],
+    defaultPrompts: [
+      'Help me write [type of message] about [topic/situation]. Make it: clear and easy to understand, appropriate for the relationship and context, respectful and considerate, effective at communicating my main points, and authentic to my voice and personality.',
+      'I received this message: [MESSAGE] and need to respond appropriately. Help me craft a response that: addresses their main points, maintains a good relationship, is honest and direct when needed, uses the right tone for the situation, and includes any necessary follow-up questions or information.',
+      'I need to decline [request/invitation] but want to do it gracefully. Help me write a response that: expresses genuine appreciation, gives a clear but kind reason, suggests alternatives if appropriate, keeps the door open for future opportunities, and maintains the relationship positively.',
+      'Help me write a message to address this difficult situation: [SITUATION]. Structure it to: acknowledge the issue honestly, take responsibility where appropriate, explain my perspective calmly, propose constructive solutions, and work toward resolution while preserving dignity for everyone involved.',
+      'I want to follow up on [previous conversation/request] but don\'t want to be pushy. Help me write something that: references our previous interaction, shows continued interest or concern, respects their time and situation, provides any helpful updates or information, and makes it easy for them to respond when ready.',
+      'Help me express genuine appreciation to [person] for [what they did]. Write something that: specifically acknowledges their actions, explains the positive impact it had, feels personal and heartfelt, is appropriate for our relationship, and makes them feel truly valued.',
+      'I need to apologize for [situation/mistake]. Help me write an apology that: takes full responsibility without excuses, acknowledges the impact on the other person, expresses genuine remorse, outlines specific steps to prevent this in the future, and focuses on making things right.'
+    ],
+    categories: ['Draft', 'Tone', 'Respond', 'Boundaries', 'Clarify', 'Sensitive', 'Follow-up', 'Gratitude', 'Apologize', 'Professional']
   }
 };
 
@@ -612,29 +695,29 @@ export const UNIVERSAL_COMMANDS: Omit<CommandOption, 'action'>[] = [
   // Quick formatting
   {
     id: 'bullet-list',
-    label: 'Can you make this into bullet points?',
-    description: 'Transform content into scannable bullet points',
+    label: 'Format as bullet points',
+    description: 'Transform into scannable bullet points',
     icon: createIcon(List),
     category: 'Format'
   },
   {
     id: 'numbered-list',
-    label: 'Can you number these steps?',
-    description: 'Turn into sequential, easy-to-follow instructions',
+    label: 'Format as numbered list',
+    description: 'Create sequential, numbered steps',
     icon: createIcon(List),
     category: 'Format'
   },
   {
     id: 'add-headers',
-    label: 'Can you add section headers?',
-    description: 'Break up long content with clear headings for readability',
+    label: 'Add section headers',
+    description: 'Break up content with clear headings',
     icon: createIcon(Heading2),
     category: 'Format'
   },
   {
     id: 'table',
-    label: 'Can you organize this into a table?',
-    description: 'Structure information in rows and columns for clarity',
+    label: 'Organize into table',
+    description: 'Structure information in rows and columns',
     icon: createIcon(Table),
     category: 'Format'
   },
@@ -642,15 +725,15 @@ export const UNIVERSAL_COMMANDS: Omit<CommandOption, 'action'>[] = [
   // Content enhancement
   {
     id: 'action-items',
-    label: 'What are my specific next steps?',
-    description: 'Extract clear, actionable tasks from ideas and discussions',
+    label: 'Extract action items',
+    description: 'Identify clear, actionable tasks',
     icon: createIcon(CheckCircle),
     category: 'Action'
   },
   {
     id: 'summary',
-    label: 'Can you summarize the key points?',
-    description: 'Create digestible highlights from long content',
+    label: 'Create summary',
+    description: 'Generate key highlights and main points',
     icon: createIcon(FileText),
     category: 'Summarize'
   }

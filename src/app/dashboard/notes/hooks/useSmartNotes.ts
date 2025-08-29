@@ -114,7 +114,7 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
         if (!response.ok) {
           const errorData = await response.json();
           const friendlyError = errorData.message?.includes('rate limit')
-            ? "We're getting lots of love from creators right now! Please take a quick break and try again in a moment. 🎨✨"
+            ? "We're getting lots of love right now! Please take a quick break and try again in a moment. 🎨✨"
             : errorData.message || "We hit a creative block while generating insights. Your work is safe - please try again!";
           toast.error(friendlyError);
           return false;
@@ -130,7 +130,7 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
         
         const errorMessage = error instanceof Error ? error.message : String(error);
         const friendlyError = errorMessage.includes('rate limit')
-          ? "We're getting lots of love from creators right now! Please take a quick break and try again in a moment. 🎨✨"
+          ? "We're getting lots of love right now! Please take a quick break and try again in a moment. 🎨✨"
           : `We hit a creative block: ${errorMessage}. Your work is safe - please try again!`;
         toast.error(friendlyError);
         return false;

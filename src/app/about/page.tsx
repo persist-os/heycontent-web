@@ -43,7 +43,7 @@ export default function About() {
         <section className="space-y-6">
           <h2 className="text-3xl font-medium text-foreground border-b border-border pb-3">Our Mission</h2>
           <p>
-            Our mission is to empower creators and brands to make smarter, data-driven decisions and grow their digital presence. We believe in democratizing access to high-quality content strategy and analytics, making it possible for anyone to compete and thrive online.
+            Our mission is to empower people and brands to make smarter, data-driven decisions and grow their digital presence. We believe in democratizing access to high-quality content strategy and analytics, making it possible for anyone to compete and thrive online.
           </p>
         </section>
 

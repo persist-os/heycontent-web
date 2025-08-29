@@ -10,10 +10,10 @@ import { WaitlistButton } from '@/app/waitlist/_components/WaitlistButton'
 console.log('[HeroSection] Module loaded');
 
 const searchSuggestions = [
-  "What's my brand deal potential?",
-  "Analyze my latest YouTube video",
-  "Find partnership opportunities",
-  "Track my audience growth"
+  "Help me work through this decision",
+  "What did I learn from that conversation?",
+  "Remember what I was thinking about yesterday",
+  "Help me sort through these ideas"
 ]
 
 export function HeroSection() {
@@ -154,10 +154,10 @@ export function HeroSection() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col items-center justify-center max-w-4xl mx-auto px-4 sm:px-6">
         <h1 className="text-4xl sm:text-5xl font-bold text-foreground mb-4 sm:mb-6 text-center">
-          What's next? Ask Content.
+          Your private space with memory, finally.
         </h1>
         <p className="text-xl sm:text-2xl text-muted-foreground mb-8 sm:mb-12 text-center">
-          Your Creative OS. Built to think with you.
+          AI that doesn't forget you. And never shares.
         </p>
 
         <div onClick={() => router.push('/auth/login')} 
@@ -196,7 +196,7 @@ export function HeroSection() {
         </div>
 
         <div className="text-center">
-          <p className="text-muted-foreground mb-4">Join our exclusive beta program and get early access to cutting-edge creator tools</p>
+          <p className="text-muted-foreground mb-4">Everything you want to think through, remember, or come back to, all in one place.</p>
           <div
             onClick={() => router.push('/waitlist')}
             className="inline-block cursor-pointer"

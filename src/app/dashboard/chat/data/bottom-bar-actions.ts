@@ -6,103 +6,103 @@ export interface BottomBarAction {
 
 export const bottomBarActions: BottomBarAction[] = [
   {
-    id: 'update-persona',
-    text: 'hey content update persona',
-    action: 'hey content update persona'
+    id: 'update-me',
+    text: 'Update persona',
+    action: 'Update persona'
   },
   {
     id: 'help',
-    text: 'hey content help',
-    action: 'hey content help'
+    text: 'How do I use this space?',
+    action: 'How do I use this space?'
   },
   {
-    id: 'audience-growth',
-    text: 'Grow audience',
-    action: 'How can I grow my audience faster?'
+    id: 'next-focus',
+    text: 'What should I focus on?',
+    action: 'What should I focus on next?'
   },
   {
-    id: 'content-ideas',
-    text: 'Content ideas',
-    action: 'What content should I create next?'
+    id: 'decision-help',
+    text: 'Help me decide',
+    action: 'Help me think through this decision'
   },
   {
-    id: 'engagement',
-    text: 'Engagement',
-    action: 'How do I improve my engagement rates?'
+    id: 'stuck-feeling',
+    text: 'I feel stuck',
+    action: 'I feel stuck with something. Help me work through it.'
   },
   {
-    id: 'strategy',
-    text: 'Content strategy',
-    action: 'Help me with my content strategy'
+    id: 'priorities',
+    text: 'Sort my priorities',
+    action: 'Help me figure out my priorities right now'
   },
   {
-    id: 'monetization',
-    text: 'Monetize content',
-    action: 'How can I monetize my content better?'
+    id: 'life-direction',
+    text: 'Life direction',
+    action: 'I\'m thinking about my life direction. Help me sort through it.'
   },
   {
-    id: 'trending-topics',
-    text: 'Trending topics',
-    action: 'What trending topics should I create content about?'
+    id: 'relationship-thoughts',
+    text: 'Relationship stuff',
+    action: 'I need to work through some relationship thoughts'
   },
   {
-    id: 'competitor-analysis',
-    text: 'Competitor insights',
-    action: 'What can I learn from my competitors\' content?'
+    id: 'career-thinking',
+    text: 'Career thoughts',
+    action: 'Help me think through some career stuff'
   },
   {
-    id: 'repurpose-content',
-    text: 'Repurpose content',
-    action: 'How can I repurpose my existing content across platforms?'
+    id: 'overwhelmed',
+    text: 'I feel overwhelmed',
+    action: 'I feel overwhelmed. Help me break things down.'
   },
   {
-    id: 'brand-voice',
-    text: 'Brand voice',
-    action: 'How can I develop a stronger brand voice and personality?'
+    id: 'personal-growth',
+    text: 'Growing as a person',
+    action: 'I want to work on growing as a person. Where do I start?'
   },
   {
-    id: 'content-calendar',
-    text: 'Content calendar',
-    action: 'Help me plan a content calendar for the next month'
+    id: 'goal-clarity',
+    text: 'Unclear about goals',
+    action: 'I\'m not clear on my goals. Help me figure them out.'
   },
   {
-    id: 'viral-potential',
-    text: 'Viral content',
-    action: 'What makes content go viral? How can I increase my chances?'
+    id: 'life-balance',
+    text: 'Finding balance',
+    action: 'How do I find better balance in my life?'
   },
   {
-    id: 'analytics-insights',
-    text: 'Analytics review',
-    action: 'Help me understand my content analytics and what they mean'
+    id: 'motivation-low',
+    text: 'Low motivation',
+    action: 'My motivation is low. Help me understand why and what to do.'
   },
   {
-    id: 'audience-research',
-    text: 'Know my audience',
-    action: 'How can I better understand my target audience?'
+    id: 'forgotten-dreams',
+    text: 'Forgotten dreams',
+    action: 'I think I\'ve lost touch with what I really want. Help me remember.'
   },
   {
-    id: 'platform-specific',
-    text: 'Platform optimization',
-    action: 'How should I optimize my content for different social platforms?'
+    id: 'fear-holding-back',
+    text: 'Fear is holding me back',
+    action: 'I think fear is holding me back from things. Let\'s talk about it.'
   },
   {
-    id: 'content-pillars',
-    text: 'Content pillars',
-    action: 'Help me define my content pillars and themes'
+    id: 'big-change',
+    text: 'Considering big changes',
+    action: 'I\'m thinking about making some big changes in my life'
   },
   {
-    id: 'collaboration',
-    text: 'Collaborations',
-    action: 'How can I find and approach creators for collaborations?'
+    id: 'habits-struggle',
+    text: 'Struggling with habits',
+    action: 'I struggle with building good habits. Help me figure this out.'
   },
   {
-    id: 'burnout-prevention',
-    text: 'Avoid burnout',
-    action: 'How can I create content consistently without burning out?'
+    id: 'energy-drained',
+    text: 'Feeling drained',
+    action: 'I feel drained lately. Help me understand what\'s going on.'
   },
   {
-    id: 'roast',
-    text: 'Roast me',
-    action: 'Roast me!'
+    id: 'gentle-honesty',
+    text: 'Be gently honest with me',
+    action: 'Be gently honest with me about something I might not be seeing clearly'
   }
 ];

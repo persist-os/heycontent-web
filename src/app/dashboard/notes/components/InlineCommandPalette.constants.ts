@@ -2,13 +2,13 @@ import React from 'react';
 import { Lightbulb, FileText, Users, BarChart3, BookOpen, CheckSquare, Link } from 'lucide-react';
 
 export const NOTE_TYPES = [
-  { value: 'idea_bank', label: 'Idea Bank', description: 'Spark fresh concepts and brainstorm your next viral idea' },
-  { value: 'content_script', label: 'Content Script', description: 'Structure your content like a pro creator' },
-  { value: 'analytics_insight', label: 'Analytics Insight', description: 'Turn your data into growth strategies' },
-  { value: 'collaboration_note', label: 'Collaboration Note', description: 'Organize your brand partnerships and team projects' },
-  { value: 'reflection_journal', label: 'Reflection Journal', description: 'Document your creative journey and insights' },
-  { value: 'task_checklist', label: 'Task Checklist', description: 'Stay organized and hit every deadline' },
-  { value: 'email_draft', label: 'Email Draft', description: 'Write emails that get opened and get results' },
+  { value: 'idea_bank', label: 'Ideas', description: 'Capture thoughts, concepts, and inspiration as they come to you' },
+  { value: 'content_script', label: 'Writing', description: 'Draft and organize written content, messages, and documents' },
+  { value: 'analytics_insight', label: 'Insights', description: 'Record important learnings, observations, and discoveries' },
+  { value: 'collaboration_note', label: 'People', description: 'Track relationships, conversations, and collaboration details' },
+  { value: 'reflection_journal', label: 'Reflection', description: 'Work through complex thoughts and personal analysis' },
+  { value: 'task_checklist', label: 'Tasks', description: 'Organize what needs to be done and track progress' },
+  { value: 'email_draft', label: 'Messages', description: 'Prepare emails, responses, and important communications' },
 ];
 
 // Helper function to create icon components
