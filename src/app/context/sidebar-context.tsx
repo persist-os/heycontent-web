@@ -23,7 +23,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   // Initialize from localStorage if available
   useEffect(() => {
     try {
-      const savedState = localStorage.getItem('heycontent-sidebar-state')
+      const savedState = localStorage.getItem('heycontext-sidebar-state')
       if (savedState !== null) {
         setIsExpanded(savedState === 'true')
       }
@@ -35,7 +35,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   // Save to localStorage when changed
   useEffect(() => {
     try {
-      localStorage.setItem('heycontent-sidebar-state', String(isExpanded))
+      localStorage.setItem('heycontext-sidebar-state', String(isExpanded))
     } catch (error) {
       console.error('Failed to save sidebar state to localStorage', error)
     }

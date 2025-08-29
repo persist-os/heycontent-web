@@ -3,9 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from '@/app/context/auth-context';
-import { WaitlistButton } from '@/app/waitlist/_components/WaitlistButton';
-
-import WaitlistScreen from "./waitlist-screen";
 import UpgradeModal from "@/app/settings/tabs/subscription/upgrade-modal";
 import { RegistrationForm } from './steps/RegistrationForm';
 
@@ -14,7 +11,6 @@ interface RegisterScreenProps {
 }
 
 const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
-  const [showWaitlist, setShowWaitlist] = useState(false);
   const [finalApiKey, setFinalApiKey] = useState<string | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [name, setName] = useState(""); // Need to track name for persona step
@@ -22,7 +18,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
   const router = useRouter();
   const { firebaseUser } = useAuth();
   
-  const [step, setStep] = useState<'register' | 'payment' | 'waitlist' | 'chat'>('register');
+  const [step, setStep] = useState<'register' | 'payment' | 'chat'>('register');
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -31,7 +27,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
       if (
         urlStep === "register" ||
         urlStep === "payment" ||
-        urlStep === "waitlist" ||
         urlStep === "chat"
       ) {
         setStep(urlStep as typeof step);
@@ -54,14 +49,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
     router.replace(url.toString());
   };
 
-  const handleWaitlistComplete = (apiKey: string) => {
-    setFinalApiKey(apiKey);
-    if (onSuccess) onSuccess(apiKey);
-    setStep('chat');
-    // Redirect to chat with a welcome parameter to trigger the onboarding message
-    router.push("/dashboard/chat?welcome=true");
-  };
-
   const handleUpgradeClose = () => {
     // Allow users to skip payment and access free tier
     setStep('chat');
@@ -75,8 +62,9 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
       setStep('chat');
       router.push("/dashboard/chat?welcome=true");
     } else {
-      // Paid plan selected - continue to waitlist
-      setStep('waitlist');
+      // Paid plan selected - redirect to dashboard
+      setStep('chat');
+      router.push("/dashboard/chat?welcome=true");
     }
   };
 
@@ -108,13 +96,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
         {step === 'register' && !registrationSuccess && (
           <>
             <RegistrationForm onSuccess={handleRegisterSuccess} />
-            <div className="mt-6 text-center">
-              <p className="text-muted-foreground mb-2 text-sm">
-                Want to be a beta tester?<br />
-                Get early access to creator tools and mobile features below.
-              </p>
-              <WaitlistButton />
-            </div>
           </>
         )}
         {step === 'register' && registrationSuccess && (
@@ -128,10 +109,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
               Continue
             </button>
           </div>
-        )}
-        
-        {step === 'waitlist' && (
-          <WaitlistScreen onComplete={handleWaitlistComplete} />
         )}
       </div>
     </div>

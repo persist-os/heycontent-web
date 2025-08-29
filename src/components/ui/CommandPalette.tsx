@@ -63,7 +63,6 @@ export function CommandPalette() {
   // Don't render command palette on landing page and auth screens, or when inline reply is active
   const isCommandPaletteDisabled = pathname === '/' || 
                                    pathname.startsWith('/auth/') || 
-                                   pathname.startsWith('/waitlist') ||
                                    isInlineReplyActive;
   
   if (isCommandPaletteDisabled) {

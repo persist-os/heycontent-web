@@ -242,7 +242,7 @@ const DataTab = () => {
             <div>
               <h3 className="font-medium">Data Collection</h3>
               <p className="text-sm text-muted-foreground">
-                By using HeyContent, you consent to us saving, using, and analyzing your data from your integrations. We use this to improve your experience and our services.
+                By using HeyContext, you consent to us saving, using, and analyzing your data from your integrations. We use this to improve your experience and our services.
               </p>
             </div>
             <Button variant="outline" disabled={isDeleting}>Configure</Button>

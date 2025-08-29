@@ -77,7 +77,7 @@ export default function UnsubscribePage() {
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group"
         >
           <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
-          <span className="text-sm font-medium">Back to HeyContent</span>
+          <span className="text-sm font-medium">Back to HeyContext</span>
         </Link>
       </div>
 
@@ -93,7 +93,7 @@ export default function UnsubscribePage() {
               Unsubscribe from emails
             </h1>
             <p className="text-muted-foreground text-lg leading-relaxed">
-              We're sorry to see you go. Enter your email address below to unsubscribe from all HeyContent emails.
+              We're sorry to see you go. Enter your email address below to unsubscribe from all HeyContext emails.
             </p>
           </div>
 
