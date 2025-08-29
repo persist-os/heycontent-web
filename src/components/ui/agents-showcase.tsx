@@ -228,54 +228,46 @@ export function AgentsShowcase() {
                           </div>
                           {msg.data && (
                             <div className="mt-3 p-3 bg-background/20 rounded-lg text-xs space-y-2">
-                              {msg.data.source_platform && (
+                              {msg.data.key_insight && (
                                 <div className="flex items-center gap-2">
-                                  <span>{msg.data.source_platform}</span>
+                                  <span className="font-medium">Key insight:</span>
+                                  <span>{msg.data.key_insight}</span>
                                 </div>
                               )}
-                              {msg.data.target_platform && (
+                              {msg.data.priority_reminder && (
                                 <div className="flex items-center gap-2">
-                                  <span>{msg.data.target_platform}</span>
+                                  <span className="font-medium">Priority:</span>
+                                  <span>{msg.data.priority_reminder}</span>
                                 </div>
                               )}
-                              {msg.data.engagement_boost && (
+                              {msg.data.emotional_state && (
                                 <div className="flex items-center gap-2">
-                                  <span>{msg.data.engagement_boost}</span>
+                                  <span className="font-medium">Feeling:</span>
+                                  <span>{msg.data.emotional_state}</span>
                                 </div>
                               )}
-                              {msg.data.content_created && (
+                              {msg.data.stress_response && (
                                 <div className="flex items-center gap-2">
-                                  <span>{msg.data.content_created}</span>
+                                  <span className="font-medium">Pattern:</span>
+                                  <span>{msg.data.stress_response}</span>
                                 </div>
                               )}
-                              {msg.data.audience_insight && (
+                              {msg.data.best_processing && (
                                 <div className="flex items-center gap-2">
-                                  <span>{msg.data.audience_insight}</span>
+                                  <span className="font-medium">Works best:</span>
+                                  <span>{msg.data.best_processing}</span>
                                 </div>
                               )}
-                              {msg.data.growth_trend && (
+                              {msg.data.helpful_strategy && (
                                 <div className="flex items-center gap-2">
-                                  <span>{msg.data.growth_trend}</span>
+                                  <span className="font-medium">Strategy:</span>
+                                  <span>{msg.data.helpful_strategy}</span>
                                 </div>
                               )}
-                              {msg.data.brand_matches && (
+                              {msg.data.pattern_confidence && (
                                 <div className="flex items-center gap-2">
-                                  <span>{msg.data.brand_matches}</span>
-                                </div>
-                              )}
-                              {msg.data.top_targets && (
-                                <div className="flex items-center gap-2">
-                                  <span>{msg.data.top_targets}</span>
-                                </div>
-                              )}
-                              {msg.data.pitch_ready && (
-                                <div className="flex items-center gap-2">
-                                  <span>{msg.data.pitch_ready}</span>
-                                </div>
-                              )}
-                              {msg.data.success_probability && (
-                                <div className="flex items-center gap-2">
-                                  <span>{msg.data.success_probability}</span>
+                                  <span className="font-medium">Based on:</span>
+                                  <span>{msg.data.pattern_confidence}</span>
                                 </div>
                               )}
                             </div>

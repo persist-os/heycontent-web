@@ -1,71 +1,69 @@
-# Human-Friendly, Creator-First Error & Empty State Messaging
+# Human-Friendly Error & Empty State Messaging
 
 ## Philosophy
 
-At HeyContent, every message—especially errors and empty states—is an opportunity to uplift, encourage, and provide value to creators. We do **not** treat errors as failures or dead-ends. Instead, we use them as moments to:
+At HeyContext, every message—especially errors and empty states—is an opportunity to provide comfort, support, and encouragement. We do **not** treat errors as failures or dead-ends. Instead, we use them as moments to:
 
-- Reframe setbacks as part of the creative journey
-- Show empathy and humanity
-- Encourage continued exploration and creation
-- Build trust and connection with our users
-- Provide actionable next steps or positive redirection
+- Show empathy and understanding
+- Provide gentle reassurance
+- Encourage continued thinking and exploration
+- Build trust and safety with our users
+- Offer calm, helpful next steps
 
-**Never** display cold, technical, or defeatist error messages. Our tone is always warm, supportive, and playful—think "cheerleader," not "system admin." We never blame the user or the system. We always thank, encourage, and empower.
-
-AVOID SAYING THE WORD AI ANYWHERE.
+**Never** display cold, technical, or intimidating error messages. Our tone is always warm, supportive, and human—think "understanding friend," not "system admin." We never blame the user or make them feel bad. We always reassure, encourage, and support.
 
 ## Core Principles
 
 1. **Reframe, Don't Blame:**
    - Errors are just temporary bumps, not failures. Use language that normalizes setbacks and encourages trying again.
-2. **Always Provide Value:**
-   - Even when something goes wrong, offer a tip, encouragement, or a creative prompt.
-3. **Be Human, Be Playful:**
-   - Use friendly, conversational, and sometimes witty language. Show the team's personality and gratitude.
-4. **Redirect Creatively:**
-   - Suggest alternative actions, or simply encourage the user to keep going.
+2. **Always Provide Comfort:**
+   - Even when something goes wrong, offer reassurance, understanding, or gentle encouragement.
+3. **Be Human, Be Caring:**
+   - Use friendly, conversational language that shows empathy and understanding.
+4. **Redirect Gently:**
+   - Suggest alternative actions, or simply encourage the user to take their time.
 5. **Never Dead-End:**
-   - Always offer a next step, even if it's just a positive affirmation or a thank you.
-6. **Acknowledge the Journey:**
-   - Remind creators that every journey has ups and downs, and that persistence is part of the process.
+   - Always offer a next step, even if it's just reassurance or a gentle suggestion.
+6. **Acknowledge the Process:**
+   - Remind users that thinking through things takes time, and that's completely normal.
 
 ## Do's & Don'ts
 
 ### Do
 
-- Thank the user for their effort or patience
-- Use language like "Keep going!", "You're doing great!", "Your next big thing is just around the corner!"
-- Offer a creative prompt or suggestion if possible
-- Use humor or light-heartedness when appropriate
-- Acknowledge the team's humanity (e.g., "We're a small dev team, thanks for your support!")
-- Reframe errors as opportunities (e.g., "No data yet? That just means you're ahead of the curve!")
-- Use positive, forward-looking language
+- Thank the user for their patience
+- Use language like "Take your time", "You're doing fine", "This happens sometimes"
+- Offer gentle suggestions or reassurance when possible
+- Use warm, understanding language when appropriate
+- Acknowledge that technology isn't perfect (e.g., "Thanks for your patience while we sort this out")
+- Reframe errors as normal occurrences (e.g., "No worries, let's try that again")
+- Use calm, supportive language
 
 ### Don't
 
 - Say "We can't find this data," "Error," "Failed," or "Something went wrong" without context or warmth
-- Blame the user or the system
+- Blame the user or make them feel bad
 - Display technical jargon or stack traces
-- Leave the user with no next step or encouragement
-- Use cold, robotic, or generic language
+- Leave the user with no next step or reassurance
+- Use cold, robotic, or intimidating language
 
 ## Examples
 
 ### Instead of
 >
-> Error: No emails found.
+> Error: No conversations found.
 
 **Say:**
-> We didn't spot any business opportunities in your Gmail just yet. Keep creating, connecting, and collaborating—your next big opportunity could be just one email away!
+> You haven't started any conversations yet. When you're ready to work through something, I'll be here to listen and remember.
 
 ---
 
 ### Instead of
 >
-> Failed to load analytics. Please try again later.
+> Failed to load your notes. Please try again later.
 
 **Say:**
-> Analytics are taking a quick coffee break ☕. Thanks for your patience—your insights will be back soon! In the meantime, why not brainstorm your next big idea?
+> Your notes are taking a moment to load. Thanks for your patience—your thoughts will be back soon. Take a deep breath while we sort this out.
 
 ---
 
@@ -74,7 +72,7 @@ AVOID SAYING THE WORD AI ANYWHERE.
 > Something went wrong.
 
 **Say:**
-> Oops! Even the best creators hit a snag sometimes. Thanks for being awesome and sticking with us. If you keep seeing this, our small but mighty dev team is on it!
+> Something's not working quite right. No worries—this happens sometimes. Thanks for your patience while we get things back on track.
 
 ---
 
@@ -83,17 +81,17 @@ AVOID SAYING THE WORD AI ANYWHERE.
 > No data available.
 
 **Say:**
-> Looks like you're blazing a new trail—no data here yet, but that just means you're ahead of the curve! Keep going!
+> Nothing here yet, but that's okay. This space is ready whenever you want to start working through something.
 
 ---
 
 ## Implementation Checklist
 
-- [ ] Review all error and empty state messages for warmth, encouragement, and value
-- [ ] Replace technical or cold language with human, creator-first phrasing
-- [ ] Always provide a next step, affirmation, or creative suggestion
-- [ ] Test messages with real creators for tone and impact
+- [ ] Review all error and empty state messages for warmth, understanding, and comfort
+- [ ] Replace technical or cold language with human, supportive phrasing
+- [ ] Always provide a next step, reassurance, or gentle suggestion
+- [ ] Test messages with real users for tone and emotional impact
 
 ## Final Word
 
-Every message is a chance to build trust, spark creativity, and make creators feel seen and supported. Let's make every "error" a moment of delight and encouragement!
+Every message is a chance to build trust, provide comfort, and make people feel safe and supported in their thinking space. Let's make every "error" a moment of understanding and reassurance.

@@ -1,8 +1,8 @@
-# HeyContent Web Frontend Rules
+# HeyContext Web Frontend Rules
 
-This document defines the required engineering standards for the HeyContent frontend, built with Next.js and deployed on Vercel.
+This document defines the required engineering standards for HeyContext, a private AI workspace built with Next.js and deployed on Vercel.
 
-NEVER guess, always look for similar implementations and follow pre existing patterns that way. review the full prd in detail and the current implemmntation before amking any changes.
+NEVER guess, always look for similar implementations and follow pre-existing patterns. Review the full requirements and current implementation before making any changes.
 
 Keep all code clean, modular, under 400 lines. Never call Firebase Auth directly, use api-helpers/api-utils correctly to get the api key from cookies.
 
@@ -14,6 +14,15 @@ Make sure all Convex queries and mutations are optimized for performance and sca
 
 Document everything clearly and concisely within the code.
 
+## Product Philosophy
+
+HeyContext is a private AI workspace designed for personal reflection, learning, and thought organization. All development decisions should align with these core values:
+
+- **Privacy First**: Complete user privacy with no social features or data sharing
+- **Human-Friendly**: Accessible language that works for everyone, not just technical users
+- **Memory-Focused**: Persistent context and understanding across all interactions
+- **Non-Judgmental**: Safe space for any thoughts, questions, or topics
+
 ## Tech Stack
 
 - Framework: Next.js (App Router)
@@ -21,7 +30,7 @@ Document everything clearly and concisely within the code.
 - Theming: next-themes with CSS variables
 - Hosting: Vercel
 - API Integration: `api/` folder and `/lib/api-utils.ts`
-- Design: Minimalist, typography-first, mobile-optimized
+- Design: Calm, minimalist, human-centered
 
 ## Core Rules
 
@@ -39,7 +48,7 @@ Always ask for clarification if:
 - A feature is poorly documented
 - A spec is ambiguous
 
-Never make assumptions. Check design files, Notion, and existing code first.
+Never make assumptions. Check design files, vision.md, and existing code first.
 
 ### 3. No Emojis Ever
 
@@ -53,11 +62,12 @@ ASCII and markdown symbols (→, —, •) are allowed when used sparingly and a
 
 ## Design and Structure
 
-### 4. Minimalist, Type-Driven Design
+### 4. Human-Centered Design
 
-- Favor clarity and whitespace
-- One primary action per screen or component
-- Typography defines layout structure
+- Prioritize clarity and understanding over optimization
+- Use language accessible to anyone (construction worker, stay-at-home parent, teenager)
+- Focus on calm, supportive interactions
+- Design for personal reflection, not performance metrics
 
 ### 5. Pages Handle Routing Only
 
@@ -81,7 +91,7 @@ State and logic should live in hooks.
 **STRICT THEME REQUIREMENTS:**
 - **Dark mode background**: MUST be `#202020` (never navy blue or gray-900)
 - **Light mode background**: MUST be white (`#FFFFFF`)
-- **Primary accent color**: Lean purple for light mode, yellow for dark mode
+- **Primary accent color**: Purple for light mode, yellow for dark mode
 - **NO hardcoded colors**: Use CSS variables and semantic color classes only
 - Make sure to use the correct colors for the dark and light mode, and never to use white text on yellow backgrounds or anything similarly unreadable.
 
@@ -103,40 +113,59 @@ Use `/lib/api-utils.ts` and the api folder for all backend interaction. Do not c
 
 Wrap calls with reusable helpers that handle errors and parsing.
 
+## Language and Content Guidelines
+
+### 9. Human-Friendly Language
+
+All user-facing text must be:
+- Clear and accessible to anyone
+- Free of technical jargon or business buzzwords
+- Supportive and non-judgmental in tone
+- Focused on personal understanding rather than optimization
+
+### 10. Privacy-Focused Features
+
+Every feature should reinforce privacy and personal use:
+- No social sharing capabilities
+- No public profiles or feeds
+- Clear communication about data privacy
+- Personal workspace metaphors over business tools
+
 ## Code Quality
 
-### 9. No Dead Code
+### 11. No Dead Code
 
 Remove all:
 - `console.log` statements
 - Commented-out code
 - Unused variables and imports
 
-### 10. Linting and Formatting
+### 12. Linting and Formatting
 
 Use Prettier and ESLint. Follow project settings without overrides.
 
 ## Pull Requests
 
-### 11. PR Format
+### 13. PR Format
 
 Use this title format:  
 `[Type]: [Area] – [Summary]`  
-Example: `UI: Chat – Improve mobile scroll behavior`
+Example: `UI: Chat – Improve conversation continuity`
 
 All PRs must include:
 - Concise summary
 - Key technical changes
-- Link to corresponding Notion task
+- Reference to vision.md alignment
 
 Follow the shared PR template.
 
-### 12. Review Process
+### 14. Review Process
 
 - Review at least one other PR before requesting your own
 - Comments must be clear, respectful, and useful
+- Consider impact on user privacy and accessibility
 
-### 13. Commit Standards
+### 15. Commit Standards
 
 - Use clear, descriptive commit messages
 - Avoid vague terms like "fix" or "tweak"
@@ -146,11 +175,13 @@ Follow the shared PR template.
 
 - No file may exceed 400 lines
 - No emojis under any circumstances
-- Use minimal, structured, and type-first design
+- Use human-centered, accessible design
 - Keep components pure and modular
 - Pages handle layout, not logic
 - API access goes through `api-utils`
-- **STRICT theme compliance**: #202020 for dark mode, semantic colors only, heycontent-yellow as primary accent
+- **STRICT theme compliance**: #202020 for dark mode, semantic colors only
+- All language must be accessible and supportive
+- Every feature must reinforce privacy and personal use
 - PRs must be clear, linked, and reviewed
 
-Stick to the rules. Keep it clean. Make it accessible.
+Stick to the rules. Keep it accessible. Make it human-friendly.
