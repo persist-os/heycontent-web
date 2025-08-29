@@ -55,32 +55,32 @@ export const NewPersonaCard: React.FC<NewPersonaCardProps> = ({ persona }) => {
       </div>
 
       <div className="px-6">
-        <Section title="Creator Identity" description="Current style and audience focus">
+        <Section title="How You Express Yourself" description="Your natural communication style and approach">
           <InfoItem label="Experience Level" value={persona.experience_level} />
-          <InfoItem label="Content Formats" value={persona.content_formats} />
-          <InfoItem label="Tone" value={persona.content_tone} />
-          <InfoItem label="Voice" value={persona.content_voice} />
-          <InfoItem label="Unique Value" value={persona.unique_value} />
-          <InfoItem label="Audience Type" value={persona.audience_type} />
+          <InfoItem label="Formats You Gravitate To" value={persona.content_formats} />
+          <InfoItem label="Your Natural Tone" value={persona.content_tone} />
+          <InfoItem label="Your Voice" value={persona.content_voice} />
+          <InfoItem label="What Makes You Unique" value={persona.unique_value} />
+          <InfoItem label="Who You Connect With" value={persona.audience_type} />
         </Section>
 
-        <Section title="Future Vision" description="Where your content journey is heading">
-          <InfoItem label="Future Persona" value={persona.future_name} />
-          <InfoItem label="Vision Description" value={persona.future_description} />
-          <InfoItem label="Desired Impact" value={persona.desired_impact} />
-          <InfoItem label="Goals" value={persona.goals} />
+        <Section title="How You're Growing" description="Where you see yourself heading and what matters to you">
+          <InfoItem label="Who You're Becoming" value={persona.future_name} />
+          <InfoItem label="Your Vision" value={persona.future_description} />
+          <InfoItem label="Impact You Want to Make" value={persona.desired_impact} />
+          <InfoItem label="What You're Working Toward" value={persona.goals} />
         </Section>
 
-        <Section title="Content Strategy" description="Topic approach and audience engagement">
-          <InfoItem label="Primary Topics" value={persona.primary_topics} />
-          <InfoItem label="Secondary Topics" value={persona.secondary_topics} />
-          <InfoItem label="Engagement Style" value={persona.engagement_style} />
-          <InfoItem label="Content Pillars" value={persona.content_pillars} />
+        <Section title="What You Return To" description="The themes and approaches that feel most natural to you">
+          <InfoItem label="What You Think About Most" value={persona.primary_topics} />
+          <InfoItem label="Other Things You Explore" value={persona.secondary_topics} />
+          <InfoItem label="How You Connect" value={persona.engagement_style} />
+          <InfoItem label="Your Core Themes" value={persona.content_pillars} />
         </Section>
 
-        <Section title="Creative Signature" description="The unique fingerprint of your content">
-          <InfoItem label="Tone Descriptors" value={persona.tone_descriptors} />
-          <InfoItem label="Style Descriptors" value={persona.style_descriptors} />
+        <Section title="Your Personal Style" description="The patterns that make your communication uniquely yours">
+          <InfoItem label="How You Sound" value={persona.tone_descriptors} />
+          <InfoItem label="Your Approach" value={persona.style_descriptors} />
         </Section>
       </div>
     </div>

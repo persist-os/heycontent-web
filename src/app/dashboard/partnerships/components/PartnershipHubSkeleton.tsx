@@ -23,10 +23,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 
-// Help system imports
-import { EnhancedHelpButton } from '@/components/ui/enhanced-help-button';
-import { InteractiveTooltip } from '@/components/ui/interactive-tooltip';
-import { interactiveTours } from '@/helpContent/interactiveTours';
+
 
 // Import the actual components to reuse them
 import { PartnershipDetailPanel } from './PartnershipDetailPanel';
@@ -138,8 +135,7 @@ export function PartnershipHubSkeleton({
 }: PartnershipHubSkeletonProps) {
   const [isOverlayDismissed, setIsOverlayDismissed] = React.useState(false);
   
-  // Help system state
-  const [interactiveTourOpen, setInteractiveTourOpen] = React.useState(false);
+
 
   // State management (same as real component)
   const [selectedPartnership, setSelectedPartnership] = React.useState<Partnership | null>(null);
@@ -300,11 +296,7 @@ export function PartnershipHubSkeleton({
                         Your command center for discovering collaborations, managing partnerships, and growing your creator business
                       </p>
                     </div>
-                    <div className="pointer-events-auto">
-                      <EnhancedHelpButton 
-                        onInteractiveTour={() => setInteractiveTourOpen(true)}
-                      />
-                    </div>
+
                   </div>
                 </div>
 
@@ -550,14 +542,7 @@ export function PartnershipHubSkeleton({
             </div>
           )}
 
-          {/* Interactive Tour */}
-          <InteractiveTooltip
-            isOpen={interactiveTourOpen}
-            onClose={() => setInteractiveTourOpen(false)}
-            steps={interactiveTours.partnershipHub}
-            title="Partnership Hub Features Tour"
-            autoPlay={false}
-          />
+
         </div>
       </TooltipProvider>
     );

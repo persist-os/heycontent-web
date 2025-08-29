@@ -161,16 +161,16 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
         </div>
         <div className="space-y-4">
           <div>
-            <p className="font-medium text-foreground text-lg">No persona yet</p>
+            <p className="font-medium text-foreground text-lg">Let's get to know you</p>
             <p className="text-sm text-muted-foreground mt-2 leading-relaxed max-w-sm mx-auto">
-              Create your first persona in chat to get started
+              Help HeyContext understand how you think and work best
             </p>
           </div>
           <Button 
             onClick={() => window.location.href = '/dashboard/chat?ask=hey%20content%20persona'}
             className="w-full sm:w-auto min-h-[48px] px-6 bg-purple-500 hover:bg-purple-600 dark:bg-accent dark:hover:bg-accent/90 text-white"
           >
-            Create Persona in Chat
+            Start Getting to Know Each Other
           </Button>
         </div>
       </div>
@@ -183,8 +183,8 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
       <div>
         <div className="flex flex-col space-y-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0 mb-6">
           <div className="space-y-1">
-            <h2 className="text-lg font-semibold text-purple-600 dark:text-accent">AI Content Persona</h2>
-            <p className="text-sm text-muted-foreground">Your active persona profile for content generation</p>
+            <h2 className="text-lg font-semibold text-purple-600 dark:text-accent">Your Persona</h2>
+            <p className="text-sm text-muted-foreground">What HeyContext has learned about your thinking patterns and preferences</p>
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-2">
             <Button
@@ -240,7 +240,7 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
               Delete Current Persona?
             </h3>
             <p className="text-muted-foreground mb-6">
-              This will permanently delete "{currentPersona?.current_name}" and automatically switch to your most recently created persona. This action cannot be undone.
+              This will permanently delete this understanding of how you work and automatically switch to your most recent self-reflection. This action cannot be undone.
             </p>
             <div className="flex gap-3 justify-end">
               <Button 

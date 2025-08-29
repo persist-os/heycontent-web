@@ -10,7 +10,7 @@ import { Analytics } from "@vercel/analytics/next"
 
 export const metadata: Metadata = {
   title: 'HeyContent',
-  description: 'AI-powered platform for content creators',
+  description: 'AI-powered platform for people',
 }
 
 export default async function RootLayout({

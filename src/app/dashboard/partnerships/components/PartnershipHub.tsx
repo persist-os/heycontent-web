@@ -41,10 +41,7 @@ import { PartnershipProgressiveThinking } from './PartnershipProgressiveThinking
 import { getPartnershipColors } from '../utils/emailCategorization';
 import { EmailComposerModal } from './EmailComposerModal';
 
-// Help system imports
-import { EnhancedHelpButton } from '@/components/ui/enhanced-help-button';
-import { InteractiveTooltip } from '@/components/ui/interactive-tooltip';
-import { interactiveTours } from '@/helpContent/interactiveTours';
+
 
 export type MetricFilter = 'all' | 'active' | 'pending' | 'brand-deals';
 
@@ -66,9 +63,7 @@ export function PartnershipHub() {
     community: true
   });
 
-  // Help system state
 
-  const [interactiveTourOpen, setInteractiveTourOpen] = useState(false);
 
   // New Email Modal state
   const [isNewEmailModalOpen, setIsNewEmailModalOpen] = useState(false);
@@ -247,11 +242,7 @@ export function PartnershipHub() {
                     Your command center for discovering collaborations, managing partnerships, and growing your creator business
                   </p>
                 </div>
-                <div>
-                  <EnhancedHelpButton 
-                    onInteractiveTour={() => setInteractiveTourOpen(true)}
-                  />
-                </div>
+
               </div>
             </div>
 
@@ -562,14 +553,7 @@ export function PartnershipHub() {
         
 
 
-        {/* Interactive Tour */}
-        <InteractiveTooltip
-          isOpen={interactiveTourOpen}
-          onClose={() => setInteractiveTourOpen(false)}
-          steps={interactiveTours.partnershipHub}
-          title="Partnership Hub Features Tour"
-          autoPlay={false}
-        />
+
 
         {/* Email Composer Modal */}
         <EmailComposerModal

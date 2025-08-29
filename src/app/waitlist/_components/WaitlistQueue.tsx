@@ -90,7 +90,7 @@ export const WaitlistQueue = ({ position, queueId, onQueueCompleteAction, onStag
           </motion.div>
           <h2 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 mb-3">🚀 Beta Program</h2>
           <p className="text-xl text-foreground mb-2">Get early access to creator tools</p>
-          <p className="text-base text-muted-foreground">Join our exclusive beta testing program for creators</p>
+          <p className="text-base text-muted-foreground">Join our exclusive beta testing program</p>
         </div>
         <div className="bg-background/90 backdrop-blur-sm rounded-xl shadow-xl p-8 border border-border">
           <form onSubmit={handleSubmit} className="space-y-6">

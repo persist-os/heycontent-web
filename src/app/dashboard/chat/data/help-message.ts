@@ -2,109 +2,99 @@ import { Message } from '@/app/types/chat';
 
 export const helpMessage: Message = {
   id: 'help-message',
-  content: `## 🆘 HeyContent Help Center
+  content: `## How to use your private thinking space
 
-Here are powerful tips to master HeyContent and boost your productivity:
+This is your calm space to work through anything. Here's how it works:
 
-### ⚡ Command Palette (Your Productivity Superpower)
-**Press \`⌘K\` (Cmd+K) anywhere to open the Command Palette**
-- **Quick Navigation**: Jump to any page instantly - Chat, Content Hub, Smart Notes, Self Hub
-- **Create New Notes**: Quickly create notes without leaving your current page
-- **Theme Toggle**: Switch between light and dark mode on the fly
-- **Quick Ask**: Type your question and hit Enter to instantly start a content conversation
-- **Smart Search**: Search across all your conversations, notes, and insights in one place
-- **Recent & History**: Your most-used commands appear first for faster access
+### ⚡ Quick Access (⌘K)
+**Press \`⌘K\` (Cmd+K) anywhere to quickly navigate**
+- **Jump anywhere**: Go to any section instantly - Chat, Notes, or your personal space
+- **Create notes**: Capture thoughts without leaving your conversation
+- **Switch themes**: Change between light and dark mode
+- **Quick questions**: Type anything and start thinking through it immediately
+- **Search everything**: Find any past conversation or thought you've had
+- **Recent conversations**: Your most important discussions are always at the top
 
-### 🎯 Navigation Mastery
-**Chat With Content** - Your AI content strategist lives here
-- This is where the magic happens - ask anything about content strategy, trends, or ideas
-- Recent chats are saved in the sidebar for quick access
-- Use natural language - no need for formal commands
+### 🎯 Your different spaces
+**Chat** - Your main thinking space
+- Bring anything here - work decisions, relationships, life stuff, random thoughts
+- Everything is remembered so you can pick up where you left off
+- Just talk naturally - no special commands needed
 
-**Content Hub** - Your analytics powerhouse  
-- Connect social platforms to analyze what's actually working
-- Get data-driven insights instead of guessing
-- Track performance across all your content channels
+**Notes** - Your idea parking lot
+- Turn conversations into notes you can return to
+- Keep track of important insights and decisions
+- Perfect for things you want to remember long-term
 
-**Smart Notes** - Your idea capture system
-- Turn conversations into actionable notes
-- AI helps organize and structure your thoughts
-- Perfect for planning content series or campaigns
+**Personal Space** - How I remember you
+- This is where you can update how I understand you
+- See patterns in what you think about
+- Keep your thinking private and personal
 
-**Self Hub** - Your content persona lab
-- Define and refine your content voice and style
-- See your usage patterns and optimize your workflow
-- Manage your content identity across platforms
+### 🔥 How to get the most from this space
+- **Just start talking**: No preparation needed - bring whatever's on your mind
+- **Come back anytime**: I remember everything, so conversations continue naturally
+- **Ask for what you need**: I can help you think, decide, remember, or just listen
+- **Save important stuff**: Use \`⌘K\` to quickly save insights as notes
+- **Trust the process**: Sometimes thinking takes time - that's okay
 
-### 🔥 Pro Tips for Power Users
-- **Keyboard First**: Use \`⌘K\` → type → Enter for lightning-fast actions
-- **Context Switching**: Jump between Chat → Notes → Analytics seamlessly via Command Palette
-- **Question Everything**: The AI understands context from your previous conversations
-- **Save Ideas Fast**: Mid-conversation, use Command Palette to quickly save insights as notes
-- **Pattern Recognition**: Let the Content Hub show you what formats/topics perform best
+### 🚀 Ways to use this space
+1. **Working through decisions**: Talk through options → Save key insights → Come back when ready to decide
+2. **Processing experiences**: Share what happened → Explore your feelings → Find patterns over time
+3. **Planning and dreaming**: Brainstorm possibilities → Capture what resonates → Build on ideas over time
 
-### 🚀 Advanced Workflows
-1. **Content Planning**: Chat for ideas → Save to Notes → Analyze performance in Content Hub
-2. **Research Mode**: Use Command Palette to search past conversations for inspiration
-3. **Quick Iteration**: Ask follow-up questions in Chat, use \`⌘K\` to find related past discussions
+### 💡 Remember
+This space doesn't judge. Bring messy thoughts, half-formed ideas, difficult feelings - whatever you need to work through. I'm here to help you think, not to fix or optimize you.`,
+  chat_response: `## How to use your private thinking space
 
-### 💡 Still stuck?
-The Command Palette is your best friend - \`⌘K\` and type your question naturally. The AI will understand and help you navigate to exactly what you need!`,
-  chat_response: `## 🆘 HeyContent Help Center
+This is your calm space to work through anything. Here's how it works:
 
-Here are powerful tips to master HeyContent and boost your productivity:
+### ⚡ Quick Access (⌘K)
+**Press \`⌘K\` (Cmd+K) anywhere to quickly navigate**
+- **Jump anywhere**: Go to any section instantly - Chat, Notes, or your personal space
+- **Create notes**: Capture thoughts without leaving your conversation
+- **Switch themes**: Change between light and dark mode
+- **Quick questions**: Type anything and start thinking through it immediately
+- **Search everything**: Find any past conversation or thought you've had
+- **Recent conversations**: Your most important discussions are always at the top
 
-### ⚡ Command Palette (Your Productivity Superpower)
-**Press \`⌘K\` (Cmd+K) anywhere to open the Command Palette**
-- **Quick Navigation**: Jump to any page instantly - Chat, Content Hub, Smart Notes, Self Hub
-- **Create New Notes**: Quickly create notes
-- **Theme Toggle**: Switch between light and dark mode on the fly
-- **Quick Ask**: Type your question and hit Enter to instantly start a content conversation
-- **Smart Search**: Search across all your conversations, notes, and insights in one place
-- **Recent & History**: Your most-used commands appear first for faster access
+### 🎯 Your different spaces
+**Chat** - Your main thinking space
+- Bring anything here - work decisions, relationships, life stuff, random thoughts
+- Everything is remembered so you can pick up where you left off
+- Just talk naturally - no special commands needed
 
-### 🎯 Navigation Mastery
-**Chat With Content** - Your AI content strategist lives here
-- This is where the magic happens - ask anything about content strategy, trends, or ideas
-- Recent chats are saved in the sidebar for quick access
-- Use natural language - no need for formal commands
+**Notes** - Your idea parking lot
+- Turn conversations into notes you can return to
+- Keep track of important insights and decisions
+- Perfect for things you want to remember long-term
 
-**Content Hub** - Your analytics powerhouse  
-- Connect social platforms to analyze what's actually working
-- Get data-driven insights instead of guessing
-- Track performance across all your content channels
+**Personal Space** - How I remember you
+- This is where you can update how I understand you
+- See patterns in what you think about
+- Keep your thinking private and personal
 
-**Smart Notes** - Your idea capture system
-- Turn conversations into actionable notes
-- AI helps organize and structure your thoughts
-- Perfect for planning content series or campaigns
+### 🔥 How to get the most from this space
+- **Just start talking**: No preparation needed - bring whatever's on your mind
+- **Come back anytime**: I remember everything, so conversations continue naturally
+- **Ask for what you need**: I can help you think, decide, remember, or just listen
+- **Save important stuff**: Use \`⌘K\` to quickly save insights as notes
+- **Trust the process**: Sometimes thinking takes time - that's okay
 
-**Self Hub** - Your content persona lab
-- Define and refine your content voice and style
-- See your usage patterns and optimize your workflow
-- Manage your content identity across platforms
+### 🚀 Ways to use this space
+1. **Working through decisions**: Talk through options → Save key insights → Come back when ready to decide
+2. **Processing experiences**: Share what happened → Explore your feelings → Find patterns over time
+3. **Planning and dreaming**: Brainstorm possibilities → Capture what resonates → Build on ideas over time
 
-### 🔥 Pro Tips for Power Users
-- **Keyboard First**: Use \`⌘K\` → type → Enter for lightning-fast actions
-- **Context Switching**: Jump between Chat → Notes → Analytics seamlessly via Command Palette
-- **Question Everything**: The AI understands context from your previous conversations
-- **Save Ideas Fast**: Use Command Palette to quickly save insights as notes
-- **Pattern Recognition**: Let the Content Hub show you what formats/topics perform best
-
-### 🚀 Advanced Workflows
-1. **Content Planning**: Chat for ideas → Save to Notes → Analyze performance in Content Hub
-2. **Research Mode**: Use Command Palette to search past conversations for inspiration
-3. **Quick Iteration**: Ask follow-up questions in Chat, use \`⌘K\` to find related past discussions
-
-### 💡 Still stuck?
-The Command Palette is your best friend - \`⌘K\` and type your question naturally. The AI will understand and help you navigate to exactly what you need!`,
+### 💡 Remember
+This space doesn't judge. Bring messy thoughts, half-formed ideas, difficult feelings - whatever you need to work through. I'm here to help you think, not to fix or optimize you.`,
   role: 'assistant',
   timestamp: new Date().toISOString(),
   suggestions: [
-    'Explain how to use ⌘K to open Command Palette',
-    'How do I create new notes?',
-    'Show me Content Hub features',
-    'Help me set up my content persona'
+    'How do I use ⌘K to navigate quickly?',
+    'How do I save thoughts as notes?',
+    'What can I talk about here?',
+    'How do I update my persona?'
   ],
   metadata: { help: true },
   sessionId: undefined

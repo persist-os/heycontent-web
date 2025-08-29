@@ -187,7 +187,7 @@ export function useInstagramInsights(userId?: string): BatchAnalysisHookReturn {
       }
     } catch (error: any) {
       console.error('❌ Error refreshing Instagram insights:', error);
-      setError(error.message || 'Oops! Even the best creators hit a snag sometimes. Thanks for being awesome and sticking with us. Your insights will be worth the wait! ✨');
+      setError(error.message || 'Oops! Even the best hit a snag sometimes. Thanks for being awesome and sticking with us. Your insights will be worth the wait! ✨');
       setIsRefreshing(false);
     }
   }, [userId, instagramAccount?.instagramAccountId, storeInstagramAnalysis, postLimit]);
