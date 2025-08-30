@@ -32,16 +32,16 @@ export default function Terms() {
         <section className="space-y-6">
           <h2 className="text-3xl font-medium text-foreground border-b border-border pb-3">Agreement to Our Legal Terms</h2>
           <p>
-            These Terms of Service ("Terms") constitute a legally binding agreement made between you, whether personally or on behalf of an entity ("you"), and Divertissement AI, Inc. ("Company," "we," "us," or "our"), concerning your access to and use of the HeyContent website (<a href="https://www.heycontent.co" className="text-blue-600 dark:text-blue-400 hover:underline">https://www.heycontent.co</a>) and any related products and services that refer or link to these Terms (collectively, the "Services").
+            These Terms of Service ("Terms") constitute a legally binding agreement made between you, whether personally or on behalf of an entity ("you"), and Divertissement AI, Inc. ("Company," "we," "us," or "our"), concerning your access to and use of the HeyContext website (<a href="https://www.HeyContext.co" className="text-blue-600 dark:text-blue-400 hover:underline">https://www.HeyContext.co</a>) and any related products and services that refer or link to these Terms (collectively, the "Services").
           </p>
           <p>
             By accessing or using the Services, you agree that you have read, understood, and agree to be bound by all of these Terms. IF YOU DO NOT AGREE WITH ALL OF THESE TERMS, THEN YOU ARE EXPRESSLY PROHIBITED FROM USING THE SERVICES AND YOU MUST DISCONTINUE USE IMMEDIATELY.
           </p>
           <p>
-            <strong>YouTube Terms of Service:</strong> Our Services use YouTube API Services. By using HeyContent, you also agree to be bound by the <a href="https://www.youtube.com/t/terms" className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">YouTube Terms of Service</a>.
+            <strong>YouTube Terms of Service:</strong> Our Services use YouTube API Services. By using HeyContext, you also agree to be bound by the <a href="https://www.youtube.com/t/terms" className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">YouTube Terms of Service</a>.
           </p>
           <p>
-            <strong>Instagram/Meta Platform Terms:</strong> Our Services use Instagram API Services. By using HeyContent, you also agree to be bound by the <a href="https://developers.facebook.com/terms" className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">Meta Platform Terms</a> and <a href="https://help.instagram.com/581066165581870" className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">Instagram Terms of Use</a>.
+            <strong>Instagram/Meta Platform Terms:</strong> Our Services use Instagram API Services. By using HeyContext, you also agree to be bound by the <a href="https://developers.facebook.com/terms" className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">Meta Platform Terms</a> and <a href="https://help.instagram.com/581066165581870" className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">Instagram Terms of Use</a>.
           </p>
           <p>
             We may update these Terms from time to time. We will alert you about any changes by updating the "Last updated" date at the top of these Terms. It is your responsibility to review these Terms periodically. Your continued use of the Services after any changes constitutes your acceptance of those changes.
@@ -91,7 +91,7 @@ export default function Terms() {
         <section className="space-y-4">
           <h2 className="text-2xl font-medium text-foreground">1. Our Services</h2>
           <p>
-            HeyContent is an AI-powered platform for content creators, providing tools for content creation, analytics, and collaboration. Our platform integrates with YouTube, Instagram, Gmail, and Google to help you analyze and manage your content. We use Stripe for payments, Convex for database operations, and Firebase for authentication. The Services are not intended for use in any jurisdiction or country where such use would be contrary to law or regulation.
+            HeyContext is an AI-powered platform for content creators, providing tools for content creation, analytics, and collaboration. Our platform integrates with YouTube, Instagram, Gmail, and Google to help you analyze and manage your content. We use Stripe for payments, Convex for database operations, and Firebase for authentication. The Services are not intended for use in any jurisdiction or country where such use would be contrary to law or regulation.
           </p>
           <p>
             The Services are not tailored to comply with industry-specific regulations (such as HIPAA or FISMA). If your interactions would be subject to such laws, you may not use the Services.
@@ -102,13 +102,13 @@ export default function Terms() {
         <section className="space-y-4">
           <h2 className="text-2xl font-medium text-foreground">2. Intellectual Property Rights</h2>
           <p>
-            HeyContent and its licensors own all rights to the platform, including the software, website design, branding, and all related intellectual property. These are protected by copyright, trademark, and other applicable laws.
+            HeyContext and its licensors own all rights to the platform, including the software, website design, branding, and all related intellectual property. These are protected by copyright, trademark, and other applicable laws.
           </p>
           <p>
             You retain all rights to the content you create using our Services. You are free to use, publish, and monetize your own content without restriction from us.
           </p>
           <p>
-            You may reference or promote HeyContent in connection with your own work, provided you do not misrepresent your relationship with us or use our branding in a misleading or unlawful way. Any use of HeyContent's platform, software, or branding beyond these purposes requires our express written permission.
+            You may reference or promote HeyContext in connection with your own work, provided you do not misrepresent your relationship with us or use our branding in a misleading or unlawful way. Any use of HeyContext's platform, software, or branding beyond these purposes requires our express written permission.
           </p>
         </section>
 

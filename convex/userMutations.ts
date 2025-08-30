@@ -381,29 +381,6 @@ export const updateEmailPreferences = mutation({
       };
     }
 
-    // If not found in users, check waitlist table
-    const waitlistEntry = await ctx.db
-      .query("waitlist")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
-      .first();
-
-    if (waitlistEntry) {
-      // Email exists in waitlist - for unsubscribe requests, we can still succeed
-      if (args.emailUnsubscribed) {
-        return {
-          success: true,
-          userId: undefined,
-          message: "You have been successfully unsubscribed from all emails."
-        };
-      } else {
-        return {
-          success: false,
-          userId: undefined,
-          message: "This email is on our waitlist. Email preferences can only be updated after you join."
-        };
-      }
-    }
-
     // Email not found in either table
     return {
       success: false,

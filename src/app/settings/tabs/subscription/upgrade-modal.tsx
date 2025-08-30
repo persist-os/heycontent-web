@@ -263,7 +263,7 @@ export default function UpgradeModal({
                 returnUrl={(() => {
                   if (typeof window === 'undefined') return undefined;
                   if (context === 'registration') {
-                    return window.location.origin + '/auth/register?step=waitlist';
+                    return window.location.origin + '/dashboard/chat?welcome=true';
                   } else {
                     return window.location.origin + '/settings';
                   }

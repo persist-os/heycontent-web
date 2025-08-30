@@ -172,7 +172,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
           <Logo className="h-12 mx-auto mb-4" />
         </motion.div>
         <h1 className="text-2xl font-bold text-foreground">Create your account</h1>
-        <p className="text-muted-foreground mt-2">Join HeyContent today</p>
+        <p className="text-muted-foreground mt-2">Join HeyContext today</p>
       </div>
 
       <StepIndicator currentStep={currentStep} />

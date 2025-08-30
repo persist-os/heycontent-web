@@ -777,15 +777,6 @@ export default defineSchema({
   .index("by_endpoint", ["endpoint"])
   .index("by_status", ["status"]),
 
-  // Waitlist
-  waitlist: defineTable({
-    name: v.string(),
-    email: v.string(),
-    timestamp: v.number(),
-    status: v.string(),
-  })
-  .index("by_email", ["email"]),
-
   // YouTube Batch Analysis
   youtubeBatchAnalysis: defineTable({
     insights: v.optional(v.any()),

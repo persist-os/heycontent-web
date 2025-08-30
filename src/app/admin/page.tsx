@@ -598,7 +598,7 @@ export default function AdminPage() {
             <CardHeader className="pb-4">
               <CardTitle className="text-foreground text-xl font-semibold">Platform Overview</CardTitle>
               <CardDescription className="text-muted-foreground">
-                Key metrics for your HeyContent platform
+                Key metrics for your HeyContext platform
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">

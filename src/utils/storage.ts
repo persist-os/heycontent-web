@@ -1,4 +1,4 @@
-const SIDEBAR_KEY = 'heycontent-sidebar-state'
+const SIDEBAR_KEY = 'heycontext-sidebar-state'
 
 export const SidebarStorage = {
   get: (userId?: string): boolean => {

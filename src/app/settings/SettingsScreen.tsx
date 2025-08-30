@@ -81,7 +81,7 @@ const SettingsScreen = () => {
       <div className="container max-w-6xl mx-auto py-4 sm:py-6 px-3 sm:px-6 space-y-4 sm:space-y-6">
         {isFirstTimeSetup && (
           <div className="mb-4 sm:mb-6 bg-purple-50 p-3 sm:p-4 rounded-lg">
-            <h2 className="text-base sm:text-lg font-semibold mb-2">Welcome to HeyContent! 🎉</h2>
+            <h2 className="text-base sm:text-lg font-semibold mb-2">Welcome to HeyContext! 🎉</h2>
             <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">Intelligent Relationship and Insight System</p>
             <ol className="list-decimal list-inside space-y-1 sm:space-y-2 text-sm sm:text-base text-gray-600">
               <li>Complete your profile information</li>
