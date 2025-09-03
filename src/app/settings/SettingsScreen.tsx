@@ -43,11 +43,28 @@ const SettingsScreen = () => {
   useEffect(() => {
     setIsFirstTimeSetup(window.location.search.includes('newUser=true'))
     
-    // Check for tab parameter in URL
+    // 0) Session flag set before navigating to /settings
+    try {
+      const stored = window.sessionStorage.getItem('settingsActiveTab')
+      if (stored && ['account', 'subscription', 'notifications', 'integrations', 'ai-preferences', 'data'].includes(stored)) {
+        setActiveTab(stored)
+        window.sessionStorage.removeItem('settingsActiveTab')
+        return
+      }
+    } catch {}
+
+    // 1) Prefer hash routing e.g. /settings#subscription
+    const hash = (window.location.hash || '').replace('#', '')
+    if (['account', 'subscription', 'notifications', 'integrations', 'ai-preferences', 'data'].includes(hash)) {
+      setActiveTab(hash)
+      return
+    }
+    // 2) Fallback to tab query parameter e.g. /settings?tab=subscription
     const urlParams = new URLSearchParams(window.location.search)
     const tabParam = urlParams.get('tab')
     if (tabParam && ['account', 'subscription', 'notifications', 'integrations', 'ai-preferences', 'data'].includes(tabParam)) {
       setActiveTab(tabParam)
+      return
     }
   }, [])
 

@@ -92,6 +92,20 @@ export default function SubscriptionOverview() {
     }
   }, [overageSettings]);
 
+  // Helper: get API key with retries to avoid transient race after navigation
+  async function getApiKeyWithRetry(maxRetries: number = 10, delayMs: number = 200): Promise<string | null> {
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const key = await getApiKey();
+        if (key) return key;
+      } catch (e) {
+        // ignore and retry
+      }
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+    return null;
+  }
+
   // Fetch plans and subscription status from API
   useEffect(() => {
     async function fetchData() {
@@ -99,9 +113,12 @@ export default function SubscriptionOverview() {
       if (!currentUserId) return;
       setLoading(true);
       try {
-        const apiKey = await getApiKey();
+        const apiKey = await getApiKeyWithRetry();
         if (!apiKey) {
-          throw new Error('No API key found. Please log in again.');
+          // Gracefully show a clear message and avoid crashing the tab
+          setError('No API key found. Please log in again.');
+          setLoading(false);
+          return;
         }
         // Fetch plans
         let plansData = null;
