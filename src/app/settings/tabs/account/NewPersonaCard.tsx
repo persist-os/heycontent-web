@@ -1,87 +1,110 @@
 import React from 'react';
 import { PersonaData } from '../../../dashboard/chat/types';
-import { Badge } from '@/components/ui/badge';
 
 interface NewPersonaCardProps {
   persona: PersonaData;
 }
 
-const Section: React.FC<{ title: string; description: string; children: React.ReactNode }> = ({ title, description, children }) => (
-  <div className="py-6 border-b border-border">
-    <div className="mb-4">
-      <h3 className="text-base font-semibold text-foreground">{title}</h3>
-      <p className="text-sm text-muted-foreground">{description}</p>
-    </div>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-      {children}
-    </div>
-  </div>
-);
-
-const InfoItem: React.FC<{ label: string; value: string | string[] | undefined }> = ({ label, value }) => {
-  if (!value || (Array.isArray(value) && value.length === 0)) return null;
+const PersonaField: React.FC<{
+  label: string;
+  value: string | string[];
+  isArray?: boolean;
+}> = ({ label, value, isArray = false }) => {
+  if (!value || (Array.isArray(value) && value.length === 0)) {
+    return null;
+  }
 
   return (
-    <div>
-      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider dark:group-hover:text-accent group-hover:text-purple-500 transition-colors duration-300">{label}</p>
+    <div className="mb-8">
+      <h4 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">
+        {label}
+      </h4>
       {Array.isArray(value) ? (
-        <div className="flex flex-wrap gap-2 mt-2">
+        <div className="flex flex-wrap gap-2">
           {value.map((item, index) => (
-            <Badge 
-              key={index} 
-              variant="outline" 
-              className="font-normal border-border group-hover:text-purple-500 group-hover:border-purple-500/50 dark:group-hover:text-accent dark:group-hover:border-accent/50 transition-colors"
+            <span
+              key={index}
+              className="inline-block px-3 py-1.5 text-sm bg-muted/60 text-foreground rounded-full border border-border/50"
             >
               {item}
-            </Badge>
+            </span>
           ))}
         </div>
       ) : (
-        <p className="text-sm text-foreground/90 mt-1">{value}</p>
+        <p className="text-base leading-relaxed text-foreground whitespace-pre-wrap">
+          {value}
+        </p>
       )}
     </div>
   );
 };
 
-
 export const NewPersonaCard: React.FC<NewPersonaCardProps> = ({ persona }) => {
-  if (!persona) return null;
-
   return (
-    <div className="bg-card rounded-lg transition-all duration-300">
-      <div className="p-6">
-        <h2 className="text-2xl font-bold text-foreground transition-colors">{persona.current_name}</h2>
-        <p className="mt-2 text-base text-muted-foreground leading-relaxed">{persona.current_description}</p>
+    <div className="w-full">
+      {/* Header Section */}
+      <div className="mb-12 pb-8 border-b border-border/50">
+        <h1 className="text-3xl font-semibold text-foreground mb-4">
+          {persona.current_name}
+        </h1>
+        <p className="text-lg leading-relaxed text-muted-foreground">
+          {persona.current_description}
+        </p>
       </div>
 
-      <div className="px-6">
-        <Section title="How You Express Yourself" description="Your natural communication style and approach">
-          <InfoItem label="Experience Level" value={persona.experience_level} />
-          <InfoItem label="Formats You Gravitate To" value={persona.content_formats} />
-          <InfoItem label="Your Natural Tone" value={persona.content_tone} />
-          <InfoItem label="Your Voice" value={persona.content_voice} />
-          <InfoItem label="What Makes You Unique" value={persona.unique_value} />
-          <InfoItem label="Who You Connect With" value={persona.audience_type} />
-        </Section>
+      {/* Content Sections */}
+      <div className="space-y-16">
+        {/* How You Express Yourself */}
+        <section>
+          <h2 className="text-2xl font-medium text-foreground mb-8 pb-2 border-b border-border/30">
+            How You Express Yourself
+          </h2>
+          <div className="space-y-8">
+            <PersonaField label="Experience Level" value={persona.experience_level} />
+            <PersonaField label="Content Formats" value={persona.content_formats} isArray={true} />
+            <PersonaField label="Natural Tone" value={persona.content_tone} />
+            <PersonaField label="Your Voice" value={persona.content_voice} />
+            <PersonaField label="Unique Value" value={persona.unique_value} />
+            <PersonaField label="Audience Type" value={persona.audience_type} />
+          </div>
+        </section>
 
-        <Section title="How You're Growing" description="Where you see yourself heading and what matters to you">
-          <InfoItem label="Who You're Becoming" value={persona.future_name} />
-          <InfoItem label="Your Vision" value={persona.future_description} />
-          <InfoItem label="Impact You Want to Make" value={persona.desired_impact} />
-          <InfoItem label="What You're Working Toward" value={persona.goals} />
-        </Section>
+        {/* How You're Growing */}
+        <section>
+          <h2 className="text-2xl font-medium text-foreground mb-8 pb-2 border-b border-border/30">
+            How You're Growing
+          </h2>
+          <div className="space-y-8">
+            <PersonaField label="Who You're Becoming" value={persona.future_name} />
+            <PersonaField label="Your Vision" value={persona.future_description} />
+            <PersonaField label="Desired Impact" value={persona.desired_impact} />
+            <PersonaField label="Goals" value={persona.goals} isArray={true} />
+          </div>
+        </section>
 
-        <Section title="What You Return To" description="The themes and approaches that feel most natural to you">
-          <InfoItem label="What You Think About Most" value={persona.primary_topics} />
-          <InfoItem label="Other Things You Explore" value={persona.secondary_topics} />
-          <InfoItem label="How You Connect" value={persona.engagement_style} />
-          <InfoItem label="Your Core Themes" value={persona.content_pillars} />
-        </Section>
+        {/* What You Return To */}
+        <section>
+          <h2 className="text-2xl font-medium text-foreground mb-8 pb-2 border-b border-border/30">
+            What You Return To
+          </h2>
+          <div className="space-y-8">
+            <PersonaField label="Primary Topics" value={persona.primary_topics} isArray={true} />
+            <PersonaField label="Secondary Topics" value={persona.secondary_topics} isArray={true} />
+            <PersonaField label="Engagement Style" value={persona.engagement_style} />
+            <PersonaField label="Content Pillars" value={persona.content_pillars} isArray={true} />
+          </div>
+        </section>
 
-        <Section title="Your Personal Style" description="The patterns that make your communication uniquely yours">
-          <InfoItem label="How You Sound" value={persona.tone_descriptors} />
-          <InfoItem label="Your Approach" value={persona.style_descriptors} />
-        </Section>
+        {/* Your Personal Style */}
+        <section>
+          <h2 className="text-2xl font-medium text-foreground mb-8 pb-2 border-b border-border/30">
+            Your Personal Style
+          </h2>
+          <div className="space-y-8">
+            <PersonaField label="Tone Descriptors" value={persona.tone_descriptors} isArray={true} />
+            <PersonaField label="Style Descriptors" value={persona.style_descriptors} isArray={true} />
+          </div>
+        </section>
       </div>
     </div>
   );

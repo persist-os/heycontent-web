@@ -121,36 +121,7 @@ const conversation: ConversationMessage[] = [
   }
 ]
 
-const commandPaletteCommands: DisplayOption[] = [
-  {
-    id: 'analyze',
-    label: 'Analyze this conversation',
-    icon: <MessageSquare className="w-4 h-4" />,
-    action: () => {},
-    category: 'AI Actions'
-  },
-  {
-    id: 'summarize',
-    label: 'Summarize key points',
-    icon: <FileText className="w-4 h-4" />,
-    action: () => {},
-    category: 'AI Actions'
-  },
-  {
-    id: 'save-note',
-    label: 'Save as Smart Note',
-    icon: <Plus className="w-4 h-4" />,
-    action: () => {},
-    category: 'Notes'
-  },
-  {
-    id: 'expand',
-    label: 'Expand on this idea',
-    icon: <ChevronRight className="w-4 h-4" />,
-    action: () => {},
-    category: 'AI Actions'
-  }
-]
+
 
 function SmartSearchSources({ sources: sourceIds }: { sources?: string[] }) {
   if (!sourceIds || sourceIds.length === 0) return null
@@ -184,7 +155,10 @@ function SmartSearchSources({ sources: sourceIds }: { sources?: string[] }) {
   )
 }
 
-function SuggestionChips({ suggestions }: { suggestions?: Array<{ id: string; text: string; type: 'followup' | 'action' }> }) {
+function SuggestionChips({ suggestions, onSuggestionClick }: { 
+  suggestions?: Array<{ id: string; text: string; type: 'followup' | 'action' }>
+  onSuggestionClick?: (suggestion: string) => void
+}) {
   if (!suggestions || suggestions.length === 0) return null
 
   return (
@@ -192,6 +166,7 @@ function SuggestionChips({ suggestions }: { suggestions?: Array<{ id: string; te
       {suggestions.map((suggestion) => (
         <button
           key={suggestion.id}
+          onClick={() => onSuggestionClick?.(suggestion.text)}
           className="inline-flex items-center gap-2 bg-slate-100/80 dark:bg-slate-800/80 hover:bg-slate-200/80 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-300 text-sm px-3 py-1.5 rounded-full transition-colors duration-200"
         >
           {suggestion.type === 'action' ? (
@@ -249,38 +224,62 @@ function InlineCommandPalette({ isOpen, onClose }: { isOpen: boolean; onClose: (
           onChange={(e) => setUserInput(e.target.value)}
           placeholder="Ask AI to analyze, summarize, or expand..."
           className="w-full px-3 py-2 text-sm bg-muted/50 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+          disabled
         />
       </div>
 
       {/* Commands */}
       <div className="max-h-80 overflow-y-auto">
         <div className="py-2">
-          {commandPaletteCommands.map((option, index) => {
-            const isSelected = selectedIndex === index
-            
-            return (
+          <div className="px-4 py-2">
+            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+              AI Actions
+            </h3>
+            <div className="space-y-0.5">
               <button
-                key={option.id}
-                onClick={option.action}
-                className={`w-full flex items-center gap-3 px-4 py-2 text-left transition-all duration-200 ${
-                  isSelected
-                    ? 'bg-purple-500/10 text-purple-600 dark:text-yellow-400' 
-                    : 'hover:bg-muted/50 text-foreground'
-                }`}
+                className="w-full flex items-center gap-3 px-3 py-2 text-left transition-all duration-200 opacity-50 cursor-not-allowed"
+                disabled
               >
                 <div className="flex-shrink-0 text-muted-foreground">
-                  {option.icon}
+                  <MessageSquare className="w-4 h-4" />
                 </div>
-                <span className="text-sm font-medium">
-                  {option.label}
-                </span>
-                {isSelected && (
-                  <ArrowRight className="w-3 h-3 ml-auto text-purple-600 dark:text-yellow-400" />
-                )}
+                <span className="text-sm font-medium">Analyze this conversation</span>
               </button>
-            )
-          })}
+              <button
+                className="w-full flex items-center gap-3 px-3 py-2 text-left transition-all duration-200 opacity-50 cursor-not-allowed"
+                disabled
+              >
+                <div className="flex-shrink-0 text-muted-foreground">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <span className="text-sm font-medium">Summarize key points</span>
+              </button>
+              <button
+                className="w-full flex items-center gap-3 px-3 py-2 text-left transition-all duration-200 opacity-50 cursor-not-allowed"
+                disabled
+              >
+                <div className="flex-shrink-0 text-muted-foreground">
+                  <Plus className="w-4 h-4" />
+                </div>
+                <span className="text-sm font-medium">Save as Smart Note</span>
+              </button>
+              <button
+                className="w-full flex items-center gap-3 px-3 py-2 text-left transition-all duration-200 opacity-50 cursor-not-allowed"
+                disabled
+              >
+                <div className="flex-shrink-0 text-muted-foreground">
+                  <ChevronRight className="w-4 h-4" />
+                </div>
+                <span className="text-sm font-medium">Expand on this idea</span>
+              </button>
+            </div>
+          </div>
         </div>
+      </div>
+
+      {/* Footer */}
+      <div className="px-4 py-2 border-t border-border text-xs text-muted-foreground/80">
+        Preview mode - AI features disabled
       </div>
     </motion.div>
   )
@@ -290,12 +289,14 @@ const MarkdownNotepad = forwardRef(function MarkdownNotepad({
   isOpen, 
   onClose, 
   width, 
-  style
+  style,
+  onOpenCommandPalette
 }: {
   isOpen: boolean
   onClose: () => void
   width: number
   style: React.CSSProperties
+  onOpenCommandPalette?: () => void
 }, ref) {
   const [content, setContent] = useState(`# Job Search Strategy
 
@@ -338,6 +339,19 @@ Based on our discussion about job searching and potential relocation, here are t
     getContent: () => content || '',
   }), [content]);
 
+  // Handle Command+K
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isOpen && (e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        onOpenCommandPalette?.()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onOpenCommandPalette])
+
   if (!isOpen) return null
 
   return (
@@ -359,6 +373,14 @@ Based on our discussion about job searching and potential relocation, here are t
         </div>
         
         <div className="flex items-center gap-1">
+          <button
+            onClick={onOpenCommandPalette}
+            className="p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            title="Open AI Assistant (⌘K)"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+          
           <button
             onClick={() => setContent('')}
             className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground rounded-md transition-colors hover:bg-muted"
@@ -400,6 +422,7 @@ export function AgentsShowcase() {
   const [notepadOpen, setNotepadOpen] = useState(true) // Open by default
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [notepadWidth, setNotepadWidth] = useState(400)
+  const [inputValue, setInputValue] = useState('')
   const notepadRef = useRef<{ hasUnsavedContent: () => boolean; clearContent: () => void; getContent: () => string }>(null)
   const { theme } = useTheme()
 
@@ -412,6 +435,10 @@ export function AgentsShowcase() {
     transform: notepadOpen ? 'translateX(0)' : 'translateX(100%)',
     transition: 'transform 0.3s ease-in-out'
   })
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setInputValue(suggestion)
+  }
 
   return (
     <section className="py-40 bg-gradient-to-b from-white via-blue-50/20 to-white dark:from-slate-900 dark:via-blue-950/10 dark:to-slate-900 relative overflow-hidden">
@@ -446,13 +473,6 @@ export function AgentsShowcase() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setCommandPaletteOpen(true)}
-                  className="p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                  title="Open AI Assistant"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
                 <button
                   onClick={() => setNotepadOpen(!notepadOpen)}
                   className="p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -500,7 +520,7 @@ export function AgentsShowcase() {
                         </div>
 
                         {/* Suggestions */}
-                        <SuggestionChips suggestions={message.suggestions} />
+                        <SuggestionChips suggestions={message.suggestions} onSuggestionClick={handleSuggestionClick} />
                       </div>
                     ))}
                   </div>
@@ -510,15 +530,18 @@ export function AgentsShowcase() {
               {/* Input Area */}
               <div className="border-t border-slate-200 dark:border-slate-700 bg-background p-4">
                 <div className="max-w-4xl mx-auto">
-                  <div className="flex items-end gap-3">
+                  <div className="flex items-center gap-3">
                     <div className="flex-1 relative">
                       <textarea
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
                         placeholder="Message HeyContext..."
                         className="w-full px-4 py-3 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
                         rows={1}
+                        style={{ height: '48px', lineHeight: '1.2' }}
                       />
                     </div>
-                    <button className="p-3 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors" aria-label="Send message">
+                    <button className="flex-shrink-0 h-12 w-12 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors flex items-center justify-center" aria-label="Send message">
                       <Send className="w-4 h-4" />
                     </button>
                   </div>
@@ -534,6 +557,7 @@ export function AgentsShowcase() {
             onClose={() => setNotepadOpen(false)}
             width={notepadWidth}
             style={getNotepadStyle()}
+            onOpenCommandPalette={() => setCommandPaletteOpen(true)}
           />
         </div>
 

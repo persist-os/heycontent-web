@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useOptimizedPersonaManager } from '@/store/persona-store';
@@ -10,9 +10,16 @@ import { NewPersonaCard } from './NewPersonaCard';
 interface PersonaUpdateManagerProps {
   userId: string;
   renderNewPersonaButton?: () => React.ReactNode;
+  isEditMode?: boolean;
+  onEditModeChange?: (isEditMode: boolean) => void;
 }
 
-export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ userId, renderNewPersonaButton }) => {
+export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ 
+  userId, 
+  renderNewPersonaButton,
+  isEditMode = false,
+  onEditModeChange
+}) => {
   const renderStartTime = performance.now();
   
   const {
@@ -34,47 +41,41 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
     timestamp: new Date().toISOString()
   });
 
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [editedPersona, setEditedPersona] = useState<PersonaData | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Use external edit mode state if provided, otherwise use internal state
+  const [internalEditMode, setInternalEditMode] = useState(false);
+  const actualEditMode = onEditModeChange ? isEditMode : internalEditMode;
+  const setActualEditMode = onEditModeChange ? onEditModeChange : setInternalEditMode;
+
+  const [editedPersona, setEditedPersona] = useState(currentPersona);
+
+  useEffect(() => {
+    setEditedPersona(currentPersona);
+  }, [currentPersona]);
+
   const handleEdit = () => {
-    if (currentPersona) {
-      setEditedPersona({ ...currentPersona });
-      setIsEditMode(true);
-    }
+    setActualEditMode(true);
   };
 
   const handleCancel = () => {
-    setEditedPersona(null);
-    setIsEditMode(false);
+    setActualEditMode(false);
+    setEditedPersona(currentPersona);
   };
 
   const handleSave = async () => {
-    if (!editedPersona || !currentPersona) return;
-
-    const changes: Partial<PersonaData> = {};
-    Object.keys(editedPersona).forEach(key => {
-      const editedKey = key as keyof PersonaData;
-      if (JSON.stringify(editedPersona[editedKey]) !== JSON.stringify(currentPersona[editedKey])) {
-        changes[editedKey] = editedPersona[editedKey];
+    if (editedPersona && currentPersona) {
+      try {
+        await updatePersona(editedPersona);
+        setActualEditMode(false);
+      } catch (error) {
+        console.error('Error updating persona:', error);
       }
-    });
-
-    if (Object.keys(changes).length === 0) {
-      setEditedPersona(null);
-      setIsEditMode(false);
-      return;
     }
-
-    await updatePersona(changes);
-    setEditedPersona(null);
-    setIsEditMode(false);
   };
 
   const handleDeleteClick = () => {
-    // Only allow deletion if there are multiple personas
     if (allPersonas.length > 1) {
       setShowDeleteConfirm(true);
     }
@@ -88,12 +89,7 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
       const success = await deleteCurrentPersonaAndSelectNext();
       if (success) {
         setShowDeleteConfirm(false);
-        // Reset edit mode if it was active
-        setIsEditMode(false);
-        setEditedPersona(null);
-      } else {
-        // Handle error - could show a toast or error message
-        console.error('Failed to delete persona');
+        setActualEditMode(false);
       }
     } catch (error) {
       console.error('Error deleting persona:', error);
@@ -106,11 +102,24 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
     setShowDeleteConfirm(false);
   };
 
-
-
-  const updateField = (field: keyof PersonaData, value: string | string[]) => {
-    if (!editedPersona) return;
-    setEditedPersona({ ...editedPersona, [field]: value });
+  const updateField = (field: keyof typeof editedPersona, value: string | string[]) => {
+    if (editedPersona) {
+      // Handle array fields properly
+      let processedValue = value;
+      if (typeof value === 'string') {
+        // Check if this field should be an array
+        const arrayFields = ['content_formats', 'primary_topics', 'secondary_topics', 'content_pillars', 'tone_descriptors', 'style_descriptors'];
+        if (arrayFields.includes(field as string)) {
+          // Split by comma and trim whitespace
+          processedValue = value.split(',').map(item => item.trim()).filter(item => item.length > 0);
+        }
+      }
+      
+      setEditedPersona({
+        ...editedPersona,
+        [field]: processedValue
+      });
+    }
   };
 
   if (isLoading) {
@@ -153,79 +162,27 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
     );
   }
 
-  if (!hasPersona) {
+  if (!currentPersona) {
     return (
-      <div className="text-center py-12 px-4 space-y-6">
-        <div className="w-12 h-12 bg-muted rounded-lg mx-auto flex items-center justify-center">
-          <Plus className="w-6 h-6 text-muted-foreground" />
-        </div>
-        <div className="space-y-4">
-          <div>
-            <p className="font-medium text-foreground text-lg">Let's get to know you</p>
-            <p className="text-sm text-muted-foreground mt-2 leading-relaxed max-w-sm mx-auto">
-              Help HeyContext understand how you think and work best
-            </p>
-          </div>
-          <Button 
-            onClick={() => window.location.href = '/dashboard/chat?ask=hey%20content%20persona'}
-            className="w-full sm:w-auto min-h-[48px] px-6 bg-purple-500 hover:bg-purple-600 dark:bg-accent dark:hover:bg-accent/90 text-white"
-          >
-            Start Getting to Know Each Other
-          </Button>
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+        <div className="max-w-md">
+          <h3 className="text-lg font-semibold mb-2 text-foreground">
+            No Persona Found
+          </h3>
+          <p className="text-muted-foreground mb-6">
+            Create your first persona to get started with personalized insights.
+          </p>
+          {renderNewPersonaButton && renderNewPersonaButton()}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Current Persona */}
+    <div>
+      {/* Persona Content */}
       <div>
-        <div className="flex flex-col space-y-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0 mb-6">
-          <div className="space-y-1">
-            <h2 className="text-lg font-semibold text-purple-600 dark:text-accent">Your Persona</h2>
-            <p className="text-sm text-muted-foreground">What HeyContext has learned about your thinking patterns and preferences</p>
-          </div>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-2">
-            <Button
-              variant={isEditMode ? 'default' : 'outline'}
-              size="sm"
-              onClick={isEditMode ? handleSave : handleEdit}
-              className={`min-h-[44px] w-full sm:w-auto transition-colors ${
-                isEditMode 
-                  ? 'bg-purple-500 hover:bg-purple-600 dark:bg-accent dark:hover:bg-accent/90 text-white' 
-                  : 'text-purple-500 border-purple-500 hover:bg-purple-50 dark:text-accent dark:border-accent dark:hover:bg-accent/10'
-              }`}
-            >
-              <Edit2 className="w-4 h-4 mr-2" />
-              {isEditMode ? 'Save' : 'Edit'}
-            </Button>
-            {isEditMode && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleCancel}
-                className="min-h-[44px] w-full sm:w-auto text-muted-foreground hover:text-foreground hover:bg-muted"
-              >
-                Cancel
-              </Button>
-            )}
-            {!isEditMode && allPersonas.length > 1 && (
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleDeleteClick}
-                className="min-h-[44px] w-full sm:w-auto text-red-500 border-red-500 hover:bg-red-50 dark:text-red-400 dark:border-red-400 dark:hover:bg-red-400/10"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete
-              </Button>
-            )}
-            {!isEditMode && renderNewPersonaButton && renderNewPersonaButton()}
-          </div>
-        </div>
-
-        {isEditMode ? (
+        {actualEditMode ? (
           <PersonaEditForm persona={editedPersona!} onUpdate={updateField} />
         ) : (
           <NewPersonaCard persona={currentPersona!} />
@@ -255,7 +212,7 @@ export const PersonaUpdateManager: React.FC<PersonaUpdateManagerProps> = ({ user
                 variant="destructive" 
                 onClick={handleDeleteConfirm}
                 disabled={isDeleting}
-                className="min-h-[44px] bg-red-500 hover:bg-red-600"
+                className="min-h-[44px]"
               >
                 {isDeleting ? (
                   <>
