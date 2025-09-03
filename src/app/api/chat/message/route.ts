@@ -394,6 +394,16 @@ export async function POST(request: Request) {
         },
         body: JSON.stringify(backendRequestBody)
       });
+      // If 402 (free tier exceeded), propagate immediately – do not retry
+      if (response.status === 402) {
+        const passthrough = new NextResponse(response.body, { status: 402 });
+        // Preserve helpful headers for the client modal
+        const limit = response.headers.get('x-free-tier-limit');
+        const used = response.headers.get('x-free-tier-used');
+        if (limit) passthrough.headers.set('X-Free-Tier-Limit', limit);
+        if (used) passthrough.headers.set('X-Free-Tier-Used', used);
+        return passthrough;
+      }
       if (response.status !== 500 && response.status !== 429) {
         break; // Success or other error, don't retry
       }
