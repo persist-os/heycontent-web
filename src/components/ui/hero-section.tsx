@@ -2,17 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import React from 'react'
-import { ArrowRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { Logo } from './logo'
 
-console.log('[HeroSection] Module loaded');
-
 const searchSuggestions = [
-  "Help me work through this decision",
-  "What did I learn from that conversation?",
-  "Remember what I was thinking about yesterday",
-  "Help me sort through these ideas"
+  "Help me organize these scattered thoughts",
+  "What's the core insight I'm missing here?",
+  "Refine this explanation for my team",
+  "Connect this to what we discussed yesterday"
 ]
 
 export function HeroSection() {
@@ -46,7 +43,7 @@ export function HeroSection() {
   useEffect(() => {
     const handleScroll = () => {
       const scrollPosition = window.scrollY
-      const atBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 2 // allow for rounding
+      const atBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 2
       setShowFloatingSearch(scrollPosition > 100 && !atBottom)
     }
 
@@ -55,160 +52,137 @@ export function HeroSection() {
   }, [])
 
   return (
-    <div className="bg-gradient-to-r from-background/80 via-muted/20 to-background/80 min-h-[80vh] flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 dark:from-slate-900 dark:via-blue-950/20 dark:to-indigo-950/10 flex flex-col relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-indigo-100/30 dark:from-blue-950/20 dark:to-indigo-950/10 transition-all duration-1000" />
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-br from-blue-200/30 to-cyan-200/20 dark:from-blue-800/15 dark:to-cyan-800/10 rounded-full blur-3xl animate-pulse-slow" />
+      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-gradient-to-br from-indigo-200/25 to-purple-200/15 dark:from-indigo-800/12 dark:to-purple-800/8 rounded-full blur-3xl animate-pulse-slow" style={{animationDelay: '1s'}} />
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-br from-emerald-200/20 to-teal-200/15 dark:from-emerald-800/10 dark:to-teal-800/8 rounded-full blur-3xl animate-pulse-slow" style={{animationDelay: '2s'}} />
+      
       {/* Header */}
-      <div className="relative">
-        <nav className="sticky top-0 z-50 backdrop-blur-sm bg-background/50">
-          <div className="flex justify-between items-center px-4 sm:px-6 py-4">
-            <div className="text-foreground">
-              <div className="group">
-                <Logo className="h-8 sm:h-12 text-foreground animate-fade-in group-hover:scale-105 transition-transform duration-300" />
-              </div>
-            </div>
-            
-            {/* Mobile Menu Button */}
-            <button 
-              aria-label="Toggle menu"
-              className="sm:hidden p-2 rounded-lg hover:bg-muted"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {isMobileMenuOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                )}
-              </svg>
-            </button>
-
-            {/* Desktop Navigation */}
-            <div className="hidden sm:flex items-center gap-4">
-              <button 
-                onClick={() => document.getElementById('featured-scroll')?.scrollIntoView({ behavior: 'smooth' })}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Features
-              </button>
-              <button 
-                onClick={() => document.getElementById('features-scroll')?.scrollIntoView({ behavior: 'smooth' })}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Capabilities
-              </button>
-              <button 
-                onClick={() => router.push('/auth/register')}
-                className="bg-foreground text-background px-4 py-2 rounded-xl hover:bg-foreground/80 transition-colors"
-              >
-                Get Started
-              </button>
-            </div>
+      <nav className="relative z-10 p-8 sm:p-12 animate-fade-in-down">
+        <div className="flex justify-between items-center max-w-7xl mx-auto">
+          <div className="transform hover:scale-105 transition-transform duration-300">
+            <Logo className="h-8 text-slate-800 dark:text-slate-200" />
           </div>
-
-          {/* Mobile Navigation Menu */}
-          {isMobileMenuOpen && (
-            <div className="absolute w-full bg-background border-b border-border sm:hidden">
-              <div className="flex flex-col p-4 space-y-4">
-                <button 
-                  onClick={() => {
-                    document.getElementById('featured-scroll')?.scrollIntoView({ behavior: 'smooth' })
-                    setIsMobileMenuOpen(false)
-                  }}
-                  className="text-muted-foreground hover:text-foreground py-2 text-left"
-                >
-                  Features
-                </button>
-                <button 
-                  onClick={() => {
-                    document.getElementById('features-scroll')?.scrollIntoView({ behavior: 'smooth' })
-                    setIsMobileMenuOpen(false)
-                  }}
-                  className="text-muted-foreground hover:text-foreground py-2 text-left"
-                >
-                  Capabilities
-                </button>
-                <button 
-                  onClick={() => {
-                    router.push('/auth/register')
-                    setIsMobileMenuOpen(false)
-                  }}
-                  className="bg-foreground text-background px-4 py-2 rounded-xl hover:bg-foreground/80 transition-colors text-left"
-                >
-                  Get Started
-                </button>
-              </div>
-            </div>
-          )}
-        </nav>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center max-w-4xl mx-auto px-4 sm:px-6">
-        <h1 className="text-4xl sm:text-5xl font-bold text-foreground mb-4 sm:mb-6 text-center">
-          Your private space with memory, finally.
-        </h1>
-        <p className="text-xl sm:text-2xl text-muted-foreground mb-8 sm:mb-12 text-center">
-          AI that doesn't forget you. And never shares.
-        </p>
-
-        <div onClick={() => router.push('/auth/login')} 
-             className="w-full relative cursor-pointer group mb-8">
-          <div className="relative">
-            {/* Pulsing ring effect */}
-            <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-500/20 to-purple-500/20 animate-pulse-slow transition-opacity duration-300" />
-            
-            <input
-              type="text"
-              placeholder={placeholder}
-              className="w-full py-3 sm:py-4 px-4 sm:px-6 pr-20 bg-background border-2 border-border rounded-lg 
-                       text-foreground placeholder-muted-foreground focus:outline-none focus:border-blue-500
-                       cursor-pointer group-hover:border-blue-400 group-hover:shadow-lg text-base sm:text-lg shadow-sm
-                       transition-all duration-300 relative z-10"
-              readOnly
-            />
-            
-            <div 
-              className={`absolute left-4 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-blue-500 transition-opacity duration-300 z-20 ${
-                showCursor ? 'opacity-100' : 'opacity-0'
-              }`}
-              style={{ left: 'calc(1rem + 0.5rem)' }}
-            />
-            
-            {/* Enhanced arrow with "Login" text */}
-            <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-2 z-20">
-              <span className="text-xs font-medium text-muted-foreground group-hover:text-blue-600 transition-colors duration-300 hidden sm:block">
-                Login
-              </span>
-              <div className="bg-blue-500 group-hover:bg-blue-600 text-white rounded-md p-2 transition-all duration-300 group-hover:scale-110">
-                <ArrowRight className="w-4 h-4" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="text-center">
-          <p className="text-muted-foreground mb-4">Everything you want to think through, remember, or come back to, all in one place.</p>
-          <button
-            onClick={() => router.push('/auth/register')}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-medium transition-colors"
+          
+          <button 
+            onClick={() => router.push('/auth/login')}
+            className="group px-8 py-3 bg-gradient-to-r from-slate-900 to-slate-800 dark:from-slate-100 dark:to-slate-200 text-slate-50 dark:text-slate-900 rounded-full text-sm font-medium hover:from-slate-800 hover:to-slate-700 dark:hover:from-slate-200 dark:hover:to-slate-300 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-slate-900/20"
           >
-            Get Started
+            <span className="group-hover:tracking-wide transition-all duration-300">Sign in</span>
           </button>
         </div>
-      </div>
+      </nav>
 
-      {/* Floating Search Suggestion */}
-      {showFloatingSearch && (
-        <div 
-          onClick={() => router.push('/auth/login')}
-          className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-40 cursor-pointer group"
-        >
-          <div className="bg-background/80 backdrop-blur-sm border border-border rounded-full px-4 py-2 shadow-lg
-                        flex items-center gap-2 hover:border-blue-400 transition-all duration-300">
-            <span className="text-muted-foreground group-hover:text-foreground transition-all duration-300">{placeholder}</span>
-            <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-blue-500 transition-colors" />
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col items-center justify-center px-8 sm:px-12 relative z-10">
+        <div className="max-w-5xl mx-auto text-center space-y-12">
+          <h1 className="text-6xl sm:text-8xl font-light text-slate-900 dark:text-slate-100 leading-tight tracking-tight animate-fade-in-up">
+            <span className="inline-block hover:scale-105 transition-transform duration-500 cursor-default">AI tools that</span>
+            <span className="block font-extralight text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-500 cursor-default mt-4">remember you privately</span>
+          </h1>
+          
+          <p className="text-2xl sm:text-3xl text-slate-600 dark:text-slate-400 font-light max-w-3xl mx-auto leading-relaxed animate-fade-in-up" style={{animationDelay: '0.2s'}}>
+            Thoughtfully designed intelligence that learns from every conversation, 
+            builds understanding over time, and keeps everything completely yours.
+          </p>
+
+          {/* Interactive search preview */}
+          <div className="max-w-3xl mx-auto mt-20 animate-fade-in-up" style={{animationDelay: '0.4s'}}>
+            <div className="relative group">
+              <div className="absolute -inset-6 bg-gradient-to-r from-blue-500/20 via-indigo-500/20 to-purple-500/20 rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-all duration-700 animate-pulse-glow" />
+              <div 
+                onClick={() => router.push('/auth/login')}
+                className="relative bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 rounded-3xl p-8 cursor-pointer hover:border-blue-300/70 dark:hover:border-blue-600/70 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-blue-500/10"
+              >
+                <div className="flex items-center gap-6">
+                  <div className="w-3 h-3 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full animate-pulse group-hover:animate-ping" />
+                  <span className="text-slate-600 dark:text-slate-400 font-light text-xl group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors duration-300">
+                    {placeholder}
+                  </span>
+                  <div className="ml-auto opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-4 group-hover:translate-x-0">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500/10 to-indigo-500/10 flex items-center justify-center">
+                      <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* Bottom indicator with hover effect */}
+      <div className="pb-12 text-center relative z-10 animate-fade-in" style={{animationDelay: '0.8s'}}>
+        <div className="w-8 h-12 border-2 border-slate-300 dark:border-slate-600 rounded-full mx-auto flex justify-center hover:border-blue-400 transition-colors duration-300 cursor-pointer group" onClick={() => document.querySelector('.py-32')?.scrollIntoView({behavior: 'smooth'})}>
+          <div className="w-1.5 h-4 bg-slate-400 dark:bg-slate-500 rounded-full mt-2 animate-bounce group-hover:bg-gradient-to-b from-blue-500 to-indigo-500 transition-all duration-300" />
+        </div>
+      </div>
+
+      <style jsx>{`
+        @keyframes fade-in-up {
+          from {
+            opacity: 0;
+            transform: translateY(40px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes fade-in-down {
+          from {
+            opacity: 0;
+            transform: translateY(-30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        
+        @keyframes pulse-slow {
+          0%, 100% { opacity: 0.08; transform: scale(1); }
+          50% { opacity: 0.25; transform: scale(1.05); }
+        }
+        
+        @keyframes pulse-glow {
+          0%, 100% { opacity: 0; transform: scale(0.95); }
+          50% { opacity: 1; transform: scale(1.05); }
+        }
+        
+        .animate-fade-in-up {
+          animation: fade-in-up 1s ease-out forwards;
+          opacity: 0;
+        }
+        
+        .animate-fade-in-down {
+          animation: fade-in-down 0.8s ease-out forwards;
+          opacity: 0;
+        }
+        
+        .animate-fade-in {
+          animation: fade-in 0.8s ease-out forwards;
+          opacity: 0;
+        }
+        
+        .animate-pulse-slow {
+          animation: pulse-slow 6s ease-in-out infinite;
+        }
+        
+        .animate-pulse-glow {
+          animation: pulse-glow 4s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   )
 } 

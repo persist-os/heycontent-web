@@ -32,16 +32,16 @@ export default function Terms() {
         <section className="space-y-6">
           <h2 className="text-3xl font-medium text-foreground border-b border-border pb-3">Agreement to Our Legal Terms</h2>
           <p>
-            These Terms of Service ("Terms") constitute a legally binding agreement made between you, whether personally or on behalf of an entity ("you"), and Divertissement AI, Inc. ("Company," "we," "us," or "our"), concerning your access to and use of the HeyContext website (<a href="https://www.HeyContext.co" className="text-blue-600 dark:text-blue-400 hover:underline">https://www.HeyContext.co</a>) and any related products and services that refer or link to these Terms (collectively, the "Services").
+            These Terms of Service ("Terms") constitute a legally binding agreement made between you, whether personally or on behalf of an entity ("you"), and Divertissement AI, Inc. ("Company," "we," "us," or "our"), concerning your access to and use of the HeyContext website (<a href="https://www.heycontext.ai" className="text-blue-600 dark:text-blue-400 hover:underline">https://www.heycontext.ai</a>) and any related products and services that refer or link to these Terms (collectively, the "Services").
           </p>
           <p>
             By accessing or using the Services, you agree that you have read, understood, and agree to be bound by all of these Terms. IF YOU DO NOT AGREE WITH ALL OF THESE TERMS, THEN YOU ARE EXPRESSLY PROHIBITED FROM USING THE SERVICES AND YOU MUST DISCONTINUE USE IMMEDIATELY.
           </p>
           <p>
-            <strong>YouTube Terms of Service:</strong> Our Services use YouTube API Services. By using HeyContext, you also agree to be bound by the <a href="https://www.youtube.com/t/terms" className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">YouTube Terms of Service</a>.
+            <strong>Google Terms of Service:</strong> Our Services use Google API Services for authentication. By using HeyContext, you also agree to be bound by the <a href="https://policies.google.com/terms" className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">Google Terms of Service</a>.
           </p>
           <p>
-            <strong>Instagram/Meta Platform Terms:</strong> Our Services use Instagram API Services. By using HeyContext, you also agree to be bound by the <a href="https://developers.facebook.com/terms" className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">Meta Platform Terms</a> and <a href="https://help.instagram.com/581066165581870" className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">Instagram Terms of Use</a>.
+
           </p>
           <p>
             We may update these Terms from time to time. We will alert you about any changes by updating the "Last updated" date at the top of these Terms. It is your responsibility to review these Terms periodically. Your continued use of the Services after any changes constitutes your acceptance of those changes.
@@ -91,7 +91,7 @@ export default function Terms() {
         <section className="space-y-4">
           <h2 className="text-2xl font-medium text-foreground">1. Our Services</h2>
           <p>
-            HeyContext is an AI-powered platform for content creators, providing tools for content creation, analytics, and collaboration. Our platform integrates with YouTube, Instagram, Gmail, and Google to help you analyze and manage your content. We use Stripe for payments, Convex for database operations, and Firebase for authentication. The Services are not intended for use in any jurisdiction or country where such use would be contrary to law or regulation.
+            HeyContext is an AI-powered platform that remembers you privately, providing thoughtfully designed intelligence that learns from every conversation and builds understanding over time. Our platform uses Firebase for authentication and Convex for secure data storage. The Services are not intended for use in any jurisdiction or country where such use would be contrary to law or regulation.
           </p>
           <p>
             The Services are not tailored to comply with industry-specific regulations (such as HIPAA or FISMA). If your interactions would be subject to such laws, you may not use the Services.
@@ -172,7 +172,7 @@ export default function Terms() {
         <section className="space-y-4">
           <h2 className="text-2xl font-medium text-foreground">10. Social Media</h2>
           <p>
-            You may link your account with third-party services such as Google, YouTube, Instagram, and Gmail. We are not responsible for the content or practices of these third-party services. Your use of third-party integrations is subject to their terms and privacy policies.
+            You may link your account with Google for authentication purposes. We are not responsible for the content or practices of these third-party services. Your use of third-party integrations is subject to their terms and privacy policies.
           </p>
         </section>
 

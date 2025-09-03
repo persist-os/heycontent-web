@@ -1,430 +1,603 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { MessageCircle, BarChart3, Zap, Globe, Brain, ArrowRight, Play, Pause, Instagram, Mail, Database, Search } from 'lucide-react'
-import { useRouter } from 'next/navigation'
-import { YouTubeBrandIcon } from '@/lib/YoutubeBrandIcon'
-import Tilt from 'react-parallax-tilt'
-import { PlatformCard } from './platform-card'
+import React, { useState, useRef, useEffect, useCallback, useImperativeHandle, forwardRef } from 'react'
+import { X, Send, Copy, MessageSquare, FileText, Plus, ChevronRight, ChevronLeft, Search, BookOpen, Users } from 'lucide-react'
+import { useTheme } from 'next-themes'
+import { motion } from "framer-motion"
+import { Loader2, ArrowRight } from 'lucide-react'
 
-const mockChatMessages = [
+interface Source {
+  id: string
+  type: 'note' | 'conversation'
+  title: string
+  content: string
+  timestamp: string
+  relevance: number
+}
+
+interface ConversationMessage {
+  id: string
+  sender: 'user' | 'assistant'
+  content: string
+  timestamp: string
+  sources?: string[]
+  suggestions?: Array<{
+    id: string
+    text: string
+    type: 'followup' | 'action'
+  }>
+}
+
+interface DisplayOption {
+  id: string
+  label: string
+  icon: React.ReactNode
+  action: () => void
+  category?: string
+}
+
+const sources: Source[] = [
   {
-    type: 'user',
-    message: "I keep going back and forth on this job decision. Can you help me remember what I was thinking about it last week?",
+    id: 'note-1',
+    type: 'note',
+    title: 'Career Goals & Values',
+    content: 'I want to work in environments that prioritize collaboration over competition. My ideal role would involve creative problem-solving and meaningful impact on users.',
+    timestamp: '2 weeks ago',
+    relevance: 0.95
+  },
+  {
+    id: 'conversation-1',
+    type: 'conversation',
+    title: 'Previous job search discussion',
+    content: 'We discussed how environment affects my focus and productivity. I mentioned preferring companies with strong work-life balance and supportive team cultures.',
+    timestamp: '1 month ago',
+    relevance: 0.88
+  },
+  {
+    id: 'note-2',
+    type: 'note',
+    title: 'Work Environment Preferences',
+    content: 'I thrive in collaborative, low-ego environments where people genuinely want to help each other succeed. Remote-friendly companies with good communication practices are important.',
+    timestamp: '3 weeks ago',
+    relevance: 0.82
+  }
+]
+
+const conversation: ConversationMessage[] = [
+  {
+    id: '1',
+    sender: 'user',
+    content: "I've been applying to jobs, but it feels overwhelming. Part of me also wonders if moving would make things easier—or harder.",
     timestamp: '2:34 PM'
   },
   {
-    type: 'system',
-    message: "Looking through your recent conversations and notes...",
-    timestamp: '2:34 PM',
-    loading: true
-  },
-    {
-    type: 'agent',
-    message: "You had a really insightful conversation about this on Tuesday. You mentioned feeling excited about the growth potential but worried about the commute affecting your evening routine. You also noted that the team seemed collaborative, which you said was your top priority after the last job.",
-    timestamp: '2:34 PM',
-    data: {
-      key_insight: "Growth potential vs. commute concerns",
-      priority_reminder: "Collaborative team environment",
-      emotional_state: "Excited but cautious",
-      previous_context: "Compared to challenges at last job",
-      decision_factors: "3 main considerations identified"
-    }
-  },
-  {
-    type: 'user',
-    message: "What patterns do you notice in how I handle stress?",
-    timestamp: '2:35 PM'
-  },
-  {
-    type: 'system',
-    message: "Analyzing your conversations and notes for patterns...",
+    id: '2',
+    sender: 'assistant',
+    content: "I hear you. Looking at your **Career Goals & Values** note from 2 weeks ago, you mentioned wanting environments that prioritize collaboration over competition. It makes sense that moving and job searching are tangled together for you.\n\nMaybe we can look at them as two threads of the same question: *where do you see yourself thriving, both in work and in daily life?*\n\nBased on your **Work Environment Preferences** note, you thrive in collaborative, low-ego environments. That could be a key filter for both location and company choices.",
     timestamp: '2:35 PM',
-    loading: true
+    sources: ['note-1', 'note-2']
   },
   {
-    type: 'agent',
-    message: "I've noticed you tend to overthink decisions when you're stressed, but your best insights come when you talk through problems out loud. You also mentioned feeling calmer after organizing your thoughts in writing. When you're overwhelmed, you often benefit from breaking things into smaller steps.",
-    timestamp: '2:35 PM',
-    data: {
-      stress_response: "Tends to overthink decisions",
-      best_processing: "Talking through problems",
-      calming_activity: "Writing thoughts down",
-      helpful_strategy: "Breaking into smaller steps",
-      pattern_confidence: "Based on 12 conversations"
-    }
+    id: '3',
+    sender: 'user',
+    content: "Yeah, I don't just want any job. I want to land somewhere that feels like it fits who I am now, not just what's available.",
+    timestamp: '2:36 PM'
+  },
+  {
+    id: '4',
+    sender: 'assistant',
+    content: "That's exactly the right mindset. From our previous conversation about job searching, we discussed how environment affects your focus and productivity. You mentioned preferring companies with strong work-life balance and supportive team cultures.\n\nThat could be your north star: look for roles in places where you can build both a career and a life you won't feel disconnected from.",
+    timestamp: '2:37 PM',
+    sources: ['conversation-1']
+  },
+  {
+    id: '5',
+    sender: 'user',
+    content: "So not just \"what's the job,\" but \"what's the setting where the job will actually feel sustainable.\"",
+    timestamp: '2:38 PM'
+  },
+  {
+    id: '6',
+    sender: 'assistant',
+    content: "Exactly. That frame can shift how you filter opportunities. Instead of scanning endless listings, you're asking: *does this role fit the kind of life I'm moving toward?* That's a calmer, more grounded way to search.\n\nHere are some ways to approach this:\n\n**1. Map your non-negotiables**\n- What environments help you focus?\n- Where do you feel most creative?\n- What kind of team dynamics energize you?\n\n**2. Research companies, not just roles**\n- Look at their values and culture\n- Check employee reviews on Glassdoor\n- See how they talk about work-life balance\n\n**3. Network with intention**\n- Reach out to people at companies you're curious about\n- Ask about day-to-day experience, not just job duties\n- Get a sense of the actual work environment",
+    timestamp: '2:39 PM',
+    suggestions: [
+      {
+        id: 's1',
+        text: 'Create a list of my non-negotiables',
+        type: 'action'
+      },
+      {
+        id: 's2',
+        text: 'Research 3 companies I\'m interested in',
+        type: 'action'
+      },
+      {
+        id: 's3',
+        text: 'What questions should I ask in interviews?',
+        type: 'followup'
+      }
+    ]
   }
 ]
 
-const connectedPlatforms = [
+const commandPaletteCommands: DisplayOption[] = [
   {
-    title: "Conversations",
-    description: "Remembers everything you've talked through and worked on",
-    icon: MessageCircle,
-    iconProps: { className: "w-10 h-10 text-white" },
-    color: "from-purple-500 to-pink-500",
-    status: "connected",
-    insights: [
-      "Never loses track of decisions you're working through",
-      "Remembers context from weeks or months ago",
-      "Helps you pick up exactly where you left off",
-      "Connects ideas across different conversations"
-    ]
+    id: 'analyze',
+    label: 'Analyze this conversation',
+    icon: <MessageSquare className="w-4 h-4" />,
+    action: () => {},
+    category: 'AI Actions'
   },
   {
-    title: "Notes & Thoughts",
-    description: "Your personal thinking space that grows with you",
-    icon: Brain,
-    iconProps: { className: "w-10 h-10 text-white" },
-    color: "from-blue-500 to-cyan-500",
-    status: "connected",
-    insights: [
-      "Keeps track of your evolving thoughts and ideas",
-      "Helps you see patterns in how you think and decide",
-      "Never judges or pressures you to have it figured out",
-      "Creates a safe space for working through anything"
-    ]
+    id: 'summarize',
+    label: 'Summarize key points',
+    icon: <FileText className="w-4 h-4" />,
+    action: () => {},
+    category: 'AI Actions'
   },
   {
-    title: "Personal Patterns",
-    description: "Learns what works for you and how you process best",
-    icon: BarChart3,
-    iconProps: { className: "w-10 h-10 text-white" },
-    color: "from-green-500 to-emerald-500",
-    status: "connected",
-    insights: [
-      "Notices how you handle different types of decisions",
-      "Remembers what strategies work best for you",
-      "Helps you understand your own thinking patterns",
-      "Suggests approaches based on what's worked before"
-    ]
-  }
-];
-
-const comingSoonPlatforms = [
-  {
-    title: "Voice Notes",
-    description: "Talk through ideas when typing feels too much",
-    icon: "voice",
-    color: "from-pink-600 to-purple-600",
-    status: "coming_soon"
+    id: 'save-note',
+    label: 'Save as Smart Note',
+    icon: <Plus className="w-4 h-4" />,
+    action: () => {},
+    category: 'Notes'
   },
   {
-    title: "Journal Integration",
-    description: "Connect your existing journaling habits",
-    icon: "journal",
-    color: "from-blue-400 to-blue-600", 
-    status: "coming_soon"
-  },
-  {
-    title: "Mood Tracking",
-    description: "Understand patterns in how you feel and think",
-    icon: "mood",
-    color: "from-green-500 to-emerald-500",
-    status: "coming_soon"
-  },
-  {
-    title: "Goal Reflection",
-    description: "Check in with yourself and track what matters",
-    icon: "goals",
-    color: "from-orange-500 to-red-500",
-    status: "coming_soon"
+    id: 'expand',
+    label: 'Expand on this idea',
+    icon: <ChevronRight className="w-4 h-4" />,
+    action: () => {},
+    category: 'AI Actions'
   }
 ]
 
-export function AgentsShowcase() {
-  const [activeMessage, setActiveMessage] = useState(0)
-  const [isAnimating, setIsAnimating] = useState(true)
-  const [selectedIntegration, setSelectedIntegration] = useState(0)
-  const router = useRouter()
+function SmartSearchSources({ sources: sourceIds }: { sources?: string[] }) {
+  if (!sourceIds || sourceIds.length === 0) return null
 
-  useEffect(() => {
-    if (!isAnimating) return
-
-    const interval = setInterval(() => {
-      setActiveMessage((prev) => (prev + 1) % mockChatMessages.length)
-    }, 3000)
-
-    return () => clearInterval(interval)
-  }, [isAnimating])
+  const relevantSources = sourceIds.map(id => sources.find(s => s.id === id)).filter(Boolean) as Source[]
 
   return (
-    <section className="relative py-16 sm:py-24 bg-gradient-to-br from-background via-muted/10 to-background overflow-hidden">
-      {/* Background decorative elements */}
-      <div className="absolute inset-0 bg-gradient-to-r from-purple-100/10 dark:from-purple-900/10 to-blue-100/10 dark:to-blue-900/10 rounded-3xl blur-3xl"></div>
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500/10 to-purple-500/10 backdrop-blur-sm rounded-full border border-white/20 dark:border-border mb-6">
-            <span className="text-sm font-medium bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              🧠 Your Personal Memory System
+    <div className="mb-4">
+      <div className="flex items-center gap-2 mb-2">
+        <Search className="w-4 h-4 text-blue-500" />
+        <span className="text-xs text-slate-500 dark:text-slate-400">Relevant sources:</span>
+      </div>
+      <div className="flex gap-2">
+        {relevantSources.map((source) => (
+          <div key={source.id} className="flex items-center gap-1 bg-blue-50/80 dark:bg-blue-900/20 border border-blue-200/50 dark:border-blue-700/30 rounded-lg px-2 py-1">
+            {source.type === 'note' ? (
+              <BookOpen className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+            ) : (
+              <Users className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+            )}
+            <span className="text-xs text-blue-700 dark:text-blue-300 font-medium">
+              {source.title}
+            </span>
+            <span className="text-xs text-blue-500/70 dark:text-blue-400/70">
+              {Math.round(source.relevance * 100)}%
             </span>
           </div>
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-foreground via-blue-800 dark:via-blue-400 to-purple-800 dark:to-purple-400 bg-clip-text text-transparent leading-relaxed tracking-tight py-2 mb-6">
-            It remembers so you don't have to
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function SuggestionChips({ suggestions }: { suggestions?: Array<{ id: string; text: string; type: 'followup' | 'action' }> }) {
+  if (!suggestions || suggestions.length === 0) return null
+
+  return (
+    <div className="mt-4 flex flex-wrap gap-2">
+      {suggestions.map((suggestion) => (
+        <button
+          key={suggestion.id}
+          className="inline-flex items-center gap-2 bg-slate-100/80 dark:bg-slate-800/80 hover:bg-slate-200/80 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-300 text-sm px-3 py-1.5 rounded-full transition-colors duration-200"
+        >
+          {suggestion.type === 'action' ? (
+            <Plus className="w-3 h-3" />
+          ) : (
+            <ChevronRight className="w-3 h-3" />
+          )}
+          {suggestion.text}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function InlineCommandPalette({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const [selectedIndex, setSelectedIndex] = useState(0)
+  const [userInput, setUserInput] = useState('')
+
+  if (!isOpen) return null
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95, y: 10 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95, y: 10 }}
+      className="fixed z-[200] bg-background border border-border rounded-lg shadow-2xl overflow-hidden backdrop-blur-sm"
+      style={{
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: '400px',
+        maxHeight: '500px'
+      }}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-border">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+          <span className="text-sm font-medium">AI Assistant</span>
+        </div>
+        <button
+          onClick={onClose}
+          className="p-1 text-muted-foreground hover:text-foreground rounded transition-colors"
+          aria-label="Close command palette"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Input */}
+      <div className="p-4 border-b border-border">
+        <input
+          type="text"
+          value={userInput}
+          onChange={(e) => setUserInput(e.target.value)}
+          placeholder="Ask AI to analyze, summarize, or expand..."
+          className="w-full px-3 py-2 text-sm bg-muted/50 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+        />
+      </div>
+
+      {/* Commands */}
+      <div className="max-h-80 overflow-y-auto">
+        <div className="py-2">
+          {commandPaletteCommands.map((option, index) => {
+            const isSelected = selectedIndex === index
+            
+            return (
+              <button
+                key={option.id}
+                onClick={option.action}
+                className={`w-full flex items-center gap-3 px-4 py-2 text-left transition-all duration-200 ${
+                  isSelected
+                    ? 'bg-purple-500/10 text-purple-600 dark:text-yellow-400' 
+                    : 'hover:bg-muted/50 text-foreground'
+                }`}
+              >
+                <div className="flex-shrink-0 text-muted-foreground">
+                  {option.icon}
+                </div>
+                <span className="text-sm font-medium">
+                  {option.label}
+                </span>
+                {isSelected && (
+                  <ArrowRight className="w-3 h-3 ml-auto text-purple-600 dark:text-yellow-400" />
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
+const MarkdownNotepad = forwardRef(function MarkdownNotepad({ 
+  isOpen, 
+  onClose, 
+  width, 
+  style
+}: {
+  isOpen: boolean
+  onClose: () => void
+  width: number
+  style: React.CSSProperties
+}, ref) {
+  const [content, setContent] = useState(`# Job Search Strategy
+
+## Key Insights from Today's Conversation
+
+Based on our discussion about job searching and potential relocation, here are the main takeaways:
+
+### Environment Matters
+- **Collaboration over competition**: I thrive in low-ego environments where people genuinely want to help each other succeed
+- **Work-life balance**: Strong preference for companies that prioritize this
+- **Remote-friendly**: Good communication practices are essential
+
+### Non-Negotiables to Map
+- [ ] What environments help me focus?
+- [ ] Where do I feel most creative?
+- [ ] What kind of team dynamics energize me?
+
+### Research Strategy
+1. **Look at company values and culture** - not just job duties
+2. **Check employee reviews** on Glassdoor for real insights
+3. **Network with intention** - reach out to people at interesting companies
+4. **Ask about day-to-day experience** during interviews
+
+### Questions to Ask in Interviews
+- How does the team handle disagreements?
+- What's the work-life balance like in practice?
+- How do you support professional growth?
+- What's the communication style like?
+
+`)
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
+  const accentBg = isDark ? 'bg-primary' : 'bg-purple-600'
+  const accentBgHover = isDark ? 'hover:bg-primary/90' : 'hover:bg-purple-700'
+
+  // Expose methods to parent
+  useImperativeHandle(ref, () => ({
+    hasUnsavedContent: () => !!content.trim(),
+    clearContent: () => setContent(''),
+    getContent: () => content || '',
+  }), [content]);
+
+  if (!isOpen) return null
+
+  return (
+    <div 
+      className="fixed top-0 right-0 h-full bg-background border-l border-border z-40 flex flex-col shadow-lg"
+      style={{ ...style, width: `${width}px` }}
+    >
+      {/* Resize Handle */}
+      <div className="absolute left-0 top-0 w-2 h-full cursor-col-resize z-50 hover:bg-purple-600/10 transition-colors group flex items-center justify-center">
+        <div className="w-0.5 h-8 bg-border group-hover:bg-purple-600/50 transition-colors rounded-full" />
+      </div>
+
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-medium text-foreground">
+            Smart Notes
+          </h3>
+        </div>
+        
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setContent('')}
+            className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground rounded-md transition-colors hover:bg-muted"
+            title="Clear content"
+          >
+            Clear
+          </button>
+          
+          <button
+            onClick={onClose}
+            className="p-1.5 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 rounded transition-colors"
+            aria-label="Close notepad"
+            title="Close notepad"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-auto p-4">
+        <textarea
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder="Start writing... Your notes will appear here."
+          className="w-full h-full resize-none bg-transparent border-0 outline-none text-sm leading-relaxed font-mono"
+        />
+      </div>
+
+      {/* Footer */}
+      <div className="px-4 py-2 border-t border-border text-xs text-muted-foreground/80 shrink-0">
+        Markdown supported • ⌘K for AI assistant • @ to link notes
+      </div>
+    </div>
+  )
+})
+
+export function AgentsShowcase() {
+  const [notepadOpen, setNotepadOpen] = useState(true) // Open by default
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+  const [notepadWidth, setNotepadWidth] = useState(400)
+  const notepadRef = useRef<{ hasUnsavedContent: () => boolean; clearContent: () => void; getContent: () => string }>(null)
+  const { theme } = useTheme()
+
+  const getMainContentStyle = () => ({
+    marginRight: notepadOpen ? `${notepadWidth}px` : '0px',
+    transition: 'margin-right 0.3s ease-in-out'
+  })
+
+  const getNotepadStyle = () => ({
+    transform: notepadOpen ? 'translateX(0)' : 'translateX(100%)',
+    transition: 'transform 0.3s ease-in-out'
+  })
+
+  return (
+    <section className="py-40 bg-gradient-to-b from-white via-blue-50/20 to-white dark:from-slate-900 dark:via-blue-950/10 dark:to-slate-900 relative overflow-hidden">
+      {/* Subtle background animation */}
+      <div className="absolute top-0 left-1/2 w-96 h-96 bg-gradient-to-br from-blue-100/40 to-cyan-100/30 dark:from-blue-900/15 dark:to-cyan-900/10 rounded-full blur-3xl animate-float" />
+      <div className="absolute bottom-0 right-1/3 w-80 h-80 bg-gradient-to-br from-indigo-100/30 to-purple-100/20 dark:from-indigo-900/12 dark:to-purple-900/8 rounded-full blur-3xl animate-float-delayed" />
+      <div className="absolute top-1/3 right-0 w-64 h-64 bg-gradient-to-br from-emerald-100/25 to-teal-100/15 dark:from-emerald-900/10 dark:to-teal-900/6 rounded-full blur-3xl animate-float-slow" />
+      
+      <div className="max-w-7xl mx-auto px-8 sm:px-12 relative z-10">
+        <div className="text-center mb-32">
+          <h2 className="text-4xl sm:text-5xl font-light text-slate-900 dark:text-slate-100 leading-tight tracking-wide mb-8 animate-fade-in-up">
+            Effortlessly intuitive
           </h2>
-          <p className="text-xl sm:text-2xl text-muted-foreground leading-relaxed max-w-4xl mx-auto">
-            A safe space where you can work through anything. It holds onto every conversation, learns your patterns, 
-            and helps you understand yourself better, without ever sharing or judging.
+          <p className="text-2xl sm:text-3xl text-slate-600 dark:text-slate-400 font-light max-w-3xl mx-auto leading-relaxed animate-fade-in-up" style={{animationDelay: '0.2s'}}>
+            Simply describe what you need in natural language. 
+            Get precisely crafted responses that build on your previous conversations and preferences.
           </p>
         </div>
 
-        {/* Main Demo Section */}
-        <div className="grid lg:grid-cols-2 gap-12 mb-20">
-          {/* Interactive Chat Demo */}
-          <div className="relative">
-            <Tilt
-              tiltMaxAngleX={5}
-              tiltMaxAngleY={5}
-              perspective={1000}
-              scale={1.02}
-              transitionSpeed={1000}
-            >
-              <div className="bg-background/60 backdrop-blur-sm rounded-2xl border border-border p-6 shadow-xl">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+        {/* Chat Container Preview */}
+        <div className="max-w-6xl mx-auto relative animate-fade-in-up" style={{animationDelay: '0.4s'}}>
+          <div className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-3xl shadow-sm border border-slate-200/50 dark:border-slate-700/50 overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
+                  <MessageSquare className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100">HeyContext Chat</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Job search & career planning</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCommandPaletteOpen(true)}
+                  className="p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  title="Open AI Assistant"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setNotepadOpen(!notepadOpen)}
+                  className="p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  title="Toggle Smart Notes"
+                >
+                  <FileText className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Chat Content */}
+            <div className="relative" style={getMainContentStyle()}>
+              <div className="p-6">
+                <div className="max-w-4xl mx-auto relative">
+                  <div className="space-y-6">
+                    {conversation.map((message, index) => (
+                      <div key={message.id} className="relative animate-fade-in-up" style={{animationDelay: `${0.6 + index * 0.2}s`}}>
+                        {message.sender === 'assistant' && message.sources && message.sources.length > 0 && (
+                          <SmartSearchSources sources={message.sources} />
+                        )}
+                        
+                        <div className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`max-w-[85%] ${message.sender === 'user' ? 'text-right' : 'text-left'}`}>
+                            <div className={`inline-block px-6 py-4 rounded-2xl ${
+                              message.sender === 'user' 
+                                ? 'bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900' 
+                                : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                            }`}>
+                              <div className="text-lg leading-relaxed prose prose-sm max-w-none">
+                                <div dangerouslySetInnerHTML={{ 
+                                  __html: message.content
+                                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                                    .replace(/\n\n/g, '<br><br>')
+                                    .replace(/\n/g, '<br>')
+                                }} />
+                              </div>
+                            </div>
+                            <div className={`text-xs text-slate-500 dark:text-slate-400 mt-2 ${
+                              message.sender === 'user' ? 'text-right' : 'text-left'
+                            }`}>
+                              {message.timestamp}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Suggestions */}
+                        <SuggestionChips suggestions={message.suggestions} />
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setIsAnimating(!isAnimating)}
-                      className="p-1 hover:bg-muted rounded transition-colors"
-                    >
-                      {isAnimating ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                </div>
+              </div>
+
+              {/* Input Area */}
+              <div className="border-t border-slate-200 dark:border-slate-700 bg-background p-4">
+                <div className="max-w-4xl mx-auto">
+                  <div className="flex items-end gap-3">
+                    <div className="flex-1 relative">
+                      <textarea
+                        placeholder="Message HeyContext..."
+                        className="w-full px-4 py-3 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                        rows={1}
+                      />
+                    </div>
+                    <button className="p-3 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors" aria-label="Send message">
+                      <Send className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
-                
-                <div className="space-y-4 max-h-96 overflow-y-auto">
-                  {mockChatMessages.map((msg, index) => (
-                    <div
-                      key={index}
-                      className={`transition-all duration-500 ${
-                        index <= activeMessage ? 'opacity-100 translate-y-0' : 'opacity-30 translate-y-2'
-                      }`}
-                    >
-                      <div className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div
-                          className={`max-w-[80%] rounded-xl p-3 ${
-                            msg.type === 'user'
-                              ? 'bg-primary text-primary-foreground dark:text-black'
-                              : msg.type === 'system'
-                              ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-200 border border-orange-200 dark:border-orange-800'
-                              : 'bg-muted text-foreground'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            {msg.loading && (
-                              <div className="flex space-x-1">
-                                <div className="w-2 h-2 bg-current rounded-full animate-pulse"></div>
-                                <div className="w-2 h-2 bg-current rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                                <div className="w-2 h-2 bg-current rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
-                              </div>
-                            )}
-                            <p className="text-sm">{msg.message}</p>
-                          </div>
-                          {msg.data && (
-                            <div className="mt-3 p-3 bg-background/20 rounded-lg text-xs space-y-2">
-                              {msg.data.key_insight && (
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">Key insight:</span>
-                                  <span>{msg.data.key_insight}</span>
-                                </div>
-                              )}
-                              {msg.data.priority_reminder && (
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">Priority:</span>
-                                  <span>{msg.data.priority_reminder}</span>
-                                </div>
-                              )}
-                              {msg.data.emotional_state && (
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">Feeling:</span>
-                                  <span>{msg.data.emotional_state}</span>
-                                </div>
-                              )}
-                              {msg.data.stress_response && (
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">Pattern:</span>
-                                  <span>{msg.data.stress_response}</span>
-                                </div>
-                              )}
-                              {msg.data.best_processing && (
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">Works best:</span>
-                                  <span>{msg.data.best_processing}</span>
-                                </div>
-                              )}
-                              {msg.data.helpful_strategy && (
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">Strategy:</span>
-                                  <span>{msg.data.helpful_strategy}</span>
-                                </div>
-                              )}
-                              {msg.data.pattern_confidence && (
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">Based on:</span>
-                                  <span>{msg.data.pattern_confidence}</span>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                          <p className="text-xs mt-1 opacity-70">{msg.timestamp}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                
-                <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Search className="w-4 h-4" />
-                    <span>Searching through all your thoughts, decisions, and conversations...</span>
-                    <div className="ml-auto flex space-x-1">
-                      <div className="w-2 h-2 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full animate-pulse"></div>
-                      <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                      <div className="w-2 h-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Tilt>
-          </div>
-
-          {/* Feature Highlights */}
-          <div className="space-y-8">
-            <div className="relative group">
-              <div className="absolute -inset-4 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 rounded-2xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
-              <div className="relative bg-background/60 backdrop-blur-sm rounded-xl border border-border p-6">
-                <div className="flex items-center gap-3 mb-3">
-                  <MessageCircle className="w-6 h-6 text-blue-500" />
-                  <h3 className="text-xl font-bold text-foreground">Talk through anything</h3>
-                </div>
-                <p className="text-muted-foreground">
-                  Work through decisions, sort through feelings, or just think out loud. 
-                  It listens without judgment and helps you understand your own thoughts better.
-                </p>
-              </div>
-            </div>
-
-            <div className="relative group">
-              <div className="absolute -inset-4 bg-gradient-to-r from-green-400 via-blue-400 to-purple-400 rounded-2xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
-              <div className="relative bg-background/60 backdrop-blur-sm rounded-xl border border-border p-6">
-                <div className="flex items-center gap-3 mb-3">
-                  <BarChart3 className="w-6 h-6 text-purple-500" />
-                  <h3 className="text-xl font-bold text-foreground">Remembers your patterns</h3>
-                </div>
-                <p className="text-muted-foreground">
-                  Notices how you think, what works for you, and what you care about. 
-                  Helps you understand yourself better by seeing patterns you might miss.
-                </p>
-              </div>
-            </div>
-
-            <div className="relative group">
-              <div className="absolute -inset-4 bg-gradient-to-r from-orange-400 via-red-400 to-pink-400 rounded-2xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
-              <div className="relative bg-background/60 backdrop-blur-sm rounded-xl border border-border p-6">
-                <div className="flex items-center gap-3 mb-3">
-                  <Globe className="w-6 h-6 text-orange-500" />
-                  <h3 className="text-xl font-bold text-foreground">Completely private</h3>
-                </div>
-                <p className="text-muted-foreground">
-                  No feeds, no sharing, no social features. What you share here stays here, always. 
-                  It's built for you alone, a sanctuary for your thoughts.
-                </p>
               </div>
             </div>
           </div>
+
+          {/* Notepad */}
+          <MarkdownNotepad
+            ref={notepadRef}
+            isOpen={notepadOpen}
+            onClose={() => setNotepadOpen(false)}
+            width={notepadWidth}
+            style={getNotepadStyle()}
+          />
         </div>
 
-        {/* Connected Platforms */}
-        <div className="mb-16">
-          <h3 className="text-3xl font-bold text-center mb-4 text-foreground">
-            How It Remembers
-          </h3>
-          <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto">
-            Your personal memory system that learns from how you think and what you care about
-          </p>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
-            {connectedPlatforms.map((platform, index) => (
-              <PlatformCard
-                key={index}
-                title={platform.title}
-                description={platform.description}
-                icon={platform.icon}
-                iconProps={platform.iconProps}
-                color={platform.color}
-                insights={platform.insights}
-                isSelected={selectedIntegration === index}
-                onClick={() => setSelectedIntegration(index)}
-              />
-            ))}
-          </div>
+        {/* Command Palette */}
+        <InlineCommandPalette 
+          isOpen={commandPaletteOpen}
+          onClose={() => setCommandPaletteOpen(false)}
+        />
 
-          {/* Coming Soon Platforms */}
-          <h3 className="text-2xl font-bold text-center mb-4 text-foreground">
-            Coming Soon
-          </h3>
-          <p className="text-center text-muted-foreground mb-8 max-w-2xl mx-auto">
-            More ways to work through what's on your mind
-          </p>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {comingSoonPlatforms.map((platform, index) => (
-              <div
-                key={index}
-                className="relative group"
-              >
-                <div className={`absolute -inset-1 bg-gradient-to-r ${platform.color} rounded-xl blur opacity-10 group-hover:opacity-20 transition-opacity`}></div>
-                <div className="relative bg-background/60 backdrop-blur-sm rounded-lg border border-border border-dashed p-4 h-full opacity-60">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className={`p-2 bg-gradient-to-r ${platform.color} rounded-lg flex items-center justify-center`}>
-                      {platform.icon === 'voice' && (
-                        <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M12 2C13.1 2 14 2.9 14 4V10C14 11.1 13.1 12 12 12C10.9 12 10 11.1 10 10V4C10 2.9 10.9 2 12 2ZM19 10V12C19 15.9 15.9 19 12 19S5 15.9 5 12V10H7V12C7 14.8 9.2 17 12 17S17 14.8 17 12V10H19ZM11 21V23H13V21H11Z"/>
-                        </svg>
-                      )}
-                      {platform.icon === 'journal' && (
-                        <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                        </svg>
-                      )}
-                      {platform.icon === 'mood' && (
-                        <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M12,2C13.1,2 14,2.9 14,4C14,5.1 13.1,6 12,6C10.9,6 10,5.1 10,4C10,2.9 10.9,2 12,2ZM21,9V7L15,13.5C14.8,13.8 14.4,14 14,14C13.6,14 13.2,13.8 13,13.5L10,10.5C9.8,10.2 9.4,10 9,10S8.2,10.2 8,10.5L3,16V18L8.5,12L12,16L21,9Z"/>
-                        </svg>
-                      )}
-                      {platform.icon === 'goals' && (
-                        <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2ZM12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4ZM12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6ZM12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/>
-                        </svg>
-                      )}
-                    </div>
-                    <h4 className="font-medium text-foreground text-sm">{platform.title}</h4>
-                  </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{platform.description}</p>
-                </div>
-              </div>
-            ))}
+        <div className="mt-32 text-center animate-fade-in-up" style={{animationDelay: '2s'}}>
+          <div className="inline-block bg-slate-100/90 dark:bg-slate-800/80 backdrop-blur-sm rounded-full px-10 py-6 hover:bg-slate-200/90 dark:hover:bg-slate-700/80 transition-all duration-500 hover:scale-105 cursor-default">
+            <p className="text-slate-600 dark:text-slate-400 font-light text-lg hover:text-slate-700 dark:hover:text-slate-300 transition-colors duration-500">
+              Beautifully simple, deeply personal, completely private
+            </p>
           </div>
-        </div>
-
-        {/* Bottom CTA */}
-        <div className="text-center">
-          <div 
-            onClick={() => router.push('/auth/register')}
-            className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full text-white font-bold text-lg hover:from-blue-600 hover:to-purple-600 transition-all duration-300 cursor-pointer group shadow-xl hover:shadow-2xl transform hover:scale-105"
-          >
-            <span>Find your space</span>
-            <ArrowRight className="w-5 h-5 ml-3 group-hover:translate-x-1 transition-transform" />
-          </div>
-         <p className="text-sm text-muted-foreground mt-4">A place where you can finally put down what you've been carrying</p>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes fade-in-up {
+          from {
+            opacity: 0;
+            transform: translateY(40px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes float {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          33% { transform: translateY(-25px) rotate(1deg); }
+          66% { transform: translateY(15px) rotate(-1deg); }
+        }
+        
+        @keyframes float-delayed {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          33% { transform: translateY(20px) rotate(-1deg); }
+          66% { transform: translateY(-15px) rotate(1deg); }
+        }
+        
+        @keyframes float-slow {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-10px) rotate(0.5deg); }
+        }
+        
+        .animate-fade-in-up {
+          animation: fade-in-up 1s ease-out forwards;
+          opacity: 0;
+        }
+        
+        .animate-float {
+          animation: float 10s ease-in-out infinite;
+        }
+        
+        .animate-float-delayed {
+          animation: float-delayed 12s ease-in-out infinite;
+        }
+        
+        .animate-float-slow {
+          animation: float-slow 15s ease-in-out infinite;
+        }
+      `}</style>
     </section>
   )
 }
