@@ -273,9 +273,9 @@ export function NotesGrid({
   // Note types for filter buttons
   const noteTypes = [
     { key: 'all', label: 'All', color: 'bg-gray-400' },
-    { key: 'idea_bank', label: 'Ideas', color: 'bg-yellow-400' },
-    { key: 'content_script', label: 'Content', color: 'bg-blue-400' },
-    { key: 'projects', label: 'Projects', color: 'bg-purple-400' },
+    { key: 'idea_bank', label: 'Ideas', color: 'bg-primary' },
+    { key: 'content_script', label: 'Content', color: 'bg-primary' },
+    { key: 'projects', label: 'Projects', color: 'bg-accent' },
   ];
 
   // Helper function to render the appropriate card component
@@ -386,7 +386,7 @@ export function NotesGrid({
               placeholder={showingAll ? "Search notes and projects..." : showingProjectsOnly ? "Search projects..." : "Search notes..."}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-base bg-white dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-full text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition-colors"
+              className="w-full pl-10 pr-4 py-2 text-base bg-white dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-full text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors"
             />
           </div>
         </div>

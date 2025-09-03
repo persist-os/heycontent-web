@@ -71,7 +71,7 @@ export function BaseCard({
                 title={note.important ? "Remove from favorites" : "Add to favorites"}
                 className={cn(
                   "p-1 rounded hover:bg-background/80 transition-colors",
-                  note.important ? "text-yellow-500" : "text-muted-foreground"
+                  note.important ? "text-primary" : "text-muted-foreground"
                 )}
               >
                 <Star className="w-3 h-3" fill={note.important ? "currentColor" : "none"} />

@@ -283,7 +283,7 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
       case 'gmail':
         return <Mail className="w-4 h-4 text-red-500" />;
       case 'insights':
-        return <Lightbulb className="w-4 h-4 text-yellow-500" />;
+        return <Lightbulb className="w-4 h-4 text-primary" />;
       default:
         return <FileText className="w-4 h-4" />;
     }
@@ -470,7 +470,7 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
                             {content.title || 'Untitled'}
                           </h4>
                           {content.important && (
-                            <span className="text-yellow-500">⭐</span>
+                            <span className="text-primary">⭐</span>
                           )}
                         </div>
                         

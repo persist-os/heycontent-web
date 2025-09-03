@@ -128,7 +128,7 @@ export function ProjectCard({ project, onEdit, onDelete, dragOverProject }: Proj
                   "px-2 py-1 rounded transition-colors",
                   isDraggedOver 
                     ? "bg-primary/20 text-primary" 
-                    : "bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300"
+                    : "bg-primary/20 dark:bg-primary/20 text-primary dark:text-primary"
                 )}>
                   {project.noteIds.length} note{project.noteIds.length !== 1 ? 's' : ''}
                 </span>

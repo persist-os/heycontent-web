@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Search, Brain, Sparkles, Database, CheckCircle, Filter, ChevronDown, ChevronUp, FileText, Youtube, Mail, MessageSquare } from 'lucide-react'
+import { Search, Brain, Sparkles, Database, CheckCircle, ChevronDown, ChevronUp, FileText, Youtube, Mail, MessageSquare } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Message } from '@/app/types/chat'
 
@@ -35,15 +35,15 @@ interface HorizontalProgressiveThinkingProps {
 const ContentTypeIcon: React.FC<{ contentType: string }> = ({ contentType }) => {
   switch (contentType) {
     case 'youtube':
-      return <Youtube className="w-4 h-4 text-red-500" />
+      return <Youtube className="w-3 h-3 text-muted-foreground" />
     case 'instagram':
-      return <div className="w-4 h-4 rounded bg-gradient-to-br from-purple-500 to-pink-500" />
+      return <div className="w-3 h-3 rounded bg-muted-foreground/20" />
     case 'gmail':
-      return <Mail className="w-4 h-4 text-blue-500" />
+      return <Mail className="w-3 h-3 text-muted-foreground" />
     case 'note':
-      return <FileText className="w-4 h-4 text-gray-600" />
+      return <FileText className="w-3 h-3 text-muted-foreground" />
     default:
-      return <MessageSquare className="w-4 h-4 text-gray-600" />
+      return <MessageSquare className="w-3 h-3 text-muted-foreground" />
   }
 }
 
@@ -61,10 +61,8 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
   // Auto-open dropdown when generation starts, auto-close when complete
   useEffect(() => {
     if (steps.length > 0 && !isCompleted) {
-      // Open dropdown when we have steps and generation is not complete
       setIsThinkingExpanded(true)
     } else if (isCompleted) {
-      // Close dropdown when generation is complete
       setIsThinkingExpanded(false)
     }
   }, [steps.length, isCompleted])
@@ -79,24 +77,18 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
     }
   }, [vectorSearchMetadata?.foundRelevantContent, isCompleted])
 
-  // Pools of gentle, human-friendly phrases for each thinking stage
+  // Simplified, friendly message pools
   const messagePools = {
     intentAnalysis: {
       main: [
-        "Understanding what you're thinking about",
-        "Getting a sense of what you need",
+        "Understanding what you need",
+        "Getting a sense of your question",
         "Seeing what's on your mind",
-        "Taking in your question",
-        "Listening to what you're asking",
-        "Figuring out how I can help"
+        "Taking in your request"
       ],
       sub: [
         "Checking if I need to look back at our conversations",
-        "Seeing if what we've talked about can help",
-        "Deciding whether to check our chat history",
-        "Figuring out if past conversations would be useful",
-        "Checking if we need what you've shared before",
-        "Seeing what kind of help you need"
+        "Seeing if what we've talked about can help"
       ]
     },
     
@@ -104,16 +96,11 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
       main: [
         "This would benefit from some context",
         "What we've talked about before will help",
-        "Time to check our conversation history",
-        "Our past discussions have useful pieces",
-        "Let's look back at what you've shared"
+        "Time to check our conversation history"
       ],
       sub: [
         "Your question would benefit from our conversation history",
-        "What you've shared before has some relevant pieces",
-        "There are helpful things in our past talks",
-        "Our conversation history will help here",
-        "What you've told me has the perfect context"
+        "What you've shared before has some relevant pieces"
       ]
     },
     
@@ -121,18 +108,11 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
       main: [
         "Looking through our past conversations...",
         "Checking what we've talked about before...",
-        "Browsing through your thoughts...",
-        "Exploring our conversation history...",
-        "Searching through what you've shared...",
-        "Looking back at what we've covered..."
+        "Browsing through your thoughts..."
       ],
       sub: [
         "Checking {count} things from our conversations",
-        "Looking through {count} pieces you've shared",
-        "Reviewing {count} items for relevance",
-        "Considering {count} pieces from our discussions",
-        "Examining {count} things we've talked about",
-        "Reviewing {count} pieces of our conversation"
+        "Looking through {count} pieces you've shared"
       ]
     },
     
@@ -140,18 +120,11 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
       main: [
         "Finding what's most relevant",
         "Sorting through what matters",
-        "Picking out the important bits",
-        "Focusing on what helps most",
-        "Choosing the most useful pieces",
-        "Connecting the relevant dots"
+        "Picking out the important bits"
       ],
       sub: [
         "Making sure I find what helps",
-        "Focusing on what's most useful",
-        "Only keeping what's relevant",
-        "Sorting out what matters most",
-        "Finding the most helpful pieces",
-        "Being thoughtful about what fits"
+        "Focusing on what's most useful"
       ]
     },
     
@@ -159,18 +132,11 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
       main: [
         "Putting my thoughts together",
         "Working through this with you",
-        "Thinking about how to help",
-        "Considering the best way forward",
-        "Bringing everything together",
         "Finding the right words"
       ],
       sub: [
         "Putting together something helpful",
-        "Bringing our conversations together",
-        "Creating something that fits you",
-        "Blending what we've talked about",
-        "Making something that makes sense",
-        "Turning our thoughts into something useful"
+        "Creating something that fits you"
       ]
     }
   };
@@ -292,7 +258,7 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
         searchStatus.includes('filtered')) {
       
       setSteps(prev => {
-        let gradingStepIndex = prev.findIndex(step => step.stage === 'grading')
+        const gradingStepIndex = prev.findIndex(step => step.stage === 'grading')
         
         if (gradingStepIndex === -1) {
           const gradingStep: ThinkingStep = {
@@ -408,7 +374,7 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
     }
   }
 
-  // Mark all steps as completed when finished - but NEVER clear them
+  // Mark all steps as completed when finished
   useEffect(() => {
     if (isCompleted) {
       setSteps(prev => prev.map(step => ({
@@ -417,195 +383,113 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
         isActive: false
       })))
       
-      // Call onComplete but NEVER clear the steps
       onComplete?.()
     }
   }, [isCompleted, onComplete])
 
-  // Show default thinking if no steps yet and actively typing
+  // Show simple thinking indicator if no steps yet
   if (steps.length === 0 && !isCompleted && !vectorSearchMetadata?.foundRelevantContent && searchStatus) {
     return (
-      <div className="flex items-center gap-2 p-2 rounded-md border bg-muted/50 border-border mb-3">
-        <Sparkles className="w-4 h-4 text-amber-500 animate-spin" />
-        <span className="text-sm text-muted-foreground">Thinking...</span>
+      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+        <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+        <span>Thinking...</span>
       </div>
     )
   }
 
   const getStageIcon = (stage: ThinkingStep['stage'], isActive: boolean, isCompleted: boolean) => {
     if (isCompleted) {
-      return <CheckCircle className="w-4 h-4 text-emerald-500" />
+      return <CheckCircle className="w-4 h-4 text-primary" />
     }
     
     switch (stage) {
       case 'analyzing':
-        return <Search className={`w-4 h-4 text-blue-500 ${isActive ? 'animate-pulse' : ''}`} />
+        return <Search className={`w-4 h-4 text-primary ${isActive ? 'animate-pulse' : ''}`} />
       case 'searching':
-        return <Database className={`w-4 h-4 text-green-500 ${isActive ? 'animate-pulse' : ''}`} />
+        return <Database className={`w-4 h-4 text-primary ${isActive ? 'animate-pulse' : ''}`} />
       case 'grading':
-        return <Brain className={`w-4 h-4 text-purple-500 ${isActive ? 'animate-bounce' : ''}`} />
+        return <Brain className={`w-4 h-4 text-primary ${isActive ? 'animate-pulse' : ''}`} />
       case 'generating':
-        return <Sparkles className={`w-4 h-4 text-amber-500 ${isActive ? 'animate-spin' : ''}`} />
+        return <Sparkles className={`w-4 h-4 text-primary ${isActive ? 'animate-spin' : ''}`} />
       case 'completed':
-        return <CheckCircle className="w-4 h-4 text-emerald-500" />
+        return <CheckCircle className="w-4 h-4 text-primary" />
       default:
-        return <Sparkles className="w-4 h-4 text-amber-500" />
+        return <Sparkles className="w-4 h-4 text-primary" />
     }
   }
 
-  const getStageColors = (stage: ThinkingStep['stage']) => {
-    switch (stage) {
-      case 'analyzing':
-        return {
-          color: 'text-blue-600 dark:text-blue-400',
-          bgColor: 'bg-blue-50 dark:bg-blue-950/20',
-          borderColor: 'border-blue-200 dark:border-blue-800'
-        }
-      case 'searching':
-        return {
-          color: 'text-green-600 dark:text-green-400',
-          bgColor: 'bg-green-50 dark:bg-green-950/20',
-          borderColor: 'border-green-200 dark:border-green-800'
-        }
-      case 'grading':
-        return {
-          color: 'text-purple-600 dark:text-purple-400',
-          bgColor: 'bg-purple-50 dark:bg-purple-950/20',
-          borderColor: 'border-purple-200 dark:border-purple-800'
-        }
-      case 'generating':
-        return {
-          color: 'text-amber-600 dark:text-amber-400',
-          bgColor: 'bg-amber-50 dark:bg-amber-950/20',
-          borderColor: 'border-amber-200 dark:border-amber-800'
-        }
-      case 'completed':
-        return {
-          color: 'text-emerald-600 dark:text-emerald-400',
-          bgColor: 'bg-emerald-50 dark:bg-emerald-950/20',
-          borderColor: 'border-emerald-200 dark:border-emerald-800'
-        }
-      default:
-        return {
-          color: 'text-muted-foreground',
-          bgColor: 'bg-muted',
-          borderColor: 'border-border'
-        }
-    }
+  // Only show if we have steps or context
+  if (steps.length === 0 && (!vectorSearchMetadata?.foundRelevantContent || !vectorSearchMetadata.relevantContent || vectorSearchMetadata.relevantContent.length === 0)) {
+    return null
   }
 
-  // ALWAYS render if we have steps OR context - never hide anything
   return (
-    <>
-      {/* Progressive Thinking Steps - in collapsible dropdown */}
-      {(steps.length > 0 || (vectorSearchMetadata?.foundRelevantContent && vectorSearchMetadata.relevantContent && vectorSearchMetadata.relevantContent.length > 0)) && (
-        <div className="mb-4 border border-border bg-muted/30 rounded-lg">
-          <button 
-            className="w-full flex justify-between items-center p-3 text-left hover:bg-muted/50 transition-colors rounded-lg"
-            onClick={() => setIsThinkingExpanded(!isThinkingExpanded)}
-          >
-            <h4 className="text-sm font-medium text-foreground">
-              {isCompleted ? 'Show thinking process' : (
-                <span className="inline-flex items-center">
-                  <span className="animate-pulse drop-shadow-[0_0_8px_rgba(255,223,57,0.6)]">Thinking...</span>
-                </span>
-              )}
-            </h4>
-            {isThinkingExpanded ? 
-              <ChevronUp className="w-4 h-4 text-muted-foreground" /> : 
-              <ChevronDown className="w-4 h-4 text-muted-foreground" />
-            }
-          </button>
+    <div className="mb-3">
+      <button 
+        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        onClick={() => setIsThinkingExpanded(!isThinkingExpanded)}
+      >
+        <Sparkles className="w-4 h-4 text-primary" />
+        <span>{isCompleted ? 'Show thinking process' : 'Thinking...'}</span>
+        {isThinkingExpanded ? 
+          <ChevronUp className="w-3 h-3" /> : 
+          <ChevronDown className="w-3 h-3" />
+        }
+      </button>
 
-          <AnimatePresence>
-            {isThinkingExpanded && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden"
-              >
-                <div className="px-3 pb-3 space-y-4">
-                  {/* Progressive Thinking Steps */}
-                  {steps.length > 0 && (
-                    <div>
-                      <h5 className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">
-                        Analysis Steps
-                      </h5>
-                      <div className="relative">
-                        <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-between sm:items-center">
-                          <AnimatePresence>
-                            {steps.map((step, index) => {
-                              const colors = getStageColors(step.stage)
-                              const opacity = step.isActive ? 1 : step.isCompleted ? 0.8 : 0.6
-                              
-                              return (
-                                <motion.div
-                                  key={step.id}
-                                  initial={{ opacity: 0, scale: 0.8 }}
-                                  animate={{ opacity, scale: 1 }}
-                                  exit={{ opacity: 0, scale: 0.8 }}
-                                  transition={{ duration: 0.3, ease: "easeOut" }}
-                                  className={`flex items-start gap-2 px-3 py-2 rounded-md border ${colors.bgColor} ${colors.borderColor} min-w-0 relative z-10 sm:flex-1 ${
-                                    step.isActive ? 'ring-2 ring-offset-2 ring-amber-500/50 shadow-lg' : ''
-                                  }`}
-                                >
-                                  <div className="flex-shrink-0 mt-0.5">
-                                    {getStageIcon(step.stage, step.isActive, step.isCompleted)}
-                                  </div>
-                                  <div className="flex flex-col min-w-0 flex-1">
-                                    <span className={`text-sm font-medium ${colors.color} leading-tight`}>
-                                      {step.message}
-                                    </span>
-                                    {step.submessage && (
-                                      <span className="text-xs text-muted-foreground leading-tight mt-0.5">
-                                        {step.submessage}
-                                      </span>
-                                    )}
-                                  </div>
-                                </motion.div>
-                              )
-                            })}
-                          </AnimatePresence>
+      <AnimatePresence>
+        {isThinkingExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden mt-2"
+          >
+            <div className="space-y-2">
+              {/* Thinking Steps */}
+              {steps.length > 0 && (
+                <div className="space-y-1">
+                  {steps.map((step) => (
+                    <div key={step.id} className="flex items-center gap-2 text-sm">
+                      {getStageIcon(step.stage, step.isActive, step.isCompleted)}
+                      <span className="text-foreground">{step.message}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Context Used */}
+              {vectorSearchMetadata?.foundRelevantContent && 
+               vectorSearchMetadata.relevantContent && 
+               vectorSearchMetadata.relevantContent.length > 0 && (
+                <div className="pt-2 border-t border-border">
+                  <div className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">
+                    Context Used ({vectorSearchMetadata.relevantContent.length} item{vectorSearchMetadata.relevantContent.length > 1 ? 's' : ''})
+                  </div>
+                  <div className="space-y-2">
+                    {vectorSearchMetadata.relevantContent.map((item, index) => (
+                      <div key={index} className="flex items-start gap-3 p-2 bg-muted/20 border border-border rounded-md">
+                        <div className="flex-shrink-0 mt-0.5">
+                          <ContentTypeIcon contentType={item.contentType} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate" title={item.title}>
+                            {item.title}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {(item.score * 100).toFixed(1)}% match • {item.contentType}
+                          </p>
                         </div>
                       </div>
-                    </div>
-                  )}
-
-                  {/* Context Results - integrated into thinking process */}
-                  {vectorSearchMetadata?.foundRelevantContent && 
-                   vectorSearchMetadata.relevantContent && 
-                   vectorSearchMetadata.relevantContent.length > 0 && (
-                    <div>
-                      <h5 className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">
-                        Context Used ({vectorSearchMetadata.relevantContent.length} item{vectorSearchMetadata.relevantContent.length > 1 ? 's' : ''})
-                      </h5>
-                      <div className="space-y-2">
-                        {vectorSearchMetadata.relevantContent.map((item, index) => (
-                          <div key={index} className="flex items-start gap-3 p-2 bg-background border border-border rounded-md">
-                            <div className="flex-shrink-0 mt-0.5">
-                              <ContentTypeIcon contentType={item.contentType} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-foreground truncate" title={item.title}>
-                                {item.title}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {(item.score * 100).toFixed(1)}% match • {item.contentType}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      )}
-    </>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   )
 } 
