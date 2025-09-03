@@ -4,13 +4,15 @@ import { NoteCard } from './cards/NoteCard';
 import { EmailCard } from './cards/EmailCard';
 import { ProjectCard } from './projects/ProjectCard';
 import { CreateProjectModal } from './projects/CreateProjectModal';
-import { Plus, Search, Folder, X } from 'lucide-react';
+import { Plus, Search, Folder, X, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCreateNote } from '../hooks/useCreateNote';
 import { useProjects } from '../hooks/useProjects';
 import { useNotes } from '@/app/context/notes-context';
 import { useAuth } from '@/app/context/auth-context';
 import { getPopularTags } from '../utils/tag-utils';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   DndContext,
   DragEndEvent,
@@ -85,6 +87,7 @@ export function NotesGrid({
   const { createNote, isCreating: isCreatingNote } = useCreateNote();
   const { setActiveNoteId } = useNotes();
   const { firebaseUser } = useAuth();
+  const pathname = usePathname();
   
   // Projects functionality
   const { 
@@ -201,7 +204,7 @@ export function NotesGrid({
         console.error('Failed to add note to project:', error);
       }
     }
-    
+
     // Handle dropping note on "create project" zone
     if (noteData?.type === 'note' && over.id === 'create-project-zone') {
       const note = noteData.note as Note;
@@ -210,77 +213,70 @@ export function NotesGrid({
     }
   };
 
-  // Note type configurations with colors - matching exact schema types
-  const noteTypes = [
-    { key: 'all', label: 'All Items', color: 'bg-gray-500' },
-    { key: 'projects', label: 'Projects', color: 'bg-blue-500' },
-    { key: 'task_checklist', label: 'To-Do List', color: 'bg-yellow-500' },
-    { key: 'collaboration_note', label: 'Collaboration', color: 'bg-green-500' },
-    { key: 'reflection_journal', label: 'Journal', color: 'bg-blue-500' },
-    { key: 'idea_bank', label: 'Idea Bank', color: 'bg-red-500' },
-    { key: 'content_script', label: 'Content/Script', color: 'bg-purple-500' },
-    { key: 'analytics_insight', label: 'Analytics/Insights', color: 'bg-pink-500' },
-    { key: 'email_draft', label: 'Emails', color: 'bg-orange-500' },
-  ] as const;
+  // Filter notes based on search term, type filter, and tag filter
+  const filteredNotes = useMemo(() => {
+    let filtered = notes;
 
-  // Determine what to show based on filter
-  const showingProjectsOnly = selectedTypeFilter === 'projects';
-  const showingAll = selectedTypeFilter === 'all';
-  
-  // ✨ MAIN CHANGE: Filter notes to exclude those that belong to ANY project
-  const notesInProjects = useMemo(() => {
-    const noteIds = new Set<string>();
-    projects.forEach(project => {
-      project.noteIds?.forEach(noteId => noteIds.add(noteId));
-    });
-    return noteIds;
-  }, [projects]);
-
-  // Filter notes based on search, type filter, tag filter, and project membership
-  const filteredNotes = showingProjectsOnly ? [] : notes.filter(note => {
-    // ✨ DEDUPLICATION: Exclude notes that belong to any project
-    if (notesInProjects.has(String(note._id))) {
-      return false;
+    // Apply search filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(note => 
+        note.title?.toLowerCase().includes(searchLower) ||
+        note.content?.toLowerCase().includes(searchLower) ||
+        note.tags?.some(tag => tag.toLowerCase().includes(searchLower))
+      );
     }
 
-    const matchesSearch = searchTerm === '' || 
-      note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      note.content?.toLowerCase().includes(searchTerm.toLowerCase());
+    // Apply type filter
+    if (selectedTypeFilter !== 'all') {
+      filtered = filtered.filter(note => note.type === selectedTypeFilter);
+    }
 
-    const matchesTypeFilter = selectedTypeFilter === 'all' || note.type === selectedTypeFilter;
+    // Apply tag filter
+    if (selectedTagFilter) {
+      filtered = filtered.filter(note => 
+        note.tags?.includes(selectedTagFilter)
+      );
+    }
 
-    const matchesTagFilter = !selectedTagFilter || 
-      note.tags?.some(tag => tag.toLowerCase() === selectedTagFilter.toLowerCase());
+    return filtered;
+  }, [notes, searchTerm, selectedTypeFilter, selectedTagFilter]);
 
-    return matchesSearch && matchesTypeFilter && matchesTagFilter;
-  });
-  
-  // Filter projects based on search - show in 'all' view and 'projects' view
-  const filteredProjects = (showingAll || showingProjectsOnly) ? projects.filter(project => {
-    const matchesSearch = searchTerm === '' || 
-      project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    return matchesSearch;
-  }) : [];
+  // Filter projects based on search term
+  const filteredProjects = useMemo(() => {
+    if (selectedTypeFilter !== 'all' && selectedTypeFilter !== 'projects') {
+      return [];
+    }
 
-  // Sort notes by importance and recency (most recently edited first)
-  const sortedNotes = [...filteredNotes].sort((a, b) => {
-    // First priority: Important (favorite) notes come first
-    if (a.important && !b.important) return -1;
-    if (!a.important && b.important) return 1;
-    
-    // Second priority: Within each group (important/non-important), 
-    // sort by most recently updated first (descending order)
-    const aTime = a.updatedAt || a._creationTime || 0;
-    const bTime = b.updatedAt || b._creationTime || 0;
-    return bTime - aTime;
-  });
-  
-  // Sort projects by recency
-  const sortedProjects = [...filteredProjects].sort((a, b) => {
-    return b.updatedAt - a.updatedAt;
-  });
+    let filtered = projects;
+
+    // Apply search filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(project => 
+        project.name?.toLowerCase().includes(searchLower) ||
+        project.description?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return filtered;
+  }, [projects, searchTerm, selectedTypeFilter]);
+
+  // Combine notes and projects for display
+  const allItems = [...filteredNotes, ...filteredProjects];
+  const totalItems = allItems.length;
+
+  // Determine what we're showing
+  const showingAll = selectedTypeFilter === 'all';
+  const showingProjectsOnly = selectedTypeFilter === 'projects';
+
+  // Note types for filter buttons
+  const noteTypes = [
+    { key: 'all', label: 'All', color: 'bg-gray-400' },
+    { key: 'idea_bank', label: 'Ideas', color: 'bg-yellow-400' },
+    { key: 'content_script', label: 'Content', color: 'bg-blue-400' },
+    { key: 'projects', label: 'Projects', color: 'bg-purple-400' },
+  ];
 
   // Helper function to render the appropriate card component
   const renderNoteCard = (note: Note) => {
@@ -311,21 +307,6 @@ export function NotesGrid({
     );
   };
 
-  // Combined items for mixed view (when showing 'all')
-  const combinedItems = showingAll ? [
-    ...sortedProjects.map(project => ({ type: 'project', item: project, timestamp: project.updatedAt })),
-    ...sortedNotes.map(note => ({ type: 'note', item: note, timestamp: note.updatedAt || note._creationTime || 0 }))
-  ].sort((a, b) => {
-    // Projects get slight priority in mixed view, then by timestamp
-    if (a.type === 'project' && b.type === 'note') return -1;
-    if (a.type === 'note' && b.type === 'project') return 1;
-    return b.timestamp - a.timestamp;
-  }) : [];
-
-  const totalItems = showingAll ? combinedItems.length : 
-                   showingProjectsOnly ? sortedProjects.length : 
-                   sortedNotes.length;
-
   return (
     <DndContext
       sensors={sensors}
@@ -342,11 +323,25 @@ export function NotesGrid({
               Your intelligent note-taking workspace
             </p>
           </div>
-          {helpButton && (
-            <div>
-              {helpButton}
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {/* Self tab */}
+            <Link
+              href="/dashboard/self-hub"
+              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm ${
+                pathname.startsWith('/dashboard/self-hub')
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-background/80 hover:bg-background text-foreground border border-border'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              <span className="hidden sm:inline">Self</span>
+            </Link>
+            {helpButton && (
+              <div>
+                {helpButton}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Prominent Search Bar */}
@@ -427,10 +422,14 @@ export function NotesGrid({
             <h3 className="text-lg font-semibold text-foreground mb-2">
               {searchTerm || (selectedTypeFilter !== 'all' && selectedTypeFilter !== 'projects') || selectedTagFilter
                 ? `No ${showingProjectsOnly ? 'projects' : showingAll ? 'items' : 'notes'} found` 
-                : `No ${showingProjectsOnly ? 'projects' : showingAll ? 'items' : 'notes'} yet`
+                : showingProjectsOnly 
+                ? 'No projects yet'
+                : showingAll
+                ? 'No notes or projects yet'
+                : 'No notes yet'
               }
             </h3>
-            <p className="text-muted-foreground mb-6 max-w-md">
+            <p className="text-muted-foreground mb-4 max-w-md">
               {searchTerm || (selectedTypeFilter !== 'all' && selectedTypeFilter !== 'projects') || selectedTagFilter
                 ? "Try adjusting your search, filters, or tags to find what you're looking for."
                 : showingProjectsOnly 
@@ -463,22 +462,22 @@ export function NotesGrid({
             <div className="px-4">
               <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 gap-4 pb-6">
                 {showingAll 
-                  ? combinedItems.map((item) => (
-                      <div key={`${item.type}-${String(item.item._id)}`} className="break-inside-avoid mb-4 w-full">
-                        {item.type === 'project' ? (
+                  ? allItems.map((item) => (
+                      <div key={`${'type' in item ? item.type : 'project'}-${String(item._id)}`} className="break-inside-avoid mb-4 w-full">
+                        {'type' in item && item.type === 'project' ? (
                           <ProjectCard
-                            project={item.item as any}
+                            project={item as any}
                             onEdit={handleEditProject}
-                            onDelete={() => deleteProject(item.item._id as any)}
+                            onDelete={() => deleteProject(item._id as any)}
                             dragOverProject={dragOverProject}
                           />
                         ) : (
-                          renderNoteCard(item.item as Note)
+                          renderNoteCard(item as Note)
                         )}
                       </div>
                     ))
                   : showingProjectsOnly 
-                  ? sortedProjects.map((project) => (
+                  ? filteredProjects.map((project) => (
                       <div key={String(project._id)} className="break-inside-avoid mb-4 w-full">
                         <ProjectCard
                           project={project}
@@ -488,7 +487,7 @@ export function NotesGrid({
                         />
                       </div>
                     ))
-                  : sortedNotes.map((note) => (
+                  : filteredNotes.map((note) => (
                       <div key={String(note._id)} className="break-inside-avoid mb-4 w-full">
                         {renderNoteCard(note)}
                       </div>

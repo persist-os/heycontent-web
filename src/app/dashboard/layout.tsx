@@ -79,6 +79,7 @@ export default function DashboardLayout({
       >
         <Menu className="w-6 h-6" />
       </button>
+      
       <main className={`flex-1 overflow-y-auto overflow-x-hidden transition-all duration-300 md:ml-20 ${isExpanded ? 'ml-64 md:ml-64' : 'ml-0'}`}>
         {children}
       </main>

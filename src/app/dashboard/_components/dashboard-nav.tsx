@@ -241,9 +241,6 @@ export const DashboardNav = memo(function DashboardNav() {
       case 'content-hub':
         // This tab is active for multiple, non-nested routes
         return pathname.startsWith('/dashboard/content') || pathname.startsWith('/dashboard/ai-insights');
-      case 'self-hub':
-        // This tab is active for all its sub-routes
-        return pathname.startsWith(item.href);
       case 'partnerships':
         // This tab is active for all its sub-routes
         return pathname.startsWith('/dashboard/partnerships');
@@ -256,30 +253,6 @@ export const DashboardNav = memo(function DashboardNav() {
         return false;
     }
   }, [pathname]);
-
-  // Memoize the self hub link
-  const selfHubLink = useMemo(() => (
-    <Link
-      href="/dashboard/self-hub"
-      onClick={() => setIsExpanded(false)}
-      className={`flex items-center transition-colors p-2 rounded-md ${
-        pathname.startsWith('/dashboard/self-hub')
-          ? 'bg-primary'
-          : 'hover:bg-muted/80'
-      }`}
-    >
-      <Users className={`w-6 h-6 ${
-        pathname.startsWith('/dashboard/self-hub')
-          ? 'text-white dark:text-black'
-          : 'text-foreground'
-      }`} />
-      {isExpanded && <span className={`ml-3 text-sm font-medium ${
-        pathname.startsWith('/dashboard/self-hub')
-          ? 'text-white dark:text-black'
-          : 'text-foreground'
-      }`}>Self</span>}
-    </Link>
-  ), [pathname, isExpanded, setIsExpanded]);
 
   // Memoize the settings link
   const settingsLink = useMemo(() => (
@@ -303,7 +276,9 @@ export const DashboardNav = memo(function DashboardNav() {
     <div className={`h-screen fixed top-0 left-0 bg-muted/20 shadow-lg flex flex-col justify-between transition-all duration-300 z-40 ${isExpanded ? 'w-64 translate-x-0' : 'w-64 -translate-x-full md:w-16 md:translate-x-0'}`}>
       <div>
         <div className={`flex items-center h-20 ${isExpanded ? 'px-4' : 'justify-center'}`}>
-          {selfHubLink}
+          <Link href="/" className="flex items-center">
+            <Logo disableLink />
+          </Link>
         </div>
 
         <div className="flex flex-col items-center gap-4 mt-8">
