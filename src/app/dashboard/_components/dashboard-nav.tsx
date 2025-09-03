@@ -1,6 +1,6 @@
 'use client'
 
-import React, { memo, useCallback, useMemo, useRef, useEffect, useState } from 'react'
+import React, { memo, useCallback, useMemo, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Logo } from '@/components/ui/logo'
@@ -92,10 +92,6 @@ export const DashboardNav = memo(function DashboardNav() {
   
   // Get platform connections for conditional navigation
   const platformConnections = usePlatformConnections();
-  
-  // Refs for throttling
-  const lastMouseMoveTime = useRef(0);
-  const mouseMoveThrottleMs = 100; // Throttle to 10fps max
 
   // Build nav items based on user permissions and platform connections
   const dynamicNavItems = [
@@ -154,38 +150,6 @@ export const DashboardNav = memo(function DashboardNav() {
       fetchRecentChats();
     }
   }, [isExpanded, fetchRecentChats, apiKeyError]);
-
-  // Throttled proximity-based sidebar toggle
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    const now = Date.now();
-    if (now - lastMouseMoveTime.current < mouseMoveThrottleMs) {
-      return; // Throttle to reduce excessive calls
-    }
-    lastMouseMoveTime.current = now;
-    
-    const proximityThreshold = 50; // pixels from left edge
-    const mouseX = e.clientX;
-    
-    // Open sidebar when mouse is near left edge
-    if (mouseX < proximityThreshold && !isExpanded) {
-      setIsExpanded(true);
-    }
-    // Close sidebar when mouse moves away (but not immediately)
-    else if (mouseX > 300 && isExpanded) {
-      setIsExpanded(false);
-    }
-  }, [isExpanded, setIsExpanded]);
-
-  // Proximity-based sidebar toggle with throttling
-  useEffect(() => {
-    // Add event listener to document
-    document.addEventListener('mousemove', handleMouseMove, { passive: true });
-    
-    // Cleanup
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-    };
-  }, [handleMouseMove]);
 
   const handleDeleteChat = useCallback(async (chatId: string) => {
     setIsDeleting(true);
@@ -273,12 +237,9 @@ export const DashboardNav = memo(function DashboardNav() {
   ), [pathname, isExpanded, setIsExpanded]);
 
   return (
-    <div className={`h-screen fixed top-0 left-0 bg-muted/20 shadow-lg flex flex-col justify-between transition-all duration-300 z-40 ${isExpanded ? 'w-64 translate-x-0' : 'w-64 -translate-x-full md:w-16 md:translate-x-0'}`}>
+    <div className={`h-screen fixed top-0 left-0 bg-background shadow-lg flex flex-col justify-between transition-all duration-300 z-50 ${isExpanded ? 'w-64 translate-x-0' : 'w-64 -translate-x-full'}`}>
       <div>
         <div className={`flex items-center h-20 ${isExpanded ? 'px-4' : 'justify-center'}`}>
-          <Link href="/" className="flex items-center">
-            <Logo disableLink />
-          </Link>
         </div>
 
         <div className="flex flex-col items-center gap-4 mt-8">
@@ -297,15 +258,11 @@ export const DashboardNav = memo(function DashboardNav() {
               {...{[item.dataAttr]: true}}
             >
               <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center">
-                {item.id === 'chat' ? (
-                  <Logo disableLink />
-                ) : (
-                  <item.icon className={`w-6 h-6 ${
-                    isItemActive(item)
-                      ? 'text-white dark:text-black'
-                      : 'text-foreground'
-                  }`} />
-                )}
+                <item.icon className={`w-6 h-6 ${
+                  isItemActive(item)
+                    ? 'text-white dark:text-black'
+                    : 'text-foreground'
+                }`} />
               </div>
               {isExpanded && (
                 <span className={`ml-4 text-sm font-medium ${isItemActive(item) ? 'dark:text-black' : ''}`}>{isExpanded ? item.label : ''}</span>

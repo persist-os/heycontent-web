@@ -74,18 +74,16 @@ export default function SelfHubPage() {
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Header */}
       <div className="px-6 py-4 border-b bg-background">
-        <div className="flex items-center justify-between mb-4">
-          <div className="ml-12 md:ml-0">
-            <h1 className="text-2xl font-bold text-foreground">
+        <div className="flex items-center justify-between mb-4 relative">
+          {/* Center - Title */}
+          <div className="absolute left-1/2 transform -translate-x-1/2">
+            <h1 className="text-lg font-bold text-foreground">
               Self
             </h1>
-            <p className="text-sm text-muted-foreground">
-              A private space to explore how you think and what works for you.
-            </p>
           </div>
           
           {/* Action Buttons */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 ml-auto">
             <Button
               variant={isEditMode ? 'default' : 'outline'}
               size="sm"

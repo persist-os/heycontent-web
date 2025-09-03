@@ -31,7 +31,7 @@ const PersonaField: React.FC<{
           ))}
         </div>
       ) : (
-        <p className="text-base leading-relaxed text-foreground whitespace-pre-wrap">
+        <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
           {value}
         </p>
       )}
@@ -44,10 +44,10 @@ export const NewPersonaCard: React.FC<NewPersonaCardProps> = ({ persona }) => {
     <div className="w-full">
       {/* Header Section */}
       <div className="mb-12 pb-8 border-b border-primary/20">
-        <h1 className="text-3xl font-semibold text-foreground mb-4">
+        <h1 className="text-2xl font-semibold text-foreground mb-4">
           {persona.current_name}
         </h1>
-        <p className="text-lg leading-relaxed text-muted-foreground">
+        <p className="text-base leading-relaxed text-muted-foreground">
           {persona.current_description}
         </p>
       </div>
@@ -56,7 +56,7 @@ export const NewPersonaCard: React.FC<NewPersonaCardProps> = ({ persona }) => {
       <div className="space-y-16">
         {/* How You Express Yourself */}
         <section>
-          <h2 className="text-2xl font-medium text-foreground mb-8 pb-2 border-b border-primary/20">
+          <h2 className="text-xl font-medium text-foreground mb-8 pb-2 border-b border-primary/20">
             How You Express Yourself
           </h2>
           <div className="space-y-8">
@@ -71,7 +71,7 @@ export const NewPersonaCard: React.FC<NewPersonaCardProps> = ({ persona }) => {
 
         {/* How You're Growing */}
         <section>
-          <h2 className="text-2xl font-medium text-foreground mb-8 pb-2 border-b border-accent/20">
+          <h2 className="text-xl font-medium text-foreground mb-8 pb-2 border-b border-accent/20">
             How You're Growing
           </h2>
           <div className="space-y-8">
@@ -84,7 +84,7 @@ export const NewPersonaCard: React.FC<NewPersonaCardProps> = ({ persona }) => {
 
         {/* What You Return To */}
         <section>
-          <h2 className="text-2xl font-medium text-foreground mb-8 pb-2 border-b border-primary/20">
+          <h2 className="text-xl font-medium text-foreground mb-8 pb-2 border-b border-primary/20">
             What You Return To
           </h2>
           <div className="space-y-8">
@@ -97,7 +97,7 @@ export const NewPersonaCard: React.FC<NewPersonaCardProps> = ({ persona }) => {
 
         {/* Your Personal Style */}
         <section>
-          <h2 className="text-2xl font-medium text-foreground mb-8 pb-2 border-b border-accent/20">
+          <h2 className="text-xl font-medium text-foreground mb-8 pb-2 border-b border-accent/20">
             Your Personal Style
           </h2>
           <div className="space-y-8">

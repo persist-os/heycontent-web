@@ -75,7 +75,7 @@ export function NoteHeader({
     <div className="border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-10">
       <div className="px-4 py-3 flex items-center">
         {/* Left side with back button */}
-        <div className="flex-1 flex justify-start ml-12 md:ml-0">
+        <div className="flex-1 flex justify-start">
           {/* Enhanced back button with smart navigation context */}
           {(isMobile || fromChat || canNavigateBack) && (
             <button
@@ -95,7 +95,7 @@ export function NoteHeader({
         </div>
         
         {/* Centered title with optional breadcrumb */}
-        <div className="text-center">
+        <div className="flex-1 flex justify-center">
           {breadcrumb && breadcrumb.length > 0 ? (
             <div className="flex items-center justify-center text-sm text-muted-foreground">
               <span className="truncate max-w-20">{breadcrumb[0]}</span>
