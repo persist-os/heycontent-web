@@ -49,7 +49,7 @@ export default function Security() {
             Platform Connections
           </h2>
           <p className="text-lg leading-8">
-            When you connect your social media accounts (YouTube, Instagram, Gmail), we use official APIs and protocols. You can disconnect integrations at any time from your account settings.
+            When you connect your Google account for authentication, we use official APIs and protocols. You can disconnect integrations at any time from your account settings.
           </p>
         </section>
 
@@ -78,7 +78,7 @@ export default function Security() {
         <section className="space-y-6 border-t border-border pt-12">
           <h2 className="text-3xl font-medium text-foreground border-b border-border pb-3">Cookie Policy</h2>
           <p>
-            This Cookie Policy explains how Divertissement AI, Inc. ("Company," "we," "us," and "our") uses cookies and similar technologies to recognize you when you visit our website at <a href="https://www.HeyContext.co" className="text-blue-600 dark:text-blue-400 hover:underline">https://www.HeyContext.co</a> ("Website"). It explains what these technologies are and why we use them, as well as your rights to control our use of them.
+            This Cookie Policy explains how Divertissement AI, Inc. ("Company," "we," "us," and "our") uses cookies and similar technologies to recognize you when you visit our website at <a href="https://www.heycontext.ai" className="text-blue-600 dark:text-blue-400 hover:underline">https://www.heycontext.ai</a> ("Website"). It explains what these technologies are and why we use them, as well as your rights to control our use of them.
           </p>
           <p>
             In some cases we may use cookies to collect personal information, or that becomes personal information if we combine it with other information.
@@ -105,7 +105,7 @@ export default function Security() {
               <tbody>
                 <tr>
                   <td className="px-4 py-2 border-b border-border">firebase-auth-token</td>
-                  <td className="px-4 py-2 border-b border-border">www.HeyContext.co</td>
+                  <td className="px-4 py-2 border-b border-border">www.heycontext.ai</td>
                   <td className="px-4 py-2 border-b border-border">First-party cookie</td>
                   <td className="px-4 py-2 border-b border-border">Used to keep you signed in and authenticate your session securely.</td>
                   <td className="px-4 py-2 border-b border-border">1 week or until logout</td>
@@ -129,7 +129,7 @@ export default function Security() {
               </thead>
               <tbody>
                 <tr>
-                  <td className="px-4 py-2 border-b border-border">HeyContext-sidebar-state</td>
+                  <td className="px-4 py-2 border-b border-border">heycontext-sidebar-state</td>
                   <td className="px-4 py-2 border-b border-border">localStorage</td>
                   <td className="px-4 py-2 border-b border-border">Remembers if your sidebar is open or closed.</td>
                   <td className="px-4 py-2 border-b border-border">Persistent (until you clear your browser storage)</td>

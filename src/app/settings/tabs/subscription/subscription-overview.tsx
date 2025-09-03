@@ -380,8 +380,8 @@ export default function SubscriptionOverview() {
       <div className="flex flex-col items-center justify-center min-h-[300px] py-12 px-4 w-full">
         <div className="w-full max-w-4xl mx-auto">
           <div className="bg-card rounded-lg shadow-lg p-6">
-            <h1 className="text-2xl font-bold mb-2">Get full access to HeyContent</h1>
-            <p className="mb-6 text-muted-foreground">Pick a plan to start creating faster. You can change or cancel anytime.</p>
+            <h1 className="text-2xl font-bold mb-2">Get full access to HeyContext</h1>
+            <p className="mb-6 text-muted-foreground">Pick a plan to unlock your private AI workspace. You can change or cancel anytime.</p>
             
             <div className="mb-6">
               <Button 
