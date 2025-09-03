@@ -2,21 +2,73 @@
 
 import React, { useEffect, useState } from 'react';
 import { PersonaTab } from './PersonaTab';
-// import { TimelineScroller } from '../timeline/_components';
-// import { UsageHeatmap } from './UsageHeatmap';
+import { Button } from '@/components/ui/button';
+import { Edit2, Trash2 } from 'lucide-react';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
-// import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-
-
+import { useOptimizedPersonaManager } from '@/store/persona-store';
 
 export default function SelfHubPage() {
   const [userId, setUserId] = useState<string | undefined>();
-
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const currentUserId = getCurrentUserId();
     setUserId(currentUserId || undefined);
   }, []);
+
+  // Get persona data and actions
+  const {
+    currentPersona,
+    allPersonas,
+    updatePersona,
+    deleteCurrentPersonaAndSelectNext,
+  } = useOptimizedPersonaManager(userId || '');
+
+  const handleEdit = () => {
+    setIsEditMode(true);
+  };
+
+  const handleCancel = () => {
+    setIsEditMode(false);
+  };
+
+  const handleSave = async () => {
+    // This will be handled by the PersonaEditForm component
+    setIsEditMode(false);
+  };
+
+  const handleDeleteClick = () => {
+    if (allPersonas.length > 1) {
+      setShowDeleteConfirm(true);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!currentPersona) return;
+    
+    setIsDeleting(true);
+    try {
+      const success = await deleteCurrentPersonaAndSelectNext();
+      if (success) {
+        setShowDeleteConfirm(false);
+        setIsEditMode(false);
+      }
+    } catch (error) {
+      console.error('Error deleting persona:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteConfirm(false);
+  };
+
+  const handleUpdatePersona = () => {
+    window.location.href = '/dashboard/chat?ask=' + encodeURIComponent('hey content update persona');
+  };
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
@@ -31,51 +83,99 @@ export default function SelfHubPage() {
               A private space to explore how you think and what works for you.
             </p>
           </div>
-
+          
+          {/* Action Buttons */}
+          <div className="flex items-center gap-3">
+            <Button
+              variant={isEditMode ? 'default' : 'outline'}
+              size="sm"
+              onClick={isEditMode ? handleSave : handleEdit}
+              className="min-h-[40px]"
+            >
+              <Edit2 className="w-4 h-4 mr-2" />
+              {isEditMode ? 'Save' : 'Edit'}
+            </Button>
+            {isEditMode && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleCancel}
+                className="min-h-[40px]"
+              >
+                Cancel
+              </Button>
+            )}
+            {!isEditMode && allPersonas.length > 1 && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleDeleteClick}
+                className="min-h-[40px] text-destructive border-destructive hover:bg-destructive/10"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
+              </Button>
+            )}
+            {!isEditMode && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleUpdatePersona}
+                className="min-h-[40px]"
+              >
+                Update Persona
+              </Button>
+            )}
+          </div>
         </div>
-        {/* Commented out tabs */}
-        {/* <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="persona" data-persona-tab>Persona</TabsTrigger>
-          <TabsTrigger value="timeline" data-timeline-tab>Timeline</TabsTrigger>
-          <TabsTrigger value="usage" data-activity-tab>Activity</TabsTrigger>
-        </TabsList> */}
       </div>
 
       {/* Only PersonaTab content */}
       <div className="flex-1 overflow-auto p-6" data-persona-content>
-        <PersonaTab />
+        <PersonaTab isEditMode={isEditMode} onEditModeChange={setIsEditMode} />
       </div>
 
-      {/* Commented out other tab contents */}
-      {/* <Tabs defaultValue="persona" className="h-full flex flex-col">
-        <TabsContent value="timeline" className="flex-1 h-full overflow-hidden" data-timeline-content>
-          <div data-timeline-filters className="absolute opacity-0 pointer-events-none -z-10 w-1 h-1">
-            <p className="text-sm text-muted-foreground">Filter your content timeline by date, type, or performance.</p>
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-background rounded-lg max-w-md w-full p-6 shadow-lg">
+            <h3 className="text-lg font-semibold mb-4 text-foreground">
+              Delete Current Persona?
+            </h3>
+            <p className="text-muted-foreground mb-6">
+              This will permanently delete this understanding of how you work and automatically switch to your most recent self-reflection. This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button 
+                variant="ghost" 
+                onClick={handleDeleteCancel}
+                disabled={isDeleting}
+                className="min-h-[44px]"
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleDeleteConfirm}
+                disabled={isDeleting}
+                className="min-h-[44px]"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Persona
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
-          <TimelineScroller />
-        </TabsContent>
-        <TabsContent value="usage" className="flex-1 overflow-auto p-6" data-activity-content>
-          {userId ? (
-            <div className="space-y-6">
-              <UsageHeatmap userId={userId} />
-              <div data-goals-section className="absolute opacity-0 pointer-events-none -z-10 w-1 h-1">
-                <h3 className="text-lg font-semibold mb-4">Content Goals & Milestones</h3>
-                <p className="text-sm text-muted-foreground">Track your progress towards creator objectives.</p>
-              </div>
-              <div data-performance-trends className="absolute opacity-0 pointer-events-none -z-10 w-1 h-1">
-                <h3 className="text-lg font-semibold mb-4">Performance Trends</h3>
-                <p className="text-sm text-muted-foreground">Analyze your content performance over time.</p>
-              </div>
-            </div>
-          ) : (
-            <div className="flex justify-center items-center min-h-[200px] px-4 rounded-lg border border-dashed">
-              <p className="text-gray-600 text-sm">Please sign in to view your activity.</p>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs> */}
-
-
+        </div>
+      )}
     </div>
   );
 } 

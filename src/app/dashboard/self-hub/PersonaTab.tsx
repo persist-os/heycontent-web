@@ -86,7 +86,12 @@ const PersonaTabSkeleton = React.memo(() => (
 
 PersonaTabSkeleton.displayName = 'PersonaTabSkeleton';
 
-export const PersonaTab = React.memo(() => {
+interface PersonaTabProps {
+  isEditMode?: boolean;
+  onEditModeChange?: (isEditMode: boolean) => void;
+}
+
+export const PersonaTab = React.memo(({ isEditMode = false, onEditModeChange }: PersonaTabProps) => {
   // Always declare hooks at the very top before any conditional return
   const [modalOpen, setModalOpen] = React.useState(true);
   console.log('[PERSONA TAB] Component rendering started at:', new Date().toISOString());
@@ -143,7 +148,7 @@ export const PersonaTab = React.memo(() => {
     }
   }, [firebaseUser?.uid, isPersonaInitialized, lastFetchedUserId, currentPersona, isCacheValid, initializePersonaData, refreshPersonaData, convex]);
 
-  // Memoize the new persona handler with eligibility check
+  // Memoized fetch function to prevent recreation
   const handleNewPersona = React.useCallback(() => {
     if (eligibility?.canGenerate) {
       console.log('[PERSONA TAB] New persona button clicked');
@@ -258,6 +263,8 @@ export const PersonaTab = React.memo(() => {
             <Suspense fallback={<PersonaTabSkeleton />}>
               <PersonaUpdateManager 
                 userId={firebaseUser?.uid} 
+                isEditMode={isEditMode}
+                onEditModeChange={onEditModeChange}
                 renderNewPersonaButton={() => (
                   <Button
                     onClick={handleNewPersona}
@@ -285,6 +292,8 @@ export const PersonaTab = React.memo(() => {
       <Suspense fallback={<PersonaTabSkeleton />}>
         <PersonaUpdateManager 
           userId={firebaseUser?.uid} 
+          isEditMode={isEditMode}
+          onEditModeChange={onEditModeChange}
           renderNewPersonaButton={() => (
             <Button
               onClick={handleNewPersona}
