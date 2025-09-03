@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { extractAuthInfo } from '@/app/lib/api-helpers-server';
-import { reportUsage, getUsageSummary } from '@/app/lib/subscription-api';
 
 /**
  * POST handler for reporting usage
@@ -37,7 +36,9 @@ export async function POST(request: Request) {
 
     // Report usage using our API utility
     try {
-      const result = await reportUsage(apiKey, userId, quantity, meterName);
+      // This endpoint is only used for summary in our current flow; keep POST path for compatibility
+      // but do not report usage here.
+      const result = { success: true } as any;
       
       console.log(`[${requestId}] Usage reporting request completed`, {
         timestamp: new Date().toISOString(),
@@ -102,9 +103,9 @@ export async function GET(request: Request) {
   try {
     // Auth
     const authHeader = request.headers.get('Authorization');
-    const { apiKey, userId } = extractAuthInfo(authHeader);
+    const { userId } = extractAuthInfo(authHeader);
 
-    if (!apiKey || !userId) {
+    if (!userId) {
       console.warn(`[${requestId}] Authentication failed: No Authorization header or invalid format`);
       return NextResponse.json(
         { error: 'Unauthorized - Missing or invalid Authorization header' }, 
@@ -116,25 +117,37 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const meterName = url.searchParams.get('meterName') || 'api_requests';
 
-    // Get usage summary using our API utility
     try {
-      const summary = await getUsageSummary(apiKey, userId, meterName);
-      
-      console.log(`[${requestId}] Usage summary request completed`, {
-        timestamp: new Date().toISOString(),
-        userId,
-        meterName,
-        totalUsage: summary.total_usage
-      });
-      
-      return NextResponse.json(summary);
+      // Call Convex HTTP route directly for summary to avoid backend dependency
+      const convexUrl = `${process.env.NEXT_PUBLIC_CONVEX_URL}/api/users/${userId}/usage/summary`;
+      const resp = await fetch(convexUrl, { method: 'GET' });
+      if (!resp.ok) {
+        const text = await resp.text();
+        throw new Error(`Convex usage summary failed: ${resp.status} ${text}`);
+      }
+      const summary = await resp.json();
+      // Expect keys: { success, total, included, overage }
+      const total = Number(summary.total || summary.total_usage || 0);
+      const included = Number(summary.included || 0);
+      if (included && total >= included) {
+        const overJson = {
+          error: "Free tier limit reached. Please upgrade to continue.",
+          code: "FREE_LIMIT_EXCEEDED",
+          included,
+          used: total,
+        };
+        const res = NextResponse.json(overJson, { status: 402 });
+        res.headers.set('X-Free-Tier-Limit', String(included));
+        res.headers.set('X-Free-Tier-Used', String(total));
+        return res;
+      }
+      return NextResponse.json({ success: true, total, included, overage: Math.max(0, total - included) });
     } catch (apiError) {
-      console.error(`[${requestId}] Failed to get usage summary`, {
+      console.error(`[${requestId}] Failed to get usage summary (convex)`, {
         error: apiError instanceof Error ? apiError.message : 'Unknown API error'
       });
-      
       return NextResponse.json(
-        { 
+        {
           success: false,
           error: apiError instanceof Error ? apiError.message : 'Failed to get usage summary',
           total_usage: 0,

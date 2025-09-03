@@ -121,16 +121,6 @@ export const AccountSubscriptionCard: React.FC<AccountSubscriptionCardProps> = (
         </div>
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-2 mt-4">
-          {!isOnHighestPlan && (
-            <Button
-              size="lg"
-              className="min-w-[120px]"
-              onClick={handleUpgrade}
-              aria-label="Upgrade subscription plan"
-            >
-              Upgrade
-            </Button>
-          )}
           <Button
             size="lg"
             variant="outline"

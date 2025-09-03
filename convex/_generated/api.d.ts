@@ -49,7 +49,6 @@ import type * as userActions from "../userActions.js";
 import type * as userMutations from "../userMutations.js";
 import type * as userQueries from "../userQueries.js";
 import type * as vectorSearch from "../vectorSearch.js";
-import type * as waitlist from "../waitlist.js";
 import type * as youtubeMutations from "../youtubeMutations.js";
 import type * as youtubeQueries from "../youtubeQueries.js";
 
@@ -98,7 +97,6 @@ declare const fullApi: ApiFromModules<{
   userMutations: typeof userMutations;
   userQueries: typeof userQueries;
   vectorSearch: typeof vectorSearch;
-  waitlist: typeof waitlist;
   youtubeMutations: typeof youtubeMutations;
   youtubeQueries: typeof youtubeQueries;
 }>;

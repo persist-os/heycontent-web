@@ -82,6 +82,16 @@ export async function POST(request: Request) {
       debug('Backend response not JSON or failed to parse:', jsonErr);
     }
 
+    if (response.status === 402) {
+      // Propagate 402 to the client with helpful headers
+      const passthrough = new NextResponse(response.body, { status: 402 });
+      const limit = response.headers.get('x-free-tier-limit');
+      const used = response.headers.get('x-free-tier-used');
+      if (limit) passthrough.headers.set('X-Free-Tier-Limit', limit);
+      if (used) passthrough.headers.set('X-Free-Tier-Used', used);
+      return passthrough;
+    }
+
     if (!response.ok) {
       debug('Backend returned error status:', response.status, response.statusText);
       throw new Error(`Backend API responded with status: ${response.status} (${response.statusText})`);
