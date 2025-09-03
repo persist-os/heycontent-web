@@ -438,11 +438,7 @@ export function ChatInput({
 
         <div className="flex gap-2 items-end w-full relative">
           <div className={`
-            flex-1 relative rounded-xl border-2 transition-all duration-200
-            ${isAtLimit ? 'border-destructive' : ''}
-            ${isNearLimit && !isAtLimit ? 'border-warning' : ''}
-            ${!isAtLimit && !isNearLimit ? 'border-transparent hover:border-purple-600 dark:hover:border-accent' : ''}
-            ${accentFocusBorder}
+            flex-1 relative rounded-xl transition-all duration-200
             focus-within:bg-background
           `}>
             {/* Top section - Text input area */}

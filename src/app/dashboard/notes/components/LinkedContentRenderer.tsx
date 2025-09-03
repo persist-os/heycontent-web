@@ -75,7 +75,7 @@ export const LinkedContentRenderer: React.FC<LinkedContentRendererProps> = ({
     if (contentType === 'insight') {
       return (
         <div className="inline-flex items-center gap-2 px-3 py-2 mx-1 my-1 rounded-lg border border-border bg-muted/50 text-sm">
-          <Lightbulb className="w-4 h-4 text-yellow-500" />
+          <Lightbulb className="w-4 h-4 text-primary" />
           <span className="text-muted-foreground">Insight</span>
         </div>
       );
@@ -116,7 +116,7 @@ export const LinkedContentRenderer: React.FC<LinkedContentRendererProps> = ({
       case 'gmail':
         return <Mail className="w-4 h-4 text-red-500" />;
       case 'insights':
-        return <Lightbulb className="w-4 h-4 text-yellow-500" />;
+        return <Lightbulb className="w-4 h-4 text-primary" />;
       case 'smart-notes':
         return <ImageIcon className="w-4 h-4" />;
       default:
@@ -249,7 +249,7 @@ export const LinkedContentRenderer: React.FC<LinkedContentRendererProps> = ({
                'Content')}
           </h4>
           {contentData.important && (
-            <span className="text-yellow-500">⭐</span>
+            <span className="text-primary">⭐</span>
           )}
         </div>
         

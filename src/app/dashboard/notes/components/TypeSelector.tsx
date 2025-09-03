@@ -138,7 +138,7 @@ export function TypeSelector({ noteId, userId, currentType, typeGenerated, onTyp
           ref={buttonRef}
           onClick={handleToggle}
           className={`inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 disabled:pointer-events-none disabled:opacity-50 gap-1.5
-            ${optimisticType === 'task_checklist' ? 'bg-yellow-500 text-white dark:bg-yellow-500 dark:text-white border-none' : ''}
+            ${optimisticType === 'task_checklist' ? 'bg-primary text-primary-foreground dark:bg-primary dark:text-primary-foreground border-none' : ''}
             ${optimisticType !== 'task_checklist' ? 'bg-muted text-foreground border-none' : ''}
           `}
           style={{ boxShadow: 'none' }}
@@ -177,8 +177,8 @@ export function TypeSelector({ noteId, userId, currentType, typeGenerated, onTyp
                   }}
                   className={`w-full text-left p-3 rounded-md transition-all duration-200 group border border-transparent
                     ${type === optimisticType ?
-                      (type === 'task_checklist' ? 'text-white dark:text-white bg-yellow-500 dark:bg-yellow-500' :
-                       type === 'content_script' ? 'text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900' :
+                      (type === 'task_checklist' ? 'text-primary-foreground dark:text-primary-foreground bg-primary dark:bg-primary' :
+                       type === 'content_script' ? 'text-accent-foreground dark:text-accent-foreground bg-accent dark:bg-accent' :
                        'text-primary bg-primary/10')
                     :
                       'text-foreground hover:bg-primary/10 hover:text-primary'}
@@ -201,11 +201,11 @@ export function TypeSelector({ noteId, userId, currentType, typeGenerated, onTyp
 export function MinimalTypeDisplay({ currentType }: { currentType: NoteType }) {
   const TYPE_COLORS: Record<NoteType, string> = {
     idea_bank: 'bg-red-500',
-    content_script: 'bg-purple-500',
+    content_script: 'bg-accent',
     collaboration_note: 'bg-green-500',
     analytics_insight: 'bg-pink-500',
     reflection_journal: 'bg-blue-500',
-    task_checklist: 'bg-yellow-500',
+    task_checklist: 'bg-primary',
     email_draft: 'bg-orange-500'
   };
 
@@ -222,9 +222,9 @@ export function MinimalTypeDisplay({ currentType }: { currentType: NoteType }) {
   // Set text color for yellow in dark mode and purple in light mode
   let textClass = 'text-muted-foreground font-medium';
   if (currentType === 'task_checklist') {
-    textClass = 'text-yellow-700 dark:text-white font-medium';
+    textClass = 'text-primary font-medium';
   } else if (currentType === 'content_script') {
-    textClass = 'text-purple-700 dark:text-purple-300 font-medium';
+    textClass = 'text-accent font-medium';
   }
 
   const colorClass = TYPE_COLORS[currentType] || 'bg-gray-500';

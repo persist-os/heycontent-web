@@ -555,7 +555,7 @@ export function ProjectItemsGrid({ project }: ProjectItemsGridProps) {
                       <div className="flex items-center gap-1">
                         <div className={cn("w-2 h-2 rounded-full", 
                           status === 'completed' ? 'bg-green-500' : 
-                          status === 'processing' ? 'bg-yellow-500' : 'bg-gray-500'
+                          status === 'processing' ? 'bg-primary' : 'bg-gray-500'
                         )} />
                         <span className="capitalize text-xs">{status}</span>
                       </div>

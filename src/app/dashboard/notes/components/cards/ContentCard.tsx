@@ -29,7 +29,7 @@ export function ContentCard({
   // Get card color based on note type or content
   const getCardColor = () => {
     if (note.type === 'content_script') {
-      return 'border-purple-500/30 hover:border-purple-500/50';
+      return 'border-accent/30 hover:border-accent/50';
     }
     if (note.type === 'idea_bank') {
       return 'border-red-500/30 hover:border-red-500/50';
@@ -40,13 +40,13 @@ export function ContentCard({
     if (note.title?.toLowerCase().includes('inspiration') || note.title?.toLowerCase().includes('ootd')) {
       return 'border-red-500/30 hover:border-red-500/50';
     }
-    return 'border-purple-500/30 hover:border-purple-500/50';
+    return 'border-accent/30 hover:border-accent/50';
   };
 
   // Get hover background class based on note type or content
   const getHoverBgClass = () => {
     if (note.type === 'content_script') {
-      return 'hover:bg-purple-500/10';
+      return 'hover:bg-accent/10';
     }
     if (note.type === 'idea_bank') {
       return 'hover:bg-red-500/10';
@@ -57,18 +57,18 @@ export function ContentCard({
     if (note.title?.toLowerCase().includes('inspiration') || note.title?.toLowerCase().includes('ootd')) {
       return 'hover:bg-red-500/10';
     }
-    return 'hover:bg-purple-500/10';
+    return 'hover:bg-accent/10';
   };
 
   // Get icon color based on type
   const getIconColor = () => {
     if (note.type === 'content_script') {
-      return 'text-purple-600';
+      return 'text-accent';
     }
     if (note.type === 'idea_bank') {
       return 'text-red-600';
     }
-    return 'text-purple-600';
+    return 'text-accent';
   };
 
   // Determine if this is a media-heavy content

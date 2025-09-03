@@ -82,8 +82,8 @@ export function TodoCard({
   return (
     <BaseCard
       note={note}
-      className="border-yellow-500/30 hover:border-yellow-500/50"
-      hoverBgClass="hover:bg-yellow-500/10"
+      className="border-primary/30 hover:border-primary/50"
+      hoverBgClass="hover:bg-primary/10"
       onEdit={onEdit}
       onDelete={onDelete}
       onToggleImportant={onToggleImportant}
@@ -109,8 +109,8 @@ export function TodoCard({
                 className={cn(
                   "w-4 h-4 rounded border-2 flex items-center justify-center cursor-pointer transition-colors",
                   todo.completed 
-                    ? "bg-yellow-500 border-yellow-500" 
-                    : "border-border hover:border-yellow-500/50"
+                            ? "bg-primary border-primary"
+        : "border-border hover:border-primary/50"
                 )}
               >
                 {todo.completed && (

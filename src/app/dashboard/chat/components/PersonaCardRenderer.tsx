@@ -139,16 +139,20 @@ export const PersonaCardRenderer: React.FC<PersonaCardRendererProps> = ({ messag
   // Render PersonaCard if conditions are met
   if (shouldFetchPersona && shouldShow && hasPersona && persona) {
     return (
-      <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-xl">
-        <div className="mb-4 text-center">
-          <h3 className="text-lg font-semibold text-gray-900">Your Content Persona</h3>
-          <p className="text-sm text-gray-500">Your personalized content identity has been created.</p>
+      <div className="mt-4 p-6 bg-gradient-to-br from-primary/5 via-accent/5 to-primary/5 border border-primary/20 rounded-xl shadow-sm">
+        <div className="mb-6 text-center">
+          <div className="inline-flex items-center gap-2 mb-3">
+            <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+            <h3 className="text-lg font-semibold text-foreground">Your Content Persona</h3>
+            <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+          </div>
+          <p className="text-sm text-muted-foreground">Your personalized content identity has been created.</p>
         </div>
         <NewPersonaCard persona={persona} />
         {showSettingsButton && (
           <div className="flex justify-center mt-6">
             <button
-              className="px-4 py-2 bg-gray-900 text-white font-semibold rounded-lg shadow-sm hover:bg-gray-800 transition-colors"
+              className="px-6 py-2 bg-primary text-primary-foreground font-semibold rounded-lg shadow-sm hover:bg-primary/90 transition-colors"
               onClick={() => router.push('/dashboard/self-hub')}
               type="button"
             >

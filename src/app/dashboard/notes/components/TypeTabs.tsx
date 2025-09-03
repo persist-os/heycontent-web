@@ -37,7 +37,7 @@ export function TypeTabs({
           onClick={() => onSectionChange('all')}
           className={`flex-shrink-0 px-4 py-3 text-sm font-medium transition-all duration-200 border-b-2 ${
             selectedSection === 'all' 
-              ? 'text-purple-600 border-purple-600 bg-purple-500/10' 
+              ? 'text-primary border-primary bg-primary/10' 
               : 'text-muted-foreground hover:text-foreground border-transparent hover:border-gray-300 dark:hover:border-gray-700'
           }`}
         >
@@ -46,7 +46,7 @@ export function TypeTabs({
             <span>All</span>
             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
               selectedSection === 'all' 
-                ? 'bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300' 
+                ? 'bg-primary/20 text-primary' 
                 : 'bg-secondary text-secondary-foreground'
             }`}>
               {totalNotes}
@@ -60,16 +60,16 @@ export function TypeTabs({
             onClick={() => onSectionChange('important')}
             className={`flex-shrink-0 px-4 py-3 text-sm font-medium transition-all duration-200 border-b-2 ${
               selectedSection === 'important' 
-                ? 'text-yellow-600 dark:text-yellow-400 border-yellow-500 bg-yellow-500/10' 
+                ? 'text-primary border-primary bg-primary/10' 
                 : 'text-muted-foreground hover:text-foreground border-transparent hover:border-gray-300 dark:hover:border-gray-700'
             }`}
           >
             <div className="flex items-center gap-2">
-              <Star size={16} className="text-yellow-500" />
+              <Star size={16} className="text-primary" />
               <span>Important</span>
               <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                 selectedSection === 'important' 
-                  ? 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-300' 
+                  ? 'bg-primary/20 text-primary' 
                   : 'bg-secondary text-secondary-foreground'
               }`}>
                 {importantCount}
