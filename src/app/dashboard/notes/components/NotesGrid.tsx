@@ -307,6 +307,39 @@ export function NotesGrid({
     );
   };
 
+  // Helper function to properly distinguish between notes and projects
+  const isProject = (item: any): item is any => {
+    return 'members' in item || 'noteIds' in item || 'conversationIds' in item;
+  };
+
+  const isNote = (item: any): item is Note => {
+    return 'type' in item || 'content' in item;
+  };
+
+  // Helper function to get item type for key generation
+  const getItemType = (item: any): string => {
+    if (isProject(item)) return 'project';
+    if (isNote(item)) return 'note';
+    return 'unknown';
+  };
+
+  // Helper function to render the appropriate card
+  const renderItemCard = (item: any) => {
+    if (isProject(item)) {
+      return (
+        <ProjectCard
+          project={item}
+          onEdit={handleEditProject}
+          onDelete={() => deleteProject(item._id)}
+          dragOverProject={dragOverProject}
+        />
+      );
+    } else if (isNote(item)) {
+      return renderNoteCard(item as Note);
+    }
+    return null;
+  };
+
   return (
     <DndContext
       sensors={sensors}
@@ -463,33 +496,19 @@ export function NotesGrid({
               <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 gap-4 pb-6">
                 {showingAll 
                   ? allItems.map((item) => (
-                      <div key={`${'type' in item ? item.type : 'project'}-${String(item._id)}`} className="break-inside-avoid mb-4 w-full">
-                        {'type' in item && item.type === 'project' ? (
-                          <ProjectCard
-                            project={item as any}
-                            onEdit={handleEditProject}
-                            onDelete={() => deleteProject(item._id as any)}
-                            dragOverProject={dragOverProject}
-                          />
-                        ) : (
-                          renderNoteCard(item as Note)
-                        )}
+                      <div key={`${getItemType(item)}-${String(item._id)}`} className="break-inside-avoid mb-4 w-full">
+                        {renderItemCard(item)}
                       </div>
                     ))
                   : showingProjectsOnly 
                   ? filteredProjects.map((project) => (
                       <div key={String(project._id)} className="break-inside-avoid mb-4 w-full">
-                        <ProjectCard
-                          project={project}
-                          onEdit={handleEditProject}
-                          onDelete={() => deleteProject(project._id)}
-                          dragOverProject={dragOverProject}
-                        />
+                        {renderItemCard(project)}
                       </div>
                     ))
                   : filteredNotes.map((note) => (
                       <div key={String(note._id)} className="break-inside-avoid mb-4 w-full">
-                        {renderNoteCard(note)}
+                        {renderItemCard(note)}
                       </div>
                     ))
                 }
