@@ -235,14 +235,14 @@ export function PartnershipHub() {
           <div className="flex flex-col space-y-4">
             {/* Title */}
             <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <div className="ml-12 md:ml-0">
+              <div className="flex items-center justify-between relative">
+                {/* Center - Title */}
+                <div className="absolute left-1/2 transform -translate-x-1/2">
                   <h1 className="text-2xl font-bold text-foreground">Partnership Hub</h1>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground text-center">
                     Your command center for discovering collaborations, managing partnerships, and growing your creator business
                   </p>
                 </div>
-
               </div>
             </div>
 

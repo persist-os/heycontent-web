@@ -70,17 +70,36 @@ export default function DashboardLayout({
 
   return (
     <div className="relative flex min-h-screen">
+      {/* Backdrop overlay */}
+      {isExpanded && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-30"
+          onClick={() => setIsExpanded(false)}
+          aria-hidden="true"
+        />
+      )}
+      
       <DashboardNav />
-      {/* Mobile-only menu button */}
+      
+      {/* Mobile menu button */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className={`fixed top-4 left-4 z-50 p-2 rounded-md bg-background/50 text-foreground transition-transform duration-300 md:hidden ${isExpanded ? 'translate-x-64' : 'translate-x-0'}`}
+        className="fixed top-4 left-4 z-50 p-2 rounded-md bg-background/50 text-foreground transition-transform duration-300 md:hidden"
         aria-label="Toggle menu"
       >
         <Menu className="w-6 h-6" />
       </button>
       
-      <main className={`flex-1 overflow-y-auto overflow-x-hidden transition-all duration-300 md:ml-20 ${isExpanded ? 'ml-64 md:ml-64' : 'ml-0'}`}>
+      {/* Desktop menu button */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="fixed top-4 left-4 z-50 p-2 rounded-md bg-background/50 text-foreground transition-transform duration-300 hidden md:block"
+        aria-label="Toggle menu"
+      >
+        <Menu className="w-6 h-6" />
+      </button>
+      
+      <main className="flex-1 overflow-y-auto overflow-x-hidden">
         {children}
       </main>
     </div>

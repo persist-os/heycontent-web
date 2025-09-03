@@ -424,17 +424,17 @@ export function InlineCommandPalette({
               />
             ) : (
               <div className="p-4 flex items-center justify-center">
-                <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <Loader2 className="w-5 h-5 animate-spin text-purple-600 dark:text-yellow-400" />
-                  <span>Waiting for refined text...</span>
-                </div>
+                              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                <span>Waiting for refined text...</span>
+              </div>
               </div>
             )}
           </div>
         ) : refinementState.previewTransition === 'loading' ? (
           <div className="p-4 flex items-center justify-center">
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <Loader2 className="w-5 h-5 animate-spin text-purple-600 dark:text-yellow-400" />
+              <Loader2 className="w-5 h-5 animate-spin text-primary" />
               <span>Refining your text...</span>
             </div>
           </div>
@@ -470,9 +470,9 @@ export function InlineCommandPalette({
                             isOptionCompleted
                               ? 'bg-green-500/10 text-green-600 dark:text-green-400 ring-2 ring-green-500/20'
                               : isOptionLoading
-                              ? 'bg-purple-500/20 dark:bg-yellow-500/20 text-purple-600 dark:text-yellow-400 ring-2 ring-purple-500/30 dark:ring-yellow-500/30'
+                              ? 'bg-primary/20 text-primary ring-2 ring-primary/30'
                               : isSelected && !isDisabled
-                              ? 'bg-purple-500/10 dark:bg-yellow-500/10 text-purple-600 dark:text-yellow-400' 
+                              ? 'bg-primary/10 text-primary' 
                               : isDisabled
                               ? 'opacity-50 text-muted-foreground'
                               : 'hover:bg-muted/50 text-foreground'
@@ -482,11 +482,11 @@ export function InlineCommandPalette({
                             {isOptionCompleted ? (
                               <Loader2 className="w-4 h-4 text-green-500 animate-pulse" />
                             ) : isOptionLoading ? (
-                              <Loader2 className="w-4 h-4 animate-spin text-purple-600 dark:text-yellow-400" />
+                              <Loader2 className="w-4 h-4 animate-spin text-primary" />
                             ) : (
                               <div className={
                                 isSelected && !isDisabled 
-                                  ? 'text-purple-600 dark:text-yellow-400' 
+                                  ? 'text-primary' 
                                   : isDisabled 
                                   ? 'text-muted-foreground/50' 
                                   : 'text-muted-foreground'
@@ -501,7 +501,7 @@ export function InlineCommandPalette({
                             {option.label}
                           </span>
                           {isSelected && !isDisabled && !isOptionLoading && !isOptionCompleted && (
-                            <ArrowRight className="w-3 h-3 ml-auto text-purple-600 dark:text-yellow-400" />
+                            <ArrowRight className="w-3 h-3 ml-auto text-primary" />
                           )}
                         </button>
                       );

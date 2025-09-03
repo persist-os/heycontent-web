@@ -349,14 +349,14 @@ export function NotesGrid({
     >
       <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="ml-12 md:ml-0">
-            <h1 className="text-2xl font-bold text-foreground">Smart Notes</h1>
-            <p className="text-sm text-muted-foreground">
-              Your intelligent note-taking workspace
-            </p>
+        <div className="flex items-center justify-between mb-6 relative">
+          {/* Center - Title */}
+          <div className="absolute left-1/2 transform -translate-x-1/2">
+            <h1 className="text-lg font-bold text-foreground">Smart Notes</h1>
           </div>
-          <div className="flex items-center gap-2">
+
+          {/* Right side - Actions */}
+          <div className="flex items-center gap-2 ml-auto">
             {/* Self tab */}
             <Link
               href="/dashboard/self-hub"

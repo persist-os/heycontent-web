@@ -398,7 +398,7 @@ export function ContentHubScreen() {
       {/* Fixed Header */}
       <div className="shrink-0 px-6 py-4 bg-background border-b border-border">
         <div className="flex items-center justify-between">
-          <div className="flex items-center ml-12 md:ml-0">
+          <div className="flex items-center justify-center flex-1">
             {fromChat && (
               <Button variant="ghost" onClick={() => router.push(chatId ? `/dashboard/chat?id=${chatId}` : '/dashboard/chat')} className="p-2 mr-4">
                 <ArrowLeft className="w-4 h-4 mr-2" />
