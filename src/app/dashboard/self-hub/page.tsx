@@ -3,9 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import { PersonaTab } from './PersonaTab';
 import { Button } from '@/components/ui/button';
-import { Edit2, Trash2 } from 'lucide-react';
+import { Edit2, Trash2, X, RefreshCw } from 'lucide-react';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { useOptimizedPersonaManager } from '@/store/persona-store';
+import { CentralizedHeader } from '@/components/ui/centralized-header';
 
 export default function SelfHubPage() {
   const [userId, setUserId] = useState<string | undefined>();
@@ -73,60 +74,44 @@ export default function SelfHubPage() {
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="px-6 py-4 border-b bg-background">
-        <div className="flex items-center justify-between mb-4 relative">
-          {/* Center - Title */}
-          <div className="absolute left-1/2 transform -translate-x-1/2">
-            <h1 className="text-lg font-bold text-foreground">
-              Self
-            </h1>
-          </div>
-          
-          {/* Action Buttons */}
-          <div className="flex items-center gap-3 ml-auto">
-            <Button
-              variant={isEditMode ? 'default' : 'outline'}
-              size="sm"
-              onClick={isEditMode ? handleSave : handleEdit}
-              className="min-h-[40px]"
-            >
-              <Edit2 className="w-4 h-4 mr-2" />
-              {isEditMode ? 'Save' : 'Edit'}
-            </Button>
-            {isEditMode && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleCancel}
-                className="min-h-[40px]"
-              >
-                Cancel
-              </Button>
-            )}
-            {!isEditMode && allPersonas.length > 1 && (
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleDeleteClick}
-                className="min-h-[40px] text-destructive border-destructive hover:bg-destructive/10"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete
-              </Button>
-            )}
-            {!isEditMode && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleUpdatePersona}
-                className="min-h-[40px]"
-              >
-                Update Persona
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
+      <CentralizedHeader
+        title="Self"
+        rightActions={[
+          {
+            id: 'edit',
+            icon: Edit2,
+            onClick: isEditMode ? handleSave : handleEdit,
+            title: isEditMode ? 'Save' : 'Edit',
+            variant: isEditMode ? 'default' : 'outline',
+            size: 'sm'
+          },
+          ...(isEditMode ? [{
+            id: 'cancel',
+            icon: X,
+            onClick: handleCancel,
+            title: 'Cancel',
+            variant: 'ghost' as const,
+            size: 'sm' as const
+          }] : []),
+          ...(!isEditMode && allPersonas.length > 1 ? [{
+            id: 'delete',
+            icon: Trash2,
+            onClick: handleDeleteClick,
+            title: 'Delete',
+            variant: 'destructive' as const,
+            size: 'sm' as const
+          }] : []),
+          ...(!isEditMode ? [{
+            id: 'update',
+            icon: RefreshCw,
+            onClick: handleUpdatePersona,
+            title: 'Update Persona',
+            variant: 'outline' as const,
+            size: 'sm' as const
+          }] : [])
+        ]}
+        variant="default"
+      />
 
       {/* Only PersonaTab content */}
       <div className="flex-1 overflow-auto p-6" data-persona-content>

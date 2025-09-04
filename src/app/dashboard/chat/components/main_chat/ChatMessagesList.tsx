@@ -55,7 +55,7 @@ const ChatMessagesList: React.FC<ChatMessagesListProps> = ({
           onContentClick={onContentClick}
         />
         {message.role === 'assistant' && message.suggestions && (
-          <div className="mt-3 flex flex-wrap gap-2 pl-4 sm:pl-12 pr-4 max-w-full">
+          <div className="mt-3 flex flex-wrap gap-2 pl-4 sm:pl-12 pr-4 max-w-full overflow-hidden">
             {message.suggestions.map((suggestion: any, idx: number) => (
               <SuggestionChip
                 key={idx}

@@ -40,6 +40,7 @@ import { InsightCardSkeleton } from '../../ai-insights/_components/InsightCardSk
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ContentHubInsights } from './ContentHubInsights'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
+import { CentralizedHeader } from '@/components/ui/centralized-header';
 
 type PlatformType = 'all' | 'youtube' | 'instagram'
 type ViewType = 'hub-insights' | 'all' | 'youtube' | 'instagram'
@@ -396,39 +397,14 @@ export function ContentHubScreen() {
   return (
     <div className="relative bg-background">
       {/* Fixed Header */}
-      <div className="shrink-0 px-6 py-4 bg-background border-b border-border">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center justify-center flex-1">
-            {fromChat && (
-              <Button variant="ghost" onClick={() => router.push(chatId ? `/dashboard/chat?id=${chatId}` : '/dashboard/chat')} className="p-2 mr-4">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Chat
-              </Button>
-            )}
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Content Hub</h1>
-              <p className="text-sm text-muted-foreground">
-                <span className="hidden sm:inline">Your unified content analytics and AI insights dashboard</span>
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-
-            {/* Integration Links - Placeholder for tour */}
-            <div data-integration-links className="absolute opacity-0 pointer-events-none -z-10 w-1 h-1">
-              <p className="text-sm text-muted-foreground">Integration with Chat & Notes</p>
-            </div>
-            {/* Discuss Button - Placeholder for tour */}
-            <div data-discuss-button className="absolute opacity-0 pointer-events-none -z-10 w-1 h-1">
-              <p className="text-sm text-muted-foreground">Discuss content with AI</p>
-            </div>
-            {/* Save Button - Placeholder for tour */}
-            <div data-save-button className="absolute opacity-0 pointer-events-none -z-10 w-1 h-1">
-              <p className="text-sm text-muted-foreground">Save insights to Notes</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <CentralizedHeader
+        title="Content Hub"
+        subtitle="Your unified content analytics and AI insights dashboard"
+        showBackButton={fromChat}
+        backButtonContext="Back to Chat"
+        onBack={() => router.push(chatId ? `/dashboard/chat?id=${chatId}` : '/dashboard/chat')}
+        variant="elevated"
+      />
 
       {/* Refresh Notification Banner */}
       {isAnyPlatformRefreshing && (

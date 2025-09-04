@@ -40,7 +40,7 @@ import { usePartnershipData } from '../hooks/usePartnershipData';
 import { PartnershipProgressiveThinking } from './PartnershipProgressiveThinking';
 import { getPartnershipColors } from '../utils/emailCategorization';
 import { EmailComposerModal } from './EmailComposerModal';
-
+import { CentralizedHeader } from '@/components/ui/centralized-header';
 
 
 export type MetricFilter = 'all' | 'active' | 'pending' | 'brand-deals';
@@ -231,23 +231,14 @@ export function PartnershipHub() {
     <TooltipProvider>
       <div className="min-h-screen flex flex-col bg-background">
         {/* Header */}
-        <div className="border-b border-border p-6">
-          <div className="flex flex-col space-y-4">
-            {/* Title */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between relative">
-                {/* Center - Title */}
-                <div className="absolute left-1/2 transform -translate-x-1/2">
-                  <h1 className="text-2xl font-bold text-foreground">Partnership Hub</h1>
-                  <p className="text-sm text-muted-foreground text-center">
-                    Your command center for discovering collaborations, managing partnerships, and growing your creator business
-                  </p>
-                </div>
-              </div>
-            </div>
+        <CentralizedHeader
+          title="Partnership Hub"
+          subtitle="Your command center for discovering collaborations, managing partnerships, and growing your creator business"
+          variant="elevated"
+        />
 
-            {/* Progress Display */}
-            {refreshing && progress.step !== 'idle' && (
+        {/* Progress Display */}
+        {refreshing && progress.step !== 'idle' && (
               <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>

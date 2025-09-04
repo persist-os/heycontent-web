@@ -530,7 +530,7 @@ export function AgentsShowcase() {
               {/* Input Area */}
               <div className="border-t border-slate-200 dark:border-slate-700 bg-background p-4">
                 <div className="max-w-4xl mx-auto">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-start gap-3">
                     <div className="flex-1 relative">
                       <textarea
                         value={inputValue}

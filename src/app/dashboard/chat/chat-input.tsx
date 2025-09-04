@@ -383,13 +383,13 @@ export function ChatInput({
         {/* Reference preview */}
         {referencedMessage && !notepadOpen && (
           <div className="w-full mb-2">
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground bg-muted/80 p-2 rounded-lg border border-border/50">
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground bg-muted/80 p-2 rounded-lg border border-border/50 min-w-0">
               <MessageSquare className="w-4 h-4 flex-shrink-0" />
               <button 
                 onClick={() => setShowFullReply(!showFullReply)}
-                className="flex-1 text-left hover:text-foreground transition-colors"
+                className="flex-1 text-left hover:text-foreground transition-colors min-w-0"
               >
-                <span className={showFullReply ? "break-words whitespace-pre-wrap" : "truncate block"}>
+                <span className={showFullReply ? "break-words whitespace-pre-wrap min-w-0" : "truncate block min-w-0"}>
                   Replying to: {showFullReply 
                     ? referencedMessage.content 
                     : referencedMessage.content.length > 60 
@@ -498,8 +498,8 @@ export function ChatInput({
                     </button>
 
                     {/* Smart Search Text Label - always visible */}
-                    <div className="ml-3">
-                      <span className={`text-xs font-medium transition-colors duration-300 ${
+                    <div className="ml-3 min-w-0">
+                      <span className={`text-xs font-medium transition-colors duration-300 break-words ${
                         useContextSearch 
                           ? 'text-foreground' 
                           : 'text-muted-foreground'

@@ -31,7 +31,7 @@ const PersonaField: React.FC<{
           ))}
         </div>
       ) : (
-        <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+        <p className="text-sm leading-relaxed text-foreground break-words">
           {value}
         </p>
       )}

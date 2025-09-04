@@ -141,6 +141,43 @@
     overflow-wrap: break-word;
     max-width: 100%;
   }
+
+  /* Mobile-specific text wrapping for chat messages */
+  @media (max-width: 640px) {
+    .markdown-content {
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+
+    .markdown-content * {
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+
+    /* Ensure list items don't overflow on mobile */
+    .markdown-content ul,
+    .markdown-content ol {
+      margin-left: 1rem !important;
+      padding-right: 0.5rem;
+    }
+
+    .markdown-content li {
+      padding-right: 0.5rem;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+
+    /* Chat content renderer mobile optimizations */
+    .chat-content-renderer {
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+
+    .chat-content-renderer * {
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+  }
 }
 
 /* Custom Scrollbar Styles */

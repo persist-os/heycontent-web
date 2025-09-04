@@ -381,7 +381,7 @@ export function NoteArea({
   };
 
   return (
-    <div className="flex flex-col h-full w-full bg-background relative">
+    <div className="flex flex-col h-screen w-full bg-background relative">
       {/* Header */}
       <NoteHeader 
         note={note}
@@ -398,7 +398,7 @@ export function NoteArea({
       />
       
       {/* Note metadata and type selector */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/95">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b border-border bg-background/95 gap-3">
         <NoteMeta
           note={note} // Use note directly from Convex
           onUpdate={onUpdate}
@@ -409,7 +409,7 @@ export function NoteArea({
         />
         
         {/* Smart Title + Tags Button */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-shrink-0">
           {shouldShowSmartButton && (
             <button
               onClick={handleGenerateMetadata}
@@ -420,12 +420,12 @@ export function NoteArea({
               {isGeneratingMetadata ? (
                 <>
                   <Loader2 size={14} className="animate-spin" />
-                  <span>Generating...</span>
+                  <span className="hidden sm:inline">Generating...</span>
                 </>
               ) : (
                 <>
                   <Wand2 size={14} />
-                  <span>Smart Title + Tags</span>
+                  <span className="hidden sm:inline">Smart Title + Tags</span>
                 </>
               )}
             </button>

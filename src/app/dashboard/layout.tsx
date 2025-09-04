@@ -151,19 +151,19 @@ export default function DashboardLayout({
       {/* Mobile menu button */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="fixed top-4 left-4 z-50 p-2 rounded-md bg-background/50 text-foreground transition-transform duration-300 md:hidden"
+        className="fixed top-3 left-4 z-50 p-1.5 rounded-md bg-background/50 text-foreground transition-transform duration-300 md:hidden"
         aria-label="Toggle menu"
       >
-        <Menu className="w-6 h-6" />
+        <Menu className="w-5 h-5" />
       </button>
       
       {/* Desktop menu button */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="fixed top-4 left-4 z-50 p-2 rounded-md bg-background/50 text-foreground transition-transform duration-300 hidden md:block"
+        className="fixed top-3 left-4 z-50 p-1.5 rounded-md bg-background/50 text-foreground transition-transform duration-300 hidden md:block"
         aria-label="Toggle menu"
       >
-        <Menu className="w-6 h-6" />
+        <Menu className="w-5 h-5" />
       </button>
       
       <main className="flex-1 overflow-y-auto overflow-x-hidden">

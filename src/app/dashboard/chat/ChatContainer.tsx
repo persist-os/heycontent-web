@@ -622,7 +622,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             </div>
           ) : hasMessagesOrContext ? (
             <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden">
-              <div className="p-2 sm:p-4 pb-4">
+              <div className="p-3 sm:p-4 pb-4">
                 <div className="max-w-4xl sm:max-w-6xl mx-auto space-y-3">
                   {/* Context box */}
                   {currentContext && (

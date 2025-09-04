@@ -24,6 +24,7 @@ import {
   DragOverEvent,
   useDroppable,
 } from '@dnd-kit/core';
+import { CentralizedHeader } from '@/components/ui/centralized-header';
 
 interface NotesGridProps {
   notes: Note[];
@@ -349,36 +350,15 @@ export function NotesGrid({
     >
       <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6 relative">
-          {/* Center - Title */}
-          <div className="absolute left-1/2 transform -translate-x-1/2">
-            <h1 className="text-lg font-bold text-foreground">Smart Notes</h1>
-          </div>
-
-          {/* Right side - Actions */}
-          <div className="flex items-center gap-2 ml-auto">
-            {/* Self tab */}
-            <Link
-              href="/dashboard/self-hub"
-              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm ${
-                pathname.startsWith('/dashboard/self-hub')
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-background/80 hover:bg-background text-foreground border border-border'
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              <span className="hidden sm:inline">Self</span>
-            </Link>
-            {helpButton && (
-              <div>
-                {helpButton}
-              </div>
-            )}
-          </div>
-        </div>
+        <CentralizedHeader
+          title="Smart Notes"
+          showSelfTab={true}
+          showHelp={true}
+          variant="elevated"
+        />
 
         {/* Prominent Search Bar */}
-        <div className="mb-6 px-4">
+        <div className="mb-6 px-4 mt-8">
           <div className="relative max-w-2xl mx-auto">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
