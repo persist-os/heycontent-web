@@ -798,32 +798,34 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         </div>
 
         {/* Input Bar */}
-        <div className="flex-shrink-0 border-t border-border bg-background">
-          <ChatInputArea
-            showAmbient={false}
-            currentContext={currentContext}
-            handleActionClick={handleActionClick}
-            handleSendMessage={handleSendMessageWithUpdateCheck}
-            inputRef={inputRef}
-            isLoading={isLoading}
-            referencedMessage={referencedMessage}
-            handleClearReference={handleClearReference}
-            includeAnalysisInQuery={includeAnalysisInQuery}
-            inputValue={inputValue}
-            onInputChange={setInputValue}
-            onInputPopulate={handleInputAppend}
-            useContextSearch={useContextSearch}
-            onToggleContextSearch={setUseContextSearch}
-            embeddingInfo={embeddingInfo}
-            notepadOpen={notepadOpen}
-            openNotepad={toggleNotepad}
-            quotedForNotepad={quotedForNotepad}
-            onClearQuoted={handleClearQuoted}
-            isAuthenticated={authData.isAuthenticated}
-            isMobile={isMobile}
-            activeTab={activeTab}
-          />
-        </div>
+        {!(isMobile && activeTab === 'notes') && (
+          <div className="flex-shrink-0 border-t border-border bg-background">
+            <ChatInputArea
+              showAmbient={false}
+              currentContext={currentContext}
+              handleActionClick={handleActionClick}
+              handleSendMessage={handleSendMessageWithUpdateCheck}
+              inputRef={inputRef}
+              isLoading={isLoading}
+              referencedMessage={referencedMessage}
+              handleClearReference={handleClearReference}
+              includeAnalysisInQuery={includeAnalysisInQuery}
+              inputValue={inputValue}
+              onInputChange={setInputValue}
+              onInputPopulate={handleInputAppend}
+              useContextSearch={useContextSearch}
+              onToggleContextSearch={setUseContextSearch}
+              embeddingInfo={embeddingInfo}
+              notepadOpen={notepadOpen}
+              openNotepad={toggleNotepad}
+              quotedForNotepad={quotedForNotepad}
+              onClearQuoted={handleClearQuoted}
+              isAuthenticated={authData.isAuthenticated}
+              isMobile={isMobile}
+              activeTab={activeTab}
+            />
+          </div>
+        )}
       </div>
 
       {/* Notepad warning modal */}

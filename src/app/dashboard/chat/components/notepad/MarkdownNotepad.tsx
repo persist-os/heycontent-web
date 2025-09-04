@@ -6,7 +6,7 @@ import { CreateNoteButton } from '@/components/ui/CreateNoteButton'
 import { useTheme } from 'next-themes'
 import { useAuth } from '@/app/context/auth-context'
 import { useInlineAI } from '../../../notes/hooks/useInlineAI'
-import { RichTextEditor } from '@/components/ui/rich-text-editor/rich-text-editor'
+import { RichTextEditor, RichTextEditorRef } from '@/components/ui/rich-text-editor/rich-text-editor'
 
 interface MarkdownNotepadProps {
   isOpen: boolean
@@ -53,6 +53,9 @@ export const MarkdownNotepad = forwardRef(function MarkdownNotepad({
 
   // --- Add sidebar container ref ---
   const sidebarRef = useRef<HTMLDivElement>(null)
+  
+  // --- Add RichTextEditor ref ---
+  const richTextEditorRef = useRef<RichTextEditorRef>(null)
 
   const { askAI, requestAnalysis, requestIdeas } = useInlineAI({
     noteContent: content,
@@ -105,6 +108,11 @@ export const MarkdownNotepad = forwardRef(function MarkdownNotepad({
       throw error
     }
   }, [requestIdeas])
+
+  // Handle command palette trigger
+  const handleTriggerCommandPalette = useCallback(() => {
+    richTextEditorRef.current?.triggerCommandPalette()
+  }, [])
 
   // Handle resizing with improved logic (desktop only)
   useEffect(() => {
@@ -207,6 +215,15 @@ export const MarkdownNotepad = forwardRef(function MarkdownNotepad({
           </div>
           
           <div className="flex items-center gap-1">
+            {/* AI Command Palette Button */}
+            <button
+              onClick={handleTriggerCommandPalette}
+              className="px-3 py-1.5 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-all duration-200 font-medium shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95"
+              title="AI Assistant (⌘K)"
+            >
+              AI
+            </button>
+            
             <button
               onClick={handleCopy}
               disabled={!content.trim()}
@@ -256,6 +273,7 @@ export const MarkdownNotepad = forwardRef(function MarkdownNotepad({
             onLinkNote={onLinkNote}
             className="h-full border-0"
             containerRef={sidebarRef}
+            ref={richTextEditorRef}
           />
         </div>
 
@@ -292,6 +310,15 @@ export const MarkdownNotepad = forwardRef(function MarkdownNotepad({
         </div>
         
         <div className="flex items-center gap-1">
+          {/* AI Command Palette Button */}
+          <button
+            onClick={handleTriggerCommandPalette}
+            className="px-3 py-1.5 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-all duration-200 font-medium shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95"
+            title="AI Assistant (⌘K)"
+          >
+            AI
+          </button>
+          
           <button
             onClick={handleCopy}
             disabled={!content.trim()}
@@ -350,6 +377,7 @@ export const MarkdownNotepad = forwardRef(function MarkdownNotepad({
           onLinkNote={onLinkNote}
           className="h-full border-0"
           containerRef={sidebarRef}
+          ref={richTextEditorRef}
         />
       </div>
 
