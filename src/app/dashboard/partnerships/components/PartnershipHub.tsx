@@ -239,188 +239,186 @@ export function PartnershipHub() {
 
         {/* Progress Display */}
         {refreshing && progress.step !== 'idle' && (
-              <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{progress.message}</p>
+          <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+              <div>
+                <p className="text-sm font-medium text-foreground">{progress.message}</p>
+              </div>
+            </div>
+            <PartnershipProgressiveThinking
+              searchStatus={progress.message}
+              isCompleted={progress.step === 'complete'}
+              progressData={progress.data}
+            />
+          </div>
+        )}
+
+        {/* Status Messages */}
+        {refreshError && (
+          <div className="text-destructive text-sm p-3 bg-destructive/10 rounded-lg border border-destructive/20">
+            <strong>Sync Issue:</strong> {refreshError}
+            <p className="text-xs mt-1">Please try again in a moment or check your Gmail connection in Settings.</p>
+          </div>
+        )}
+        {refreshSuccess && (
+          <div className="text-green-600 dark:text-green-400 text-sm p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+            <strong>Success!</strong> Your Gmail analysis is complete. Fresh opportunities are ready to explore!
+          </div>
+        )}
+
+        {/* Metrics and Button Row */}
+        <div className="flex items-center justify-between w-full">
+          {/* Left side - 4 metric boxes */}
+          <div className="flex items-center gap-4">
+            {/* Metric Cards */}
+            <div className="flex items-center gap-3">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div 
+                    className={`flex items-center gap-2 px-4 py-3 border rounded-lg backdrop-blur-sm cursor-pointer transition-all duration-200 ${
+                      activeFilter === 'all' 
+                        ? 'bg-primary/10 border-primary/30 ring-2 ring-primary/30 shadow-lg' 
+                        : 'bg-card border-border hover:bg-muted'
+                    }`}
+                    onClick={() => setActiveFilter('all')}
+                  >
+                    <Mail className="w-5 h-5 text-muted-foreground" />
+                    <div>
+                      <div className="text-xl font-bold text-foreground">{partnerships.length}</div>
+                      <div className="text-xs text-muted-foreground">Total Emails</div>
+                    </div>
                   </div>
-                </div>
-                <PartnershipProgressiveThinking
-                  searchStatus={progress.message}
-                  isCompleted={progress.step === 'complete'}
-                  progressData={progress.data}
-                />
-              </div>
-            )}
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="max-w-xs text-sm">Total partnership opportunities found</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div 
+                    className={`flex items-center gap-2 px-4 py-3 border rounded-lg backdrop-blur-sm cursor-pointer transition-all duration-200 ${
+                      activeFilter === 'active' 
+                        ? 'bg-primary/10 border-primary/30 ring-2 ring-primary/30 shadow-lg' 
+                        : 'bg-card border-border hover:bg-muted'
+                    }`}
+                    onClick={() => setActiveFilter('active')}
+                  >
+                    <MessageSquare className="w-5 h-5 text-muted-foreground" />
+                    <div>
+                      <div className="text-xl font-bold text-foreground">{partnershipMetrics.activePartnerships}</div>
+                      <div className="text-xs text-muted-foreground">Active Discussions</div>
+                    </div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="max-w-xs text-sm">Ongoing conversations and deals</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div 
+                    className={`flex items-center gap-2 px-4 py-3 border rounded-lg backdrop-blur-sm cursor-pointer transition-all duration-200 ${
+                      activeFilter === 'pending' 
+                        ? 'bg-primary/10 border-primary/30 ring-2 ring-primary/30 shadow-lg' 
+                        : 'bg-card border-border hover:bg-muted'
+                    }`}
+                    onClick={() => setActiveFilter('pending')}
+                  >
+                    <Clock className="w-5 h-5 text-muted-foreground" />
+                    <div>
+                      <div className="text-xl font-bold text-foreground">{partnershipMetrics.pendingResponses}</div>
+                      <div className="text-xs text-muted-foreground">Needs Response</div>
+                    </div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="max-w-xs text-sm">Opportunities waiting for your reply</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div 
+                    className={`flex items-center gap-2 px-4 py-3 border rounded-lg backdrop-blur-sm cursor-pointer transition-all duration-200 ${
+                      activeFilter === 'brand-deals' 
+                        ? 'bg-primary/10 border-primary/30 ring-2 ring-primary/30 shadow-lg' 
+                        : 'bg-card border-border hover:bg-muted'
+                    }`}
+                    onClick={() => setActiveFilter('brand-deals')}
+                  >
+                    <Users className="w-5 h-5 text-muted-foreground" />
+                    <div>
+                      <div className="text-xl font-bold text-foreground">{brandDealsCount}</div>
+                      <div className="text-xs text-muted-foreground">Brand Deals</div>
+                    </div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="max-w-xs text-sm">High-value partnerships and serious negotiations</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
 
-            {/* Status Messages */}
-            {refreshError && (
-              <div className="text-destructive text-sm p-3 bg-destructive/10 rounded-lg border border-destructive/20">
-                <strong>Sync Issue:</strong> {refreshError}
-                <p className="text-xs mt-1">Please try again in a moment or check your Gmail connection in Settings.</p>
-              </div>
-            )}
-            {refreshSuccess && (
-              <div className="text-green-600 dark:text-green-400 text-sm p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
-                <strong>Success!</strong> Your Gmail analysis is complete. Fresh opportunities are ready to explore!
-              </div>
-            )}
+            {/* Find New Opportunities Button */}
+            <Button 
+              variant="outline" 
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="flex items-center gap-2 justify-center shrink-0 rounded-full border-2 border-border bg-background hover:bg-purple-100 hover:text-purple-900 dark:hover:bg-yellow-500/20 dark:hover:text-yellow-300 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 text-foreground font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              data-find-opportunities-button
+              style={{
+                width: '219px',
+                height: '43px',
+              }}
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+              Find New Opportunities
+            </Button>
 
-            {/* Metrics and Button Row */}
-            <div className="flex items-center justify-between w-full">
-              {/* Left side - 4 metric boxes */}
-              <div className="flex items-center gap-4">
-                {/* Metric Cards */}
-                <div className="flex items-center gap-3">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div 
-                        className={`flex items-center gap-2 px-4 py-3 border rounded-lg backdrop-blur-sm cursor-pointer transition-all duration-200 ${
-                          activeFilter === 'all' 
-                            ? 'bg-primary/10 border-primary/30 ring-2 ring-primary/30 shadow-lg' 
-                            : 'bg-card border-border hover:bg-muted'
-                        }`}
-                        onClick={() => setActiveFilter('all')}
-                      >
-                        <Mail className="w-5 h-5 text-muted-foreground" />
-                        <div>
-                          <div className="text-xl font-bold text-foreground">{partnerships.length}</div>
-                          <div className="text-xs text-muted-foreground">Total Emails</div>
-                        </div>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="max-w-xs text-sm">Total partnership opportunities found</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div 
-                        className={`flex items-center gap-2 px-4 py-3 border rounded-lg backdrop-blur-sm cursor-pointer transition-all duration-200 ${
-                          activeFilter === 'active' 
-                            ? 'bg-primary/10 border-primary/30 ring-2 ring-primary/30 shadow-lg' 
-                            : 'bg-card border-border hover:bg-muted'
-                        }`}
-                        onClick={() => setActiveFilter('active')}
-                      >
-                        <MessageSquare className="w-5 h-5 text-muted-foreground" />
-                        <div>
-                          <div className="text-xl font-bold text-foreground">{partnershipMetrics.activePartnerships}</div>
-                          <div className="text-xs text-muted-foreground">Active Discussions</div>
-                        </div>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="max-w-xs text-sm">Ongoing conversations and deals</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div 
-                        className={`flex items-center gap-2 px-4 py-3 border rounded-lg backdrop-blur-sm cursor-pointer transition-all duration-200 ${
-                          activeFilter === 'pending' 
-                            ? 'bg-primary/10 border-primary/30 ring-2 ring-primary/30 shadow-lg' 
-                            : 'bg-card border-border hover:bg-muted'
-                        }`}
-                        onClick={() => setActiveFilter('pending')}
-                      >
-                        <Clock className="w-5 h-5 text-muted-foreground" />
-                        <div>
-                          <div className="text-xl font-bold text-foreground">{partnershipMetrics.pendingResponses}</div>
-                          <div className="text-xs text-muted-foreground">Needs Response</div>
-                        </div>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="max-w-xs text-sm">Opportunities waiting for your reply</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div 
-                        className={`flex items-center gap-2 px-4 py-3 border rounded-lg backdrop-blur-sm cursor-pointer transition-all duration-200 ${
-                          activeFilter === 'brand-deals' 
-                            ? 'bg-primary/10 border-primary/30 ring-2 ring-primary/30 shadow-lg' 
-                            : 'bg-card border-border hover:bg-muted'
-                        }`}
-                        onClick={() => setActiveFilter('brand-deals')}
-                      >
-                        <Users className="w-5 h-5 text-muted-foreground" />
-                        <div>
-                          <div className="text-xl font-bold text-foreground">{brandDealsCount}</div>
-                          <div className="text-xs text-muted-foreground">Brand Deals</div>
-                        </div>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="max-w-xs text-sm">High-value partnerships and serious negotiations</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-
-                {/* Find New Opportunities Button */}
+            {/* New Email Button */}
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <Button 
                   variant="outline" 
-                  onClick={handleRefresh}
-                  disabled={refreshing}
-                  className="flex items-center gap-2 justify-center shrink-0 rounded-full border-2 border-border bg-background hover:bg-purple-100 hover:text-purple-900 dark:hover:bg-yellow-500/20 dark:hover:text-yellow-300 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 text-foreground font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  data-find-opportunities-button
+                  onClick={handleOpenNewEmailModal}
+                  className="flex items-center gap-2 justify-center shrink-0 rounded-full border-2 border-border bg-background hover:bg-purple-100 hover:text-purple-900 dark:hover:bg-yellow-500/20 dark:hover:text-yellow-300 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 text-foreground font-medium text-sm transition-colors"
                   style={{
-                    width: '219px',
+                    width: '160px',
                     height: '43px',
                   }}
                 >
-                  <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-                  Find New Opportunities
+                  <PenSquare className="w-4 h-4" />
+                  New Email
                 </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="max-w-xs text-sm">Compose a new email to anyone</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
 
-                {/* New Email Button */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      onClick={handleOpenNewEmailModal}
-                      className="flex items-center gap-2 justify-center shrink-0 rounded-full border-2 border-border bg-background hover:bg-purple-100 hover:text-purple-900 dark:hover:bg-yellow-500/20 dark:hover:text-yellow-300 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 text-foreground font-medium text-sm transition-colors"
-                      style={{
-                        width: '160px',
-                        height: '43px',
-                      }}
-                    >
-                      <PenSquare className="w-4 h-4" />
-                      New Email
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="max-w-xs text-sm">Compose a new email to anyone</p>
-                  </TooltipContent>
-                </Tooltip>
+          {/* Right side - Deal Value */}
+          <div 
+            className="flex items-center gap-2 px-4 py-3 shrink-0 rounded-[15px] bg-purple-100 dark:bg-purple-950/30"
+            style={{
+              width: '209px',
+              height: '64px',
+              flexShrink: 0
+            }}
+          >
+            <div className="w-8 h-8 bg-purple-500 dark:bg-purple-400 rounded-full flex items-center justify-center">
+              <span className="text-white dark:text-purple-900 font-bold text-sm">$</span>
+            </div>
+            <div>
+              <div className="text-xl font-bold text-foreground">
+                {partnershipMetrics.pipelineValue >= 1000000 ? `$${(partnershipMetrics.pipelineValue / 1000000).toFixed(1)}M` :
+                 partnershipMetrics.pipelineValue >= 1000 ? `$${(partnershipMetrics.pipelineValue / 1000).toFixed(1)}K` :
+                 partnershipMetrics.pipelineValue === 0 ? '$0' : `$${partnershipMetrics.pipelineValue}`}
               </div>
-
-              {/* Right side - Deal Value */}
-              <div 
-                className="flex items-center gap-2 px-4 py-3 shrink-0 rounded-[15px] bg-purple-100 dark:bg-purple-950/30"
-                style={{
-                  width: '209px',
-                  height: '64px',
-                  flexShrink: 0
-                }}
-              >
-                <div className="w-8 h-8 bg-purple-500 dark:bg-purple-400 rounded-full flex items-center justify-center">
-                  <span className="text-white dark:text-purple-900 font-bold text-sm">$</span>
-                </div>
-                <div>
-                  <div className="text-xl font-bold text-foreground">
-                    {partnershipMetrics.pipelineValue >= 1000000 ? `$${(partnershipMetrics.pipelineValue / 1000000).toFixed(1)}M` :
-                     partnershipMetrics.pipelineValue >= 1000 ? `$${(partnershipMetrics.pipelineValue / 1000).toFixed(1)}K` :
-                     partnershipMetrics.pipelineValue === 0 ? '$0' : `$${partnershipMetrics.pipelineValue}`}
-                  </div>
-                  <div className="text-xs text-muted-foreground">Deal Value</div>
-                </div>
-              </div>
+              <div className="text-xs text-muted-foreground">Deal Value</div>
             </div>
           </div>
         </div>
