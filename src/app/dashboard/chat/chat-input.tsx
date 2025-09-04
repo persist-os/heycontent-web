@@ -497,8 +497,8 @@ export function ChatInput({
                       <Brain className="w-4 h-4" />
                     </button>
 
-                    {/* Smart Search Text Label - always visible */}
-                    <div className="ml-3 min-w-0">
+                    {/* Smart Search Text Label - hidden on mobile */}
+                    <div className="ml-3 min-w-0 hidden sm:block">
                       <span className={`text-xs font-medium transition-colors duration-300 break-words ${
                         useContextSearch 
                           ? 'text-foreground' 
