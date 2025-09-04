@@ -139,7 +139,7 @@ export const PersonaCardRenderer: React.FC<PersonaCardRendererProps> = ({ messag
   // Render PersonaCard if conditions are met
   if (shouldFetchPersona && shouldShow && hasPersona && persona) {
     return (
-      <div className="mt-4 p-6 bg-gradient-to-br from-primary/5 via-accent/5 to-primary/5 border border-primary/20 rounded-xl shadow-sm">
+      <div className="mt-4 p-6 bg-gradient-to-br from-primary/5 via-accent/5 to-primary/5 border border-primary/20 rounded-xl shadow-sm overflow-hidden">
         <div className="mb-6 text-center">
           <div className="inline-flex items-center gap-2 mb-3">
             <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>

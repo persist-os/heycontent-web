@@ -863,6 +863,12 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
     // New refinement setters
     setSelectedNoteTypeForCommands,
     
+    // Additional setters for external control
+    setPalettePosition,
+    setPaletteMode,
+    setRefinementMode,
+    setSelectedText,
+    
     // Props pass-through
     noteType,
     availableNotes,

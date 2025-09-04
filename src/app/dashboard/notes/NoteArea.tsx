@@ -6,7 +6,7 @@ import { api } from '@/convex/_generated/api';
 import { useInlineAI } from './hooks/useInlineAI';
 import { Note, NoteUpdate, NoteType } from './types';
 import { NoteHeader } from './components/NoteHeader';
-import { RichTextEditor } from '@/components/ui/rich-text-editor/rich-text-editor';
+import { RichTextEditor, RichTextEditorRef } from '@/components/ui/rich-text-editor/rich-text-editor';
 import { NoteMeta } from './components/NoteMeta';
 import { TypeSelector } from './components/TypeSelector';
 import { ImageGalleryModal } from './components/ImageGalleryModal';
@@ -203,6 +203,10 @@ export function NoteArea({
 }: NoteAreaProps) {
   // Get all notes from context for tag suggestions
   const { notes, canNavigateBack, navigationStack, generateMetadataManually, isGeneratingMetadata } = useNotes();
+  
+  // Add RichTextEditor ref for AI button
+  const richTextEditorRef = useRef<RichTextEditorRef>(null);
+  
   // Use the live query conditionally with "skip" parameter to avoid conditional hook call
   const liveNoteData = useQuery(
     api.notes.getNote, 
@@ -380,8 +384,12 @@ export function NoteArea({
     }
   };
 
+  const handleTriggerCommandPalette = () => {
+    richTextEditorRef.current?.triggerCommandPalette();
+  };
+
   return (
-    <div className="flex flex-col h-full w-full bg-background relative">
+    <div className="flex flex-col h-screen w-full bg-background relative">
       {/* Header */}
       <NoteHeader 
         note={note}
@@ -398,7 +406,7 @@ export function NoteArea({
       />
       
       {/* Note metadata and type selector */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/95">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b border-border bg-background/95 gap-3">
         <NoteMeta
           note={note} // Use note directly from Convex
           onUpdate={onUpdate}
@@ -409,7 +417,16 @@ export function NoteArea({
         />
         
         {/* Smart Title + Tags Button */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {/* AI Command Palette Button */}
+          <button
+            onClick={handleTriggerCommandPalette}
+            className="px-3 py-1.5 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-all duration-200 font-medium shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95"
+            title="AI Assistant (⌘K)"
+          >
+            AI
+          </button>
+          
           {shouldShowSmartButton && (
             <button
               onClick={handleGenerateMetadata}
@@ -420,12 +437,12 @@ export function NoteArea({
               {isGeneratingMetadata ? (
                 <>
                   <Loader2 size={14} className="animate-spin" />
-                  <span>Generating...</span>
+                  <span className="hidden sm:inline">Generating...</span>
                 </>
               ) : (
                 <>
                   <Wand2 size={14} />
-                  <span>Smart Title + Tags</span>
+                  <span className="hidden sm:inline">Smart Title + Tags</span>
                 </>
               )}
             </button>
@@ -453,6 +470,7 @@ export function NoteArea({
           </div>
         ) : (
           <RichTextEditor
+            ref={richTextEditorRef}
             content={content}
             onContentChange={handleContentChange}
             placeholder="Start writing your note..."

@@ -258,7 +258,7 @@ export default function SmartNotes() {
   // If viewing a specific note, show the editor
   if (activeNote) {
     return (
-      <div className="h-full w-full bg-background animate-in slide-in-from-right-4 duration-200">
+      <div className="h-screen w-full bg-background animate-in slide-in-from-right-4 duration-200">
         <NoteArea
           key={String(activeNote._id)}
           note={activeNote}
@@ -330,7 +330,7 @@ export default function SmartNotes() {
 
   // Show the grid view
   return (
-    <div className="h-full w-full bg-background p-3 sm:p-4 md:p-6">
+    <div className="h-screen w-full bg-background">
       <NotesGrid
         notes={notes}
         onEditNote={handleEditNote}

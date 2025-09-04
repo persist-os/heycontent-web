@@ -6,7 +6,7 @@ import { CreateNoteButton } from '@/components/ui/CreateNoteButton'
 import { useTheme } from 'next-themes'
 import { useAuth } from '@/app/context/auth-context'
 import { useInlineAI } from '../../../notes/hooks/useInlineAI'
-import { RichTextEditor } from '@/components/ui/rich-text-editor/rich-text-editor'
+import { RichTextEditor, RichTextEditorRef } from '@/components/ui/rich-text-editor/rich-text-editor'
 
 interface MarkdownNotepadProps {
   isOpen: boolean
@@ -20,6 +20,10 @@ interface MarkdownNotepadProps {
   // Note linking
   availableNotes?: Array<{ _id: string; title: string; type: string }>
   onLinkNote?: (noteId: string) => void
+  // Mobile props
+  isMobile?: boolean
+  activeTab?: 'chat' | 'notes'
+  onScrollPositionChange?: (position: number) => void
 }
 
 export const MarkdownNotepad = forwardRef(function MarkdownNotepad({ 
@@ -32,7 +36,10 @@ export const MarkdownNotepad = forwardRef(function MarkdownNotepad({
   onWidthChange, 
   style,
   availableNotes = [],
-  onLinkNote
+  onLinkNote,
+  isMobile = false,
+  activeTab = 'notes',
+  onScrollPositionChange
 }: MarkdownNotepadProps, ref) {
   const [content, setContent] = useState('')
   const [isResizing, setIsResizing] = useState(false)
@@ -46,6 +53,9 @@ export const MarkdownNotepad = forwardRef(function MarkdownNotepad({
 
   // --- Add sidebar container ref ---
   const sidebarRef = useRef<HTMLDivElement>(null)
+  
+  // --- Add RichTextEditor ref ---
+  const richTextEditorRef = useRef<RichTextEditorRef>(null)
 
   const { askAI, requestAnalysis, requestIdeas } = useInlineAI({
     noteContent: content,
@@ -99,8 +109,15 @@ export const MarkdownNotepad = forwardRef(function MarkdownNotepad({
     }
   }, [requestIdeas])
 
-  // Handle resizing with improved logic
+  // Handle command palette trigger
+  const handleTriggerCommandPalette = useCallback(() => {
+    richTextEditorRef.current?.triggerCommandPalette()
+  }, [])
+
+  // Handle resizing with improved logic (desktop only)
   useEffect(() => {
+    if (isMobile) return // Disable resizing on mobile
+    
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing) return
       
@@ -130,15 +147,16 @@ export const MarkdownNotepad = forwardRef(function MarkdownNotepad({
         document.body.style.userSelect = ''
       }
     }
-  }, [isResizing, onWidthChange])
+  }, [isResizing, onWidthChange, isMobile])
 
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    if (isMobile) return // Disable resizing on mobile
     e.preventDefault()
     e.stopPropagation()
     resizeStartX.current = e.clientX
     resizeStartWidth.current = width
     setIsResizing(true)
-  }, [width])
+  }, [width, isMobile])
 
   const handleClear = () => {
     setContent('')
@@ -174,8 +192,100 @@ export const MarkdownNotepad = forwardRef(function MarkdownNotepad({
     getContent: () => content || '',
   }), [content]);
 
-  if (!isOpen) return null
+  // Don't render on mobile if not the active tab
+  if (isMobile && activeTab !== 'notes') {
+    return null
+  }
 
+  // Don't render on desktop if not open
+  if (!isMobile && !isOpen) {
+    return null
+  }
+
+  // Mobile layout
+  if (isMobile) {
+    return (
+      <div className="flex flex-col h-full bg-background">
+        {/* Mobile Header */}
+        <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-medium text-foreground">
+              Smart Notes
+            </h3>
+          </div>
+          
+          <div className="flex items-center gap-1">
+            {/* AI Command Palette Button */}
+            <button
+              onClick={handleTriggerCommandPalette}
+              className="px-3 py-1.5 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-all duration-200 font-medium shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95"
+              title="AI Assistant (⌘K)"
+            >
+              AI
+            </button>
+            
+            <button
+              onClick={handleCopy}
+              disabled={!content.trim()}
+              className="p-1.5 text-muted-foreground hover:text-foreground rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted"
+              aria-label="Copy content"
+              title="Copy content"
+            >
+              <Copy className="w-4 h-4" />
+            </button>
+            
+            <button
+              onClick={handleClear}
+              className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground rounded-md transition-colors hover:bg-muted"
+              title="Clear content"
+            >
+              Clear
+            </button>
+            
+            <CreateNoteButton content={content} onNoteCreate={handleClear} />
+
+            {onSendToChat && (
+              <button
+                onClick={handleSendToChat}
+                disabled={!content.trim()}
+                className={`flex items-center gap-1 px-3 py-1.5 text-xs ${accentBg} ${accentBgHover} text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium`}
+                title="Send to chat"
+              >
+                <Send className="w-3 h-3" />
+                Send
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Mobile Rich Text Editor */}
+        <div className="flex-1 overflow-auto relative">
+          <RichTextEditor
+            content={content}
+            onContentChange={setContent}
+            placeholder="Start writing... Messages will appear here."
+            onAskAI={handleAskAI}
+            onRequestAnalysis={handleRequestAnalysis}
+            onRequestIdeas={handleRequestIdeas}
+            userId={firebaseUser?.uid}
+            noteType="idea_bank"
+            availableNotes={availableNotes}
+            onLinkNote={onLinkNote}
+            className="h-full border-0"
+            containerRef={sidebarRef}
+            ref={richTextEditorRef}
+          />
+        </div>
+
+        {/* Mobile Footer */}
+        <div className="px-4 py-2 border-t border-border text-xs text-muted-foreground/80 shrink-0">
+          Markdown supported • ⌘K for AI assistant • @ to link notes • ⌘B bold • ⌘I italic • ⌘U underline
+        </div>
+      </div>
+    )
+  }
+
+  // Desktop layout (existing implementation)
   return (
     <div 
       ref={sidebarRef}
@@ -200,6 +310,15 @@ export const MarkdownNotepad = forwardRef(function MarkdownNotepad({
         </div>
         
         <div className="flex items-center gap-1">
+          {/* AI Command Palette Button */}
+          <button
+            onClick={handleTriggerCommandPalette}
+            className="px-3 py-1.5 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-all duration-200 font-medium shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95"
+            title="AI Assistant (⌘K)"
+          >
+            AI
+          </button>
+          
           <button
             onClick={handleCopy}
             disabled={!content.trim()}
@@ -258,6 +377,7 @@ export const MarkdownNotepad = forwardRef(function MarkdownNotepad({
           onLinkNote={onLinkNote}
           className="h-full border-0"
           containerRef={sidebarRef}
+          ref={richTextEditorRef}
         />
       </div>
 

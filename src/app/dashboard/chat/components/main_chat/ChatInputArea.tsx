@@ -26,6 +26,9 @@ interface ChatInputAreaProps {
   onClearQuoted: () => void;
   isAuthenticated?: boolean;
   currentTab?: string; // Add currentTab prop for tab-specific @ linking
+  // Mobile props
+  isMobile?: boolean;
+  activeTab?: 'chat' | 'notes';
 }
 
 const ChatInputArea: React.FC<ChatInputAreaProps> = ({
@@ -49,7 +52,9 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   quotedForNotepad,
   onClearQuoted,
   isAuthenticated = true,
-  currentTab = 'all'
+  currentTab = 'all',
+  isMobile = false,
+  activeTab = 'chat'
 }) => {
   // Only show ambient content when there are no messages
   const showAmbientContent = showAmbient && !currentContext;
@@ -112,6 +117,8 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
             quotedForNotepad={quotedForNotepad}
             onClearQuoted={onClearQuoted}
             currentTab={currentTab}
+            isMobile={isMobile}
+            activeTab={activeTab}
           />
         </div>
       </div>

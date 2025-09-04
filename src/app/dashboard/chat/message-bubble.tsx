@@ -311,7 +311,7 @@ export function MessageBubble({
       {/* Chat Bubble Container */}
       <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-1`}>
         <div
-          className={`flex-shrink max-w-full sm:max-w-[80%] ${isUser ? '' : 'sm:max-w-[90%]'}`}
+          className={`flex-shrink max-w-full sm:max-w-[70%] ${isUser ? '' : 'sm:max-w-[80%]'} min-w-0 w-full`}
         >
           <div
             id={`message-${message.id}`}
@@ -322,21 +322,24 @@ export function MessageBubble({
               relative
               group
               w-full
+              min-w-0
+              mr-2 sm:mr-4
+              overflow-hidden
             `}
           >
             {/* Referenced message preview */}
             {message.referencedMessage && (
               <button 
                 onClick={() => onScrollToMessage?.(message.referencedMessage!.id)}
-                className="text-[10px] sm:text-xs text-muted-foreground bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 p-1.5 rounded mb-2 break-words text-left transition-colors w-full cursor-pointer"
+                className="text-[10px] sm:text-xs text-muted-foreground bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 p-1.5 rounded mb-2 break-words text-left transition-colors w-full cursor-pointer min-w-0"
               >
                 <div className="font-medium mb-0.5">Replying to:</div>
-                <div className="truncate opacity-80">{message.referencedMessage.content}</div>
+                <div className="truncate opacity-80 break-words">{message.referencedMessage.content}</div>
               </button>
             )}
 
             {/* Main message content */}
-            <div className="prose prose-sm dark:prose-invert prose-p:my-2 prose-headings:my-3 max-w-none break-words">
+            <div className="prose prose-sm dark:prose-invert prose-p:my-2 prose-headings:my-3 max-w-none break-words pr-1 w-full overflow-hidden">
               {mightHavePersona && userId ? (
                 <PersonaCardRenderer message={message} userId={userId} />
               ) : isUser && hasLinkedContent ? (

@@ -33,7 +33,7 @@ export const SuggestionChip = ({ suggestion, onClick, onInputPopulate }: Suggest
         className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium  
           bg-primary text-primary-foreground dark:text-black hover:bg-primary/90 hover:text-primary-foreground dark:hover:text-black
           rounded-lg transition-all duration-200 hover:shadow-sm hover:-translate-y-0.5 
-          active:translate-y-0 active:shadow-none select-none max-w-full chat-font"
+          active:translate-y-0 active:shadow-none select-none max-w-full chat-font break-words"
       >
         {!isStringType && (
           <span className="text-primary-foreground dark:text-black group-hover:text-primary-foreground dark:group-hover:text-black transition-colors duration-200">
@@ -43,7 +43,7 @@ export const SuggestionChip = ({ suggestion, onClick, onInputPopulate }: Suggest
             {(suggestion as SuggestedAction).type === 'strategic' && <Target className="w-3.5 h-3.5 flex-shrink-0" />}
           </span>
         )}
-        <span className="break-words min-w-0 text-left whitespace-normal sm:whitespace-nowrap">
+        <span className="break-words min-w-0 text-left whitespace-normal">
           {displayText}
         </span>
       </button>

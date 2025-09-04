@@ -5,6 +5,8 @@ import { X, Send, Copy, MessageSquare, FileText, Plus, ChevronRight, ChevronLeft
 import { useTheme } from 'next-themes'
 import { motion } from "framer-motion"
 import { Loader2, ArrowRight } from 'lucide-react'
+import { MobileTabBar } from '@/app/dashboard/chat/components/notepad/MobileTabBar'
+import { CreateNoteButton } from '@/components/ui/CreateNoteButton'
 
 interface Source {
   id: string
@@ -34,6 +36,98 @@ interface DisplayOption {
   icon: React.ReactNode
   action: () => void
   category?: string
+}
+
+// Simplified useNotepadUI hook for showcase
+function useShowcaseNotepadUI() {
+  const [isOpen, setIsOpen] = useState(true) // Open by default for showcase
+  const [width, setWidth] = useState(400)
+  
+  // Mobile tab bar state
+  const [isMobile, setIsMobile] = useState(false)
+  const [activeTab, setActiveTab] = useState<'chat' | 'notes'>('chat')
+  const [hasUnreadNotepadChanges, setHasUnreadNotepadChanges] = useState(false)
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640) // sm breakpoint
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  const toggleNotepad = useCallback(() => {
+    if (isMobile) {
+      // On mobile, toggle between chat and notes tabs
+      setActiveTab(prev => prev === 'chat' ? 'notes' : 'chat')
+      // Clear badge when user manually switches to notes
+      if (activeTab === 'chat') {
+        setHasUnreadNotepadChanges(false)
+      }
+    } else {
+      // On desktop, toggle notepad visibility
+      setIsOpen(prev => !prev)
+    }
+  }, [isMobile, activeTab])
+
+  const switchToTab = useCallback((tab: 'chat' | 'notes') => {
+    if (isMobile) {
+      setActiveTab(tab)
+      // Clear badge when user switches to notes
+      if (tab === 'notes') {
+        setHasUnreadNotepadChanges(false)
+      }
+    }
+  }, [isMobile])
+
+  const getMainContentStyle = useCallback(() => {
+    if (isMobile) {
+      // On mobile, always use full width
+      return {
+        width: '100%',
+        transition: 'width 0.2s ease-out'
+      }
+    } else {
+      // On desktop, use the existing logic
+      return {
+        marginRight: isOpen ? `${width}px` : '0px',
+        transition: 'margin-right 0.3s ease-in-out'
+      }
+    }
+  }, [isOpen, width, isMobile])
+
+  const getNotepadStyle = useCallback(() => {
+    if (isMobile) {
+      // On mobile, notepad is part of the main layout, not fixed positioned
+      return {
+        transform: 'none',
+        visibility: (activeTab === 'notes' ? 'visible' : 'hidden') as 'visible' | 'hidden',
+        transition: 'visibility 0.2s ease-out'
+      }
+    } else {
+      // On desktop, use the existing fixed positioning logic
+      return {
+        transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
+        transition: 'transform 0.3s ease-in-out'
+      }
+    }
+  }, [isOpen, isMobile, activeTab])
+
+  return {
+    isOpen,
+    width,
+    isMobile,
+    activeTab,
+    hasUnreadNotepadChanges,
+    toggleNotepad,
+    switchToTab,
+    getMainContentStyle,
+    getNotepadStyle
+  }
 }
 
 const sources: Source[] = [
@@ -121,8 +215,6 @@ const conversation: ConversationMessage[] = [
   }
 ]
 
-
-
 function SmartSearchSources({ sources: sourceIds }: { sources?: string[] }) {
   if (!sourceIds || sourceIds.length === 0) return null
 
@@ -181,28 +273,30 @@ function SuggestionChips({ suggestions, onSuggestionClick }: {
   )
 }
 
-function InlineCommandPalette({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const [selectedIndex, setSelectedIndex] = useState(0)
-  const [userInput, setUserInput] = useState('')
-
+// Command Palette Component
+function CommandPalette({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   if (!isOpen) return null
 
   return (
     <motion.div
+      drag
+      dragMomentum={false}
+      whileDrag={{ cursor: "grabbing" }}
       initial={{ opacity: 0, scale: 0.95, y: 10 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95, y: 10 }}
-      className="fixed z-[200] bg-background border border-border rounded-lg shadow-2xl overflow-hidden backdrop-blur-sm"
+      className="fixed z-[200] bg-background border border-border rounded-lg shadow-2xl overflow-hidden backdrop-blur-sm cursor-grab"
       style={{
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
-        width: '400px',
-        maxHeight: '500px'
+        width: '90vw',
+        maxWidth: '400px',
+        maxHeight: '80vh'
       }}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
+      {/* Draggable Header */}
+      <div className="flex items-center justify-between p-4 border-b border-border select-none">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
           <span className="text-sm font-medium">AI Assistant</span>
@@ -220,8 +314,6 @@ function InlineCommandPalette({ isOpen, onClose }: { isOpen: boolean; onClose: (
       <div className="p-4 border-b border-border">
         <input
           type="text"
-          value={userInput}
-          onChange={(e) => setUserInput(e.target.value)}
           placeholder="Ask AI to analyze, summarize, or expand..."
           className="w-full px-3 py-2 text-sm bg-muted/50 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
           disabled
@@ -229,7 +321,7 @@ function InlineCommandPalette({ isOpen, onClose }: { isOpen: boolean; onClose: (
       </div>
 
       {/* Commands */}
-      <div className="max-h-80 overflow-y-auto">
+      <div className="max-h-60 overflow-y-auto">
         <div className="py-2">
           <div className="px-4 py-2">
             <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
@@ -290,13 +382,17 @@ const MarkdownNotepad = forwardRef(function MarkdownNotepad({
   onClose, 
   width, 
   style,
-  onOpenCommandPalette
+  isMobile = false,
+  activeTab = 'chat',
+  onCommandPaletteOpen
 }: {
   isOpen: boolean
   onClose: () => void
   width: number
   style: React.CSSProperties
-  onOpenCommandPalette?: () => void
+  isMobile?: boolean
+  activeTab?: 'chat' | 'notes'
+  onCommandPaletteOpen?: () => void
 }, ref) {
   const [content, setContent] = useState(`# Job Search Strategy
 
@@ -344,20 +440,88 @@ Based on our discussion about job searching and potential relocation, here are t
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isOpen && (e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
-        onOpenCommandPalette?.()
+        onCommandPaletteOpen?.()
       }
     }
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onOpenCommandPalette])
+  }, [isOpen, onCommandPaletteOpen])
 
   if (!isOpen) return null
 
+  // Don't render on mobile if not the active tab
+  if (isMobile && activeTab !== 'notes') {
+    return null
+  }
+
+  // Don't render on desktop if not open
+  if (!isMobile && !isOpen) {
+    return null
+  }
+
+  // Mobile layout
+  if (isMobile) {
+    return (
+      <div className="flex flex-col h-full bg-background">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-medium text-foreground">
+              Smart Notes
+            </h3>
+          </div>
+          
+          <div className="flex items-center gap-1">
+            <CreateNoteButton
+              content={content}
+              title="Smart Note"
+              className="p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            />
+            
+            {/* AI Command Palette Button */}
+            <button
+              onClick={onCommandPaletteOpen}
+              className="px-3 py-1.5 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-all duration-200 font-medium shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95"
+              title="AI Assistant (⌘K)"
+            >
+              AI
+            </button>
+            
+            <button
+              onClick={() => setContent('')}
+              className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground rounded-md transition-colors hover:bg-muted"
+              title="Clear content"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-auto p-4 min-h-0">
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="Start writing... Your notes will appear here."
+            className="w-full h-full resize-none bg-transparent border-0 outline-none text-sm leading-relaxed font-mono min-h-[400px]"
+          />
+        </div>
+
+        {/* Footer */}
+        <div className="px-4 py-2 border-t border-border text-xs text-muted-foreground/80 shrink-0">
+          Markdown supported • ⌘K for AI assistant • @ to link notes
+        </div>
+      </div>
+    )
+  }
+
+  // Desktop layout
   return (
     <div 
       className="fixed top-0 right-0 h-full bg-background border-l border-border z-40 flex flex-col shadow-lg"
       style={{ ...style, width: `${width}px` }}
+      data-note-editor
     >
       {/* Resize Handle */}
       <div className="absolute left-0 top-0 w-2 h-full cursor-col-resize z-50 hover:bg-purple-600/10 transition-colors group flex items-center justify-center">
@@ -373,12 +537,19 @@ Based on our discussion about job searching and potential relocation, here are t
         </div>
         
         <div className="flex items-center gap-1">
-          <button
-            onClick={onOpenCommandPalette}
+          <CreateNoteButton
+            content={content}
+            title="Smart Note"
             className="p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            title="Open AI Assistant (⌘K)"
+          />
+          
+          {/* AI Command Palette Button */}
+          <button
+            onClick={onCommandPaletteOpen}
+            className="px-3 py-1.5 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-all duration-200 font-medium shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95"
+            title="AI Assistant (⌘K)"
           >
-            <Plus className="w-4 h-4" />
+            AI
           </button>
           
           <button
@@ -419,25 +590,30 @@ Based on our discussion about job searching and potential relocation, here are t
 })
 
 export function AgentsShowcase() {
-  const [notepadOpen, setNotepadOpen] = useState(true) // Open by default
+  // Use the showcase notepad UI hook
+  const {
+    isOpen: notepadOpen,
+    width: notepadWidth,
+    isMobile,
+    activeTab,
+    hasUnreadNotepadChanges,
+    toggleNotepad,
+    switchToTab,
+    getMainContentStyle,
+    getNotepadStyle
+  } = useShowcaseNotepadUI()
+
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
-  const [notepadWidth, setNotepadWidth] = useState(400)
   const [inputValue, setInputValue] = useState('')
   const notepadRef = useRef<{ hasUnsavedContent: () => boolean; clearContent: () => void; getContent: () => string }>(null)
   const { theme } = useTheme()
 
-  const getMainContentStyle = () => ({
-    marginRight: notepadOpen ? `${notepadWidth}px` : '0px',
-    transition: 'margin-right 0.3s ease-in-out'
-  })
-
-  const getNotepadStyle = () => ({
-    transform: notepadOpen ? 'translateX(0)' : 'translateX(100%)',
-    transition: 'transform 0.3s ease-in-out'
-  })
-
   const handleSuggestionClick = (suggestion: string) => {
     setInputValue(suggestion)
+  }
+
+  const handleCommandPaletteOpen = () => {
+    setCommandPaletteOpen(true)
   }
 
   return (
@@ -460,9 +636,9 @@ export function AgentsShowcase() {
 
         {/* Chat Container Preview */}
         <div className="max-w-6xl mx-auto relative animate-fade-in-up" style={{animationDelay: '0.4s'}}>
-          <div className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-3xl shadow-sm border border-slate-200/50 dark:border-slate-700/50 overflow-hidden">
+          <div className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-3xl shadow-sm border border-slate-200/50 dark:border-slate-700/50 overflow-hidden h-[600px] flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
                   <MessageSquare className="w-4 h-4 text-white" />
@@ -474,7 +650,7 @@ export function AgentsShowcase() {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setNotepadOpen(!notepadOpen)}
+                  onClick={toggleNotepad}
                   className="p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   title="Toggle Smart Notes"
                 >
@@ -483,88 +659,128 @@ export function AgentsShowcase() {
               </div>
             </div>
 
-            {/* Chat Content */}
-            <div className="relative" style={getMainContentStyle()}>
-              <div className="p-6">
-                <div className="max-w-4xl mx-auto relative">
-                  <div className="space-y-6">
-                    {conversation.map((message, index) => (
-                      <div key={message.id} className="relative animate-fade-in-up" style={{animationDelay: `${0.6 + index * 0.2}s`}}>
-                        {message.sender === 'assistant' && message.sources && message.sources.length > 0 && (
-                          <SmartSearchSources sources={message.sources} />
-                        )}
-                        
-                        <div className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[85%] ${message.sender === 'user' ? 'text-right' : 'text-left'}`}>
-                            <div className={`inline-block px-6 py-4 rounded-2xl ${
-                              message.sender === 'user' 
-                                ? 'bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900' 
-                                : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
-                            }`}>
-                              <div className="text-lg leading-relaxed prose prose-sm max-w-none">
-                                <div dangerouslySetInnerHTML={{ 
-                                  __html: message.content
-                                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                                    .replace(/\n\n/g, '<br><br>')
-                                    .replace(/\n/g, '<br>')
-                                }} />
+            {/* Mobile Tab Bar */}
+            {isMobile && (
+              <MobileTabBar
+                activeTab={activeTab}
+                onTabChange={switchToTab}
+                hasUnreadNotepadChanges={hasUnreadNotepadChanges}
+              />
+            )}
+
+            {/* Main Content Area */}
+            <div className="flex-1 flex flex-col min-h-0">
+              {/* Mobile: Show chat content only when activeTab is 'chat' */}
+              {/* Desktop: Always show chat content */}
+              {(!isMobile || activeTab === 'chat') && (
+                <div className="flex-1 flex flex-col min-h-0" style={getMainContentStyle()}>
+                  {/* Chat Messages - Scrollable Area */}
+                  <div className="flex-1 overflow-y-auto p-6 min-h-0">
+                    <div className="max-w-4xl mx-auto relative">
+                      <div className="space-y-6">
+                        {conversation.map((message, index) => (
+                          <div key={message.id} className="relative animate-fade-in-up" style={{animationDelay: `${0.6 + index * 0.2}s`}}>
+                            {message.sender === 'assistant' && message.sources && message.sources.length > 0 && (
+                              <SmartSearchSources sources={message.sources} />
+                            )}
+                            
+                            <div className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                              <div className={`max-w-[85%] ${message.sender === 'user' ? 'text-right' : 'text-left'}`}>
+                                <div className={`inline-block px-6 py-4 rounded-2xl ${
+                                  message.sender === 'user' 
+                                    ? 'bg-[hsl(var(--user-message))] dark:bg-slate-200 text-white dark:text-slate-900' 
+                                    : 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white'
+                                }`}>
+                                  <div className={`text-lg leading-relaxed max-w-none ${
+                                    message.sender === 'user' 
+                                      ? 'text-white dark:text-slate-900' 
+                                      : 'text-slate-800 dark:text-white'
+                                  }`}>
+                                    <div dangerouslySetInnerHTML={{ 
+                                      __html: message.content
+                                        .replace(/\*\*(.*?)\*\*/g, `<strong class="${message.sender === 'user' ? 'text-white dark:text-slate-900' : 'text-slate-800 dark:text-white'}">$1</strong>`)
+                                        .replace(/\*(.*?)\*/g, `<em class="${message.sender === 'user' ? 'text-white dark:text-slate-900' : 'text-slate-800 dark:text-white'}">$1</em>`)
+                                        .replace(/\n\n/g, '<br><br>')
+                                        .replace(/\n/g, '<br>')
+                                    }} />
+                                  </div>
+                                </div>
+                                <div className={`text-xs text-slate-500 dark:text-slate-400 mt-2 ${
+                                  message.sender === 'user' ? 'text-right' : 'text-left'
+                                }`}>
+                                  {message.timestamp}
+                                </div>
                               </div>
                             </div>
-                            <div className={`text-xs text-slate-500 dark:text-slate-400 mt-2 ${
-                              message.sender === 'user' ? 'text-right' : 'text-left'
-                            }`}>
-                              {message.timestamp}
-                            </div>
+
+                            {/* Suggestions */}
+                            <SuggestionChips suggestions={message.suggestions} onSuggestionClick={handleSuggestionClick} />
                           </div>
-                        </div>
-
-                        {/* Suggestions */}
-                        <SuggestionChips suggestions={message.suggestions} onSuggestionClick={handleSuggestionClick} />
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Input Area */}
-              <div className="border-t border-slate-200 dark:border-slate-700 bg-background p-4">
-                <div className="max-w-4xl mx-auto">
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 relative">
-                      <textarea
-                        value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
-                        placeholder="Message HeyContext..."
-                        className="w-full px-4 py-3 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
-                        rows={1}
-                        style={{ height: '48px', lineHeight: '1.2' }}
-                      />
                     </div>
-                    <button className="flex-shrink-0 h-12 w-12 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors flex items-center justify-center" aria-label="Send message">
-                      <Send className="w-4 h-4" />
-                    </button>
+                  </div>
+
+                  {/* Input Area - Fixed at Bottom */}
+                  <div className="border-t border-slate-200 dark:border-slate-700 bg-background p-4 shrink-0">
+                    <div className="max-w-4xl mx-auto">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1 relative">
+                          <textarea
+                            value={inputValue}
+                            onChange={(e) => setInputValue(e.target.value)}
+                            placeholder="Message HeyContext..."
+                            className="w-full px-4 py-3 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                            rows={1}
+                            style={{ height: '48px', lineHeight: '1.2' }}
+                          />
+                        </div>
+                        <button className="flex-shrink-0 h-12 w-12 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors flex items-center justify-center" aria-label="Send message">
+                          <Send className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
+
+              {/* Mobile: Show notepad content when activeTab is 'notes' */}
+              {isMobile && activeTab === 'notes' && (
+                <div className="flex-1 flex flex-col min-h-0">
+                  <MarkdownNotepad
+                    ref={notepadRef}
+                    isOpen={true}
+                    onClose={toggleNotepad}
+                    width={notepadWidth}
+                    style={getNotepadStyle()}
+                    isMobile={isMobile}
+                    activeTab={activeTab}
+                    onCommandPaletteOpen={handleCommandPaletteOpen}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Notepad */}
-          <MarkdownNotepad
-            ref={notepadRef}
-            isOpen={notepadOpen}
-            onClose={() => setNotepadOpen(false)}
-            width={notepadWidth}
-            style={getNotepadStyle()}
-            onOpenCommandPalette={() => setCommandPaletteOpen(true)}
-          />
+          {/* Notepad - Desktop only */}
+          {!isMobile && (
+            <MarkdownNotepad
+              ref={notepadRef}
+              isOpen={notepadOpen}
+              onClose={toggleNotepad}
+              width={notepadWidth}
+              style={getNotepadStyle()}
+              isMobile={isMobile}
+              activeTab={activeTab}
+              onCommandPaletteOpen={handleCommandPaletteOpen}
+            />
+          )}
         </div>
 
-        {/* Command Palette */}
-        <InlineCommandPalette 
-          isOpen={commandPaletteOpen}
-          onClose={() => setCommandPaletteOpen(false)}
+        {/* Global Command Palette */}
+        <CommandPalette 
+          isOpen={commandPaletteOpen} 
+          onClose={() => setCommandPaletteOpen(false)} 
         />
 
         <div className="mt-32 text-center animate-fade-in-up" style={{animationDelay: '2s'}}>

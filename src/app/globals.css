@@ -44,6 +44,7 @@
     --light-green: 140 60% 95%; /* Light green background */
     --gray-text: 220 10% 55%; /* Gray text */
     --dark-text: 220 25% 20%; /* Dark text */
+    --user-message: 220 13% 18%; /* #2D3748 - gray-blue for user messages */
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
@@ -86,6 +87,7 @@
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+    --user-message: 220 13% 18%; /* #2D3748 - gray-blue for user messages in dark mode too */
   }
 }
 
@@ -140,6 +142,43 @@
     word-wrap: break-word;
     overflow-wrap: break-word;
     max-width: 100%;
+  }
+
+  /* Mobile-specific text wrapping for chat messages */
+  @media (max-width: 640px) {
+    .markdown-content {
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+
+    .markdown-content * {
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+
+    /* Ensure list items don't overflow on mobile */
+    .markdown-content ul,
+    .markdown-content ol {
+      margin-left: 1rem !important;
+      padding-right: 0.5rem;
+    }
+
+    .markdown-content li {
+      padding-right: 0.5rem;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+
+    /* Chat content renderer mobile optimizations */
+    .chat-content-renderer {
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+
+    .chat-content-renderer * {
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
   }
 }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { forwardRef, useEffect } from 'react'
+import React, { forwardRef, useEffect, useImperativeHandle } from 'react'
 import { Edit, Eye } from 'lucide-react'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
@@ -9,8 +9,13 @@ import { useRichTextEditor } from './use-rich-text-editor'
 import { RichTextEditorProps } from './rich-text-editor.types'
 import { ContentRenderer } from './content-renderer'
 import { InlineCommandPalette } from '@/app/dashboard/notes/components/InlineCommandPalette'
+import { getCursorCoordinates } from './formatting-utils'
 
-export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProps>(({
+export interface RichTextEditorRef {
+  triggerCommandPalette: () => void;
+}
+
+export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>(({
   content,
   onContentChange,
   placeholder = 'Start writing...',
@@ -77,7 +82,11 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
     setShowEnhancedContentSelector,
     setContentSearchTerm,
     // New refinement setters
-    setSelectedNoteTypeForCommands
+    setSelectedNoteTypeForCommands,
+    setPalettePosition,
+    setPaletteMode,
+    setRefinementMode,
+    setSelectedText
   } = useRichTextEditor({
     content,
     onContentChange,
@@ -95,15 +104,64 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
     userId,
     containerRef
   })
-  
-  // Sync external ref
-  useEffect(() => {
-    if (ref && typeof ref === 'function') {
-      ref(textAreaRef.current)
-    } else if (ref) {
-      (ref as React.MutableRefObject<HTMLTextAreaElement | null>).current = textAreaRef.current
+
+  // Expose the trigger function to parent components
+  useImperativeHandle(ref, () => ({
+    triggerCommandPalette: () => {
+      // If we're in preview mode, switch to edit mode first
+      if (currentShowPreview) {
+        togglePreview();
+        // Wait for the textarea to be rendered, then trigger the palette
+        setTimeout(() => {
+          triggerCommandPaletteInternal();
+        }, 100);
+        return;
+      }
+      
+      triggerCommandPaletteInternal();
     }
-  }, [ref])
+  }), [currentShowPreview, togglePreview, getDisplayContent, content, setPalettePosition, setPaletteMode, setShowCommandPalette, setRefinementMode, setSelectedText, setSelectedNoteTypeForCommands, noteType, textAreaRef, containerRef]);
+  
+  // Internal function to actually trigger the command palette
+  const triggerCommandPaletteInternal = () => {
+    const textarea = textAreaRef.current;
+    if (!textarea) {
+      return;
+    }
+    
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const hasSelection = start !== end;
+    
+    if (hasSelection) {
+      // Refinement mode - text is selected
+      const displayContent = getDisplayContent(content);
+      const selectedText = displayContent.substring(start, end);
+      
+      // Set refinement mode state
+      const coords = getCursorCoordinates(textAreaRef, containerRef);
+      setPalettePosition(coords);
+      setPaletteMode('commands');
+      setShowCommandPalette(true);
+      
+      // Set refinement mode
+      setRefinementMode(true);
+      setSelectedText(selectedText);
+      setSelectedNoteTypeForCommands(noteType as any);
+    } else {
+      // Generation mode - no text selected
+      const coords = getCursorCoordinates(textAreaRef, containerRef);
+      setPalettePosition(coords);
+      setPaletteMode('commands');
+      setShowCommandPalette(true);
+      
+      // Set generation mode
+      setRefinementMode(false);
+      setSelectedText('');
+    }
+  };
+  
+  // Remove the conflicting ref sync since we're using RichTextEditorRef interface
 
   return (
     <div className={`relative w-full h-full ${className}`}>
