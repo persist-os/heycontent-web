@@ -106,11 +106,6 @@ export function CommandPaletteHeader({
                 className="w-full px-2 py-1 text-sm bg-transparent border-none focus:outline-none text-foreground placeholder:text-muted-foreground"
                 disabled={operationState.isOperationInProgress || refinementState.isProcessingRefinement}
               />
-              {userInput.trim() && (
-                <div className="mt-1 text-xs text-muted-foreground">
-                  Press <kbd className="px-1 py-0.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600">Enter</kbd> to {refinementMode ? 'refine' : 'generate'} with: "{userInput}"
-                </div>
-              )}
             </div>
           ) : (
             <span className="text-sm text-muted-foreground flex items-center gap-2">
