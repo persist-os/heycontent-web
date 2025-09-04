@@ -33,6 +33,7 @@ import { checkUserEmbeddings } from './utils/api-utils';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { useChatHandlers } from './hooks/useChatHandlers'
 import { MarkdownNotepad } from './components/notepad/MarkdownNotepad'
+import { MobileTabBar } from './components/notepad/MobileTabBar'
 import { useNotepadUI } from './hooks/useNotepadUI'
 import { useNotes } from '@/app/context/notes-context'
 import { usePersonaStore } from '@/store/persona-store'
@@ -199,7 +200,17 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     toggleNotepad,
     updateWidth,
     getMainContentStyle,
-    getNotepadStyle
+    getNotepadStyle,
+    // Mobile tab bar functionality
+    isMobile,
+    activeTab,
+    chatScrollPosition,
+    notepadScrollPosition,
+    hasUnreadNotepadChanges,
+    switchToTab,
+    insertTextToNotepad,
+    clearNotepadBadge,
+    saveScrollPosition
   } = useNotepadUI()
 
   // Add ref for MarkdownNotepad
@@ -235,6 +246,12 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     handleNotepadSendToChat,
     createReferenceClickHandler 
   } = useChatHandlers(handleSendMessage, handleClearReference, messages)
+
+  // Enhanced quote to notepad handler with mobile support
+  const handleQuoteToNotepadEnhanced = useCallback((text: string) => {
+    handleQuoteToNotepad(text)
+    insertTextToNotepad(text)
+  }, [handleQuoteToNotepad, insertTextToNotepad])
 
   // Memoized handlers to prevent unnecessary re-renders
   const handleSendMessageWithUpdateCheck = useCallback((message: string) => {
@@ -557,6 +574,38 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     }
   }, [messages, isLoading]);
 
+  // Scroll position management for mobile tab switching
+  useEffect(() => {
+    if (!isMobile || !chatContainerRef.current) return;
+
+    const scrollContainer = chatContainerRef.current;
+    
+    const handleScroll = () => {
+      saveScrollPosition('chat', scrollContainer.scrollTop);
+    };
+
+    scrollContainer.addEventListener('scroll', handleScroll);
+    
+    return () => scrollContainer.removeEventListener('scroll', handleScroll);
+  }, [isMobile, saveScrollPosition]);
+
+  // Restore scroll position when switching tabs
+  useEffect(() => {
+    if (!isMobile || !chatContainerRef.current) return;
+
+    const scrollContainer = chatContainerRef.current;
+    
+    // Restore chat scroll position when switching to chat tab
+    if (activeTab === 'chat' && chatScrollPosition > 0) {
+      setTimeout(() => {
+        scrollContainer.scrollTo({
+          top: chatScrollPosition,
+          behavior: 'instant'
+        });
+      }, 100);
+    }
+  }, [isMobile, activeTab, chatScrollPosition]);
+
   // Cleanup effect to prevent auto-restart on unmount
   useEffect(() => {
     return () => {
@@ -611,6 +660,15 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Mobile Tab Bar */}
+          {isMobile && (
+            <MobileTabBar
+              activeTab={activeTab}
+              onTabChange={switchToTab}
+              hasUnreadNotepadChanges={hasUnreadNotepadChanges}
+            />
+          )}
+
           {!authData.user ? (
             // Loading placeholder for unauthenticated state
             <div className="flex-1 flex items-center justify-center">
@@ -621,61 +679,65 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
               </div>
             </div>
           ) : hasMessagesOrContext ? (
-            <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden">
-              <div className="p-3 sm:p-4 pb-4">
-                <div className="max-w-4xl sm:max-w-6xl mx-auto space-y-3">
-                  {/* Context box */}
-                  {currentContext && (
-                    <ChatContextBox
-                      currentContext={currentContext}
+            // Mobile: Show chat content only when activeTab is 'chat'
+            // Desktop: Always show chat content
+            (!isMobile || activeTab === 'chat') && (
+              <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden">
+                <div className="p-3 sm:p-4 pb-4">
+                  <div className="max-w-4xl sm:max-w-6xl mx-auto space-y-3">
+                    {/* Context box */}
+                    {currentContext && (
+                      <ChatContextBox
+                        currentContext={currentContext}
+                        messages={messages}
+                        onRemove={handleRemoveContext}
+                        includeAnalysisInQuery={includeAnalysisInQuery}
+                        onToggleAnalysis={setIncludeAnalysisInQuery}
+                        onSendMessage={handleSendMessageWithUpdateCheck}
+                        onInputPopulate={handleInputAppend}
+                      />
+                    )}
+                    
+                    <ChatMessagesList
                       messages={messages}
-                      onRemove={handleRemoveContext}
-                      includeAnalysisInQuery={includeAnalysisInQuery}
-                      onToggleAnalysis={setIncludeAnalysisInQuery}
-                      onSendMessage={handleSendMessageWithUpdateCheck}
-                      onInputPopulate={handleInputAppend}
-                    />
-                  )}
-                  
-                  <ChatMessagesList
-                    messages={messages}
-                    referencedMessage={referencedMessage}
-                    handleMessageReference={handleMessageReference}
-                    handleReferenceClick={notepadReferenceHandler}
-                    handleOptionClick={handleOptionClick}
-                    handleFollowUpClick={handleFollowUpPopulate}
-                    userId={authData.userId}
-                    handleSuggestionClick={handleSuggestionClick}
-                    handleSendMessage={handleSendMessageWithUpdateCheck}
-                    onInputPopulate={handleInputAppend}
-                    notepadOpen={notepadOpen}
-                    onQuoteToNotepad={handleQuoteToNotepad}
-                    onContentClick={handleContentClick}
-                  />
-
-                  {/* Persona tip */}
-                  {(updatePersonaRequested || (onboardingState.shouldShowPersonaTip && messages.length >= 4)) && !onboardingState.hasCompletedPersona && (
-                    <PersonaTip
+                      referencedMessage={referencedMessage}
+                      handleMessageReference={handleMessageReference}
+                      handleReferenceClick={notepadReferenceHandler}
+                      handleOptionClick={handleOptionClick}
+                      handleFollowUpClick={handleFollowUpPopulate}
                       userId={authData.userId}
-                      onTipClick={handleSendMessageWithUpdateCheck}
+                      handleSuggestionClick={handleSuggestionClick}
+                      handleSendMessage={handleSendMessageWithUpdateCheck}
+                      onInputPopulate={handleInputAppend}
+                      notepadOpen={notepadOpen}
+                      onQuoteToNotepad={handleQuoteToNotepadEnhanced}
+                      onContentClick={handleContentClick}
                     />
-                  )}
 
-                  {/* Error display */}
-                  {error && (
-                    <div className={`${themeColors.accentBgLight} border ${themeColors.accentBorder}/20 rounded-lg p-3 mt-4`}>
-                      <p className={`${themeColors.accentColor} text-sm`}>{error}</p>
-                      <button
-                        onClick={() => chatState.setError(null)}
-                        className={`text-xs ${themeColors.accentColor} hover:opacity-80 mt-1`}
-                      >
-                        Dismiss
-                      </button>
-                    </div>
-                  )}
+                    {/* Persona tip */}
+                    {(updatePersonaRequested || (onboardingState.shouldShowPersonaTip && messages.length >= 4)) && !onboardingState.hasCompletedPersona && (
+                      <PersonaTip
+                        userId={authData.userId}
+                        onTipClick={handleSendMessageWithUpdateCheck}
+                      />
+                    )}
+
+                    {/* Error display */}
+                    {error && (
+                      <div className={`${themeColors.accentBgLight} border ${themeColors.accentBorder}/20 rounded-lg p-3 mt-4`}>
+                        <p className={`${themeColors.accentColor} text-sm`}>{error}</p>
+                        <button
+                          onClick={() => chatState.setError(null)}
+                          className={`text-xs ${themeColors.accentColor} hover:opacity-80 mt-1`}
+                        >
+                          Dismiss
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            )
           ) : (
             // Ambient insights - only show for users with personas
             hasPersona ? (
@@ -705,6 +767,26 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                 </div>
               </div>
             )
+          )}
+
+          {/* Mobile: Show notepad content when activeTab is 'notes' */}
+          {isMobile && activeTab === 'notes' && (
+            <div className="flex-1 overflow-hidden">
+              <MarkdownNotepad
+                ref={notepadRef}
+                isOpen={true}
+                onClose={() => switchToTab('chat')}
+                onSendToChat={handleNotepadSendToChat}
+                quotedContent={quotedForNotepad}
+                onClearQuoted={handleClearQuoted}
+                width={notepadWidth}
+                onWidthChange={updateWidth}
+                style={getNotepadStyle()}
+                availableNotes={availableNotes}
+                isMobile={true}
+                activeTab={activeTab}
+              />
+            </div>
           )}
 
           {/* Bottom Bar Actions - only show for users with personas */}
@@ -738,6 +820,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             quotedForNotepad={quotedForNotepad}
             onClearQuoted={handleClearQuoted}
             isAuthenticated={authData.isAuthenticated}
+            isMobile={isMobile}
+            activeTab={activeTab}
           />
         </div>
       </div>
@@ -768,19 +852,22 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         </DialogContent>
       </Dialog>
       
-      {/* Markdown Notepad */}
-      <MarkdownNotepad
-        ref={notepadRef}
-        isOpen={notepadOpen}
-        onClose={toggleNotepad}
-        onSendToChat={handleNotepadSendToChat}
-        quotedContent={quotedForNotepad}
-        onClearQuoted={handleClearQuoted}
-        width={notepadWidth}
-        onWidthChange={updateWidth}
-        style={getNotepadStyle()}
-        availableNotes={availableNotes}
-      />
+      {/* Markdown Notepad - Desktop only */}
+      {!isMobile && (
+        <MarkdownNotepad
+          ref={notepadRef}
+          isOpen={notepadOpen}
+          onClose={toggleNotepad}
+          onSendToChat={handleNotepadSendToChat}
+          quotedContent={quotedForNotepad}
+          onClearQuoted={handleClearQuoted}
+          width={notepadWidth}
+          onWidthChange={updateWidth}
+          style={getNotepadStyle()}
+          availableNotes={availableNotes}
+          isMobile={false}
+        />
+      )}
       
 
 

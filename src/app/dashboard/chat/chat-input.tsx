@@ -35,6 +35,9 @@ interface ChatInputProps {
   onClearQuoted?: () => void
   disabled?: boolean
   currentTab?: string // Add currentTab prop for tab-specific @ linking
+  // Mobile props
+  isMobile?: boolean
+  activeTab?: 'chat' | 'notes'
 }
 
 const placeholders = [
@@ -72,7 +75,9 @@ export function ChatInput({
   quotedForNotepad,
   onClearQuoted,
   disabled = false,
-  currentTab = 'all'
+  currentTab = 'all',
+  isMobile = false,
+  activeTab = 'chat'
 }: ChatInputProps) {
   const [input, setInput] = useState('')
   const [placeholder, setPlaceholder] = useState(placeholders[0])
