@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { Note, NoteType } from '../types/index';
 import { CentralizedHeader, createSaveAction, createStarAction, createLightbulbAction } from '@/components/ui/centralized-header';
+import { Sparkles } from 'lucide-react';
 
 interface NoteHeaderProps {
   note: Note;
