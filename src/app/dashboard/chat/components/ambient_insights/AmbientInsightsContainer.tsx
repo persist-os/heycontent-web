@@ -30,17 +30,34 @@ export function AmbientInsightsContainer({ userId, handleSendMessage }: { userId
   }, [handleSendMessage]);
 
   const handleRefresh = async () => {
+    if (!userId) return;
+    
     setLoading(true);
     try {
       const apiKey = await getApiKey();
       if (!apiKey) throw new Error('No API key found. Please log in again.');
+      
+      // First, remove existing insights to force regeneration
+      const removeRes = await fetch('/api/ambient_insights/remove', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({ userId }),
+      });
+      
+      // Then generate new insights
       const res = await fetch('/api/ambient_insights', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`,
         },
-        body: JSON.stringify({}), // Send an empty object or required payload
+        body: JSON.stringify({
+          context_type: 'manual_refresh',
+          content: JSON.stringify({ user_id: userId })
+        }),
       });
       if (!res.ok) {
         throw new Error('Failed to refresh ambient insights');

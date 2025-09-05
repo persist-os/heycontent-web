@@ -99,7 +99,7 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
 
   useEffect(() => {
     const requestNewInsights = async () => {
-      // Only request new insights if we have a userId and no insights from Convex
+      // Request new insights if we have a userId and no insights from Convex (removed time restrictions)
       if (
         userId &&
         typeof convexInsights !== 'string' &&
@@ -186,19 +186,7 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
     );
   }
 
-  // Show error state if there's an error
-  if (error) {
-    return (
-      <div className="space-y-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
-        <div className="col-span-full text-center text-muted-foreground">
-          <p>Your insights are taking a little break! 🌙</p>
-          <p className="text-sm mt-2">No worries—great ideas take time to develop. Keep being awesome!</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show skeleton state if no insights
+  // Show skeleton state if no insights (regardless of error state)
   if (insights.length === 0) {
     return (
       <div className="space-y-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
