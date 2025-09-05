@@ -175,25 +175,14 @@ export const getUserDataBundle = query({
       persona = null;
     }
 
-    // Fetch most recent ambient insights
-    let ambientInsights = null;
-    try {
-      const insights = await ctx.db
-        .query("ambientInsights")
-        .withIndex("by_userId", q => q.eq("userId", userId))
-        .order("desc")
-        .take(1);
-      ambientInsights = insights.length > 0 ? insights[0] : null;
-    } catch (e) {
-      ambientInsights = null;
-    }
+    // Note: Ambient insights are intentionally excluded from the data bundle
+    // to prevent the AI from being influenced by previous insights when generating new ones
 
     return {
       conversations,
       notes,
       youtubeAnalyses,
       persona,
-      ambientInsights,
     };
   },
 });
