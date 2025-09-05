@@ -138,16 +138,14 @@ export const getUserDataBundle = query({
       conversations = [];
     }
 
-    // Fetch last 3 notes (with analyses)
+    // Fetch last 3 notes
     let notes: any[] = [];
     try {
       notes = await ctx.db
         .query("notes")
         .withIndex("by_user", q => q.eq("userId", userId))
         .order("desc")
-        .take(10); // get more in case some don't have analysis
-      // Only keep notes with analysis, up to 3
-      notes = notes.filter(n => n.analysis && n.analysis.length > 0).slice(0, 3);
+        .take(3);
     } catch (e) {
       notes = [];
     }
