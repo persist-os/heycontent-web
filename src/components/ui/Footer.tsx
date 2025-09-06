@@ -43,7 +43,7 @@ const Footer = () => (
       
       <div className="border-t border-slate-800 mt-12 pt-8">
         <p className="text-slate-500 text-sm font-light">
-          © 2025 PersistOs. All rights reserved.
+          © 2025 PersistOS. All rights reserved.
         </p>
       </div>
     </div>
