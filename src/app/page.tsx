@@ -3,121 +3,65 @@
 console.log('[LandingPage] Module loaded');
 
 import React from 'react'
-import { useRouter } from 'next/navigation'
-import Image from 'next/image'
+import Head from 'next/head'
 import { HeroSection } from '../components/ui/hero-section'
-import { AgentsShowcase } from '../components/ui/agents-showcase'
+import { ValueCards } from '../components/ui/value-cards'
+import { UIPreview } from '../components/ui/ui-preview'
+import { WhyItWorks } from '../components/ui/why-it-works'
+import { Personas } from '../components/ui/personas'
+import { PrivacyTrust } from '../components/ui/privacy-trust'
+import { CTABand } from '../components/ui/cta-band'
+import { FAQ } from '../components/ui/faq'
 import Footer from '../components/ui/Footer'
 
-const featureCards = [
-  {
-    title: "Intuitively designed",
-    description: "Carefully crafted interface that feels natural from the first interaction. Every element placed with intention, every workflow refined for effortless use."
-  },
-  {
-    title: "Privately yours", 
-    description: "Your conversations, thoughts, and preferences remain exclusively yours. Zero data sharing, zero external access, zero compromise on your personal privacy."
-  }
-]
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question","name": "What makes HeyContext different from notes apps or AI chat?","acceptedAnswer": {"@type": "Answer","text": "Notes store text; chat answers prompts. HeyContext keeps projects alive via background agents that condense updates, flag contradictions, and prepare Since-You-Left bundles."}},
+    {"@type": "Question","name": "What do I actually see in the app?","acceptedAnswer": {"@type": "Answer","text": "A Project Brief that updates itself, Since-You-Left bundles, Contradiction Flags, and a Because panel showing sources for every claim."}},
+    {"@type": "Question","name": "Do I need to organize anything?","acceptedAnswer": {"@type": "Answer","text": "No. Drop notes and conversations into a project; the system structures and updates the brief for you."}},
+    {"@type": "Question","name": "How is this private?","acceptedAnswer": {"@type": "Answer","text": "Local-first by default with explicit, itemized cloud calls. Every surfaced claim links to its source."}},
+    {"@type": "Question","name": "Can I use it without being good at AI?","acceptedAnswer": {"@type": "Answer","text": "Yes. You don't have to prompt. The value shows up as ready-to-use outputs—briefs, bundles, and tasks."}},
+    {"@type": "Question","name": "What's under the hood?","acceptedAnswer": {"@type": "Answer","text": "Async multi-agent orchestration and a Redis-powered working memory keep projects current without busywork."}},
+    {"@type": "Question","name": "How do I start?","acceptedAnswer": {"@type": "Answer","text": "Create a project, paste your notes or links, and come back later to a refreshed brief and a Since-You-Left bundle."}}
+  ]
+}
 
 export default function LandingPage() {
   console.log('[LandingPage] Function start');
-  const router = useRouter()
-
-  const scrollSection = (direction: 'left' | 'right', elementId: string) => {
-    const container = document.getElementById(elementId)
-    if (container) {
-      const scrollAmount = direction === 'left' ? -container.offsetWidth : container.offsetWidth
-      container.scrollBy({ left: scrollAmount, behavior: 'smooth' })
-    }
-  }
 
   console.log('[LandingPage] Before render');
 
   return (
-        <div className="min-h-screen flex flex-col">
+    <>
+      <Head>
+        <title>HeyContext - The AI Project Platform</title>
+        <meta name="description" content="HeyContext turns every project into a living memory that summarizes, reconciles, and resurfaces work—so you don't have to. Projects that think in the background." />
+        <meta name="keywords" content="AI project management, living memory, project briefs, async agents, context management" />
+        <meta property="og:title" content="HeyContext - Projects that think in the background" />
+        <meta property="og:description" content="Turn every project into a living memory that summarizes, reconciles, and resurfaces work automatically." />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="HeyContext - The AI Project Platform" />
+        <meta name="twitter:description" content="Projects that think in the background. Auto-updated briefs, since-you-left bundles, and contradiction flags." />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
+      </Head>
+      
+      <div className="min-h-screen flex flex-col">
         <HeroSection />
-      
-
-      
-      <AgentsShowcase />
-      
-            {/* Features Section */}
-      <section className="py-40 bg-gradient-to-b from-slate-50 via-blue-50/10 to-slate-50 dark:from-slate-900 dark:via-blue-950/5 dark:to-slate-900 relative overflow-hidden">
-        {/* Animated background elements */}
-        <div className="absolute top-1/2 left-0 w-72 h-72 bg-gradient-to-r from-blue-200/25 to-cyan-200/20 dark:from-blue-800/12 dark:to-cyan-800/8 rounded-full blur-3xl animate-drift-right" />
-        <div className="absolute bottom-0 right-0 w-80 h-80 bg-gradient-to-l from-indigo-200/20 to-purple-200/15 dark:from-indigo-800/10 dark:to-purple-800/6 rounded-full blur-3xl animate-drift-left" />
-        <div className="absolute top-0 right-1/4 w-64 h-64 bg-gradient-to-br from-emerald-200/15 to-teal-200/10 dark:from-emerald-800/8 dark:to-teal-800/4 rounded-full blur-3xl animate-drift-slow" />
-        
-        <div className="max-w-5xl mx-auto px-8 sm:px-12 relative z-10">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-20">
-            {featureCards.map((card, index) => (
-              <div 
-                key={index} 
-                className="group space-y-8 p-10 rounded-3xl hover:bg-white/60 dark:hover:bg-slate-800/40 transition-all duration-700 hover:scale-[1.02] hover:shadow-2xl hover:shadow-blue-500/10 cursor-default backdrop-blur-sm animate-slide-in border border-slate-200/30 dark:border-slate-700/30 hover:border-blue-300/50 dark:hover:border-blue-600/30"
-                style={{animationDelay: `${index * 0.4}s`}}
-              >
-                <h3 className="text-3xl font-light text-slate-900 dark:text-slate-100 tracking-wide group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-all duration-500 group-hover:scale-105 transform-gpu">
-                  {card.title}
-                </h3>
-                <div className="w-16 h-0.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-700 origin-left" />
-                <p className="text-xl text-slate-600 dark:text-slate-400 leading-relaxed font-light group-hover:text-slate-700 dark:group-hover:text-slate-300 transition-colors duration-500">
-                  {card.description}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <style jsx>{`
-          @keyframes slide-in {
-            from {
-              opacity: 0;
-              transform: translateY(50px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-          
-          @keyframes drift-right {
-            0%, 100% { transform: translateX(0px) translateY(0px); }
-            33% { transform: translateX(40px) translateY(-20px); }
-            66% { transform: translateX(-30px) translateY(25px); }
-          }
-          
-          @keyframes drift-left {
-            0%, 100% { transform: translateX(0px) translateY(0px); }
-            33% { transform: translateX(-35px) translateY(20px); }
-            66% { transform: translateX(25px) translateY(-30px); }
-          }
-          
-          @keyframes drift-slow {
-            0%, 100% { transform: translateX(0px) translateY(0px); }
-            50% { transform: translateX(15px) translateY(-15px); }
-          }
-          
-          .animate-slide-in {
-            animation: slide-in 1.2s ease-out forwards;
-            opacity: 0;
-          }
-          
-          .animate-drift-right {
-            animation: drift-right 15s ease-in-out infinite;
-          }
-          
-          .animate-drift-left {
-            animation: drift-left 18s ease-in-out infinite;
-          }
-          
-          .animate-drift-slow {
-            animation: drift-slow 20s ease-in-out infinite;
-          }
-        `}</style>
-      </section>
-
+        <ValueCards />
+        <UIPreview />
+        <WhyItWorks />
+        <Personas />
+        <PrivacyTrust />
+        <CTABand />
+        <FAQ />
         <Footer />
-    </div>
+      </div>
+    </>
   );
 } 

@@ -6,10 +6,10 @@ import { useRouter } from 'next/navigation'
 import { Logo } from './logo'
 
 const searchSuggestions = [
-  "Help me organize these scattered thoughts",
-  "What's the core insight I'm missing here?",
-  "Refine this explanation for my team",
-  "Connect this to what we discussed yesterday"
+  "Track this product launch project",
+  "What changed while I was away?",
+  "Flag any contradictions in my notes",
+  "Generate a brief for this research"
 ]
 
 export function HeroSection() {
@@ -79,37 +79,43 @@ export function HeroSection() {
       <div className="flex-1 flex flex-col items-center justify-center px-8 sm:px-12 relative z-10">
         <div className="max-w-5xl mx-auto text-center space-y-12">
           <h1 className="text-6xl sm:text-8xl font-light text-slate-900 dark:text-slate-100 leading-tight tracking-tight animate-fade-in-up">
-            <span className="inline-block hover:scale-105 transition-transform duration-500 cursor-default">AI tools that</span>
-            <span className="block font-extralight text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-500 cursor-default mt-4">remember you privately</span>
+            <span className="inline-block hover:scale-105 transition-transform duration-500 cursor-default">Projects that</span>
+            <span className="block font-extralight text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-500 cursor-default mt-4">think in the background</span>
           </h1>
           
-          <p className="text-2xl sm:text-3xl text-slate-600 dark:text-slate-400 font-light max-w-3xl mx-auto leading-relaxed animate-fade-in-up" style={{animationDelay: '0.2s'}}>
-            Thoughtfully designed intelligence that learns from every conversation, 
-            builds understanding over time, and keeps everything completely yours.
+          <p className="text-2xl sm:text-3xl text-slate-600 dark:text-slate-400 font-light max-w-4xl mx-auto leading-relaxed animate-fade-in-up" style={{animationDelay: '0.2s'}}>
+            HeyContext turns every project into a living memory that summarizes, reconciles, and resurfaces work—so you don't have to.
           </p>
 
-          {/* Interactive search preview */}
-          <div className="max-w-3xl mx-auto mt-20 animate-fade-in-up" style={{animationDelay: '0.4s'}}>
-            <div className="relative group">
-              <div className="absolute -inset-6 bg-gradient-to-r from-blue-500/20 via-indigo-500/20 to-purple-500/20 rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-all duration-700 animate-pulse-glow" />
-              <div 
-                onClick={() => router.push('/auth/login')}
-                className="relative bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 rounded-3xl p-8 cursor-pointer hover:border-blue-300/70 dark:hover:border-blue-600/70 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-blue-500/10"
-              >
-                <div className="flex items-center gap-6">
-                  <div className="w-3 h-3 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full animate-pulse group-hover:animate-ping" />
-                  <span className="text-slate-600 dark:text-slate-400 font-light text-xl group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors duration-300">
-                    {placeholder}
-                  </span>
-                  <div className="ml-auto opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-4 group-hover:translate-x-0">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500/10 to-indigo-500/10 flex items-center justify-center">
-                      <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          {/* CTAs */}
+          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mt-16 animate-fade-in-up" style={{animationDelay: '0.4s'}}>
+            <button 
+              onClick={() => router.push('/auth/login')}
+              className="group px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full text-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/25 min-w-[200px]"
+            >
+              <span className="group-hover:tracking-wide transition-all duration-300">Start a Project</span>
+            </button>
+            <button 
+              onClick={() => router.push('/auth/login?demo=true')}
+              className="group px-8 py-4 bg-transparent border-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-full text-lg font-medium hover:border-slate-400 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-300 hover:scale-105 min-w-[200px]"
+            >
+              <span className="group-hover:tracking-wide transition-all duration-300">See a Sample Brief</span>
+            </button>
+          </div>
+
+          {/* Trust badges */}
+          <div className="flex flex-col sm:flex-row gap-6 sm:gap-12 justify-center items-center mt-12 text-sm text-slate-500 dark:text-slate-400 animate-fade-in-up" style={{animationDelay: '0.6s'}}>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span>Private by default</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <span>Explainable outputs</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+              <span>Async multi-agent</span>
             </div>
           </div>
         </div>
