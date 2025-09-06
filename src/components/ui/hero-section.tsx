@@ -76,12 +76,12 @@ export function HeroSection() {
       </nav>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center px-8 sm:px-12 relative z-10">
+      <div className="flex-1 flex flex-col items-center justify-center px-8 sm:px-12 relative z-10 -mt-16">
         <div className="max-w-5xl mx-auto text-center">
-          <div className="space-y-12">
+          <div className="space-y-10">
             <div className="space-y-8">
               <div className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wider uppercase animate-fade-in-up">
-                Your intelligent workspace
+                Intelligence that evolves with your work
               </div>
               
               <h1 className="text-5xl sm:text-7xl font-light text-slate-900 dark:text-slate-100 leading-tight animate-fade-in-up" style={{animationDelay: '0.1s'}}>
@@ -91,10 +91,10 @@ export function HeroSection() {
               
               <div className="max-w-4xl mx-auto space-y-6 animate-fade-in-up" style={{animationDelay: '0.2s'}}>
                 <p className="text-xl sm:text-2xl text-slate-600 dark:text-slate-400 font-light leading-relaxed">
-                  Conversations that remember. Notes that connect. Ideas that evolve.
+                  Conversations that build connections. Context that grows smarter. Projects that remember everything.
                 </p>
                 <p className="text-lg sm:text-xl text-slate-500 dark:text-slate-500 font-light leading-relaxed">
-                  Your thoughts stay organized, your projects stay on track, your creativity stays flowing.
+                  Not another tool to manage. Intelligence that thinks alongside you.
                 </p>
               </div>
             </div>

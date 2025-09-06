@@ -56,8 +56,8 @@ export default function LandingPage() {
         <ValueCards />
         <AgentsShowcase />
         <WhyItWorks />
-        <Personas />
-        <PrivacyTrust />
+        {/* <Personas /> */}
+        {/* <PrivacyTrust /> */}
         <CTABand />
         <FAQ />
         <Footer />

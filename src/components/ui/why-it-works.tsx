@@ -9,28 +9,37 @@ export function WhyItWorks() {
         <div className="space-y-16">
           <div className="text-center space-y-6">
             <h2 className="text-4xl sm:text-5xl font-light leading-tight">
-              The gap we're filling
+              The time you'll save back
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 text-center">
-            <div className="space-y-4">
-              <h3 className="text-xl font-light text-slate-300">Most AI tools</h3>
-              <div className="space-y-3 text-slate-400">
-                <p>Start fresh every conversation</p>
-                <p>Require you to organize everything</p>
-                <p>Work in isolation</p>
-                <p>Need constant prompting</p>
+          <div className="space-y-12">
+            <div className="text-center space-y-8">
+              <div className="space-y-4">
+                <p className="text-2xl font-light text-slate-300">
+                  2 hours every morning
+                </p>
+                <p className="text-slate-400 max-w-2xl mx-auto leading-relaxed">
+                  Stop re-reading yesterday's notes, hunting through chat history, and rebuilding context from scratch. Your AI already knows where you left off.
+                </p>
               </div>
-            </div>
 
-            <div className="space-y-4">
-              <h3 className="text-xl font-light text-blue-400">HeyContext</h3>
-              <div className="space-y-3 text-slate-300">
-                <p>Builds understanding over time</p>
-                <p>Organizes itself around your work</p>
-                <p>Connects ideas across conversations</p>
-                <p>Proactively surfaces insights</p>
+              <div className="space-y-4">
+                <p className="text-2xl font-light text-slate-300">
+                  4 hours every week
+                </p>
+                <p className="text-slate-400 max-w-2xl mx-auto leading-relaxed">
+                  No more status meetings to sync everyone up. No more writing project summaries. No more losing track of decisions made in scattered conversations.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-2xl font-light text-slate-300">
+                  Entire weekends back
+                </p>
+                <p className="text-slate-400 max-w-2xl mx-auto leading-relaxed">
+                  When projects coordinate themselves and contradictions surface automatically, you focus on creating instead of organizing. Your best work happens when your tools disappear.
+                </p>
               </div>
             </div>
           </div>
@@ -38,10 +47,10 @@ export function WhyItWorks() {
           <div className="border-t border-slate-700 pt-16">
             <div className="text-center space-y-6">
               <p className="text-xl font-light text-slate-300 max-w-2xl mx-auto leading-relaxed">
-                We're not trying to replace your thinking. We're building AI that amplifies it.
+                Start saving time today. Save even more time tomorrow.
               </p>
               <p className="text-slate-400 max-w-xl mx-auto">
-                Start with advanced chat and notes. Soon: the project coordination layer that ties it all together.
+                Your projects remember everything so you can focus on what only you can do.
               </p>
             </div>
           </div>

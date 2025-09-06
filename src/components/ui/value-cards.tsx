@@ -5,22 +5,22 @@ import React from 'react'
 const currentFeatures = [
   {
     title: "Contextual conversations",
-    current: "Chat that remembers your previous conversations and connects to your notes. Context builds over time to improve relevance and accuracy.",
-    future: "Living project memory that evolves continuously as agents work overnight to reconcile contradictions and surface insights before you even ask"
+    current: "Chat that connects what you said yesterday to what you're thinking today. Context builds naturally, like human understanding does.",
+    future: "Living project intelligence that evolves continuously as agents work overnight to reconcile contradictions and surface insights before you even ask"
   },
   {
-    title: "Smart notes",
-    current: "Notes that connect to your conversations and help you spot patterns in your thinking. Integration creates a unified knowledge layer.",
+    title: "Connected thinking",
+    current: "Notes that spot patterns in your thinking and connect ideas across conversations. Intelligence that sees relationships you might miss.",
     future: "Self-updating project briefs that condense messy inputs into structured schemas with goals, risks, and decisions automatically maintained"
   },
   {
-    title: "Writing assistance",
-    current: "Inline help that learns your writing style and adapts to your voice. Suggestions feel natural and aligned with how you think.",
+    title: "Voice learning",
+    current: "Writing help that learns how you sound and think. Understanding of your style that gets more accurate with every interaction.",
     future: "Context-aware content generation that understands your entire project landscape and suggests ideas based on evolving project schemas"
   },
   {
-    title: "Persona AI",
-    current: "AI that understands your preferences and working style for personalized assistance that gets better with use.",
+    title: "Personal AI",
+    current: "AI that learns your preferences, patterns, and working style. Gets smarter about what you need without being told.",
     future: "Multi-agent orchestration where specialized agents handle different aspects of your projects, condensing information, detecting contradictions, and preparing insights"
   }
 ]
@@ -36,7 +36,7 @@ export function ValueCards() {
               <div className="text-sm font-medium text-blue-600 dark:text-blue-400 tracking-wide uppercase">
                 Available today
               </div>
-              <h2 className="text-3xl sm:text-4xl font-light text-slate-900 dark:text-slate-100 leading-tight">AI that already thinks like you do
+              <h2 className="text-3xl sm:text-4xl font-light text-slate-900 dark:text-slate-100 leading-tight">Memory that grows like you
               </h2>
             </div>
             
