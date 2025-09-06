@@ -6,10 +6,10 @@ import { useRouter } from 'next/navigation'
 import { Logo } from './logo'
 
 const searchSuggestions = [
-  "Help me organize these scattered thoughts",
-  "What's the core insight I'm missing here?",
-  "Refine this explanation for my team",
-  "Connect this to what we discussed yesterday"
+  "Help me think through this project idea",
+  "Refine this draft with my writing style", 
+  "What patterns do you see in my notes?",
+  "Connect this to what we discussed before"
 ]
 
 export function HeroSection() {
@@ -77,48 +77,38 @@ export function HeroSection() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col items-center justify-center px-8 sm:px-12 relative z-10">
-        <div className="max-w-5xl mx-auto text-center space-y-12">
-          <h1 className="text-6xl sm:text-8xl font-light text-slate-900 dark:text-slate-100 leading-tight tracking-tight animate-fade-in-up">
-            <span className="inline-block hover:scale-105 transition-transform duration-500 cursor-default">AI tools that</span>
-            <span className="block font-extralight text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-500 cursor-default mt-4">remember you privately</span>
-          </h1>
-          
-          <p className="text-2xl sm:text-3xl text-slate-600 dark:text-slate-400 font-light max-w-3xl mx-auto leading-relaxed animate-fade-in-up" style={{animationDelay: '0.2s'}}>
-            Thoughtfully designed intelligence that learns from every conversation, 
-            builds understanding over time, and keeps everything completely yours.
-          </p>
-
-          {/* Interactive search preview */}
-          <div className="max-w-3xl mx-auto mt-20 animate-fade-in-up" style={{animationDelay: '0.4s'}}>
-            <div className="relative group">
-              <div className="absolute -inset-6 bg-gradient-to-r from-blue-500/20 via-indigo-500/20 to-purple-500/20 rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-all duration-700 animate-pulse-glow" />
-              <div 
-                onClick={() => router.push('/auth/login')}
-                className="relative bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 rounded-3xl p-8 cursor-pointer hover:border-blue-300/70 dark:hover:border-blue-600/70 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-blue-500/10"
-              >
-                <div className="flex items-center gap-6">
-                  <div className="w-3 h-3 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full animate-pulse group-hover:animate-ping" />
-                  <span className="text-slate-600 dark:text-slate-400 font-light text-xl group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors duration-300">
-                    {placeholder}
-                  </span>
-                  <div className="ml-auto opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-4 group-hover:translate-x-0">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500/10 to-indigo-500/10 flex items-center justify-center">
-                      <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
+        <div className="max-w-5xl mx-auto text-center">
+          <div className="space-y-12">
+            <div className="space-y-8">
+              <div className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wider uppercase animate-fade-in-up">
+                Your intelligent workspace
+              </div>
+              
+              <h1 className="text-5xl sm:text-7xl font-light text-slate-900 dark:text-slate-100 leading-tight animate-fade-in-up" style={{animationDelay: '0.1s'}}>
+                <span className="inline-block">Your AI </span>
+                <span className="block text-6xl sm:text-8xl font-extralight text-blue-600 dark:text-blue-400 mt-2">project platform</span>
+              </h1>
+              
+              <div className="max-w-4xl mx-auto space-y-6 animate-fade-in-up" style={{animationDelay: '0.2s'}}>
+                <p className="text-xl sm:text-2xl text-slate-600 dark:text-slate-400 font-light leading-relaxed">
+                  Conversations that remember. Notes that connect. Ideas that evolve.
+                </p>
+                <p className="text-lg sm:text-xl text-slate-500 dark:text-slate-500 font-light leading-relaxed">
+                  Your thoughts stay organized, your projects stay on track, your creativity stays flowing.
+                </p>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Bottom indicator with hover effect */}
-      <div className="pb-12 text-center relative z-10 animate-fade-in" style={{animationDelay: '0.8s'}}>
-        <div className="w-8 h-12 border-2 border-slate-300 dark:border-slate-600 rounded-full mx-auto flex justify-center hover:border-blue-400 transition-colors duration-300 cursor-pointer group" onClick={() => document.querySelector('.py-32')?.scrollIntoView({behavior: 'smooth'})}>
-          <div className="w-1.5 h-4 bg-slate-400 dark:bg-slate-500 rounded-full mt-2 animate-bounce group-hover:bg-gradient-to-b from-blue-500 to-indigo-500 transition-all duration-300" />
+            {/* CTA */}
+            <div className="animate-fade-in-up" style={{animationDelay: '0.4s'}}>
+              <button 
+                onClick={() => router.push('/auth/login')}
+                className="group px-10 py-4 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-lg font-medium hover:bg-slate-800 dark:hover:bg-slate-200 transition-all duration-300 min-w-[240px]"
+              >
+                <span className="transition-all duration-300">Start your workspace</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
