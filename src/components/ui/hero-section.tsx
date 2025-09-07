@@ -94,20 +94,20 @@ export function HeroSection() {
         <div className="max-w-5xl mx-auto text-center">
           <div className="space-y-8 sm:space-y-10">
             <div className="space-y-6 sm:space-y-8">
-              <div className="text-slate-500 dark:text-slate-400 text-sm sm:text-lg font-light tracking-wider uppercase animate-fade-in-up">
+              <div className="text-slate-500 dark:text-slate-400 text-sm sm:text-lg font-light tracking-wider uppercase animate-fade-in-up hover:text-slate-700 dark:hover:text-slate-300 hover:tracking-widest transition-all duration-300 cursor-default">
                 Intelligence that evolves with your work
               </div>
               
-              <h1 className="text-3xl sm:text-5xl lg:text-7xl font-light text-slate-900 dark:text-slate-100 leading-tight animate-fade-in-up" style={{animationDelay: '0.1s'}}>
+              <h1 className="text-3xl sm:text-5xl lg:text-7xl font-light text-slate-900 dark:text-slate-100 leading-tight animate-fade-in-up hover:text-slate-700 dark:hover:text-slate-200 transition-colors duration-300 cursor-default" style={{animationDelay: '0.1s'}}>
                 <span className="inline-block">Your AI </span>
-                <span className="block text-4xl sm:text-6xl lg:text-8xl font-extralight text-blue-600 dark:text-blue-400 mt-1 sm:mt-2">project platform</span>
+                <span className="block text-4xl sm:text-6xl lg:text-8xl font-extralight text-blue-600 dark:text-blue-400 mt-1 sm:mt-2 hover:text-blue-700 dark:hover:text-blue-300 transition-colors duration-300">project platform</span>
               </h1>
               
               <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 animate-fade-in-up" style={{animationDelay: '0.2s'}}>
-                <p className="text-lg sm:text-xl lg:text-2xl text-slate-600 dark:text-slate-400 font-light leading-relaxed">
+                <p className="text-lg sm:text-xl lg:text-2xl text-slate-600 dark:text-slate-400 font-light leading-relaxed hover:text-slate-700 dark:hover:text-slate-300 transition-colors duration-300 cursor-default">
                   Conversations that build connections. Context that grows smarter. Projects that remember everything.
                 </p>
-                <p className="text-base sm:text-lg lg:text-xl text-slate-500 dark:text-slate-500 font-light leading-relaxed">
+                <p className="text-base sm:text-lg lg:text-xl text-slate-500 dark:text-slate-500 font-light leading-relaxed hover:text-slate-600 dark:hover:text-slate-400 transition-colors duration-300 cursor-default">
                   Not another tool to manage. Intelligence that thinks alongside you.
                 </p>
               </div>
