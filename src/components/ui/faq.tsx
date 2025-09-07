@@ -47,39 +47,39 @@ export function FAQ() {
   }
 
   return (
-    <section className="py-32 bg-gradient-to-b from-white via-slate-50/20 to-white dark:from-slate-900 dark:via-slate-800/20 dark:to-slate-900 relative overflow-hidden">
+    <section className="py-20 sm:py-28 lg:py-32 bg-gradient-to-b from-white via-slate-50/20 to-white dark:from-slate-900 dark:via-slate-800/20 dark:to-slate-900 relative overflow-hidden min-h-screen flex items-center">
         {/* Background elements */}
-        <div className="absolute top-1/3 left-1/4 w-64 h-64 bg-gradient-to-br from-blue-100/15 to-indigo-100/10 dark:from-blue-900/8 dark:to-indigo-900/6 rounded-full blur-3xl animate-pulse-slow" />
+        <div className="absolute top-1/3 left-1/4 w-48 sm:w-64 h-48 sm:h-64 bg-gradient-to-br from-blue-100/15 to-indigo-100/10 dark:from-blue-900/8 dark:to-indigo-900/6 rounded-full blur-3xl animate-pulse-slow" />
         
-        <div className="max-w-4xl mx-auto px-8 sm:px-12 relative z-10">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl sm:text-5xl font-light text-slate-900 dark:text-slate-100 leading-tight tracking-wide mb-6 animate-fade-in-up">
+        <div className="max-w-4xl mx-auto px-4 sm:px-8 lg:px-12 relative z-10 w-full">
+          <div className="text-center mb-12 sm:mb-16">
+            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-light text-slate-900 dark:text-slate-100 leading-tight tracking-wide mb-4 sm:mb-6 animate-fade-in-up">
               Frequently asked questions
             </h2>
-            <p className="text-xl text-slate-600 dark:text-slate-400 font-light max-w-2xl mx-auto leading-relaxed animate-fade-in-up" style={{animationDelay: '0.2s'}}>
+            <p className="text-base sm:text-xl text-slate-600 dark:text-slate-400 font-light max-w-2xl mx-auto leading-relaxed animate-fade-in-up" style={{animationDelay: '0.2s'}}>
               Everything you need to know about HeyContext and how it works.
             </p>
           </div>
 
-          <div className="space-y-4 animate-fade-in-up" style={{animationDelay: '0.4s'}}>
+          <div className="space-y-3 sm:space-y-4 animate-fade-in-up" style={{animationDelay: '0.4s'}}>
             {faqData.map((item, index) => {
               const isOpen = openItems.has(index)
               return (
                 <div 
                   key={index}
-                  className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm rounded-xl border border-slate-200/50 dark:border-slate-700/50 hover:border-blue-300/50 dark:hover:border-blue-600/30 transition-all duration-300 overflow-hidden"
+                  className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm rounded-lg sm:rounded-xl border border-slate-200/50 dark:border-slate-700/50 hover:border-blue-300/50 dark:hover:border-blue-600/30 transition-all duration-300 overflow-hidden active:scale-[0.99] sm:active:scale-100"
                 >
                   <button
                     onClick={() => toggleItem(index)}
-                    className="w-full px-6 py-5 text-left flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition-colors duration-200"
-                    aria-expanded={isOpen}
+                    className="w-full px-4 sm:px-6 py-4 sm:py-5 text-left flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition-colors duration-200 touch-manipulation"
+                    aria-expanded={isOpen ? 'true' : 'false'}
                     aria-controls={`faq-answer-${index}`}
                   >
-                    <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100 pr-4">
+                    <h3 className="text-base sm:text-lg font-medium text-slate-900 dark:text-slate-100 pr-3 sm:pr-4">
                       {item.question}
                     </h3>
                     <ChevronDown 
-                      className={`w-5 h-5 text-slate-500 dark:text-slate-400 transition-transform duration-200 flex-shrink-0 ${
+                      className={`w-4 sm:w-5 h-4 sm:h-5 text-slate-500 dark:text-slate-400 transition-transform duration-200 flex-shrink-0 ${
                         isOpen ? 'rotate-180' : ''
                       }`}
                     />
@@ -88,13 +88,13 @@ export function FAQ() {
                   <div 
                     id={`faq-answer-${index}`}
                     className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                      isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                      isOpen ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'
                     }`}
                   >
-                    <div className="px-6 pb-5 pt-0">
-                      <div className="w-full h-px bg-slate-200/50 dark:bg-slate-700/50 mb-4" />
+                    <div className="px-4 sm:px-6 pb-4 sm:pb-5 pt-0">
+                      <div className="w-full h-px bg-slate-200/50 dark:bg-slate-700/50 mb-3 sm:mb-4" />
                       <p 
-                        className="text-slate-600 dark:text-slate-400 leading-relaxed"
+                        className="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed"
                         dangerouslySetInnerHTML={{
                           __html: item.answer
                             .replace(/\*\*(.*?)\*\*/g, '<strong class="text-slate-700 dark:text-slate-300">$1</strong>')

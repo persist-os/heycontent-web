@@ -18,7 +18,19 @@ export function HeroSection() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [showFloatingSearch, setShowFloatingSearch] = useState(false)
   const [showCursor, setShowCursor] = useState(true)
+  const [isButtonPressed, setIsButtonPressed] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const router = useRouter()
+
+  // Detect mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -55,20 +67,22 @@ export function HeroSection() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 dark:from-slate-900 dark:via-blue-950/20 dark:to-indigo-950/10 flex flex-col relative overflow-hidden">
       {/* Animated background elements */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-indigo-100/30 dark:from-blue-950/20 dark:to-indigo-950/10 transition-all duration-1000" />
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-br from-blue-200/30 to-cyan-200/20 dark:from-blue-800/15 dark:to-cyan-800/10 rounded-full blur-3xl animate-pulse-slow" />
-      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-gradient-to-br from-indigo-200/25 to-purple-200/15 dark:from-indigo-800/12 dark:to-purple-800/8 rounded-full blur-3xl animate-pulse-slow" style={{animationDelay: '1s'}} />
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-br from-emerald-200/20 to-teal-200/15 dark:from-emerald-800/10 dark:to-teal-800/8 rounded-full blur-3xl animate-pulse-slow" style={{animationDelay: '2s'}} />
+      <div className={`absolute top-1/4 left-1/4 ${isMobile ? 'w-64 h-64' : 'w-96 h-96'} bg-gradient-to-br from-blue-200/30 to-cyan-200/20 dark:from-blue-800/15 dark:to-cyan-800/10 rounded-full blur-3xl animate-pulse-slow`} />
+      <div className={`absolute bottom-1/4 right-1/4 ${isMobile ? 'w-48 h-48' : 'w-80 h-80'} bg-gradient-to-br from-indigo-200/25 to-purple-200/15 dark:from-indigo-800/12 dark:to-purple-800/8 rounded-full blur-3xl animate-pulse-slow`} style={{animationDelay: '1s'}} />
+      <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 ${isMobile ? 'w-40 h-40' : 'w-64 h-64'} bg-gradient-to-br from-emerald-200/20 to-teal-200/15 dark:from-emerald-800/10 dark:to-teal-800/8 rounded-full blur-3xl animate-pulse-slow`} style={{animationDelay: '2s'}} />
       
       {/* Header */}
-      <nav className="relative z-10 p-8 sm:p-12 animate-fade-in-down">
+      <nav className="relative z-10 p-4 sm:p-8 lg:p-12 animate-fade-in-down">
         <div className="flex justify-between items-center max-w-7xl mx-auto">
-          <div className="transform hover:scale-105 transition-transform duration-300">
-            <Logo className="h-8 text-slate-800 dark:text-slate-200" />
+          <div className="transform active:scale-95 hover:scale-105 transition-transform duration-200">
+            <Logo className="h-6 sm:h-8 text-slate-800 dark:text-slate-200" />
           </div>
           
           <button 
             onClick={() => router.push('/auth/login')}
-            className="group px-8 py-3 bg-gradient-to-r from-slate-900 to-slate-800 dark:from-slate-100 dark:to-slate-200 text-slate-50 dark:text-slate-900 rounded-full text-sm font-medium hover:from-slate-800 hover:to-slate-700 dark:hover:from-slate-200 dark:hover:to-slate-300 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-slate-900/20"
+            onTouchStart={() => setIsButtonPressed(true)}
+            onTouchEnd={() => setIsButtonPressed(false)}
+            className={`group px-4 sm:px-6 lg:px-8 py-2 sm:py-3 bg-gradient-to-r from-slate-900 to-slate-800 dark:from-slate-100 dark:to-slate-200 text-slate-50 dark:text-slate-900 rounded-full text-xs sm:text-sm font-medium hover:from-slate-800 hover:to-slate-700 dark:hover:from-slate-200 dark:hover:to-slate-300 transition-all duration-300 hover:scale-105 active:scale-95 hover:shadow-xl hover:shadow-slate-900/20 ${isButtonPressed ? 'scale-95' : ''} ${isMobile ? 'min-h-[44px] touch-manipulation' : ''}`}
           >
             <span className="group-hover:tracking-wide transition-all duration-300">Sign in</span>
           </button>
@@ -76,24 +90,24 @@ export function HeroSection() {
       </nav>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center px-8 sm:px-12 relative z-10 -mt-16">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-8 lg:px-12 relative z-10 -mt-8 sm:-mt-16">
         <div className="max-w-5xl mx-auto text-center">
-          <div className="space-y-10">
-            <div className="space-y-8">
-              <div className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wider uppercase animate-fade-in-up">
+          <div className="space-y-8 sm:space-y-10">
+            <div className="space-y-6 sm:space-y-8">
+              <div className="text-slate-500 dark:text-slate-400 text-sm sm:text-lg font-light tracking-wider uppercase animate-fade-in-up">
                 Intelligence that evolves with your work
               </div>
               
-              <h1 className="text-5xl sm:text-7xl font-light text-slate-900 dark:text-slate-100 leading-tight animate-fade-in-up" style={{animationDelay: '0.1s'}}>
+              <h1 className="text-3xl sm:text-5xl lg:text-7xl font-light text-slate-900 dark:text-slate-100 leading-tight animate-fade-in-up" style={{animationDelay: '0.1s'}}>
                 <span className="inline-block">Your AI </span>
-                <span className="block text-6xl sm:text-8xl font-extralight text-blue-600 dark:text-blue-400 mt-2">project platform</span>
+                <span className="block text-4xl sm:text-6xl lg:text-8xl font-extralight text-blue-600 dark:text-blue-400 mt-1 sm:mt-2">project platform</span>
               </h1>
               
-              <div className="max-w-4xl mx-auto space-y-6 animate-fade-in-up" style={{animationDelay: '0.2s'}}>
-                <p className="text-xl sm:text-2xl text-slate-600 dark:text-slate-400 font-light leading-relaxed">
+              <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 animate-fade-in-up" style={{animationDelay: '0.2s'}}>
+                <p className="text-lg sm:text-xl lg:text-2xl text-slate-600 dark:text-slate-400 font-light leading-relaxed">
                   Conversations that build connections. Context that grows smarter. Projects that remember everything.
                 </p>
-                <p className="text-lg sm:text-xl text-slate-500 dark:text-slate-500 font-light leading-relaxed">
+                <p className="text-base sm:text-lg lg:text-xl text-slate-500 dark:text-slate-500 font-light leading-relaxed">
                   Not another tool to manage. Intelligence that thinks alongside you.
                 </p>
               </div>
@@ -103,9 +117,11 @@ export function HeroSection() {
             <div className="animate-fade-in-up" style={{animationDelay: '0.4s'}}>
               <button 
                 onClick={() => router.push('/auth/login')}
-                className="group px-10 py-4 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-lg font-medium hover:bg-slate-800 dark:hover:bg-slate-200 transition-all duration-300 min-w-[240px]"
+                onTouchStart={() => setIsButtonPressed(true)}
+                onTouchEnd={() => setIsButtonPressed(false)}
+                className={`group px-8 sm:px-10 py-3 sm:py-4 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-base sm:text-lg font-medium hover:bg-slate-800 dark:hover:bg-slate-200 transition-all duration-300 active:scale-95 hover:scale-105 hover:shadow-xl min-w-[200px] sm:min-w-[240px] ${isButtonPressed ? 'scale-95' : ''} ${isMobile ? 'min-h-[48px] touch-manipulation' : ''}`}
               >
-                <span className="transition-all duration-300">Start your workspace</span>
+                <span className="transition-all duration-300 group-active:tracking-wide">Start your workspace</span>
               </button>
             </div>
           </div>
