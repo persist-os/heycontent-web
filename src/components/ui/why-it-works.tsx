@@ -8,14 +8,14 @@ export function WhyItWorks() {
       <div className="max-w-4xl mx-auto px-4 sm:px-8 lg:px-12 relative z-10 w-full">
         <div className="space-y-12 sm:space-y-16">
           <div className="text-center space-y-4 sm:space-y-6">
-            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-light leading-tight">
+            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-light leading-tight hover:text-white transition-colors duration-300 cursor-default">
               The time you'll save back
             </h2>
           </div>
 
           <div className="space-y-8 sm:space-y-12">
             <div className="text-center space-y-6 sm:space-y-8">
-              <div className="space-y-3 sm:space-y-4 p-4 sm:p-0 rounded-lg hover:bg-white/5 transition-all duration-300 active:scale-[0.98] sm:active:scale-100">
+              <div className="space-y-3 sm:space-y-4 p-4 rounded-lg hover:bg-white/5 transition-all duration-300 cursor-pointer">
                 <p className="text-lg sm:text-2xl font-light text-slate-300">
                   2 hours every morning
                 </p>
@@ -24,7 +24,7 @@ export function WhyItWorks() {
                 </p>
               </div>
 
-              <div className="space-y-3 sm:space-y-4 p-4 sm:p-0 rounded-lg hover:bg-white/5 transition-all duration-300 active:scale-[0.98] sm:active:scale-100">
+              <div className="space-y-3 sm:space-y-4 p-4 rounded-lg hover:bg-white/5 transition-all duration-300 cursor-pointer">
                 <p className="text-lg sm:text-2xl font-light text-slate-300">
                   4 hours every week
                 </p>
@@ -33,7 +33,7 @@ export function WhyItWorks() {
                 </p>
               </div>
 
-              <div className="space-y-3 sm:space-y-4 p-4 sm:p-0 rounded-lg hover:bg-white/5 transition-all duration-300 active:scale-[0.98] sm:active:scale-100">
+              <div className="space-y-3 sm:space-y-4 p-4 rounded-lg hover:bg-white/5 transition-all duration-300 cursor-pointer">
                 <p className="text-lg sm:text-2xl font-light text-slate-300">
                   Entire weekends back
                 </p>
@@ -46,10 +46,10 @@ export function WhyItWorks() {
 
           <div className="border-t border-slate-700 pt-12 sm:pt-16">
             <div className="text-center space-y-4 sm:space-y-6">
-              <p className="text-lg sm:text-xl font-light text-slate-300 max-w-2xl mx-auto leading-relaxed">
+              <p className="text-lg sm:text-xl font-light text-slate-300 max-w-2xl mx-auto leading-relaxed hover:text-white transition-colors duration-300 cursor-default">
                 Start saving time today. Save even more time tomorrow.
               </p>
-              <p className="text-sm sm:text-base text-slate-400 max-w-xl mx-auto">
+              <p className="text-sm sm:text-base text-slate-400 max-w-xl mx-auto hover:text-slate-300 transition-colors duration-300 cursor-default">
                 Your projects remember everything so you can focus on what only you can do.
               </p>
             </div>

@@ -628,15 +628,15 @@ export function AgentsShowcase() {
           <h2 className="text-2xl sm:text-4xl lg:text-5xl font-light text-slate-900 dark:text-slate-100 leading-tight tracking-wide mb-6 sm:mb-8 animate-fade-in-up">
             Effortlessly intuitive
           </h2>
-          <p className="text-lg sm:text-2xl lg:text-3xl text-slate-600 dark:text-slate-400 font-light max-w-3xl mx-auto leading-relaxed animate-fade-in-up" style={{animationDelay: '0.2s'}}>
+          <p className="text-lg sm:text-2xl lg:text-3xl text-slate-600 dark:text-slate-400 font-light max-w-3xl mx-auto leading-relaxed animate-fade-in-up [animation-delay:0.2s]">
             Simply describe what you need in natural language. 
             Get precisely crafted responses that build on your previous conversations and preferences.
           </p>
         </div>
 
         {/* Chat Container Preview */}
-        <div className="max-w-6xl mx-auto relative animate-fade-in-up" style={{animationDelay: '0.4s'}}>
-          <div className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200/50 dark:border-slate-700/50 overflow-hidden h-[500px] sm:h-[600px] flex flex-col">
+        <div className="max-w-6xl mx-auto relative animate-fade-in-up [animation-delay:0.4s]">
+          <div className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200/50 dark:border-slate-700/50 overflow-hidden h-[600px] sm:h-[700px] lg:h-[750px] flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between p-3 sm:p-4 border-b border-slate-200 dark:border-slate-700 shrink-0">
               <div className="flex items-center gap-2 sm:gap-3">
@@ -730,9 +730,8 @@ export function AgentsShowcase() {
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                             placeholder="Message HeyContext..."
-                            className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 touch-manipulation"
+                            className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 touch-manipulation h-10 leading-tight"
                             rows={1}
-                            style={{ height: '40px', lineHeight: '1.2' }}
                           />
                         </div>
                         <button className="flex-shrink-0 h-10 w-10 sm:h-12 sm:w-12 bg-purple-500 hover:bg-purple-600 active:bg-purple-700 text-white rounded-lg transition-colors flex items-center justify-center active:scale-95 touch-manipulation" aria-label="Send message">

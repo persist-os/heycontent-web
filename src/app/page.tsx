@@ -97,11 +97,11 @@ export default function LandingPage() {
           }
           
           /* Prevent zoom on inputs */
-          input[type="text"],
-          input[type="email"],
-          input[type="password"],
-          textarea {
-            font-size: 16px !important;
+          body input[type="text"],
+          body input[type="email"],
+          body input[type="password"],
+          body textarea {
+            font-size: 16px;
           }
           
           /* Enhanced button feedback */
