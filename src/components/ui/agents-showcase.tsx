@@ -617,18 +617,18 @@ export function AgentsShowcase() {
   }
 
   return (
-    <section className="py-40 bg-gradient-to-b from-white via-blue-50/20 to-white dark:from-slate-900 dark:via-blue-950/10 dark:to-slate-900 relative overflow-hidden">
+    <section className="py-20 sm:py-32 lg:py-40 bg-gradient-to-b from-white via-blue-50/20 to-white dark:from-slate-900 dark:via-blue-950/10 dark:to-slate-900 relative overflow-hidden min-h-screen flex flex-col justify-center">
       {/* Subtle background animation */}
-      <div className="absolute top-0 left-1/2 w-96 h-96 bg-gradient-to-br from-blue-100/40 to-cyan-100/30 dark:from-blue-900/15 dark:to-cyan-900/10 rounded-full blur-3xl animate-float" />
-      <div className="absolute bottom-0 right-1/3 w-80 h-80 bg-gradient-to-br from-indigo-100/30 to-purple-100/20 dark:from-indigo-900/12 dark:to-purple-900/8 rounded-full blur-3xl animate-float-delayed" />
-      <div className="absolute top-1/3 right-0 w-64 h-64 bg-gradient-to-br from-emerald-100/25 to-teal-100/15 dark:from-emerald-900/10 dark:to-teal-900/6 rounded-full blur-3xl animate-float-slow" />
+      <div className="absolute top-0 left-1/2 w-64 sm:w-80 lg:w-96 h-64 sm:h-80 lg:h-96 bg-gradient-to-br from-blue-100/40 to-cyan-100/30 dark:from-blue-900/15 dark:to-cyan-900/10 rounded-full blur-3xl animate-float" />
+      <div className="absolute bottom-0 right-1/3 w-48 sm:w-64 lg:w-80 h-48 sm:h-64 lg:h-80 bg-gradient-to-br from-indigo-100/30 to-purple-100/20 dark:from-indigo-900/12 dark:to-purple-900/8 rounded-full blur-3xl animate-float-delayed" />
+      <div className="absolute top-1/3 right-0 w-40 sm:w-52 lg:w-64 h-40 sm:h-52 lg:h-64 bg-gradient-to-br from-emerald-100/25 to-teal-100/15 dark:from-emerald-900/10 dark:to-teal-900/6 rounded-full blur-3xl animate-float-slow" />
       
-      <div className="max-w-7xl mx-auto px-8 sm:px-12 relative z-10">
-        <div className="text-center mb-32">
-          <h2 className="text-4xl sm:text-5xl font-light text-slate-900 dark:text-slate-100 leading-tight tracking-wide mb-8 animate-fade-in-up">
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 relative z-10 w-full">
+        <div className="text-center mb-16 sm:mb-24 lg:mb-32">
+          <h2 className="text-2xl sm:text-4xl lg:text-5xl font-light text-slate-900 dark:text-slate-100 leading-tight tracking-wide mb-6 sm:mb-8 animate-fade-in-up">
             Effortlessly intuitive
           </h2>
-          <p className="text-2xl sm:text-3xl text-slate-600 dark:text-slate-400 font-light max-w-3xl mx-auto leading-relaxed animate-fade-in-up" style={{animationDelay: '0.2s'}}>
+          <p className="text-lg sm:text-2xl lg:text-3xl text-slate-600 dark:text-slate-400 font-light max-w-3xl mx-auto leading-relaxed animate-fade-in-up" style={{animationDelay: '0.2s'}}>
             Simply describe what you need in natural language. 
             Get precisely crafted responses that build on your previous conversations and preferences.
           </p>
@@ -636,25 +636,25 @@ export function AgentsShowcase() {
 
         {/* Chat Container Preview */}
         <div className="max-w-6xl mx-auto relative animate-fade-in-up" style={{animationDelay: '0.4s'}}>
-          <div className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-3xl shadow-sm border border-slate-200/50 dark:border-slate-700/50 overflow-hidden h-[600px] flex flex-col">
+          <div className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200/50 dark:border-slate-700/50 overflow-hidden h-[500px] sm:h-[600px] flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
-                  <MessageSquare className="w-4 h-4 text-white" />
+            <div className="flex items-center justify-between p-3 sm:p-4 border-b border-slate-200 dark:border-slate-700 shrink-0">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-6 sm:w-8 h-6 sm:h-8 bg-purple-500 rounded-lg flex items-center justify-center">
+                  <MessageSquare className="w-3 sm:w-4 h-3 sm:h-4 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100">HeyContext Chat</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Job search & career planning</p>
+                  <h3 className="text-xs sm:text-sm font-medium text-slate-900 dark:text-slate-100">HeyContext Chat</h3>
+                  <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">Job search & career planning</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-2">
                 <button
                   onClick={toggleNotepad}
-                  className="p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="p-1.5 sm:p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors active:scale-95"
                   title="Toggle Smart Notes"
                 >
-                  <FileText className="w-4 h-4" />
+                  <FileText className="w-3 sm:w-4 h-3 sm:h-4" />
                 </button>
               </div>
             </div>
@@ -675,9 +675,9 @@ export function AgentsShowcase() {
               {(!isMobile || activeTab === 'chat') && (
                 <div className="flex-1 flex flex-col min-h-0" style={getMainContentStyle()}>
                   {/* Chat Messages - Scrollable Area */}
-                  <div className="flex-1 overflow-y-auto p-6 min-h-0">
+                  <div className="flex-1 overflow-y-auto p-3 sm:p-6 min-h-0">
                     <div className="max-w-4xl mx-auto relative">
-                      <div className="space-y-6">
+                      <div className="space-y-4 sm:space-y-6">
                         {conversation.map((message, index) => (
                           <div key={message.id} className="relative animate-fade-in-up" style={{animationDelay: `${0.6 + index * 0.2}s`}}>
                             {message.sender === 'assistant' && message.sources && message.sources.length > 0 && (
@@ -685,13 +685,13 @@ export function AgentsShowcase() {
                             )}
                             
                             <div className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                              <div className={`max-w-[85%] ${message.sender === 'user' ? 'text-right' : 'text-left'}`}>
-                                <div className={`inline-block px-6 py-4 rounded-2xl ${
+                              <div className={`max-w-[90%] sm:max-w-[85%] ${message.sender === 'user' ? 'text-right' : 'text-left'}`}>
+                                <div className={`inline-block px-3 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl ${
                                   message.sender === 'user' 
                                     ? 'bg-[hsl(var(--user-message))] dark:bg-slate-200 text-white dark:text-slate-900' 
                                     : 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white'
                                 }`}>
-                                  <div className={`text-lg leading-relaxed max-w-none ${
+                                  <div className={`text-sm sm:text-lg leading-relaxed max-w-none ${
                                     message.sender === 'user' 
                                       ? 'text-white dark:text-slate-900' 
                                       : 'text-slate-800 dark:text-white'
@@ -705,7 +705,7 @@ export function AgentsShowcase() {
                                     }} />
                                   </div>
                                 </div>
-                                <div className={`text-xs text-slate-500 dark:text-slate-400 mt-2 ${
+                                <div className={`text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-1 sm:mt-2 ${
                                   message.sender === 'user' ? 'text-right' : 'text-left'
                                 }`}>
                                   {message.timestamp}
@@ -722,21 +722,21 @@ export function AgentsShowcase() {
                   </div>
 
                   {/* Input Area - Fixed at Bottom */}
-                  <div className="border-t border-slate-200 dark:border-slate-700 bg-background p-4 shrink-0">
+                  <div className="border-t border-slate-200 dark:border-slate-700 bg-background p-3 sm:p-4 shrink-0">
                     <div className="max-w-4xl mx-auto">
-                      <div className="flex items-start gap-3">
+                      <div className="flex items-start gap-2 sm:gap-3">
                         <div className="flex-1 relative">
                           <textarea
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                             placeholder="Message HeyContext..."
-                            className="w-full px-4 py-3 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                            className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 touch-manipulation"
                             rows={1}
-                            style={{ height: '48px', lineHeight: '1.2' }}
+                            style={{ height: '40px', lineHeight: '1.2' }}
                           />
                         </div>
-                        <button className="flex-shrink-0 h-12 w-12 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors flex items-center justify-center" aria-label="Send message">
-                          <Send className="w-4 h-4" />
+                        <button className="flex-shrink-0 h-10 w-10 sm:h-12 sm:w-12 bg-purple-500 hover:bg-purple-600 active:bg-purple-700 text-white rounded-lg transition-colors flex items-center justify-center active:scale-95 touch-manipulation" aria-label="Send message">
+                          <Send className="w-3 sm:w-4 h-3 sm:h-4" />
                         </button>
                       </div>
                     </div>

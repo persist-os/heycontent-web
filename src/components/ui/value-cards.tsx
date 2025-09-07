@@ -27,26 +27,26 @@ const currentFeatures = [
 
 export function ValueCards() {
   return (
-    <section className="py-24 bg-white dark:bg-slate-900">
-      <div className="max-w-7xl mx-auto px-8 sm:px-12">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
+    <section className="py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-900 min-h-screen flex items-center">
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 sm:gap-16 items-start">
           {/* Left side - What's here now */}
-          <div className="space-y-8">
-            <div className="space-y-4">
-              <div className="text-sm font-medium text-blue-600 dark:text-blue-400 tracking-wide uppercase">
+          <div className="space-y-6 sm:space-y-8">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="text-xs sm:text-sm font-medium text-blue-600 dark:text-blue-400 tracking-wide uppercase">
                 Available today
               </div>
-              <h2 className="text-3xl sm:text-4xl font-light text-slate-900 dark:text-slate-100 leading-tight">Memory that grows like you
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-light text-slate-900 dark:text-slate-100 leading-tight">Memory that grows like you
               </h2>
             </div>
             
-            <div className="space-y-6">
+            <div className="space-y-5 sm:space-y-6">
               {currentFeatures.map((feature, index) => (
-                <div key={index} className="group">
-                  <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100 mb-2">
+                <div key={index} className="group p-4 sm:p-0 rounded-lg hover:bg-blue-50/30 dark:hover:bg-blue-950/20 transition-all duration-300 active:scale-[0.98] sm:active:scale-100">
+                  <h3 className="text-base sm:text-lg font-medium text-slate-900 dark:text-slate-100 mb-2 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
                     {feature.title}
                   </h3>
-                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                  <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed group-hover:text-slate-700 dark:group-hover:text-slate-300 transition-colors">
                     {feature.current}
                   </p>
                 </div>
@@ -55,23 +55,23 @@ export function ValueCards() {
           </div>
 
           {/* Right side - Where it's going */}
-          <div className="space-y-8">
-            <div className="space-y-4">
-              <div className="text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide uppercase">
+          <div className="space-y-6 sm:space-y-8">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide uppercase">
                 Coming soon
               </div>
-              <h2 className="text-3xl sm:text-4xl font-light text-slate-900 dark:text-slate-100 leading-tight">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-light text-slate-900 dark:text-slate-100 leading-tight">
                 Projects that evolve while you sleep
               </h2>
             </div>
             
-            <div className="space-y-6">
+            <div className="space-y-5 sm:space-y-6">
               {currentFeatures.map((feature, index) => (
-                <div key={index} className="group opacity-75 hover:opacity-100 transition-opacity duration-300">
-                  <h3 className="text-lg font-medium text-slate-700 dark:text-slate-300 mb-2">
+                <div key={index} className="group p-4 sm:p-0 rounded-lg opacity-75 hover:opacity-100 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all duration-300 active:scale-[0.98] sm:active:scale-100">
+                  <h3 className="text-base sm:text-lg font-medium text-slate-700 dark:text-slate-300 mb-2 group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors">
                     {feature.title}
                   </h3>
-                  <p className="text-slate-500 dark:text-slate-500 leading-relaxed">
+                  <p className="text-sm sm:text-base text-slate-500 dark:text-slate-500 leading-relaxed group-hover:text-slate-600 dark:group-hover:text-slate-400 transition-colors">
                     {feature.future}
                   </p>
                 </div>

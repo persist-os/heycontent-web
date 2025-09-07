@@ -51,17 +51,127 @@ export default function LandingPage() {
         />
       </Head>
       
-      <div className="min-h-screen flex flex-col">
-        <HeroSection />
-        <ValueCards />
-        <AgentsShowcase />
-        <WhyItWorks />
+      <div className="min-h-screen flex flex-col snap-y snap-mandatory overflow-y-scroll scroll-smooth">
+        <section className="snap-start snap-always">
+          <HeroSection />
+        </section>
+        <section className="snap-start">
+          <ValueCards />
+        </section>
+        <section className="snap-start">
+          <AgentsShowcase />
+        </section>
+        <section className="snap-start">
+          <WhyItWorks />
+        </section>
         {/* <Personas /> */}
         {/* <PrivacyTrust /> */}
-        <CTABand />
-        <FAQ />
-        <Footer />
+        <section className="snap-start">
+          <CTABand />
+        </section>
+        <section className="snap-start">
+          <FAQ />
+        </section>
+        <section className="snap-end">
+          <Footer />
+        </section>
       </div>
+
+      <style jsx global>{`
+        /* Enhanced mobile interactions */
+        @media (max-width: 768px) {
+          /* Improve scroll snap for mobile */
+          .snap-y {
+            scroll-snap-type: y proximity;
+          }
+          
+          /* Better touch targets */
+          .touch-manipulation {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+          }
+          
+          /* Smooth momentum scrolling on iOS */
+          * {
+            -webkit-overflow-scrolling: touch;
+          }
+          
+          /* Prevent zoom on inputs */
+          input[type="text"],
+          input[type="email"],
+          input[type="password"],
+          textarea {
+            font-size: 16px !important;
+          }
+          
+          /* Enhanced button feedback */
+          button:active,
+          .active\\:scale-95:active {
+            transform: scale(0.95);
+            transition: transform 0.1s ease;
+          }
+          
+          /* Better hover states for touch */
+          @media (hover: none) and (pointer: coarse) {
+            .hover\\:scale-105:hover {
+              transform: none;
+            }
+            
+            .hover\\:bg-blue-50\\/30:hover {
+              background-color: rgba(239, 246, 255, 0.3);
+            }
+            
+            .hover\\:bg-slate-50\\/50:hover {
+              background-color: rgba(248, 250, 252, 0.5);
+            }
+          }
+          
+          /* Improved scroll indicators */
+          ::-webkit-scrollbar {
+            width: 3px;
+          }
+          
+          ::-webkit-scrollbar-track {
+            background: transparent;
+          }
+          
+          ::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.3);
+            border-radius: 3px;
+          }
+          
+          ::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.5);
+          }
+        }
+        
+        /* Reduce motion for users who prefer it */
+        @media (prefers-reduced-motion: reduce) {
+          .animate-fade-in-up,
+          .animate-pulse-slow,
+          .animate-float,
+          .animate-float-delayed,
+          .animate-float-slow {
+            animation: none;
+          }
+          
+          .transition-all,
+          .transition-transform,
+          .transition-colors,
+          .transition-opacity {
+            transition: none;
+          }
+        }
+        
+        /* Enhanced focus states for accessibility */
+        button:focus-visible,
+        a:focus-visible,
+        input:focus-visible,
+        textarea:focus-visible {
+          outline: 2px solid #3b82f6;
+          outline-offset: 2px;
+        }
+      `}</style>
     </>
   );
 } 
