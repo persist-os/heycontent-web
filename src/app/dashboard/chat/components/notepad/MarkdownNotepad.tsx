@@ -22,7 +22,7 @@ interface MarkdownNotepadProps {
   onLinkNote?: (noteId: string) => void
   // Mobile props
   isMobile?: boolean
-  activeTab?: 'chat' | 'notes'
+  activeTab?: 'chat' | 'notes' | 'fingerprint'
   onScrollPositionChange?: (position: number) => void
 }
 
@@ -194,6 +194,11 @@ export const MarkdownNotepad = forwardRef(function MarkdownNotepad({
 
   // Don't render on mobile if not the active tab
   if (isMobile && activeTab !== 'notes') {
+    return null
+  }
+
+  // Don't render fingerprint tab in this component
+  if (activeTab === 'fingerprint') {
     return null
   }
 

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Logo } from '@/components/ui/logo'
 import {
-  Users, Settings, FileText, LogOut, BarChart3, Menu, X, MessageSquare, Clock, Handshake, Trash2, Shield
+  Users, Settings, FileText, LogOut, BarChart3, Menu, X, MessageSquare, Clock, Handshake, Trash2, Shield, Zap
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { useSidebar } from '@/app/context/sidebar-context'
@@ -15,6 +15,13 @@ import { useAdminAuth } from '@/app/lib/admin-auth'
 import { usePlatformConnections } from '@/app/hooks/usePlatformConnections'
 
 const navItems = [
+  {
+    id: 'living-projects',
+    label: 'Living Projects',
+    icon: Zap,
+    href: '/dashboard/living-projects',
+    dataAttr: 'data-living-projects-link',
+  },
   {
     id: 'chat',
     label: 'Chat with Content',
@@ -202,6 +209,9 @@ export const DashboardNav = memo(function DashboardNav() {
   // Memoize active item calculation
   const isItemActive = useCallback((item: typeof dynamicNavItems[0]) => {
     switch (item.id) {
+      case 'living-projects':
+        // This tab is active for living projects and project discovery routes
+        return pathname.startsWith('/dashboard/living-projects') || pathname.startsWith('/dashboard/project-discovery');
       case 'content-hub':
         // This tab is active for multiple, non-nested routes
         return pathname.startsWith('/dashboard/content') || pathname.startsWith('/dashboard/ai-insights');

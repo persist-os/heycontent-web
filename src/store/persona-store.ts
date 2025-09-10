@@ -4,6 +4,7 @@ import { subscribeWithSelector, persist } from 'zustand/middleware';
 import { ConvexReactClient, useMutation, useConvex } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Doc, Id } from '@/convex/_generated/dataModel';
+import { ProjectFingerprint, FingerprintEvolutionHistory } from '@/app/dashboard/chat/types';
 
 export interface PersonaStoreState {
   // Data

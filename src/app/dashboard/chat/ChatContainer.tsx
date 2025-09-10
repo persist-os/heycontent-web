@@ -33,6 +33,7 @@ import { checkUserEmbeddings } from './utils/api-utils';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { useChatHandlers } from './hooks/useChatHandlers'
 import { MarkdownNotepad } from './components/notepad/MarkdownNotepad'
+import { FingerprintDisplay } from './components/notepad/FingerprintDisplay'
 import { MobileTabBar } from './components/notepad/MobileTabBar'
 import { useNotepadUI } from './hooks/useNotepadUI'
 import { useNotes } from '@/app/context/notes-context'
@@ -663,7 +664,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           {/* Mobile Tab Bar */}
           {isMobile && (
             <MobileTabBar
-              activeTab={activeTab}
+              activeTab={activeTab as 'chat' | 'notes' | 'fingerprint'}
               onTabChange={switchToTab}
               hasUnreadNotepadChanges={hasUnreadNotepadChanges}
             />
@@ -789,6 +790,21 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             </div>
           )}
 
+          {/* Mobile: Show fingerprint content when activeTab is 'fingerprint' */}
+          {isMobile && activeTab === 'fingerprint' && (
+            <div className="flex-1 overflow-hidden">
+              <FingerprintDisplay
+                isOpen={true}
+                onClose={() => switchToTab('chat')}
+                width={notepadWidth}
+                onWidthChange={updateWidth}
+                style={getNotepadStyle()}
+                isMobile={true}
+                activeTab={activeTab}
+              />
+            </div>
+          )}
+
           {/* Bottom Bar Actions - only show for users with personas */}
           {authData.user && messages.length === 0 && hasPersona && (
             <div className="flex-shrink-0">
@@ -867,6 +883,18 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           onWidthChange={updateWidth}
           style={getNotepadStyle()}
           availableNotes={availableNotes}
+          isMobile={false}
+        />
+      )}
+
+      {/* Fingerprint Display - Desktop only */}
+      {!isMobile && (
+        <FingerprintDisplay
+          isOpen={true} // Always rendered for now, visibility controlled by component
+          onClose={toggleNotepad}
+          width={notepadWidth}
+          onWidthChange={updateWidth}
+          style={getNotepadStyle()}
           isMobile={false}
         />
       )}

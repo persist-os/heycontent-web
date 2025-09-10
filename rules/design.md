@@ -46,19 +46,6 @@ Our theming is built on `next-themes` and TailwindCSS, utilizing CSS variables f
 | `input` | `--input` | `0 0% 89.8%` | `0 0% 20%` | Input borders |
 | `ring` | `--ring` | `55 95% 58%` | `55 95% 58%` | Focus rings (`#FFDF39`) |
 
-### Custom Brand Colors
-
-Use these for specific elements that reinforce the personal workspace aesthetic.
-
-| Name | Class (`bg-heycontext-*`) | Hex |
-|---|---|---|
-| Yellow | `yellow` | `#FFDF39` |
-| Purple | `purple` | `#9046FF` |
-| Green | `green` | `#45E290` |
-| Light Yellow | `light-yellow` | `hsl(55 100% 92%)` |
-| Light Purple | `light-purple` | `hsl(280 100% 95%)` |
-| Light Green | `light-green` | `hsl(140 60% 95%)` |
-
 ---
 
 ## Typography
