@@ -19,6 +19,8 @@ import ChatContextBox from './main_chat/ChatContextBox'
 import { useContentContext, useContentContextActions } from '@/store/content-context-store'
 import { useProjectContext } from '../hooks/useProjectContext'
 import AmbientFingerprintCanvas from './AmbientFingerprintCanvas'
+import { ConstellationTransition } from '@/app/dashboard/living-projects/components/widgets/ConstellationTransition'
+import { ProjectReveal } from '@/app/dashboard/living-projects/components/widgets/ProjectReveal'
 
 interface ProjectDiscoveryChatProps {
   projectId?: string
@@ -43,15 +45,44 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
 
   // UI state
   const [inputValue, setInputValue] = useState('')
-  const [embeddingInfo, setEmbeddingInfo] = useState<{ hasEmbeddings: boolean; count: number }>({ 
-    hasEmbeddings: false, 
-    count: 0 
+  const [embeddingInfo, setEmbeddingInfo] = useState<{ hasEmbeddings: boolean; count: number }>({
+    hasEmbeddings: false,
+    count: 0
   })
   const [useContextSearch, setUseContextSearch] = useState(true)
   const [contextConsumption, setContextConsumption] = useState({
     hasConsumed: false,
     isDisplayed: false
   })
+
+  // Project reveal state
+  const [showProjectReveal, setShowProjectReveal] = useState(false)
+  const [showTransition, setShowTransition] = useState(false)
+
+  // Fingerprint completion state
+  const [fingerprintComplete, setFingerprintComplete] = useState(false)
+  const [sampleFingerprint] = useState(() => ({
+    projectId: "demo_project",
+    userId: firebaseUser?.uid || "demo_user",
+    name: "Creative Project Discovery",
+    description: "A project discovered through conversation that captures your creative workflow and working style",
+    domain: "creative",
+    complexity_level: 7,
+    collaboration_style: "solo",
+    time_horizon: "project",
+    primary_pattern: "iterative_creator",
+    working_style: ["visual_design", "user_experience", "content_creation"],
+    tangible_deliverables: ["portfolio_website", "design_system", "case_studies", "contact_form"],
+    intangible_benefits: ["professional_growth", "creative_satisfaction", "client_acquisition"],
+    measurement_approach: "website_traffic, client_inquiries, project_completion_milestones",
+    sharing_intention: "public",
+    base_personality: "creative and professional, with a focus on visual storytelling and user experience",
+    project_voice: "supportive and encouraging, helping you create beautiful digital experiences",
+    created_at: Date.now(),
+    last_evolution: Date.now(),
+    intelligence_version: "1.0",
+    status: "active"
+  }))
 
   // Refs
   const chatContainerRef = useRef<HTMLDivElement>(null)
@@ -199,6 +230,20 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
     setInputValue(cleanText)
   }, [])
 
+  // Transition handlers
+  const handleStarsDiscovered = useCallback(() => {
+    setShowTransition(true)
+  }, [])
+
+  const handleTransitionComplete = useCallback(() => {
+    setShowTransition(false)
+    setShowProjectReveal(true)
+  }, [])
+
+  const handleBackFromProjectReveal = useCallback(() => {
+    setShowProjectReveal(false)
+  }, [])
+
   // Autoscroll functionality
   useEffect(() => {
     if (chatContainerRef.current && messages.length > 0) {
@@ -235,6 +280,16 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
     askQueryProcessedRef.current = null
   }, []) // Only run on mount
 
+  // Show project reveal if triggered
+  if (showProjectReveal) {
+    return (
+      <ProjectReveal
+        fingerprint={sampleFingerprint}
+        onBack={handleBackFromProjectReveal}
+      />
+    )
+  }
+
   if (!authData.isAuthenticated) {
     return (
       <div className="flex-1 flex items-center justify-center px-8">
@@ -260,6 +315,7 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
       <AmbientFingerprintCanvas
         messageCount={messages.length}
         isActive={authData.isAuthenticated}
+        onAllStarsDiscovered={handleStarsDiscovered}
       />
       
       {/* Chat Messages Area */}
@@ -382,8 +438,16 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
         </div>
       </div>
 
-      {/* Input Area */}
-      <div className="flex-shrink-0 border-t border-border bg-background">
+      {/* Project Reveal - shows when fingerprint is complete */}
+      {fingerprintComplete && (
+        <div className="flex-1 overflow-hidden">
+          <ProjectReveal fingerprint={sampleFingerprint} />
+        </div>
+      )}
+
+      {/* Input Area - hide when fingerprint is complete */}
+      {!fingerprintComplete && (
+        <div className="flex-shrink-0 border-t border-border bg-background">
         <div className="max-w-4xl sm:max-w-6xl mx-auto px-2 sm:px-3 pt-1 pb-2">
           <ChatInput
             inputRef={inputRef}
@@ -407,6 +471,14 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
           />
         </div>
       </div>
+      )}
+
+      {/* Constellation Transition Overlay */}
+      <ConstellationTransition
+        isActive={showTransition}
+        onComplete={handleTransitionComplete}
+        duration={3000}
+      />
     </div>
   )
 }

@@ -262,9 +262,9 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
                 <FingerprintDisplay 
                   isOpen={true} 
                   onClose={() => {}} 
-                  width="100%" 
+                  width={100} 
                   onWidthChange={() => {}} 
-                  style="full" 
+                  style={{ width: '100%' }} 
                 />
               </div>
             </div>

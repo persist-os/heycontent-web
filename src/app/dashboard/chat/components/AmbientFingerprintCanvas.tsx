@@ -143,23 +143,35 @@ interface FloatingInsight {
 interface AmbientFingerprintCanvasProps {
   messageCount: number
   isActive: boolean
+  onAllStarsDiscovered?: () => void
 }
 
 const AmbientFingerprintCanvas: React.FC<AmbientFingerprintCanvasProps> = ({
   messageCount,
-  isActive
+  isActive,
+  onAllStarsDiscovered
 }) => {
   const [discoveredFields, setDiscoveredFields] = useState<Set<string>>(new Set())
   const [floatingInsights, setFloatingInsights] = useState<FloatingInsight[]>([])
   const [currentPhase, setCurrentPhase] = useState(1)
   const [isExpanded, setIsExpanded] = useState(false)
   const [hoveredField, setHoveredField] = useState<string | null>(null)
+  const [isCompleting, setIsCompleting] = useState(false)
+  const [completionTriggered, setCompletionTriggered] = useState(false)
 
   // Calculate which fingerprint fields should be discovered based on message count
   const fieldsToDiscover = useMemo(() => {
-    // More natural discovery rate - 1-2 fields per 2-3 messages
-    const maxFields = Math.min(Math.floor(messageCount * 0.8) + 1, FINGERPRINT_STARS.length)
-    return FINGERPRINT_STARS.slice(0, maxFields)
+    // Rapid discovery - complete fingerprint after just 2 messages
+    if (messageCount >= 2) {
+      // After 2 messages, discover ALL fields to trigger completion
+      return FINGERPRINT_STARS.slice(0, FINGERPRINT_STARS.length)
+    } else if (messageCount >= 1) {
+      // After 1 message, discover about half the fields
+      const halfFields = Math.floor(FINGERPRINT_STARS.length / 2)
+      return FINGERPRINT_STARS.slice(0, halfFields)
+    }
+    // No messages yet
+    return []
   }, [messageCount])
 
   // Update discovered fields and current phase
@@ -171,7 +183,7 @@ const AmbientFingerprintCanvas: React.FC<AmbientFingerprintCanvasProps> = ({
     fieldsToDiscover.forEach(field => {
       if (!discoveredFields.has(field.fieldName)) {
         newDiscovered.add(field.fieldName)
-        
+
         // Create floating insight for newly discovered field (subtle, not bouncing)
         newInsights.push({
           id: field.fieldName,
@@ -193,8 +205,19 @@ const AmbientFingerprintCanvas: React.FC<AmbientFingerprintCanvasProps> = ({
     if (newDiscovered.size > discoveredFields.size) {
       setDiscoveredFields(newDiscovered)
       setFloatingInsights(prev => [...prev, ...newInsights])
+
+      // Check if all stars are discovered
+      if (newDiscovered.size === FINGERPRINT_STARS.length && !completionTriggered) {
+        setCompletionTriggered(true)
+        setIsCompleting(true)
+
+        // Trigger completion callback after animation starts
+        setTimeout(() => {
+          onAllStarsDiscovered?.()
+        }, 1000) // Give time for animation to start
+      }
     }
-  }, [fieldsToDiscover, discoveredFields, currentPhase])
+  }, [fieldsToDiscover, discoveredFields, currentPhase, completionTriggered, onAllStarsDiscovered])
 
   // Remove floating insights after 3 seconds (shorter for subtlety)
   useEffect(() => {
@@ -312,11 +335,11 @@ const AmbientFingerprintCanvas: React.FC<AmbientFingerprintCanvasProps> = ({
         {FINGERPRINT_STARS.map(field => {
           const isDiscovered = discoveredFields.has(field.fieldName)
           const isHovered = hoveredField === field.fieldName
-          
+
           if (!isDiscovered) return null
 
           return (
-            <g 
+            <g
               key={field.fieldName}
               className={isExpanded ? 'cursor-pointer' : ''}
               onMouseEnter={() => isExpanded && setHoveredField(field.fieldName)}
@@ -329,19 +352,30 @@ const AmbientFingerprintCanvas: React.FC<AmbientFingerprintCanvasProps> = ({
                 r={field.size * (isHovered ? 0.7 : 0.6)}
                 fill="url(#starGlow)"
                 className={`transition-all duration-300 ease-out ${
-                  isHovered 
-                    ? 'opacity-60 dark:opacity-70' 
+                  isHovered
+                    ? 'opacity-60 dark:opacity-70'
                     : 'opacity-30 dark:opacity-40'
-                }`}
+                } ${isCompleting ? 'animate-pulse' : ''}`}
               >
-                <animate
-                  attributeName="r"
-                  values={`${field.size * 0.5};${field.size * 0.7};${field.size * 0.5}`}
-                  dur={`${4 + field.importance * 0.3}s`}
-                  repeatCount="indefinite"
-                />
+                {!isCompleting && (
+                  <animate
+                    attributeName="r"
+                    values={`${field.size * 0.5};${field.size * 0.7};${field.size * 0.5}`}
+                    dur={`${4 + field.importance * 0.3}s`}
+                    repeatCount="indefinite"
+                  />
+                )}
+                {isCompleting && (
+                  <animate
+                    attributeName="r"
+                    values={`${field.size * 0.6};${field.size * 2};${field.size * 0.6}`}
+                    dur="2s"
+                    repeatCount="1"
+                    fill="freeze"
+                  />
+                )}
               </circle>
-              
+
               {/* Main star - steady presence */}
               <circle
                 cx={field.x}
@@ -349,12 +383,21 @@ const AmbientFingerprintCanvas: React.FC<AmbientFingerprintCanvasProps> = ({
                 r={field.size * (isHovered ? 0.28 : 0.25)}
                 fill="rgb(59 130 246)"
                 className={`transition-all duration-300 ease-out ${
-                  isHovered 
-                    ? 'opacity-85 dark:opacity-75' 
+                  isHovered
+                    ? 'opacity-85 dark:opacity-75'
                     : 'opacity-70 dark:opacity-60'
-                }`}
-              />
-              
+                } ${isCompleting ? 'animate-ping' : ''}`}
+              >
+                {isCompleting && (
+                  <animate
+                    attributeName="fill"
+                    values="rgb(59 130 246);rgb(147 197 253);rgb(59 130 246)"
+                    dur="1s"
+                    repeatCount="3"
+                  />
+                )}
+              </circle>
+
               {/* Inner core - bright center */}
               <circle
                 cx={field.x}
@@ -362,12 +405,39 @@ const AmbientFingerprintCanvas: React.FC<AmbientFingerprintCanvasProps> = ({
                 r={field.size * (isHovered ? 0.14 : 0.12)}
                 fill="rgb(147 197 253)"
                 className={`transition-all duration-300 ease-out ${
-                  isHovered 
-                    ? 'opacity-95' 
+                  isHovered
+                    ? 'opacity-95'
                     : 'opacity-85 dark:opacity-75'
-                }`}
+                } ${isCompleting ? 'animate-pulse' : ''}`}
               />
-              
+
+              {/* Completion burst effect */}
+              {isCompleting && (
+                <circle
+                  cx={field.x}
+                  cy={field.y}
+                  r="0"
+                  fill="rgb(147 197 253)"
+                  opacity="0.6"
+                  className="pointer-events-none"
+                >
+                  <animate
+                    attributeName="r"
+                    values="0;20;0"
+                    dur="1.5s"
+                    repeatCount="1"
+                    fill="freeze"
+                  />
+                  <animate
+                    attributeName="opacity"
+                    values="0.6;0;0.6"
+                    dur="1.5s"
+                    repeatCount="1"
+                    fill="freeze"
+                  />
+                </circle>
+              )}
+
               {/* Invisible hover area for better UX */}
               {isExpanded && (
                 <circle

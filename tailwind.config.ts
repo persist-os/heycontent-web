@@ -125,7 +125,7 @@ const config = {
   		}
   	}
   },
-  plugins: [tailwindcssAnimate, require('@tailwindcss/typography')],
+  plugins: [tailwindcssAnimate, require('@tailwindcss/typography'), require('tailwind-scrollbar')],
 } satisfies Config;
 
 export default config;

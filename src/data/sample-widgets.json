@@ -1,0 +1,500 @@
+{
+  "widget_data": {
+    "fp_001": {
+      "world_building_tracker": {
+        "title": "Shadowmere World",
+        "data": {
+          "locations": [
+            { "name": "Necropolis of Shadowmere", "status": "detailed", "notes": "Central hub where death magic originates" },
+            { "name": "The Forbidden Crypts", "status": "outlined", "notes": "Ancient burial grounds with dormant magic" },
+            { "name": "Thornwick Village", "status": "drafted", "notes": "Where protagonist first discovers her powers" },
+            { "name": "The Whispering Woods", "status": "concept", "notes": "Trees that speak to necromancers" }
+          ],
+          "magic_system": {
+            "death_magic_rules": "Complete - 5 tiers of necromancy",
+            "forbidden_aspects": "In progress - social consequences",
+            "power_costs": "Outlined - emotional/physical toll"
+          },
+          "completion": 68
+        }
+      },
+      "character_arc_tracker": {
+        "title": "Necromancer's Journey",
+        "data": {
+          "protagonist": {
+            "name": "Lyralei Shadowmere",
+            "current_arc": "Discovering her heritage",
+            "progress": 45,
+            "key_moments": [
+              "First accidental resurrection - COMPLETE",
+              "Meeting her mentor - COMPLETE", 
+              "Accepting her power - IN PROGRESS",
+              "Confronting the Council - PLANNED",
+              "Embracing her destiny - PLANNED"
+            ]
+          },
+          "supporting_cast": [
+            { "name": "Theron the Bone Scholar", "role": "Mentor", "arc_progress": 60 },
+            { "name": "Kira Brightblade", "role": "Reluctant ally", "arc_progress": 30 },
+            { "name": "The Shadow Council", "role": "Antagonist", "arc_progress": 20 }
+          ]
+        }
+      },
+      "atmospheric_inspiration": {
+        "title": "Dark Magic Muse",
+        "data": {
+          "current_mood": "Melancholic autumn energy",
+          "inspiration_sources": [
+            { "type": "music", "title": "Wardruna - Helvegen", "energy": "death-mystical" },
+            { "type": "visual", "title": "Victorian cemetery photography", "energy": "gothic-beautiful" },
+            { "type": "scent", "title": "Sandalwood and rain", "energy": "grounding-mystical" },
+            { "type": "literature", "title": "Mexican Day of the Dead traditions", "energy": "death-celebration" }
+          ],
+          "moon_phase": "Waning Crescent",
+          "seasonal_energy": "Late autumn - death/rebirth themes strong"
+        }
+      },
+      "writing_streak_tracker": {
+        "title": "Forbidden Magic Flow",
+        "data": {
+          "current_streak": 12,
+          "best_streak": 28,
+          "total_words": 23847,
+          "weekly_goal": 5000,
+          "recent_sessions": [
+            { "date": "2024-01-08", "words": 892, "quality": "deep character work" },
+            { "date": "2024-01-07", "words": 1247, "quality": "flowing dialogue" },
+            { "date": "2024-01-06", "words": 654, "quality": "atmospheric description" }
+          ]
+        }
+      },
+      "creative_flow_meter": {
+        "title": "Shadow Work State",
+        "data": {
+          "current_flow": 7.2,
+          "energy_level": "deep introspection",
+          "creative_blocks": [
+            "Pacing in middle section",
+            "Balancing dark themes with hope"
+          ],
+          "flow_boosters": [
+            "Full moon energy",
+            "Late night writing sessions",
+            "Character meditation"
+          ],
+          "shadow_work_progress": 78
+        }
+      }
+    },
+    "fp_002": {
+      "data_visualizer": {
+        "title": "Forest Network Data",
+        "data": {
+          "datasets": [
+            { "name": "Mycelial Network Mapping", "status": "collecting", "samples": 342 },
+            { "name": "Chemical Signal Analysis", "status": "analyzing", "samples": 156 },
+            { "name": "Tree Communication Patterns", "status": "complete", "samples": 89 }
+          ],
+          "latest_findings": [
+            "Nitrogen sharing increases 34% during drought stress",
+            "Signal propagation speed: 3cm per hour average",
+            "Network complexity correlates with forest age"
+          ],
+          "visualization_types": ["network_graphs", "chemical_heatmaps", "temporal_analysis"]
+        }
+      },
+      "hypothesis_tracker": {
+        "title": "Fungal Intelligence Theory",
+        "data": {
+          "primary_hypothesis": "Mycelial networks exhibit distributed decision-making comparable to neural networks",
+          "supporting_evidence": [
+            "Chemical gradient responses mirror neural firing patterns",
+            "Resource allocation shows predictive behavior",
+            "Network topology resembles brain structure"
+          ],
+          "challenges": [
+            "Defining 'intelligence' in non-neural systems",
+            "Measuring decision vs. chemical reaction",
+            "Scaling laboratory findings to forest systems"
+          ],
+          "confidence_level": 73,
+          "peer_feedback": "Promising but needs more quantitative metrics"
+        }
+      },
+      "publication_pipeline": {
+        "title": "Research Publication Flow",
+        "data": {
+          "manuscripts": [
+            { "title": "Chemical Communication in Mycorrhizal Networks", "status": "drafting", "target": "Nature Communications" },
+            { "title": "Distributed Intelligence in Forest Ecosystems", "status": "outlined", "target": "Science" },
+            { "title": "Biomimetic Applications of Fungal Networks", "status": "concept", "target": "Bioinspiration & Biomimetics" }
+          ],
+          "conferences": [
+            { "name": "International Mycological Congress", "abstract_due": "2024-03-15", "status": "submitted" },
+            { "name": "Society for Integrative Biology", "abstract_due": "2024-04-01", "status": "planned" }
+          ]
+        }
+      },
+      "research_tracker": {
+        "title": "Mycorrhizal Discovery Log",
+        "data": {
+          "field_sites": [
+            { "name": "Old Growth Douglas Fir Plot", "visits": 23, "last_sample": "2024-01-05" },
+            { "name": "Second Growth Mixed Forest", "visits": 18, "last_sample": "2024-01-03" },
+            { "name": "Urban Forest Fragment", "visits": 12, "last_sample": "2023-12-28" }
+          ],
+          "equipment_status": [
+            { "item": "Microscopy Suite", "status": "operational", "next_maintenance": "2024-02-15" },
+            { "item": "Chemical Analysis Kit", "status": "needs_calibration", "next_maintenance": "2024-01-12" },
+            { "item": "Environmental Sensors", "status": "operational", "next_maintenance": "2024-03-01" }
+          ],
+          "recent_discoveries": [
+            "Novel fungal species in urban plots",
+            "Faster signal transmission in stressed trees",
+            "Seasonal variation in network density"
+          ]
+        }
+      },
+      "milestone_timeline": {
+        "title": "PhD Journey Map",
+        "data": {
+          "phases": [
+            { "name": "Literature Review", "start": "2023-09-01", "end": "2023-12-15", "progress": 100 },
+            { "name": "Methodology Development", "start": "2023-11-01", "end": "2024-02-29", "progress": 85 },
+            { "name": "Field Data Collection", "start": "2024-01-15", "end": "2024-08-31", "progress": 35 },
+            { "name": "Laboratory Analysis", "start": "2024-06-01", "end": "2024-11-30", "progress": 15 },
+            { "name": "Dissertation Writing", "start": "2024-09-01", "end": "2025-04-30", "progress": 5 },
+            { "name": "Defense Preparation", "start": "2025-03-01", "end": "2025-06-15", "progress": 0 }
+          ],
+          "critical_dates": [
+            { "event": "Qualifying Exam", "date": "2024-05-15", "status": "scheduled" },
+            { "event": "Committee Meeting", "date": "2024-07-20", "status": "planned" },
+            { "event": "Dissertation Defense", "date": "2025-06-01", "status": "target" }
+          ]
+        }
+      }
+    },
+    "fp_003": {
+      "market_sentiment_tracker": {
+        "title": "DeFi Market Pulse",
+        "data": {
+          "current_sentiment": "bullish",
+          "confidence": 78,
+          "key_metrics": [
+            { "metric": "Total DeFi TVL", "value": "$98.7B", "change": "+12.3%" },
+            { "metric": "Yield Farming Interest", "value": "High", "change": "+23%" },
+            { "metric": "Regulatory Clarity", "value": "Improving", "change": "+5%" }
+          ],
+          "competitor_analysis": [
+            { "protocol": "Compound", "tvl": "$3.2B", "apy": "4.2%", "trend": "stable" },
+            { "protocol": "Aave", "tvl": "$5.8B", "apy": "3.8%", "trend": "growing" },
+            { "protocol": "Curve", "tvl": "$4.1B", "apy": "5.1%", "trend": "volatile" }
+          ],
+          "market_opportunities": [
+            "Cross-chain arbitrage gaps increasing",
+            "Institutional demand for stable yields",
+            "L2 adoption creating new yield opportunities"
+          ]
+        }
+      },
+      "tvl_growth_chart": {
+        "title": "Protocol TVL Growth",
+        "data": {
+          "current_tvl": "$0", 
+          "target_tvl": "$1B",
+          "growth_phases": [
+            { "phase": "Genesis Pool", "target": "$10M", "timeline": "Week 1-2", "status": "planned" },
+            { "phase": "Community Launch", "target": "$100M", "timeline": "Month 1-3", "status": "planned" },
+            { "phase": "Institutional Adoption", "target": "$500M", "timeline": "Month 6-12", "status": "planned" },
+            { "phase": "Market Leadership", "target": "$1B+", "timeline": "Year 2", "status": "planned" }
+          ],
+          "historical_comparisons": [
+            { "protocol": "Uniswap V3", "month_1": "$45M", "month_6": "$2.1B" },
+            { "protocol": "Compound V2", "month_1": "$12M", "month_6": "$890M" }
+          ],
+          "risk_factors": [
+            "Smart contract vulnerabilities",
+            "Market volatility impact",
+            "Regulatory changes"
+          ]
+        }
+      },
+      "security_audit_status": {
+        "title": "Smart Contract Security",
+        "data": {
+          "audit_firms": [
+            { "firm": "Trail of Bits", "status": "contracted", "timeline": "2024-02-01 to 2024-02-28" },
+            { "firm": "ConsenSys Diligence", "status": "planned", "timeline": "2024-03-01 to 2024-03-21" },
+            { "firm": "OpenZeppelin", "status": "interested", "timeline": "TBD" }
+          ],
+          "security_checklist": [
+            { "item": "Reentrancy Protection", "status": "implemented", "priority": "critical" },
+            { "item": "Oracle Manipulation Resistance", "status": "in_progress", "priority": "critical" },
+            { "item": "Flash Loan Attack Prevention", "status": "designed", "priority": "high" },
+            { "item": "Admin Key Management", "status": "implemented", "priority": "high" }
+          ],
+          "bug_bounty": {
+            "program": "Immunefi",
+            "max_reward": "$1M",
+            "status": "launch_ready"
+          }
+        }
+      },
+      "code_commits": {
+        "title": "YieldFarm Development",
+        "data": {
+          "weekly_commits": 47,
+          "active_branches": [
+            { "name": "yield-optimization", "commits": 23, "author": "lead_dev" },
+            { "name": "cross-chain-bridge", "commits": 18, "author": "blockchain_eng" },
+            { "name": "frontend-v3", "commits": 12, "author": "frontend_dev" }
+          ],
+          "code_coverage": 87,
+          "test_status": {
+            "unit_tests": "456 passing",
+            "integration_tests": "89 passing", 
+            "e2e_tests": "23 passing"
+          },
+          "recent_features": [
+            "Dynamic APY calculation algorithm",
+            "Multi-token pool support",
+            "Gas optimization for large transactions"
+          ]
+        }
+      },
+      "milestone_timeline": {
+        "title": "Mainnet Launch Roadmap",
+        "data": {
+          "phases": [
+            { "name": "Smart Contract Development", "start": "2024-01-01", "end": "2024-02-15", "progress": 78 },
+            { "name": "Security Audits", "start": "2024-02-01", "end": "2024-03-31", "progress": 25 },
+            { "name": "Testnet Deployment", "start": "2024-03-15", "end": "2024-04-30", "progress": 10 },
+            { "name": "Community Testing", "start": "2024-04-15", "end": "2024-05-31", "progress": 0 },
+            { "name": "Mainnet Launch", "start": "2024-06-01", "end": "2024-06-15", "progress": 0 },
+            { "name": "Liquidity Bootstrap", "start": "2024-06-15", "end": "2024-07-15", "progress": 0 }
+          ],
+          "critical_dependencies": [
+            "Audit completion and approval",
+            "Oracle provider integration",
+            "Exchange listing confirmations"
+          ]
+        }
+      }
+    },
+    "fp_004": {
+      "vendor_coordination_board": {
+        "title": "Forest Wedding Vendors",
+        "data": {
+          "confirmed_vendors": [
+            { "type": "Venue", "name": "Enchanted Grove Gardens", "status": "contracted", "contact": "Sarah@grovegardens.com" },
+            { "type": "Catering", "name": "Woodland Feast Co", "status": "contracted", "contact": "chef@woodlandfeast.com" },
+            { "type": "Photography", "name": "Mystic Moments Photo", "status": "contracted", "contact": "lens@mysticmoments.com" }
+          ],
+          "pending_vendors": [
+            { "type": "Florist", "name": "Wild Bloom Studio", "status": "proposal_sent", "contact": "hello@wildbloom.studio" },
+            { "type": "Music", "name": "Forest Folk Band", "status": "negotiating", "contact": "music@forestfolk.band" },
+            { "type": "Transportation", "name": "Fairy Tale Carriages", "status": "quote_requested", "contact": "book@fairytalerides.com" }
+          ],
+          "coordination_notes": [
+            "Venue needs final headcount by March 15th",
+            "Caterer requires menu tasting by February 20th",
+            "Photographer wants engagement shoot before March"
+          ]
+        }
+      },
+      "guest_rsvp_tracker": {
+        "title": "Guest List Magic",
+        "data": {
+          "total_invited": 150,
+          "responses_received": 87,
+          "attending": 72,
+          "declined": 15,
+          "categories": [
+            { "group": "Family", "invited": 45, "attending": 40, "declined": 3, "pending": 2 },
+            { "group": "Friends", "invited": 65, "attending": 52, "declined": 8, "pending": 5 },
+            { "group": "Colleagues", "invited": 25, "attending": 18, "declined": 4, "pending": 3 },
+            { "group": "Plus Ones", "invited": 15, "attending": 12, "declined": 0, "pending": 3 }
+          ],
+          "special_accommodations": [
+            { "guest": "Aunt Martha", "need": "Wheelchair accessible seating" },
+            { "guest": "Jamie & Alex", "need": "Vegan meal options" },
+            { "guest": "Little Emma", "need": "Child activity kit" }
+          ]
+        }
+      },
+      "budget_tracker": {
+        "title": "Enchanted Budget",
+        "data": {
+          "total_budget": 25000,
+          "spent": 14750,
+          "remaining": 10250,
+          "categories": [
+            { "category": "Venue", "budgeted": 8000, "spent": 8000, "remaining": 0 },
+            { "category": "Food & Drink", "budgeted": 6000, "spent": 3500, "remaining": 2500 },
+            { "category": "Photography", "budgeted": 3000, "spent": 2800, "remaining": 200 },
+            { "category": "Flowers", "budgeted": 2500, "spent": 0, "remaining": 2500 },
+            { "category": "Music", "budgeted": 2000, "spent": 450, "remaining": 1550 },
+            { "category": "Attire", "budgeted": 1500, "spent": 0, "remaining": 1500 },
+            { "category": "Miscellaneous", "budgeted": 2000, "spent": 0, "remaining": 2000 }
+          ],
+          "upcoming_expenses": [
+            { "item": "Final catering payment", "amount": 2500, "due": "2024-04-15" },
+            { "item": "Floral arrangements", "amount": 2200, "due": "2024-03-30" },
+            { "item": "Wedding dress alterations", "amount": 300, "due": "2024-03-01" }
+          ]
+        }
+      },
+      "milestone_timeline": {
+        "title": "Wedding Timeline",
+        "data": {
+          "phases": [
+            { "name": "Planning & Booking", "start": "2023-10-01", "end": "2024-01-31", "progress": 85 },
+            { "name": "Detailed Coordination", "start": "2024-01-15", "end": "2024-04-30", "progress": 45 },
+            { "name": "Final Preparations", "start": "2024-04-15", "end": "2024-05-25", "progress": 15 },
+            { "name": "Wedding Week", "start": "2024-05-20", "end": "2024-05-26", "progress": 0 },
+            { "name": "Honeymoon", "start": "2024-05-27", "end": "2024-06-10", "progress": 5 }
+          ],
+          "important_dates": [
+            { "event": "Final dress fitting", "date": "2024-04-20", "status": "scheduled" },
+            { "event": "Rehearsal dinner", "date": "2024-05-24", "status": "venue_booked" },
+            { "event": "Wedding day!", "date": "2024-05-25", "status": "the_big_day" }
+          ]
+        }
+      },
+      "mood_tracker": {
+        "title": "Wedding Joy Meter",
+        "data": {
+          "current_mood": "Excited but slightly overwhelmed",
+          "stress_level": 6,
+          "joy_level": 9,
+          "recent_emotions": [
+            { "date": "2024-01-08", "mood": "Accomplished", "note": "Booked photographer!" },
+            { "date": "2024-01-06", "mood": "Stressed", "note": "Catering menu decisions" },
+            { "date": "2024-01-04", "mood": "Blissful", "note": "Venue visit was magical" }
+          ],
+          "stress_sources": [
+            "Guest coordination complexity",
+            "Budget balancing act",
+            "Timeline pressure"
+          ],
+          "joy_sources": [
+            "Partner's excitement and support",
+            "Family involvement and love",
+            "Vision coming to life"
+          ]
+        }
+      }
+    },
+    "fp_005": {
+      "filming_schedule": {
+        "title": "Urban Exploration Schedule",
+        "data": {
+          "locations": [
+            { "name": "Abandoned Steel Mill", "date": "2024-01-15", "status": "completed", "footage": "2.5 hours" },
+            { "name": "Former Auto Plant", "date": "2024-01-22", "status": "scheduled", "permits": "approved" },
+            { "name": "Empty Warehouse District", "date": "2024-02-05", "status": "scouted", "permits": "pending" },
+            { "name": "Reclaimed Community Garden", "date": "2024-02-12", "status": "contacted", "permits": "requested" }
+          ],
+          "weather_concerns": [
+            "Winter lighting challenges",
+            "Snow affecting outdoor shots",
+            "Indoor heating for equipment"
+          ],
+          "equipment_needs": [
+            { "item": "Steadicam rig", "status": "reserved", "pickup": "2024-01-20" },
+            { "item": "Extra batteries", "status": "purchased", "note": "Cold weather drain" },
+            { "item": "Lighting kit", "status": "checked_out", "return": "2024-02-15" }
+          ]
+        }
+      },
+      "interview_pipeline": {
+        "title": "Community Voices Pipeline",
+        "data": {
+          "subjects": [
+            { "name": "Maria Santos", "role": "Community Garden Coordinator", "status": "interviewed", "date": "2024-01-10" },
+            { "name": "James Miller", "role": "Former Factory Worker", "status": "scheduled", "date": "2024-01-25" },
+            { "name": "Dr. Sarah Chen", "role": "Urban Studies Professor", "status": "contacted", "response": "pending" },
+            { "name": "Alex Rivera", "role": "Street Artist", "status": "interested", "contact": "via_instagram" }
+          ],
+          "interview_themes": [
+            "Personal connection to spaces",
+            "Witnessing transformation over time",
+            "Community resilience stories",
+            "Future vision for the area"
+          ],
+          "consent_forms": {
+            "completed": 1,
+            "pending": 2,
+            "template_approved": true
+          }
+        }
+      },
+      "editing_progress": {
+        "title": "Resilience Story Editing",
+        "data": {
+          "total_footage": "8.5 hours",
+          "rough_cuts": [
+            { "sequence": "Opening montage", "duration": "3:24", "status": "draft_complete" },
+            { "sequence": "Maria interview", "duration": "12:47", "status": "transcribed" },
+            { "sequence": "Steel mill exploration", "duration": "8:15", "status": "color_corrected" },
+            { "sequence": "Community garden reveal", "duration": "5:30", "status": "rough_cut" }
+          ],
+          "target_length": "15-20 minutes",
+          "current_assembly": "11:32",
+          "editing_notes": [
+            "Need more b-roll for transitions",
+            "Audio levels need balancing",
+            "Color grade too dark in some sequences"
+          ],
+          "next_tasks": [
+            "Sync remaining interview audio",
+            "Create title sequence",
+            "Find copyright-free music"
+          ]
+        }
+      },
+      "research_tracker": {
+        "title": "Urban Decay Discovery",
+        "data": {
+          "academic_sources": [
+            { "title": "The Death and Life of Great American Cities", "author": "Jane Jacobs", "status": "notes_complete" },
+            { "title": "Shrinking Cities", "author": "Philipp Oswalt", "status": "reading" },
+            { "title": "Urban Ruins in Detroit", "author": "Various", "status": "ordered" }
+          ],
+          "historical_context": [
+            { "topic": "Industrial decline timeline", "progress": 70, "sources": 8 },
+            { "topic": "Community response patterns", "progress": 45, "sources": 12 },
+            { "topic": "Art in abandoned spaces", "progress": 85, "sources": 15 }
+          ],
+          "field_observations": [
+            "Nature reclaiming industrial spaces",
+            "Informal community gathering spots", 
+            "Street art as documentation",
+            "Safety considerations for filming"
+          ]
+        }
+      },
+      "publication_tracker": {
+        "title": "Film Festival Pipeline",
+        "data": {
+          "target_festivals": [
+            { "name": "Sundance Film Festival", "deadline": "2024-09-17", "category": "Short Documentary", "fee": "$75" },
+            { "name": "SXSW", "deadline": "2024-08-30", "category": "Documentary Shorts", "fee": "$50" },
+            { "name": "Toronto International Film Festival", "deadline": "2024-07-15", "category": "Short Cuts", "fee": "$100" },
+            { "name": "Local Film Society Festival", "deadline": "2024-04-30", "category": "Student Films", "fee": "$25" }
+          ],
+          "submission_requirements": [
+            "Final cut completion by March 2024",
+            "Director's statement (500 words)",
+            "Production stills and poster",
+            "Music licensing documentation"
+          ],
+          "screening_opportunities": [
+            { "venue": "University Film Showcase", "date": "2024-04-15", "status": "accepted" },
+            { "venue": "Community Center", "date": "2024-05-10", "status": "proposed" }
+          ]
+        }
+      }
+    }
+  }
+}
