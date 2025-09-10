@@ -18,6 +18,11 @@ import sampleFingerprintsData from '@/data/sample-fingerprints.json'
 import sampleWidgetsData from '@/data/sample-widgets.json'
 import { WidgetConfig } from './WidgetFactory'
 
+// TODO: Remove all sample data imports and replace with backend queries
+// TODO: Implement real-time fingerprint evolution tracking
+// TODO: Add fingerprint comparison and versioning system
+// TODO: Implement fingerprint collaboration and sharing features
+
 interface ProjectRevealProps {
   fingerprint: ProjectFingerprint
   onBack?: () => void
@@ -37,11 +42,15 @@ export function ProjectReveal({
   // Use the provided fingerprint directly
   const currentFingerprint = fingerprint
 
+  // TODO: Replace with backend widget generation and configuration API
+  // TODO: Implement intelligent widget suggestions based on fingerprint evolution
+  // TODO: Add widget performance metrics and optimization
   // Function to convert sample widget data to WidgetConfig format
   function convertSampleWidgetsToConfig(fingerprintId: string): WidgetConfig[] {
     const widgetData = sampleWidgetsData.widget_data[fingerprintId]
 
     if (!widgetData) {
+      // TODO: Implement fallback widget generation for incomplete fingerprints
       return []
     }
 
@@ -120,6 +129,9 @@ export function ProjectReveal({
 
   return (
     <>
+      {/* TODO: Replace fingerprint overlay with backend-driven fingerprint viewer */}
+      {/* TODO: Implement fingerprint real-time updates and collaboration */}
+      {/* TODO: Add fingerprint export/import functionality */}
       {/* Project Fingerprint Overlay - Simple scrollable div */}
       <div className={`fixed top-24 right-6 z-[9999] bg-background/95 backdrop-blur-sm border border-border/30 rounded-xl shadow-lg transition-all duration-300 ease-in-out ${
         isOverlayExpanded ? 'max-w-4xl w-full' : 'max-w-sm'
@@ -162,6 +174,9 @@ export function ProjectReveal({
           {/* Expanded Content */}
           {isOverlayExpanded && (
             <div className="border-t border-border/20 pt-4 space-y-4">
+              {/* TODO: Replace hardcoded fingerprint display with dynamic backend queries */}
+              {/* TODO: Implement fingerprint field validation and type safety */}
+              {/* TODO: Add fingerprint change tracking and audit log */}
               {/* Full Fingerprint Data */}
               <div className="space-y-3">
                 <div className="text-sm font-medium text-foreground">Complete Fingerprint Data:</div>
@@ -315,8 +330,8 @@ export function ProjectReveal({
               </div>
 
               <div className="flex items-center gap-4">
-                {/* Demo project selector */}
-                <div className="flex items-center gap-3 min-w-0">
+                {/* Demo project selector - moved further left to avoid overlap with fingerprint overlay */}
+                <div className="flex items-center gap-3 min-w-0 mr-8">
                   <span className="text-sm text-muted-foreground/70 font-medium whitespace-nowrap">Select Project:</span>
                   <Select
                     value={selectedDemoFingerprint.toString()}

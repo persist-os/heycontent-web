@@ -5,6 +5,11 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/app/context/auth-context'
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
+
+// TODO: Replace sample data dependencies with real backend queries
+// TODO: Implement real-time constellation updates via Convex subscriptions
+// TODO: Add constellation state persistence and restoration
+// TODO: Implement collaborative constellation viewing and editing
 import { Button } from '@/components/ui/button'
 import { CreateProjectModal } from './CreateProjectModal'
 import { ProjectStar } from './ProjectStar'

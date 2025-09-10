@@ -2,6 +2,11 @@
 
 import { useMemo } from 'react'
 
+// TODO: Replace hardcoded layout calculations with backend-optimized positioning algorithm
+// TODO: Implement layout persistence and user customization options
+// TODO: Add layout performance optimization and caching
+// TODO: Implement collaborative layout sharing and team templates
+
 interface Project {
   _id: string
   name: string
@@ -41,6 +46,10 @@ export function useConstellationLayout(projects: Project[]): ConstellationLayout
     const canvasWidth = Math.max(window.innerWidth * 3, 2400)
     const canvasHeight = Math.max(window.innerHeight * 2.5, 1600)
 
+    // TODO: Replace hardcoded importance calculation with ML-based scoring
+    // TODO: Implement user behavior tracking for importance weighting
+    // TODO: Add collaborative importance voting and consensus
+    // TODO: Implement importance decay and time-based relevance
     // Calculate project importance scores
     const projectsWithImportance = projects.map(project => {
       const hasFingerprint = !!project.fingerprintId

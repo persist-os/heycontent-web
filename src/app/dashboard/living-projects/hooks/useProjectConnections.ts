@@ -2,6 +2,11 @@
 
 import { useMemo } from 'react'
 
+// TODO: Replace hardcoded connection logic with AI-powered relationship mapping
+// TODO: Implement connection strength learning from user interactions
+// TODO: Add manual connection creation and editing capabilities
+// TODO: Implement connection visualization with different relationship types
+
 interface Project {
   _id: string
   name: string

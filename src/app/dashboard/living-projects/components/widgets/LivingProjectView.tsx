@@ -10,6 +10,11 @@ import {
 } from './WidgetFactory'
 import { Sparkles, Heart, Coffee, BookOpen, Target, Users } from 'lucide-react'
 
+// TODO: Replace all sample data imports with real backend queries
+// TODO: Implement widget persistence - currently all widget state is ephemeral
+// TODO: Add widget interaction logging for personalization
+// TODO: Implement widget collaboration features for multi-user projects
+
 // Reuse existing components and hooks
 import { usePanZoom } from '../../hooks/usePanZoom'
 import { ConnectionLines } from '../ConnectionLines'
@@ -215,10 +220,15 @@ interface LivingProjectViewProps {
   sampleWidgets?: WidgetConfig[]
 }
 
+// TODO: Replace hardcoded personality theme system with backend-configured themes
+// TODO: Implement dynamic theme generation based on user preferences
+// TODO: Add theme customization and user-defined color schemes
 // Personality-driven theme system based on fingerprint
 function getPersonalityTheme(fingerprint: ProjectFingerprint) {
   const { domain, primary_pattern, base_personality } = fingerprint
 
+  // TODO: Load theme configurations from backend database
+  // TODO: Implement theme inheritance and customization
   // Base theme from domain
   let theme = {
     primary: 'blue',
@@ -290,18 +300,34 @@ function WidgetStar({
   onHover?: (widgetId: string | null) => void
 }) {
   const themeColors = getWidgetThemeColors(widget.theme)
-  const cardSizes = {
-    small: { width: 192, height: 128 }, // w-48 h-32
-    medium: { width: 256, height: 160 }, // w-64 h-40
-    large: { width: 320, height: 192 } // w-80 h-48
+  
+  // Dynamic sizing based on zoom level and content
+  const getCardDimensions = () => {
+    // Base sizes
+    const baseSizes = {
+      small: { width: 192, minHeight: 128 }, // w-48 min-h-32
+      medium: { width: 256, minHeight: 160 }, // w-64 min-h-40
+      large: { width: 320, minHeight: 192 } // w-80 min-h-48
+    }
+    
+    const baseSize = baseSizes[size]
+    
+    // Scale up dimensions based on zoom level for better readability
+    const zoomMultiplier = Math.max(1, scale * 0.8) // Subtle scaling with zoom
+    
+    return {
+      width: baseSize.width * zoomMultiplier,
+      minHeight: baseSize.minHeight * zoomMultiplier
+    }
   }
 
-  const { width, height } = cardSizes[size]
+  const { width, minHeight } = getCardDimensions()
 
   // Show different levels of detail based on zoom
   const showDescription = scale > 0.8
   const showMetadata = scale > 1.0
   const showFullDetails = scale > 1.4
+  const showAllContent = scale > 1.2 // Remove text truncation at higher zoom
 
   // Calculate opacity based on importance and scale
   const baseOpacity = Math.max(0.7, importance)
@@ -313,42 +339,42 @@ function WidgetStar({
       className="absolute cursor-pointer group transition-all duration-300 ease-out will-change-transform"
       style={{
         left: `${x - width/2}px`,
-        top: `${y - height/2}px`,
+        top: `${y - minHeight/2}px`,
         width: `${width}px`,
-        height: `${height}px`,
+        minHeight: `${minHeight}px`,
         opacity: finalOpacity
       }}
       onClick={onClick}
       onMouseEnter={() => onHover?.(widget.id)}
       onMouseLeave={() => onHover?.(null)}
     >
-      {/* Main Card */}
+      {/* Main Card - Now uses min-height instead of fixed height */}
       <div className={`
-        relative w-full h-full rounded-lg border backdrop-blur-sm
+        relative w-full rounded-lg border backdrop-blur-sm
         transition-all duration-300 ease-out
         hover:scale-[1.02] hover:z-10
         ${themeColors.border} ${themeColors.bg}
         ${isHighlighted ? 'ring-2 ring-blue-400/60 scale-[1.01]' : 'ring-1 ring-border/50'}
-      `}>
+      `} style={{ minHeight: `${minHeight}px` }}>
         {/* Subtle border glow effect */}
         <div className={`
           absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300
           bg-gradient-to-br from-white/5 via-transparent to-white/5
         `} />
 
-        {/* Content */}
-        <div className="relative p-4 h-full flex flex-col">
+        {/* Content - Now allows natural height expansion */}
+        <div className="relative p-4 flex flex-col">
           {/* Header */}
           <div className="flex-shrink-0 mb-3">
             <div className="flex items-start justify-between mb-1">
               <h3 className={`
                 font-medium text-foreground leading-tight transition-colors duration-300
-                group-hover:text-blue-600 dark:group-hover:text-blue-400
+                group-hover:text-blue-600 dark:group-hover:text-blue-400 break-words
                 ${size === 'large' ? 'text-lg' : size === 'medium' ? 'text-base' : 'text-sm'}
               `}>
                 {widget.title}
               </h3>
-              <div className="text-muted-foreground/50 group-hover:text-muted-foreground transition-colors text-xs">
+              <div className="text-muted-foreground/50 group-hover:text-muted-foreground transition-colors text-xs flex-shrink-0 ml-2">
                 →
               </div>
             </div>
@@ -364,23 +390,20 @@ function WidgetStar({
             </div>
           </div>
 
-          {/* Widget content preview */}
-          <div className="flex-1 mb-3">
+          {/* Widget content preview - Dynamic height based on zoom */}
+          <div className="flex-grow mb-3">
             <div className={`
-              text-muted-foreground/80 leading-relaxed
+              text-muted-foreground/80 leading-relaxed break-words
               ${size === 'large' ? 'text-sm' : 'text-xs'}
-              ${showFullDetails ? '' : 'line-clamp-2'}
+              ${showAllContent ? '' : showFullDetails ? 'line-clamp-4' : showDescription ? 'line-clamp-3' : 'line-clamp-2'}
             `}>
-              {renderWidgetContent(widget)}
+              {renderWidgetContent(widget, showAllContent)}
             </div>
           </div>
 
-          {/* Spacer */}
-          <div className="flex-1" />
-
           {/* Footer metadata */}
           {showMetadata && (
-            <div className="flex-shrink-0 pt-2 border-t border-border/20">
+            <div className="flex-shrink-0 pt-2 border-t border-border/20 mt-auto">
               <div className="flex items-center justify-between text-xs">
                 <div className="space-y-1">
                   <div className="text-muted-foreground/60">
@@ -406,7 +429,7 @@ function WidgetStar({
 
           {/* Minimal footer for low zoom */}
           {!showMetadata && (
-            <div className="flex-shrink-0 pt-2">
+            <div className="flex-shrink-0 pt-2 mt-auto">
               <div className="text-xs text-muted-foreground/50 font-mono">
                 {widget.type}
               </div>
@@ -428,11 +451,16 @@ function WidgetStar({
   )
 }
 
+// TODO: Replace hardcoded widget rendering with backend-driven widget system
+// TODO: Implement dynamic widget component loading from registry
+// TODO: Add widget data validation and type safety
+// TODO: Implement widget-specific interaction handlers from backend configuration
 // Render actual widget content from sample data
-function renderWidgetContent(config: any) {
+function renderWidgetContent(config: any, showAllContent: boolean = false) {
   const { type, data } = config
 
   if (!data) {
+    // TODO: Implement proper error handling and loading states from backend
     return (
       <div className="text-center text-xs text-muted-foreground/60">
         No data available
@@ -442,6 +470,7 @@ function renderWidgetContent(config: any) {
 
   switch (type) {
     case 'world_building_tracker':
+      const maxLocations = showAllContent ? (data.locations?.length || 0) : 3
       return (
         <div className="space-y-2">
           <div className="text-xs font-medium text-muted-foreground/80">World Building Progress</div>
@@ -451,15 +480,20 @@ function renderWidgetContent(config: any) {
             </div>
             <div className="space-y-1">
               <div className="text-xs font-medium">Locations:</div>
-              {data.locations?.slice(0, 3).map((loc: any, i: number) => (
-                <div key={i} className="text-xs text-muted-foreground/70 pl-2">
+              {data.locations?.slice(0, maxLocations).map((loc: any, i: number) => (
+                <div key={i} className="text-xs text-muted-foreground/70 pl-2 break-words">
                   • {loc.name} ({loc.status})
                 </div>
               ))}
+              {!showAllContent && data.locations?.length > 3 && (
+                <div className="text-xs text-muted-foreground/50 pl-2">
+                  +{data.locations.length - 3} more locations...
+                </div>
+              )}
             </div>
             <div className="space-y-1">
               <div className="text-xs font-medium">Magic System:</div>
-              <div className="text-xs text-muted-foreground/70 pl-2">
+              <div className="text-xs text-muted-foreground/70 pl-2 break-words">
                 Death Magic: {data.magic_system?.death_magic_rules}
               </div>
             </div>
@@ -468,12 +502,13 @@ function renderWidgetContent(config: any) {
       )
 
     case 'character_arc_tracker':
+      const maxMoments = showAllContent ? (data.protagonist?.key_moments?.length || 0) : 2
       return (
         <div className="space-y-2">
           <div className="text-xs font-medium text-muted-foreground/80">Character Development</div>
           <div className="space-y-1">
             {data.protagonist && (
-              <div className="text-xs">
+              <div className="text-xs break-words">
                 <span className="font-medium">{data.protagonist.name}:</span> {data.protagonist.current_arc}
               </div>
             )}
@@ -482,58 +517,75 @@ function renderWidgetContent(config: any) {
             </div>
             <div className="space-y-1">
               <div className="text-xs font-medium">Key Moments:</div>
-              {data.protagonist?.key_moments?.slice(0, 2).map((moment: string, i: number) => (
-                <div key={i} className="text-xs text-muted-foreground/70 pl-2">
+              {data.protagonist?.key_moments?.slice(0, maxMoments).map((moment: string, i: number) => (
+                <div key={i} className="text-xs text-muted-foreground/70 pl-2 break-words">
                   • {moment}
                 </div>
               ))}
+              {!showAllContent && data.protagonist?.key_moments?.length > 2 && (
+                <div className="text-xs text-muted-foreground/50 pl-2">
+                  +{data.protagonist.key_moments.length - 2} more moments...
+                </div>
+              )}
             </div>
           </div>
         </div>
       )
 
     case 'atmospheric_inspiration':
+      const maxSources = showAllContent ? (data.inspiration_sources?.length || 0) : 2
       return (
         <div className="space-y-2">
           <div className="text-xs font-medium text-muted-foreground/80">Current Mood</div>
-          <div className="text-xs text-muted-foreground/70">
+          <div className="text-xs text-muted-foreground/70 break-words">
             {data.current_mood}
           </div>
-          <div className="text-xs">
+          <div className="text-xs break-words">
             <span className="font-medium">Seasonal:</span> {data.seasonal_energy}
           </div>
           <div className="space-y-1">
             <div className="text-xs font-medium">Inspiration:</div>
-            {data.inspiration_sources?.slice(0, 2).map((source: any, i: number) => (
-              <div key={i} className="text-xs text-muted-foreground/70 pl-2">
+            {data.inspiration_sources?.slice(0, maxSources).map((source: any, i: number) => (
+              <div key={i} className="text-xs text-muted-foreground/70 pl-2 break-words">
                 • {source.title}
               </div>
             ))}
+            {!showAllContent && data.inspiration_sources?.length > 2 && (
+              <div className="text-xs text-muted-foreground/50 pl-2">
+                +{data.inspiration_sources.length - 2} more sources...
+              </div>
+            )}
           </div>
         </div>
       )
 
     case 'writing_streak_tracker':
+      const maxSessions = showAllContent ? (data.recent_sessions?.length || 0) : 2
       return (
         <div className="space-y-2">
           <div className="text-xs font-medium text-muted-foreground/80">Writing Stats</div>
           <div className="space-y-1">
-            <div className="text-xs">
+            <div className="text-xs break-words">
               <span className="font-medium">Streak:</span> {data.current_streak} days
             </div>
-            <div className="text-xs">
+            <div className="text-xs break-words">
               <span className="font-medium">Total Words:</span> {data.total_words?.toLocaleString()}
             </div>
-            <div className="text-xs">
+            <div className="text-xs break-words">
               <span className="font-medium">Goal:</span> {data.weekly_goal} words/week
             </div>
             <div className="space-y-1">
               <div className="text-xs font-medium">Recent Sessions:</div>
-              {data.recent_sessions?.slice(0, 2).map((session: any, i: number) => (
-                <div key={i} className="text-xs text-muted-foreground/70 pl-2">
+              {data.recent_sessions?.slice(0, maxSessions).map((session: any, i: number) => (
+                <div key={i} className="text-xs text-muted-foreground/70 pl-2 break-words">
                   • {session.words} words ({session.quality})
                 </div>
               ))}
+              {!showAllContent && data.recent_sessions?.length > 2 && (
+                <div className="text-xs text-muted-foreground/50 pl-2">
+                  +{data.recent_sessions.length - 2} more sessions...
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -544,18 +596,18 @@ function renderWidgetContent(config: any) {
         <div className="space-y-2">
           <div className="text-xs font-medium text-muted-foreground/80">Flow State</div>
           <div className="space-y-1">
-            <div className="text-xs">
+            <div className="text-xs break-words">
               <span className="font-medium">Current Flow:</span> {data.current_flow}/10
             </div>
-            <div className="text-xs">
+            <div className="text-xs break-words">
               <span className="font-medium">Energy:</span> {data.energy_level}
             </div>
             <div className="space-y-1">
               <div className="text-xs font-medium">Flow Boosters:</div>
               {data.flow_boosters?.slice(0, 2).map((booster: string, i: number) => (
-                <div key={i} className="text-xs text-muted-foreground/70 pl-2">
-                  • {booster}
-                </div>
+              <div key={i} className="text-xs text-muted-foreground/70 pl-2 break-words">
+                • {booster}
+              </div>
               ))}
             </div>
           </div>
@@ -981,7 +1033,9 @@ export function LivingProjectView({ fingerprint, sampleWidgets }: LivingProjectV
   })
 
   const widgets = useMemo(() => {
-    // Use sample widgets if provided, otherwise generate from fingerprint
+    // TODO: Replace with backend widget query - currently uses hardcoded sample data
+    // TODO: Implement widget caching and sync with Convex database
+    // TODO: Add widget versioning and conflict resolution for collaborative editing
     if (sampleWidgets && sampleWidgets.length > 0) {
       return sampleWidgets
     }
@@ -1084,7 +1138,10 @@ export function LivingProjectView({ fingerprint, sampleWidgets }: LivingProjectV
 
   // Handle widget click
   const handleWidgetClick = useCallback((widget: WidgetConfig) => {
-    // For now, just log the interaction - in a real app this would open the widget
+    // TODO: Implement real widget interaction system
+    // TODO: Add widget usage analytics and personalization data collection
+    // TODO: Implement widget-specific navigation and state management
+    // TODO: Add widget collaboration features (comments, shared views, etc.)
     console.log('Widget clicked:', widget.title, widget.type)
   }, [])
 
@@ -1121,9 +1178,14 @@ export function LivingProjectView({ fingerprint, sampleWidgets }: LivingProjectV
   const personalityTheme = useMemo(() => getPersonalityTheme(fingerprint), [fingerprint])
   const ThemeIcon = personalityTheme.icon
 
+  // TODO: Replace hardcoded status mapping with backend status configuration
+  // TODO: Implement status progression logic and automated status updates
+  // TODO: Add status-specific actions and workflows from backend
   // Get project status with personality
   const getProjectStatus = () => {
     const status = fingerprint.status || 'discovering'
+    // TODO: Load status configurations and labels from backend
+    // TODO: Implement status-based feature unlocking
     switch (status) {
       case 'active': return { label: 'actively growing', color: 'text-green-600 dark:text-green-400' }
       case 'evolving': return { label: 'evolving beautifully', color: 'text-blue-600 dark:text-blue-400' }

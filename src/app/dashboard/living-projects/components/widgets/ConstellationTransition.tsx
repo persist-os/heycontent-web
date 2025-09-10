@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { Sparkles, Star } from 'lucide-react'
 
 interface ConstellationTransitionProps {
   isActive: boolean
@@ -78,7 +77,7 @@ export function ConstellationTransition({
     <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex items-center justify-center">
       {/* Animated background */}
       <div className="absolute inset-0 overflow-hidden">
-        {/* Scattered stars phase */}
+        {/* Scattered points phase */}
         {phase === 'stars' && animatedStars.map((star) => (
           <div
             key={star.id}
@@ -89,47 +88,27 @@ export function ConstellationTransition({
               animationDelay: `${star.delay}ms`
             }}
           >
-            <Star
-              size={star.size}
-              className={`${star.color} animate-pulse opacity-0`}
+            <div
+              className={`${star.color} rounded-full opacity-0`}
               style={{
-                animation: `starScatter 2s ease-out forwards`,
+                width: `${star.size}px`,
+                height: `${star.size}px`,
+                animation: `pointScatter 2s ease-out forwards`,
                 animationDelay: `${star.delay}ms`
               }}
             />
           </div>
         ))}
 
-        {/* Widget formation phase */}
-        {phase === 'widgets' && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="grid grid-cols-4 gap-6 max-w-2xl">
-              {/* Simulate widget formation */}
-              {Array.from({ length: 6 }, (_, i) => (
-                <div
-                  key={i}
-                  className="w-20 h-20 bg-card/50 border border-border/30 rounded-xl flex items-center justify-center opacity-0"
-                  style={{
-                    animation: `widgetForm 1s ease-out forwards`,
-                    animationDelay: `${i * 150}ms`
-                  }}
-                >
-                  <Sparkles size={20} className="text-muted-foreground/70" />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Widget formation phase - removed background widgets */}
       </div>
 
       {/* Central message */}
       <div className="relative z-10 text-center space-y-4">
-        <div className="w-16 h-16 mx-auto mb-4">
-          <Sparkles
-            size={64}
-            className="text-blue-400 animate-spin"
-            style={{ animationDuration: '3s' }}
-          />
+        <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+          <div className="text-4xl font-light text-blue-400/60 animate-pulse" style={{ animationDuration: '2s' }}>
+            •
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -159,38 +138,24 @@ export function ConstellationTransition({
 
       {/* Custom animations */}
       <style jsx>{`
-        @keyframes starScatter {
+        @keyframes pointScatter {
           0% {
             opacity: 0;
-            transform: scale(0) rotate(0deg);
+            transform: scale(0);
           }
           50% {
-            opacity: 1;
-            transform: scale(1.2) rotate(180deg);
+            opacity: 0.8;
+            transform: scale(1.1);
           }
           100% {
-            opacity: 0.8;
-            transform: scale(1) rotate(360deg) translate(
-              ${Math.random() * 200 - 100}px,
-              ${Math.random() * 200 - 100}px
+            opacity: 0.6;
+            transform: scale(1) translate(
+              ${Math.random() * 100 - 50}px,
+              ${Math.random() * 100 - 50}px
             );
           }
         }
 
-        @keyframes widgetForm {
-          0% {
-            opacity: 0;
-            transform: scale(0.5) rotate(-10deg);
-          }
-          50% {
-            opacity: 0.7;
-            transform: scale(1.1) rotate(5deg);
-          }
-          100% {
-            opacity: 1;
-            transform: scale(1) rotate(0deg);
-          }
-        }
       `}</style>
     </div>
   )

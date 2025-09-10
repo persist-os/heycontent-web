@@ -2,6 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+// TODO: Replace hardcoded pan/zoom constants with user preference configuration
+// TODO: Implement view state persistence across sessions
+// TODO: Add multi-touch gesture support for mobile devices
+// TODO: Implement collaborative view synchronization for team projects
+
 interface PanZoomState {
   x: number
   y: number

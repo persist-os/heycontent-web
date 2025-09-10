@@ -3,6 +3,10 @@
 import React from 'react'
 import { FingerprintField, ALL_FINGERPRINT_FIELDS } from '@/types/fingerprint-schema'
 
+// TODO: Replace rule-based widget factory with AI-driven widget recommendation system
+// TODO: Implement ML-based widget suggestions using fingerprint analysis
+// TODO: Add widget performance tracking and A/B testing
+// TODO: Implement collaborative widget suggestions across team members
 // NOTE: This is a rule-based widget factory that should eventually be replaced
 // with an AI layer that can more intelligently analyze fingerprints and
 // recommend widgets. For now, it provides decent fallbacks based on common patterns.
@@ -76,10 +80,15 @@ export type WidgetType =
   | 'atmospheric_inspiration'
   | 'writing_streak_tracker'
 
+// TODO: Replace hardcoded fingerprint analysis with backend widget generation API
+// TODO: Implement dynamic widget configuration based on real project data
+// TODO: Add widget recommendation engine with user behavior learning
+// TODO: Implement widget marketplace and custom widget support
 export function analyzeFingerprintForWidgets(fingerprint: ProjectFingerprint): WidgetConfig[] {
   const widgets: WidgetConfig[] = []
 
-  // Always include chat widget for all projects
+  // TODO: Replace hardcoded chat widget with dynamic widget loading
+  // TODO: Implement widget permission system and access control
   widgets.push({
     id: 'chat',
     type: 'chat',
@@ -89,6 +98,8 @@ export function analyzeFingerprintForWidgets(fingerprint: ProjectFingerprint): W
     size: 'large'
   })
 
+  // TODO: Remove hardcoded project ID checks and replace with fingerprint-based analysis
+  // TODO: Implement pattern recognition for automatic widget suggestions
   // Special handling for specific sample fingerprints based on their unique characteristics
   const projectId = fingerprint.projectId
 
@@ -446,11 +457,16 @@ export function analyzeFingerprintForWidgets(fingerprint: ProjectFingerprint): W
     }
   }
 
+  // TODO: Replace hardcoded sorting with backend ranking algorithm
+  // TODO: Implement widget diversity and balance optimization
+  // TODO: Add user preference-based widget filtering
   // Sort by priority and limit to 4-6 widgets
   const sortedWidgets = widgets
     .sort((a, b) => b.priority - a.priority)
     .slice(0, 6)
 
+  // TODO: Replace hardcoded fallback logic with intelligent widget suggestions
+  // TODO: Implement widget onboarding and gradual introduction system
   // Ensure we have at least 4 widgets by adding fallbacks
   if (sortedWidgets.length < 4) {
     const fallbackWidgets: WidgetConfig[] = [
