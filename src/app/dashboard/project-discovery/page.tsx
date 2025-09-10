@@ -7,6 +7,7 @@ import { useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import ProjectDiscoveryChat from '../chat/components/ProjectDiscoveryChat'
 import { CentralizedHeader } from '@/components/ui/centralized-header'
+import { useContentContextActions } from '@/store/content-context-store'
 
 const ProjectDiscoveryPage: React.FC = () => {
   const searchParams = useSearchParams()
@@ -23,6 +24,15 @@ const ProjectDiscoveryPage: React.FC = () => {
 
   // Mutation for creating projects
   const createProjectMutation = useMutation(api.projectsMutations.createProject)
+  
+  // Clear any lingering content context when entering project discovery
+  const { clearContentContext } = useContentContextActions()
+  
+  useEffect(() => {
+    // Clear any existing content context when entering project discovery mode
+    console.log('🧹 Clearing content context on project discovery navigation')
+    clearContentContext()
+  }, [clearContentContext])
 
   // Handle project creation when in create mode
   useEffect(() => {

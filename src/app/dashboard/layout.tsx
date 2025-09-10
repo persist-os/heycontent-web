@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { DashboardNav } from './_components/dashboard-nav';
 import { useAuth } from '@/app/context/auth-context';
 import { usePathname, useRouter } from 'next/navigation';
@@ -12,6 +12,7 @@ import { RefreshState } from '@/components/ui/refresh-state';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import UpgradeModal from '@/app/settings/tabs/subscription/upgrade-modal';
+import { useContentContextActions } from '@/store/content-context-store';
 
 // Pages that don't require a subscription
 const PUBLIC_PATHS = [
@@ -34,6 +35,10 @@ export default function DashboardLayout({
   const router = useRouter();
   const { firebaseUser, authLoading } = useAuth();
   const { isExpanded, setIsExpanded } = useSidebar();
+  const { clearContentContext } = useContentContextActions();
+  
+  // Track user changes to clear context on logout/login
+  const previousUserRef = useRef<string | null>(null);
   
   // Check if current path is public or doesn't require a subscription
   const isPublicPath = useMemo(() => {
@@ -52,6 +57,20 @@ export default function DashboardLayout({
 
   // Monitor API key validity (only when authenticated)
   useApiKeyMonitor(); // 🔒 ENABLED: Provides immediate logout when logged in elsewhere
+  
+  // Clear content context when user changes (logout/login)
+  useEffect(() => {
+    const currentUserId = firebaseUser?.uid || null;
+    const previousUserId = previousUserRef.current;
+    
+    // If user changed (including logout), clear context
+    if (previousUserId !== null && previousUserId !== currentUserId) {
+      console.log('🧹 User changed, clearing content context', { previousUserId, currentUserId });
+      clearContentContext();
+    }
+    
+    previousUserRef.current = currentUserId;
+  }, [firebaseUser?.uid, clearContentContext]);
 
   // Redirect to login if not authenticated
   useEffect(() => {

@@ -1,5 +1,6 @@
-import React from 'react';
-import { ContextBox } from '../main_chat/ContextBox';
+import React, { useState } from 'react';
+import { Instagram, Mail, X, ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
+import { YouTubeBrandIcon } from '../../../../../lib/YoutubeBrandIcon';
 
 interface ChatContextBoxProps {
   currentContext: any;
@@ -20,18 +21,18 @@ const ChatContextBox: React.FC<ChatContextBoxProps> = ({
   onSendMessage,
   onInputPopulate,
 }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
   if (!currentContext) return null;
   
   // For Gmail context, try to get enriched metadata from the latest assistant message
   let enrichedContext = currentContext;
   if (currentContext.platform === 'gmail' && messages.length > 0) {
-    // Find the latest assistant message with Gmail metadata
     const latestGmailMessage = messages
       .filter(msg => msg.role === 'assistant' && msg.metadata?.platform_context === 'gmail')
-      .slice(-1)[0]; // Get the most recent one
+      .slice(-1)[0];
     
     if (latestGmailMessage?.metadata) {
-      // Merge the metadata into the context for display
       enrichedContext = {
         ...currentContext,
         messageCount: latestGmailMessage.metadata.message_count,
@@ -41,152 +42,300 @@ const ChatContextBox: React.FC<ChatContextBoxProps> = ({
     }
   }
 
+  // Get platform info
+  const getPlatformInfo = () => {
+    switch (currentContext.platform) {
+      case 'youtube':
+        return {
+          icon: <YouTubeBrandIcon href="https://youtube.com/" className="w-4 h-4" />,
+          name: 'YouTube',
+          contentType: 'video'
+        };
+      case 'instagram':
+        return {
+          icon: <Instagram className="w-4 h-4 text-pink-500" />,
+          name: 'Instagram',
+          contentType: 'post'
+        };
+      case 'gmail':
+        return {
+          icon: <Mail className="w-4 h-4 text-blue-500" />,
+          name: 'Gmail',
+          contentType: enrichedContext.hasFullThread && (enrichedContext.messageCount || 0) > 1 ? 'thread' : 'email'
+        };
+      default:
+        return {
+          icon: null,
+          name: currentContext.platform,
+          contentType: 'content'
+        };
+    }
+  };
+
+  const platformInfo = getPlatformInfo();
+
+  // Get external link
+  const getExternalLink = () => {
+    switch (currentContext.platform) {
+      case 'youtube':
+        return `https://www.youtube.com/watch?v=${currentContext.contentId}`;
+      case 'instagram':
+        return currentContext.permalink || `https://www.instagram.com/p/${currentContext.contentId}`;
+      case 'gmail':
+        return null; // Gmail doesn't have external links
+      default:
+        return null;
+    }
+  };
+
+  const externalLink = getExternalLink();
   
   return (
-    <div className="mb-4 flex flex-col">
-      {/* Only render ContextBox for all context, no extra title or action item box */}
-      <ContextBox 
-        context={enrichedContext} 
-        onRemove={onRemove}
-        includeAnalysisInQuery={includeAnalysisInQuery}
-        onToggleAnalysis={onToggleAnalysis}
-      />
-      {/* Platform-specific suggestions for content with analysis */}
-      {currentContext.analysis && messages.length === 0 && (
-        <div className="mt-4 p-3 sm:p-4 bg-muted/50 rounded-lg border border-border mx-3 sm:mx-0">
-          <h4 className="text-sm font-medium text-foreground mb-3">
-            What would you like to explore?
-          </h4>
-          <div className="flex flex-wrap gap-1.5 sm:gap-2">
-            {(currentContext.platform === 'youtube' ? [
-              "What made this video resonate?",
-              "How can I improve my storytelling?",
-              "What should I try differently next time?",
-              "Why did this connect with viewers?",
-              "What's my strongest content element?"
-            ] : currentContext.platform === 'instagram' ? [
-              "What made this post engaging?",
-              "How can I improve my visual style?",
-              "What resonates with my audience?",
-              "How can I tell better stories?",
-              "What should I focus on next?"
-            ] : currentContext.platform === 'ai-insights' || currentContext.type === 'content-hub-insight' ? [
-              "How can I make this my own?",
-              "What would this look like for my content?",
-              "How can I start experimenting with this?",
-              "What's the easiest way to try this?",
-              "How can I test this with my audience?",
-              "What creative twist can I add?"
-            ] : [
-              "What are the key insights?",
-              "How can I improve this content?",
-              "What patterns do you notice?",
-              "What should I focus on?",
-              "How can I grow from this?"
-            ]).map((suggestion, index) => (
+    <div className="relative z-10 mb-4">
+      {/* Collapsed state - minimal, unobtrusive */}
+      <div className="bg-background/80 backdrop-blur-sm border border-border/20 rounded-lg">
+        <div className="flex items-center">
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="flex-1 flex items-center gap-3 p-3 text-left hover:bg-muted/30 transition-colors duration-300 rounded-l-lg min-w-0"
+          >
+            {platformInfo.icon}
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-foreground truncate">
+                {currentContext.title || `${platformInfo.name} ${platformInfo.contentType}`}
+              </p>
+              {!isExpanded && (
+                <p className="text-xs text-muted-foreground truncate mt-0.5">
+                  {currentContext.platform === 'gmail' && currentContext.content?.messages?.[0]?.from && 
+                    `From ${currentContext.content.messages[0].from}`}
+                  {currentContext.platform === 'youtube' && currentContext.content?.channelTitle && 
+                    `By ${currentContext.content.channelTitle}`}
+                  {currentContext.platform === 'instagram' && currentContext.content?.username && 
+                    `@${currentContext.content.username}`}
+                </p>
+              )}
+            </div>
+            <div className="flex-shrink-0 ml-2">
+              {isExpanded ? (
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              )}
+            </div>
+          </button>
+          
+          {onRemove && (
               <button
-                key={index}
-                onClick={() => onSendMessage(suggestion)}
-                className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm bg-background border border-border rounded-md hover:bg-muted hover:text-foreground text-muted-foreground transition-colors break-words"
-              >
-                {suggestion}
+              onClick={onRemove}
+              className="flex-shrink-0 p-3 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors duration-300 rounded-r-lg"
+              title="Remove context"
+            >
+              <X className="w-3 h-3" />
               </button>
-            ))}
+          )}
+        </div>
+
+        {/* Expanded state - larger, more detailed */}
+        {isExpanded && (
+          <div className="px-4 pb-4 space-y-6">
+            <div className="h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
+            
+            {/* Title and basic info */}
+            {currentContext.title && (
+              <div className="mb-4">
+                <h3 className="text-lg font-medium text-foreground leading-relaxed">
+                  {currentContext.title}
+                </h3>
+              </div>
+            )}
+
+            {/* Platform-specific metadata in compact row */}
+            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-6">
+              {currentContext.platform === 'gmail' && (
+                <>
+                  {enrichedContext.messageCount && enrichedContext.messageCount > 1 && (
+                    <span>{enrichedContext.messageCount} messages</span>
+                  )}
+                  {currentContext.content?.messages?.[0]?.from && (
+                    <span>From {currentContext.content.messages[0].from}</span>
+                  )}
+                  {currentContext.content?.messages?.[0]?.date && (
+                    <span>{new Date(currentContext.content.messages[0].date).toLocaleDateString()}</span>
+                  )}
+                </>
+              )}
+
+              {currentContext.platform === 'youtube' && currentContext.content && (
+                <>
+                  {currentContext.content.channelTitle && (
+                    <span>By {currentContext.content.channelTitle}</span>
+                  )}
+                  {currentContext.content.duration && (
+                    <span>{currentContext.content.duration}</span>
+                  )}
+                  {currentContext.metrics && (
+                    <>
+                      {currentContext.metrics.views > 0 && (
+                        <span>{currentContext.metrics.views.toLocaleString()} views</span>
+                      )}
+                      {currentContext.metrics.likes > 0 && (
+                        <span>{currentContext.metrics.likes.toLocaleString()} likes</span>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+
+              {currentContext.platform === 'instagram' && (
+                <>
+                  {currentContext.content?.username && (
+                    <span>@{currentContext.content.username}</span>
+                  )}
+                  {currentContext.content?.timestamp && (
+                    <span>{new Date(currentContext.content.timestamp).toLocaleDateString()}</span>
+                  )}
+                </>
+              )}
+
+              {/* External link */}
+              {externalLink && (
+                <a
+                  href={externalLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors duration-300"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  View on {platformInfo.name}
+                </a>
+              )}
+            </div>
+
+            {/* Main content area - full width and prominent */}
+            <div className="space-y-6">
+              {/* Thumbnail at top if available */}
+              {currentContext.thumbnailUrl && (
+                <div className="flex justify-center">
+                  <img
+                    src={currentContext.thumbnailUrl}
+                    alt="Content preview"
+                    className={`rounded object-cover ${
+                      currentContext.platform === 'instagram' 
+                        ? 'w-64 h-64' 
+                        : 'w-80 h-48'
+                    }`}
+                  />
+                </div>
+              )}
+
+              {/* Actual content - full width and larger */}
+              {(currentContext.content || currentContext.analysis) && (
+                <div className="space-y-4">
+                  {/* Gmail content */}
+                  {currentContext.platform === 'gmail' && currentContext.content?.messages && (
+                    <div className="space-y-4">
+                      {currentContext.content.messages.slice(0, 3).map((message: any, index: number) => (
+                        <div key={index} className="bg-muted/20 rounded-lg p-4 space-y-3">
+                          {message.subject && index === 0 && (
+                            <h5 className="font-medium text-foreground">{message.subject}</h5>
+                          )}
+                          {message.body && (
+                            <div className="text-sm text-muted-foreground max-h-48 overflow-y-auto leading-relaxed">
+                              {message.body.length > 1000 
+                                ? `${message.body.substring(0, 1000)}...` 
+                                : message.body}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {currentContext.content.messages.length > 3 && (
+                        <p className="text-sm text-muted-foreground text-center">
+                          +{currentContext.content.messages.length - 3} more messages in this thread
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* YouTube content */}
+                  {currentContext.platform === 'youtube' && (
+                    <div className="space-y-4">
+                      {currentContext.content?.description && (
+                        <div className="bg-muted/20 rounded-lg p-4">
+                          <h5 className="font-medium text-foreground mb-3">Description</h5>
+                          <div className="text-sm text-muted-foreground max-h-48 overflow-y-auto leading-relaxed">
+                            {currentContext.content.description.length > 1000 
+                              ? `${currentContext.content.description.substring(0, 1000)}...` 
+                              : currentContext.content.description}
+                          </div>
+                        </div>
+                      )}
+                      {currentContext.content?.transcript && (
+                        <div className="bg-muted/20 rounded-lg p-4">
+                          <h5 className="font-medium text-foreground mb-3">Transcript</h5>
+                          <div className="text-sm text-muted-foreground max-h-48 overflow-y-auto leading-relaxed">
+                            {currentContext.content.transcript.length > 1000 
+                              ? `${currentContext.content.transcript.substring(0, 1000)}...` 
+                              : currentContext.content.transcript}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Instagram content */}
+                  {currentContext.platform === 'instagram' && currentContext.content?.caption && (
+                    <div className="bg-muted/20 rounded-lg p-4">
+                      <h5 className="font-medium text-foreground mb-3">Caption</h5>
+                      <div className="text-sm text-muted-foreground max-h-48 overflow-y-auto leading-relaxed">
+                        {currentContext.content.caption}
           </div>
         </div>
       )}
 
-      {/* YouTube content suggestions (when no analysis available) */}
-      {currentContext.platform === 'youtube' && !currentContext.analysis && messages.length === 0 && (
-        <div className="mt-4 p-3 sm:p-4 bg-muted/50 rounded-lg border border-border mx-3 sm:mx-0">
-          <h4 className="text-sm font-medium text-foreground mb-3">
-            Questions about your video
-          </h4>
-          <div className="flex flex-wrap gap-1.5 sm:gap-2">
-            {[
-              "How can I make my intro more engaging?",
-              "What video format works best for this topic?",
-              "How can I improve my thumbnail strategy?",
-              "What would make viewers stay longer?",
-              "How can I better connect with my audience?",
-              "What topics should I cover next?"
-            ].map((suggestion, index) => (
-              <button
-                key={index}
-                onClick={() => onSendMessage(suggestion)}
-                className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm bg-background border border-border rounded-md hover:bg-muted hover:text-foreground text-muted-foreground transition-colors break-words"
-              >
-                {suggestion}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Instagram content suggestions (when no analysis available) */}
-      {currentContext.platform === 'instagram' && !currentContext.analysis && messages.length === 0 && (
-        <div className="mt-4 p-3 sm:p-4 bg-muted/50 rounded-lg border border-border mx-3 sm:mx-0">
-          <h4 className="text-sm font-medium text-foreground mb-3">
-            Questions about your post
-          </h4>
-          <div className="flex flex-wrap gap-1.5 sm:gap-2">
-            {[
-              "How can I write more engaging captions?",
-              "What visual style should I develop?",
-              "How can I spark better conversations?",
-              "What content format works best for me?",
-              "How can I show more personality?",
-              "What stories should I tell?"
-            ].map((suggestion, index) => (
-              <button
-                key={index}
-                onClick={() => onSendMessage(suggestion)}
-                className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm bg-background border border-border rounded-md hover:bg-muted hover:text-foreground text-muted-foreground transition-colors break-words"
-              >
-                {suggestion}
-              </button>
-            ))}
+                  {/* Insights content - removed "Analysis" label */}
+                  {currentContext.analysis && (
+                    <div className="bg-muted/20 rounded-lg p-4">
+                      <div className="text-sm text-muted-foreground max-h-60 overflow-y-auto leading-relaxed">
+                        {typeof currentContext.analysis === 'string' 
+                          ? currentContext.analysis 
+                          : JSON.stringify(currentContext.analysis, null, 2)}
           </div>
         </div>
       )}
       
-      {/* Gmail-specific context-aware suggestions */}
-      {currentContext.platform === 'gmail' && !currentContext.analysis && messages.length === 0 && (
-        <div className="mt-4 p-3 sm:p-4 bg-muted/50 rounded-lg border border-border mx-3 sm:mx-0">
-          <h4 className="text-sm font-medium text-foreground mb-3">
-            {enrichedContext.hasFullThread && (enrichedContext.messageCount || 0) > 1 
-              ? "Questions about this email thread" 
-              : "Questions about this email"}
-          </h4>
-          <div className="flex flex-wrap gap-1.5 sm:gap-2">
-            {(enrichedContext.hasFullThread && (enrichedContext.messageCount || 0) > 1 ? [
-              "How should I respond to this thread?",
-              "What's the main conversation about?",
-              "Who should I follow up with?",
-              "What are the key decisions made?",
-              "Help me understand the context",
-              "What's the tone of this conversation?",
-              "How can I add value to this discussion?",
-              "What questions haven't been answered?"
-            ] : [
-              "What's the main message here?",
-              "How should I respond to this?",
-              "What's the sender's intent?",
-              "How urgent is this email?",
-              "What context am I missing?",
-              "How can I respond thoughtfully?"
-            ]).map((suggestion, index) => (
+                  {/* Generic content fallback */}
+                  {currentContext.content && typeof currentContext.content === 'string' && (
+                    <div className="bg-muted/20 rounded-lg p-4">
+                      <div className="text-sm text-muted-foreground max-h-48 overflow-y-auto leading-relaxed">
+                        {currentContext.content.length > 1000 
+                          ? `${currentContext.content.substring(0, 1000)}...` 
+                          : currentContext.content}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Analysis toggle */}
+            {onToggleAnalysis && (
+              <div className="pt-2">
               <button
-                key={index}
-                onClick={() => onSendMessage(suggestion)}
-                className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm bg-background border border-border rounded-md hover:bg-muted hover:text-foreground text-muted-foreground transition-colors break-words"
-              >
-                {suggestion}
+                  onClick={() => onToggleAnalysis(!includeAnalysisInQuery)}
+                  className="flex items-center gap-3 text-muted-foreground hover:text-foreground transition-colors duration-300"
+                >
+                  <div className={`w-6 h-px transition-colors duration-300 ${
+                    includeAnalysisInQuery ? 'bg-foreground' : 'bg-border'
+                  }`} />
+                  <span className="text-sm">
+                    {includeAnalysisInQuery ? 'Including insights in conversation' : 'Basic context only'}
+                  </span>
               </button>
-            ))}
+              </div>
+            )}
           </div>
+        )}
         </div>
-      )}
     </div>
   );
 };

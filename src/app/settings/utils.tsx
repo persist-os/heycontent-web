@@ -15,6 +15,9 @@ export const handleSignOut = async (router: AppRouterInstance, reason?: string) 
     sessionStorage.removeItem('apiKey')
     sessionStorage.removeItem('firebaseToken')
     sessionStorage.removeItem('userId')
+    
+    // Clear all localStorage and sessionStorage (this will clear Zustand persisted stores)
+    console.log('🧹 Clearing all storage including content context')
     localStorage.clear()
     sessionStorage.clear()
 

@@ -18,6 +18,7 @@ import { ContentContext } from '../types'
 import ChatContextBox from './main_chat/ChatContextBox'
 import { useContentContext, useContentContextActions } from '@/store/content-context-store'
 import { useProjectContext } from '../hooks/useProjectContext'
+import AmbientFingerprintCanvas from './AmbientFingerprintCanvas'
 
 interface ProjectDiscoveryChatProps {
   projectId?: string
@@ -254,7 +255,13 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
   }
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-background relative">
+      {/* Fingerprint Constellation Minimap */}
+      <AmbientFingerprintCanvas
+        messageCount={messages.length}
+        isActive={authData.isAuthenticated}
+      />
+      
       {/* Chat Messages Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden">
