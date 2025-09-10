@@ -6,6 +6,7 @@ import { useAuth } from '@/app/context/auth-context'
 import { useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import ProjectDiscoveryChat from '../chat/components/ProjectDiscoveryChat'
+import { CentralizedHeader } from '@/components/ui/centralized-header'
 
 const ProjectDiscoveryPage: React.FC = () => {
   const searchParams = useSearchParams()
@@ -58,22 +59,71 @@ const ProjectDiscoveryPage: React.FC = () => {
   // Show loading state while creating project
   if (mode === 'create' && !currentProjectId) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <h2 className="text-lg font-semibold mb-2">Creating Your Project</h2>
-          <p className="text-muted-foreground">Setting up your project discovery session...</p>
+      <div className="h-full bg-background flex flex-col">
+        <CentralizedHeader
+          title="Preparing"
+          subtitle="your space"
+          showBackButton={true}
+          backButtonContext="Cancel"
+          onBack={() => router.push('/dashboard/living-projects')}
+          breadcrumbs={[
+            { label: 'Projects', href: '/dashboard/living-projects' },
+            { label: 'Discovery', href: '#' }
+          ]}
+          variant="minimal"
+          className="border-b border-border/20"
+        />
+        
+        <div className="flex-1 flex items-center justify-center px-8">
+          <div className="max-w-md space-y-8">
+            {/* Asymmetric gradient line */}
+            <div className="h-px bg-gradient-to-r from-blue-400/60 via-transparent to-transparent w-2/3" />
+            
+            <div className="space-y-6">
+              <div className="ml-1 space-y-3">
+                <p className="text-muted-foreground/80 leading-relaxed">
+                  Setting up your project discovery environment...
+                </p>
+                
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 border-2 border-blue-400/60 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-sm text-muted-foreground/70">
+                    Initializing conversation space
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Subtle bottom accent */}
+            <div className="h-px bg-gradient-to-r from-transparent via-border/30 to-transparent" />
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="h-full">
-      <ProjectDiscoveryChat
-        projectId={currentProjectId || undefined}
-        fingerprintId={fingerprintId || undefined}
+    <div className="h-full bg-background flex flex-col">
+      <CentralizedHeader
+        title="Discovery"
+        subtitle="conversation"
+        showBackButton={true}
+        backButtonContext="Back to projects"
+        onBack={() => router.push('/dashboard/living-projects')}
+        breadcrumbs={[
+          { label: 'Projects', href: '/dashboard/living-projects' },
+          { label: 'Discovery', href: '#' }
+        ]}
+        variant="minimal"
+        className="border-b border-border/20"
       />
+      
+      <div className="flex-1 overflow-hidden">
+        <ProjectDiscoveryChat
+          projectId={currentProjectId || undefined}
+          fingerprintId={fingerprintId || undefined}
+        />
+      </div>
     </div>
   )
 }

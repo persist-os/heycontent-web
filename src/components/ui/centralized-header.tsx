@@ -99,7 +99,7 @@ export const CentralizedHeader: React.FC<CentralizedHeaderProps> = ({
     return "Back";
   };
 
-  // Render action button
+  // Render action button with anti-corporate styling
   const renderAction = (action: HeaderAction) => {
     const IconComponent = action.icon;
     const buttonContent = (
@@ -110,7 +110,7 @@ export const CentralizedHeader: React.FC<CentralizedHeaderProps> = ({
           <IconComponent size={16} />
         )}
         {action.title && (
-          <span className="hidden sm:inline ml-2">{action.title}</span>
+          <span className="hidden sm:inline ml-2 text-sm font-medium">{action.title}</span>
         )}
       </>
     );
@@ -123,7 +123,7 @@ export const CentralizedHeader: React.FC<CentralizedHeaderProps> = ({
           size={action.size || 'sm'}
           onClick={action.onClick}
           disabled={action.disabled || action.loading}
-          className={`flex items-center gap-2 ${action.className || ''}`}
+          className={`flex items-center gap-2 transition-all duration-300 hover:scale-[1.02] ${action.className || ''}`}
           title={action.title}
         >
           {buttonContent}
@@ -134,10 +134,10 @@ export const CentralizedHeader: React.FC<CentralizedHeaderProps> = ({
     return (
       <div
         key={action.id}
-        className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
+        className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-300 border ${
           action.active 
-            ? 'bg-primary text-primary-foreground' 
-            : 'bg-muted/60 hover:bg-primary text-foreground hover:text-primary-foreground'
+            ? 'bg-foreground text-background border-foreground/20' 
+            : 'bg-muted/30 hover:bg-muted/50 text-foreground border-border/30 hover:border-border/50'
         } ${action.className || ''}`}
         title={action.title}
       >
@@ -146,99 +146,112 @@ export const CentralizedHeader: React.FC<CentralizedHeaderProps> = ({
     );
   };
 
-  // Get header variant styles
+  // Get header variant styles with anti-corporate design
   const getVariantStyles = () => {
     switch (variant) {
       case 'minimal':
-        return 'border-b border-border bg-background/60 backdrop-blur-sm';
+        return 'border-b border-border/30 bg-background/60 backdrop-blur-sm';
       case 'elevated':
-        return 'border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm';
+        return 'border-b border-border/30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm';
       default:
-        return 'border-b border-border bg-background/95 backdrop-blur-sm';
+        return 'border-b border-border/30 bg-background/95 backdrop-blur-sm';
     }
   };
 
   return (
     <div className={`${getVariantStyles()} ${sticky ? 'sticky top-0 z-10' : ''} ${className}`}>
-      <div className="px-4 py-3 flex items-center">
-        {/* Left side */}
-        <div className="flex-1 flex justify-start items-center gap-2">
-          {/* Back button */}
+      {/* Subtle gradient line at top */}
+      <div className="h-px bg-gradient-to-r from-transparent via-blue-400/30 to-transparent" />
+      
+      <div className="px-6 py-4 flex items-center">
+        {/* Left side with asymmetric layout */}
+        <div className="flex-1 flex justify-start items-center gap-3">
+          {/* Back button with enhanced styling */}
           {showBackButton && (
             <Button
               variant="ghost"
               size="sm"
               onClick={handleBack}
-              className="p-2 rounded-md transition-colors ml-12"
+              className="p-2 rounded-lg transition-all duration-300 hover:bg-muted/50 hover:scale-[1.02] ml-2"
               title={getBackButtonTitle()}
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-4 h-4" />
             </Button>
           )}
           
-          {/* Left actions */}
-          {leftActions.map(renderAction)}
+          {/* Left actions with improved spacing */}
+          <div className="flex items-center gap-2">
+            {leftActions.map(renderAction)}
+          </div>
         </div>
         
-        {/* Center */}
+        {/* Center with asymmetric typography */}
         <div className="flex-1 flex justify-center">
-          <div className="flex flex-col items-center min-h-[24px] justify-center">
-            {/* Breadcrumbs */}
+          <div className="flex flex-col items-center min-h-[32px] justify-center space-y-2">
+            {/* Breadcrumbs with subtle styling */}
             {breadcrumbs.length > 0 && (
-              <div className="flex items-center justify-center text-sm text-muted-foreground mb-1">
+              <div className="flex items-center justify-center text-xs text-muted-foreground/70 mb-2">
                 {breadcrumbs.map((crumb, index) => (
                   <React.Fragment key={index}>
-                    {index > 0 && <ChevronRight className="w-3 h-3 mx-1" />}
+                    {index > 0 && <ChevronRight className="w-3 h-3 mx-2 text-muted-foreground/50" />}
                     {crumb.href ? (
                       <Link
                         href={crumb.href}
-                        className="truncate max-w-20 hover:text-foreground transition-colors"
+                        className="truncate max-w-24 hover:text-foreground/70 transition-colors duration-300"
                       >
                         {crumb.label}
                       </Link>
                     ) : (
                       <button
                         onClick={crumb.onClick}
-                        className="truncate max-w-20 hover:text-foreground transition-colors"
+                        className="truncate max-w-24 hover:text-foreground/70 transition-colors duration-300"
                       >
                         {crumb.label}
                       </button>
                     )}
                   </React.Fragment>
                 ))}
-                <ChevronRight className="w-3 h-3 mx-1" />
-                <span className="text-foreground font-medium">Current</span>
+                <ChevronRight className="w-3 h-3 mx-2 text-muted-foreground/50" />
+                <span className="text-foreground/80 font-medium">Current</span>
               </div>
             )}
             
-            {/* Title */}
-            <h1 className="text-base font-medium text-foreground leading-none">{title}</h1>
-            {subtitle && (
-              <p className="text-sm text-muted-foreground mt-1 leading-none">{subtitle}</p>
-            )}
+            {/* Asymmetric title layout */}
+            <div className="flex items-baseline gap-3">
+              <h1 className="text-xl font-light tracking-tight text-foreground">
+                {title}
+              </h1>
+              {subtitle && (
+                <span className="text-sm font-medium text-muted-foreground/70">
+                  {subtitle}
+                </span>
+              )}
+            </div>
             
-            {/* Center actions */}
+            {/* Center actions with improved spacing */}
             {centerActions.length > 0 && (
-              <div className="flex items-center gap-2 mt-2">
+              <div className="flex items-center gap-3 mt-3">
                 {centerActions.map(renderAction)}
               </div>
             )}
           </div>
         </div>
         
-        {/* Right side */}
-        <div className="flex-1 flex justify-end items-center gap-2">
+        {/* Right side with enhanced styling */}
+        <div className="flex-1 flex justify-end items-center gap-3">
           {/* Right actions */}
-          {rightActions.map(renderAction)}
+          <div className="flex items-center gap-2">
+            {rightActions.map(renderAction)}
+          </div>
           
-          {/* Self tab */}
+          {/* Self tab with anti-corporate styling */}
           {showSelfTab && (
             <Link
               href="/dashboard/self-hub"
-              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 text-sm font-medium ${
                 pathname.startsWith('/dashboard/self-hub')
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-background/80 hover:bg-background text-foreground border border-border'
+                  ? 'bg-foreground text-background hover:bg-foreground/90'
+                  : 'bg-muted/30 hover:bg-muted/50 text-foreground border border-border/30 hover:border-border/50'
               }`}
             >
               <Users className="w-4 h-4" />
@@ -285,7 +298,8 @@ export const createSaveAction = (
   title: 'Save',
   loading: isSaving,
   variant: 'outline',
-  size: 'sm'
+  size: 'sm',
+  className: 'border-border/50 hover:border-blue-400/60 transition-colors duration-300'
 });
 
 export const createStarAction = (
@@ -296,7 +310,10 @@ export const createStarAction = (
   icon: Star,
   onClick: onToggle,
   active: isStarred,
-  variant: 'ghost'
+  variant: 'ghost',
+  className: isStarred 
+    ? 'text-amber-400/80 hover:text-amber-400' 
+    : 'text-muted-foreground hover:text-amber-400/60 transition-colors duration-300'
 });
 
 export const createLightbulbAction = (
@@ -307,7 +324,10 @@ export const createLightbulbAction = (
   icon: Lightbulb,
   onClick: onToggle,
   active: isIdeaBank,
-  variant: 'ghost'
+  variant: 'ghost',
+  className: isIdeaBank 
+    ? 'text-blue-400/80 hover:text-blue-400' 
+    : 'text-muted-foreground hover:text-blue-400/60 transition-colors duration-300'
 });
 
 export const createNewChatAction = (
@@ -318,5 +338,6 @@ export const createNewChatAction = (
   onClick: onNewChat,
   title: 'New Chat',
   variant: 'outline',
-  size: 'sm'
+  size: 'sm',
+  className: 'border-border/50 hover:border-blue-400/60 transition-colors duration-300'
 });

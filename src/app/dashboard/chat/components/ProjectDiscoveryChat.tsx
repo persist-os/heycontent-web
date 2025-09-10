@@ -130,9 +130,18 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
 
   if (!authData.isAuthenticated) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-muted-foreground">Please sign in to continue with project discovery.</p>
+      <div className="flex-1 flex items-center justify-center px-8">
+        <div className="max-w-md space-y-6">
+          <div className="h-px bg-gradient-to-r from-transparent via-amber-400/60 to-transparent w-2/3" />
+          <div className="space-y-3">
+            <h2 className="text-2xl font-light tracking-tight text-foreground">
+              Authentication required
+            </h2>
+            <p className="text-muted-foreground/80 leading-relaxed ml-1">
+              Please sign in to begin your project discovery journey.
+            </p>
+          </div>
+          <div className="h-px bg-gradient-to-r from-transparent via-border/30 to-transparent" />
         </div>
       </div>
     )
@@ -142,41 +151,56 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
     <div className="flex h-full bg-background">
       {/* Main Chat Content */}
       <div className="flex flex-col flex-1 overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <div>
-            <h1 className="text-xl font-semibold">Project Discovery</h1>
-            <p className="text-sm text-muted-foreground">
-              Building your project's AI fingerprint
-            </p>
-          </div>
-          {projectDiscovery.discoveryProgress.isComplete && (
-            <div className="flex items-center gap-2 px-3 py-1 bg-green-100 dark:bg-green-900/20 rounded-full">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-sm text-green-700 dark:text-green-300">Complete</span>
+        {/* Status indicator for discovery progress */}
+        {projectDiscovery.discoveryProgress.isComplete && (
+          <div className="px-8 py-4 border-b border-border/20">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-blue-400/60 rounded-full" />
+              <span className="text-sm font-medium text-foreground/80">Discovery complete</span>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Chat Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center space-y-4 max-w-md">
-                  <div className="space-y-3">
-                    <h2 className="text-2xl font-semibold">Let's Get Started</h2>
-                    <p className="text-muted-foreground">
-                      Tell me about your project. What are you working on? I'll help create a comprehensive AI fingerprint that evolves with your project.
-                    </p>
-                  </div>
-                  {combinedLoading && (
-                    <div className="flex flex-col items-center space-y-3">
-                      <div className={`h-8 w-8 rounded-full ${themeColors.accentBgLight} animate-pulse`}></div>
-                      <p className="text-sm text-muted-foreground">Initializing project discovery...</p>
+              <div className="flex-1 flex items-center justify-center px-8">
+                <div className="max-w-lg space-y-8">
+                  <div className="h-px bg-gradient-to-r from-blue-400/60 via-transparent to-transparent w-3/4" />
+                  
+                  <div className="space-y-6">
+                    <div className="space-y-4">
+                      <div className="flex items-baseline gap-4">
+                        <h2 className="text-4xl font-light tracking-tight text-foreground">
+                          Begin
+                        </h2>
+                        <div className="h-px bg-border/40 flex-1 mb-2" />
+                      </div>
+                      <h3 className="text-xl font-medium text-muted-foreground ml-6">
+                        together
+                      </h3>
                     </div>
-                  )}
+                    
+                    <div className="ml-1 space-y-4">
+                      <p className="text-muted-foreground/80 leading-relaxed text-base">
+                        Share what you're working on. I'll listen, ask thoughtful questions, 
+                        and help create an AI fingerprint that truly understands your project.
+                      </p>
+                      
+                      {combinedLoading && (
+                        <div className="flex items-center gap-3 mt-6">
+                          <div className="w-5 h-5 border-2 border-blue-400/60 border-t-transparent rounded-full animate-spin" />
+                          <span className="text-sm text-muted-foreground/70">
+                            Preparing conversation space...
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="h-px bg-gradient-to-r from-transparent via-border/30 to-transparent" />
                 </div>
               </div>
             ) : (
@@ -184,110 +208,122 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
                 <div
                   key={message.id}
                   className={cn(
-                    "flex gap-3 max-w-4xl",
+                    "flex gap-4 max-w-4xl",
                     message.role === 'user' ? "ml-auto flex-row-reverse" : ""
                   )}
                 >
                   <div className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
+                    "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border transition-colors duration-300",
                     message.role === 'user'
-                      ? `${themeColors.accentBg} text-white`
-                      : "bg-muted"
+                      ? "bg-foreground text-background border-foreground/20"
+                      : "bg-muted/50 border-border/30"
                   )}>
                     {message.role === 'user' ? (
-                      <span className="text-sm font-medium">U</span>
+                      <span className="text-sm font-medium">You</span>
                     ) : (
-                      <span className="text-sm">AI</span>
+                      <span className="text-sm font-medium">AI</span>
                     )}
                   </div>
                   <div className={cn(
-                    "rounded-lg px-4 py-2 max-w-[70%]",
+                    "rounded-lg px-5 py-3 max-w-[75%] transition-all duration-300",
                     message.role === 'user'
-                      ? `${themeColors.accentBg} text-white`
-                      : "bg-muted"
+                      ? "bg-foreground text-background border-l-2 border-foreground/20"
+                      : "bg-muted/30 border-l-2 border-blue-400/60"
                   )}>
-                    <p className="text-sm">{message.content}</p>
+                    <p className="text-base leading-relaxed">{message.content}</p>
                   </div>
                 </div>
               ))
             )}
             {combinedLoading && (
-              <div className="flex gap-3 max-w-4xl">
-                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                  <span className="text-sm">AI</span>
+              <div className="flex gap-4 max-w-4xl">
+                <div className="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center flex-shrink-0 border border-border/30">
+                  <div className="w-4 h-4 border-2 border-blue-400/60 border-t-transparent rounded-full animate-spin" />
                 </div>
-                <div className="bg-muted rounded-lg px-4 py-2">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-current rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-current rounded-full animate-bounce animate-delay-100"></div>
-                    <div className="w-2 h-2 bg-current rounded-full animate-bounce animate-delay-200"></div>
+                <div className="bg-muted/30 rounded-lg px-5 py-3 border-l-2 border-blue-400/60">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground/70">Thinking...</span>
+                    <div className="flex space-x-1">
+                      <div className="w-1.5 h-1.5 bg-blue-400/60 rounded-full animate-pulse"></div>
+                      <div className="w-1.5 h-1.5 bg-blue-400/60 rounded-full animate-pulse [animation-delay:0.2s]"></div>
+                      <div className="w-1.5 h-1.5 bg-blue-400/60 rounded-full animate-pulse [animation-delay:0.4s]"></div>
+                    </div>
                   </div>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Input Area */}
-          <div className="border-t border-border p-4">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(inputValue)}
-                placeholder="Tell me about your project..."
-                className="flex-1 px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                disabled={combinedLoading}
-              />
-              <button
-                onClick={() => handleSendMessage(inputValue)}
-                disabled={!inputValue.trim() || combinedLoading}
-                className={cn(
-                  "px-4 py-2 rounded-lg transition-colors",
-                  inputValue.trim() && !combinedLoading
-                    ? `${themeColors.accentBg} ${themeColors.accentBgHover} text-white`
-                    : "bg-muted text-muted-foreground cursor-not-allowed"
-                )}
-              >
-                Send
-              </button>
+          {/* Input Area with anti-corporate styling */}
+          <div className="border-t border-border/20 px-8 py-6">
+            <div className="space-y-4">
+              <div className="h-px bg-gradient-to-r from-transparent via-blue-400/30 to-transparent w-1/2" />
+              
+              <div className="flex gap-4">
+                <input
+                  type="text"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(inputValue)}
+                  placeholder="What's on your mind about this project..."
+                  className="flex-1 px-4 py-3 text-base border border-border/50 rounded-lg focus:outline-none focus:border-blue-400/60 transition-colors duration-300 bg-background"
+                  disabled={combinedLoading}
+                />
+                <button
+                  onClick={() => handleSendMessage(inputValue)}
+                  disabled={!inputValue.trim() || combinedLoading}
+                  className={cn(
+                    "px-6 py-3 text-base rounded-lg transition-all duration-300",
+                    inputValue.trim() && !combinedLoading
+                      ? "bg-foreground text-background hover:bg-foreground/90 hover:scale-[1.02]"
+                      : "bg-muted/50 text-muted-foreground cursor-not-allowed border border-border/30"
+                  )}
+                >
+                  {combinedLoading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  ) : (
+                    'Share'
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Mobile Tab Bar */}
+        {/* Mobile Tab Bar with anti-corporate styling */}
         {isMobile && (
-          <div className="sm:hidden border-t border-border bg-background">
+          <div className="sm:hidden border-t border-border/20 bg-background">
+            <div className="h-px bg-gradient-to-r from-transparent via-blue-400/30 to-transparent" />
             <div className="flex">
               <button
                 onClick={() => switchToTab('chat')}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-2 py-3 px-4 relative transition-all duration-200",
+                  "flex-1 flex flex-col items-center justify-center gap-1 py-4 px-4 relative transition-all duration-300",
                   activeTab === 'chat'
-                    ? "text-foreground bg-muted/50"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                    ? "text-foreground bg-muted/30"
+                    : "text-muted-foreground hover:text-foreground/70 hover:bg-muted/20"
                 )}
               >
-                <MessageSquare className="w-4 h-4" />
-                <span className="text-sm font-medium">Chat</span>
+                <span className="text-sm font-medium">Conversation</span>
                 {activeTab === 'chat' && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                  <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-400/60 to-transparent" />
                 )}
               </button>
 
               <button
                 onClick={() => switchToTab('fingerprint')}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-2 py-3 px-4 relative transition-all duration-200",
+                  "flex-1 flex flex-col items-center justify-center gap-1 py-4 px-4 relative transition-all duration-300",
                   activeTab === 'fingerprint'
-                    ? "text-foreground bg-muted/50"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                    ? "text-foreground bg-muted/30"
+                    : "text-muted-foreground hover:text-foreground/70 hover:bg-muted/20"
                 )}
               >
-                <Eye className="w-4 h-4" />
-                <span className="text-sm font-medium">Fingerprint</span>
+                <span className="text-sm font-medium">Intelligence</span>
                 {activeTab === 'fingerprint' && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                  <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-400/60 to-transparent" />
                 )}
               </button>
             </div>
