@@ -160,6 +160,8 @@ export default function SubscriptionOverview() {
           }
         } catch (e) {
           statusObj = null;
+          // Clear any existing subscription data when API fails
+          setCurrentSubscription(null);
         }
         setStatus(statusObj);
       } catch (e: any) {

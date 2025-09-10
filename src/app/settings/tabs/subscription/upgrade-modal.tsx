@@ -44,7 +44,7 @@ export default function UpgradeModal({
   open: boolean; 
   onClose: () => void; 
   onSelectPlan: (planId: string) => void;
-  context?: 'registration' | 'settings';
+  context?: 'registration' | 'settings' | 'subscription_required';
 }) {
   const { firebaseUser } = useAuth();
   const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">("monthly");
@@ -245,7 +245,7 @@ export default function UpgradeModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={context === 'registration' || context === 'subscription_required' ? undefined : onClose}>
       <DialogContent className={showCheckout ? "max-w-4xl w-[95vw] max-h-[95vh] overflow-auto" : "max-w-2xl"}>
         <DialogHeader>
           <DialogTitle>Choose Your Plan</DialogTitle>
@@ -311,10 +311,10 @@ export default function UpgradeModal({
                 return (
                   <div
                     key={plan.id}
-                    className={`border rounded-xl p-6 flex flex-col transition-all ${
+                    className={`border rounded-xl p-6 flex flex-col ${
                       selectedPlan === plan.id 
-                        ? "border-primary shadow-lg scale-[1.02]" 
-                        : "border-gray-200 hover:border-gray-300"
+                        ? "border-primary shadow-lg" 
+                        : "border-gray-200"
                     }`}
                     onClick={() => setSelectedPlan(plan.id)}
                     style={{ cursor: "pointer" }}
