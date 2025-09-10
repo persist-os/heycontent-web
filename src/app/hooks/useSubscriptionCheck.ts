@@ -27,6 +27,8 @@ export function useSubscriptionCheck(requiredPlan: SubscriptionPlan = 'free') {
     api.subscriptionQueries.getUserSubscription, 
     firebaseUser?.uid ? { userId: firebaseUser.uid } : 'skip'
   );
+  
+  console.log('🔍 [SUBSCRIPTION CHECK] Convex query result:', subscriptionData);
 
   // Check subscription status when data changes
   useEffect(() => {
@@ -35,68 +37,106 @@ export function useSubscriptionCheck(requiredPlan: SubscriptionPlan = 'free') {
     setIsLoading(true);
     setError(null);
     
-    try {
-      if (subscriptionData === undefined) {
-        // Still loading
-        return;
-      }
-      
-      if (subscriptionData === null) {
-        // No subscription data - treat as free tier user
+    const checkSubscriptionStatus = async () => {
+      try {
+        // First try Convex data
+        if (subscriptionData === undefined) {
+          // Still loading
+          return;
+        }
+        
+        if (subscriptionData === null) {
+          // No subscription data in Convex - check backend API
+          try {
+            const apiKey = await getToken();
+            if (apiKey) {
+              const response = await fetch('/api/v1/subscription/status', {
+                headers: {
+                  'Authorization': `Bearer ${apiKey}`,
+                  'Content-Type': 'application/json'
+                }
+              });
+              
+              if (response.ok) {
+                const backendStatus = await response.json();
+                const status: SubscriptionStatus = {
+                  status: backendStatus.status || 'free',
+                  plan: backendStatus.plan_type || 'monthly_free',
+                  currentPeriodEnd: backendStatus.current_period_end,
+                  cancelAtPeriodEnd: backendStatus.cancel_at_period_end || false,
+                  isSubscribed: backendStatus.is_subscribed || false,
+                  includedRequests: backendStatus.quotas?.api_requests?.included || 50,
+                  usedRequests: backendStatus.quotas?.api_requests?.used || 0
+                };
+                setSubscriptionStatus(status);
+                setIsSubscribed(status.isSubscribed);
+                return;
+              }
+            }
+          } catch (backendError) {
+            console.warn('Backend subscription check failed, using Convex data:', backendError);
+          }
+          
+          // No subscription data means user is NOT subscribed
+          const status: SubscriptionStatus = {
+            status: null,
+            isSubscribed: false,  // No subscription data = not subscribed
+            plan: null
+          };
+          setSubscriptionStatus(status);
+          setIsSubscribed(false);
+          return;
+        }
+        
+        // Parse subscription status from Convex data
         const status: SubscriptionStatus = {
-          status: 'free',
-          isSubscribed: true,  // Free users are considered "subscribed" to the free tier
-          plan: 'monthly_free'
+          status: subscriptionData.status || null,
+          plan: subscriptionData.plan || null,
+          currentPeriodEnd: subscriptionData.currentPeriodEnd,
+          cancelAtPeriodEnd: subscriptionData.cancelAtPeriodEnd,
+          // Only consider users subscribed if they have a valid plan AND active status
+          isSubscribed: ['active', 'trialing', 'dev', 'tester', 'free'].includes(subscriptionData.status || '') && 
+                       !!subscriptionData.plan,
+          includedRequests: subscriptionData.includedRequests,
+          usedRequests: subscriptionData.usedRequests
         };
+        
+        console.log('🔍 [SUBSCRIPTION CHECK] Raw data:', subscriptionData);
+        console.log('🔍 [SUBSCRIPTION CHECK] Parsed status:', status);
+        
         setSubscriptionStatus(status);
         
-        // Free tier users can access basic features
-        setIsSubscribed(true);
-        return;
-      }
-      
-      // Parse subscription status from Convex data
-      const status: SubscriptionStatus = {
-        status: subscriptionData.status || null,
-        plan: subscriptionData.plan || null,
-        currentPeriodEnd: subscriptionData.currentPeriodEnd,
-        cancelAtPeriodEnd: subscriptionData.cancelAtPeriodEnd,
-        isSubscribed: ['active', 'trialing', 'dev', 'tester', 'free'].includes(subscriptionData.status || ''),
-        includedRequests: subscriptionData.includedRequests,
-        usedRequests: subscriptionData.usedRequests
-      };
-      
-      setSubscriptionStatus(status);
-      
-      // Check if user meets the required plan level
-      if (requiredPlan === 'free') {
-        // Free tier is always accessible
-        setIsSubscribed(true);
-      } else if (requiredPlan === 'basic') {
-        // Basic features require at least free tier
+        // Set the base subscription status first
         setIsSubscribed(status.isSubscribed);
-      } else if (requiredPlan === 'pro') {
-        // Pro features require pro subscription
-        const isProUser = status.plan?.includes('pro') || false;
-        setIsSubscribed(isProUser);
-      }
-      
-      // Only redirect if user doesn't meet the required plan level
-      if (!status.isSubscribed && requiredPlan !== 'free') {
-        if (!window.location.pathname.startsWith('/dashboard/subscribe-tab/subscription')) {
-          window.location.href = '/dashboard/subscribe-tab/subscription';
+        
+        // Check if user meets the required plan level
+        if (requiredPlan === 'free') {
+          // Free tier is always accessible
+          setIsSubscribed(true);
+        } else if (requiredPlan === 'basic') {
+          // Basic features require at least free tier
+          setIsSubscribed(status.isSubscribed);
+        } else if (requiredPlan === 'pro') {
+          // Pro features require pro subscription
+          const isProUser = status.plan?.includes('pro') || false;
+          setIsSubscribed(isProUser);
         }
+        
+        // Note: Redirect logic is handled by the dashboard layout, not here
+        // This prevents conflicts between modal display and page redirects
+      } catch (err) {
+        console.error('Error checking subscription:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Failed to check subscription status';
+        setError(errorMessage);
+        // On error, for non-free plans, we'll assume they need to subscribe
+        setIsSubscribed(requiredPlan === 'free');
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      console.error('Error checking subscription:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to check subscription status';
-      setError(errorMessage);
-      // On error, for non-free plans, we'll assume they need to subscribe
-      setIsSubscribed(requiredPlan === 'free');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [subscriptionData, firebaseUser, authLoading, requiredPlan]);
+    };
+    
+    checkSubscriptionStatus();
+  }, [subscriptionData, firebaseUser, authLoading, requiredPlan, getToken]);
 
   const refresh = useCallback(() => {
     // This will trigger a re-fetch of the subscription data

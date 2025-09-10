@@ -11,6 +11,7 @@ import { useApiKeyMonitor } from '@/app/hooks/useApiKeyMonitor';
 import { RefreshState } from '@/components/ui/refresh-state';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import UpgradeModal from '@/app/settings/tabs/subscription/upgrade-modal';
 
 // Pages that don't require a subscription
 const PUBLIC_PATHS = [
@@ -33,8 +34,6 @@ export default function DashboardLayout({
   const router = useRouter();
   const { firebaseUser, authLoading } = useAuth();
   const { isExpanded, setIsExpanded } = useSidebar();
-  const [limitExceeded, setLimitExceeded] = useState(false);
-  const [limitInfo, setLimitInfo] = useState<{ included?: number; used?: number } | null>(null);
   
   // Check if current path is public or doesn't require a subscription
   const isPublicPath = useMemo(() => {
@@ -47,6 +46,9 @@ export default function DashboardLayout({
     isLoading: isSubscriptionLoading, 
     error: subscriptionError 
   } = useSubscriptionCheck(isPublicPath ? 'free' : 'free');
+
+  // State for subscription enforcement modal
+  const [showSubscriptionRequired, setShowSubscriptionRequired] = useState(false);
 
   // Monitor API key validity (only when authenticated)
   useApiKeyMonitor(); // 🔒 ENABLED: Provides immediate logout when logged in elsewhere
@@ -65,6 +67,30 @@ export default function DashboardLayout({
   useEffect(() => {
     // Skip if still loading or on a public path
     if (isSubscriptionLoading || isPublicPath) return;
+    
+    // Don't show modal if subscription status is still being determined (null means not yet checked)
+    if (isSubscribed === null) {
+      console.log('🔍 [DASHBOARD] Subscription status not yet determined, waiting...');
+      return;
+    }
+    
+    // Check if user has a valid subscription
+    // Users must have isSubscribed=true to access the platform
+    console.log('🔍 [DASHBOARD] Subscription check:', {
+      isSubscribed,
+      isSubscriptionLoading,
+      subscriptionError,
+      firebaseUser: firebaseUser?.uid
+    });
+    
+    if (!isSubscribed) {
+      console.log('🔒 [DASHBOARD] User not subscribed, showing subscription modal');
+      if (!showSubscriptionRequired) {
+        setShowSubscriptionRequired(true);
+      }
+      return;
+    }
+    
     // If backend signals free-tier exceeded, lock to subscription page
     const controller = new AbortController();
     (async () => {
@@ -78,19 +104,14 @@ export default function DashboardLayout({
           signal: controller.signal,
         });
         if (resp.status === 402) {
-          // Show modal; do not auto-redirect
-          setLimitExceeded(true);
-          const inc = Number(resp.headers.get('X-Free-Tier-Limit') || NaN);
-          const usd = Number(resp.headers.get('X-Free-Tier-Used') || NaN);
-          setLimitInfo({ included: Number.isFinite(inc) ? inc : undefined, used: Number.isFinite(usd) ? usd : undefined });
-          return;
-        }
-        // Also check custom headers if present
-        const freeLimit = resp.headers.get('X-Free-Tier-Limit');
-        const freeUsed = resp.headers.get('X-Free-Tier-Used');
-        if (freeLimit && freeUsed && Number(freeUsed) >= Number(freeLimit)) {
-          setLimitExceeded(true);
-          setLimitInfo({ included: Number(freeLimit), used: Number(freeUsed) });
+          // Check if it's a subscription required error
+          if (resp.headers.get('X-Subscription-Required') === 'true') {
+            console.log('🔒 [DASHBOARD] Backend returned subscription required, showing modal');
+            if (!showSubscriptionRequired) {
+              setShowSubscriptionRequired(true);
+            }
+            return;
+          }
         }
       } catch (_) {
         // Ignore errors; don't block dashboard
@@ -98,9 +119,9 @@ export default function DashboardLayout({
     })();
 
     return () => controller.abort();
-  }, [isPublicPath, isSubscriptionLoading, isSubscribed, pathname, router]);
+  }, [isPublicPath, isSubscriptionLoading, isSubscribed, showSubscriptionRequired, pathname, router]);
 
-  // Global fetch interceptor for 402 (free tier exhausted)
+  // Global fetch interceptor for subscription required errors
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const originalFetch = window.fetch;
@@ -108,19 +129,14 @@ export default function DashboardLayout({
       const res = await originalFetch(input, init);
       try {
         if (res.status === 402) {
-          let included: number | undefined;
-          let used: number | undefined;
-          try {
-            const cloned = res.clone();
-            const data = await cloned.json();
-            if (typeof data?.included === 'number') included = data.included;
-            if (typeof data?.used === 'number') used = data.used;
-          } catch {}
-          setLimitExceeded(true);
-          setLimitInfo(prev => ({
-            included: included ?? prev?.included,
-            used: used ?? prev?.used,
-          }));
+          // Check if it's a subscription required error
+          if (res.headers.get('X-Subscription-Required') === 'true') {
+            console.log('🔒 [DASHBOARD] Global fetch interceptor caught subscription required, showing modal');
+            if (!showSubscriptionRequired) {
+              setShowSubscriptionRequired(true);
+            }
+            return res;
+          }
         }
       } catch {}
       return res;
@@ -169,26 +185,57 @@ export default function DashboardLayout({
       <main className="flex-1 overflow-y-auto overflow-x-hidden">
         {children}
       </main>
-      {limitExceeded && (
-        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-background border border-border rounded-xl p-6 shadow-xl">
-            <h2 className="text-xl font-semibold mb-2">You've used your free requests</h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              Your free tier limit has been reached{limitInfo?.included !== undefined && limitInfo?.used !== undefined ? ` (${limitInfo.used}/${limitInfo.included})` : ''}. Upgrade your plan to continue using HeyContent.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-2 justify-end">
-              <Button
-                onClick={() => {
-                  try { window.sessionStorage.setItem('settingsActiveTab', 'subscription') } catch {}
-                  window.location.href = '/settings';
-                }}
-              >
-                Manage subscription
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      
+      <UpgradeModal
+        open={showSubscriptionRequired}
+        onClose={() => {}} // Non-dismissible
+        onSelectPlan={async (planId: string) => {
+          if (planId === 'free') {
+            // Handle free tier selection
+            try {
+              const apiKey = await getApiKey();
+              if (!apiKey) {
+                console.error('No API key found. Please log in again.');
+                return;
+              }
+              
+              const response = await fetch('/api/subscription/free-tier', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${apiKey}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  userId: firebaseUser?.uid,
+                  email: firebaseUser?.email || '',
+                  name: firebaseUser?.displayName || ''
+                })
+              });
+              
+              if (!response.ok) {
+                console.error('Failed to create free subscription');
+                return;
+              }
+              
+              const result = await response.json();
+              
+              if (result.success) {
+                setShowSubscriptionRequired(false);
+                window.location.reload();
+              } else {
+                console.error('Failed to create free subscription:', result.error);
+              }
+            } catch (error) {
+              console.error('Error creating free subscription:', error);
+            }
+          } else {
+            // For paid plans, the UpgradeModal will handle Stripe checkout
+            // The modal will close automatically after successful checkout
+            setShowSubscriptionRequired(false);
+          }
+        }}
+        context="subscription_required"
+      />
     </div>
   );
 }
