@@ -159,19 +159,19 @@ const AmbientFingerprintCanvas: React.FC<AmbientFingerprintCanvasProps> = ({
   const [isCompleting, setIsCompleting] = useState(false)
   const [completionTriggered, setCompletionTriggered] = useState(false)
 
-	// Calculate which fingerprint fields should be discovered based on message count
+  // Calculate which fingerprint fields should be discovered based on message count
 	// TODO: make this based on when all fields are properly populated as determined by the backend
   const fieldsToDiscover = useMemo(() => {
-    // Progressive discovery - complete fingerprint after 4 messages
-    if (messageCount >= 4) {
-      // After 4 messages, discover ALL fields to trigger completion
+    // Progressive discovery - complete fingerprint after 8 messages
+    if (messageCount >= 8) {
+      // After 8 messages, discover ALL fields to trigger completion
       return FINGERPRINT_STARS.slice(0, FINGERPRINT_STARS.length)
-    } else if (messageCount >= 2) {
-      // After 2 messages, discover about 3/4 of the fields
+    } else if (messageCount >= 5) {
+      // After 5 messages, discover about 3/4 of the fields
       const threeQuarterFields = Math.floor(FINGERPRINT_STARS.length * 0.75)
       return FINGERPRINT_STARS.slice(0, threeQuarterFields)
-    } else if (messageCount >= 1) {
-      // After 1 message, discover about half the fields
+    } else if (messageCount >= 2) {
+      // After 2 messages, discover about half the fields
       const halfFields = Math.floor(FINGERPRINT_STARS.length / 2)
       return FINGERPRINT_STARS.slice(0, halfFields)
     }
