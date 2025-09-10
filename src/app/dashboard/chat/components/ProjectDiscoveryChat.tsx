@@ -1,38 +1,23 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
-import { useTheme } from 'next-themes'
-import { MessageSquare, Eye } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/app/context/auth-context'
+import { useAction } from 'convex/react'
+import { api } from '@/convex/_generated/api'
 
-// Project Discovery specific components
-import { FingerprintDisplay } from './notepad/FingerprintDisplay'
-
-// Project discovery context and hooks
-import { useProjectFingerprintStore } from '@/store/project-fingerprint-store'
-
-// Temporary mock implementation for development
-const mockUseProjectDiscoveryContext = (projectId?: string, fingerprintId?: string) => ({
-  projectId,
-  fingerprintId,
-  currentFingerprint: null,
-  isInitializing: false,
-  isLoading: false,
-  error: null,
-  initializeProjectDiscovery: () => Promise.resolve(),
-  updateFingerprint: () => Promise.resolve(),
-  finalizeFingerprint: () => Promise.resolve(),
-  resetDiscovery: () => Promise.resolve(),
-  discoveryProgress: {
-    hasBasicInfo: false,
-    hasGoals: false,
-    hasTimeline: false,
-    hasOutputs: false,
-    hasUI: false,
-    isComplete: false
-  }
-})
+// Import essential chat components and hooks
+import { useChatState } from '../hooks/useChatState'
+import { useChat } from '../hooks/useChat'
+import { useConversation } from '../hooks/useConversation'
+import { useWelcomeMessage } from '../hooks/useWelcomeMessage'
+import { usePersonaData } from '../hooks/usePersonaData'
+import ChatMessagesList from './main_chat/ChatMessagesList'
+import { ChatInput } from '../chat-input'
+import { ContentContext } from '../types'
+import ChatContextBox from './main_chat/ChatContextBox'
+import { useContentContext, useContentContextActions } from '@/store/content-context-store'
+import { useProjectContext } from '../hooks/useProjectContext'
 
 interface ProjectDiscoveryChatProps {
   projectId?: string
@@ -43,90 +28,211 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
   projectId,
   fingerprintId
 }) => {
-  const { theme } = useTheme()
-
-  // Project discovery context
-  const projectDiscovery = mockUseProjectDiscoveryContext(projectId, fingerprintId)
-  const fingerprintStore = useProjectFingerprintStore()
-
+  const searchParams = useSearchParams()
+  
   // Authentication and user data
   const { firebaseUser } = useAuth()
-  const authData = {
+  const authData = useMemo(() => ({
     user: firebaseUser,
     userId: firebaseUser?.uid,
     userEmail: firebaseUser?.email,
     isAuthenticated: !!firebaseUser,
     isLoading: firebaseUser === undefined
-  }
-
-  // Theme-aware colors
-  const themeColors = {
-    accentColor: theme === 'dark' ? 'text-primary' : 'text-purple-600',
-    accentBg: theme === 'dark' ? 'bg-primary' : 'bg-purple-600',
-    accentBgHover: theme === 'dark' ? 'hover:bg-primary/90' : 'hover:bg-purple-700',
-    accentBgLight: theme === 'dark' ? 'bg-primary/10' : 'bg-purple-600/10',
-    accentBorder: theme === 'dark' ? 'border-primary' : 'border-purple-600'
-  }
+  }), [firebaseUser])
 
   // UI state
-  const [isMobile, setIsMobile] = useState(false)
-  const [activeTab, setActiveTab] = useState<'chat' | 'fingerprint'>('chat')
   const [inputValue, setInputValue] = useState('')
-  const [messages, setMessages] = useState<Array<{id: string, content: string, role: 'user' | 'assistant'}>>([])
-  const [isLoading, setIsLoading] = useState(false)
+  const [embeddingInfo, setEmbeddingInfo] = useState<{ hasEmbeddings: boolean; count: number }>({ 
+    hasEmbeddings: false, 
+    count: 0 
+  })
+  const [useContextSearch, setUseContextSearch] = useState(true)
+  const [contextConsumption, setContextConsumption] = useState({
+    hasConsumed: false,
+    isDisplayed: false
+  })
 
-  // Check mobile state
+  // Refs
+  const chatContainerRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
+  const askQueryProcessedRef = useRef<string | null>(null)
+
+  // Embedding sync heartbeat
+  const userHeartbeat = useAction(api.embeddingSystem.userHeartbeat)
+
+  // Get real project context with content
+  const { 
+    projectContext, 
+    isLoading: isProjectLoading, 
+    error: projectError,
+    contentSummary 
+  } = useProjectContext(projectId, fingerprintId, authData.userId)
+
+  // Get content context from Zustand store
+  const { context: currentContext, hasContext } = useContentContext()
+  const { clearContentContext, setContentContext } = useContentContextActions()
+
+  // Set project context when component mounts - force set if we have project data
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768)
+    // Force set project context if we have project data, regardless of existing context
+    // This ensures project context takes priority over any lingering context
+    if (projectContext && !isProjectLoading && contentSummary && contentSummary.totalItems > 0) {
+      setContentContext(projectContext as any)
     }
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
+  }, [projectContext, currentContext, setContentContext, isProjectLoading, contentSummary])
 
-  // Initialize project discovery context
+  // Initialize shared state and hooks
+  const chatState = useChatState()
+  const { messages, setMessages, error, isLoading, includeAnalysisInQuery, setIncludeAnalysisInQuery } = chatState
+
+  // Get persona data
+  const { hasPersona } = usePersonaData(authData.userId, authData.isAuthenticated)
+
+  // Initialize chat hook with shared state and userId
+  const {
+    referencedMessage,
+    handleSendMessage,
+    handleMessageReference,
+    handleClearReference,
+    handleOptionClick,
+    handleFollowUpClick,
+    handleReferenceClick
+  } = useChat(chatState, authData.userId, useContextSearch)
+
+  // Initialize conversation hook
+  const { initSession } = useConversation(chatState, authData.user)
+
+  // Initialize welcome message hook for onboarding users without personas
+  const { handleSuggestionClick: handleWelcomeSuggestionClick } = useWelcomeMessage(
+    messages, 
+    isLoading, 
+    authData.user, 
+    setMessages, 
+    hasPersona, 
+    false
+  )
+
+  // Embedding sync heartbeat for active chat users  
   useEffect(() => {
-    if (authData.userId && projectId) {
-      projectDiscovery.initializeProjectDiscovery()
-    }
-  }, [authData.userId, projectId, projectDiscovery])
+    if (!authData.userId) return
 
-  // Handle sending messages (simplified for now)
-  const handleSendMessage = useCallback(async (content: string) => {
-    if (!content.trim()) return
-
-    const userMessage = {
-      id: Date.now().toString(),
-      content,
-      role: 'user' as const
-    }
-
-    setMessages(prev => [...prev, userMessage])
-    setInputValue('')
-    setIsLoading(true)
-
-    // Simulate AI response for project discovery
-    setTimeout(() => {
-      const aiMessage = {
-        id: (Date.now() + 1).toString(),
-        content: `I understand you're working on: "${content}". This is great context for building your project fingerprint. What are your main goals for this project?`,
-        role: 'assistant' as const
+    const heartbeatInterval = setInterval(async () => {
+      try {
+        await userHeartbeat({ userId: authData.userId! })
+      } catch (error) {
+        console.error('Chat heartbeat sync failed:', error)
       }
-      setMessages(prev => [...prev, aiMessage])
-      setIsLoading(false)
-    }, 1000)
+    }, 2 * 60 * 1000) // 2 minutes
+
+    return () => clearInterval(heartbeatInterval)
+  }, [authData.userId, userHeartbeat])
+
+  // Handle content context display and consumption
+  useEffect(() => {
+    if (currentContext && !contextConsumption.hasConsumed) {
+      setContextConsumption(prev => ({ ...prev, isDisplayed: true }))
+    }
+  }, [currentContext, contextConsumption.hasConsumed])
+
+  // Mark context as consumed after first message
+  useEffect(() => {
+    if (currentContext && 
+        contextConsumption.isDisplayed && 
+        !contextConsumption.hasConsumed && 
+        messages.length > 0) {
+      
+      const hasRealMessage = messages.some(msg => !msg.metadata?.isWelcome)
+      
+      if (hasRealMessage) {
+        setContextConsumption(prev => ({ ...prev, hasConsumed: true }))
+      }
+    }
+  }, [messages.length, currentContext, contextConsumption])
+
+  // Handle initial ask query
+  const askQuery = searchParams.get('ask')
+  useEffect(() => {
+    if (askQuery && 
+        askQuery !== askQueryProcessedRef.current && 
+        !isLoading && 
+        messages.length === 0 &&
+        authData.user) {
+      
+      askQueryProcessedRef.current = askQuery
+      
+      setTimeout(() => {
+        handleSendMessage(askQuery)
+      }, 100)
+    }
+  }, [askQuery, isLoading, handleSendMessage, messages.length, authData.user])
+
+  // Handlers
+  const handleRemoveContext = useCallback(() => {
+    clearContentContext()
+  }, [clearContentContext])
+
+  const handleSuggestionClick = useCallback((suggestion: any, onSendMessage: (msg: string) => void) => {
+    if (!hasPersona) {
+      handleWelcomeSuggestionClick(suggestion, onSendMessage)
+    } else {
+      const message = typeof suggestion === 'string' ? suggestion : suggestion.description
+      onSendMessage(message)
+    }
+  }, [hasPersona, handleWelcomeSuggestionClick])
+
+  const handleInputAppend = useCallback((text: string) => {
+    setInputValue(currentValue => {
+      const cleanText = text
+        .replace(/^[\s]*[-*•]\s*/, '')
+        .replace(/^[\s]*\*\s*/, '')
+        .trim()
+      return currentValue.trim() ? `${currentValue} ${cleanText}` : cleanText
+    })
   }, [])
 
-  // Handle tab switching
-  const switchToTab = useCallback((tab: 'chat' | 'fingerprint') => {
-    if (isMobile) {
-      setActiveTab(tab)
-    }
-  }, [isMobile])
+  const handleFollowUpPopulate = useCallback((choice: string) => {
+    const cleanText = choice
+      .replace(/^[\s]*[-*•]\s*/, '')
+      .replace(/^[\s]*\*\s*/, '')
+      .trim()
+    setInputValue(cleanText)
+  }, [])
 
-  // Loading state
-  const combinedLoading = isLoading || authData.isLoading || projectDiscovery.isInitializing
+  // Autoscroll functionality
+  useEffect(() => {
+    if (chatContainerRef.current && messages.length > 0) {
+      const scrollContainer = chatContainerRef.current
+      
+      const scrollToBottom = () => {
+        const scrollHeight = scrollContainer.scrollHeight
+        const height = scrollContainer.clientHeight
+        const maxScrollTop = scrollHeight - height
+        const currentScrollTop = scrollContainer.scrollTop
+        const isNearBottom = currentScrollTop >= maxScrollTop - 100
+        
+        if (isNearBottom || isLoading) {
+          scrollContainer.scrollTo({
+            top: scrollHeight + 200,
+            behavior: 'smooth'
+          })
+        }
+      }
+
+      scrollToBottom()
+      const timeoutId = setTimeout(scrollToBottom, 100)
+      
+      return () => clearTimeout(timeoutId)
+    }
+  }, [messages, isLoading])
+
+  // Clear state on mount for clean start
+  useEffect(() => {
+    setMessages([])
+    chatState.setSessionId(null)
+    chatState.setIsFirstMessage(true)
+    setContextConsumption({ hasConsumed: false, isDisplayed: false })
+    askQueryProcessedRef.current = null
+  }, []) // Only run on mount
 
   if (!authData.isAuthenticated) {
     return (
@@ -148,217 +254,152 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
   }
 
   return (
-    <div className="flex h-full bg-background">
-      {/* Main Chat Content */}
-      <div className="flex flex-col flex-1 overflow-hidden">
-        {/* Status indicator for discovery progress */}
-        {projectDiscovery.discoveryProgress.isComplete && (
-          <div className="px-8 py-4 border-b border-border/20">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-blue-400/60 rounded-full" />
-              <span className="text-sm font-medium text-foreground/80">Discovery complete</span>
-            </div>
-          </div>
-        )}
-
-        {/* Chat Area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center px-8">
-                <div className="max-w-lg space-y-8">
-                  <div className="h-px bg-gradient-to-r from-blue-400/60 via-transparent to-transparent w-3/4" />
-                  
-                  <div className="space-y-6">
-                    <div className="space-y-4">
-                      <div className="flex items-baseline gap-4">
-                        <h2 className="text-4xl font-light tracking-tight text-foreground">
-                          Begin
-                        </h2>
-                        <div className="h-px bg-border/40 flex-1 mb-2" />
+    <div className="flex flex-col h-full bg-background">
+      {/* Chat Messages Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="p-3 sm:p-4 pb-4">
+            <div className="max-w-4xl sm:max-w-6xl mx-auto space-y-3">
+              {/* Context box */}
+              {currentContext && (
+                <ChatContextBox
+                  currentContext={currentContext}
+                  messages={messages}
+                  onRemove={handleRemoveContext}
+                  includeAnalysisInQuery={includeAnalysisInQuery}
+                  onToggleAnalysis={setIncludeAnalysisInQuery}
+                  onSendMessage={handleSendMessage}
+                  onInputPopulate={handleInputAppend}
+                />
+              )}
+              
+              {/* Messages */}
+              {messages.length > 0 ? (
+                <ChatMessagesList
+                  messages={messages}
+                  referencedMessage={referencedMessage}
+                  handleMessageReference={handleMessageReference}
+                  handleReferenceClick={handleReferenceClick}
+                  handleOptionClick={handleOptionClick}
+                  handleFollowUpClick={handleFollowUpPopulate}
+                  userId={authData.userId}
+                  handleSuggestionClick={handleSuggestionClick}
+                  handleSendMessage={handleSendMessage}
+                  onInputPopulate={handleInputAppend}
+                  notepadOpen={false}
+                  onQuoteToNotepad={() => {}}
+                />
+              ) : (
+                // Empty state with project discovery messaging
+                <div className="flex-1 flex items-center justify-center px-8 min-h-[400px]">
+                  <div className="max-w-lg space-y-8">
+                    <div className="h-px bg-gradient-to-r from-blue-400/60 via-transparent to-transparent w-3/4" />
+                    
+                    <div className="space-y-6">
+                      <div className="space-y-4">
+                        <div className="flex items-baseline gap-4">
+                          <h2 className="text-4xl font-light tracking-tight text-foreground">
+                            Begin
+                          </h2>
+                          <div className="h-px bg-border/40 flex-1 mb-2" />
+                        </div>
+                        <h3 className="text-xl font-medium text-muted-foreground ml-6">
+                          together
+                        </h3>
                       </div>
-                      <h3 className="text-xl font-medium text-muted-foreground ml-6">
-                        together
-                      </h3>
+                      
+                      <div className="ml-1 space-y-4">
+                        <p className="text-muted-foreground/80 leading-relaxed text-base">
+                          Share what you're working on. I'll listen, ask thoughtful questions, 
+                          and help create an AI fingerprint that truly understands your project.
+                        </p>
+                        
+                        {/* Show project content summary if available */}
+                        {contentSummary && contentSummary.totalItems > 0 && (
+                          <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/20 rounded-lg p-3 mt-4">
+                            <p className="text-blue-800 dark:text-blue-300 text-sm">
+                              <strong>Project Context Loaded:</strong> {contentSummary.totalItems} items 
+                              ({contentSummary.itemCounts.notes} notes, {contentSummary.itemCounts.conversations} conversations)
+                            </p>
+                          </div>
+                        )}
+                        
+                        {isLoading && (
+                          <div className="flex items-center gap-3 mt-6">
+                            <div className="w-5 h-5 border-2 border-blue-400/60 border-t-transparent rounded-full animate-spin" />
+                            <span className="text-sm text-muted-foreground/70">
+                              Preparing conversation space...
+                            </span>
+                          </div>
+                        )}
+                        
+                        {isProjectLoading && (
+                          <div className="flex items-center gap-3 mt-6">
+                            <div className="w-5 h-5 border-2 border-green-400/60 border-t-transparent rounded-full animate-spin" />
+                            <span className="text-sm text-muted-foreground/70">
+                              Loading project content...
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     
-                    <div className="ml-1 space-y-4">
-                      <p className="text-muted-foreground/80 leading-relaxed text-base">
-                        Share what you're working on. I'll listen, ask thoughtful questions, 
-                        and help create an AI fingerprint that truly understands your project.
-                      </p>
-                      
-                      {combinedLoading && (
-                        <div className="flex items-center gap-3 mt-6">
-                          <div className="w-5 h-5 border-2 border-blue-400/60 border-t-transparent rounded-full animate-spin" />
-                          <span className="text-sm text-muted-foreground/70">
-                            Preparing conversation space...
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="h-px bg-gradient-to-r from-transparent via-border/30 to-transparent" />
-                </div>
-              </div>
-            ) : (
-              messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={cn(
-                    "flex gap-4 max-w-4xl",
-                    message.role === 'user' ? "ml-auto flex-row-reverse" : ""
-                  )}
-                >
-                  <div className={cn(
-                    "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border transition-colors duration-300",
-                    message.role === 'user'
-                      ? "bg-foreground text-background border-foreground/20"
-                      : "bg-muted/50 border-border/30"
-                  )}>
-                    {message.role === 'user' ? (
-                      <span className="text-sm font-medium">You</span>
-                    ) : (
-                      <span className="text-sm font-medium">AI</span>
-                    )}
-                  </div>
-                  <div className={cn(
-                    "rounded-lg px-5 py-3 max-w-[75%] transition-all duration-300",
-                    message.role === 'user'
-                      ? "bg-foreground text-background border-l-2 border-foreground/20"
-                      : "bg-muted/30 border-l-2 border-blue-400/60"
-                  )}>
-                    <p className="text-base leading-relaxed">{message.content}</p>
+                    <div className="h-px bg-gradient-to-r from-transparent via-border/30 to-transparent" />
                   </div>
                 </div>
-              ))
-            )}
-            {combinedLoading && (
-              <div className="flex gap-4 max-w-4xl">
-                <div className="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center flex-shrink-0 border border-border/30">
-                  <div className="w-4 h-4 border-2 border-blue-400/60 border-t-transparent rounded-full animate-spin" />
-                </div>
-                <div className="bg-muted/30 rounded-lg px-5 py-3 border-l-2 border-blue-400/60">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground/70">Thinking...</span>
-                    <div className="flex space-x-1">
-                      <div className="w-1.5 h-1.5 bg-blue-400/60 rounded-full animate-pulse"></div>
-                      <div className="w-1.5 h-1.5 bg-blue-400/60 rounded-full animate-pulse [animation-delay:0.2s]"></div>
-                      <div className="w-1.5 h-1.5 bg-blue-400/60 rounded-full animate-pulse [animation-delay:0.4s]"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+              )}
 
-          {/* Input Area with anti-corporate styling */}
-          <div className="border-t border-border/20 px-8 py-6">
-            <div className="space-y-4">
-              <div className="h-px bg-gradient-to-r from-transparent via-blue-400/30 to-transparent w-1/2" />
+              {/* Error display */}
+              {error && (
+                <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800/20 rounded-lg p-3 mt-4">
+                  <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+                  <button
+                    onClick={() => chatState.setError(null)}
+                    className="text-xs text-red-600 dark:text-red-400 hover:opacity-80 mt-1"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )}
               
-              <div className="flex gap-4">
-                <input
-                  type="text"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(inputValue)}
-                  placeholder="What's on your mind about this project..."
-                  className="flex-1 px-4 py-3 text-base border border-border/50 rounded-lg focus:outline-none focus:border-blue-400/60 transition-colors duration-300 bg-background"
-                  disabled={combinedLoading}
-                />
-                <button
-                  onClick={() => handleSendMessage(inputValue)}
-                  disabled={!inputValue.trim() || combinedLoading}
-                  className={cn(
-                    "px-6 py-3 text-base rounded-lg transition-all duration-300",
-                    inputValue.trim() && !combinedLoading
-                      ? "bg-foreground text-background hover:bg-foreground/90 hover:scale-[1.02]"
-                      : "bg-muted/50 text-muted-foreground cursor-not-allowed border border-border/30"
-                  )}
-                >
-                  {combinedLoading ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                    </div>
-                  ) : (
-                    'Share'
-                  )}
-                </button>
-              </div>
+              {/* Project loading error display */}
+              {projectError && (
+                <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800/20 rounded-lg p-3 mt-4">
+                  <p className="text-orange-600 dark:text-orange-400 text-sm">
+                    <strong>Project Context:</strong> {projectError}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
-
-        {/* Mobile Tab Bar with anti-corporate styling */}
-        {isMobile && (
-          <div className="sm:hidden border-t border-border/20 bg-background">
-            <div className="h-px bg-gradient-to-r from-transparent via-blue-400/30 to-transparent" />
-            <div className="flex">
-              <button
-                onClick={() => switchToTab('chat')}
-                className={cn(
-                  "flex-1 flex flex-col items-center justify-center gap-1 py-4 px-4 relative transition-all duration-300",
-                  activeTab === 'chat'
-                    ? "text-foreground bg-muted/30"
-                    : "text-muted-foreground hover:text-foreground/70 hover:bg-muted/20"
-                )}
-              >
-                <span className="text-sm font-medium">Conversation</span>
-                {activeTab === 'chat' && (
-                  <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-400/60 to-transparent" />
-                )}
-              </button>
-
-              <button
-                onClick={() => switchToTab('fingerprint')}
-                className={cn(
-                  "flex-1 flex flex-col items-center justify-center gap-1 py-4 px-4 relative transition-all duration-300",
-                  activeTab === 'fingerprint'
-                    ? "text-foreground bg-muted/30"
-                    : "text-muted-foreground hover:text-foreground/70 hover:bg-muted/20"
-                )}
-              >
-                <span className="text-sm font-medium">Intelligence</span>
-                {activeTab === 'fingerprint' && (
-                  <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-400/60 to-transparent" />
-                )}
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Mobile: Show fingerprint content when activeTab is 'fingerprint' */}
-      {isMobile && activeTab === 'fingerprint' && (
-        <div className="flex-1 overflow-hidden">
-          <FingerprintDisplay
-            isOpen={true}
-            onClose={() => switchToTab('chat')}
-            width={400}
-            onWidthChange={() => {}}
-            style={{}}
-            isMobile={true}
-            activeTab={activeTab}
-            onScrollPositionChange={() => {}}
+      {/* Input Area */}
+      <div className="flex-shrink-0 border-t border-border bg-background">
+        <div className="max-w-4xl sm:max-w-6xl mx-auto px-2 sm:px-3 pt-1 pb-2">
+          <ChatInput
+            inputRef={inputRef}
+            onSend={handleSendMessage}
+            isLoading={isLoading}
+            disabled={!authData.isAuthenticated}
+            referencedMessage={referencedMessage}
+            onClearReference={handleClearReference}
+            hasContext={!!currentContext}
+            contextPlatform={currentContext?.platform}
+            hasAnalysis={currentContext?.analysis ? true : false}
+            inputValue={inputValue}
+            onInputChange={setInputValue}
+            useContextSearch={useContextSearch}
+            onToggleContextSearch={setUseContextSearch}
+            embeddingInfo={embeddingInfo}
+            notepadOpen={false}
+            openNotepad={() => {}}
+            quotedForNotepad={null}
+            onClearQuoted={() => {}}
           />
         </div>
-      )}
-
-      {/* Desktop: Always show fingerprint display */}
-      {!isMobile && (
-        <FingerprintDisplay
-          isOpen={true}
-          onClose={() => {}}
-          width={400}
-          onWidthChange={() => {}}
-          style={{}}
-          isMobile={false}
-          onScrollPositionChange={() => {}}
-        />
-      )}
+      </div>
     </div>
   )
 }
