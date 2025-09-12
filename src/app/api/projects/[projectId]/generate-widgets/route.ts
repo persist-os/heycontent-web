@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { ConvexHttpClient } from 'convex/browser'
 import { api } from '@/convex/_generated/api'
 
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
+
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ projectId: string }> }
@@ -9,7 +11,7 @@ export async function POST(
   try {
     const { projectId } = await context.params
     const body = await request.json()
-    const { fingerprint_id, project_id, user_preferences } = body
+    const { fingerprint_id, project_id, user_preferences, check_fingerprint_only } = body
 
     // Get Firebase ID token from Authorization header
     const authHeader = request.headers.get('authorization')
@@ -45,7 +47,6 @@ export async function POST(
     }
 
     // Get fingerprint data from Convex by project ID
-    const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
     let fingerprint_data = null
     
     if (userId && projectId) {
@@ -54,7 +55,8 @@ export async function POST(
           projectId,
           userId,
           projectIdType: typeof projectId,
-          userIdType: typeof userId
+          userIdType: typeof userId,
+          check_fingerprint_only
         })
         
         // Get fingerprint by project ID (this ensures we get the correct fingerprint for this project)
@@ -64,9 +66,23 @@ export async function POST(
         })
         console.log('Retrieved fingerprint data by project:', fingerprint_data)
         
+        // If this is just a fingerprint check, return early
+        if (check_fingerprint_only) {
+          return NextResponse.json({
+            success: true,
+            fingerprint_exists: !!fingerprint_data,
+            fingerprint_id: fingerprint_data?._id || null
+          })
+        }
+        
         if (!fingerprint_data) {
+          console.error('No fingerprint found for project:', { projectId, userId })
           return NextResponse.json(
-            { error: 'No fingerprint found for this project. Please complete the project discovery first.' },
+            { 
+              error: 'No fingerprint found for this project. Please complete the project discovery first.',
+              success: false,
+              fingerprint_exists: false
+            },
             { status: 404 }
           )
         }
@@ -74,7 +90,11 @@ export async function POST(
         console.error('Failed to fetch fingerprint data by project:', error)
         console.error('Debug info:', { projectId, userId })
         return NextResponse.json(
-          { error: 'Failed to fetch fingerprint data' },
+          { 
+            error: 'Failed to fetch fingerprint data',
+            success: false,
+            fingerprint_exists: false
+          },
           { status: 500 }
         )
       }

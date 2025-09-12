@@ -152,31 +152,36 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
           
           // Check if fingerprint is complete
           if (result.data.fingerprintEvolution.decision?.should_continue === false) {
-            // Transform FingerprintEvolution to ProjectFingerprint format
-            const fingerprintData = result.data.fingerprintEvolution
-            const projectFingerprint = {
-              projectId: projectId,
-              userId: authData.userId,
-              name: fingerprintData.name || 'Unnamed Project',
-              description: fingerprintData.description || 'AI-generated project fingerprint',
-              domain: fingerprintData.domain || 'General',
-              complexity_level: fingerprintData.complexity_level || 5,
-              collaboration_style: fingerprintData.collaboration_style || 'Unknown',
-              time_horizon: fingerprintData.time_horizon || 'Unknown',
-              primary_pattern: fingerprintData.primary_pattern || 'Unknown',
-              working_style: fingerprintData.working_style || [],
-              tangible_deliverables: fingerprintData.tangible_deliverables || [],
-              intangible_benefits: fingerprintData.intangible_benefits || [],
-              measurement_approach: fingerprintData.measurement_approach || 'Unknown',
-              sharing_intention: fingerprintData.sharing_intention || 'Unknown',
-              base_personality: fingerprintData.base_personality || 'Unknown',
-              project_voice: fingerprintData.project_voice || 'Unknown',
-              created_at: Date.now(),
-              last_evolution: Date.now(),
-              intelligence_version: '1.0',
-              // Include all other fields from the evolution data
-              ...fingerprintData
-            }
+        // Transform FingerprintEvolution to ProjectFingerprint format
+        const fingerprintData = result.data.fingerprintEvolution
+        
+        if (!fingerprintData.name || !fingerprintData.description || !fingerprintData.domain) {
+          throw new Error('Fingerprint evolution failed - incomplete fingerprint data')
+        }
+        
+        const projectFingerprint = {
+          projectId: projectId,
+          userId: authData.userId,
+          name: fingerprintData.name,
+          description: fingerprintData.description,
+          domain: fingerprintData.domain,
+          complexity_level: fingerprintData.complexity_level,
+          collaboration_style: fingerprintData.collaboration_style,
+          time_horizon: fingerprintData.time_horizon,
+          primary_pattern: fingerprintData.primary_pattern,
+          working_style: fingerprintData.working_style,
+          tangible_deliverables: fingerprintData.tangible_deliverables,
+          intangible_benefits: fingerprintData.intangible_benefits,
+          measurement_approach: fingerprintData.measurement_approach,
+          sharing_intention: fingerprintData.sharing_intention,
+          base_personality: fingerprintData.base_personality,
+          project_voice: fingerprintData.project_voice,
+          created_at: Date.now(),
+          last_evolution: Date.now(),
+          intelligence_version: '1.0',
+          // Include all other fields from the evolution data
+          ...fingerprintData
+        }
             setCurrentFingerprint(projectFingerprint)
             console.log('[DISCOVERY][processConversationMessage:evolution:complete]', {
               willSetComplete: true,
@@ -194,24 +199,69 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
     }
   }, [authData.userId, projectId])
 
-  // Generate project widgets when fingerprint is complete
-  const generateProjectWidgets = useCallback(async () => {
+  // Wait for fingerprint to be saved to Convex, then generate widgets
+  const waitForFingerprintAndGenerateWidgets = useCallback(async () => {
     if (!authData.userId || !projectId) return
 
     try {
+      console.log('[DISCOVERY][fingerprint:wait:start]', {
+        hasUserId: !!authData.userId,
+        projectId
+      })
+
+      // Poll for fingerprint in Convex with timeout
+      const maxAttempts = 30 // 30 seconds max
+      const pollInterval = 1000 // 1 second intervals
+      let attempts = 0
+      let fingerprintExists = false
+
+      while (attempts < maxAttempts && !fingerprintExists) {
+        try {
+          // Check if fingerprint exists in Convex
+          const response = await fetch(`/api/projects/${projectId}/generate-widgets`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${await getApiKey()}`
+            },
+            body: JSON.stringify({
+              user_preferences: {},
+              check_fingerprint_only: true // Signal to just check if fingerprint exists
+            })
+          })
+
+          if (response.ok) {
+            const result = await response.json()
+            if (result.fingerprint_exists) {
+              fingerprintExists = true
+              console.log('[DISCOVERY][fingerprint:wait:found]', { attempts })
+              break
+            }
+          }
+        } catch (error) {
+          console.warn('[DISCOVERY][fingerprint:wait:poll:error]', error)
+        }
+
+        attempts++
+        await new Promise(resolve => setTimeout(resolve, pollInterval))
+      }
+
+      if (!fingerprintExists) {
+        throw new Error('Fingerprint not found in Convex after waiting')
+      }
+
+      // Now generate widgets
       console.log('[DISCOVERY][widgets:start]', {
         hasUserId: !!authData.userId,
         projectId,
-        hasCurrentFingerprint: !!currentFingerprint
+        fingerprintExists
       })
-      // Get API key
+      
       const apiKey = await getApiKey()
       if (!apiKey) {
         throw new Error('Authentication required')
       }
       
-      // Call the API route to generate widgets
-      console.log('[DISCOVERY][widgets:fetch]', { url: `/api/projects/${projectId}/generate-widgets` })
       const response = await fetch(`/api/projects/${projectId}/generate-widgets`, {
         method: 'POST',
         headers: {
@@ -219,7 +269,6 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
           'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          // No need to pass fingerprintId - the API will look it up by projectId
           user_preferences: {}
         })
       })
@@ -233,13 +282,16 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
       const result = await response.json()
       
       if (result.success) {
-        // Widgets will be stored in Convex and can be fetched by the project view
         console.log('[DISCOVERY][widgets:success]', { hasData: !!result.data })
+        return true
+      } else {
+        throw new Error('Widget generation failed')
       }
     } catch (error) {
-      console.error('Error generating project widgets:', error)
+      console.error('Error waiting for fingerprint and generating widgets:', error)
+      return false
     }
-  }, [authData.userId, projectId, currentFingerprint])
+  }, [authData.userId, projectId])
 
   // Generate widgets and redirect when fingerprint is complete (based on Convex confirmation)
   useEffect(() => {
@@ -247,18 +299,25 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
       const handleFingerprintComplete = async () => {
         try {
           console.log('[DISCOVERY][complete:start]', { projectId, hasCurrentFingerprint: !!currentFingerprint })
-          // Generate widgets first
-          await generateProjectWidgets()
-          console.log('[DISCOVERY][complete:widgets:done]')
           
-          // Wait a moment for widgets to be generated
-          setTimeout(() => {
-            // Redirect to the project view
-            if (projectId) {
-              console.log('[DISCOVERY][complete:redirect]', { to: `/dashboard/living-projects/${projectId}` })
-              window.location.href = `/dashboard/living-projects/${projectId}`
-            }
-          }, 2000) // 2 second delay to show completion
+          // Wait for fingerprint to be saved to Convex, then generate widgets
+          const widgetsGenerated = await waitForFingerprintAndGenerateWidgets()
+          
+          if (widgetsGenerated) {
+            console.log('[DISCOVERY][complete:widgets:done]')
+            
+            // Wait a moment for widgets to be generated
+            setTimeout(() => {
+              // Redirect to the project view
+              if (projectId) {
+                console.log('[DISCOVERY][complete:redirect]', { to: `/dashboard/living-projects/${projectId}` })
+                window.location.href = `/dashboard/living-projects/${projectId}`
+              }
+            }, 2000) // 2 second delay to show completion
+          } else {
+            console.error('[DISCOVERY][complete:widgets:failed]')
+            // Could show error message to user here
+          }
         } catch (error) {
           console.error('Error completing fingerprint process:', error)
         }
@@ -266,7 +325,7 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
       
       handleFingerprintComplete()
     }
-  }, [fingerprintComplete, currentFingerprint, generateProjectWidgets, projectId])
+  }, [fingerprintComplete, currentFingerprint, waitForFingerprintAndGenerateWidgets, projectId])
 
   // Refs
   const chatContainerRef = useRef<HTMLDivElement>(null)
@@ -329,24 +388,34 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
             throw new Error(txt || 'Fingerprint generation failed')
           }
           const result = await resp.json()
-          const fingerprintData = result?.data?.finalFingerprint || result?.data?.fingerprintEvolution || result?.fingerprint_data
+          
+          if (!result.success || !result.data?.finalFingerprint) {
+            throw new Error('Fingerprint generation failed - no fingerprint data returned')
+          }
+          
+          const fingerprintData = result.data.finalFingerprint
+          
+          if (!fingerprintData.name || !fingerprintData.description || !fingerprintData.domain) {
+            throw new Error('Fingerprint generation failed - incomplete fingerprint data')
+          }
+          
           const projectFingerprint = {
             projectId: projectId,
             userId: authData.userId,
-            name: fingerprintData?.name || 'Unnamed Project',
-            description: fingerprintData?.description || 'AI-generated project fingerprint',
-            domain: fingerprintData?.domain || 'General',
-            complexity_level: fingerprintData?.complexity_level || 5,
-            collaboration_style: fingerprintData?.collaboration_style || 'Unknown',
-            time_horizon: fingerprintData?.time_horizon || 'Unknown',
-            primary_pattern: fingerprintData?.primary_pattern || 'Unknown',
-            working_style: fingerprintData?.working_style || [],
-            tangible_deliverables: fingerprintData?.tangible_deliverables || [],
-            intangible_benefits: fingerprintData?.intangible_benefits || [],
-            measurement_approach: fingerprintData?.measurement_approach || 'Unknown',
-            sharing_intention: fingerprintData?.sharing_intention || 'Unknown',
-            base_personality: fingerprintData?.base_personality || 'Unknown',
-            project_voice: fingerprintData?.project_voice || 'Unknown',
+            name: fingerprintData.name,
+            description: fingerprintData.description,
+            domain: fingerprintData.domain,
+            complexity_level: fingerprintData.complexity_level,
+            collaboration_style: fingerprintData.collaboration_style,
+            time_horizon: fingerprintData.time_horizon,
+            primary_pattern: fingerprintData.primary_pattern,
+            working_style: fingerprintData.working_style,
+            tangible_deliverables: fingerprintData.tangible_deliverables,
+            intangible_benefits: fingerprintData.intangible_benefits,
+            measurement_approach: fingerprintData.measurement_approach,
+            sharing_intention: fingerprintData.sharing_intention,
+            base_personality: fingerprintData.base_personality,
+            project_voice: fingerprintData.project_voice,
             created_at: Date.now(),
             last_evolution: Date.now(),
             intelligence_version: '1.0',
@@ -356,11 +425,15 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
           setFingerprintComplete(true)
 
           console.log('[DISCOVERY][simple:widgets:start]')
-          await generateProjectWidgets()
+          const widgetsGenerated = await waitForFingerprintAndGenerateWidgets()
 
-          setTimeout(() => {
-            window.location.href = `/dashboard/living-projects/${projectId}`
-          }, 1500)
+          if (widgetsGenerated) {
+            setTimeout(() => {
+              window.location.href = `/dashboard/living-projects/${projectId}`
+            }, 1500)
+          } else {
+            console.error('[DISCOVERY][simple:widgets:failed]')
+          }
         } catch (e) {
           console.error('[DISCOVERY][simple:flow:error]', e)
         } finally {
@@ -369,7 +442,7 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
       }
       run()
     }
-  }, [messages, projectId, authData.userId, fingerprintComplete, generateProjectWidgets, authData.user])
+  }, [messages, projectId, authData.userId, fingerprintComplete, waitForFingerprintAndGenerateWidgets, authData.user])
 
   // Set project context when component mounts - force set if we have project data
   useEffect(() => {
