@@ -11,7 +11,6 @@ import { useNotes } from '@/app/context/notes-context';
 import { Id } from '@/convex/_generated/dataModel';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { useContentManager, usePlatformContent } from '@/app/hooks/use-content';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { Search, Plus, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -39,33 +38,24 @@ export function AttachmentPanel({ projectId, project, isOpen, onClose }: Attachm
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<'all' | ItemType>('all');
 
-  // Initialize content manager
-  useContentManager(userId);
-
-  // Fetch conversations (keeping direct query for now as it may not be part of content system)
+  // Fetch conversations
   const conversations = useQuery(
     api.chatQueries.getHistory,
     userId ? { userId } : "skip"
   );
 
-  // Fetch platform content using content hooks
-  const { content: instagramPosts } = usePlatformContent('instagram');
-  const { content: youtubeVideos } = usePlatformContent('youtube');
-  const { content: gmailContent } = usePlatformContent('gmail');
-  const { content: analysisContent } = usePlatformContent('insights');
-
-  // Convert all available items to a unified format
+  // Convert all available items to a unified format (notes and conversations only)
   const allItems = useMemo(() => {
     return convertToAttachableItems(
       notes,
       conversations || [],
-      instagramPosts || [],
-      youtubeVideos || [],
-      gmailContent || [],
-      analysisContent || [],
+      [], // No Instagram posts - removed social media
+      [], // No YouTube videos - removed social media  
+      [], // No Gmail content - removed social media
+      [], // No analysis content
       project
     );
-  }, [notes, conversations, instagramPosts, youtubeVideos, gmailContent, analysisContent, project]);
+  }, [notes, conversations, project]);
 
   // Filter items based on search and type
   const filteredItems = useMemo(() => {
@@ -77,8 +67,8 @@ export function AttachmentPanel({ projectId, project, isOpen, onClose }: Attachm
   const availableItems = filteredItems.filter(item => !item.isAttached);
 
   const handleToggleItem = async (item: AttachableItem) => {
-    // For analysis items, use the full ID; for others, extract the raw database ID
-    const idToUse = item.type === 'analysis' ? item.id : extractRawId(item.id);
+    // Extract the raw database ID for all item types
+    const idToUse = extractRawId(item.id);
     if (item.isAttached) {
       await removeItemFromProject(projectId, item.type, idToUse);
     } else {
@@ -90,10 +80,6 @@ export function AttachmentPanel({ projectId, project, isOpen, onClose }: Attachm
     { key: 'all', label: 'All Items' },
     { key: 'note', label: 'Notes' },
     { key: 'conversation', label: 'Conversations' },
-    { key: 'instagramPost', label: 'Instagram' },
-    { key: 'youtubeVideo', label: 'YouTube' },
-    { key: 'gmail', label: 'Gmail' },
-    { key: 'analysis', label: 'Analysis' },
   ] as const;
 
   return (

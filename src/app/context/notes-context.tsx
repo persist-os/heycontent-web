@@ -31,7 +31,7 @@ interface NotesContextType {
   canNavigateBack: boolean;
   clearNavigationStack: () => void;
   // Manual metadata generation functions
-  generateMetadataManually: (noteId: string, noteContent: string) => Promise<boolean>;
+  generateMetadataManually: (noteId: string, noteContent: string) => Promise<any>;
   isGeneratingMetadata: boolean;
 }
 

@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useRef, useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { NotesTree } from './components/NotesTree';
-import { NoteArea } from './NoteArea';
 import { useAuth } from '@/app/context/auth-context';
 import type { Id } from '@/convex/_generated/dataModel';
 import { useNotes } from '@/app/context/notes-context';
@@ -14,17 +13,10 @@ import { InstagramPostCard } from './components/InstagramPostCard';
 import { GmailThreadCard } from './components/GmailThreadCard';
 import { InsightCard } from '../ai-insights/_components/InsightCard';
 import { InsightOverlay } from '@/components/content/overlays/InsightOverlay';
-import { buildNoteUpdate, validateNoteUpdate } from './NoteArea';
 
 export default function SmartNotes() {
   const { firebaseUser } = useAuth();
   const userId = firebaseUser?.uid;
-  const searchParams = useSearchParams();
-  const noteIdParam = searchParams.get('noteId');
-  const fromChat = searchParams.get('fromChat') === 'true';
-  const chatId = searchParams.get('chatId');
-  const fromProject = searchParams.get('fromProject') === 'true';
-  const projectId = searchParams.get('projectId');
   const router = useRouter();
 
   const {
@@ -32,71 +24,25 @@ export default function SmartNotes() {
     isLoading: notesIsLoading,
     updateNote,
     deleteNote,
-    activeNoteId,
-    setActiveNoteId,
-    // Smart navigation functionality
-    navigateToNote,
-    navigateBack,
-    canNavigateBack,
-    clearNavigationStack,
-    navigationStack, // <-- add this line
   } = useNotes();
   
   const { projects } = useProjects(userId);
 
-  // YouTube video card state
+  // Content overlay states
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
-  // Instagram post card state
   const [selectedInstagramPostId, setSelectedInstagramPostId] = useState<string | null>(null);
-  // Gmail thread card state
   const [selectedGmailThreadId, setSelectedGmailThreadId] = useState<string | null>(null);
-  // Insight card state
   const [selectedInsightId, setSelectedInsightId] = useState<string | null>(null);
-  
 
-  const noteAreaFlushRef = useRef<() => Promise<void>>();
-  const [shouldForcePreview, setShouldForcePreview] = useState(false);
-
-  // Compute activeNote from notes and activeNoteId (single source of truth)
-  const activeNote = useMemo(() =>
-    activeNoteId ? notes.find(n => n._id === activeNoteId) || null : null,
-    [notes, activeNoteId]
-  );
-
-  // Auto-select note if noteId param is present in URL
-  React.useEffect(() => {
-    if (noteIdParam && notes.length > 0) {
-      try {
-        const found = notes.find(n => String(n._id) === String(noteIdParam));
-        if (found) {
-          setActiveNoteId(found._id);
-        }
-      } catch (error) {
-        console.error('Error selecting note by noteId param:', error);
-      }
-    }
-  }, [noteIdParam, notes, setActiveNoteId]);
-
-  // Helper to clear noteId from URL
-  const clearNoteIdFromUrl = React.useCallback(() => {
-    const params = new URLSearchParams(window.location.search);
-    params.delete('noteId');
-    const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
-    router.replace(newUrl);
-  }, [router]);
-
-  // Handle note editing (select note)
+  // Handle note editing - redirect to chat with noteId
   const handleEditNote = (note: Note) => {
-    setActiveNoteId(note._id);
+    router.push(`/dashboard/chat?noteId=${note._id}`);
   };
 
   // Handle note deletion
   const handleDeleteNote = async (noteId: string) => {
     try {
-      const result = await deleteNote(noteId as Id<'notes'>);
-      if (result && activeNote && String(activeNote._id) === noteId) {
-        setActiveNoteId(undefined);
-      }
+      await deleteNote(noteId as Id<'notes'>);
     } catch (error) {
       console.error('Failed to delete note:', error);
     }
@@ -110,233 +56,22 @@ export default function SmartNotes() {
     }
   };
 
-  // Stable, safe onUpdate handler for NoteArea
-  const handleNoteUpdate = useCallback(async (noteId, updates) => {
-    // Always call backend update to ensure consistency
-    // Use buildNoteUpdate and validateNoteUpdate to ensure only changed fields are sent
-    const note = notes.find(n => String(n._id) === String(noteId));
-    if (!note) return null;
-    const safeUpdate = buildNoteUpdate(updates, note);
-    const validatedUpdate = validateNoteUpdate(safeUpdate, 'handleNoteUpdate');
-    if (Object.keys(validatedUpdate).length > 0) {
-      return await updateNote(String(noteId), validatedUpdate);
-    }
-    return null;
-  }, [updateNote, notes]);
-
-  // Handle note saving from editor
-  const handleSave = async (latestContent: string, latestTitle?: string) => {
-    if (!activeNote) return;
-    try {
-      const safeUpdate = buildNoteUpdate({ content: latestContent, title: latestTitle ?? activeNote.title ?? '' }, activeNote);
-      const validatedUpdate = validateNoteUpdate(safeUpdate, 'handleSave');
-      if (Object.keys(validatedUpdate).length > 0) {
-        await updateNote(activeNote._id, validatedUpdate);
-      }
-      // No manual state patching needed
-    } catch (error) {
-      console.error('Failed to save note:', error);
-    }
-  };
-
-  // Handle going back - now uses smart navigation when available
-  const handleBackToGrid = async (currentContent?: string) => {
-    if (activeNote && currentContent !== undefined) {
-      // Only skip metadata generation if both are already generated
-      const shouldForce = !!activeNote.titleGenerated && !!activeNote.typeGenerated;
-      try {
-        const safeUpdate = buildNoteUpdate({ content: currentContent, title: activeNote.title ?? '' }, activeNote);
-        const validatedUpdate = validateNoteUpdate(safeUpdate, 'handleBackToGrid');
-        if (Object.keys(validatedUpdate).length > 0) {
-          await updateNote(activeNote._id, validatedUpdate, shouldForce);
-        }
-      } catch (error) {
-        console.error('Failed to save note before returning to grid:', error);
-      }
-    }
-
-    // Use smart navigation if we have a stack, otherwise go to grid, chat, or project
-    if (canNavigateBack && !fromChat && !fromProject) {
-      const previousNoteId = navigateBack();
-      console.log('🔙 Smart back navigation to:', previousNoteId);
-      // If navigateBack returns null, we're already at the grid
-    } else {
-      // Clear navigation stack and go to grid, chat, or project
-      clearNavigationStack();
-      setActiveNoteId(undefined);
-      clearNoteIdFromUrl();
-      
-      // If we came from chat, navigate back to chat
-      if (fromChat) {
-        const chatUrl = chatId ? `/dashboard/chat?id=${chatId}` : '/dashboard/chat';
-        router.push(chatUrl);
-      }
-      // If we came from project, navigate back to project
-      else if (fromProject && projectId) {
-        router.push(`/dashboard/notes/projects/${projectId}`);
-      }
-    }
-  };
-
-  // Handle note linking - now uses smart navigation
-  const handleLinkNote = (noteId: string) => {
-    navigateToNote(noteId, true); // true indicates this is from a note link
-  };
-
-  // Helper to flush autosave before navigation
-  const flushAutosave = async () => {
-    if (noteAreaFlushRef.current) {
-      await noteAreaFlushRef.current();
-    }
-  };
+  // Simple note update handler for tree operations
+  const handleNoteUpdate = useCallback(async (noteId: string | Id<'notes'>, updates: any) => {
+    return await updateNote(String(noteId), updates);
+  }, [updateNote]);
 
   // Handle YouTube video analysis navigation
   const handleOpenAnalysis = async (videoId: string) => {
-    await flushAutosave();
     setSelectedVideoId(null); // Close the card
     router.push(`/dashboard/notes/youtube-analysis/${videoId}`);
   };
 
   // Handle insight analysis navigation
   const handleOpenInsightAnalysis = async (insightId: string) => {
-    await flushAutosave();
     setSelectedInsightId(null); // Close the card
     router.push(`/dashboard/notes/insight-analysis/${encodeURIComponent(insightId)}`);
   };
-
-  // Handle content linking (YouTube, Instagram, Insights, etc.)
-  const handleLinkContent = async (prefixedId: string) => {
-    await flushAutosave();
-    console.log('handleLinkContent called:', {
-      prefixedId,
-      prefixedIdLength: prefixedId.length,
-      prefixedIdIncludesColon: prefixedId.includes(':'),
-      prefixedIdSplit: prefixedId.split(':'),
-      currentActiveNoteId: activeNoteId,
-      currentStack: navigationStack
-    });
-    
-    // Special handling for insight links which have format insight:analysisId:index
-    if (prefixedId.startsWith('insight:')) {
-      setSelectedInsightId(prefixedId);
-      return;
-    }
-    
-    // Parse the prefixed ID to determine the content type for other content types
-    const [contentType, contentId] = prefixedId.split(':', 2);
-    switch (contentType) {
-      case 'note':
-        handleLinkNote(contentId);
-        break;
-      case 'youtube':
-        setSelectedVideoId(contentId);
-        break;
-      case 'instagram':
-        setSelectedInstagramPostId(contentId);
-        break;
-      case 'gmail':
-        setSelectedGmailThreadId(contentId);
-        break;
-      case 'conversations':
-        // Navigate to chat history with the conversation
-        router.push(`/dashboard/chat?id=${contentId}`);
-        break;
-      default:
-        // Unknown content type
-        break;
-    }
-  };
-
-  // Prepare available notes for linking (exclude current note)
-  const availableNotes = notes
-    .filter(note => String(note._id) !== activeNoteId)
-    .map(note => ({
-      _id: String(note._id),
-      title: note.title,
-      type: note.type || 'idea_bank'
-    }));
-
-  // If viewing a specific note, show the editor with gentle transitions
-  if (activeNote) {
-    return (
-      <div className="h-screen w-full bg-background transition-all duration-300 ease-out">
-        <NoteArea
-          key={String(activeNote._id)}
-          note={activeNote}
-          onUpdate={handleNoteUpdate}
-          onSave={handleSave}
-          onToggleShortcuts={() => {}} // Not used in grid view
-          onBack={handleBackToGrid}
-          isMobile={true}
-          availableNotes={availableNotes}
-          onLinkNote={handleLinkNote}
-          onLinkContent={handleLinkContent}
-          flushRef={noteAreaFlushRef}
-          forcePreview={shouldForcePreview}
-        />
-        
-        {/* Content overlays with subtle animations */}
-        {selectedVideoId && (
-          <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 animate-in fade-in duration-300">
-            <YouTubeVideoCard
-              videoId={selectedVideoId}
-              onClose={async () => {
-                await flushAutosave();
-                setSelectedVideoId(null);
-                setShouldForcePreview(true);
-                setTimeout(() => setShouldForcePreview(false), 0);
-              }}
-              onOpenAnalysis={handleOpenAnalysis}
-            />
-          </div>
-        )}
-        
-        {selectedInstagramPostId && (
-          <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 animate-in fade-in duration-300">
-            <InstagramPostCard
-              postId={selectedInstagramPostId}
-              onClose={async () => {
-                await flushAutosave();
-                setSelectedInstagramPostId(null);
-                setShouldForcePreview(true);
-                setTimeout(() => setShouldForcePreview(false), 0);
-              }}
-              onOpenAnalysis={handleOpenAnalysis}
-            />
-          </div>
-        )}
-        
-        {selectedGmailThreadId && (
-          <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 animate-in fade-in duration-300">
-            <GmailThreadCard
-              threadId={selectedGmailThreadId}
-              onClose={async () => {
-                await flushAutosave();
-                setSelectedGmailThreadId(null);
-                setShouldForcePreview(true);
-                setTimeout(() => setShouldForcePreview(false), 0);
-              }}
-            />
-          </div>
-        )}
-        
-        {selectedInsightId && (
-          <div className="animate-in fade-in duration-300">
-            <InsightOverlay
-              insightId={selectedInsightId}
-              onClose={async () => {
-                await flushAutosave();
-                setSelectedInsightId(null);
-                setShouldForcePreview(true);
-                setTimeout(() => setShouldForcePreview(false), 0);
-              }}
-              showAnalysis={true}
-            />
-          </div>
-        )}
-      </div>
-    );
-  }
 
   // Show the tree view with clean organization
   return (
@@ -350,6 +85,46 @@ export default function SmartNotes() {
         onUpdateNote={handleNoteUpdate}
         isLoading={notesIsLoading}
       />
+      
+      {/* Content overlays */}
+      {selectedVideoId && (
+        <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 animate-in fade-in duration-300">
+          <YouTubeVideoCard
+            videoId={selectedVideoId}
+            onClose={() => setSelectedVideoId(null)}
+            onOpenAnalysis={handleOpenAnalysis}
+          />
+        </div>
+      )}
+      
+      {selectedInstagramPostId && (
+        <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 animate-in fade-in duration-300">
+          <InstagramPostCard
+            postId={selectedInstagramPostId}
+            onClose={() => setSelectedInstagramPostId(null)}
+            onOpenAnalysis={handleOpenAnalysis}
+          />
+        </div>
+      )}
+      
+      {selectedGmailThreadId && (
+        <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 animate-in fade-in duration-300">
+          <GmailThreadCard
+            threadId={selectedGmailThreadId}
+            onClose={() => setSelectedGmailThreadId(null)}
+          />
+        </div>
+      )}
+      
+      {selectedInsightId && (
+        <div className="animate-in fade-in duration-300">
+          <InsightOverlay
+            insightId={selectedInsightId}
+            onClose={() => setSelectedInsightId(null)}
+            showAnalysis={true}
+          />
+        </div>
+      )}
     </div>
   );
 }

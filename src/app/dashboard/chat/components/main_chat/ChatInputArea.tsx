@@ -28,7 +28,7 @@ interface ChatInputAreaProps {
   currentTab?: string; // Add currentTab prop for tab-specific @ linking
   // Mobile props
   isMobile?: boolean;
-  activeTab?: 'chat' | 'notes' | 'fingerprint';
+  activeTab?: 'chat' | 'notes';
 }
 
 const ChatInputArea: React.FC<ChatInputAreaProps> = ({

@@ -16,7 +16,7 @@ interface SmartNotesHook {
   activeNoteId: string | undefined;
   setActiveNoteId: (id: string | undefined) => void;
   // Manual metadata generation functions
-  generateMetadataManually: (noteId: string, noteContent: string) => Promise<boolean>;
+  generateMetadataManually: (noteId: string, noteContent: string) => Promise<any>;
   isGeneratingMetadata: boolean;
 }
 
@@ -120,8 +120,9 @@ export function useSmartNotes(userId: string | undefined): SmartNotesHook {
           return false;
         }
 
+        const result = await response.json();
         toast.success("✨ Smart title and tags generated!");
-        return true;
+        return result; // Return the full result including potential new noteId
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
           // Request was cancelled, ignore

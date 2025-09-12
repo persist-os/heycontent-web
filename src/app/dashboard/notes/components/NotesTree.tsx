@@ -250,14 +250,15 @@ export function NotesTree({
         customType: selectedFilter === 'projects' ? undefined : (selectedFilter !== 'all' ? selectedFilter : undefined)
       });
       if (newNoteId) {
-        setActiveNoteId(newNoteId);
+        // Navigate to chat page with the new note
+        router.push(`/dashboard/chat?noteId=${newNoteId}`);
       }
     } catch (error) {
       console.error('Failed to create note:', error);
     } finally {
       setIsCreatingNote(false);
     }
-  }, [createNote, setActiveNoteId, selectedFilter]);
+  }, [createNote, router, selectedFilter]);
 
   const handleCreateProject = useCallback(async (name: string, description?: string) => {
     const projectId = await createProject(name, description);
@@ -323,7 +324,10 @@ export function NotesTree({
           />
           
           <div className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-muted/30 transition-all duration-200 cursor-pointer relative"
-               onClick={() => onEditNote(node.note!)}>
+               onClick={() => {
+                 // Navigate to chat with noteId parameter to open note in MarkdownNotepad
+                 router.push(`/dashboard/chat?noteId=${node.note!._id}`);
+               }}>
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <FileText className="w-4 h-4 text-muted-foreground/60 flex-shrink-0" />
               <div className="flex-1 min-w-0">

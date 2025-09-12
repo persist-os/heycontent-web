@@ -33,7 +33,6 @@ import { checkUserEmbeddings } from './utils/api-utils';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { useChatHandlers } from './hooks/useChatHandlers'
 import { MarkdownNotepad } from './components/notepad/MarkdownNotepad'
-import { FingerprintDisplay } from './components/notepad/FingerprintDisplay'
 import { MobileTabBar } from './components/notepad/MobileTabBar'
 import { useNotepadUI } from './hooks/useNotepadUI'
 import { useNotes } from '@/app/context/notes-context'
@@ -47,7 +46,7 @@ import { Button } from '@/components/ui/button';
 import { CreateNoteButton } from '@/components/ui/CreateNoteButton';
 import { ChatOverlay } from './components/ChatOverlay';
 
-const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery }) => {
+const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery, noteId }) => {
   const router = useRouter()
   
   // Authentication and user data (derived from firebaseUser)
@@ -215,7 +214,15 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   } = useNotepadUI()
 
   // Add ref for MarkdownNotepad
-  const notepadRef = useRef<{ hasUnsavedContent: () => boolean, clearContent: () => void, getContent: () => string }>(null);
+  const notepadRef = useRef<{ 
+    hasUnsavedContent: () => boolean, 
+    clearContent: () => void, 
+    getContent: () => string,
+    saveNote: () => Promise<string | null>,
+    getCurrentNote: () => any,
+    isNewNote: () => boolean,
+    setNoteForEditing: (noteId: string) => void
+  }>(null);
 
   // Modal state for notepad warning
   const [showNotepadWarning, setShowNotepadWarning] = useState(false);
@@ -239,6 +246,26 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     setOverlayContent(null);
   }, []);
   const [pendingNewChat, setPendingNewChat] = useState(false);
+
+  // Handle noteId parameter - automatically open notepad with the specified note
+  React.useEffect(() => {
+    if (noteId && notepadRef.current) {
+      // Open the notepad if not already open
+      if (!notepadOpen) {
+        toggleNotepad();
+      }
+      
+      // Set the note for editing in the notepad
+      if (notepadRef.current.setNoteForEditing) {
+        notepadRef.current.setNoteForEditing(noteId);
+      }
+      
+      // On mobile, switch to notes tab
+      if (isMobile && activeTab !== 'notes') {
+        switchToTab('notes');
+      }
+    }
+  }, [noteId, notepadOpen, toggleNotepad, isMobile, activeTab, switchToTab]);
 
   const { 
     quotedForNotepad, 
@@ -664,7 +691,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           {/* Mobile Tab Bar */}
           {isMobile && (
             <MobileTabBar
-              activeTab={activeTab as 'chat' | 'notes' | 'fingerprint'}
+              activeTab={activeTab}
               onTabChange={switchToTab}
               hasUnreadNotepadChanges={hasUnreadNotepadChanges}
             />
@@ -790,24 +817,14 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                 availableNotes={availableNotes}
                 isMobile={true}
                 activeTab={activeTab}
+                noteId={noteId}
+                fromChat={true}
+                canNavigateBack={true}
+                onBack={() => router.back()}
               />
             </div>
           )}
 
-          {/* Mobile: Show fingerprint content when activeTab is 'fingerprint' */}
-          {isMobile && activeTab === 'fingerprint' && (
-            <div className="flex-1 overflow-hidden">
-              <FingerprintDisplay
-                isOpen={true}
-                onClose={() => switchToTab('chat')}
-                width={notepadWidth}
-                onWidthChange={updateWidth}
-                style={getNotepadStyle()}
-                isMobile={true}
-                activeTab={activeTab}
-              />
-            </div>
-          )}
 
           {/* Bottom Bar Actions - only show for users with personas */}
           {authData.user && messages.length === 0 && hasPersona && (
@@ -888,20 +905,13 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           style={getNotepadStyle()}
           availableNotes={availableNotes}
           isMobile={false}
+          noteId={noteId}
+          fromChat={true}
+          canNavigateBack={true}
+          onBack={() => router.back()}
         />
       )}
 
-      {/* Fingerprint Display - Desktop only */}
-      {!isMobile && (
-        <FingerprintDisplay
-          isOpen={true} // Always rendered for now, visibility controlled by component
-          onClose={toggleNotepad}
-          width={notepadWidth}
-          onWidthChange={updateWidth}
-          style={getNotepadStyle()}
-          isMobile={false}
-        />
-      )}
       
 
 
