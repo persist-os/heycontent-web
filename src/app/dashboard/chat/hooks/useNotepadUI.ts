@@ -2,13 +2,12 @@ import { useState, useCallback, useEffect } from 'react'
 
 interface UseNotepadUIResult {
   isOpen: boolean
-  width: number
+  width: string
   transition: {
     duration: number
     ease: string
   }
   toggleNotepad: () => void
-  updateWidth: (newWidth: number) => void
   getMainContentStyle: () => {
     width: string
     transition: string
@@ -30,15 +29,14 @@ interface UseNotepadUIResult {
   saveScrollPosition: (tab: 'chat' | 'notes', position: number) => void
 }
 
-const DEFAULT_WIDTH = 400 // pixels
-const MIN_WIDTH = 300
-const MAX_WIDTH = 800
 const TRANSITION_DURATION = 0.2 // seconds, increased for a smoother feel
 const MOBILE_BREAKPOINT = 640 // sm breakpoint
 
+// Always use 50% of viewport width for perfect split screen
+
 export function useNotepadUI(): UseNotepadUIResult {
-  const [isOpen, setIsOpen] = useState(true)
-  const [width, setWidth] = useState(DEFAULT_WIDTH)
+  const [isOpen, setIsOpen] = useState(true) // Always true for desktop - notepad always visible
+  const width = '50%' // Fixed 50% width for perfect split screen
   
   // Mobile tab bar state
   const [isMobile, setIsMobile] = useState(false)
@@ -49,14 +47,15 @@ export function useNotepadUI(): UseNotepadUIResult {
 
   // Detect mobile screen size
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    const handleResize = () => {
+      const newIsMobile = window.innerWidth < MOBILE_BREAKPOINT
+      setIsMobile(newIsMobile)
     }
     
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
+    handleResize()
+    window.addEventListener('resize', handleResize)
     
-    return () => window.removeEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', handleResize)
   }, [])
 
   const toggleNotepad = useCallback(() => {
@@ -68,15 +67,11 @@ export function useNotepadUI(): UseNotepadUIResult {
         setHasUnreadNotepadChanges(false)
       }
     } else {
-      // On desktop, toggle notepad visibility
-      setIsOpen(prev => !prev)
+      // On desktop, notepad is always open - do nothing
+      // setIsOpen(prev => !prev) // Disabled: notepad should always be visible
     }
   }, [isMobile, activeTab])
 
-  const updateWidth = useCallback((newWidth: number) => {
-    const clampedWidth = Math.min(Math.max(newWidth, MIN_WIDTH), MAX_WIDTH)
-    setWidth(clampedWidth)
-  }, [])
 
   const switchToTab = useCallback((tab: 'chat' | 'notes') => {
     if (isMobile) {
@@ -121,13 +116,13 @@ export function useNotepadUI(): UseNotepadUIResult {
         transition: `width ${TRANSITION_DURATION}s ease-out`
       }
     } else {
-      // On desktop, use the existing logic
+      // On desktop, always use 50% for perfect split with notepad
       return {
-        width: isOpen ? `calc(100% - ${width}px)` : '100%',
+        width: '50%',
         transition: `width ${TRANSITION_DURATION}s ease-out`
       }
     }
-  }, [isOpen, width, isMobile])
+  }, [isMobile])
 
   const getNotepadStyle = useCallback(() => {
     if (isMobile) {
@@ -138,14 +133,14 @@ export function useNotepadUI(): UseNotepadUIResult {
         transition: `visibility ${TRANSITION_DURATION}s ease-out`
       }
     } else {
-      // On desktop, use the existing fixed positioning logic
+      // On desktop, notepad is always visible
       return {
-        transform: isOpen ? 'translateX(0%)' : 'translateX(100%)',
-        visibility: (isOpen ? 'visible' : 'hidden') as 'visible' | 'hidden',
+        transform: 'translateX(0%)', // Always visible
+        visibility: 'visible' as 'visible' | 'hidden',
         transition: `transform ${TRANSITION_DURATION}s ease-out, visibility ${TRANSITION_DURATION}s ease-out`
       }
     }
-  }, [isOpen, isMobile, activeTab])
+  }, [isMobile, activeTab])
 
   return {
     isOpen,
@@ -155,7 +150,6 @@ export function useNotepadUI(): UseNotepadUIResult {
       ease: 'ease-out'
     },
     toggleNotepad,
-    updateWidth,
     getMainContentStyle,
     getNotepadStyle,
     // Mobile tab bar functionality

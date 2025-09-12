@@ -1,10 +1,10 @@
 import { useCallback, useState } from 'react';
 import { AmbientInsights } from './AmbientInsights';
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Plus } from 'lucide-react';
 import { getApiKey } from '@/app/lib/api-helpers';
 
-export function AmbientInsightsContainer({ userId, handleSendMessage }: { userId: string | undefined; handleSendMessage?: (msg: string, context?: any) => void }) {
+export function AmbientInsightsContainer({ userId, handleSendMessage, onNewChat }: { userId: string | undefined; handleSendMessage?: (msg: string, context?: any) => void; onNewChat?: () => void }) {
   const [refreshKey, setRefreshKey] = useState(0);
   const [loading, setLoading] = useState(false);
 
@@ -73,12 +73,23 @@ export function AmbientInsightsContainer({ userId, handleSendMessage }: { userId
 
   // For simplicity, AmbientInsights manages its own loading and error states
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col">
       {/* Compact Header with Just Refresh Button */}
-      <div className="flex-shrink-0 pt-4 pb-3">
-        <div className="max-w-4xl sm:max-w-5xl lg:max-w-7xl mx-auto px-6 sm:px-8">
-          {/* Refresh Button - Compact and Right-aligned */}
-          <div className="flex justify-end">
+      <div className="flex-shrink-0 pt-3 pb-2">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+          {/* Action Buttons - Compact and Right-aligned */}
+          <div className="flex justify-end items-center gap-2">
+            {onNewChat && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="gap-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors px-3 py-1.5 h-auto"
+                onClick={onNewChat}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span className="text-xs">New</span>
+              </Button>
+            )}
             <Button 
               variant="ghost" 
               size="sm" 
@@ -95,9 +106,9 @@ export function AmbientInsightsContainer({ userId, handleSendMessage }: { userId
         </div>
       </div>
 
-      {/* Insights Content - Full Available Space */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden pb-4 min-h-0">
-        <div className="max-w-4xl sm:max-w-5xl lg:max-w-7xl mx-auto px-6 sm:px-8">
+      {/* Insights Content - Fit within available space with proper padding */}
+      <div className="flex-1 flex flex-col min-h-0 pb-4">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-full">
           <AmbientInsights 
             key={refreshKey}
             userId={userId}

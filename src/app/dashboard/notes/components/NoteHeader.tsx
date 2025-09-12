@@ -48,7 +48,7 @@ export function NoteHeader({
     });
   };
 
-  // Create actions
+  // Create actions (removed save button)
   const rightActions = [
     createLightbulbAction(
       note.type === 'idea_bank',
@@ -57,24 +57,13 @@ export function NoteHeader({
     createStarAction(
       note.important,
       () => onUpdate(String(note._id), { important: !note.important })
-    ),
-    createSaveAction(
-      async () => {
-        setIsAnalyzing(true);
-        try {
-          await onSave();
-        } finally {
-          setIsAnalyzing(false);
-        }
-      },
-      isAnalyzing
     )
   ];
 
   return (
     <CentralizedHeader
       title="Smart Notes"
-      showBackButton={isMobile || fromChat || canNavigateBack}
+      showBackButton={false}
       backButtonContext={backButtonContext}
       onBack={onBack}
       breadcrumbs={getBreadcrumb()}

@@ -7,7 +7,6 @@ import { useAuth } from '@/app/context/auth-context'
 import { useInlineAI } from '../../../notes/hooks/useInlineAI'
 import { LexicalNotepadEditor, LexicalNotepadEditorRef } from '@/components/ui/lexical-editor/LexicalNotepadEditor'
 import { getApiKey } from '@/app/lib/api-helpers'
-import { NoteHeader } from '../../../notes/components/NoteHeader'
 import { NoteMeta } from '../../../notes/components/NoteMeta'
 import { TypeSelector } from '../../../notes/components/TypeSelector'
 import { useNotes } from '@/app/context/notes-context'
@@ -52,8 +51,7 @@ interface MarkdownNotepadProps {
   onSendToChat?: (content: string) => void
   quotedContent?: string
   onClearQuoted?: () => void
-  width: number
-  onWidthChange: (width: number) => void
+  width: string
   style: React.CSSProperties
   // Note linking
   availableNotes?: Array<{ _id: string; title: string; type: string }>
@@ -76,7 +74,6 @@ export const MarkdownNotepad = forwardRef(function MarkdownNotepad({
   quotedContent, 
   onClearQuoted, 
   width, 
-  onWidthChange, 
   style,
   availableNotes = [],
   onLinkNote,
@@ -99,9 +96,6 @@ export const MarkdownNotepad = forwardRef(function MarkdownNotepad({
   
   // Content and UI state
   const [content, setContent] = useState('')
-  const [isResizing, setIsResizing] = useState(false)
-  const resizeStartX = useRef<number>(0)
-  const resizeStartWidth = useRef<number>(0)
   
   // Fetch existing note if editing
   const existingNote = useQuery(
@@ -482,49 +476,6 @@ export const MarkdownNotepad = forwardRef(function MarkdownNotepad({
     lexicalEditorRef.current?.triggerCommandPalette()
   }, [])
 
-  // Handle resizing with improved logic (desktop only)
-  useEffect(() => {
-    if (isMobile) return // Disable resizing on mobile
-    
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return
-      
-      // Calculate the change in X position since resize started
-      const deltaX = resizeStartX.current - e.clientX
-      // Apply delta to the starting width
-      const newWidth = Math.max(300, Math.min(800, resizeStartWidth.current + deltaX))
-      onWidthChange(newWidth)
-    }
-
-    const handleMouseUp = () => {
-      setIsResizing(false)
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-    }
-
-    if (isResizing) {
-      document.addEventListener('mousemove', handleMouseMove)
-      document.addEventListener('mouseup', handleMouseUp)
-      document.body.style.cursor = 'col-resize'
-      document.body.style.userSelect = 'none'
-      
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove)
-        document.removeEventListener('mouseup', handleMouseUp)
-        document.body.style.cursor = ''
-        document.body.style.userSelect = ''
-      }
-    }
-  }, [isResizing, onWidthChange, isMobile])
-
-  const handleResizeStart = useCallback((e: React.MouseEvent) => {
-    if (isMobile) return // Disable resizing on mobile
-    e.preventDefault()
-    e.stopPropagation()
-    resizeStartX.current = e.clientX
-    resizeStartWidth.current = width
-    setIsResizing(true)
-  }, [width, isMobile])
 
   const handleClear = () => {
     setContent('')
@@ -578,30 +529,15 @@ export const MarkdownNotepad = forwardRef(function MarkdownNotepad({
   }
 
 
-  // Don't render on desktop if not open
-  if (!isMobile && !isOpen) {
-    return null
-  }
+  // Don't render on desktop if not open - REMOVED: Notepad should always be visible
+  // if (!isMobile && !isOpen) {
+  //   return null
+  // }
 
   // Mobile layout - complete note editing experience
   if (isMobile) {
     return (
       <div className="flex flex-col h-full bg-background">
-        {/* Note Header */}
-        <NoteHeader 
-          note={note}
-          onUpdate={handleNoteUpdate}
-          onSave={handleSaveAsNote}
-          onBack={onBack || onClose}
-          isMobile={true}
-          currentContent={content}
-          fromChat={fromChat}
-          canNavigateBack={canNavigateBack}
-          backButtonContext={fromChat ? "Back to chat" : "Back"}
-          navigationStack={[]}
-          notes={notes}
-        />
-
         {/* Note metadata with enhanced mobile layout */}
         <div className="px-4 py-4 border-b border-border/30 bg-background/95">
           <div className="space-y-4">
@@ -712,31 +648,9 @@ export const MarkdownNotepad = forwardRef(function MarkdownNotepad({
   return (
     <div 
       ref={sidebarRef}
-      className="fixed top-0 right-0 h-full bg-background border-l border-border/50 z-40 flex flex-col"
-      style={{ ...style, width: `${width}px` }}
+      className="h-full bg-background border-l border-border/50 flex flex-col"
+      style={{ ...style, width }}
     >
-      {/* Simple resize handle */}
-      <div
-        className="absolute left-0 top-0 w-2 h-full cursor-col-resize z-50 group flex items-center justify-center"
-        onMouseDown={handleResizeStart}
-      >
-        <div className="w-px h-8 bg-border/30 group-hover:bg-border transition-colors" />
-      </div>
-
-      {/* Note Header */}
-      <NoteHeader 
-        note={note}
-        onUpdate={handleNoteUpdate}
-        onSave={handleSaveAsNote}
-        onBack={onBack || onClose}
-        isMobile={false}
-        currentContent={content}
-        fromChat={fromChat}
-        canNavigateBack={canNavigateBack}
-        backButtonContext={fromChat ? "Back to chat" : "Close"}
-        navigationStack={[]}
-        notes={notes}
-      />
 
       {/* Note metadata and actions */}
       <div className="px-6 py-5 border-b border-border/30 bg-background/95">
