@@ -44,38 +44,35 @@ export async function POST(
       )
     }
 
-    // Get fingerprint data from Convex
+    // Get fingerprint data from Convex by project ID
     const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
     let fingerprint_data = null
     
-    if (fingerprint_id && userId) {
+    if (userId && projectId) {
       try {
-        console.log('Attempting to fetch fingerprint:', { 
-          fingerprint_id, 
+        console.log('Attempting to fetch fingerprint by project:', { 
+          projectId,
           userId,
-          fingerprintIdType: typeof fingerprint_id,
-          userIdType: typeof userId,
-          projectId
+          projectIdType: typeof projectId,
+          userIdType: typeof userId
         })
         
-        // First try to get the fingerprint without userId validation for debugging
-        try {
-          const debugFingerprint = await convex.query(api.fingerprintQueries.getFingerprintById, {
-            fingerprintId: fingerprint_id as any
-          })
-          console.log('Debug fingerprint (no userId validation):', debugFingerprint)
-        } catch (debugError) {
-          console.error('Debug fingerprint fetch failed:', debugError)
-        }
-        
-        fingerprint_data = await convex.query(api.projectFingerprintQueries.getFingerprint, {
-          fingerprintId: fingerprint_id as any,
+        // Get fingerprint by project ID (this ensures we get the correct fingerprint for this project)
+        fingerprint_data = await convex.query(api.projectFingerprintQueries.getFingerprintByProject, {
+          projectId: projectId as any,
           userId: userId
         })
-        console.log('Retrieved fingerprint data:', fingerprint_data)
+        console.log('Retrieved fingerprint data by project:', fingerprint_data)
+        
+        if (!fingerprint_data) {
+          return NextResponse.json(
+            { error: 'No fingerprint found for this project. Please complete the project discovery first.' },
+            { status: 404 }
+          )
+        }
       } catch (error) {
-        console.error('Failed to fetch fingerprint data:', error)
-        console.error('Debug info:', { fingerprint_id, userId, projectId })
+        console.error('Failed to fetch fingerprint data by project:', error)
+        console.error('Debug info:', { projectId, userId })
         return NextResponse.json(
           { error: 'Failed to fetch fingerprint data' },
           { status: 500 }
@@ -87,7 +84,7 @@ export async function POST(
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://backend.hicontent.co'
     const requestBody = {
       project_id: project_id || projectId,
-      fingerprint_id,
+      fingerprint_id: fingerprint_data?._id || fingerprint_id, // Use the actual fingerprint ID from the data
       fingerprint_data,
       user_preferences: user_preferences || {}
     }

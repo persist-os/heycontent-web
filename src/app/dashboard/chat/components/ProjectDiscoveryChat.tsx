@@ -195,7 +195,7 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
   }, [authData.userId, projectId])
 
   // Generate project widgets when fingerprint is complete
-  const generateProjectWidgets = useCallback(async (providedFingerprintId?: string) => {
+  const generateProjectWidgets = useCallback(async () => {
     if (!authData.userId || !projectId) return
 
     try {
@@ -219,7 +219,8 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
           'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          fingerprintId: providedFingerprintId || currentFingerprint?._id || `fp_${Date.now()}`
+          // No need to pass fingerprintId - the API will look it up by projectId
+          user_preferences: {}
         })
       })
 
@@ -355,7 +356,7 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
           setFingerprintComplete(true)
 
           console.log('[DISCOVERY][simple:widgets:start]')
-          await generateProjectWidgets(undefined as any)
+          await generateProjectWidgets()
 
           setTimeout(() => {
             window.location.href = `/dashboard/living-projects/${projectId}`
