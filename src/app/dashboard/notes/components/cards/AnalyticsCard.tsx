@@ -40,70 +40,89 @@ export function AnalyticsCard({
   return (
     <BaseCard
       note={note}
-      className="border-pink-500/30 hover:border-pink-500/50"
-      hoverBgClass="hover:bg-pink-500/10"
+      className="border-l-2 border-l-purple-400/40"
       onEdit={onEdit}
       onDelete={onDelete}
       onToggleImportant={onToggleImportant}
     >
-      <div className="p-4">
-        {/* Header */}
-        <div className="flex items-center gap-2 mb-3">
-          <BarChart3 className="w-4 h-4 text-pink-600" />
-          <h3 className="font-semibold text-foreground flex-1 pr-8 line-clamp-1">
-            {(note.title && note.title.trim()) || 'Analytics Insight'}
+      <div className="space-y-4">
+        {/* Header with elegant typography */}
+        <div className="space-y-2">
+          <h3 className="text-lg font-light text-foreground leading-tight tracking-tight line-clamp-2">
+            {(note.title && note.title.trim()) || 'Performance Insights'}
           </h3>
+          
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-3 h-3 text-purple-600/70" />
+            <span className="text-xs font-light text-purple-600/70 bg-purple-50/50 dark:bg-purple-950/20 px-2 py-0.5 rounded-md">
+              Analytics
+            </span>
+          </div>
         </div>
 
-        {/* Metrics - only show if we have real data */}
+        {/* Elegant metrics display */}
         {hasMetrics && (
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            {metrics.growth !== null && (
-              <div className="text-center p-3 bg-muted/50 rounded-lg border border-border/50">
-                <div className="text-lg font-bold text-pink-600">
-                  {metrics.growth}%
+          <div className="space-y-3">
+            <h4 className="text-xs font-light text-muted-foreground/70 tracking-wide uppercase">
+              Key Metrics
+            </h4>
+            <div className="grid grid-cols-2 gap-3">
+              {metrics.growth !== null && (
+                <div className="space-y-1">
+                  <div className="text-2xl font-light text-purple-600/90 tracking-tight">
+                    {metrics.growth}%
+                  </div>
+                  <div className="text-xs font-light text-muted-foreground/70">Growth</div>
                 </div>
-                <div className="text-xs text-muted-foreground">Growth</div>
-              </div>
-            )}
-            {metrics.retention !== null && (
-              <div className="text-center p-3 bg-muted/50 rounded-lg border border-border/50">
-                <div className="text-lg font-bold text-pink-600">
-                  {metrics.retention}%
+              )}
+              {metrics.retention !== null && (
+                <div className="space-y-1">
+                  <div className="text-2xl font-light text-purple-600/90 tracking-tight">
+                    {metrics.retention}%
+                  </div>
+                  <div className="text-xs font-light text-muted-foreground/70">Retention</div>
                 </div>
-                <div className="text-xs text-muted-foreground">Retention</div>
-              </div>
-            )}
-            {metrics.engagement !== null && (
-              <div className="text-center p-3 bg-muted/50 rounded-lg border border-border/50">
-                <div className="text-lg font-bold text-pink-600">
-                  {metrics.engagement}%
+              )}
+              {metrics.engagement !== null && (
+                <div className="space-y-1">
+                  <div className="text-2xl font-light text-purple-600/90 tracking-tight">
+                    {metrics.engagement}%
+                  </div>
+                  <div className="text-xs font-light text-muted-foreground/70">Engagement</div>
                 </div>
-                <div className="text-xs text-muted-foreground">Engagement</div>
-              </div>
-            )}
-            {metrics.views !== null && (
-              <div className="text-center p-3 bg-muted/50 rounded-lg border border-border/50">
-                <div className="text-lg font-bold text-pink-600">
-                  {metrics.views}
+              )}
+              {metrics.views !== null && (
+                <div className="space-y-1">
+                  <div className="text-2xl font-light text-purple-600/90 tracking-tight">
+                    {metrics.views}
+                  </div>
+                  <div className="text-xs font-light text-muted-foreground/70">Views</div>
                 </div>
-                <div className="text-xs text-muted-foreground">Views</div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
 
-        {/* Content preview */}
-        <div className="text-sm text-muted-foreground line-clamp-3">
-          {note.content ? (
-            <NoteContentRenderer 
-              content={note.content} 
-              availableNotes={availableNotes}
-            />
-          ) : (
-            'No content yet...'
-          )}
-        </div>
+        {/* Content with breathing space */}
+        {note.content && (
+          <div className="space-y-2">
+            {hasMetrics && (
+              <div className="h-px bg-gradient-to-r from-transparent via-border/30 to-transparent" />
+            )}
+            <div className="text-sm text-muted-foreground/80 leading-relaxed line-clamp-3 font-light">
+              <NoteContentRenderer 
+                content={note.content} 
+                availableNotes={availableNotes}
+              />
+            </div>
+          </div>
+        )}
+
+        {!note.content && (
+          <div className="text-sm text-muted-foreground/60 italic font-light py-4 text-center">
+            Add your performance insights here
+          </div>
+        )}
       </div>
     </BaseCard>
   );

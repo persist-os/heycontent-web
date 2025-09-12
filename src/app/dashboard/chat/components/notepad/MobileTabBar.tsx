@@ -55,12 +55,13 @@ export const MobileTabBar: React.FC<MobileTabBarProps> = ({
             )}
           </div>
           <span className="text-sm font-medium">Notes</span>
-          
+
           {/* Active indicator */}
           {activeTab === 'notes' && (
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
           )}
         </button>
+
       </div>
     </div>
   )

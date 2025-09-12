@@ -88,7 +88,7 @@ export interface ProjectUpdate {
   description?: string;
 }
 
-export type ItemType = "note" | "conversation" | "instagramPost" | "youtubeVideo" | "gmail" | "analysis";
+export type ItemType = "note" | "conversation" | "analysis";
 
 export interface ProjectItem {
   id: string;

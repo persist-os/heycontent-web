@@ -2,6 +2,13 @@
 
 This document defines the required engineering standards for HeyContext, a private AI workspace built with Next.js and deployed on Vercel.
 
+Key Principles Maintained:
+
+Modular Extension: Build on existing patterns without changing them
+Backwards Compatible: Existing functionality completely preserved
+Incremental Building: Each phase builds on previous without breaking changes
+Reference-Based: Always examine existing codebase patterns first
+
 NEVER guess, always look for similar implementations and follow pre-existing patterns. Review the full requirements and current implementation before making any changes.
 
 Keep all code clean, modular, under 400 lines. Never call Firebase Auth directly, use api-helpers/api-utils correctly to get the api key from cookies.

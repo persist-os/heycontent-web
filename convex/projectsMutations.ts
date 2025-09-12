@@ -531,4 +531,29 @@ export const removeItemFromProject = mutation({
       throw new Error("Failed to remove item from project. Please try again.");
     }
   },
-}); 
+});
+
+// Update project fingerprint ID
+export const updateProjectFingerprintId = mutation({
+  args: {
+    projectId: v.id("projects"),
+    fingerprintId: v.union(v.id("project_fingerprints"), v.null()),
+    userId: v.optional(v.string()), // For ownership validation
+  },
+  returns: v.id("projects"),
+  handler: async (ctx, args) => {
+    // Validate project ownership
+    await validateProjectOwnership(ctx, args.projectId, args.userId);
+
+    try {
+      await ctx.db.patch(args.projectId, {
+        fingerprintId: args.fingerprintId,
+        updatedAt: Date.now(),
+      });
+      return args.projectId;
+    } catch (error) {
+      console.error("Failed to update project fingerprint ID:", error);
+      throw new Error("Failed to update project fingerprint ID. Please try again.");
+    }
+  },
+});

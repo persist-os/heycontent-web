@@ -25,6 +25,57 @@ async function safeGet<T>(ctx: any, id: string, table: string): Promise<T | null
   }
 }
 
+// Get project by ID (simple version for fingerprint store)
+export const getProjectById = query({
+  args: {
+    projectId: v.id("projects"),
+    userId: v.optional(v.string()),
+  },
+  returns: v.union(
+    v.null(),
+    v.object({
+      _id: v.id("projects"),
+      _creationTime: v.number(),
+      userId: v.string(),
+      name: v.string(),
+      description: v.optional(v.string()),
+      fingerprintId: v.optional(v.id("project_fingerprints")),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    try {
+      const project = await ctx.db.get(args.projectId);
+      if (!project) {
+        return null;
+      }
+
+      // Optional: Validate ownership if userId is provided
+      if (args.userId && project.userId !== args.userId) {
+        throw new Error("Access denied: You don't own this project");
+      }
+
+      return {
+        _id: project._id,
+        _creationTime: project._creationTime,
+        userId: project.userId,
+        name: project.name,
+        description: project.description,
+        fingerprintId: project.fingerprintId,
+        createdAt: project.createdAt,
+        updatedAt: project.updatedAt,
+      };
+    } catch (error) {
+      console.error("Failed to fetch project:", error);
+      if (error.message.includes("Access denied")) {
+        throw error;
+      }
+      throw new Error("Failed to fetch project. Please try again.");
+    }
+  },
+});
+
 // Get all projects for a user
 export const getProjectsForUser = query({
   args: {
@@ -36,6 +87,7 @@ export const getProjectsForUser = query({
     userId: v.string(),
     name: v.string(),
     description: v.optional(v.string()),
+    fingerprintId: v.optional(v.id("project_fingerprints")),
     noteIds: v.optional(v.array(v.string())),
     conversationIds: v.optional(v.array(v.string())),
     instagramPostIds: v.optional(v.array(v.string())),
@@ -89,6 +141,7 @@ export const getProjectDetails = query({
       userId: v.string(),
       name: v.string(),
       description: v.optional(v.string()),
+      fingerprintId: v.optional(v.id("project_fingerprints")),
       noteIds: v.optional(v.array(v.string())),
       conversationIds: v.optional(v.array(v.string())),
       instagramPostIds: v.optional(v.array(v.string())),
@@ -331,6 +384,7 @@ export const getProjectsContainingNote = query({
     userId: v.string(),
     name: v.string(),
     description: v.optional(v.string()),
+    fingerprintId: v.optional(v.id("project_fingerprints")),
     noteIds: v.optional(v.array(v.string())),
     conversationIds: v.optional(v.array(v.string())),
     instagramPostIds: v.optional(v.array(v.string())),
@@ -398,6 +452,7 @@ export const getProjectsContainingItem = query({
     userId: v.string(),
     name: v.string(),
     description: v.optional(v.string()),
+    fingerprintId: v.optional(v.id("project_fingerprints")),
     noteIds: v.optional(v.array(v.string())),
     conversationIds: v.optional(v.array(v.string())),
     instagramPostIds: v.optional(v.array(v.string())),

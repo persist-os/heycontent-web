@@ -1,15 +1,12 @@
 'use client'
 
-import React, { forwardRef, useEffect, useImperativeHandle } from 'react'
-import { Edit, Eye } from 'lucide-react'
-import { Textarea } from '@/components/ui/textarea'
-import { Button } from '@/components/ui/button'
+import React, { forwardRef, useImperativeHandle } from 'react'
 import { UnifiedContentSelector } from '@/components/ui/UnifiedContentSelector'
 import { useRichTextEditor } from './use-rich-text-editor'
 import { RichTextEditorProps } from './rich-text-editor.types'
-import { ContentRenderer } from './content-renderer'
 import { InlineCommandPalette } from '@/app/dashboard/notes/components/InlineCommandPalette'
 import { getCursorCoordinates } from './formatting-utils'
+import { MarkdownRenderer } from '@/app/dashboard/chat/markdown-renderer'
 
 export interface RichTextEditorRef {
   triggerCommandPalette: () => void;
@@ -108,19 +105,9 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
   // Expose the trigger function to parent components
   useImperativeHandle(ref, () => ({
     triggerCommandPalette: () => {
-      // If we're in preview mode, switch to edit mode first
-      if (currentShowPreview) {
-        togglePreview();
-        // Wait for the textarea to be rendered, then trigger the palette
-        setTimeout(() => {
-          triggerCommandPaletteInternal();
-        }, 100);
-        return;
-      }
-      
       triggerCommandPaletteInternal();
     }
-  }), [currentShowPreview, togglePreview, getDisplayContent, content, setPalettePosition, setPaletteMode, setShowCommandPalette, setRefinementMode, setSelectedText, setSelectedNoteTypeForCommands, noteType, textAreaRef, containerRef]);
+  }), [getDisplayContent, content, setPalettePosition, setPaletteMode, setShowCommandPalette, setRefinementMode, setSelectedText, setSelectedNoteTypeForCommands, noteType, textAreaRef, containerRef]);
   
   // Internal function to actually trigger the command palette
   const triggerCommandPaletteInternal = () => {
@@ -165,74 +152,65 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
 
   return (
     <div className={`relative w-full h-full ${className}`}>
-      {/* Preview Toggle Button */}
-      <div className="absolute top-2 right-2 z-10">
-        <button
-          onClick={togglePreview}
-          className="flex items-center gap-1 px-2 py-1.5 rounded-md bg-background/90 backdrop-blur-sm border border-border hover:bg-muted transition-colors text-xs font-medium"
-          title={currentShowPreview ? 'Switch to edit mode' : 'Switch to preview mode'}
-        >
-          {currentShowPreview ? (
-            <>
-              <Edit className="w-3 h-3" />
-              Edit
-            </>
-          ) : (
-            <>
-              <Eye className="w-3 h-3" />
-              Preview
-            </>
-          )}
-        </button>
-      </div>
-
-      {currentShowPreview ? (
-        /* Markdown Preview */
-        <div 
-          className="w-full h-full overflow-auto p-4 cursor-text"
-          onClick={() => togglePreview()}
-        >
-          <ContentRenderer
-            content={content}
-            availableNotes={availableNotes}
-            allLinkableContent={allLinkableContent}
-            onLinkNote={onLinkNote}
-            onLinkContent={onLinkContent}
-          />
-        </div>
-      ) : (
-        /* Text Editor */
-        <div className="relative w-full h-full">
-          <textarea
-            ref={textAreaRef}
-            value={getDisplayContent(content)}
-            onChange={handleContentChange}
-            onKeyDown={handleKeyDown}
-            onClick={handleClick}
-            onMouseDown={handleMouseDown}
-            className={`w-full h-full min-h-[300px] resize-none p-4 text-base leading-relaxed bg-background text-foreground placeholder:text-muted-foreground/50 border-0 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2 transition-all duration-200 rounded-md transform-gpu will-change-contents ${
-              selectedText && refinementMode 
-                ? 'ring-2 ring-purple-500/30 dark:ring-yellow-500/30' 
-                : ''
-            }`}
-            placeholder={`${placeholder}
-
-⌘K or / for AI assistant • ⌘B bold • ⌘I italic • ⌘U underline • Click Preview to see rich text${selectedText ? ' • Text selected - ⌘K to refine' : ''}`}
-            disabled={disabled}
-            spellCheck={true}
-            autoFocus={!disabled}
-          />
-          
-          {/* Refinement Mode Indicator */}
-          {selectedText && !showCommandPalette && (
-            <div className="absolute bottom-2 right-2 flex items-center gap-1 px-2 py-1 bg-purple-500/10 dark:bg-yellow-500/10 border border-purple-200 dark:border-yellow-200 rounded-md text-xs font-medium text-purple-600 dark:text-yellow-600 backdrop-blur-sm">
-              <span>Text selected</span>
-              <kbd className="px-1 py-0.5 bg-purple-500/20 dark:bg-yellow-500/20 rounded text-xs">⌘K</kbd>
-              <span>to refine</span>
+      {/* Production-ready markdown overlay with perfect cursor alignment */}
+      <div className="relative w-full h-full">
+        {/* Markdown content renderer with exact textarea typography */}
+        {content && (
+          <div className="absolute inset-0 w-full h-full overflow-auto pointer-events-none z-0">
+            <div 
+              className="p-4"
+              style={{
+                fontFamily: 'inherit',
+                fontSize: '16px',
+                lineHeight: '1.625',
+                fontWeight: 'inherit'
+              }}
+            >
+              <MarkdownRenderer 
+                content={content} 
+                className="[&_p]:mb-0 [&_p]:leading-[1.625] [&_p]:text-base [&_h1]:mb-0 [&_h1]:leading-[1.625] [&_h2]:mb-0 [&_h2]:leading-[1.625] [&_h3]:mb-0 [&_h3]:leading-[1.625] [&_ul]:mb-0 [&_ul]:mt-0 [&_ol]:mb-0 [&_ol]:mt-0 [&_li]:leading-[1.625] [&_li]:mb-0 [&_strong]:font-semibold [&_em]:italic [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-sm [&_pre]:mb-0 [&_pre]:mt-0 [&_blockquote]:mb-0 [&_blockquote]:mt-0 [&_hr]:mb-0 [&_hr]:mt-0"
+              />
             </div>
-          )}
-        </div>
-      )}
+          </div>
+        )}
+        
+        {/* Textarea with identical typography to markdown renderer */}
+        <textarea
+          ref={textAreaRef}
+          value={content || ''} // Use raw content, not transformed display content
+          onChange={handleContentChange} // Use the hook's handler for @ support
+          onKeyDown={handleKeyDown}
+          onClick={handleClick}
+          onMouseDown={handleMouseDown}
+          className={`relative w-full h-full min-h-[300px] resize-none p-4 bg-transparent border-0 focus:outline-none transition-all duration-200 caret-foreground selection:bg-blue-200/50 dark:selection:bg-blue-800/50 z-10 ${
+            content ? 'text-transparent' : 'text-foreground placeholder:text-muted-foreground/50'
+          } ${
+            selectedText && refinementMode 
+              ? 'bg-muted/10' 
+              : ''
+          }`}
+          style={{
+            fontFamily: 'inherit',
+            fontSize: '16px',
+            lineHeight: '1.625',
+            fontWeight: 'inherit'
+          }}
+          placeholder={content ? '' : placeholder}
+          title="Rich text editor"
+          aria-label="Rich text editor"
+          disabled={disabled}
+          spellCheck={false}
+          autoFocus={!disabled}
+        />
+        
+        {/* Refinement Mode Indicator */}
+        {selectedText && !showCommandPalette && (
+          <div className="absolute bottom-4 right-4 flex items-center gap-2 px-3 py-2 bg-background/80 backdrop-blur-sm border border-border/50 rounded text-xs text-muted-foreground z-20">
+            <span>Selection</span>
+            <kbd className="px-1.5 py-0.5 bg-muted text-xs font-mono">⌘K</kbd>
+          </div>
+        )}
+      </div>
       
       {/* Inline Command Palette */}
       <InlineCommandPalette

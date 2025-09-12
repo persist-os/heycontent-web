@@ -72,7 +72,7 @@ export function FAQ() {
                   <button
                     onClick={() => toggleItem(index)}
                     className="w-full px-4 sm:px-6 py-4 sm:py-5 text-left flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition-colors duration-200 touch-manipulation"
-                    aria-expanded={isOpen}
+                    aria-expanded={isOpen.toString()}
                     aria-controls={`faq-answer-${index}`}
                   >
                     <h3 className="text-base sm:text-lg font-medium text-slate-900 dark:text-slate-100 pr-3 sm:pr-4">

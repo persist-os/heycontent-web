@@ -27,34 +27,25 @@ export const SuggestionChip = ({ suggestion, onClick, onInputPopulate }: Suggest
     : cleanSuggestionText((suggestion as SuggestedAction).description);
   
   return (
-    <div className="group relative">
+    <div className="group relative inline-block">
       <button
         onClick={onClick}
-        className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium  
-          bg-primary text-primary-foreground dark:text-black hover:bg-primary/90 hover:text-primary-foreground dark:hover:text-black
-          rounded-lg transition-all duration-200 hover:shadow-sm hover:-translate-y-0.5 
-          active:translate-y-0 active:shadow-none select-none max-w-full chat-font break-words"
+        className="text-left transition-all duration-300 hover:scale-105 select-none chat-font"
       >
-        {!isStringType && (
-          <span className="text-primary-foreground dark:text-black group-hover:text-primary-foreground dark:group-hover:text-black transition-colors duration-200">
-            {(suggestion as SuggestedAction).type === 'explore' && <Brain className="w-3.5 h-3.5 flex-shrink-0" />}
-            {(suggestion as SuggestedAction).type === 'clarify' && <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />}
-            {(suggestion as SuggestedAction).type === 'action' && <Zap className="w-3.5 h-3.5 flex-shrink-0" />}
-            {(suggestion as SuggestedAction).type === 'strategic' && <Target className="w-3.5 h-3.5 flex-shrink-0" />}
-          </span>
-        )}
-        <span className="break-words min-w-0 text-left whitespace-normal">
+        <span className="text-sm text-primary/80 hover:text-primary underline underline-offset-4 
+          decoration-primary/30 hover:decoration-primary/60 transition-all duration-300 
+          decoration-dotted hover:decoration-solid break-words leading-relaxed">
           {displayText}
         </span>
       </button>
       
-      {/* Input button - appears on hover */}
+      {/* Input button - minimal and unobtrusive */}
       {onInputPopulate && (
-        <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 -mt-1 -mr-1">
+        <div className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
           <InputButton
             text={displayText}
             onInputPopulate={onInputPopulate}
-            tooltipText="Add suggestion to input"
+            tooltipText="Add to input"
           />
         </div>
       )}

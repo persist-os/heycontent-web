@@ -178,7 +178,7 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
         console.log('🎯 Selection positions:', { selectionStart, selectionEnd });
         
         console.log('🎯 Getting display content...');
-        const displayContent = getDisplayContentMemo(content);
+        const displayContent = content;
         console.log('🎯 Display content length:', displayContent?.length);
         
         console.log('🎯 About to call handleRefineText...');
@@ -255,16 +255,15 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
     const textarea = textAreaRef.current
     const start = textarea.selectionStart
     const end = textarea.selectionEnd
-    const displayContent = getDisplayContentMemo(content)
+    const displayContent = content
     
     // Replace selected text with refined text
     const beforeSelection = displayContent.substring(0, start)
     const afterSelection = displayContent.substring(end)
     const newDisplayContent = beforeSelection + refinedTextPreview + afterSelection
     
-    // Convert back to storage format and save
-    const newStorageContent = getStorageContentMemo(newDisplayContent)
-    onContentChange(newStorageContent)
+    // Save content directly (no conversion needed for raw content)
+    onContentChange(newDisplayContent)
     
     // Reset refinement state
     setShowRefinementPreview(false)
@@ -278,7 +277,7 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
       textarea.setSelectionRange(newCursorPos, newCursorPos)
       textarea.focus()
     }, 0)
-  }, [refinedTextPreview, content, onContentChange, getDisplayContentMemo, getStorageContentMemo])
+  }, [refinedTextPreview, content, onContentChange])
 
   const handleRejectRefinement = useCallback(async () => {
     // Reset refinement state and return to command palette
@@ -358,7 +357,7 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
 
     const textarea = textAreaRef.current
     const cursorPos = textarea.selectionStart
-    const displayContent = getDisplayContentMemo(content)
+    const displayContent = content
     const beforeCursor = displayContent.substring(0, cursorPos)
     
     // Look for @ symbol by checking backwards
@@ -383,9 +382,8 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
       const newDisplayContent = beforeAt + linkText + afterCursor
       const newCursorPos = atPosition + linkText.length
       
-      // Convert back to storage format and save
-      const newStorageContent = getStorageContentMemo(newDisplayContent)
-      onContentChange(newStorageContent)
+      // Save content directly (no conversion needed for raw content)
+      onContentChange(newDisplayContent)
       
       // Set cursor position after the link
       setTimeout(() => {
@@ -399,9 +397,8 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
       const newDisplayContent = beforeCursor + linkText + afterCursor
       const newCursorPos = cursorPos + linkText.length
       
-      // Convert back to storage format and save
-      const newStorageContent = getStorageContentMemo(newDisplayContent)
-      onContentChange(newStorageContent)
+      // Save content directly (no conversion needed for raw content)
+      onContentChange(newDisplayContent)
       
       // Set cursor position after the link
       setTimeout(() => {
@@ -409,7 +406,7 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
         textarea.focus()
       }, 0)
     }
-  }, [content, onContentChange, availableNotes, getDisplayContentMemo, getStorageContentMemo])
+  }, [content, onContentChange, availableNotes])
 
   // Handle content linking
   const handleLinkContent = useCallback((prefixedId: string) => {
@@ -422,7 +419,7 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
 
     const textarea = textAreaRef.current
     const cursorPos = textarea.selectionStart
-    const displayContent = getDisplayContentMemo(content)
+    const displayContent = content
     const beforeCursor = displayContent.substring(0, cursorPos)
     
     // Look for @ symbol by checking backwards
@@ -446,13 +443,12 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
       const afterCursor = displayContent.substring(cursorPos)
       const newDisplayContent = beforeAt + linkText + '\n' + afterCursor
       
-      // Convert back to storage format and save
-      const newStorageContent = getStorageContentMemo(newDisplayContent)
-      onContentChange(newStorageContent)
+      // Save content directly (no conversion needed for raw content)
+      onContentChange(newDisplayContent)
       
       // Find the position of the inserted link in the storage content
       const storageLinkText = `@[${prefixedId}]@`
-      const linkStartInStorage = newStorageContent.indexOf(storageLinkText)
+      const linkStartInStorage = newDisplayContent.indexOf(storageLinkText)
       const newCursorPos = linkStartInStorage + storageLinkText.length + 1 // +1 for the newline
       
       // Set cursor position after the link and newline
@@ -466,13 +462,12 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
       const afterCursor = displayContent.substring(cursorPos)
       const newDisplayContent = beforeCursor + linkText + '\n' + afterCursor
       
-      // Convert back to storage format and save
-      const newStorageContent = getStorageContentMemo(newDisplayContent)
-      onContentChange(newStorageContent)
+      // Save content directly (no conversion needed for raw content)
+      onContentChange(newDisplayContent)
       
       // Find the position of the inserted link in the storage content
       const storageLinkText = `@[${prefixedId}]@`
-      const linkStartInStorage = newStorageContent.indexOf(storageLinkText)
+      const linkStartInStorage = newDisplayContent.indexOf(storageLinkText)
       const newCursorPos = linkStartInStorage + storageLinkText.length + 1 // +1 for the newline
       
       // Set cursor position after the link and newline
@@ -481,22 +476,19 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
         textarea.focus()
       }, 0)
     }
-  }, [content, onContentChange, getDisplayContentMemo, getStorageContentMemo])
+  }, [content, onContentChange])
 
   // Handle click events to prevent cursor placement inside @[...]@ blocks
   const handleClick = useCallback((e: React.MouseEvent<HTMLTextAreaElement>) => {
     const textarea = e.currentTarget
     const clickPosition = textarea.selectionStart
     
-    // Get the display content to check for @[...]@ blocks
-    const displayContent = getDisplayContentMemo(content)
-    
-    // Find all @[...]@ blocks and their positions
+    // Find all @[...]@ blocks and their positions in raw content
     const linkRegex = /@\[([^\]]+)\]@/g
     let match
-    let blockPositions: Array<{ start: number; end: number }> = []
+    const blockPositions: Array<{ start: number; end: number }> = []
     
-    while ((match = linkRegex.exec(displayContent)) !== null) {
+    while ((match = linkRegex.exec(content)) !== null) {
       const start = match.index
       const end = start + match[0].length
       blockPositions.push({ start, end })
@@ -513,7 +505,7 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
         return
       }
     }
-    }, [content, getDisplayContentMemo])
+    }, [content])
 
   // Handle mouse down to prevent selection inside @[...]@ blocks
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLTextAreaElement>) => {
@@ -522,14 +514,13 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
     // Use a small delay to get the cursor position after the mouse down
     setTimeout(() => {
       const cursorPosition = textarea.selectionStart
-      const displayContent = getDisplayContentMemo(content)
       
-      // Find all @[...]@ blocks and their positions
+      // Find all @[...]@ blocks and their positions in raw content
       const linkRegex = /@\[([^\]]+)\]@/g
       let match
-      let blockPositions: Array<{ start: number; end: number }> = []
+      const blockPositions: Array<{ start: number; end: number }> = []
       
-      while ((match = linkRegex.exec(displayContent)) !== null) {
+      while ((match = linkRegex.exec(content)) !== null) {
         const start = match.index
         const end = start + match[0].length
         blockPositions.push({ start, end })
@@ -545,7 +536,7 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
         }
       }
     }, 10)
-  }, [content, getDisplayContentMemo])
+  }, [content])
 
   // Handle keyboard shortcuts - Modified to support refinement mode
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -553,12 +544,12 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       const textarea = e.currentTarget
       const currentPosition = textarea.selectionStart
-      const displayContent = getDisplayContentMemo(content)
+      const displayContent = content
       
       // Find all @[...]@ blocks and their positions
       const linkRegex = /@\[([^\]]+)\]@/g
       let match
-      let blockPositions: Array<{ start: number; end: number }> = []
+      const blockPositions: Array<{ start: number; end: number }> = []
       
       while ((match = linkRegex.exec(displayContent)) !== null) {
         const start = match.index
@@ -600,7 +591,7 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
         
         if (hasSelection) {
           // Refinement mode - text is selected
-          const displayContent = getDisplayContentMemo(content)
+          const displayContent = content
           const selectedText = displayContent.substring(start, end)
           
           setSelectedText(selectedText)
@@ -706,15 +697,15 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
       }, 10) // Slightly longer delay to ensure @ is typed and cursor updated
       return
     }
-  }, [content, showCommandPalette, showRefinementPreview, refinedTextPreview, onContentChange, containerRef, normalizedNoteType, getDisplayContentMemo, handleAcceptRefinement, handleRetryRefinement, handleCancelRefinement])
+  }, [content, showCommandPalette, showRefinementPreview, refinedTextPreview, onContentChange, containerRef, normalizedNoteType, handleAcceptRefinement, handleRetryRefinement, handleCancelRefinement])
 
   // Helper function to ensure cursor is never inside @[...]@ blocks
-  const ensureCursorOutsideBlocks = useCallback((cursorPosition: number, displayContent: string) => {
+  const ensureCursorOutsideBlocks = useCallback((cursorPosition: number, rawContent: string) => {
     const linkRegex = /@\[([^\]]+)\]@/g
     let match
-    let blockPositions: Array<{ start: number; end: number }> = []
+    const blockPositions: Array<{ start: number; end: number }> = []
     
-    while ((match = linkRegex.exec(displayContent)) !== null) {
+    while ((match = linkRegex.exec(rawContent)) !== null) {
       const start = match.index
       const end = start + match[0].length
       blockPositions.push({ start, end })
@@ -731,20 +722,19 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
     return cursorPosition
   }, [])
 
-  // Handle content changes from typing
+  // Handle content changes from typing - simplified for raw content
   const handleContentChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const displayContent = e.target.value
+    const newContent = e.target.value
     const newCursorPosition = e.target.selectionStart
-    const oldContent = content
     
     // Check if this is a deletion that might break @[...]@ blocks
-    if (displayContent.length < oldContent.length) {
+    if (newContent.length < content.length) {
       // Find all @[...]@ blocks in the old content
       const linkRegex = /@\[([^\]]+)\]@/g
       const links: Array<{ start: number; end: number; content: string }> = []
       let match
       
-      while ((match = linkRegex.exec(oldContent)) !== null) {
+      while ((match = linkRegex.exec(content)) !== null) {
         links.push({
           start: match.index,
           end: match.index + match[0].length,
@@ -758,19 +748,19 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
         const linkContentWithoutBrackets = link.content.substring(2, link.content.length - 2) // Remove @[ and ]@
         
         // Look for the link content without brackets in the new content
-        const linkStartInNew = displayContent.indexOf(linkContentWithoutBrackets)
+        const linkStartInNew = newContent.indexOf(linkContentWithoutBrackets)
         
         if (linkStartInNew !== -1) {
           // Check if the brackets are missing
-          const hasOpeningBracket = displayContent.substring(linkStartInNew - 2, linkStartInNew) === '@['
-          const hasClosingBracket = displayContent.substring(linkStartInNew + linkContentWithoutBrackets.length, linkStartInNew + linkContentWithoutBrackets.length + 2) === ']@'
+          const hasOpeningBracket = newContent.substring(linkStartInNew - 2, linkStartInNew) === '@['
+          const hasClosingBracket = newContent.substring(linkStartInNew + linkContentWithoutBrackets.length, linkStartInNew + linkContentWithoutBrackets.length + 2) === ']@'
           
           if (!hasOpeningBracket || !hasClosingBracket) {
             // Link was partially deleted - remove the entire link
-            const beforeLink = oldContent.substring(0, link.start)
-            const afterLink = oldContent.substring(link.end)
-            const newContent = beforeLink + afterLink
-            onContentChange(newContent)
+            const beforeLink = content.substring(0, link.start)
+            const afterLink = content.substring(link.end)
+            const cleanContent = beforeLink + afterLink
+            onContentChange(cleanContent)
             
             // Set cursor position to where the link was
             const newCursorPos = link.start
@@ -786,24 +776,13 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
       }
     }
     
-    // Only convert if the content actually contains link patterns
-    if (displayContent.includes('@[')) {
-      // Convert display content (with titles) back to storage format (with IDs)
-      const storageContent = getStorageContentMemo(displayContent)
-      
-      // Prevent saving "Missing Note" - if conversion resulted in missing notes, keep original
-      if (storageContent.includes('@[Missing Note]@') && !displayContent.includes('@[Missing Note]@')) {
-        onContentChange(displayContent)
-      } else {
-        onContentChange(storageContent)
-      }
-    } else {
-      // No links, just pass through the content
-      onContentChange(displayContent)
-    }
+    // Ensure cursor position is valid for raw content
+    const adjustedCursorPosition = ensureCursorOutsideBlocks(newCursorPosition, newContent)
+    setCursorPosition(adjustedCursorPosition)
     
-    setCursorPosition(newCursorPosition)
-  }, [onContentChange, getStorageContentMemo, content, textAreaRef])
+    // Save raw content directly - no more display/storage conversion
+    onContentChange(newContent)
+  }, [onContentChange, content, textAreaRef, ensureCursorOutsideBlocks])
 
   const togglePreview = useCallback(() => {
     setCurrentShowPreview(!currentShowPreview)
@@ -827,7 +806,7 @@ export const useRichTextEditor = (props: UseRichTextEditorProps) => {
     selectedNoteTypeForCommands,
     
     // Content functions
-    getDisplayContent: getDisplayContentMemo,
+    getDisplayContent: (content: string) => content, // Raw content passthrough
     
     // Existing handlers
     handleKeyDown,

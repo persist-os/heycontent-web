@@ -226,10 +226,12 @@ export default defineSchema({
     youtubeVideoIds: v.optional(v.array(v.string())),
     gmailIds: v.optional(v.array(v.string())),
     analysisIds: v.optional(v.array(v.string())),
+    fingerprintId: v.optional(v.id("project_fingerprints")), // Links to project fingerprint
     createdAt: v.number(),
     updatedAt: v.number(),
   })
   .index("by_user", ["userId"])
+  .index("by_fingerprint", ["fingerprintId"])
   .index("by_creation", ["createdAt"]),
 
   // API Keys
@@ -1124,4 +1126,253 @@ export default defineSchema({
   })
   .index("by_referrer", ["referrerId"])
   .index("by_total_referred", ["totalReferred"]),
+
+  // Project Fingerprints - Universal AI project intelligence
+  project_fingerprints: defineTable({
+    // Core Identity
+    projectId: v.id("projects"),
+    userId: v.string(),
+    name: v.string(),
+    description: v.optional(v.string()),
+
+    // AI-Discovered Project Nature (flattened for AI searchability)
+    domain: v.string(), // "academic", "creative", "business", "skill_development"
+    complexity_level: v.number(), // 1-10 scale
+    collaboration_style: v.string(), // "solo", "small_team", "large_group", "community"
+    time_horizon: v.string(), // "sprint", "project", "journey", "lifestyle"
+
+    // AI-Generated Project Archetype (flattened)
+    primary_pattern: v.string(), // "iterative_creator", "systematic_builder", "exploratory_learner"
+    working_style: v.array(v.string()), // Array of working style preferences
+    decision_making: v.string(), // How user approaches choices
+    energy_patterns: v.string(), // When/how user works best
+
+    // Intentions (User + AI refined)
+    core_intention: v.string(), // The deep "why"
+    success_vision: v.string(), // What success looks/feels like
+    value_creation: v.string(), // What this creates for user/world
+    personal_growth: v.array(v.string()), // How user wants to evolve through this
+
+    // Dynamic Timeline (AI suggests, user refines)
+    natural_rhythm: v.string(), // "daily", "weekly", "monthly", "seasonal", "milestone_driven"
+    key_phases: v.array(v.object({
+      name: v.string(),
+      essence: v.string(), // What this phase is really about
+      estimated_duration: v.string(),
+      readiness_indicators: v.array(v.string()), // When to move to next phase
+    })),
+    flexibility_preference: v.string(), // "structured", "adaptive", "emergent"
+
+    // Output Desires (AI helps articulate)
+    tangible_deliverables: v.array(v.string()),
+    intangible_benefits: v.array(v.string()),
+    measurement_approach: v.string(), // How user wants to track progress
+    sharing_intention: v.string(), // "private", "selective", "public", "community"
+
+    // Interface Preferences (AI learns from behavior)
+    cognitive_load_preference: v.string(), // "minimal", "rich", "customizable"
+    information_density: v.string(), // "focused", "contextual", "comprehensive"
+    motivation_style: v.array(v.string()), // What keeps user engaged
+    feedback_frequency: v.string(), // How often user wants check-ins
+
+    // Evolution Intelligence
+    learning_sensitivity: v.number(), // How quickly to adapt (1-10)
+    change_triggers: v.array(v.object({
+      condition_type: v.string(),
+      threshold: v.number(),
+      response_style: v.string(),
+    })),
+    stability_zones: v.array(v.string()), // What should rarely change
+    growth_edges: v.array(v.string()), // What should evolve actively
+
+    // AI Agent Coordination
+    morning_persona: v.object({
+      energy_match: v.string(), // Matches user's morning energy
+      focus_style: v.string(), // How to help user start days
+      preparation_depth: v.string(),
+    }),
+    evening_persona: v.object({
+      reflection_approach: v.string(), // How user processes
+      consolidation_style: v.string(),
+      transition_support: v.string(), // Help with day-to-night shift
+    }),
+    event_triggers: v.array(v.object({
+      trigger_pattern: v.string(),
+      response_personality: v.string(),
+      coordination_rules: v.array(v.string()),
+    })),
+
+    // AI Prompt Generation
+    base_personality: v.string(), // Derived from user persona
+    project_voice: v.string(), // How AI should talk about THIS project
+    question_generation_style: v.string(),
+    suggestion_approach: v.string(),
+    clarification_method: v.string(),
+
+    // Dynamic Intelligence Fields (AI-generated based on project)
+    dynamic_dimensions: v.array(v.object({
+      dimension_name: v.string(), // e.g., "Research Depth", "Creative Flow", "Market Validation"
+      dimension_type: v.string(), // "progress_tracker", "quality_metric", "decision_point", "resource_monitor"
+      measurement_approach: v.string(),
+      evolution_sensitivity: v.number(),
+      ui_representation: v.string(), // How to show this in UI
+    })),
+
+    // Contextual Awareness
+    user_constraints: v.array(v.string()), // Time, resources, skills
+    external_dependencies: v.array(v.string()),
+    support_systems: v.array(v.string()),
+    potential_obstacles: v.array(v.string()),
+
+    // Metadata
+    created_at: v.number(),
+    last_evolution: v.number(),
+    intelligence_version: v.string(),
+    status: v.string(), // "discovering", "active", "evolving", "completing", "archived"
+  })
+  .index("by_project", ["projectId"])
+  .index("by_user", ["userId"])
+  .index("by_domain", ["domain"])
+  .index("by_status", ["status"])
+  .index("by_creation", ["created_at"])
+  .index("by_evolution", ["last_evolution"]),
+
+  // Fingerprint Evolution History - Separate table for AI access and querying
+  fingerprint_evolution_history: defineTable({
+    fingerprintId: v.id("project_fingerprints"),
+    userId: v.string(),
+    projectId: v.id("projects"),
+
+    // Evolution details
+    timestamp: v.number(),
+    evolution_trigger: v.string(), // "morning_update", "evening_update", "data_change", "user_edit", "milestone_reached"
+
+    // What changed (flattened for AI searchability)
+    changes_made: v.record(v.string(), v.any()), // Key-value pairs of what changed
+    reasoning: v.string(), // AI reasoning for the evolution
+    confidence_score: v.number(), // 0-1 confidence in the evolution
+
+    // User response to evolution
+    user_response: v.optional(v.string()), // "accepted", "modified", "rejected"
+    user_feedback: v.optional(v.string()), // Any user comments on the evolution
+
+    // Learning captured for future evolutions
+    learning_captured: v.string(), // What AI learned from this evolution
+
+    // Context of evolution
+    trigger_context: v.optional(v.record(v.string(), v.any())), // Additional context about what triggered the evolution
+    evolution_metrics: v.optional(v.record(v.string(), v.number())), // Metrics about the evolution process
+
+    // Metadata
+    processing_time_ms: v.optional(v.number()),
+    ai_model_version: v.optional(v.string()),
+  })
+  .index("by_fingerprint", ["fingerprintId"])
+  .index("by_user", ["userId"])
+  .index("by_project", ["projectId"])
+  .index("by_trigger", ["evolution_trigger"])
+  .index("by_timestamp", ["timestamp"])
+  .index("by_user_timestamp", ["userId", "timestamp"]),
+
+  // Project Widgets - Personalized widgets for each project
+  project_widgets: defineTable({
+    projectId: v.id("projects"),
+    fingerprintId: v.id("project_fingerprints"),
+    userId: v.string(),
+
+    // Dynamic categories/tabs
+    categories: v.array(v.object({
+      name: v.string(),
+      icon: v.string(),
+      description: v.string(),
+    })),
+
+    // Widget configuration
+    widgets: v.array(v.object({
+      widget_id: v.string(),
+      widget_type: v.string(), // tracker, chart, board, timeline, meter, etc.
+      title: v.string(),
+      description: v.string(),
+      category: v.string(), // Category/tab this widget belongs to
+      priority: v.number(), // 1-10
+      size: v.string(), // small, medium, large, xlarge
+      theme: v.string(), // warm, clean, professional, creative
+      position: v.number(), // Position in dashboard (1-based)
+      config: v.any(), // Widget-specific configuration
+      data_sources: v.array(v.string()),
+      update_frequency: v.string(), // realtime, hourly, daily, weekly
+      interactive: v.boolean(),
+      editable: v.boolean(),
+      shareable: v.boolean(),
+    })),
+
+    // Layout configuration
+    layout_type: v.string(), // grid, dashboard, kanban, timeline
+    columns: v.number(),
+    rows: v.number(),
+
+    // Theme and styling
+    global_theme: v.string(),
+    color_scheme: v.string(), // monochrome, colorful, pastel, vibrant
+    font_style: v.string(), // modern, classic, playful, professional
+
+    // Interaction settings
+    allow_customization: v.boolean(),
+    allow_reordering: v.boolean(),
+    allow_resizing: v.boolean(),
+
+    // Data integration
+    required_integrations: v.array(v.string()),
+    data_refresh_strategy: v.string(),
+
+    // Metadata
+    generated_at: v.number(),
+    version: v.string(),
+    confidence: v.number(), // 0-1 confidence in widget recommendations
+    status: v.string(), // "generating", "active", "archived"
+  })
+  .index("by_project", ["projectId"])
+  .index("by_fingerprint", ["fingerprintId"])
+  .index("by_user", ["userId"])
+  .index("by_status", ["status"])
+  .index("by_generated", ["generated_at"]),
+
+  // Conversation Summaries - Real-time conversation analysis
+  conversation_summaries: defineTable({
+    userId: v.string(),
+    projectId: v.optional(v.id("projects")),
+    segmentId: v.string(), // Unique identifier for conversation segment
+    messageCount: v.number(),
+    
+    // Key insights extracted
+    keyInsights: v.array(v.object({
+      insight_type: v.string(),
+      content: v.string(),
+      confidence: v.number(), // 0-1
+      context: v.string(),
+      importance: v.string(), // low, medium, high, critical
+    })),
+    
+    // Working style analysis
+    workingStyleHints: v.array(v.string()),
+    goalClarity: v.string(), // unclear, emerging, clear, very_clear
+    collaborationPreferences: v.array(v.string()),
+    timePreferences: v.array(v.string()),
+    complexityIndicators: v.array(v.string()),
+    emotionalTone: v.string(),
+    
+    // Follow-up suggestions
+    nextQuestions: v.array(v.string()),
+    summary: v.string(),
+    
+    // Metadata
+    createdAt: v.number(),
+    processedAt: v.number(),
+    agentVersion: v.string(),
+  })
+  .index("by_user", ["userId"])
+  .index("by_project", ["projectId"])
+  .index("by_segment", ["segmentId"])
+  .index("by_created", ["createdAt"])
+  .index("by_user_project", ["userId", "projectId"]),
 });

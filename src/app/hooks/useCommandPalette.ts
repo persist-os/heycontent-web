@@ -135,10 +135,6 @@ export function useCommandPaletteState() {
     }
 
     if (!isOpen) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setIsOpen(true);
-      }
       return;
     }
 

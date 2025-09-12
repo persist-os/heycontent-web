@@ -130,53 +130,78 @@ export function ReflectionCard({
   return (
     <BaseCard
       note={note}
-      className="border-blue-500/30 hover:border-blue-500/50"
-      hoverBgClass="hover:bg-blue-500/10"
+      className="border-l-2 border-l-indigo-400/40"
       onEdit={onEdit}
       onDelete={onDelete}
       onToggleImportant={onToggleImportant}
     >
-      <div className="p-4">
-        {/* Header with mood icon and type */}
-        <div className="flex items-center gap-2 mb-3">
-          {getMoodIcon()}
-          <div className="flex-1 pr-8">
-            <h3 className="font-semibold text-foreground line-clamp-1">
-              {(note.title && note.title.trim()) || getMoodLabel()}
-            </h3>
-            <p className="text-xs text-muted-foreground">
+      <div className="space-y-4">
+        {/* Header with elegant mood indication */}
+        <div className="space-y-2">
+          <h3 className="text-lg font-light text-foreground leading-tight tracking-tight line-clamp-2">
+            {(note.title && note.title.trim()) || getMoodLabel()}
+          </h3>
+          
+          <div className="flex items-center gap-2">
+            {getMoodIcon()}
+            <span className="text-xs font-light text-indigo-600/70 bg-indigo-50/50 dark:bg-indigo-950/20 px-2 py-0.5 rounded-md">
               {getMoodLabel()}
-            </p>
+            </span>
           </div>
         </div>
 
-        {/* Key insight highlight */}
+        {/* Key insight with subtle highlighting */}
         {keyInsight && (
-          <div className="mb-3 p-3 bg-muted/30 rounded-lg border-l-4 border-blue-500/50">
-            <div className="flex items-start gap-2">
-              <Lightbulb className="w-3 h-3 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-foreground italic line-clamp-3">
+          <div className="space-y-2">
+            <h4 className="text-xs font-light text-muted-foreground/70 tracking-wide uppercase">
+              Key Insight
+            </h4>
+            <div className="relative">
+              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-indigo-400/60 to-transparent" />
+              <div className="pl-4 text-sm text-foreground/90 leading-relaxed font-light italic line-clamp-3">
                 "{keyInsight}"
               </div>
             </div>
           </div>
         )}
 
-        {/* Content preview */}
-        <div className="text-sm text-muted-foreground line-clamp-4 mb-3">
-          {note.content ? (
-            <NoteContentRenderer 
-              content={note.content && keyInsight 
-                ? note.content.replace(keyInsight, '').trim()
-                : note.content
-              }
-              availableNotes={availableNotes}
-            />
-          ) : (
-            'Start your reflection...'
-          )}
-        </div>
+        {/* Reflection themes */}
+        {themes.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {themes.map((theme, index) => (
+              <span 
+                key={index} 
+                className="text-xs font-light text-indigo-600/70 bg-indigo-50/30 dark:bg-indigo-950/20 px-2 py-1 rounded-md border border-indigo-200/30 dark:border-indigo-800/30"
+              >
+                {theme}
+              </span>
+            ))}
+          </div>
+        )}
 
+        {/* Content with breathing space */}
+        {note.content && (
+          <div className="space-y-2">
+            {(keyInsight || themes.length > 0) && (
+              <div className="h-px bg-gradient-to-r from-transparent via-border/30 to-transparent" />
+            )}
+            <div className="text-sm text-muted-foreground/80 leading-relaxed line-clamp-4 font-light">
+              <NoteContentRenderer 
+                content={note.content && keyInsight 
+                  ? note.content.replace(keyInsight, '').trim()
+                  : note.content
+                }
+                availableNotes={availableNotes}
+              />
+            </div>
+          </div>
+        )}
+
+        {!note.content && (
+          <div className="text-sm text-muted-foreground/60 italic font-light py-4 text-center">
+            Begin your reflection journey here
+          </div>
+        )}
       </div>
     </BaseCard>
   );

@@ -1,11 +1,11 @@
 'use client'
 
-import React, { memo, useCallback, useMemo, useEffect, useState } from 'react'
+import React, { memo, useCallback, useMemo, useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Logo } from '@/components/ui/logo'
 import {
-  Users, Settings, FileText, LogOut, BarChart3, Menu, X, MessageSquare, Clock, Handshake, Trash2, Shield
+  Users, Settings, FileText, LogOut, BarChart3, Menu, X, MessageSquare, Clock, Handshake, Trash2, Shield, Zap, Search, ArrowRight, Sparkles, Command
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { useSidebar } from '@/app/context/sidebar-context'
@@ -13,45 +13,55 @@ import { getApiKey } from '@/app/lib/api-helpers'
 import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDialog'
 import { useAdminAuth } from '@/app/lib/admin-auth'
 import { usePlatformConnections } from '@/app/hooks/usePlatformConnections'
+import { cn } from '@/lib/utils'
 
 const navItems = [
   {
-    id: 'chat',
-    label: 'Chat with Content',
-    icon: BarChart3,
-    href: '/dashboard/chat',
-    dataAttr: 'data-chat-link',
-  },
-  // Timeline - completely hidden
-  // {
-  //   id: 'timeline',
-  //   label: 'Timeline',
-  //   icon: Clock,
-  //   href: '/dashboard/timeline',
-  //   dataAttr: 'data-timeline-link',
-  // },
-  {
-    id: 'content-hub',
-    label: 'Content Hub',
-    icon: BarChart3,
-    href: '/dashboard/content-hub',
-    dataAttr: 'data-content-hub-link',
-    requiresConnection: 'instagram_or_youtube', // Hidden until Instagram OR YouTube is connected
+    id: 'living-projects',
+    label: 'Living Projects',
+    description: 'Collaborative spaces that evolve',
+    icon: Zap,
+    href: '/dashboard/living-projects',
+    dataAttr: 'data-living-projects-link',
+    category: 'create',
   },
   {
     id: 'notes',
     label: 'Smart Notes',
+    description: 'AI-enhanced thoughts and ideas',
     icon: FileText,
     href: '/dashboard/notes',
     dataAttr: 'data-smart-notes-link',
+    category: 'create',
+  },
+  {
+    id: 'chat',
+    label: 'Chat with Content',
+    description: 'Converse with your creative universe',
+    icon: MessageSquare,
+    href: '/dashboard/chat',
+    dataAttr: 'data-chat-link',
+    category: 'explore',
+  },
+  {
+    id: 'content-hub',
+    label: 'Content Hub',
+    description: 'Curated insights from your platforms',
+    icon: BarChart3,
+    href: '/dashboard/content-hub',
+    dataAttr: 'data-content-hub-link',
+    requiresConnection: 'instagram_or_youtube',
+    category: 'analyze',
   },
   {
     id: 'partnerships',
     label: 'Partnership Hub',
+    description: 'Meaningful collaborations await',
     icon: Handshake,
     href: '/dashboard/partnerships',
     dataAttr: 'data-partnerships-link',
-    requiresConnection: 'gmail', // Hidden until Gmail is connected
+    requiresConnection: 'gmail',
+    category: 'connect',
   },
 ]
 
@@ -89,6 +99,9 @@ export const DashboardNav = memo(function DashboardNav() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   
   // Get platform connections for conditional navigation
   const platformConnections = usePlatformConnections();
@@ -109,9 +122,11 @@ export const DashboardNav = memo(function DashboardNav() {
     ...(canAccessAdmin ? [{
       id: 'admin',
       label: 'Admin',
+      description: 'System administration and controls',
       icon: Shield,
       href: '/admin',
       dataAttr: 'data-admin-link',
+      category: 'system',
     }] : []),
   ];
 
@@ -148,8 +163,33 @@ export const DashboardNav = memo(function DashboardNav() {
   useEffect(() => {
     if (isExpanded && !apiKeyError) {
       fetchRecentChats();
+      // Focus search input when opening
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
+    } else {
+      // Clear search when closing
+      setSearchQuery('');
     }
   }, [isExpanded, fetchRecentChats, apiKeyError]);
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Command/Ctrl + K to open command palette
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsExpanded(!isExpanded);
+      }
+      // Escape to close
+      if (e.key === 'Escape' && isExpanded) {
+        setIsExpanded(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isExpanded, setIsExpanded]);
 
   const handleDeleteChat = useCallback(async (chatId: string) => {
     setIsDeleting(true);
@@ -199,9 +239,41 @@ export const DashboardNav = memo(function DashboardNav() {
     setChatToDelete(null);
   }, []);
 
+  // Filter items based on search query
+  const filteredNavItems = useMemo(() => {
+    if (!searchQuery.trim()) return dynamicNavItems;
+    
+    const query = searchQuery.toLowerCase();
+    return dynamicNavItems.filter(item => 
+      item.label.toLowerCase().includes(query) ||
+      item.description?.toLowerCase().includes(query) ||
+      item.category.toLowerCase().includes(query)
+    );
+  }, [dynamicNavItems, searchQuery]);
+
+  // Filter chats based on search query
+  const filteredChats = useMemo(() => {
+    if (!searchQuery.trim()) return recentChats;
+    
+    const query = searchQuery.toLowerCase();
+    return recentChats.filter(chat => 
+      chat.topic.toLowerCase().includes(query)
+    );
+  }, [recentChats, searchQuery]);
+
+  // Handle navigation with search query
+  const handleNavigate = useCallback((href: string) => {
+    router.push(href);
+    setIsExpanded(false);
+    setSearchQuery('');
+  }, [router, setIsExpanded]);
+
   // Memoize active item calculation
   const isItemActive = useCallback((item: typeof dynamicNavItems[0]) => {
     switch (item.id) {
+      case 'living-projects':
+        // This tab is active for living projects and project discovery routes
+        return pathname.startsWith('/dashboard/living-projects') || pathname.startsWith('/dashboard/project-discovery');
       case 'content-hub':
         // This tab is active for multiple, non-nested routes
         return pathname.startsWith('/dashboard/content') || pathname.startsWith('/dashboard/ai-insights');
@@ -218,112 +290,210 @@ export const DashboardNav = memo(function DashboardNav() {
     }
   }, [pathname]);
 
-  // Memoize the settings link
-  const settingsLink = useMemo(() => (
-    <Link
-      href="/settings"
-      onClick={() => setIsExpanded(false)}
-      className={`flex items-center w-full h-12 rounded-none transition-all ${
-        isExpanded ? 'px-6' : 'justify-center'
-      } ${
-        pathname === '/settings'
-          ? 'bg-muted font-medium'
-          : 'hover:bg-muted'
-      }`}
-    >
-      <Settings className="w-6 h-6 text-foreground" />
-      {isExpanded && <span className="ml-4 text-sm font-medium">Settings</span>}
-    </Link>
-  ), [pathname, isExpanded, setIsExpanded]);
-
   return (
-    <div className={`h-screen fixed top-0 left-0 bg-background shadow-lg flex flex-col justify-between transition-all duration-300 z-50 ${isExpanded ? 'w-64 translate-x-0' : 'w-64 -translate-x-full'}`}>
-      <div>
-        <div className={`flex items-center h-20 ${isExpanded ? 'px-4' : 'justify-center'}`}>
-        </div>
+    <>
+      {/* Backdrop with blur effect */}
+      {isExpanded && (
+        <div 
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-all duration-300"
+          onClick={() => setIsExpanded(false)}
+        />
+      )}
 
-        <div className="flex flex-col items-center gap-4 mt-8">
-          {dynamicNavItems.map((item) => (
-            <Link
-              key={item.id}
-              href={item.href}
-              onClick={() => setIsExpanded(false)}
-              className={`flex items-center w-full h-12 rounded-none transition-colors ${
-                isExpanded ? 'justify-start px-6' : 'justify-center'
-              } ${
-                isItemActive(item)
-                  ? 'bg-primary text-primary-foreground'
-                  : 'hover:bg-muted/80'
-              }`}
-              {...{[item.dataAttr]: true}}
-            >
-              <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center">
-                <item.icon className={`w-6 h-6 ${
-                  isItemActive(item)
-                    ? 'text-white dark:text-black'
-                    : 'text-foreground'
-                }`} />
+      {/* Floating Command Palette */}
+      <div className={cn(
+        "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 transition-all duration-500 ease-out",
+        isExpanded 
+          ? "opacity-100 scale-100" 
+          : "opacity-0 scale-95 pointer-events-none"
+      )}>
+        <div className="w-[90vw] max-w-2xl bg-background/95 backdrop-blur-xl border border-border/40 rounded-3xl shadow-2xl overflow-hidden">
+          
+          {/* Header with Search */}
+          <div className="p-6 border-b border-border/20">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-primary/70" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-light tracking-tight text-foreground">
+                    Command Palette
+                  </h2>
+                  <p className="text-sm text-muted-foreground/60 font-light">
+                    Navigate your creative universe
+                  </p>
+                </div>
               </div>
-              {isExpanded && (
-                <span className={`ml-4 text-sm font-medium ${isItemActive(item) ? 'dark:text-black' : ''}`}>{isExpanded ? item.label : ''}</span>
-              )}
-            </Link>
-          ))}
-        </div>
-      </div>
-      <div>
-        {isExpanded && (
-          <div className="px-6 my-4">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-xs font-semibold text-black dark:text-white uppercase tracking-wider">Recent Chats</h3>
-              <Link href="/dashboard/history" onClick={() => setIsExpanded(false)} className="text-xs text-primary hover:underline">
-                View All
-              </Link>
+              <div className="flex items-center gap-2 ml-auto">
+                <div className="p-1.5 bg-muted/20 rounded-lg">
+                  <Command className="w-4 h-4 text-muted-foreground/60" />
+                </div>
+                <button
+                  onClick={() => setIsExpanded(false)}
+                  className="p-1.5 hover:bg-muted/30 rounded-lg transition-colors"
+                  title="Close command palette"
+                  aria-label="Close command palette"
+                >
+                  <X className="w-4 h-4 text-muted-foreground/60" />
+                </button>
+              </div>
             </div>
-            <div className="space-y-1">
-              {recentChats.length > 0 ? (
-                recentChats.map((chat) => (
-                  <div
-                    key={chat.id}
-                    className="group flex items-center gap-3 p-2 rounded-md hover:bg-muted"
-                  >
-                    <Link
-                      href={`/dashboard/chat?id=${chat.id}`}
-                      onClick={() => setIsExpanded(false)}
-                      className="flex items-center gap-3 flex-1 min-w-0"
-                      title={chat.topic}
-                    >
-                      <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
-                      <div className="flex flex-col flex-1 min-w-0">
-                        <span className="text-sm text-black dark:text-white truncate">{chat.topic}</span>
-                        {chat.createdAt ? (
-                          <span className="text-xs text-black dark:text-white">
-                            {formatRelativeTime(chat.createdAt)}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-red-500">No timestamp</span>
-                        )}
-                      </div>
-                    </Link>
-                    <button
-                      onClick={(e) => openDeleteDialog(chat.id, e)}
-                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 rounded-md transition-all text-destructive/80 hover:text-destructive shrink-0"
-                      title="Delete chat"
-                      aria-label="Delete chat"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground p-2">No recent chats.</p>
-              )}
+
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search spaces, chats, or actions..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 bg-muted/20 border-0 rounded-2xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:bg-muted/30 transition-all font-light"
+              />
             </div>
           </div>
-        )}
-        <div className="flex flex-col items-center gap-2 mb-4">
-          {settingsLink}
-          <ThemeToggle />
+
+          {/* Content */}
+          <div className="max-h-[60vh] overflow-y-auto">
+            
+            {/* Navigation Items */}
+            {filteredNavItems.length > 0 && (
+              <div className="p-6">
+                <h3 className="text-sm font-light text-muted-foreground/70 mb-4 tracking-wide">
+                  Spaces
+                </h3>
+                <div className="space-y-2">
+                  {filteredNavItems.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => handleNavigate(item.href)}
+                      onMouseEnter={() => setHoveredItem(item.id)}
+                      onMouseLeave={() => setHoveredItem(null)}
+                      className={cn(
+                        "w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 text-left group",
+                        isItemActive(item)
+                          ? "bg-primary/10 border border-primary/20"
+                          : "hover:bg-muted/30 border border-transparent",
+                        hoveredItem === item.id && "scale-[1.02]"
+                      )}
+                      {...{[item.dataAttr]: true}}
+                    >
+                      <div className={cn(
+                        "w-12 h-12 rounded-2xl flex items-center justify-center transition-all",
+                        isItemActive(item)
+                          ? "bg-primary/20"
+                          : "bg-muted/20 group-hover:bg-muted/40"
+                      )}>
+                        <item.icon className={cn(
+                          "w-5 h-5 transition-colors",
+                          isItemActive(item)
+                            ? "text-primary"
+                            : "text-muted-foreground group-hover:text-foreground"
+                        )} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium text-foreground group-hover:text-foreground transition-colors">
+                            {item.label}
+                          </h4>
+                          {isItemActive(item) && (
+                            <div className="w-2 h-2 rounded-full bg-primary/60" />
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground/70 font-light leading-relaxed">
+                          {item.description}
+                        </p>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Recent Chats */}
+            {filteredChats.length > 0 && (
+              <div className="px-6 pb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-light text-muted-foreground/70 tracking-wide">
+                    Recent Conversations
+                  </h3>
+                  <button
+                    onClick={() => handleNavigate('/dashboard/history')}
+                    className="text-xs text-primary/70 hover:text-primary transition-colors font-light"
+                  >
+                    View All
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {filteredChats.map((chat) => (
+                    <div
+                      key={chat.id}
+                      className="group flex items-center gap-3 p-3 rounded-xl hover:bg-muted/20 transition-all"
+                    >
+                      <button
+                        onClick={() => handleNavigate(`/dashboard/chat?id=${chat.id}`)}
+                        className="flex items-center gap-3 flex-1 min-w-0"
+                        title={chat.topic}
+                      >
+                        <div className="w-8 h-8 rounded-xl bg-muted/20 flex items-center justify-center flex-shrink-0">
+                          <MessageSquare className="w-4 h-4 text-muted-foreground/60" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {chat.topic}
+                          </p>
+                          <p className="text-xs text-muted-foreground/60 font-light">
+                            {chat.createdAt ? formatRelativeTime(chat.createdAt) : 'No timestamp'}
+                          </p>
+                        </div>
+                      </button>
+                      <button
+                        onClick={(e) => openDeleteDialog(chat.id, e)}
+                        className="opacity-0 group-hover:opacity-100 p-2 hover:bg-destructive/10 rounded-lg transition-all text-destructive/60 hover:text-destructive"
+                        title="Delete chat"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Settings and Theme */}
+            <div className="p-6 border-t border-border/20">
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={() => handleNavigate('/settings')}
+                  className={cn(
+                    "flex items-center gap-3 p-3 rounded-xl transition-all hover:bg-muted/30",
+                    pathname === '/settings' && "bg-muted/40"
+                  )}
+                >
+                  <Settings className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-light text-foreground">Settings</span>
+                </button>
+                <ThemeToggle />
+              </div>
+            </div>
+
+            {/* Empty State */}
+            {filteredNavItems.length === 0 && filteredChats.length === 0 && searchQuery.trim() && (
+              <div className="p-8 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/20 flex items-center justify-center">
+                  <Search className="w-6 h-6 text-muted-foreground/40" />
+                </div>
+                <h3 className="text-lg font-light text-foreground mb-2">
+                  No results found
+                </h3>
+                <p className="text-muted-foreground/60 font-light">
+                  Try adjusting your search or explore available spaces above
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -336,6 +506,6 @@ export const DashboardNav = memo(function DashboardNav() {
         description="Are you sure you want to delete this conversation? This action cannot be undone."
         isLoading={isDeleting}
       />
-    </div>
+    </>
   )
 });

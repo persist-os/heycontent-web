@@ -3,7 +3,7 @@
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import ChatScreen from './utils/chat-screen'
-import { useContentContext } from '@/store/content-context-store'
+import { useContentContext, useContentContextActions } from '@/store/content-context-store'
 import { ContentContext } from './types'
 
 export default function ChatPage() {
@@ -12,9 +12,24 @@ export default function ChatPage() {
   const welcome = searchParams.get('welcome')
   const autoSend = searchParams.get('autoSend')
   const askQuery = searchParams.get('ask')
+  const projectId = searchParams.get('projectId')
+  const noteId = searchParams.get('noteId')
 
   const { context: contentContext, isLoading, isInitialized } = useContentContext()
+  const { clearContentContext } = useContentContextActions()
   const [currentContext, setCurrentContext] = useState<ContentContext | null>(null)
+
+  // Clear context when navigating to regular chat (not from a specific content source)
+  useEffect(() => {
+    // If we're on regular chat page without specific context triggers, clear any lingering context
+    if (isInitialized && !askQuery && !autoSend && !projectId && !noteId && !searchParams.get('contentContext')) {
+      // Only clear if we have context but no valid reason to keep it
+      if (contentContext) {
+        console.log('🧹 Clearing lingering context on regular chat navigation')
+        clearContentContext()
+      }
+    }
+  }, [isInitialized, askQuery, autoSend, projectId, noteId, searchParams, contentContext, clearContentContext])
 
   useEffect(() => {
     if (contentContext && isInitialized) {
@@ -30,5 +45,6 @@ export default function ChatPage() {
     chatId={chatId} 
     contentContext={currentContext} 
     askQuery={askQuery} 
+    noteId={noteId}
   />
 }

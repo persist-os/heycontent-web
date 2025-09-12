@@ -6,7 +6,7 @@ import { Doc, Id } from '@/convex/_generated/dataModel';
 export interface ContentContextState {
   // Current content context
   currentContext: {
-    platform: 'instagram' | 'youtube' | 'gmail' | 'ai-insights';
+    platform: 'instagram' | 'youtube' | 'gmail' | 'ai-insights' | 'project';
     contentId: string;
     title?: string;
     analysis?: string | null;
@@ -21,7 +21,7 @@ export interface ContentContextState {
     // AI Insights specific fields
     fullInsight?: any;
     actionStep?: string;
-    originalPlatform?: 'youtube' | 'instagram' | 'gmail';
+    originalPlatform?: 'youtube' | 'instagram' | 'gmail' | 'project';
     additionalContext?: string;
   } | null;
   

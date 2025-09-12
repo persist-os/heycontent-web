@@ -16,14 +16,14 @@ interface TypeSelectorProps {
   onTypeChange?: (newType: NoteType) => void;
 }
 
-const TYPE_LABELS: Record<NoteType, { label: string; description: string }> = {
-  idea_bank: { label: 'Ideas', description: 'Capture thoughts, concepts, and inspiration' },
-  content_script: { label: 'Writing', description: 'Draft and organize written content' },
-  collaboration_note: { label: 'People', description: 'Track relationships and collaborations' },
-  analytics_insight: { label: 'Insights', description: 'Record important learnings and discoveries' },
-  reflection_journal: { label: 'Reflection', description: 'Work through complex thoughts and analysis' },
-  task_checklist: { label: 'Tasks', description: 'Organize what needs to be done' },
-  email_draft: { label: 'Messages', description: 'Prepare emails and communications' }
+const TYPE_LABELS: Record<NoteType, { label: string; description: string; color: string }> = {
+  idea_bank: { label: 'Ideas', description: 'Thoughts & inspiration', color: 'bg-red-500/80' },
+  content_script: { label: 'Writing', description: 'Draft & create', color: 'bg-accent' },
+  collaboration_note: { label: 'People', description: 'Relationships & teams', color: 'bg-green-500/80' },
+  analytics_insight: { label: 'Insights', description: 'Analysis & learnings', color: 'bg-pink-500/80' },
+  reflection_journal: { label: 'Reflection', description: 'Deep thinking', color: 'bg-blue-500/80' },
+  task_checklist: { label: 'Tasks', description: 'Things to do', color: 'bg-primary' },
+  email_draft: { label: 'Messages', description: 'Communications', color: 'bg-orange-500/80' }
 };
 
 export function TypeSelector({ noteId, userId, currentType, typeGenerated, onTypeChange }: TypeSelectorProps) {
@@ -130,6 +130,7 @@ export function TypeSelector({ noteId, userId, currentType, typeGenerated, onTyp
   }, [isOpen]);
 
   const currentLabel = TYPE_LABELS[optimisticType]?.label || 'Unknown';
+  const currentColor = TYPE_LABELS[optimisticType]?.color || 'bg-gray-500/80';
 
   return (
     <>
@@ -137,37 +138,34 @@ export function TypeSelector({ noteId, userId, currentType, typeGenerated, onTyp
         <button
           ref={buttonRef}
           onClick={handleToggle}
-          className={`inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 disabled:pointer-events-none disabled:opacity-50 gap-1.5
-            ${optimisticType === 'task_checklist' ? 'bg-primary text-primary-foreground dark:bg-primary dark:text-primary-foreground border-none' : ''}
-            ${optimisticType !== 'task_checklist' ? 'bg-muted text-foreground border-none' : ''}
-          `}
-          style={{ boxShadow: 'none' }}
-          title={`Type: ${currentLabel}${typeGenerated ? ' (AI-classified)' : ''}${isSyncing ? ' (Syncing...)' : ''}`}
+          className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-transparent hover:bg-muted/40 rounded-md transition-all duration-300 hover:scale-[1.02] disabled:pointer-events-none disabled:opacity-50"
+          title={`${currentLabel}${typeGenerated ? ' (AI)' : ''}${isSyncing ? ' (syncing)' : ''}`}
         >
-          <span className={typeGenerated ? 'opacity-75' : ''}>{currentLabel}</span>
+          <div className={`w-2.5 h-2.5 rounded-full ${currentColor} transition-all duration-300`} />
+          <span className="tracking-wide">{currentLabel}</span>
           {typeGenerated && (
-            <span className="text-primary-foreground text-[10px] font-medium px-1 py-0.5 rounded">AI</span>
+            <span className="text-[10px] font-medium text-primary/80 bg-primary/10 px-1.5 py-0.5 rounded-full">AI</span>
           )}
           {isSyncing && (
-            <span className="text-primary-foreground text-[10px] font-medium px-1 py-0.5 rounded animate-pulse">...</span>
+            <span className="text-[10px] font-medium text-muted-foreground/60 animate-pulse">•••</span>
           )}
-          <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`w-3 h-3 transition-all duration-300 ${isOpen ? 'rotate-180 text-foreground' : 'text-muted-foreground/60'}`} />
         </button>
       </div>
       
-      {/* Portal the dropdown to body to avoid clipping */}
+      {/* Beautiful minimalist dropdown */}
       {typeof window !== 'undefined' && isOpen && (
         createPortal(
           <div
             ref={dropdownRef}
-            className="fixed w-64 border border-border rounded-lg shadow-lg z-[9999] backdrop-blur-sm bg-background"
+            className="fixed w-72 border border-border/50 rounded-xl shadow-2xl z-[9999] backdrop-blur-md bg-background/95 overflow-hidden"
             style={{
               top: `${dropdownPosition.top}px`,
               right: `${dropdownPosition.right}px`,
             }}
           >
-            <div className="p-1">
-              {Object.entries(TYPE_LABELS).map(([type, { label, description }]) => (
+            <div className="p-2 space-y-1">
+              {Object.entries(TYPE_LABELS).map(([type, { label, description, color }]) => (
                 <button
                   key={type}
                   onMouseDown={(e) => {
@@ -175,17 +173,21 @@ export function TypeSelector({ noteId, userId, currentType, typeGenerated, onTyp
                     e.stopPropagation();
                     handleTypeSelect(type as NoteType);
                   }}
-                  className={`w-full text-left p-3 rounded-md transition-all duration-200 group border border-transparent
-                    ${type === optimisticType ?
-                      (type === 'task_checklist' ? 'text-primary-foreground dark:text-primary-foreground bg-primary dark:bg-primary' :
-                       type === 'content_script' ? 'text-accent-foreground dark:text-accent-foreground bg-accent dark:bg-accent' :
-                       'text-primary bg-primary/10')
-                    :
-                      'text-foreground hover:bg-primary/10 hover:text-primary'}
+                  className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all duration-300 group border border-transparent hover:scale-[1.01] hover:bg-muted/60
+                    ${type === optimisticType
+                      ? 'bg-muted/80 text-foreground border-border/40'
+                      : 'text-muted-foreground hover:text-foreground'
+                    }
                   `}
                 >
-                  <div className="font-medium text-sm">{label}</div>
-                  <div className="text-xs text-gray-600 dark:text-muted-foreground mt-0.5 group-hover:text-gray-800 dark:group-hover:text-muted-foreground/80">{description}</div>
+                  <div className={`w-3 h-3 rounded-full ${color} transition-all duration-300 group-hover:scale-110`} />
+                  <div className="flex-1 text-left">
+                    <div className="font-medium text-sm tracking-tight">{label}</div>
+                    <div className="text-xs text-muted-foreground/70 mt-0.5 leading-tight">{description}</div>
+                  </div>
+                  {type === optimisticType && (
+                    <div className="w-2 h-2 rounded-full bg-primary/60" />
+                  )}
                 </button>
               ))}
             </div>
@@ -197,43 +199,14 @@ export function TypeSelector({ noteId, userId, currentType, typeGenerated, onTyp
   );
 }
 
-// Update MinimalTypeDisplay to use correct text color for yellow in dark mode and purple in light mode
+// Minimal and beautiful type display for metadata
 export function MinimalTypeDisplay({ currentType }: { currentType: NoteType }) {
-  const TYPE_COLORS: Record<NoteType, string> = {
-    idea_bank: 'bg-red-500',
-    content_script: 'bg-accent',
-    collaboration_note: 'bg-green-500',
-    analytics_insight: 'bg-pink-500',
-    reflection_journal: 'bg-blue-500',
-    task_checklist: 'bg-primary',
-    email_draft: 'bg-orange-500'
-  };
-
-  const TYPE_LABELS: Record<NoteType, string> = {
-    idea_bank: 'Ideas',
-    content_script: 'Writing',
-    collaboration_note: 'People',
-    analytics_insight: 'Insights',
-    reflection_journal: 'Reflection',
-    task_checklist: 'Tasks',
-    email_draft: 'Messages'
-  };
-
-  // Set text color for yellow in dark mode and purple in light mode
-  let textClass = 'text-muted-foreground font-medium';
-  if (currentType === 'task_checklist') {
-    textClass = 'text-primary font-medium';
-  } else if (currentType === 'content_script') {
-    textClass = 'text-accent font-medium';
-  }
-
-  const colorClass = TYPE_COLORS[currentType] || 'bg-gray-500';
-  const label = TYPE_LABELS[currentType] || 'Unknown';
+  const typeInfo = TYPE_LABELS[currentType] || { label: 'Unknown', color: 'bg-gray-500/80' };
 
   return (
     <div className="flex items-center gap-1.5">
-      <div className={`w-2 h-2 rounded-full ${colorClass}`}></div>
-      <span className={`text-xs ${textClass}`}>{label}</span>
+      <div className={`w-2 h-2 rounded-full ${typeInfo.color} transition-all duration-300`} />
+      <span className="text-xs font-medium text-muted-foreground/80 tracking-wide">{typeInfo.label}</span>
     </div>
   );
 } 

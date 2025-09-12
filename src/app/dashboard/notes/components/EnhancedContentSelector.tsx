@@ -7,18 +7,8 @@ import { useAuth } from '@/app/context/auth-context';
 import { useContentResolver } from '@/lib/content-resolver';
 import { 
   FileText, 
-  Youtube, 
-  Instagram, 
-  Mail,
   Search, 
   X, 
-  ExternalLink,
-  Play,
-  Image as ImageIcon,
-  Video,
-  Users,
-  Eye,
-  Heart,
   MessageCircle,
   Lightbulb
 } from 'lucide-react';
@@ -27,23 +17,13 @@ import { cn } from '@/lib/utils';
 interface LinkableContent {
   id: string;
   title: string;
-  type: 'note' | 'youtube' | 'instagram' | 'gmail' | 'insight';
+  type: 'note' | 'insight';
   contentType: string;
   platform: string;
   createdAt: number;
   important?: boolean;
   tags: string[];
   analysis?: any;
-  // YouTube specific
-  thumbnailUrl?: string;
-  statistics?: any;
-  // Instagram specific
-  mediaUrl?: string;
-  insights?: any;
-  // Gmail specific
-  from?: string;
-  messageCount?: number;
-  category?: string;
 }
 
 interface EnhancedContentSelectorProps {
@@ -69,7 +49,7 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
 }) => {
   const { firebaseUser } = useAuth();
   const userId = firebaseUser?.uid;
-  const [selectedPlatform, setSelectedPlatform] = useState<'all' | 'smart-notes' | 'youtube' | 'instagram' | 'gmail' | 'insights'>('all');
+  const [selectedPlatform, setSelectedPlatform] = useState<'all' | 'smart-notes' | 'insights'>('all');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Add error boundary for Convex queries
@@ -120,12 +100,6 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
         switch (selectedPlatform) {
           case 'smart-notes':
             return content.platform === 'smart-notes' || content.type === 'note';
-          case 'youtube':
-            return content.platform === 'youtube' || content.type === 'youtube';
-          case 'instagram':
-            return content.platform === 'instagram' || content.type === 'instagram';
-          case 'gmail':
-            return content.platform === 'gmail' || content.type === 'gmail';
           case 'insights':
             return content.platform === 'insights' || content.type === 'insight';
           default:
@@ -404,13 +378,10 @@ export const EnhancedContentSelector: React.FC<EnhancedContentSelectorProps> = (
 
       {/* Platform Filter */}
       <div className="p-3 border-b border-border">
-        <div className="grid grid-cols-6 gap-1">
+        <div className="grid grid-cols-3 gap-1">
           {[
             { key: 'all', label: 'All', icon: <FileText className="w-3 h-3" /> },
             { key: 'smart-notes', label: 'Notes', icon: <FileText className="w-3 h-3" /> },
-            { key: 'youtube', label: 'YouTube', icon: <Youtube className="w-3 h-3" /> },
-            { key: 'instagram', label: 'Instagram', icon: <Instagram className="w-3 h-3" /> },
-            { key: 'gmail', label: 'Gmail', icon: <Mail className="w-3 h-3" /> },
             { key: 'insights', label: 'Insights', icon: <Lightbulb className="w-3 h-3" /> }
           ].map(({ key, label, icon }) => (
             <button

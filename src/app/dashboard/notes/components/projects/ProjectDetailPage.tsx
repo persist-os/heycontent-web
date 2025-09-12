@@ -10,7 +10,7 @@ import { useNotes } from '@/app/context/notes-context';
 import { Id } from '@/convex/_generated/dataModel';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Trash2, Plus } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Plus, Folder } from 'lucide-react';
 import { UnifiedContentSelector } from '@/components/ui/UnifiedContentSelector';
 import { ProjectItemsGrid } from './ProjectItemsGrid';
 import { EditProjectModal } from './EditProjectModal';
@@ -195,41 +195,55 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
   if (isLoading) {
     return (
       <div className="flex flex-col h-full">
-        {/* Header Skeleton */}
-        <div className="flex items-center justify-between p-6 border-b">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-8 bg-muted rounded animate-pulse"></div>
-            <div>
-              <div className="w-48 h-8 bg-muted rounded animate-pulse mb-2"></div>
-              <div className="w-72 h-4 bg-muted rounded animate-pulse mb-2"></div>
-              <div className="w-32 h-3 bg-muted rounded animate-pulse"></div>
+        {/* Elegant loading header */}
+        <div className="px-6 pt-8 pb-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-end">
+              <div className="lg:col-span-2">
+                <div className="flex items-baseline gap-6 mb-2">
+                  <div className="w-24 h-4 bg-muted/30 rounded animate-pulse"></div>
+                  <div className="h-px bg-gradient-to-r from-border/20 to-transparent flex-1 mb-3" />
+                </div>
+                <div className="w-80 h-12 bg-muted/30 rounded animate-pulse mb-3"></div>
+                <div className="w-96 h-5 bg-muted/20 rounded animate-pulse ml-2"></div>
+                <div className="flex items-center gap-6 mt-4 ml-2">
+                  <div className="w-16 h-4 bg-muted/20 rounded animate-pulse"></div>
+                  <div className="w-px h-4 bg-border/20"></div>
+                  <div className="w-24 h-4 bg-muted/20 rounded animate-pulse"></div>
+                </div>
+              </div>
+              <div className="flex flex-col items-start lg:items-end gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-20 h-4 bg-muted/20 rounded animate-pulse"></div>
+                  <div className="w-24 h-4 bg-muted/20 rounded animate-pulse"></div>
+                  <div className="w-16 h-4 bg-muted/20 rounded animate-pulse"></div>
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-24 h-8 bg-muted rounded animate-pulse"></div>
-            <div className="w-16 h-8 bg-muted rounded animate-pulse"></div>
-            <div className="w-20 h-8 bg-muted rounded animate-pulse"></div>
           </div>
         </div>
 
-        {/* Content Skeleton */}
-        <div className="flex-1 p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="bg-background border border-border rounded-lg p-4">
-                <div className="flex items-start gap-3 mb-3">
-                  <div className="w-8 h-8 bg-muted rounded-lg animate-pulse"></div>
-                  <div className="flex-1">
-                    <div className="w-32 h-4 bg-muted rounded animate-pulse mb-2"></div>
-                    <div className="w-24 h-3 bg-muted rounded animate-pulse"></div>
+        {/* Elegant content skeleton */}
+        <div className="flex-1 overflow-auto px-6">
+          <div className="max-w-7xl mx-auto pb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="bg-background/50 border border-border/30 rounded-2xl p-6 hover:bg-background/80 transition-colors">
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className="w-10 h-10 bg-muted/30 rounded-xl animate-pulse"></div>
+                    <div className="flex-1">
+                      <div className="w-32 h-4 bg-muted/30 rounded animate-pulse mb-2"></div>
+                      <div className="w-24 h-3 bg-muted/20 rounded animate-pulse"></div>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="w-full h-3 bg-muted/20 rounded animate-pulse"></div>
+                    <div className="w-3/4 h-3 bg-muted/20 rounded animate-pulse"></div>
+                    <div className="w-1/2 h-3 bg-muted/20 rounded animate-pulse"></div>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <div className="w-full h-3 bg-muted rounded animate-pulse"></div>
-                  <div className="w-3/4 h-3 bg-muted rounded animate-pulse"></div>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -238,13 +252,24 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
 
   if (!project) {
     return (
-      <div className="flex flex-col items-center justify-center h-64">
-        <h2 className="text-lg font-semibold text-foreground mb-2">Project not found</h2>
-        <p className="text-muted-foreground mb-4">The project you're looking for doesn't exist or you don't have access to it.</p>
-        <Button onClick={handleBack} variant="outline">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Go Back
-        </Button>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
+        <div className="text-center max-w-md">
+          <div className="w-20 h-20 mx-auto mb-8 rounded-full bg-gradient-to-br from-muted/20 to-muted/5 flex items-center justify-center">
+            <Folder className="w-8 h-8 text-muted-foreground/40" />
+          </div>
+          <h2 className="text-2xl font-light tracking-tight text-foreground mb-4">
+            Project not found
+          </h2>
+          <p className="text-muted-foreground/70 font-light leading-relaxed mb-8">
+            This project may have been moved, deleted, or you might not have the necessary permissions to access it.
+          </p>
+          <button
+            onClick={handleBack}
+            className="text-foreground hover:text-muted-foreground transition-colors text-sm font-light tracking-wide border-b border-border/30 hover:border-foreground pb-1"
+          >
+            ← Return to Notes
+          </button>
+        </div>
       </div>
     );
   }
@@ -257,68 +282,93 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between p-6 border-b">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={handleBack}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">{project.name}</h1>
-            {project.description && (
-              <p className="text-muted-foreground mt-1">{project.description}</p>
-            )}
-            <p className="text-sm text-muted-foreground mt-2">
-              {itemCount} item{itemCount !== 1 ? 's' : ''} • Created {new Date(project.createdAt).toLocaleDateString()}
-            </p>
+      {/* Anti-corporate header with asymmetric layout */}
+      <div className="px-6 pt-8 pb-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-end">
+            <div className="lg:col-span-2">
+              <div className="flex items-baseline gap-6 mb-2">
+                <button
+                  onClick={handleBack}
+                  className="text-muted-foreground/60 hover:text-foreground transition-colors text-sm font-light tracking-wide"
+                >
+                  ← Back to Notes
+                </button>
+                <div className="h-px bg-gradient-to-r from-border/50 to-transparent flex-1 mb-3" />
+              </div>
+              <h1 className="text-4xl lg:text-5xl font-light tracking-tight text-foreground mb-3">
+                {project.name}
+              </h1>
+              {project.description && (
+                <h2 className="text-lg font-light text-muted-foreground ml-2 tracking-wide leading-relaxed">
+                  {project.description}
+                </h2>
+              )}
+              <div className="flex items-center gap-6 mt-4 ml-2 text-sm text-muted-foreground/70">
+                <span className="font-light">
+                  {itemCount} item{itemCount !== 1 ? 's' : ''}
+                </span>
+                <span className="w-px h-4 bg-border/30" />
+                <span className="font-light">
+                  Created {new Date(project.createdAt).toLocaleDateString()}
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-col items-start lg:items-end gap-4">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowAttachmentPanel(true)}
+                  className="text-sm font-light text-muted-foreground hover:text-foreground transition-colors tracking-wide"
+                >
+                  Add Items
+                </button>
+                <button
+                  onClick={handleEdit}
+                  className="text-sm font-light text-muted-foreground hover:text-foreground transition-colors tracking-wide"
+                >
+                  Edit Project
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="text-sm font-light text-destructive/70 hover:text-destructive transition-colors tracking-wide"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowAttachmentPanel(true)}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Items
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleEdit}>
-            <Edit className="w-4 h-4 mr-2" />
-            Edit
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleDelete}
-            className="hover:bg-destructive hover:text-destructive-foreground"
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            Delete
-          </Button>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-auto">
-        {itemCount === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full p-8">
-            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-              <Plus className="w-8 h-8 text-muted-foreground" />
+      {/* Content with elegant spacing */}
+      <div className="flex-1 overflow-auto px-6">
+        <div className="max-w-7xl mx-auto">
+          {itemCount === 0 ? (
+            <div className="flex flex-col items-center justify-center min-h-[50vh] py-16">
+              <div className="text-center max-w-md">
+                <div className="w-24 h-24 mx-auto mb-8 rounded-full bg-gradient-to-br from-muted/30 to-muted/10 flex items-center justify-center">
+                  <Plus className="w-10 h-10 text-muted-foreground/50" />
+                </div>
+                <h3 className="text-2xl font-light tracking-tight text-foreground mb-4">
+                  Empty canvas awaits
+                </h3>
+                <p className="text-muted-foreground/70 font-light leading-relaxed mb-8">
+                  Transform this space by weaving together your notes, conversations, and creative content into a unified narrative.
+                </p>
+                <button
+                  onClick={() => setShowAttachmentPanel(true)}
+                  className="text-foreground hover:text-muted-foreground transition-colors text-sm font-light tracking-wide border-b border-border/30 hover:border-foreground pb-1"
+                >
+                  Begin composing →
+                </button>
+              </div>
             </div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">No items yet</h3>
-            <p className="text-muted-foreground mb-6 text-center max-w-md">
-              Start organizing your content by adding notes, conversations, and other items to this project.
-            </p>
-            <Button onClick={() => setShowAttachmentPanel(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Your First Item
-            </Button>
-          </div>
-        ) : (
-          <ProjectItemsGrid project={project} />
-        )}
+          ) : (
+            <div className="pb-8">
+              <ProjectItemsGrid project={project} />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Attachment Panel */}
@@ -345,18 +395,29 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
         />
       )}
 
-      {/* Floating Create Note Button */}
+      {/* Elegant floating create button */}
       <button
         onClick={handleCreateNote}
         disabled={isCreatingNote}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors flex items-center justify-center shadow-lg hover:shadow-xl z-50 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
+        className="fixed bottom-8 right-8 group z-50 disabled:opacity-50 disabled:cursor-not-allowed"
         title={isCreatingNote ? "Creating note..." : "Create new note in project"}
       >
-        {isCreatingNote ? (
-          <div className="w-6 h-6 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
-        ) : (
-          <Plus className="w-6 h-6" />
-        )}
+        <div className="relative">
+          {/* Subtle backdrop blur effect */}
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm rounded-2xl border border-border/40 shadow-lg group-hover:shadow-xl group-hover:border-border/60 transition-all duration-300" />
+          
+          {/* Button content */}
+          <div className="relative px-4 py-3 flex items-center gap-2">
+            {isCreatingNote ? (
+              <div className="w-4 h-4 border-2 border-foreground/30 border-t-foreground rounded-full animate-spin" />
+            ) : (
+              <Plus className="w-4 h-4 text-foreground/70 group-hover:text-foreground transition-colors" />
+            )}
+            <span className="text-sm font-light text-foreground/70 group-hover:text-foreground transition-colors tracking-wide">
+              New Note
+            </span>
+          </div>
+        </div>
       </button>
     </div>
   );

@@ -348,166 +348,245 @@ export function NotesGrid({
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex flex-col h-full">
-        {/* Header */}
-        <CentralizedHeader
-          title="Smart Notes"
-          showSelfTab={true}
-          showHelp={true}
-          variant="elevated"
-        />
-
-        {/* Prominent Search Bar */}
-        <div className="mb-6 px-4 mt-8">
-          <div className="relative max-w-2xl mx-auto">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder={showingAll ? "Search notes and projects..." : showingProjectsOnly ? "Search projects..." : "Search notes..."}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-base bg-white dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-full text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors"
-            />
+      <div className="flex flex-col min-h-full">
+        {/* Asymmetric Header with breathing space - mobile optimized */}
+        <div className="px-4 sm:px-6 pt-6 sm:pt-8 pb-4 sm:pb-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8 items-end">
+              <div className="lg:col-span-2">
+                <div className="flex items-baseline gap-3 sm:gap-6 mb-2">
+                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-light tracking-tight text-foreground">
+                    Smart Notes
+                  </h1>
+                  <div className="h-px bg-gradient-to-r from-border/50 to-transparent flex-1 mb-2 sm:mb-3" />
+                </div>
+                <h2 className="text-base sm:text-lg font-light text-muted-foreground ml-1 sm:ml-2 tracking-wide">
+                  AI-enhanced thoughts and ideas
+                </h2>
+              </div>
+              <div className="flex flex-col items-start lg:items-end gap-2 sm:gap-4">
+                <div className="text-sm font-light text-muted-foreground">
+                  {totalItems} {totalItems === 1 ? 'item' : 'items'}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Type filter buttons */}
-        <div className="flex flex-wrap gap-2 justify-center mb-4">
-          {noteTypes.map((type) => (
-            <button
-              key={type.key}
-              onClick={() => setSelectedTypeFilter(type.key as any)}
-              className={cn(
-                "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-full transition-colors",
-                selectedTypeFilter === type.key
-                  ? "bg-background text-foreground shadow-sm border-2 border-primary"
-                  : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
-              )}
-              {...(type.key === 'projects' && { 'data-projects-filter': true })}
-            >
-              <div className={cn("w-2 h-2 rounded-full", type.color)}></div>
-              {type.label}
-            </button>
-          ))}
+        {/* Elegant Search Bar - mobile optimized */}
+        <div className="px-4 sm:px-6 pb-4 sm:pb-6">
+          <div className="max-w-2xl mx-auto">
+            <div className="relative">
+              <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground/50 w-4 h-4" />
+              <input
+                type="text"
+                placeholder={showingAll ? "Search your thoughts..." : showingProjectsOnly ? "Find projects..." : "Discover notes..."}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 sm:pl-12 pr-4 sm:pr-6 py-3 sm:py-3.5 text-sm sm:text-base bg-background/50 backdrop-blur-sm border-0 border-b border-border/30 text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary/50 transition-all duration-300 focus:bg-background/80 touch-manipulation"
+              />
+            </div>
+          </div>
         </div>
 
-        {/* Tag filter pills */}
-        {topTags.length > 0 && (
-          <div className="px-4 mb-6">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <span className="text-xs text-muted-foreground font-medium">Popular Tags:</span>
-              {selectedTagFilter && (
+        {/* Typography-focused filter navigation - mobile optimized */}
+        <div className="px-4 sm:px-6 pb-6 sm:pb-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center gap-4 sm:gap-8 border-b border-border/20 pb-4 overflow-x-auto scrollbar-none">
+              {noteTypes.map((type, index) => (
                 <button
-                  onClick={clearTagFilter}
-                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                >
-                  <X className="w-3 h-3" />
-                  Clear
-                </button>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-1 justify-center max-w-4xl mx-auto">
-              {topTags.map(({ tag, count }) => (
-                <button
-                  key={tag}
-                  onClick={() => handleTagFilter(tag)}
+                  key={type.key}
+                  onClick={() => setSelectedTypeFilter(type.key as any)}
                   className={cn(
-                    "flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors",
-                    selectedTagFilter === tag
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted/80"
+                    "relative pb-4 px-2 text-sm font-medium transition-all duration-300 hover:scale-[1.02] whitespace-nowrap touch-manipulation",
+                    selectedTypeFilter === type.key
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground/70"
                   )}
+                  {...(type.key === 'projects' && { 'data-projects-filter': true })}
                 >
-                  <span>{tag}</span>
-                  <span className="text-xs opacity-70">({count})</span>
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className={cn(
+                      "w-1.5 h-1.5 rounded-full transition-all duration-300",
+                      selectedTypeFilter === type.key ? type.color : "bg-muted-foreground/30"
+                    )} />
+                    <span className="tracking-wide text-xs sm:text-sm">{type.label}</span>
+                  </div>
+                  {selectedTypeFilter === type.key && (
+                    <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-foreground to-transparent" />
+                  )}
                 </button>
               ))}
             </div>
           </div>
-        )}
+        </div>
 
-        {/* Content Grid */}
-        {totalItems === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-              {showingProjectsOnly ? <Folder className="w-8 h-8 text-muted-foreground" /> : <Plus className="w-8 h-8 text-muted-foreground" />}
-            </div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">
-              {searchTerm || (selectedTypeFilter !== 'all' && selectedTypeFilter !== 'projects') || selectedTagFilter
-                ? `No ${showingProjectsOnly ? 'projects' : showingAll ? 'items' : 'notes'} found` 
-                : showingProjectsOnly 
-                ? 'No projects yet'
-                : showingAll
-                ? 'No notes or projects yet'
-                : 'No notes yet'
-              }
-            </h3>
-            <p className="text-muted-foreground mb-4 max-w-md">
-              {searchTerm || (selectedTypeFilter !== 'all' && selectedTypeFilter !== 'projects') || selectedTagFilter
-                ? "Try adjusting your search, filters, or tags to find what you're looking for."
-                : showingProjectsOnly 
-                ? 'Create your first project to start organizing your notes, conversations, and content together.'
-                : showingAll
-                ? 'Start organizing your thoughts and ideas. Create your first note or project to get started.'
-                : 'Start organizing your thoughts, ideas, and insights. Create your first note to get started.'
-              }
-            </p>
-            <button
-              onClick={handleCreateNote}
-              disabled={isCreatingNote}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground dark:text-black rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isCreatingNote ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4" />
-                  Create Your First {showingProjectsOnly ? 'Project' : showingAll ? 'Item' : 'Note'}
-                </>
-              )}
-            </button>
-          </div>
-        ) : (
-          <div className="flex-1 overflow-auto scrollbar-none">
-            <div className="px-4">
-              <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 gap-4 pb-6">
-                {showingAll 
-                  ? allItems.map((item) => (
-                      <div key={`${getItemType(item)}-${String(item._id)}`} className="break-inside-avoid mb-4 w-full">
-                        {renderItemCard(item)}
-                      </div>
-                    ))
-                  : showingProjectsOnly 
-                  ? filteredProjects.map((project) => (
-                      <div key={String(project._id)} className="break-inside-avoid mb-4 w-full">
-                        {renderItemCard(project)}
-                      </div>
-                    ))
-                  : filteredNotes.map((note) => (
-                      <div key={String(note._id)} className="break-inside-avoid mb-4 w-full">
-                        {renderItemCard(note)}
-                      </div>
-                    ))
-                }
+        {/* Subtle tag exploration */}
+        {topTags.length > 0 && (
+          <div className="px-6 pb-8">
+            <div className="max-w-5xl mx-auto">
+              <div className="flex items-center gap-4 mb-4">
+                <h3 className="text-sm font-light text-muted-foreground tracking-wide">
+                  Explore by topic
+                </h3>
+                <div className="h-px bg-gradient-to-r from-border/30 to-transparent flex-1" />
+                {selectedTagFilter && (
+                  <button
+                    onClick={clearTagFilter}
+                    className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors duration-200"
+                  >
+                    <X className="w-3 h-3" />
+                    Clear filter
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2 justify-start">
+                {topTags.slice(0, 12).map(({ tag, count }) => (
+                  <button
+                    key={tag}
+                    onClick={() => handleTagFilter(tag)}
+                    className={cn(
+                      "group flex items-center gap-2 px-3 py-1.5 text-xs font-light rounded-full transition-all duration-300 hover:scale-[1.02]",
+                      selectedTagFilter === tag
+                        ? "bg-primary/10 text-primary border border-primary/20"
+                        : "bg-muted/30 text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-transparent"
+                    )}
+                  >
+                    <span className="tracking-wide">{tag}</span>
+                    <span className={cn(
+                      "text-xs transition-opacity duration-200",
+                      selectedTagFilter === tag ? "opacity-70" : "opacity-50 group-hover:opacity-70"
+                    )}>
+                      {count}
+                    </span>
+                  </button>
+                ))}
               </div>
             </div>
           </div>
         )}
 
-        {/* Floating Create Button */}
+        {/* Content with asymmetric masonry layout */}
+        {totalItems === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-center px-6 py-16">
+            <div className="max-w-md mx-auto space-y-6">
+              <div className="w-20 h-20 bg-muted/50 rounded-2xl flex items-center justify-center">
+                {showingProjectsOnly ? <Folder className="w-10 h-10 text-muted-foreground/60" /> : <Plus className="w-10 h-10 text-muted-foreground/60" />}
+              </div>
+              <div className="space-y-3">
+                <h3 className="text-2xl font-light text-foreground tracking-tight">
+                  {searchTerm || (selectedTypeFilter !== 'all' && selectedTypeFilter !== 'projects') || selectedTagFilter
+                    ? `Nothing found` 
+                    : showingProjectsOnly 
+                    ? 'Your first project awaits'
+                    : showingAll
+                    ? 'Begin your creative journey'
+                    : 'Start capturing ideas'
+                  }
+                </h3>
+                <p className="text-muted-foreground font-light leading-relaxed">
+                  {searchTerm || (selectedTypeFilter !== 'all' && selectedTypeFilter !== 'projects') || selectedTagFilter
+                    ? "Try a different search term or adjust your filters to discover content."
+                    : showingProjectsOnly 
+                    ? 'Organize your notes, conversations, and content into meaningful projects.'
+                    : showingAll
+                    ? 'Transform your thoughts into organized, AI-enhanced notes and projects.'
+                    : 'Capture insights, ideas, and inspirations with AI-powered organization.'
+                  }
+                </p>
+              </div>
+              <button
+                onClick={handleCreateNote}
+                disabled={isCreatingNote}
+                className="inline-flex items-center gap-3 px-6 py-3 bg-primary/10 text-primary border border-primary/20 rounded-xl hover:bg-primary/20 hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-light tracking-wide"
+              >
+                {isCreatingNote ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    Create {showingProjectsOnly ? 'Project' : showingAll ? 'Something New' : 'Note'}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 pb-24">
+            <div className="px-6">
+              <div className="max-w-7xl mx-auto">
+                {/* Asymmetric masonry grid with staggered layout */}
+                <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 gap-6">
+                  {showingAll 
+                    ? allItems.map((item, index) => (
+                        <div 
+                          key={`${getItemType(item)}-${String(item._id)}`} 
+                          className={cn(
+                            "break-inside-avoid mb-6 w-full transition-all duration-300 ease-out",
+                            // Staggered animation delays
+                            "animate-in fade-in slide-in-from-bottom-4",
+                            // Subtle offset for visual interest
+                            index % 5 === 1 && "sm:mt-4",
+                            index % 5 === 3 && "sm:mt-2 lg:mt-6",
+                            // Animation delay classes
+                            index < 10 && `[animation-delay:${Math.min(index * 50, 500)}ms] [animation-fill-mode:both]`
+                          )}
+                        >
+                          {renderItemCard(item)}
+                        </div>
+                      ))
+                    : showingProjectsOnly 
+                    ? filteredProjects.map((project, index) => (
+                        <div 
+                          key={String(project._id)} 
+                          className={cn(
+                            "break-inside-avoid mb-6 w-full transition-all duration-300 ease-out",
+                            "animate-in fade-in slide-in-from-bottom-4",
+                            index % 4 === 1 && "sm:mt-4",
+                            index % 4 === 2 && "lg:mt-6",
+                            // Animation delay classes
+                            index < 10 && `[animation-delay:${Math.min(index * 50, 500)}ms] [animation-fill-mode:both]`
+                          )}
+                        >
+                          {renderItemCard(project)}
+                        </div>
+                      ))
+                    : filteredNotes.map((note, index) => (
+                        <div 
+                          key={String(note._id)} 
+                          className={cn(
+                            "break-inside-avoid mb-6 w-full transition-all duration-300 ease-out",
+                            "animate-in fade-in slide-in-from-bottom-4",
+                            index % 6 === 2 && "sm:mt-3",
+                            index % 6 === 4 && "lg:mt-5",
+                            // Animation delay classes
+                            index < 10 && `[animation-delay:${Math.min(index * 50, 500)}ms] [animation-fill-mode:both]`
+                          )}
+                        >
+                          {renderItemCard(note)}
+                        </div>
+                      ))
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Elegant floating create button */}
         <button
           onClick={handleCreateNote}
           disabled={isCreatingNote}
-          className="fixed bottom-6 right-6 w-14 h-14 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors flex items-center justify-center shadow-lg hover:shadow-xl z-50 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
+          className="fixed bottom-8 right-8 w-16 h-16 bg-primary/90 text-primary-foreground rounded-2xl backdrop-blur-sm hover:bg-primary hover:scale-[1.05] transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-xl z-50 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation border border-primary/20"
           title={isCreatingNote ? "Creating..." : "Create new item"}
         >
           {isCreatingNote ? (
-            <div className="w-6 h-6 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-5 h-5 border-2 border-primary-foreground/80 border-t-transparent rounded-full animate-spin"></div>
           ) : (
-            <Plus className="w-6 h-6 text-white dark:text-black" />
+            <Plus className="w-6 h-6" />
           )}
         </button>
 

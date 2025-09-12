@@ -37,7 +37,7 @@ const TRANSITION_DURATION = 0.2 // seconds, increased for a smoother feel
 const MOBILE_BREAKPOINT = 640 // sm breakpoint
 
 export function useNotepadUI(): UseNotepadUIResult {
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(true)
   const [width, setWidth] = useState(DEFAULT_WIDTH)
   
   // Mobile tab bar state
@@ -61,7 +61,7 @@ export function useNotepadUI(): UseNotepadUIResult {
 
   const toggleNotepad = useCallback(() => {
     if (isMobile) {
-      // On mobile, toggle between chat and notes tabs
+      // On mobile, toggle between chat and notes
       setActiveTab(prev => prev === 'chat' ? 'notes' : 'chat')
       // Clear badge when user manually switches to notes
       if (activeTab === 'chat') {
@@ -108,7 +108,7 @@ export function useNotepadUI(): UseNotepadUIResult {
   const saveScrollPosition = useCallback((tab: 'chat' | 'notes', position: number) => {
     if (tab === 'chat') {
       setChatScrollPosition(position)
-    } else {
+    } else if (tab === 'notes') {
       setNotepadScrollPosition(position)
     }
   }, [])

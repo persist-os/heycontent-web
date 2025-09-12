@@ -7,78 +7,38 @@ interface BottomBarActionsProps {
 }
 
 export const BottomBarActions: React.FC<BottomBarActionsProps> = ({ onActionClick, onInputPopulate }) => {
-  // Always use onActionClick to auto-send messages
-  const handleActionClick = onActionClick;
-  
   return (
     <>
-      {/* CSS to hide scrollbar and add fade effects */}
       <style dangerouslySetInnerHTML={{
         __html: `
-          .hide-scrollbar {
-            scrollbar-width: none; /* Firefox */
-            -ms-overflow-style: none; /* Internet Explorer 10+ */
+          .action-scroll {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
           }
-          
-          .hide-scrollbar::-webkit-scrollbar {
-            display: none; /* Safari and Chrome */
-          }
-
-          .fade-edges {
-            position: relative;
-          }
-
-          .fade-edges::before,
-          .fade-edges::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 40px;
-            pointer-events: none;
-            z-index: 1;
-          }
-
-          .fade-edges::before {
-            left: 0;
-            background: linear-gradient(to right, white, transparent);
-          }
-
-          .fade-edges::after {
-            right: 0;
-            background: linear-gradient(to left, white, transparent);
-          }
-
-          /* Dark mode fade effects */
-          .dark .fade-edges::before {
-            background: linear-gradient(to right, hsl(var(--background)), transparent);
-          }
-
-          .dark .fade-edges::after {
-            background: linear-gradient(to left, hsl(var(--background)), transparent);
+          .action-scroll::-webkit-scrollbar {
+            display: none;
           }
         `
       }} />
       
-      <div className="bg-background border-t border-border">
-        <div className="max-w-3xl sm:max-w-4xl mx-auto px-3 sm:px-4 py-2">
-          {/* Horizontal scrollable container with fade effects */}
-          <div className="relative fade-edges">
-            <div className="overflow-x-auto overflow-y-visible hide-scrollbar py-2">
-              <div className="flex gap-2 px-5 pb-1 items-center" style={{ minWidth: 'max-content' }}>
-                {bottomBarActions.map((action) => (
-                  <button
-                    key={action.id}
-                    onClick={() => handleActionClick(action.action)}
-                    className="flex-shrink-0 px-3 py-1.5 text-sm font-medium text-primary-foreground dark:text-black 
-                      bg-primary rounded-full transition-all duration-200 whitespace-nowrap select-none chat-font
-                      hover:bg-primary/60 focus:bg-primary/60 active:bg-primary/70
-                      dark:hover:bg-primary/80 dark:hover:text-black dark:focus:bg-primary/80 dark:focus:text-black dark:active:bg-primary/90 dark:active:text-black"
-                  >
+      <div className="bg-background py-3">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="overflow-x-auto action-scroll">
+            <div className="flex gap-3 pb-1 min-w-max">
+              {bottomBarActions.map((action) => (
+                <button
+                  key={action.id}
+                  onClick={() => onActionClick(action.action)}
+                  className="group flex-shrink-0 px-3 py-1.5 rounded-full bg-primary/5 hover:bg-primary/10 
+                    border border-primary/20 hover:border-primary/30 transition-all duration-300 
+                    hover:scale-[1.02] hover:shadow-sm"
+                >
+                  <span className="text-xs font-medium text-primary group-hover:text-primary 
+                    transition-colors duration-300 whitespace-nowrap">
                     {action.text}
-                  </button>
-                ))}
-              </div>
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
         </div>
