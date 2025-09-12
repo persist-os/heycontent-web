@@ -20,15 +20,14 @@ interface UseNotepadUIResult {
   }
   // Mobile tab bar functionality
   isMobile: boolean
-  activeTab: 'chat' | 'notes' | 'fingerprint'
+  activeTab: 'chat' | 'notes'
   chatScrollPosition: number
   notepadScrollPosition: number
-  fingerprintScrollPosition: number
   hasUnreadNotepadChanges: boolean
-  switchToTab: (tab: 'chat' | 'notes' | 'fingerprint') => void
+  switchToTab: (tab: 'chat' | 'notes') => void
   insertTextToNotepad: (text: string) => void
   clearNotepadBadge: () => void
-  saveScrollPosition: (tab: 'chat' | 'notes' | 'fingerprint', position: number) => void
+  saveScrollPosition: (tab: 'chat' | 'notes', position: number) => void
 }
 
 const DEFAULT_WIDTH = 400 // pixels
@@ -38,15 +37,14 @@ const TRANSITION_DURATION = 0.2 // seconds, increased for a smoother feel
 const MOBILE_BREAKPOINT = 640 // sm breakpoint
 
 export function useNotepadUI(): UseNotepadUIResult {
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(true)
   const [width, setWidth] = useState(DEFAULT_WIDTH)
   
   // Mobile tab bar state
   const [isMobile, setIsMobile] = useState(false)
-  const [activeTab, setActiveTab] = useState<'chat' | 'notes' | 'fingerprint'>('chat')
+  const [activeTab, setActiveTab] = useState<'chat' | 'notes'>('chat')
   const [chatScrollPosition, setChatScrollPosition] = useState(0)
   const [notepadScrollPosition, setNotepadScrollPosition] = useState(0)
-  const [fingerprintScrollPosition, setFingerprintScrollPosition] = useState(0)
   const [hasUnreadNotepadChanges, setHasUnreadNotepadChanges] = useState(false)
 
   // Detect mobile screen size
@@ -63,18 +61,8 @@ export function useNotepadUI(): UseNotepadUIResult {
 
   const toggleNotepad = useCallback(() => {
     if (isMobile) {
-      // On mobile, cycle through tabs: chat -> notes -> fingerprint -> chat
-      setActiveTab(prev => {
-        switch (prev) {
-          case 'chat':
-            return 'notes'
-          case 'notes':
-            return 'fingerprint'
-          case 'fingerprint':
-          default:
-            return 'chat'
-        }
-      })
+      // On mobile, toggle between chat and notes
+      setActiveTab(prev => prev === 'chat' ? 'notes' : 'chat')
       // Clear badge when user manually switches to notes
       if (activeTab === 'chat') {
         setHasUnreadNotepadChanges(false)
@@ -90,7 +78,7 @@ export function useNotepadUI(): UseNotepadUIResult {
     setWidth(clampedWidth)
   }, [])
 
-  const switchToTab = useCallback((tab: 'chat' | 'notes' | 'fingerprint') => {
+  const switchToTab = useCallback((tab: 'chat' | 'notes') => {
     if (isMobile) {
       setActiveTab(tab)
       // Clear badge when user switches to notes
@@ -117,13 +105,11 @@ export function useNotepadUI(): UseNotepadUIResult {
     setHasUnreadNotepadChanges(false)
   }, [])
 
-  const saveScrollPosition = useCallback((tab: 'chat' | 'notes' | 'fingerprint', position: number) => {
+  const saveScrollPosition = useCallback((tab: 'chat' | 'notes', position: number) => {
     if (tab === 'chat') {
       setChatScrollPosition(position)
     } else if (tab === 'notes') {
       setNotepadScrollPosition(position)
-    } else if (tab === 'fingerprint') {
-      setFingerprintScrollPosition(position)
     }
   }, [])
 
@@ -177,7 +163,6 @@ export function useNotepadUI(): UseNotepadUIResult {
     activeTab,
     chatScrollPosition,
     notepadScrollPosition,
-    fingerprintScrollPosition,
     hasUnreadNotepadChanges,
     switchToTab,
     insertTextToNotepad,

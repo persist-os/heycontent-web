@@ -1,5 +1,5 @@
 import { ItemType } from '../types/project';
-import { FileText, MessageSquare, Instagram, Youtube, Mail, BarChart3 } from 'lucide-react';
+import { FileText, MessageSquare, BarChart3 } from 'lucide-react';
 
 // Types
 export interface AttachableItem {
@@ -13,30 +13,6 @@ export interface AttachableItem {
 }
 
 export interface ProcessedPlatformData {
-  instagram: {
-    likes: number;
-    comments: number;
-    mediaUrl?: string;
-    caption: string;
-    timestamp?: number;
-  };
-  youtube: {
-    views: number;
-    likes: number;
-    comments: number;
-    thumbnailUrl?: string;
-    title: string;
-    duration?: string;
-    publishedAt?: number;
-  };
-  gmail: {
-    subject: string;
-    from: string;
-    snippet: string;
-    messageCount: number;
-    category: string;
-    timestamp?: number;
-  };
   analysis: {
     title: string;
     type: string;
@@ -60,16 +36,16 @@ export function extractRawId(unifiedId: string): string {
 export function convertToAttachableItems(
   notes: any[],
   conversations: any[],
-  instagramPosts: any[],
-  youtubeVideos: any[],
-  gmailContent: any[],
+  instagramPosts: any[], // Keep params for backward compatibility but won't use
+  youtubeVideos: any[], // Keep params for backward compatibility but won't use
+  gmailContent: any[], // Keep params for backward compatibility but won't use
   analysisContent: any[],
   project?: {
     noteIds?: string[];
     conversationIds?: string[];
-    instagramPostIds?: string[];
-    youtubeVideoIds?: string[];
-    gmailIds?: string[];
+    instagramPostIds?: string[]; // Keep for backward compatibility but won't use
+    youtubeVideoIds?: string[]; // Keep for backward compatibility but won't use
+    gmailIds?: string[]; // Keep for backward compatibility but won't use
     analysisIds?: string[];
   }
 ): AttachableItem[] {
@@ -105,47 +81,7 @@ export function convertToAttachableItems(
     });
   });
 
-  // Add Instagram posts
-  (instagramPosts || []).forEach(post => {
-    const fullId = String(post.id);
-    items.push({
-      id: fullId,
-      type: 'instagramPost',
-      title: post.title || 'Instagram Post',
-      preview: post.content?.substring(0, 100),
-      date: post.createdAt || 0,
-      data: post,
-      isAttached: project?.instagramPostIds?.includes(fullId) || false,
-    });
-  });
-
-  // Add YouTube videos
-  (youtubeVideos || []).forEach(video => {
-    const fullId = String(video.id);
-    items.push({
-      id: fullId,
-      type: 'youtubeVideo',
-      title: video.title || 'YouTube Video',
-      preview: video.content?.substring(0, 100),
-      date: video.createdAt || 0,
-      data: video,
-      isAttached: project?.youtubeVideoIds?.includes(fullId) || false,
-    });
-  });
-
-  // Add Gmail threads
-  (gmailContent || []).forEach(thread => {
-    const fullId = String(thread.id);
-    items.push({
-      id: fullId,
-      type: 'gmail',
-      title: thread.title || 'Gmail Thread',
-      preview: thread.content?.substring(0, 100),
-      date: thread.createdAt || 0,
-      data: thread,
-      isAttached: project?.gmailIds?.includes(fullId) || false,
-    });
-  });
+  // Social media platforms removed - no longer processing Instagram, YouTube, or Gmail content
 
   // Add analysis content
   (analysisContent || []).forEach(analysis => {
@@ -164,9 +100,6 @@ export function convertToAttachableItems(
   });
   
   console.log('=== CONTENT DEBUG ===');
-  console.log('instagramPosts:', instagramPosts?.slice(0, 2)); // First 2 items
-  console.log('youtubeVideos:', youtubeVideos?.slice(0, 2));
-  console.log('gmailContent:', gmailContent?.slice(0, 2));
   console.log('analysisContent:', analysisContent?.slice(0, 2));
   
   // Debug project data
@@ -174,7 +107,6 @@ export function convertToAttachableItems(
     console.log('=== PROJECT DEBUG ===');
     console.log('Project ID:', project._id);
     console.log('Project noteIds:', project.noteIds);
-    console.log('Project instagramPostIds:', project.instagramPostIds);
     console.log('Project analysisIds:', project.analysisIds);
   }
 
@@ -186,9 +118,6 @@ export function groupItemsByType(items: AttachableItem[]) {
   return {
     notes: items.filter(item => item.type === 'note'),
     conversations: items.filter(item => item.type === 'conversation'),
-    instagramPosts: items.filter(item => item.type === 'instagramPost'),
-    youtubeVideos: items.filter(item => item.type === 'youtubeVideo'),
-    gmail: items.filter(item => item.type === 'gmail'),
     analysis: items.filter(item => item.type === 'analysis'),
   };
 }
@@ -198,10 +127,8 @@ export function getItemIcon(type: ItemType) {
   switch (type) {
     case 'note': return FileText;
     case 'conversation': return MessageSquare;
-    case 'instagramPost': return Instagram;
-    case 'youtubeVideo': return Youtube;
-    case 'gmail': return Mail;
     case 'analysis': return BarChart3;
+    default: return FileText; // Fallback for any remaining social media types
   }
 }
 
@@ -210,10 +137,8 @@ export function getItemColor(type: ItemType) {
   switch (type) {
     case 'note': return 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900/20';
     case 'conversation': return 'text-green-600 bg-green-100 dark:bg-green-900/20';
-    case 'instagramPost': return 'text-pink-600 bg-pink-100 dark:bg-pink-900/20';
-    case 'youtubeVideo': return 'text-red-600 bg-red-100 dark:bg-red-900/20';
-    case 'gmail': return 'text-blue-600 bg-blue-100 dark:bg-blue-900/20';
     case 'analysis': return 'text-indigo-600 bg-indigo-100 dark:bg-indigo-900/20';
+    default: return 'text-gray-600 bg-gray-100 dark:bg-gray-900/20'; // Fallback for any remaining social media types
   }
 }
 
@@ -230,59 +155,12 @@ export function getSectionConfig(type: ItemType) {
     title: {
       note: 'Notes',
       conversation: 'Conversations',
-      instagramPost: 'Instagram Posts',
-      youtubeVideo: 'YouTube Videos',
-      gmail: 'Gmail Threads',
       analysis: 'Analysis Reports',
-    }[type],
+    }[type] || 'Unknown Items', // Fallback for deprecated social media types
   };
 }
 
-// Process Instagram post data
-export function processInstagramData(item: AttachableItem): ProcessedPlatformData['instagram'] {
-  const data = item.data?.data || item.data || {};
-  const insights = data.insights || {};
-  
-  return {
-    likes: insights.likes || data.like_count || data.likes || 0,
-    comments: insights.comments || data.comments_count || data.comments || 0,
-    mediaUrl: data.media_url || data.thumbnail_url || data.mediaUrl || data.thumbnailUrl,
-    caption: data.caption || item.title || '',
-    timestamp: data.timestamp || data.createdAt || item.date,
-  };
-}
-
-// Process YouTube video data
-export function processYouTubeData(item: AttachableItem): ProcessedPlatformData['youtube'] {
-  const data = item.data || {};
-  const snippet = data.snippet || {};
-  const statistics = data.statistics || {};
-  const contentDetails = data.content_details || {};
-  
-  return {
-    views: statistics.views || 0,
-    likes: statistics.likes || 0,
-    comments: statistics.comments || 0,
-    thumbnailUrl: snippet.thumbnails?.high || snippet.thumbnails?.medium || snippet.thumbnails?.default || data.thumbnailUrl,
-    title: snippet.title || item.title || 'YouTube Video',
-    duration: contentDetails.duration,
-    publishedAt: snippet.published_at || snippet.publishedAt || data.createdAt || item.date,
-  };
-}
-
-// Process Gmail thread data
-export function processGmailData(item: AttachableItem): ProcessedPlatformData['gmail'] {
-  const data = item.data || {};
-  
-  return {
-    subject: data.subject || item.title || 'No Subject',
-    from: data.from || 'Unknown Sender',
-    snippet: data.snippet || item.preview || '',
-    messageCount: data.message_count || data.messageCount || 1,
-    category: data.category || 'none',
-    timestamp: data.createdAt || item.date,
-  };
-}
+// Social media processing functions removed - no longer supporting Instagram, YouTube, Gmail
 
 // Process analysis data
 export function processAnalysisData(item: AttachableItem): ProcessedPlatformData['analysis'] {
