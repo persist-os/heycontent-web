@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { extractAuthInfo } from '@/app/lib/api-helpers-server';
+import { ConvexHttpClient } from 'convex/browser';
+import { api } from '@/convex/_generated/api';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
 
 export async function POST(
   request: Request,
@@ -76,8 +79,8 @@ export async function POST(
     });
 
     // Get the actual project name from Convex
-    let projectName = 'Creating a small OS'; // Default fallback
-    let projectDescription = 'Developing a small operating system from scratch'; // Default fallback
+    let projectName = 'New Project'; // Default fallback
+    let projectDescription = 'Project description not available'; // Default fallback
     
     try {
       const project = await convex.query(api.projectsQueries.getProjectById, {
@@ -85,10 +88,13 @@ export async function POST(
       });
       if (project) {
         projectName = project.name || projectName;
-        projectDescription = `Project: ${projectName}`;
+        projectDescription = project.description || `Project: ${projectName}`;
+        console.log(`[process-message:${requestId}] Retrieved project:`, { name: projectName, description: projectDescription });
+      } else {
+        console.warn(`[process-message:${requestId}] Project not found for ID: ${projectId}`);
       }
     } catch (error) {
-      console.warn(`[process-message:${requestId}] Could not fetch project name:`, error);
+      console.error(`[process-message:${requestId}] Could not fetch project name:`, error);
     }
 
     // Call backend: simplified flow expects backend to accept the full transcript and return a fingerprint immediately
@@ -99,7 +105,8 @@ export async function POST(
       projectDescription,
       transcriptLen: conversationTranscript.length,
       hasIdToken: !!idToken,
-      conversationPreview: conversationTranscript.slice(-3).map(msg => `${msg.role}: ${msg.content.slice(0, 100)}...`)
+      conversationPreview: conversationTranscript.slice(-3).map(msg => `${msg.role}: ${msg.content.slice(0, 100)}...`),
+      fullConversation: conversationTranscript // Log full conversation for debugging
     })
     const response = await fetch(`${BACKEND_URL}/api/v1/project-fingerprint/generate`, {
       method: 'POST',
