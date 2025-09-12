@@ -33,8 +33,8 @@ const MOMENTUM_THRESHOLD = 0.3
 export function usePanZoom(
   canvasWidth: number,
   canvasHeight: number,
-  viewportWidth: number = window.innerWidth,
-  viewportHeight: number = window.innerHeight
+  viewportWidth: number = typeof window !== 'undefined' ? window.innerWidth : 1200,
+  viewportHeight: number = typeof window !== 'undefined' ? window.innerHeight : 800
 ): UsePanZoomReturn {
   const containerRef = useRef<HTMLDivElement>(null)
   const [isInitialized, setIsInitialized] = useState(false)

@@ -48,6 +48,15 @@ export function ConstellationView() {
   // Generate constellation layout
   const layout = useConstellationLayout(projects || [])
   
+  // Debug logging
+  console.log('ConstellationView Debug:', {
+    firebaseUser: !!firebaseUser,
+    projects: projects,
+    projectsLength: projects?.length,
+    layout: layout,
+    layoutPositionsLength: layout.positions.length
+  })
+  
   // Pan and zoom functionality
   const {
     transform,
@@ -75,18 +84,34 @@ export function ConstellationView() {
 
   // Virtual rendering - only render projects visible in viewport + buffer
   const visibleProjects = useMemo(() => {
+    // Temporarily disable virtual rendering to debug
+    // TODO: Re-enable virtual rendering once issue is resolved
+    return layout.positions
+    
+    /* Original virtual rendering logic:
     const buffer = 400 // Buffer zone around viewport
     const viewportLeft = -transform.x / transform.scale - buffer
     const viewportTop = -transform.y / transform.scale - buffer
     const viewportRight = viewportLeft + (viewportSize.width / transform.scale) + (buffer * 2)
     const viewportBottom = viewportTop + (viewportSize.height / transform.scale) + (buffer * 2)
 
-    return layout.positions.filter(position => 
+    const filtered = layout.positions.filter(position => 
       position.x >= viewportLeft && 
       position.x <= viewportRight &&
       position.y >= viewportTop && 
       position.y <= viewportBottom
     )
+    
+    console.log('Virtual rendering debug:', {
+      totalPositions: layout.positions.length,
+      visiblePositions: filtered.length,
+      viewport: { viewportLeft, viewportTop, viewportRight, viewportBottom },
+      transform,
+      viewportSize
+    })
+    
+    return filtered
+    */
   }, [layout.positions, transform, viewportSize])
 
   // Handle creating a new project
@@ -133,11 +158,11 @@ export function ConstellationView() {
 
   const isLoading = projects === undefined
 
-  if (isLoading || layout.positions.length === 0) {
+  if (isLoading) {
     return <LoadingState />
   }
 
-  // Empty state
+  // Empty state - show this when we have no projects
   if (!projects || projects.length === 0) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
