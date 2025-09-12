@@ -84,7 +84,7 @@ export async function POST(
     }
 
     // Call the backend FastAPI service
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000'
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://backend.hicontent.co'
     const requestBody = {
       project_id: project_id || projectId,
       fingerprint_id,
