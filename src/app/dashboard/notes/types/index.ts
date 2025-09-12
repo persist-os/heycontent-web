@@ -1,6 +1,6 @@
 import { Id } from "@/convex/_generated/dataModel";
 
-export type NoteType = 'idea_bank' | 'content_script' | 'collaboration_note' | 'analytics_insight' | 'reflection_journal' | 'task_checklist' | 'email_draft';
+export type NoteType = 'idea_bank' | 'content_script' | 'collaboration_note' | 'analytics_insight' | 'reflection_journal' | 'task_checklist' | 'email_draft' | 'project';
 
 export interface ImageData {
   url: string;

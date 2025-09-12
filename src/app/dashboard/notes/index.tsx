@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useRef, useCallback, useMemo, useState } from 'react';
-import { NotesGrid } from './components/NotesGrid';
+import { NotesTree } from './components/NotesTree';
 import { NoteArea } from './NoteArea';
 import { useAuth } from '@/app/context/auth-context';
 import type { Id } from '@/convex/_generated/dataModel';
 import { useNotes } from '@/app/context/notes-context';
+import { useProjects } from './hooks/useProjects';
 import { Note } from './types';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { YouTubeVideoCard } from './components/YouTubeVideoCard';
@@ -13,8 +14,6 @@ import { InstagramPostCard } from './components/InstagramPostCard';
 import { GmailThreadCard } from './components/GmailThreadCard';
 import { InsightCard } from '../ai-insights/_components/InsightCard';
 import { InsightOverlay } from '@/components/content/overlays/InsightOverlay';
-
-
 import { buildNoteUpdate, validateNoteUpdate } from './NoteArea';
 
 export default function SmartNotes() {
@@ -42,6 +41,8 @@ export default function SmartNotes() {
     clearNavigationStack,
     navigationStack, // <-- add this line
   } = useNotes();
+  
+  const { projects } = useProjects(userId);
 
   // YouTube video card state
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
@@ -255,10 +256,10 @@ export default function SmartNotes() {
       type: note.type || 'idea_bank'
     }));
 
-  // If viewing a specific note, show the editor
+  // If viewing a specific note, show the editor with gentle transitions
   if (activeNote) {
     return (
-      <div className="h-screen w-full bg-background animate-in slide-in-from-right-4 duration-200">
+      <div className="h-screen w-full bg-background transition-all duration-300 ease-out">
         <NoteArea
           key={String(activeNote._id)}
           note={activeNote}
@@ -273,76 +274,82 @@ export default function SmartNotes() {
           flushRef={noteAreaFlushRef}
           forcePreview={shouldForcePreview}
         />
-        {/* YouTube Video Card */}
+        
+        {/* Content overlays with subtle animations */}
         {selectedVideoId && (
-          <YouTubeVideoCard
-            videoId={selectedVideoId}
-            onClose={async () => {
-              await flushAutosave();
-              setSelectedVideoId(null);
-              setShouldForcePreview(true);
-              setTimeout(() => setShouldForcePreview(false), 0);
-            }}
-            onOpenAnalysis={handleOpenAnalysis}
-          />
+          <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 animate-in fade-in duration-300">
+            <YouTubeVideoCard
+              videoId={selectedVideoId}
+              onClose={async () => {
+                await flushAutosave();
+                setSelectedVideoId(null);
+                setShouldForcePreview(true);
+                setTimeout(() => setShouldForcePreview(false), 0);
+              }}
+              onOpenAnalysis={handleOpenAnalysis}
+            />
+          </div>
         )}
-        {/* Instagram Post Card */}
+        
         {selectedInstagramPostId && (
-          <InstagramPostCard
-            postId={selectedInstagramPostId}
-            onClose={async () => {
-              await flushAutosave();
-              setSelectedInstagramPostId(null);
-              setShouldForcePreview(true);
-              setTimeout(() => setShouldForcePreview(false), 0);
-            }}
-            onOpenAnalysis={handleOpenAnalysis}
-          />
+          <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 animate-in fade-in duration-300">
+            <InstagramPostCard
+              postId={selectedInstagramPostId}
+              onClose={async () => {
+                await flushAutosave();
+                setSelectedInstagramPostId(null);
+                setShouldForcePreview(true);
+                setTimeout(() => setShouldForcePreview(false), 0);
+              }}
+              onOpenAnalysis={handleOpenAnalysis}
+            />
+          </div>
         )}
-        {/* Gmail Thread Card */}
+        
         {selectedGmailThreadId && (
-          <GmailThreadCard
-            threadId={selectedGmailThreadId}
-            onClose={async () => {
-              await flushAutosave();
-              setSelectedGmailThreadId(null);
-              setShouldForcePreview(true);
-              setTimeout(() => setShouldForcePreview(false), 0);
-            }}
-          />
+          <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 animate-in fade-in duration-300">
+            <GmailThreadCard
+              threadId={selectedGmailThreadId}
+              onClose={async () => {
+                await flushAutosave();
+                setSelectedGmailThreadId(null);
+                setShouldForcePreview(true);
+                setTimeout(() => setShouldForcePreview(false), 0);
+              }}
+            />
+          </div>
         )}
-        {/* Insight Card */}
+        
         {selectedInsightId && (
-          <InsightOverlay
-            insightId={selectedInsightId}
-            onClose={async () => {
-              await flushAutosave();
-              setSelectedInsightId(null);
-              setShouldForcePreview(true);
-              setTimeout(() => setShouldForcePreview(false), 0);
-            }}
-            showAnalysis={true}
-          />
+          <div className="animate-in fade-in duration-300">
+            <InsightOverlay
+              insightId={selectedInsightId}
+              onClose={async () => {
+                await flushAutosave();
+                setSelectedInsightId(null);
+                setShouldForcePreview(true);
+                setTimeout(() => setShouldForcePreview(false), 0);
+              }}
+              showAnalysis={true}
+            />
+          </div>
         )}
       </div>
     );
   }
 
-  // Show the grid view
+  // Show the tree view with clean organization
   return (
-    <div className="h-screen w-full bg-background">
-      <NotesGrid
+    <div className="min-h-screen w-full bg-background">
+      <NotesTree
         notes={notes}
+        projects={projects}
         onEditNote={handleEditNote}
         onDeleteNote={handleDeleteNote}
         onToggleImportant={handleToggleImportant}
         onUpdateNote={handleNoteUpdate}
         isLoading={notesIsLoading}
-
       />
-
-
-
     </div>
   );
 }

@@ -183,22 +183,22 @@ export default function DashboardLayout({
       
       <DashboardNav />
       
-      {/* Mobile menu button */}
+      {/* Floating Command Palette Trigger */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="fixed top-3 left-4 z-50 p-1.5 rounded-md bg-background/50 text-foreground transition-transform duration-300 md:hidden"
-        aria-label="Toggle menu"
+        className="fixed top-6 left-6 z-40 group p-3"
+        aria-label="Open command palette"
+        title="Open command palette (⌘K)"
       >
-        <Menu className="w-5 h-5" />
-      </button>
-      
-      {/* Desktop menu button */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="fixed top-3 left-4 z-50 p-1.5 rounded-md bg-background/50 text-foreground transition-transform duration-300 hidden md:block"
-        aria-label="Toggle menu"
-      >
-        <Menu className="w-5 h-5" />
+        <div className="relative">
+          {/* Subtle backdrop blur effect */}
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm rounded-xl border border-border/40 shadow-lg group-hover:shadow-xl group-hover:border-border/60 transition-all duration-300" />
+
+          {/* Button content */}
+          <div className="relative w-6 h-6 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+            <Menu className="w-3.5 h-3.5 text-primary/70" />
+          </div>
+        </div>
       </button>
       
       <main className="flex-1 overflow-y-auto overflow-x-hidden">

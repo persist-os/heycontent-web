@@ -27,6 +27,7 @@ export function useNoteTypeStats(notes: Note[]) {
       reflection_journal: { label: 'Reflection', icon: 'BookOpen', color: 'text-indigo-600 border-indigo-500' },
       task_checklist: { label: 'Tasks', icon: 'CheckSquare', color: 'text-emerald-600 border-emerald-500' },
       email_draft: { label: 'Messages', icon: 'Mail', color: 'text-orange-600 border-orange-500' },
+      project: { label: 'Projects', icon: 'Folder', color: 'text-blue-700 border-blue-600' },
     };
 
     // Create stats array only for types that have notes

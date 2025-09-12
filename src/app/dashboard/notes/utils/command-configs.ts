@@ -78,8 +78,9 @@ export type NoteType =
   | 'collaboration_note' 
   | 'analytics_insight' 
   | 'reflection_journal' 
-  | 'task_checklist' 
-  | 'email_draft';
+  | 'task_checklist'
+  | 'email_draft'
+  | 'project';
 
 // Helper function to create icon components
 const createIcon = (IconComponent: React.ComponentType<{ className?: string }>) => 
@@ -687,6 +688,47 @@ export const NOTE_TYPE_CONFIGS: Record<NoteType, TypeSpecificConfig> = {
       'I need to apologize for [situation/mistake]. Help me write an apology that: takes full responsibility without excuses, acknowledges the impact on the other person, expresses genuine remorse, outlines specific steps to prevent this in the future, and focuses on making things right.'
     ],
     categories: ['Draft', 'Tone', 'Respond', 'Boundaries', 'Clarify', 'Sensitive', 'Follow-up', 'Gratitude', 'Apologize', 'Professional']
+  },
+
+  // Projects - Organize and manage complex endeavors
+  project: {
+    quickCommands: [
+      {
+        id: 'project-planner',
+        label: 'Help me plan this project',
+        description: 'Break down complex projects into manageable phases',
+        icon: createIcon(Target),
+        category: 'Plan'
+      },
+      {
+        id: 'milestone-tracker',
+        label: 'What are the key milestones?',
+        description: 'Identify important checkpoints and deliverables',
+        icon: createIcon(CheckSquare),
+        category: 'Track'
+      },
+      {
+        id: 'resource-mapper',
+        label: 'What resources do I need?',
+        description: 'Identify people, tools, and materials required',
+        icon: createIcon(Users),
+        category: 'Resources'
+      },
+      {
+        id: 'timeline-builder',
+        label: 'Create a realistic timeline',
+        description: 'Estimate duration and sequence of project phases',
+        icon: createIcon(Calendar),
+        category: 'Timeline'
+      }
+    ],
+    defaultPrompts: [
+      'Help me plan [project name]: break it into logical phases, identify key deliverables and milestones, estimate realistic timelines, anticipate potential challenges, and suggest resources or skills needed.',
+      'I\'m working on [project description]. Help me identify the most critical milestones that will indicate real progress and keep the project on track.',
+      'For this project [project details], what resources, people, or tools should I consider? Include both obvious necessities and things I might overlook.',
+      'Help me create a realistic timeline for [project description]. Consider dependencies between tasks, buffer time for unexpected issues, and a sustainable pace of work.'
+    ],
+    categories: ['Plan', 'Track', 'Resources', 'Timeline']
   }
 };
 

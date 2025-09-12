@@ -6,6 +6,7 @@ import { getApiKey } from '@/app/lib/api-helpers';
 import { Id } from '@/convex/_generated/dataModel';
 import { RefreshState } from '@/components/ui/refresh-state';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 
 // Type for the Convex response
 type ConvexInsight = {
@@ -28,16 +29,13 @@ interface AmbientInsightsProps {
   onInsightClick?: (action: string, insight: InsightWithOptionalIcon) => void;
 }
 
-// Skeleton component for loading state
+// Organic thought bubble skeleton
 const InsightSkeleton = () => (
-  <div className="bg-card border border-border shadow-sm p-3 sm:p-4 rounded-xl">
-    <div className="flex items-start gap-2 sm:gap-3">
-      <div className="flex-1 min-w-0 space-y-2">
-        <Skeleton className="h-4 w-3/4" />
-        <Skeleton className="h-3 w-full" />
-        <Skeleton className="h-3 w-2/3" />
-        <Skeleton className="h-3 w-1/2 mt-2" />
-      </div>
+  <div className="group animate-pulse">
+    <div className="space-y-3">
+      <Skeleton className="h-5 w-3/4 rounded-full" />
+      <Skeleton className="h-4 w-full rounded-full opacity-60" />
+      <Skeleton className="h-4 w-2/3 rounded-full opacity-40" />
     </div>
   </div>
 );
@@ -53,6 +51,9 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
   const [lastLoggedInsights, setLastLoggedInsights] = useState<string | null>(null);
   const [isRequestingInsights, setIsRequestingInsights] = useState(false);
   const requestedInsightsRef = React.useRef<string | null>(null);
+  
+  // Manual reveal state
+  const [showSecondary, setShowSecondary] = useState(false);
 
   // Always call useQuery, passing undefined if userId is not available
   const convexInsights = useQuery(
@@ -76,7 +77,7 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
   // Map Convex data to insights format - memoize with stable dependency
   const insights = useMemo<InsightWithOptionalIcon[]>(() => {
     if (convexInsights && Array.isArray(convexInsights.data) && convexInsights.data.length > 0) {
-      return convexInsights.data.slice(0, 6).map((item: ConvexInsight, index: number) => ({
+      return convexInsights.data.slice(0, 5).map((item: ConvexInsight, index: number) => ({
         type: item.category || 'auto_generated',
         title: item.title,
         description: item.content,
@@ -86,6 +87,8 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
     }
     return [];
   }, [convexInsights?._id, convexInsights?.data]);
+
+  // No auto-reveal - only manual button click
 
   // Combine prop error with fetch error
   const error = propError || fetchError;
@@ -175,53 +178,132 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
     );
   }
 
-  // Show skeleton loading state
+  // Organic loading pattern
   if (isLoading && !error) {
     return (
-      <div className="space-y-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
-        {Array.from({ length: 6 }).map((_, index) => (
-          <InsightSkeleton key={index} />
-        ))}
+      <div className="max-w-6xl mx-auto px-8 py-16">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          {Array.from({ length: 2 }).map((_, index) => (
+            <div key={index} className="space-y-4">
+              <InsightSkeleton />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
-  // Show skeleton state if no insights (regardless of error state)
+  // Show skeleton state if no insights
   if (insights.length === 0) {
     return (
-      <div className="space-y-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
-        {Array.from({ length: 6 }).map((_, index) => (
-          <InsightSkeleton key={index} />
-        ))}
+      <div className="max-w-6xl mx-auto px-8 py-16">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          {Array.from({ length: 2 }).map((_, index) => (
+            <div key={index} className="space-y-4">
+              <InsightSkeleton />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
+  // Get insights for progressive reveal
+  const primaryInsights = insights.slice(0, 2);
+  const secondaryInsights = insights.slice(2, 5);
+
   return (
-    <div className="space-y-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0 pt-2" data-ambient-insights>
-      {insights.map((insight) => (
-        <div
-          key={insight.id}
-          onClick={() => onInsightClick?.(insight.action, insight)}
-          className="bg-card border border-border shadow-sm p-3 sm:p-4 rounded-xl cursor-pointer \
-            hover:shadow-lg transition-all duration-200 hover:scale-[1.02] hover:border-primary"
-          tabIndex={0}
-          role="button"
-          aria-label={`${insight.title}: ${insight.description}`}
-        >
-          <div className="flex items-start gap-2 sm:gap-3">
-            <div className="flex-1 min-w-0">
-              <h3 className="font-medium text-sm text-card-foreground mb-1">{insight.title}</h3>
-              <p className="text-sm text-muted-foreground">{insight.description}</p>
-              {insight.action && (
-                <p className="mt-2 text-sm text-primary font-medium">
-                  {insight.action}
+    <div className="max-w-6xl ml-auto px-8 py-16" data-ambient-insights>
+      <div className="space-y-12">
+        {/* Primary insights - always visible */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          {primaryInsights.map((insight, index) => (
+            <div
+              key={insight.id}
+              className="group cursor-pointer"
+              onClick={() => onInsightClick?.(insight.action, insight)}
+              tabIndex={0}
+              role="button"
+              aria-label={`${insight.title}: ${insight.description}`}
+            >
+              <div className="space-y-4 p-8 rounded-3xl bg-card/30 hover:bg-card/50 
+                transition-all duration-500 hover:scale-[1.02]">
+                
+                <h3 className={`text-lg font-medium leading-snug transition-colors duration-300
+                  ${index === 0 ? 'text-blue-600 dark:text-blue-400' : 'text-foreground group-hover:text-primary'}`}>
+                  {insight.title}
+                </h3>
+                
+                <p className="text-sm text-muted-foreground/60 group-hover:text-muted-foreground 
+                  leading-relaxed transition-colors duration-300">
+                  {insight.description}
                 </p>
-              )}
+                
+                {insight.action && (
+                  <div className="pt-2">
+                    <span className={`text-xs font-medium uppercase tracking-wide transition-colors duration-300
+                      ${index === 0 ? 'text-blue-600/80 group-hover:text-blue-600' : 'text-primary/70 group-hover:text-primary'}`}>
+                      {insight.action}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          ))}
         </div>
-      ))}
+
+        {/* See more button */}
+        {!showSecondary && secondaryInsights.length > 0 && (
+          <div className="flex justify-center">
+            <Button 
+              variant="ghost" 
+              onClick={() => setShowSecondary(true)}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
+            >
+              See more ({secondaryInsights.length})
+            </Button>
+          </div>
+        )}
+
+        {/* Secondary insights - show when button clicked, 3 smaller cards */}
+        {showSecondary && secondaryInsights.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-500">
+            {secondaryInsights.map((insight) => (
+              <div
+                key={insight.id}
+                className="group cursor-pointer"
+                onClick={() => onInsightClick?.(insight.action, insight)}
+                tabIndex={0}
+                role="button"
+                aria-label={`${insight.title}: ${insight.description}`}
+              >
+                <div className="space-y-3 p-5 rounded-xl bg-card/15 hover:bg-card/30 
+                  transition-all duration-500">
+                  
+                  <h3 className="text-sm font-medium text-foreground group-hover:text-primary 
+                    transition-colors duration-300 leading-snug">
+                    {insight.title}
+                  </h3>
+                  
+                  <p className="text-xs text-muted-foreground/40 group-hover:text-muted-foreground/70 
+                    leading-relaxed transition-colors duration-300">
+                    {insight.description}
+                  </p>
+                  
+                  {insight.action && (
+                    <div className="pt-1">
+                      <span className="text-xs font-medium text-primary/50 group-hover:text-primary/70 
+                        transition-colors duration-300 uppercase tracking-wide">
+                        {insight.action}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

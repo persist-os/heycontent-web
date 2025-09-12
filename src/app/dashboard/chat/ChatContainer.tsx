@@ -684,8 +684,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             // Desktop: Always show chat content
             (!isMobile || activeTab === 'chat') && (
               <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden">
-                <div className="p-3 sm:p-4 pb-4">
-                  <div className="max-w-4xl sm:max-w-6xl mx-auto space-y-3">
+                <div className="p-4 sm:p-6">
+                  <div className="max-w-4xl mx-auto space-y-6">
                     {/* Context box */}
                     {currentContext && (
                       <ChatContextBox
@@ -699,6 +699,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                       />
                     )}
                     
+                    {/* Messages */}
                     <ChatMessagesList
                       messages={messages}
                       referencedMessage={referencedMessage}
@@ -717,19 +718,22 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
                     {/* Persona tip */}
                     {(updatePersonaRequested || (onboardingState.shouldShowPersonaTip && messages.length >= 4)) && !onboardingState.hasCompletedPersona && (
-                      <PersonaTip
-                        userId={authData.userId}
-                        onTipClick={handleSendMessageWithUpdateCheck}
-                      />
+                      <div className="mt-8">
+                        <PersonaTip
+                          userId={authData.userId}
+                          onTipClick={handleSendMessageWithUpdateCheck}
+                        />
+                      </div>
                     )}
 
                     {/* Error display */}
                     {error && (
-                      <div className={`${themeColors.accentBgLight} border ${themeColors.accentBorder}/20 rounded-lg p-3 mt-4`}>
-                        <p className={`${themeColors.accentColor} text-sm`}>{error}</p>
+                      <div className="mt-6 p-4 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800">
+                        <p className="text-sm text-red-800 dark:text-red-200 mb-2">{error}</p>
                         <button
                           onClick={() => chatState.setError(null)}
-                          className={`text-xs ${themeColors.accentColor} hover:opacity-80 mt-1`}
+                          className="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-200 
+                            transition-colors duration-200"
                         >
                           Dismiss
                         </button>

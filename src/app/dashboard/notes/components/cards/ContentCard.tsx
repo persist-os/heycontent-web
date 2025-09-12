@@ -84,41 +84,80 @@ export function ContentCard({
   return (
     <BaseCard
       note={note}
-      className={getCardColor()}
-      hoverBgClass={getHoverBgClass()}
+      className={cn(
+        "relative",
+        // Subtle type-based accent on left edge
+        note.type === 'content_script' && "border-l-2 border-l-blue-400/40",
+        note.type === 'idea_bank' && "border-l-2 border-l-amber-400/40"
+      )}
       onEdit={onEdit}
       onDelete={onDelete}
       onToggleImportant={onToggleImportant}
     >
-      <div className="p-4">
-        {/* Header with icon */}
-        <div className="flex items-start gap-2 mb-3">
-          {hasMediaContent && (
-            <div className="mt-1">
-              {note.title?.toLowerCase().includes('vlog') ? (
-                <Video className={cn("w-4 h-4", getIconColor())} />
-              ) : (
-                <Image className={cn("w-4 h-4", getIconColor())} />
-              )}
-            </div>
-          )}
-          <h3 className="font-semibold text-foreground flex-1 pr-8 line-clamp-2">
-            {(note.title && note.title.trim()) || 'Content Idea'}
+      {/* Content with improved typography hierarchy */}
+      <div className="space-y-4">
+        {/* Title with breathing space */}
+        <div className="space-y-2">
+          <h3 className="text-lg font-light text-foreground leading-tight tracking-tight line-clamp-3">
+            {(note.title && note.title.trim()) || 'Untitled Idea'}
           </h3>
+          
+          {/* Content type indicator */}
+          <div className="flex items-center gap-2">
+            {hasMediaContent && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground/70">
+                {note.title?.toLowerCase().includes('vlog') ? (
+                  <Video className="w-3 h-3" />
+                ) : (
+                  <Image className="w-3 h-3" />
+                )}
+                <span className="font-light">Media content</span>
+              </div>
+            )}
+            {note.type === 'content_script' && (
+              <span className="text-xs font-light text-blue-600/70 bg-blue-50/50 dark:bg-blue-950/20 px-2 py-0.5 rounded-md">
+                Script
+              </span>
+            )}
+            {note.type === 'idea_bank' && (
+              <span className="text-xs font-light text-amber-600/70 bg-amber-50/50 dark:bg-amber-950/20 px-2 py-0.5 rounded-md">
+                Idea
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Content preview - CSS handles truncation after note links are rendered */}
-        <div className="text-sm text-muted-foreground line-clamp-4">
-          <NoteContentRenderer 
-            content={contentForRendering} 
-            availableNotes={availableNotes}
-          />
-        </div>
+        {/* Content preview with better typography */}
+        {contentForRendering && (
+          <div className="text-sm text-muted-foreground/80 leading-relaxed line-clamp-4 font-light">
+            <NoteContentRenderer 
+              content={contentForRendering} 
+              availableNotes={availableNotes}
+            />
+          </div>
+        )}
 
-        {/* Media placeholder for certain content types */}
+        {/* Hashtags with subtle styling */}
+        {hashtags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {hashtags.map((hashtag, index) => (
+              <span 
+                key={index} 
+                className="text-xs font-light text-primary/70 bg-primary/5 px-2 py-1 rounded-md"
+              >
+                {hashtag}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* OOTD media preview with elegant styling */}
         {note.title?.toLowerCase().includes('ootd') && (
-          <div className="mt-3 h-24 bg-gradient-to-r from-red-500/20 to-purple-500/20 rounded border border-red-500/30 flex items-center justify-center">
-            <Image className="w-6 h-6 text-red-600" />
+          <div className="mt-4 h-20 bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-950/20 dark:to-orange-950/20 rounded-xl border border-amber-200/30 dark:border-amber-800/30 flex items-center justify-center">
+            <div className="flex items-center gap-2 text-amber-600/70">
+              <Image className="w-4 h-4" />
+              <span className="text-xs font-light">Outfit inspiration</span>
+            </div>
           </div>
         )}
       </div>

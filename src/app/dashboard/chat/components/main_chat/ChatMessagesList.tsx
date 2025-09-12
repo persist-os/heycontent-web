@@ -55,15 +55,17 @@ const ChatMessagesList: React.FC<ChatMessagesListProps> = ({
           onContentClick={onContentClick}
         />
         {message.role === 'assistant' && message.suggestions && (
-          <div className="mt-3 flex flex-wrap gap-2 pl-4 sm:pl-12 pr-4 max-w-full overflow-hidden">
-            {message.suggestions.map((suggestion: any, idx: number) => (
-              <SuggestionChip
-                key={idx}
-                suggestion={suggestion}
-                onClick={() => handleSuggestionClick(suggestion, handleSendMessage)}
-                onInputPopulate={onInputPopulate}
-              />
-            ))}
+          <div className="mt-4 pl-4 sm:pl-12 pr-4">
+            <div className="flex flex-wrap gap-x-6 gap-y-3 items-baseline">
+              {message.suggestions.slice(0, 4).map((suggestion: any, idx: number) => (
+                <SuggestionChip
+                  key={idx}
+                  suggestion={suggestion}
+                  onClick={() => handleSuggestionClick(suggestion, handleSendMessage)}
+                  onInputPopulate={onInputPopulate}
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>
