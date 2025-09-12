@@ -236,27 +236,28 @@ export function ConstellationView() {
       </div>
 
       {/* Header - Floating */}
-      <div className="absolute top-6 left-6 right-6 z-10">
-        <div className="flex items-center justify-between">
-          <div className="bg-background/80 backdrop-blur-sm border border-border/50 rounded-lg px-6 py-4 shadow-lg">
-            <div className="flex items-baseline gap-4">
-              <h1 className="text-2xl font-light text-foreground">Constellation</h1>
-              <div className="text-sm text-muted-foreground/70 font-mono">
-                {projects.length} project{projects.length !== 1 ? 's' : ''}
-              </div>
+      <div className="absolute top-6 left-20 z-10">
+        <div className="bg-background/80 backdrop-blur-sm border border-border/50 rounded-lg px-6 py-4 shadow-lg">
+          <div className="flex items-baseline gap-4">
+            <h1 className="text-2xl font-light text-foreground">Constellation</h1>
+            <div className="text-sm text-muted-foreground/70 font-mono">
+              {projects.length} project{projects.length !== 1 ? 's' : ''}
             </div>
-            <p className="text-sm text-muted-foreground/60 mt-1 max-w-md">
-              Your universe of projects, connected and evolving
-            </p>
           </div>
-
-          <Button
-            onClick={() => setShowCreateModal(true)}
-            className="bg-foreground text-background hover:bg-foreground/90 shadow-lg"
-          >
-            New Project
-          </Button>
+          <p className="text-sm text-muted-foreground/60 mt-1 max-w-md">
+            Your universe of projects, connected and evolving
+          </p>
         </div>
+      </div>
+
+      {/* New Project Button - Top Right */}
+      <div className="absolute top-6 right-6 z-10">
+        <Button
+          onClick={() => setShowCreateModal(true)}
+          className="bg-foreground text-background hover:bg-foreground/90 shadow-lg"
+        >
+          New Project
+        </Button>
       </div>
 
       {/* Navigation Controls */}
@@ -265,7 +266,7 @@ export function ConstellationView() {
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
         onReset={resetView}
-        className="absolute bottom-6 left-6 z-10"
+        className="absolute bottom-6 left-20 z-10"
       />
 
       {/* Minimap */}
@@ -280,9 +281,9 @@ export function ConstellationView() {
         className="absolute bottom-6 right-6 z-10"
       />
 
-      {/* Stats Overlay - Subtle */}
-      <div className="absolute top-6 right-6 left-1/2 z-10 pointer-events-none">
-        <div className="bg-background/60 backdrop-blur-sm border border-border/30 rounded-lg px-4 py-2 shadow-sm max-w-xs">
+      {/* Stats Overlay - Bottom Center */}
+      <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 z-10 pointer-events-none">
+        <div className="bg-background/60 backdrop-blur-sm border border-border/30 rounded-lg px-4 py-2 shadow-sm">
           <div className="flex items-center gap-4 text-xs text-muted-foreground/70">
             <span>
               Active: {projects.filter(p => p.fingerprintId && Date.now() - p.updatedAt < 7 * 24 * 60 * 60 * 1000).length}
@@ -308,7 +309,7 @@ export function ConstellationView() {
 
       {/* Keyboard shortcuts hint */}
       {transform.scale < 0.6 && (
-        <div className="absolute bottom-6 left-1/2 z-10 pointer-events-none" style={{ transform: 'translateX(-50%)' }}>
+        <div className="absolute bottom-32 left-1/2 z-10 pointer-events-none" style={{ transform: 'translateX(-50%)' }}>
           <div className="bg-background/80 backdrop-blur-sm border border-border/50 rounded-lg px-4 py-2 shadow-lg">
             <div className="text-xs text-muted-foreground/70 text-center">
               Drag to explore • Scroll to zoom • Click projects to open
