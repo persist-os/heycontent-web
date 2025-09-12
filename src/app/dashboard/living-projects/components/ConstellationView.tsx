@@ -48,6 +48,15 @@ export function ConstellationView() {
   // Generate constellation layout
   const layout = useConstellationLayout(projects || [])
   
+  // Debug logging
+  console.log('ConstellationView Debug:', {
+    firebaseUser: !!firebaseUser,
+    projects: projects,
+    projectsLength: projects?.length,
+    layout: layout,
+    layoutPositionsLength: layout.positions.length
+  })
+  
   // Pan and zoom functionality
   const {
     transform,
@@ -75,18 +84,34 @@ export function ConstellationView() {
 
   // Virtual rendering - only render projects visible in viewport + buffer
   const visibleProjects = useMemo(() => {
+    // Temporarily disable virtual rendering to debug
+    // TODO: Re-enable virtual rendering once issue is resolved
+    return layout.positions
+    
+    /* Original virtual rendering logic:
     const buffer = 400 // Buffer zone around viewport
     const viewportLeft = -transform.x / transform.scale - buffer
     const viewportTop = -transform.y / transform.scale - buffer
     const viewportRight = viewportLeft + (viewportSize.width / transform.scale) + (buffer * 2)
     const viewportBottom = viewportTop + (viewportSize.height / transform.scale) + (buffer * 2)
 
-    return layout.positions.filter(position => 
+    const filtered = layout.positions.filter(position => 
       position.x >= viewportLeft && 
       position.x <= viewportRight &&
       position.y >= viewportTop && 
       position.y <= viewportBottom
     )
+    
+    console.log('Virtual rendering debug:', {
+      totalPositions: layout.positions.length,
+      visiblePositions: filtered.length,
+      viewport: { viewportLeft, viewportTop, viewportRight, viewportBottom },
+      transform,
+      viewportSize
+    })
+    
+    return filtered
+    */
   }, [layout.positions, transform, viewportSize])
 
   // Handle creating a new project
@@ -133,11 +158,11 @@ export function ConstellationView() {
 
   const isLoading = projects === undefined
 
-  if (isLoading || layout.positions.length === 0) {
+  if (isLoading) {
     return <LoadingState />
   }
 
-  // Empty state
+  // Empty state - show this when we have no projects
   if (!projects || projects.length === 0) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -236,27 +261,28 @@ export function ConstellationView() {
       </div>
 
       {/* Header - Floating */}
-      <div className="absolute top-6 left-6 right-6 z-10">
-        <div className="flex items-center justify-between">
-          <div className="bg-background/80 backdrop-blur-sm border border-border/50 rounded-lg px-6 py-4 shadow-lg">
-            <div className="flex items-baseline gap-4">
-              <h1 className="text-2xl font-light text-foreground">Constellation</h1>
-              <div className="text-sm text-muted-foreground/70 font-mono">
-                {projects.length} project{projects.length !== 1 ? 's' : ''}
-              </div>
+      <div className="absolute top-6 left-20 z-10">
+        <div className="bg-background/80 backdrop-blur-sm border border-border/50 rounded-lg px-6 py-4 shadow-lg">
+          <div className="flex items-baseline gap-4">
+            <h1 className="text-2xl font-light text-foreground">Constellation</h1>
+            <div className="text-sm text-muted-foreground/70 font-mono">
+              {projects.length} project{projects.length !== 1 ? 's' : ''}
             </div>
-            <p className="text-sm text-muted-foreground/60 mt-1 max-w-md">
-              Your universe of projects, connected and evolving
-            </p>
           </div>
-
-          <Button
-            onClick={() => setShowCreateModal(true)}
-            className="bg-foreground text-background hover:bg-foreground/90 shadow-lg"
-          >
-            New Project
-          </Button>
+          <p className="text-sm text-muted-foreground/60 mt-1 max-w-md">
+            Your universe of projects, connected and evolving
+          </p>
         </div>
+      </div>
+
+      {/* New Project Button - Top Right */}
+      <div className="absolute top-6 right-6 z-10">
+        <Button
+          onClick={() => setShowCreateModal(true)}
+          className="bg-foreground text-background hover:bg-foreground/90 shadow-lg"
+        >
+          New Project
+        </Button>
       </div>
 
       {/* Navigation Controls */}
@@ -265,7 +291,7 @@ export function ConstellationView() {
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
         onReset={resetView}
-        className="absolute bottom-6 left-6 z-10"
+        className="absolute bottom-6 left-20 z-10"
       />
 
       {/* Minimap */}
@@ -280,9 +306,9 @@ export function ConstellationView() {
         className="absolute bottom-6 right-6 z-10"
       />
 
-      {/* Stats Overlay - Subtle */}
-      <div className="absolute top-6 right-6 left-1/2 z-10 pointer-events-none">
-        <div className="bg-background/60 backdrop-blur-sm border border-border/30 rounded-lg px-4 py-2 shadow-sm max-w-xs">
+      {/* Stats Overlay - Bottom Center */}
+      <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 z-10 pointer-events-none">
+        <div className="bg-background/60 backdrop-blur-sm border border-border/30 rounded-lg px-4 py-2 shadow-sm">
           <div className="flex items-center gap-4 text-xs text-muted-foreground/70">
             <span>
               Active: {projects.filter(p => p.fingerprintId && Date.now() - p.updatedAt < 7 * 24 * 60 * 60 * 1000).length}
@@ -308,7 +334,7 @@ export function ConstellationView() {
 
       {/* Keyboard shortcuts hint */}
       {transform.scale < 0.6 && (
-        <div className="absolute bottom-6 left-1/2 z-10 pointer-events-none" style={{ transform: 'translateX(-50%)' }}>
+        <div className="absolute bottom-32 left-1/2 z-10 pointer-events-none" style={{ transform: 'translateX(-50%)' }}>
           <div className="bg-background/80 backdrop-blur-sm border border-border/50 rounded-lg px-4 py-2 shadow-lg">
             <div className="text-xs text-muted-foreground/70 text-center">
               Drag to explore • Scroll to zoom • Click projects to open

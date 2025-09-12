@@ -37,17 +37,22 @@ function useWidgetLayout(widgets: WidgetConfig[]): {
   connections: Array<{ from: string; to: string; strength: number }>
 } {
   return useMemo(() => {
+    // Check if we're running in the browser to avoid SSR issues
+    const isClient = typeof window !== 'undefined'
+    const defaultWidth = isClient ? window.innerWidth * 3 : 2400
+    const defaultHeight = isClient ? window.innerHeight * 2.5 : 1600
+
     if (!widgets.length) {
       return {
         positions: [],
-        canvasWidth: window.innerWidth * 3,
-        canvasHeight: window.innerHeight * 2.5,
+        canvasWidth: defaultWidth,
+        canvasHeight: defaultHeight,
         connections: []
       }
     }
 
-    const canvasWidth = Math.max(window.innerWidth * 3, 2400)
-    const canvasHeight = Math.max(window.innerHeight * 2.5, 1600)
+    const canvasWidth = Math.max(defaultWidth, 2400)
+    const canvasHeight = Math.max(defaultHeight, 1600)
 
     // Calculate widget importance scores
     const widgetsWithImportance = widgets.map(widget => {

@@ -77,7 +77,7 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
   // Map Convex data to insights format - memoize with stable dependency
   const insights = useMemo<InsightWithOptionalIcon[]>(() => {
     if (convexInsights && Array.isArray(convexInsights.data) && convexInsights.data.length > 0) {
-      return convexInsights.data.slice(0, 5).map((item: ConvexInsight, index: number) => ({
+      return convexInsights.data.slice(0, 6).map((item: ConvexInsight, index: number) => ({
         type: item.category || 'auto_generated',
         title: item.title,
         description: item.content,
@@ -181,13 +181,15 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
   // Organic loading pattern
   if (isLoading && !error) {
     return (
-      <div className="max-w-6xl mx-auto px-8 py-16">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {Array.from({ length: 2 }).map((_, index) => (
-            <div key={index} className="space-y-4">
-              <InsightSkeleton />
-            </div>
-          ))}
+      <div className="h-full flex flex-col">
+        <div className="flex-1 flex flex-col justify-center py-4 min-h-0">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full max-w-4xl mx-auto">
+            {Array.from({ length: 2 }).map((_, index) => (
+              <div key={index} className="space-y-4">
+                <InsightSkeleton />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -196,13 +198,15 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
   // Show skeleton state if no insights
   if (insights.length === 0) {
     return (
-      <div className="max-w-6xl mx-auto px-8 py-16">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {Array.from({ length: 2 }).map((_, index) => (
-            <div key={index} className="space-y-4">
-              <InsightSkeleton />
-            </div>
-          ))}
+      <div className="h-full flex flex-col">
+        <div className="flex-1 flex flex-col justify-center py-4 min-h-0">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full max-w-4xl mx-auto">
+            {Array.from({ length: 2 }).map((_, index) => (
+              <div key={index} className="space-y-4">
+                <InsightSkeleton />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -210,97 +214,99 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
 
   // Get insights for progressive reveal
   const primaryInsights = insights.slice(0, 2);
-  const secondaryInsights = insights.slice(2, 5);
+  const secondaryInsights = insights.slice(2, 6);
 
   return (
-    <div className="max-w-6xl ml-auto px-8 py-16" data-ambient-insights>
-      <div className="space-y-12">
-        {/* Primary insights - always visible */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {primaryInsights.map((insight, index) => (
-            <div
-              key={insight.id}
-              className="group cursor-pointer"
-              onClick={() => onInsightClick?.(insight.action, insight)}
-              tabIndex={0}
-              role="button"
-              aria-label={`${insight.title}: ${insight.description}`}
-            >
-              <div className="space-y-4 p-8 rounded-3xl bg-card/30 hover:bg-card/50 
-                transition-all duration-500 hover:scale-[1.02]">
-                
-                <h3 className={`text-lg font-medium leading-snug transition-colors duration-300
-                  ${index === 0 ? 'text-blue-600 dark:text-blue-400' : 'text-foreground group-hover:text-primary'}`}>
-                  {insight.title}
-                </h3>
-                
-                <p className="text-sm text-muted-foreground/60 group-hover:text-muted-foreground 
-                  leading-relaxed transition-colors duration-300">
-                  {insight.description}
-                </p>
-                
-                {insight.action && (
-                  <div className="pt-2">
-                    <span className={`text-xs font-medium uppercase tracking-wide transition-colors duration-300
-                      ${index === 0 ? 'text-blue-600/80 group-hover:text-blue-600' : 'text-primary/70 group-hover:text-primary'}`}>
-                      {insight.action}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* See more button */}
-        {!showSecondary && secondaryInsights.length > 0 && (
-          <div className="flex justify-center">
-            <Button 
-              variant="ghost" 
-              onClick={() => setShowSecondary(true)}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
-            >
-              See more ({secondaryInsights.length})
-            </Button>
-          </div>
-        )}
-
-        {/* Secondary insights - show when button clicked, 3 smaller cards */}
-        {showSecondary && secondaryInsights.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-500">
-            {secondaryInsights.map((insight) => (
+    <div className="h-full flex flex-col px-4 sm:px-6 pt-6 pb-2 overflow-hidden" data-ambient-insights>
+      <div className="w-full max-w-4xl mx-auto h-full flex flex-col">
+        {/* Main insights grid - calculated height to fit content + button */}
+        <div className={`grid gap-2 transition-all duration-400 ease-out ${
+          showSecondary 
+            ? 'grid-cols-2 lg:grid-cols-3 h-[calc(100%-4rem)]' 
+            : 'grid-cols-2 gap-4 h-[calc(100%-3rem)]'
+        }`}>
+          {insights.map((insight, index) => {
+            const isPrimary = index < 2;
+            const isVisible = isPrimary || showSecondary;
+            
+            if (!isVisible) return null;
+            
+            return (
               <div
                 key={insight.id}
-                className="group cursor-pointer"
+                className="group cursor-pointer overflow-visible"
                 onClick={() => onInsightClick?.(insight.action, insight)}
                 tabIndex={0}
                 role="button"
                 aria-label={`${insight.title}: ${insight.description}`}
               >
-                <div className="space-y-3 p-5 rounded-xl bg-card/15 hover:bg-card/30 
-                  transition-all duration-500">
+                <div className={`rounded-lg flex flex-col relative z-10 group-hover:z-20 transition-all duration-500 ease-out h-full overflow-hidden ${
+                  showSecondary 
+                    ? 'p-2 group-hover:shadow-lg bg-card/30 hover:bg-card/50' 
+                    : isPrimary 
+                      ? 'p-4 group-hover:shadow-lg bg-card/30 hover:bg-card/50' 
+                      : 'p-2 group-hover:shadow-lg bg-card/30 hover:bg-card/50'
+                }`}>
                   
-                  <h3 className="text-sm font-medium text-foreground group-hover:text-primary 
-                    transition-colors duration-300 leading-snug">
+                  {/* Title */}
+                  <h3 className={`font-medium leading-tight transition-colors duration-300 flex-shrink-0 ${
+                    showSecondary 
+                      ? 'text-xs mb-1 text-foreground group-hover:text-primary' 
+                      : isPrimary && index === 0
+                        ? 'text-base mb-2 text-blue-600 dark:text-blue-400 tracking-tight'
+                        : isPrimary
+                          ? 'text-base mb-2 text-foreground group-hover:text-primary tracking-tight'
+                          : 'text-xs mb-1 text-foreground group-hover:text-primary'
+                  }`}>
                     {insight.title}
                   </h3>
                   
-                  <p className="text-xs text-muted-foreground/40 group-hover:text-muted-foreground/70 
-                    leading-relaxed transition-colors duration-300">
-                    {insight.description}
-                  </p>
+                  {/* Description - full text visible */}
+                  <div className="flex-1 overflow-auto">
+                    <p className={`leading-snug transition-all duration-500 ease-out ${
+                      showSecondary
+                        ? 'text-xs text-muted-foreground/70 group-hover:text-muted-foreground'
+                        : isPrimary
+                          ? 'text-sm text-muted-foreground/70 group-hover:text-muted-foreground tracking-tight'
+                          : 'text-xs text-muted-foreground/70 group-hover:text-muted-foreground'
+                    }`}>
+                      {insight.description}
+                    </p>
+                  </div>
                   
+                  {/* Action text - appears on hover */}
                   {insight.action && (
-                    <div className="pt-1">
-                      <span className="text-xs font-medium text-primary/50 group-hover:text-primary/70 
-                        transition-colors duration-300 uppercase tracking-wide">
+                    <div className={`flex-shrink-0 ${
+                      showSecondary ? 'mt-1' : isPrimary ? 'mt-1' : 'mt-1'
+                    }`}>
+                      <p className={`uppercase tracking-wide font-medium text-[10px] transition-all duration-500 ease-out ${
+                        showSecondary
+                          ? 'text-primary/0 group-hover:text-primary/70'
+                          : isPrimary && index === 0
+                            ? 'text-blue-600/0 group-hover:text-blue-600/80'
+                            : isPrimary
+                              ? 'text-primary/0 group-hover:text-primary/70'
+                              : 'text-primary/0 group-hover:text-primary/70'
+                      }`}>
                         {insight.action}
-                      </span>
+                      </p>
                     </div>
                   )}
                 </div>
               </div>
-            ))}
+            );
+          })}
+        </div>
+
+        {/* Toggle button - always accessible */}
+        {secondaryInsights.length > 0 && (
+          <div className="flex-shrink-0 text-center py-3 mt-2 bg-background/80 backdrop-blur-sm">
+            <button 
+              onClick={() => setShowSecondary(!showSecondary)}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors duration-200 px-4 py-2 rounded-full hover:bg-muted"
+            >
+              {showSecondary ? 'show less' : `show all ${insights.length}`}
+            </button>
           </div>
         )}
       </div>
