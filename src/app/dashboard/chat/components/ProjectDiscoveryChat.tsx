@@ -72,8 +72,9 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
   const convexClientRef = useRef<ConvexHttpClient | null>(null)
   const startedPollingRef = useRef<boolean>(false)
   const lastProcessedUserMessageIdRef = useRef<string | null>(null)
-  // Simplified flow: trigger once when total messages (incl. assistant) reach random 12-20
-  const triggerThresholdRef = useRef<number>(12 + Math.floor(Math.random() * 9))
+
+  // Simplified flow: trigger once when total messages (incl. assistant) reach random 6-8
+  const triggerThresholdRef = useRef<number>(6 + Math.floor(Math.random() * 3))
   const hasTriggeredRef = useRef<boolean>(false)
 
   // Agent-based fingerprinting functions
