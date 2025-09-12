@@ -34,17 +34,22 @@ interface ConstellationLayout {
 
 export function useConstellationLayout(projects: Project[]): ConstellationLayout {
   return useMemo(() => {
+    // Check if we're running in the browser to avoid SSR issues
+    const isClient = typeof window !== 'undefined'
+    const defaultWidth = isClient ? window.innerWidth * 3 : 2400
+    const defaultHeight = isClient ? window.innerHeight * 2.5 : 1600
+
     if (!projects.length) {
       return {
         positions: [],
-        canvasWidth: window.innerWidth * 3,
-        canvasHeight: window.innerHeight * 2.5,
+        canvasWidth: defaultWidth,
+        canvasHeight: defaultHeight,
         connections: []
       }
     }
 
-    const canvasWidth = Math.max(window.innerWidth * 3, 2400)
-    const canvasHeight = Math.max(window.innerHeight * 2.5, 1600)
+    const canvasWidth = Math.max(defaultWidth, 2400)
+    const canvasHeight = Math.max(defaultHeight, 1600)
 
     // TODO: Replace hardcoded importance calculation with ML-based scoring
     // TODO: Implement user behavior tracking for importance weighting

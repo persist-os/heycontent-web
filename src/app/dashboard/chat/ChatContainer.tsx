@@ -13,7 +13,6 @@ import { Message } from '@/app/types/chat'
 import { BottomBarActions } from './components/main_chat/BottomBarActions';
 import { useAmbientInsightsActions } from './components/ambient_insights/AmbientInsightsActions';
 import { PersonaTip } from './components/PersonaTip'
-import ChatHeader from './components/main_chat/ChatHeader'
 import ChatContextBox from './components/main_chat/ChatContextBox'
 import ChatMessagesList from './components/main_chat/ChatMessagesList'
 import ChatInputArea from './components/main_chat/ChatInputArea'
@@ -45,6 +44,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { CreateNoteButton } from '@/components/ui/CreateNoteButton';
 import { ChatOverlay } from './components/ChatOverlay';
+import { Plus } from 'lucide-react';
 
 const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery, noteId }) => {
   const router = useRouter()
@@ -198,7 +198,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     isOpen: notepadOpen,
     width: notepadWidth,
     toggleNotepad,
-    updateWidth,
     getMainContentStyle,
     getNotepadStyle,
     // Mobile tab bar functionality
@@ -676,15 +675,17 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
   return (
     <>
-      <div 
-        data-chat-container
-        className="flex flex-col h-screen bg-background"
-        style={getMainContentStyle()}
-      >
-        {/* Header */}
-        <ChatHeader 
-          onNewChat={handleNewChat}
-        />
+      <div className="flex h-screen bg-background">
+        {/* Main chat content */}
+        <div 
+          data-chat-container
+          className="flex flex-col h-screen bg-background"
+          style={getMainContentStyle()}
+        >
+    
+    
+    
+    
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
@@ -713,6 +714,19 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
               <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden">
                 <div className="p-4 sm:p-6">
                   <div className="max-w-4xl mx-auto space-y-6">
+                    {/* Chat Header with New Chat Button */}
+                    <div className="flex justify-end items-center gap-2 pb-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="gap-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors px-3 py-1.5 h-auto"
+                        onClick={handleNewChat}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span className="text-xs">New Chat</span>
+                      </Button>
+                    </div>
+
                     {/* Context box */}
                     {currentContext && (
                       <ChatContextBox
@@ -773,7 +787,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           ) : (
             // Ambient insights - only show for users with personas
             hasPersona ? (
-              <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 flex flex-col">
                 <AmbientInsightsContainer 
                   userId={authData.userId}
                   handleSendMessage={(msg, context) => {
@@ -812,7 +826,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                 quotedContent={quotedForNotepad}
                 onClearQuoted={handleClearQuoted}
                 width={notepadWidth}
-                onWidthChange={updateWidth}
                 style={getNotepadStyle()}
                 availableNotes={availableNotes}
                 isMobile={true}
@@ -853,8 +866,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
               useContextSearch={useContextSearch}
               onToggleContextSearch={setUseContextSearch}
               embeddingInfo={embeddingInfo}
-              notepadOpen={notepadOpen}
-              openNotepad={toggleNotepad}
+              notepadOpen={true} // Always open on desktop
+              openNotepad={isMobile ? toggleNotepad : undefined} // Only show toggle on mobile
               quotedForNotepad={quotedForNotepad}
               onClearQuoted={handleClearQuoted}
               isAuthenticated={authData.isAuthenticated}
@@ -862,6 +875,27 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
               activeTab={activeTab}
             />
           </div>
+        )}
+        </div>
+
+        {/* Desktop Notepad - Always visible, taking 50% of space */}
+        {!isMobile && (
+          <MarkdownNotepad
+            ref={notepadRef}
+            isOpen={true} // Always open
+            onClose={() => {}} // Disable close functionality
+            onSendToChat={handleNotepadSendToChat}
+            quotedContent={quotedForNotepad}
+            onClearQuoted={handleClearQuoted}
+            width={notepadWidth}
+            style={getNotepadStyle()}
+            availableNotes={availableNotes}
+            isMobile={false}
+            noteId={noteId}
+            fromChat={true}
+            canNavigateBack={true}
+            onBack={() => router.back()}
+          />
         )}
       </div>
 
@@ -891,29 +925,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         </DialogContent>
       </Dialog>
       
-      {/* Markdown Notepad - Desktop only */}
-      {!isMobile && (
-        <MarkdownNotepad
-          ref={notepadRef}
-          isOpen={notepadOpen}
-          onClose={toggleNotepad}
-          onSendToChat={handleNotepadSendToChat}
-          quotedContent={quotedForNotepad}
-          onClearQuoted={handleClearQuoted}
-          width={notepadWidth}
-          onWidthChange={updateWidth}
-          style={getNotepadStyle()}
-          availableNotes={availableNotes}
-          isMobile={false}
-          noteId={noteId}
-          fromChat={true}
-          canNavigateBack={true}
-          onBack={() => router.back()}
-        />
-      )}
-
-      
-
 
 
 
