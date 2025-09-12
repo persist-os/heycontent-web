@@ -11,7 +11,9 @@ import { useChatState } from '../hooks/useChatState'
 import { useChat } from '../hooks/useChat'
 import { useConversation } from '../hooks/useConversation'
 import { useWelcomeMessage } from '../hooks/useWelcomeMessage'
+import { getProjectDiscoveryWelcomeMessage, projectDiscoverySuggestions } from '../data/project-discovery-welcome'
 import { usePersonaData } from '../hooks/usePersonaData'
+import { getApiKey } from '@/app/lib/api-helpers'
 import ChatMessagesList from './main_chat/ChatMessagesList'
 import { ChatInput } from '../chat-input'
 import { ContentContext } from '../types'
@@ -21,6 +23,7 @@ import { useProjectContext } from '../hooks/useProjectContext'
 import AmbientFingerprintCanvas from './AmbientFingerprintCanvas'
 import { ConstellationTransition } from '@/app/dashboard/living-projects/components/widgets/ConstellationTransition'
 import { ProjectReveal } from '@/app/dashboard/living-projects/components/widgets/ProjectReveal'
+import { ConvexHttpClient } from 'convex/browser'
 
 interface ProjectDiscoveryChatProps {
   projectId?: string
@@ -61,28 +64,207 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
 
   // Fingerprint completion state
   const [fingerprintComplete, setFingerprintComplete] = useState(false)
-  const [sampleFingerprint] = useState(() => ({
-    projectId: "demo_project",
-    userId: firebaseUser?.uid || "demo_user",
-    name: "Creative Project Discovery",
-    description: "A project discovered through conversation that captures your creative workflow and working style",
-    domain: "creative",
-    complexity_level: 7,
-    collaboration_style: "solo",
-    time_horizon: "project",
-    primary_pattern: "iterative_creator",
-    working_style: ["visual_design", "user_experience", "content_creation"],
-    tangible_deliverables: ["portfolio_website", "design_system", "case_studies", "contact_form"],
-    intangible_benefits: ["professional_growth", "creative_satisfaction", "client_acquisition"],
-    measurement_approach: "website_traffic, client_inquiries, project_completion_milestones",
-    sharing_intention: "public",
-    base_personality: "creative and professional, with a focus on visual storytelling and user experience",
-    project_voice: "supportive and encouraging, helping you create beautiful digital experiences",
-    created_at: Date.now(),
-    last_evolution: Date.now(),
-    intelligence_version: "1.0",
-    status: "active"
-  }))
+  const [currentFingerprint, setCurrentFingerprint] = useState<any>(null)
+  const [fingerprintEvolution, setFingerprintEvolution] = useState<any>(null)
+  const [conversationSummaries, setConversationSummaries] = useState<any[]>([])
+  const [isGeneratingFingerprint, setIsGeneratingFingerprint] = useState(false)
+  const prevRealUserCountRef = useRef<number>(0)
+  const convexClientRef = useRef<ConvexHttpClient | null>(null)
+  const startedPollingRef = useRef<boolean>(false)
+  const lastProcessedUserMessageIdRef = useRef<string | null>(null)
+  // Simplified flow: trigger once when total messages (incl. assistant) reach random 12-20
+  const triggerThresholdRef = useRef<number>(12 + Math.floor(Math.random() * 9))
+  const hasTriggeredRef = useRef<boolean>(false)
+
+  // Agent-based fingerprinting functions
+  const processConversationMessage = useCallback(async (message: any, conversationHistory: any[]) => {
+    if (!authData.userId || !projectId) return
+
+    try {
+      console.log('[DISCOVERY][processConversationMessage:start]', {
+        hasUserId: !!authData.userId,
+        projectId,
+        messageRole: message?.role,
+        messagePreview: (message?.content || '').slice(0, 120),
+        conversationLength: Array.isArray(conversationHistory) ? conversationHistory.length : 'n/a'
+      })
+      setIsGeneratingFingerprint(true)
+      
+      // Get Firebase ID token for backend auth
+      const idToken = await authData.user?.getIdToken?.()
+      if (!idToken) {
+        throw new Error('Authentication required')
+      }
+      console.log('[DISCOVERY][processConversationMessage:auth]', { hasIdToken: !!idToken })
+      
+      // Call the API route to process message and evolve fingerprint
+      console.log('[DISCOVERY][processConversationMessage:fetch]', {
+        url: `/api/projects/${projectId}/process-message`
+      })
+      const response = await fetch(`/api/projects/${projectId}/process-message`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({
+          message,
+          conversationHistory
+        })
+      })
+
+      if (!response.ok) {
+        const errText = await response.text()
+        let errJson: any = null
+        try { errJson = JSON.parse(errText) } catch {}
+        console.error('[DISCOVERY][processConversationMessage:response:error]', {
+          status: response.status,
+          errorJson: errJson,
+          errorText: errText
+        })
+        throw new Error(errJson?.error || errJson?.detail || `Failed to process message (${response.status})`)
+      }
+      console.log('[DISCOVERY][processConversationMessage:response]', { status: response.status })
+
+      const result = await response.json()
+      console.log('[DISCOVERY][processConversationMessage:result]', {
+        success: result?.success,
+        hasSummary: !!result?.data?.conversationSummary,
+        hasEvolution: !!result?.data?.fingerprintEvolution,
+        decisionShouldContinue: result?.data?.fingerprintEvolution?.decision?.should_continue
+      })
+      
+      if (result.success) {
+        // Update conversation summaries
+        if (result.data.conversationSummary) {
+          setConversationSummaries(prev => [...prev, result.data.conversationSummary])
+        }
+        
+        // Update fingerprint evolution
+        if (result.data.fingerprintEvolution) {
+          setFingerprintEvolution(result.data.fingerprintEvolution)
+          console.log('[DISCOVERY][processConversationMessage:evolution:set]', {
+            name: result.data.fingerprintEvolution?.name,
+            domain: result.data.fingerprintEvolution?.domain,
+            confidence: result.data.fingerprintEvolution?.confidence_score
+          })
+          
+          // Check if fingerprint is complete
+          if (result.data.fingerprintEvolution.decision?.should_continue === false) {
+            // Transform FingerprintEvolution to ProjectFingerprint format
+            const fingerprintData = result.data.fingerprintEvolution
+            const projectFingerprint = {
+              projectId: projectId,
+              userId: authData.userId,
+              name: fingerprintData.name || 'Unnamed Project',
+              description: fingerprintData.description || 'AI-generated project fingerprint',
+              domain: fingerprintData.domain || 'General',
+              complexity_level: fingerprintData.complexity_level || 5,
+              collaboration_style: fingerprintData.collaboration_style || 'Unknown',
+              time_horizon: fingerprintData.time_horizon || 'Unknown',
+              primary_pattern: fingerprintData.primary_pattern || 'Unknown',
+              working_style: fingerprintData.working_style || [],
+              tangible_deliverables: fingerprintData.tangible_deliverables || [],
+              intangible_benefits: fingerprintData.intangible_benefits || [],
+              measurement_approach: fingerprintData.measurement_approach || 'Unknown',
+              sharing_intention: fingerprintData.sharing_intention || 'Unknown',
+              base_personality: fingerprintData.base_personality || 'Unknown',
+              project_voice: fingerprintData.project_voice || 'Unknown',
+              created_at: Date.now(),
+              last_evolution: Date.now(),
+              intelligence_version: '1.0',
+              // Include all other fields from the evolution data
+              ...fingerprintData
+            }
+            setCurrentFingerprint(projectFingerprint)
+            console.log('[DISCOVERY][processConversationMessage:evolution:complete]', {
+              willSetComplete: true,
+              projectId
+            })
+            setFingerprintComplete(true)
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error processing conversation message:', error)
+    } finally {
+      setIsGeneratingFingerprint(false)
+      console.log('[DISCOVERY][processConversationMessage:end]')
+    }
+  }, [authData.userId, projectId])
+
+  // Generate project widgets when fingerprint is complete
+  const generateProjectWidgets = useCallback(async (providedFingerprintId?: string) => {
+    if (!authData.userId || !projectId) return
+
+    try {
+      console.log('[DISCOVERY][widgets:start]', {
+        hasUserId: !!authData.userId,
+        projectId,
+        hasCurrentFingerprint: !!currentFingerprint
+      })
+      // Get API key
+      const apiKey = await getApiKey()
+      if (!apiKey) {
+        throw new Error('Authentication required')
+      }
+      
+      // Call the API route to generate widgets
+      console.log('[DISCOVERY][widgets:fetch]', { url: `/api/projects/${projectId}/generate-widgets` })
+      const response = await fetch(`/api/projects/${projectId}/generate-widgets`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          fingerprintId: providedFingerprintId || currentFingerprint?._id || `fp_${Date.now()}`
+        })
+      })
+
+      if (!response.ok) {
+        console.error('[DISCOVERY][widgets:response:error]', { status: response.status })
+        throw new Error('Failed to generate widgets')
+      }
+      console.log('[DISCOVERY][widgets:response]', { status: response.status })
+
+      const result = await response.json()
+      
+      if (result.success) {
+        // Widgets will be stored in Convex and can be fetched by the project view
+        console.log('[DISCOVERY][widgets:success]', { hasData: !!result.data })
+      }
+    } catch (error) {
+      console.error('Error generating project widgets:', error)
+    }
+  }, [authData.userId, projectId, currentFingerprint])
+
+  // Generate widgets and redirect when fingerprint is complete (based on Convex confirmation)
+  useEffect(() => {
+    if (fingerprintComplete) {
+      const handleFingerprintComplete = async () => {
+        try {
+          console.log('[DISCOVERY][complete:start]', { projectId, hasCurrentFingerprint: !!currentFingerprint })
+          // Generate widgets first
+          await generateProjectWidgets()
+          console.log('[DISCOVERY][complete:widgets:done]')
+          
+          // Wait a moment for widgets to be generated
+          setTimeout(() => {
+            // Redirect to the project view
+            if (projectId) {
+              console.log('[DISCOVERY][complete:redirect]', { to: `/dashboard/living-projects/${projectId}` })
+              window.location.href = `/dashboard/living-projects/${projectId}`
+            }
+          }, 2000) // 2 second delay to show completion
+        } catch (error) {
+          console.error('Error completing fingerprint process:', error)
+        }
+      }
+      
+      handleFingerprintComplete()
+    }
+  }, [fingerprintComplete, currentFingerprint, generateProjectWidgets, projectId])
 
   // Refs
   const chatContainerRef = useRef<HTMLDivElement>(null)
@@ -104,18 +286,109 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
   const { context: currentContext, hasContext } = useContentContext()
   const { clearContentContext, setContentContext } = useContentContextActions()
 
+  // Initialize shared state and hooks
+  const chatState = useChatState()
+  const { messages, setMessages, error, isLoading, includeAnalysisInQuery, setIncludeAnalysisInQuery } = chatState
+
+  // Count real user messages for fingerprint progress
+  const realUserMessages = useMemo(() => {
+    return messages.filter(msg => 
+      msg.role === 'user' && !msg.metadata?.isWelcome
+    )
+  }, [messages])
+
+  // Simplified trigger: once total messages (excluding welcome) reach random threshold, run full flow
+  useEffect(() => {
+    if (!projectId || !authData.userId || fingerprintComplete || hasTriggeredRef.current) return
+
+    const effectiveMessages = messages.filter(m => !m.metadata?.isWelcome)
+    const totalCount = effectiveMessages.length
+    const threshold = triggerThresholdRef.current
+    console.log('[DISCOVERY][simple:threshold]', { totalCount, threshold })
+
+    if (totalCount >= threshold) {
+      hasTriggeredRef.current = true
+      const run = async () => {
+        try {
+          setIsGeneratingFingerprint(true)
+          const idToken = await authData.user?.getIdToken?.()
+          if (!idToken) throw new Error('Authentication required')
+
+          const lastMessage = effectiveMessages[effectiveMessages.length - 1]
+          console.log('[DISCOVERY][simple:fingerprint:start]', { projectId, totalCount })
+          const resp = await fetch(`/api/projects/${projectId}/process-message`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+            body: JSON.stringify({ message: lastMessage, conversationHistory: effectiveMessages })
+          })
+          if (!resp.ok) {
+            const txt = await resp.text()
+            console.error('[DISCOVERY][simple:fingerprint:error]', { status: resp.status, txt })
+            throw new Error(txt || 'Fingerprint generation failed')
+          }
+          const result = await resp.json()
+          const fingerprintData = result?.data?.finalFingerprint || result?.data?.fingerprintEvolution || result?.fingerprint_data
+          const projectFingerprint = {
+            projectId: projectId,
+            userId: authData.userId,
+            name: fingerprintData?.name || 'Unnamed Project',
+            description: fingerprintData?.description || 'AI-generated project fingerprint',
+            domain: fingerprintData?.domain || 'General',
+            complexity_level: fingerprintData?.complexity_level || 5,
+            collaboration_style: fingerprintData?.collaboration_style || 'Unknown',
+            time_horizon: fingerprintData?.time_horizon || 'Unknown',
+            primary_pattern: fingerprintData?.primary_pattern || 'Unknown',
+            working_style: fingerprintData?.working_style || [],
+            tangible_deliverables: fingerprintData?.tangible_deliverables || [],
+            intangible_benefits: fingerprintData?.intangible_benefits || [],
+            measurement_approach: fingerprintData?.measurement_approach || 'Unknown',
+            sharing_intention: fingerprintData?.sharing_intention || 'Unknown',
+            base_personality: fingerprintData?.base_personality || 'Unknown',
+            project_voice: fingerprintData?.project_voice || 'Unknown',
+            created_at: Date.now(),
+            last_evolution: Date.now(),
+            intelligence_version: '1.0',
+            ...fingerprintData
+          }
+          setCurrentFingerprint(projectFingerprint)
+          setFingerprintComplete(true)
+
+          console.log('[DISCOVERY][simple:widgets:start]')
+          await generateProjectWidgets(undefined as any)
+
+          setTimeout(() => {
+            window.location.href = `/dashboard/living-projects/${projectId}`
+          }, 1500)
+        } catch (e) {
+          console.error('[DISCOVERY][simple:flow:error]', e)
+        } finally {
+          setIsGeneratingFingerprint(false)
+        }
+      }
+      run()
+    }
+  }, [messages, projectId, authData.userId, fingerprintComplete, generateProjectWidgets, authData.user])
+
   // Set project context when component mounts - force set if we have project data
   useEffect(() => {
     // Force set project context if we have project data, regardless of existing context
     // This ensures project context takes priority over any lingering context
     if (projectContext && !isProjectLoading && contentSummary && contentSummary.totalItems > 0) {
+      console.log('[DISCOVERY][projectContext:set]', {
+        hasProjectContext: !!projectContext,
+        totalItems: contentSummary.totalItems
+      })
       setContentContext(projectContext as any)
     }
   }, [projectContext, currentContext, setContentContext, isProjectLoading, contentSummary])
 
-  // Initialize shared state and hooks
-  const chatState = useChatState()
-  const { messages, setMessages, error, isLoading, includeAnalysisInQuery, setIncludeAnalysisInQuery } = chatState
+  // Show project discovery welcome message when component mounts
+  useEffect(() => {
+    if (projectId && messages.length === 0 && !isLoading) {
+      console.log('🎯 Showing project discovery welcome message')
+      setMessages([getProjectDiscoveryWelcomeMessage(0)])
+    }
+  }, [projectId, messages.length, isLoading, setMessages])
 
   // Get persona data
   const { hasPersona } = usePersonaData(authData.userId, authData.isAuthenticated)
@@ -134,15 +407,6 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
   // Initialize conversation hook
   const { initSession } = useConversation(chatState, authData.user)
 
-  // Initialize welcome message hook for onboarding users without personas
-  const { handleSuggestionClick: handleWelcomeSuggestionClick } = useWelcomeMessage(
-    messages, 
-    isLoading, 
-    authData.user, 
-    setMessages, 
-    hasPersona, 
-    false
-  )
 
   // Embedding sync heartbeat for active chat users  
   useEffect(() => {
@@ -198,6 +462,16 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
     }
   }, [askQuery, isLoading, handleSendMessage, messages.length, authData.user])
 
+  // Initialize welcome message hook for onboarding users without personas
+  const { handleSuggestionClick: handleWelcomeSuggestionClick } = useWelcomeMessage(
+    messages, 
+    isLoading, 
+    authData.user, 
+    setMessages, 
+    hasPersona, 
+    false
+  )
+
   // Handlers
   const handleRemoveContext = useCallback(() => {
     clearContentContext()
@@ -232,8 +506,9 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
 
   // Transition handlers
   const handleStarsDiscovered = useCallback(() => {
-    setShowTransition(true)
-  }, [])
+    // Gate overlay strictly on fingerprint completion to avoid premature UI
+    if (fingerprintComplete) setShowTransition(true)
+  }, [fingerprintComplete])
 
   const handleTransitionComplete = useCallback(() => {
     setShowTransition(false)
@@ -284,7 +559,7 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
   if (showProjectReveal) {
     return (
       <ProjectReveal
-        fingerprint={sampleFingerprint}
+        fingerprint={currentFingerprint}
         onBack={handleBackFromProjectReveal}
       />
     )
@@ -336,6 +611,7 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
                 />
               )}
               
+
               {/* Messages */}
               {messages.length > 0 ? (
                 <ChatMessagesList
@@ -441,7 +717,7 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
       {/* Project Reveal - shows when fingerprint is complete */}
       {fingerprintComplete && (
         <div className="flex-1 overflow-hidden">
-          <ProjectReveal fingerprint={sampleFingerprint} />
+          <ProjectReveal fingerprint={currentFingerprint} />
         </div>
       )}
 

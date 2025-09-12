@@ -2,7 +2,9 @@
 
 import React from 'react'
 import { FingerprintField, ALL_FINGERPRINT_FIELDS } from '@/types/fingerprint-schema'
+import { WidgetConfig, WidgetType } from '@/types/projectWidgets'
 
+// DEPRECATED: This file will be replaced by AI-driven widget generation
 // TODO: Replace rule-based widget factory with AI-driven widget recommendation system
 // TODO: Implement ML-based widget suggestions using fingerprint analysis
 // TODO: Add widget performance tracking and A/B testing
@@ -10,6 +12,10 @@ import { FingerprintField, ALL_FINGERPRINT_FIELDS } from '@/types/fingerprint-sc
 // NOTE: This is a rule-based widget factory that should eventually be replaced
 // with an AI layer that can more intelligently analyze fingerprints and
 // recommend widgets. For now, it provides decent fallbacks based on common patterns.
+// 
+// IMPORTANT: The AI widget generation system is now active and this file
+// is only used as a fallback. All new widgets should be generated via the
+// backend AI agents and stored in Convex.
 
 export interface ProjectFingerprint {
   [key: string]: any
@@ -35,68 +41,55 @@ export interface ProjectFingerprint {
   status: string
 }
 
-export interface WidgetConfig {
-  id: string
-  type: string
-  title: string
-  priority: number // 1-10, higher = more important
-  theme: 'warm' | 'clean' | 'professional'
-  size: 'small' | 'medium' | 'large'
-  data?: any
-}
-
-// Widget types we support
-export type WidgetType =
-  | 'chat'
-  | 'writing_progress'
-  | 'code_commits'
-  | 'client_meetings'
-  | 'content_calendar'
-  | 'research_tracker'
-  | 'milestone_timeline'
-  | 'collaboration_board'
-  | 'resource_library'
-  | 'goal_tracker'
-  | 'mood_tracker'
-  | 'time_tracker'
-  | 'inspiration_board'
-  | 'peer_review'
-  | 'publication_tracker'
-  | 'world_building_tracker'
-  | 'character_arc_tracker'
-  | 'market_sentiment_tracker'
-  | 'tvl_growth_chart'
-  | 'security_audit_status'
-  | 'vendor_coordination_board'
-  | 'guest_rsvp_tracker'
-  | 'budget_tracker'
-  | 'filming_schedule'
-  | 'interview_pipeline'
-  | 'editing_progress'
-  | 'data_visualizer'
-  | 'hypothesis_tracker'
-  | 'publication_pipeline'
-  | 'creative_flow_meter'
-  | 'atmospheric_inspiration'
-  | 'writing_streak_tracker'
+// Widget types are now imported from shared types
 
 // TODO: Replace hardcoded fingerprint analysis with backend widget generation API
 // TODO: Implement dynamic widget configuration based on real project data
 // TODO: Add widget recommendation engine with user behavior learning
 // TODO: Implement widget marketplace and custom widget support
+
+// Helper function to create a complete WidgetConfig with all required fields
+function createWidgetConfig(partial: Partial<WidgetConfig>): WidgetConfig {
+  return {
+    widget_id: partial.widget_id || `widget_${Date.now()}`,
+    widget_type: partial.widget_type || 'generic',
+    title: partial.title || 'Untitled Widget',
+    description: partial.description || 'No description available',
+    category: partial.category || 'General',
+    priority: partial.priority || 5,
+    size: partial.size || 'medium',
+    theme: partial.theme || 'clean',
+    position: partial.position || 1,
+    config: partial.config || {},
+    data_sources: partial.data_sources || [],
+    update_frequency: partial.update_frequency || 'daily',
+    interactive: partial.interactive ?? true,
+    editable: partial.editable ?? true,
+    shareable: partial.shareable ?? false,
+  }
+}
 export function analyzeFingerprintForWidgets(fingerprint: ProjectFingerprint): WidgetConfig[] {
   const widgets: WidgetConfig[] = []
 
   // TODO: Replace hardcoded chat widget with dynamic widget loading
   // TODO: Implement widget permission system and access control
-  widgets.push({
-    id: 'chat',
-    type: 'chat',
+  widgets.push(createWidgetConfig({
+    widget_id: 'chat',
+    widget_type: 'chat',
     title: 'Project Chat',
+    description: 'AI-powered project conversation interface',
+    category: 'Communication',
     priority: 10,
     theme: 'clean',
-    size: 'large'
-  })
+    size: 'large',
+    position: 0,
+    config: {},
+    data_sources: ['conversation_history'],
+    update_frequency: 'realtime',
+    interactive: true,
+    editable: true,
+    shareable: false
+  }))
 
   // TODO: Remove hardcoded project ID checks and replace with fingerprint-based analysis
   // TODO: Implement pattern recognition for automatic widget suggestions
@@ -107,40 +100,40 @@ export function analyzeFingerprintForWidgets(fingerprint: ProjectFingerprint): W
   if (projectId === 'fp_001') {
     widgets.push(
       {
-        id: 'world_building_tracker',
-        type: 'world_building_tracker',
+        widget_id: 'world_building_tracker',
+        widget_type: 'world_building_tracker',
         title: 'Shadowmere World',
         priority: 9,
         theme: 'warm',
         size: 'large'
       },
       {
-        id: 'character_arc_tracker',
-        type: 'character_arc_tracker',
+        widget_id: 'character_arc_tracker',
+        widget_type: 'character_arc_tracker',
         title: 'Necromancer\'s Journey',
         priority: 9,
         theme: 'warm',
         size: 'medium'
       },
       {
-        id: 'atmospheric_inspiration',
-        type: 'atmospheric_inspiration',
+        widget_id: 'atmospheric_inspiration',
+        widget_type: 'atmospheric_inspiration',
         title: 'Dark Magic Muse',
         priority: 8,
         theme: 'warm',
         size: 'medium'
       },
       {
-        id: 'writing_streak_tracker',
-        type: 'writing_streak_tracker',
+        widget_id: 'writing_streak_tracker',
+        widget_type: 'writing_streak_tracker',
         title: 'Forbidden Magic Flow',
         priority: 7,
         theme: 'warm',
         size: 'small'
       },
       {
-        id: 'creative_flow_meter',
-        type: 'creative_flow_meter',
+        widget_id: 'creative_flow_meter',
+        widget_type: 'creative_flow_meter',
         title: 'Shadow Work State',
         priority: 6,
         theme: 'warm',
@@ -152,40 +145,40 @@ export function analyzeFingerprintForWidgets(fingerprint: ProjectFingerprint): W
   else if (projectId === 'fp_002') {
     widgets.push(
       {
-        id: 'data_visualizer',
-        type: 'data_visualizer',
+        widget_id: 'data_visualizer',
+        widget_type: 'data_visualizer',
         title: 'Forest Network Data',
         priority: 9,
         theme: 'clean',
         size: 'large'
       },
       {
-        id: 'hypothesis_tracker',
-        type: 'hypothesis_tracker',
+        widget_id: 'hypothesis_tracker',
+        widget_type: 'hypothesis_tracker',
         title: 'Fungal Intelligence Theory',
         priority: 9,
         theme: 'clean',
         size: 'medium'
       },
       {
-        id: 'publication_pipeline',
-        type: 'publication_pipeline',
+        widget_id: 'publication_pipeline',
+        widget_type: 'publication_pipeline',
         title: 'Research Publication Flow',
         priority: 8,
         theme: 'professional',
         size: 'medium'
       },
       {
-        id: 'research_tracker',
-        type: 'research_tracker',
+        widget_id: 'research_tracker',
+        widget_type: 'research_tracker',
         title: 'Mycorrhizal Discovery Log',
         priority: 8,
         theme: 'clean',
         size: 'medium'
       },
       {
-        id: 'milestone_timeline',
-        type: 'milestone_timeline',
+        widget_id: 'milestone_timeline',
+        widget_type: 'milestone_timeline',
         title: 'PhD Journey Map',
         priority: 7,
         theme: 'clean',
@@ -197,40 +190,40 @@ export function analyzeFingerprintForWidgets(fingerprint: ProjectFingerprint): W
   else if (projectId === 'fp_003') {
     widgets.push(
       {
-        id: 'market_sentiment_tracker',
-        type: 'market_sentiment_tracker',
+        widget_id: 'market_sentiment_tracker',
+        widget_type: 'market_sentiment_tracker',
         title: 'DeFi Market Pulse',
         priority: 9,
         theme: 'professional',
         size: 'medium'
       },
       {
-        id: 'tvl_growth_chart',
-        type: 'tvl_growth_chart',
+        widget_id: 'tvl_growth_chart',
+        widget_type: 'tvl_growth_chart',
         title: 'Protocol TVL Growth',
         priority: 9,
         theme: 'professional',
         size: 'large'
       },
       {
-        id: 'security_audit_status',
-        type: 'security_audit_status',
+        widget_id: 'security_audit_status',
+        widget_type: 'security_audit_status',
         title: 'Smart Contract Security',
         priority: 8,
         theme: 'professional',
         size: 'medium'
       },
       {
-        id: 'code_commits',
-        type: 'code_commits',
+        widget_id: 'code_commits',
+        widget_type: 'code_commits',
         title: 'YieldFarm Development',
         priority: 8,
         theme: 'clean',
         size: 'medium'
       },
       {
-        id: 'milestone_timeline',
-        type: 'milestone_timeline',
+        widget_id: 'milestone_timeline',
+        widget_type: 'milestone_timeline',
         title: 'Mainnet Launch Roadmap',
         priority: 7,
         theme: 'professional',
@@ -242,40 +235,40 @@ export function analyzeFingerprintForWidgets(fingerprint: ProjectFingerprint): W
   else if (projectId === 'fp_004') {
     widgets.push(
       {
-        id: 'vendor_coordination_board',
-        type: 'vendor_coordination_board',
+        widget_id: 'vendor_coordination_board',
+        widget_type: 'vendor_coordination_board',
         title: 'Forest Wedding Vendors',
         priority: 9,
         theme: 'warm',
         size: 'medium'
       },
       {
-        id: 'guest_rsvp_tracker',
-        type: 'guest_rsvp_tracker',
+        widget_id: 'guest_rsvp_tracker',
+        widget_type: 'guest_rsvp_tracker',
         title: 'Guest List Magic',
         priority: 9,
         theme: 'warm',
         size: 'medium'
       },
       {
-        id: 'budget_tracker',
-        type: 'budget_tracker',
+        widget_id: 'budget_tracker',
+        widget_type: 'budget_tracker',
         title: 'Enchanted Budget',
         priority: 8,
         theme: 'professional',
         size: 'medium'
       },
       {
-        id: 'milestone_timeline',
-        type: 'milestone_timeline',
+        widget_id: 'milestone_timeline',
+        widget_type: 'milestone_timeline',
         title: 'Wedding Timeline',
         priority: 8,
         theme: 'warm',
         size: 'large'
       },
       {
-        id: 'mood_tracker',
-        type: 'mood_tracker',
+        widget_id: 'mood_tracker',
+        widget_type: 'mood_tracker',
         title: 'Wedding Joy Meter',
         priority: 6,
         theme: 'warm',
@@ -287,40 +280,40 @@ export function analyzeFingerprintForWidgets(fingerprint: ProjectFingerprint): W
   else if (projectId === 'fp_005') {
     widgets.push(
       {
-        id: 'filming_schedule',
-        type: 'filming_schedule',
+        widget_id: 'filming_schedule',
+        widget_type: 'filming_schedule',
         title: 'Urban Exploration Schedule',
         priority: 9,
         theme: 'clean',
         size: 'medium'
       },
       {
-        id: 'interview_pipeline',
-        type: 'interview_pipeline',
+        widget_id: 'interview_pipeline',
+        widget_type: 'interview_pipeline',
         title: 'Community Voices Pipeline',
         priority: 9,
         theme: 'professional',
         size: 'medium'
       },
       {
-        id: 'editing_progress',
-        type: 'editing_progress',
+        widget_id: 'editing_progress',
+        widget_type: 'editing_progress',
         title: 'Resilience Story Editing',
         priority: 8,
         theme: 'clean',
         size: 'large'
       },
       {
-        id: 'research_tracker',
-        type: 'research_tracker',
+        widget_id: 'research_tracker',
+        widget_type: 'research_tracker',
         title: 'Urban Decay Discovery',
         priority: 8,
         theme: 'warm',
         size: 'medium'
       },
       {
-        id: 'publication_tracker',
-        type: 'publication_tracker',
+        widget_id: 'publication_tracker',
+        widget_type: 'publication_tracker',
         title: 'Film Festival Pipeline',
         priority: 7,
         theme: 'professional',
@@ -341,24 +334,24 @@ export function analyzeFingerprintForWidgets(fingerprint: ProjectFingerprint): W
       case 'creative':
         widgets.push(
           {
-            id: 'writing_progress',
-            type: 'writing_progress',
+            widget_id: 'writing_progress',
+            widget_type: 'writing_progress',
             title: 'Creative Progress',
             priority: 9,
             theme: 'warm',
             size: 'medium'
           },
           {
-            id: 'inspiration_board',
-            type: 'inspiration_board',
+            widget_id: 'inspiration_board',
+            widget_type: 'inspiration_board',
             title: 'Inspiration Board',
             priority: 7,
             theme: 'warm',
             size: 'medium'
           },
           {
-            id: 'mood_tracker',
-            type: 'mood_tracker',
+            widget_id: 'mood_tracker',
+            widget_type: 'mood_tracker',
             title: 'Creative Flow',
             priority: 6,
             theme: 'warm',
@@ -371,24 +364,24 @@ export function analyzeFingerprintForWidgets(fingerprint: ProjectFingerprint): W
       case 'professional':
         widgets.push(
           {
-            id: 'client_meetings',
-            type: 'client_meetings',
+            widget_id: 'client_meetings',
+            widget_type: 'client_meetings',
             title: 'Client Meetings',
             priority: 9,
             theme: 'professional',
             size: 'medium'
           },
           {
-            id: 'goal_tracker',
-            type: 'goal_tracker',
+            widget_id: 'goal_tracker',
+            widget_type: 'goal_tracker',
             title: 'Business Goals',
             priority: 8,
             theme: 'professional',
             size: 'medium'
           },
           {
-            id: 'milestone_timeline',
-            type: 'milestone_timeline',
+            widget_id: 'milestone_timeline',
+            widget_type: 'milestone_timeline',
             title: 'Project Timeline',
             priority: 7,
             theme: 'professional',
@@ -401,24 +394,24 @@ export function analyzeFingerprintForWidgets(fingerprint: ProjectFingerprint): W
       case 'skill_development':
         widgets.push(
           {
-            id: 'research_tracker',
-            type: 'research_tracker',
+            widget_id: 'research_tracker',
+            widget_type: 'research_tracker',
             title: 'Research Progress',
             priority: 9,
             theme: 'clean',
             size: 'large'
           },
           {
-            id: 'resource_library',
-            type: 'resource_library',
+            widget_id: 'resource_library',
+            widget_type: 'resource_library',
             title: 'Study Materials',
             priority: 8,
             theme: 'clean',
             size: 'medium'
           },
           {
-            id: 'milestone_timeline',
-            type: 'milestone_timeline',
+            widget_id: 'milestone_timeline',
+            widget_type: 'milestone_timeline',
             title: 'Learning Timeline',
             priority: 7,
             theme: 'clean',
@@ -430,24 +423,24 @@ export function analyzeFingerprintForWidgets(fingerprint: ProjectFingerprint): W
       default: // personal, skill_development
         widgets.push(
           {
-            id: 'goal_tracker',
-            type: 'goal_tracker',
+            widget_id: 'goal_tracker',
+            widget_type: 'goal_tracker',
             title: 'Personal Goals',
             priority: 8,
             theme: 'clean',
             size: 'medium'
           },
           {
-            id: 'time_tracker',
-            type: 'time_tracker',
+            widget_id: 'time_tracker',
+            widget_type: 'time_tracker',
             title: 'Time Investment',
             priority: 7,
             theme: 'clean',
             size: 'small'
           },
           {
-            id: 'mood_tracker',
-            type: 'mood_tracker',
+            widget_id: 'mood_tracker',
+            widget_type: 'mood_tracker',
             title: 'Progress Mood',
             priority: 6,
             theme: 'warm',
@@ -471,24 +464,24 @@ export function analyzeFingerprintForWidgets(fingerprint: ProjectFingerprint): W
   if (sortedWidgets.length < 4) {
     const fallbackWidgets: WidgetConfig[] = [
       {
-        id: 'goal_tracker',
-        type: 'goal_tracker',
+        widget_id: 'goal_tracker',
+        widget_type: 'goal_tracker',
         title: 'Goals & Objectives',
         priority: 5,
         theme: 'clean',
         size: 'medium'
       },
       {
-        id: 'time_tracker',
-        type: 'time_tracker',
+        widget_id: 'time_tracker',
+        widget_type: 'time_tracker',
         title: 'Time Tracking',
         priority: 4,
         theme: 'clean',
         size: 'small'
       },
       {
-        id: 'resource_library',
-        type: 'resource_library',
+        widget_id: 'resource_library',
+        widget_type: 'resource_library',
         title: 'Resources',
         priority: 3,
         theme: 'clean',
@@ -498,7 +491,7 @@ export function analyzeFingerprintForWidgets(fingerprint: ProjectFingerprint): W
 
     for (const fallback of fallbackWidgets) {
       if (sortedWidgets.length >= 4) break
-      if (!sortedWidgets.find(w => w.id === fallback.id)) {
+      if (!sortedWidgets.find(w => w.widget_id === fallback.widget_id)) {
         sortedWidgets.push(fallback)
       }
     }
@@ -508,7 +501,7 @@ export function analyzeFingerprintForWidgets(fingerprint: ProjectFingerprint): W
 }
 
 // Helper function to get theme colors based on widget theme
-export function getWidgetThemeColors(theme: 'warm' | 'clean' | 'professional') {
+export function getWidgetThemeColors(theme: 'warm' | 'clean' | 'professional' | 'creative') {
   switch (theme) {
     case 'warm':
       return {
@@ -531,11 +524,18 @@ export function getWidgetThemeColors(theme: 'warm' | 'clean' | 'professional') {
         accent: 'text-blue-700 dark:text-blue-300',
         glow: 'shadow-blue-200/50 dark:shadow-blue-900/30'
       }
+    case 'creative':
+      return {
+        bg: 'bg-gradient-to-br from-purple-50/50 to-pink-50/30 dark:from-purple-950/30 dark:to-pink-950/20',
+        border: 'border-purple-200/60 dark:border-purple-800/40',
+        accent: 'text-purple-700 dark:text-purple-300',
+        glow: 'shadow-purple-200/50 dark:shadow-purple-900/30'
+      }
   }
 }
 
 // Helper function to get size classes
-export function getWidgetSizeClasses(size: 'small' | 'medium' | 'large') {
+export function getWidgetSizeClasses(size: 'small' | 'medium' | 'large' | 'xlarge') {
   switch (size) {
     case 'small':
       return 'col-span-1 row-span-1'
@@ -543,5 +543,62 @@ export function getWidgetSizeClasses(size: 'small' | 'medium' | 'large') {
       return 'col-span-2 row-span-1'
     case 'large':
       return 'col-span-2 row-span-2'
+    case 'xlarge':
+      return 'col-span-3 row-span-2'
   }
+}
+
+// Main WidgetFactory React component
+interface WidgetFactoryProps {
+  config: WidgetConfig
+  projectId: string
+}
+
+export function WidgetFactory({ config, projectId }: WidgetFactoryProps) {
+  const themeColors = getWidgetThemeColors(config.theme)
+  const sizeClasses = getWidgetSizeClasses(config.size)
+
+  return (
+    <div className={`
+      relative overflow-hidden rounded-xl border-2 p-6 transition-all duration-300
+      ${themeColors.bg} ${themeColors.border} ${themeColors.glow}
+      hover:scale-[1.02] hover:shadow-lg
+      ${sizeClasses}
+    `}>
+      {/* Widget Header */}
+      <div className="mb-4">
+        <h3 className={`text-lg font-semibold ${themeColors.accent}`}>
+          {config.title}
+        </h3>
+        {config.description && (
+          <p className="text-sm text-muted-foreground/70 mt-1">
+            {config.description}
+          </p>
+        )}
+      </div>
+
+      {/* Widget Content */}
+      <div className="space-y-3">
+        <div className="text-sm text-muted-foreground/60">
+          Type: {config.widget_type}
+        </div>
+        <div className="text-sm text-muted-foreground/60">
+          Priority: {config.priority}/10
+        </div>
+        <div className="text-sm text-muted-foreground/60">
+          Size: {config.size}
+        </div>
+        <div className="text-sm text-muted-foreground/60">
+          Theme: {config.theme}
+        </div>
+      </div>
+
+      {/* Widget Footer */}
+      <div className="mt-4 pt-4 border-t border-current/20">
+        <div className="text-xs text-muted-foreground/50">
+          Widget ID: {config.widget_id}
+        </div>
+      </div>
+    </div>
+  )
 }

@@ -2733,5 +2733,577 @@ app.delete("/api/feedback/:id", async (c) => {
   }
 });
 
+// CONVERSATION SUMMARIES ROUTES
+
+// Create conversation summary
+app.post("/api/conversation-summaries", async (c) => {
+  const ctx = c.env;
+  const summaryData = await c.req.json();
+  
+  try {
+    const summaryId = await ctx.runMutation(api.conversationSummariesMutations.createConversationSummary, summaryData);
+    return c.json({ success: true, summaryId });
+  } catch (error: any) {
+    console.error("Failed to create conversation summary:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to create conversation summary",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get conversation summaries for a user
+app.get("/api/users/:userId/conversation-summaries", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("userId");
+  const limit = c.req.query("limit") ? parseInt(c.req.query("limit") as string) : undefined;
+  
+  try {
+    const summaries = await ctx.runQuery(api.conversationSummariesQueries.getUserConversationSummaries, { 
+      userId, 
+      limit 
+    });
+    return c.json({ success: true, summaries });
+  } catch (error: any) {
+    console.error("Failed to get conversation summaries:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get conversation summaries",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get conversation summaries for a project
+app.get("/api/projects/:projectId/conversation-summaries", async (c) => {
+  const ctx = c.env;
+  const projectId = c.req.param("projectId") as Id<"projects">;
+  const limit = c.req.query("limit") ? parseInt(c.req.query("limit") as string) : undefined;
+  
+  try {
+    const summaries = await ctx.runQuery(api.conversationSummariesQueries.getProjectConversationSummaries, { 
+      projectId, 
+      limit 
+    });
+    return c.json({ success: true, summaries });
+  } catch (error: any) {
+    console.error("Failed to get project conversation summaries:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get project conversation summaries",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// PROJECT FINGERPRINT ROUTES
+
+// Create project fingerprint
+app.post("/api/project-fingerprint/createFingerprint", async (c) => {
+  const ctx = c.env;
+  const fingerprintData = await c.req.json();
+  
+  try {
+    const fingerprintId = await ctx.runMutation(api.projectFingerprintMutations.createFingerprint, fingerprintData);
+    return c.json(fingerprintId);
+  } catch (error: any) {
+    console.error("Failed to create project fingerprint:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to create project fingerprint",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get project fingerprint by ID
+app.post("/api/project-fingerprint/getFingerprint", async (c) => {
+  const ctx = c.env;
+  const { fingerprintId, userId } = await c.req.json();
+  
+  try {
+    const fingerprint = await ctx.runQuery(api.projectFingerprintQueries.getFingerprint, { 
+      fingerprintId, 
+      userId 
+    });
+    return c.json(fingerprint);
+  } catch (error: any) {
+    console.error("Failed to get project fingerprint:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get project fingerprint",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get project fingerprint by project ID
+app.post("/api/project-fingerprint/getFingerprintByProject", async (c) => {
+  const ctx = c.env;
+  const { projectId, userId } = await c.req.json();
+  
+  try {
+    const fingerprint = await ctx.runQuery(api.projectFingerprintQueries.getFingerprintByProject, { 
+      projectId, 
+      userId 
+    });
+    return c.json(fingerprint);
+  } catch (error: any) {
+    console.error("Failed to get project fingerprint by project:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get project fingerprint by project",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Update project fingerprint
+app.post("/api/project-fingerprint/updateFingerprint", async (c) => {
+  const ctx = c.env;
+  const { fingerprintId, userId, updates } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.projectFingerprintMutations.updateFingerprint, {
+      fingerprintId,
+      userId,
+      updates
+    });
+    return c.json(result);
+  } catch (error: any) {
+    console.error("Failed to update project fingerprint:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to update project fingerprint",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Delete project fingerprint
+app.post("/api/project-fingerprint/deleteFingerprint", async (c) => {
+  const ctx = c.env;
+  const { fingerprintId, userId } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.projectFingerprintMutations.deleteFingerprint, {
+      fingerprintId,
+      userId
+    });
+    return c.json(result);
+  } catch (error: any) {
+    console.error("Failed to delete project fingerprint:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to delete project fingerprint",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// PROJECT ROUTES
+
+// Update project
+app.post("/api/projects/updateProject", async (c) => {
+  const ctx = c.env;
+  const projectData = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.projectsMutations.updateProject, projectData);
+    return c.json({
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    console.error("Failed to update project:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to update project",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Update project fingerprint ID
+app.post("/api/projects/updateProjectFingerprintId", async (c) => {
+  const ctx = c.env;
+  const { projectId, userId, fingerprintId } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.projectsMutations.updateProjectFingerprintId, {
+      projectId,
+      userId,
+      fingerprintId
+    });
+    return c.json({
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    console.error("Failed to update project fingerprint ID:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to update project fingerprint ID",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// PROJECT WIDGETS ROUTES
+
+// Create project widgets
+app.post("/api/projects/:projectId/widgets", async (c) => {
+  const ctx = c.env;
+  const projectId = c.req.param("projectId") as Id<"projects">;
+  const widgetsData = await c.req.json();
+  
+  try {
+    const widgetsId = await ctx.runMutation(api.projectWidgetsMutations.createProjectWidgets, {
+      projectId,
+      ...widgetsData
+    });
+    return c.json({ success: true, widgetsId });
+  } catch (error: any) {
+    console.error("Failed to create project widgets:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to create project widgets",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get project widgets
+app.get("/api/projects/:projectId/widgets", async (c) => {
+  const ctx = c.env;
+  const projectId = c.req.param("projectId") as Id<"projects">;
+  
+  try {
+    const widgets = await ctx.runQuery(api.projectWidgetsQueries.getProjectWidgetsByProject, { projectId });
+    return c.json({ success: true, widgets });
+  } catch (error: any) {
+    console.error("Failed to get project widgets:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get project widgets",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Update project widgets
+app.patch("/api/projects/:projectId/widgets/:widgetsId", async (c) => {
+  const ctx = c.env;
+  const widgetsId = c.req.param("widgetsId") as Id<"project_widgets">;
+  const updates = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.projectWidgetsMutations.updateProjectWidgets, {
+      widgetsId,
+      updates
+    });
+    return c.json({ success: true, widgetsId: result });
+  } catch (error: any) {
+    console.error("Failed to update project widgets:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to update project widgets",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Update widget configuration
+app.patch("/api/projects/:projectId/widgets/:widgetsId/config/:widgetId", async (c) => {
+  const ctx = c.env;
+  const widgetsId = c.req.param("widgetsId") as Id<"project_widgets">;
+  const widgetId = c.req.param("widgetId");
+  const { config } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.projectWidgetsMutations.updateWidgetConfig, {
+      widgetsId,
+      widgetId,
+      config
+    });
+    return c.json({ success: true, result });
+  } catch (error: any) {
+    console.error("Failed to update widget config:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to update widget config",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Reorder widgets
+app.post("/api/projects/:projectId/widgets/:widgetsId/reorder", async (c) => {
+  const ctx = c.env;
+  const widgetsId = c.req.param("widgetsId") as Id<"project_widgets">;
+  const { widgetOrder } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.projectWidgetsMutations.reorderWidgets, {
+      widgetsId,
+      widgetOrder
+    });
+    return c.json({ success: true, result });
+  } catch (error: any) {
+    console.error("Failed to reorder widgets:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to reorder widgets",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Delete project widgets
+app.delete("/api/projects/:projectId/widgets/:widgetsId", async (c) => {
+  const ctx = c.env;
+  const widgetsId = c.req.param("widgetsId") as Id<"project_widgets">;
+  
+  try {
+    const result = await ctx.runMutation(api.projectWidgetsMutations.deleteProjectWidgets, { widgetsId });
+    return c.json({ success: true, result });
+  } catch (error: any) {
+    console.error("Failed to delete project widgets:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to delete project widgets",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// AGENT WORKFLOW ROUTES
+
+// Process conversation message (summarize and evolve fingerprint)
+app.post("/api/users/:userId/projects/:projectId/process-message", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("userId");
+  const projectId = c.req.param("projectId") as Id<"projects">;
+  const { message, conversationHistory } = await c.req.json();
+  
+  try {
+    // This would call the backend agent services
+    // For now, return a placeholder response
+    return c.json({ 
+      success: true, 
+      message: "Message processing not yet implemented",
+      data: {
+        userId,
+        projectId,
+        message,
+        conversationHistory
+      }
+    });
+  } catch (error: any) {
+    console.error("Failed to process message:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to process message",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Generate project widgets
+app.post("/api/users/:userId/projects/:projectId/generate-widgets", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("userId");
+  const projectId = c.req.param("projectId") as Id<"projects">;
+  const { fingerprintId } = await c.req.json();
+  
+  try {
+    // This would call the backend agent services
+    // For now, return a placeholder response
+    return c.json({ 
+      success: true, 
+      message: "Widget generation not yet implemented",
+      data: {
+        userId,
+        projectId,
+        fingerprintId
+      }
+    });
+  } catch (error: any) {
+    console.error("Failed to generate widgets:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to generate widgets",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// HTTP Routes for Backend Integration
+app.post("/api/project-widgets/createProjectWidgets", async (c) => {
+  const ctx = c.env;
+  const widgetsData = await c.req.json();
+  
+  try {
+    const widgetsId = await ctx.runMutation(api.projectWidgetsMutations.createProjectWidgets, widgetsData);
+    
+    return c.json({
+      success: true,
+      data: widgetsId
+    });
+  } catch (error: any) {
+    console.error("Failed to create project widgets:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to create project widgets",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+app.get("/api/project-widgets/getProjectWidgets", async (c) => {
+  const ctx = c.env;
+  const widgetsId = c.req.query("widgetsId");
+  
+  try {
+    if (!widgetsId) {
+      return c.json({ 
+        success: false, 
+        error: "Missing widgetsId parameter" 
+      }, 400);
+    }
+
+    const widgets = await ctx.runQuery(api.projectWidgetsQueries.getProjectWidgets, { widgetsId: widgetsId as Id<"project_widgets"> });
+    
+    return c.json({
+      success: true,
+      data: widgets
+    });
+  } catch (error: any) {
+    console.error("Failed to get project widgets:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get project widgets",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+app.get("/api/project-widgets/getProjectWidgetsByProject", async (c) => {
+  const ctx = c.env;
+  const projectId = c.req.query("projectId");
+  
+  try {
+    if (!projectId) {
+      return c.json({ 
+        success: false, 
+        error: "Missing projectId parameter" 
+      }, 400);
+    }
+
+    const widgets = await ctx.runQuery(api.projectWidgetsQueries.getProjectWidgetsByProject, { projectId: projectId as Id<"projects"> });
+    
+    return c.json({
+      success: true,
+      data: widgets
+    });
+  } catch (error: any) {
+    console.error("Failed to get project widgets by project:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get project widgets by project",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+app.post("/api/project-widgets/updateProjectWidgets", async (c) => {
+  const ctx = c.env;
+  const { widgetsId, ...updates } = await c.req.json();
+  
+  try {
+    if (!widgetsId) {
+      return c.json({ 
+        success: false, 
+        error: "Missing widgetsId" 
+      }, 400);
+    }
+
+    const result = await ctx.runMutation(api.projectWidgetsMutations.updateProjectWidgets, { widgetsId, updates });
+    
+    return c.json({
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    console.error("Failed to update project widgets:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to update project widgets",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+app.post("/api/project-widgets/deleteProjectWidgets", async (c) => {
+  const ctx = c.env;
+  const { widgetsId } = await c.req.json();
+  
+  try {
+    if (!widgetsId) {
+      return c.json({ 
+        success: false, 
+        error: "Missing widgetsId" 
+      }, 400);
+    }
+
+    const result = await ctx.runMutation(api.projectWidgetsMutations.deleteProjectWidgets, { widgetsId });
+    
+    return c.json({
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    console.error("Failed to delete project widgets:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to delete project widgets",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get projects for user route
+app.get("/api/projects/getProjectsForUser", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.query("userId");
+  
+  try {
+    if (!userId) {
+      return c.json({
+        success: false,
+        error: "Missing required parameter: userId"
+      }, 400);
+    }
+
+    const projects = await ctx.runQuery(api.projectsQueries.getProjectsForUser, {
+      userId
+    });
+
+    return c.json({
+      success: true,
+      data: projects
+    });
+  } catch (error: any) {
+    console.error("Error getting projects for user:", error);
+    return c.json({
+      success: false, 
+      error: "Failed to get projects for user",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+
 const router = new HttpRouterWithHono(app);
 export default router;

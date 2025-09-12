@@ -1273,4 +1273,106 @@ export default defineSchema({
   .index("by_trigger", ["evolution_trigger"])
   .index("by_timestamp", ["timestamp"])
   .index("by_user_timestamp", ["userId", "timestamp"]),
+
+  // Project Widgets - Personalized widgets for each project
+  project_widgets: defineTable({
+    projectId: v.id("projects"),
+    fingerprintId: v.id("project_fingerprints"),
+    userId: v.string(),
+
+    // Dynamic categories/tabs
+    categories: v.array(v.object({
+      name: v.string(),
+      icon: v.string(),
+      description: v.string(),
+    })),
+
+    // Widget configuration
+    widgets: v.array(v.object({
+      widget_id: v.string(),
+      widget_type: v.string(), // tracker, chart, board, timeline, meter, etc.
+      title: v.string(),
+      description: v.string(),
+      category: v.string(), // Category/tab this widget belongs to
+      priority: v.number(), // 1-10
+      size: v.string(), // small, medium, large, xlarge
+      theme: v.string(), // warm, clean, professional, creative
+      position: v.number(), // Position in dashboard (1-based)
+      config: v.any(), // Widget-specific configuration
+      data_sources: v.array(v.string()),
+      update_frequency: v.string(), // realtime, hourly, daily, weekly
+      interactive: v.boolean(),
+      editable: v.boolean(),
+      shareable: v.boolean(),
+    })),
+
+    // Layout configuration
+    layout_type: v.string(), // grid, dashboard, kanban, timeline
+    columns: v.number(),
+    rows: v.number(),
+
+    // Theme and styling
+    global_theme: v.string(),
+    color_scheme: v.string(), // monochrome, colorful, pastel, vibrant
+    font_style: v.string(), // modern, classic, playful, professional
+
+    // Interaction settings
+    allow_customization: v.boolean(),
+    allow_reordering: v.boolean(),
+    allow_resizing: v.boolean(),
+
+    // Data integration
+    required_integrations: v.array(v.string()),
+    data_refresh_strategy: v.string(),
+
+    // Metadata
+    generated_at: v.number(),
+    version: v.string(),
+    confidence: v.number(), // 0-1 confidence in widget recommendations
+    status: v.string(), // "generating", "active", "archived"
+  })
+  .index("by_project", ["projectId"])
+  .index("by_fingerprint", ["fingerprintId"])
+  .index("by_user", ["userId"])
+  .index("by_status", ["status"])
+  .index("by_generated", ["generated_at"]),
+
+  // Conversation Summaries - Real-time conversation analysis
+  conversation_summaries: defineTable({
+    userId: v.string(),
+    projectId: v.optional(v.id("projects")),
+    segmentId: v.string(), // Unique identifier for conversation segment
+    messageCount: v.number(),
+    
+    // Key insights extracted
+    keyInsights: v.array(v.object({
+      insight_type: v.string(),
+      content: v.string(),
+      confidence: v.number(), // 0-1
+      context: v.string(),
+      importance: v.string(), // low, medium, high, critical
+    })),
+    
+    // Working style analysis
+    workingStyleHints: v.array(v.string()),
+    goalClarity: v.string(), // unclear, emerging, clear, very_clear
+    collaborationPreferences: v.array(v.string()),
+    timePreferences: v.array(v.string()),
+    complexityIndicators: v.array(v.string()),
+    emotionalTone: v.string(),
+    
+    // Follow-up suggestions
+    nextQuestions: v.array(v.string()),
+    summary: v.string(),
+    
+    // Metadata
+    createdAt: v.number(),
+    processedAt: v.number(),
+    agentVersion: v.string(),
+  })
+  .index("by_user", ["userId"])
+  .index("by_project", ["projectId"])
+  .index("by_segment", ["segmentId"])
+  .index("by_created", ["createdAt"])
+  .index("by_user_project", ["userId", "projectId"]),
 });

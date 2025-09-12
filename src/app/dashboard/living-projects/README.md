@@ -57,8 +57,7 @@ living-projects/
 │   │   ├── WidgetFactory.tsx    # Widget recommendation engine
 │   │   ├── LivingProjectView.tsx # Project dashboard
 │   │   ├── ProjectReveal.tsx    # Fingerprint revelation
-│   │   ├── ConstellationTransition.tsx # Transition animations
-│   │   └── LivingProjectViewDemo.tsx # Widget demo
+│   │   └── ConstellationTransition.tsx # Transition animations
 │   └── ...
 └── hooks/
     ├── useConstellationLayout.ts # Layout algorithms

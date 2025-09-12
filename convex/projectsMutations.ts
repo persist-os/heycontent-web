@@ -556,4 +556,4 @@ export const updateProjectFingerprintId = mutation({
       throw new Error("Failed to update project fingerprint ID. Please try again.");
     }
   },
-}); 
+});

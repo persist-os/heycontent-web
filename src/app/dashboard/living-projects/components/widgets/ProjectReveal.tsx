@@ -3,20 +3,9 @@
 import React, { useState, useEffect } from 'react'
 import { LivingProjectView } from './LivingProjectView'
 import { ConstellationTransition } from './ConstellationTransition'
-import { LivingProjectViewDemo } from './LivingProjectViewDemo'
 import { ProjectFingerprint } from './WidgetFactory'
 import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { ChevronLeft, RotateCcw, Sparkles, Star, ChevronDown, ChevronUp, Eye } from 'lucide-react'
-import sampleFingerprintsData from '@/data/sample-fingerprints.json'
-import sampleWidgetsData from '@/data/sample-widgets.json'
-import { WidgetConfig } from './WidgetFactory'
+import { ChevronLeft, RotateCcw, ChevronDown, ChevronUp, Eye } from 'lucide-react'
 
 // TODO: Remove all sample data imports and replace with backend queries
 // TODO: Implement real-time fingerprint evolution tracking
@@ -24,7 +13,7 @@ import { WidgetConfig } from './WidgetFactory'
 // TODO: Implement fingerprint collaboration and sharing features
 
 interface ProjectRevealProps {
-  fingerprint: ProjectFingerprint
+  fingerprint: ProjectFingerprint | null
   onBack?: () => void
 }
 
@@ -34,83 +23,22 @@ export function ProjectReveal({
 }: ProjectRevealProps) {
   const [showTransition, setShowTransition] = useState(false)
   const [showProjectView, setShowProjectView] = useState(false)
-  const [selectedDemoFingerprint, setSelectedDemoFingerprint] = useState(0)
   const [isOverlayExpanded, setIsOverlayExpanded] = useState(false)
 
-  const demoFingerprints = sampleFingerprintsData.fingerprints
-
-  // Use the provided fingerprint directly
+  // Use the provided fingerprint directly, with null safety
   const currentFingerprint = fingerprint
 
-  // TODO: Replace with backend widget generation and configuration API
-  // TODO: Implement intelligent widget suggestions based on fingerprint evolution
-  // TODO: Add widget performance metrics and optimization
-  // Function to convert sample widget data to WidgetConfig format
-  function convertSampleWidgetsToConfig(fingerprintId: string): WidgetConfig[] {
-    const widgetData = sampleWidgetsData.widget_data[fingerprintId]
-
-    if (!widgetData) {
-      // TODO: Implement fallback widget generation for incomplete fingerprints
-      return []
-    }
-
-    const widgets: WidgetConfig[] = []
-
-    // Convert each widget in the sample data to WidgetConfig format
-    Object.entries(widgetData).forEach(([widgetKey, widgetInfo]: [string, any], index) => {
-      // Determine theme based on fingerprint domain
-      let theme: 'warm' | 'clean' | 'professional' = 'clean'
-      const fingerprint = demoFingerprints.find(fp => fp.projectId === fingerprintId)
-      if (fingerprint) {
-        switch (fingerprint.domain) {
-          case 'creative':
-            theme = 'warm'
-            break
-          case 'business':
-            theme = 'professional'
-            break
-          case 'academic':
-            theme = 'clean'
-            break
-          default:
-            theme = 'clean'
-        }
-      }
-
-      // Determine size and priority based on widget type
-      let size: 'small' | 'medium' | 'large' = 'medium'
-      let priority = 8 - index // Decreasing priority for each widget
-
-      // Special sizing for certain widget types
-      if (widgetKey.includes('timeline') || widgetKey.includes('tracker') || widgetKey.includes('chart')) {
-        size = 'large'
-        priority = 9
-      } else if (widgetKey.includes('board') || widgetKey.includes('pipeline')) {
-        size = 'medium'
-        priority = 8
-      } else {
-        size = 'small'
-        priority = 7
-      }
-
-      widgets.push({
-        id: widgetKey,
-        type: widgetKey,
-        title: widgetInfo.title,
-        priority: Math.max(1, Math.min(10, priority)),
-        theme,
-        size,
-        data: widgetInfo.data
-      })
-    })
-
-    // Sort by priority and limit to 6 widgets
-    return widgets
-      .sort((a, b) => b.priority - a.priority)
-      .slice(0, 6)
+  // Early return if no fingerprint is available
+  if (!currentFingerprint) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="text-muted-foreground mb-2">No fingerprint available</div>
+          <div className="text-sm text-muted-foreground">Please complete the project discovery process</div>
+        </div>
+      </div>
+    )
   }
-
-  const sampleWidgets = convertSampleWidgetsToConfig(demoFingerprints[selectedDemoFingerprint].projectId)
 
   const handleStarsDiscovered = () => {
     setShowTransition(true)
@@ -160,14 +88,14 @@ export function ProjectReveal({
               <div>
               <div className="text-sm font-medium text-foreground mb-1">Project Name:</div>
               <div className="text-muted-foreground font-medium text-sm bg-muted/30 px-3 py-2 rounded-md">
-                {demoFingerprints[selectedDemoFingerprint].name}
+                {currentFingerprint.name || 'Unnamed Project'}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 text-xs">
-              <div><span className="font-medium text-foreground">Domain:</span> <span className="text-muted-foreground">{demoFingerprints[selectedDemoFingerprint].domain}</span></div>
-              <div><span className="font-medium text-foreground">Complexity:</span> <span className="text-muted-foreground">{demoFingerprints[selectedDemoFingerprint].complexity_level}/10</span></div>
-              <div><span className="font-medium text-foreground">Pattern:</span> <span className="text-muted-foreground">{demoFingerprints[selectedDemoFingerprint].primary_pattern?.replace('_', ' ')}</span></div>
-              <div><span className="font-medium text-foreground">Collaboration:</span> <span className="text-muted-foreground">{demoFingerprints[selectedDemoFingerprint].collaboration_style?.replace('_', ' ')}</span></div>
+              <div><span className="font-medium text-foreground">Domain:</span> <span className="text-muted-foreground">{currentFingerprint.domain || 'Unknown'}</span></div>
+              <div><span className="font-medium text-foreground">Complexity:</span> <span className="text-muted-foreground">{currentFingerprint.complexity_level || 0}/10</span></div>
+              <div><span className="font-medium text-foreground">Pattern:</span> <span className="text-muted-foreground">{currentFingerprint.primary_pattern?.replace('_', ' ') || 'Unknown'}</span></div>
+              <div><span className="font-medium text-foreground">Collaboration:</span> <span className="text-muted-foreground">{currentFingerprint.collaboration_style?.replace('_', ' ') || 'Unknown'}</span></div>
             </div>
           </div>
 
@@ -182,96 +110,95 @@ export function ProjectReveal({
                 <div className="text-sm font-medium text-foreground">Complete Fingerprint Data:</div>
                 <div className="bg-muted/20 rounded-lg p-4 space-y-2">
                   <div className="text-xs font-mono space-y-1">
-                    <div><span className="text-muted-foreground">projectId:</span> <span className="text-foreground">{demoFingerprints[selectedDemoFingerprint].projectId}</span></div>
-                    <div><span className="text-muted-foreground">name:</span> <span className="text-foreground">"{demoFingerprints[selectedDemoFingerprint].name}"</span></div>
-                    <div><span className="text-muted-foreground">domain:</span> <span className="text-foreground">"{demoFingerprints[selectedDemoFingerprint].domain}"</span></div>
-                    <div><span className="text-muted-foreground">complexity_level:</span> <span className="text-foreground">{demoFingerprints[selectedDemoFingerprint].complexity_level}</span></div>
+                    <div><span className="text-muted-foreground">name:</span> <span className="text-foreground">"{currentFingerprint.name || 'Unnamed Project'}"</span></div>
+                    <div><span className="text-muted-foreground">domain:</span> <span className="text-foreground">"{currentFingerprint.domain || 'Unknown'}"</span></div>
+                    <div><span className="text-muted-foreground">complexity_level:</span> <span className="text-foreground">{currentFingerprint.complexity_level || 0}</span></div>
 
-                    {demoFingerprints[selectedDemoFingerprint].primary_pattern && (
-                      <div><span className="text-muted-foreground">primary_pattern:</span> <span className="text-foreground">"{demoFingerprints[selectedDemoFingerprint].primary_pattern}"</span></div>
+                    {currentFingerprint.primary_pattern && (
+                      <div><span className="text-muted-foreground">primary_pattern:</span> <span className="text-foreground">"{currentFingerprint.primary_pattern}"</span></div>
                     )}
 
-                    {demoFingerprints[selectedDemoFingerprint].collaboration_style && (
-                      <div><span className="text-muted-foreground">collaboration_style:</span> <span className="text-foreground">"{demoFingerprints[selectedDemoFingerprint].collaboration_style}"</span></div>
+                    {currentFingerprint.collaboration_style && (
+                      <div><span className="text-muted-foreground">collaboration_style:</span> <span className="text-foreground">"{currentFingerprint.collaboration_style}"</span></div>
                     )}
 
-                    {demoFingerprints[selectedDemoFingerprint].description && (
-                      <div><span className="text-muted-foreground">description:</span> <span className="text-foreground">"{demoFingerprints[selectedDemoFingerprint].description}"</span></div>
+                    {currentFingerprint.description && (
+                      <div><span className="text-muted-foreground">description:</span> <span className="text-foreground">"{currentFingerprint.description}"</span></div>
                     )}
 
-                    {demoFingerprints[selectedDemoFingerprint].time_horizon && (
-                      <div><span className="text-muted-foreground">time_horizon:</span> <span className="text-foreground">"{demoFingerprints[selectedDemoFingerprint].time_horizon}"</span></div>
+                    {currentFingerprint.time_horizon && (
+                      <div><span className="text-muted-foreground">time_horizon:</span> <span className="text-foreground">"{currentFingerprint.time_horizon}"</span></div>
                     )}
 
-                    {demoFingerprints[selectedDemoFingerprint].working_style && demoFingerprints[selectedDemoFingerprint].working_style.length > 0 && (
-                      <div><span className="text-muted-foreground">working_style:</span> <span className="text-foreground">[{demoFingerprints[selectedDemoFingerprint].working_style.map((style: string) => `"${style}"`).join(', ')}]</span></div>
+                    {currentFingerprint.working_style && currentFingerprint.working_style.length > 0 && (
+                      <div><span className="text-muted-foreground">working_style:</span> <span className="text-foreground">[{currentFingerprint.working_style.map((style: string) => `"${style}"`).join(', ')}]</span></div>
                     )}
 
-                    {demoFingerprints[selectedDemoFingerprint].core_intention && (
-                      <div><span className="text-muted-foreground">core_intention:</span> <span className="text-foreground">"{demoFingerprints[selectedDemoFingerprint].core_intention}"</span></div>
+                    {currentFingerprint.core_intention && (
+                      <div><span className="text-muted-foreground">core_intention:</span> <span className="text-foreground">"{currentFingerprint.core_intention}"</span></div>
                     )}
 
-                    {demoFingerprints[selectedDemoFingerprint].success_vision && (
-                      <div><span className="text-muted-foreground">success_vision:</span> <span className="text-foreground">"{demoFingerprints[selectedDemoFingerprint].success_vision}"</span></div>
+                    {currentFingerprint.success_vision && (
+                      <div><span className="text-muted-foreground">success_vision:</span> <span className="text-foreground">"{currentFingerprint.success_vision}"</span></div>
                     )}
 
-                    {demoFingerprints[selectedDemoFingerprint].personal_growth && demoFingerprints[selectedDemoFingerprint].personal_growth.length > 0 && (
+                    {currentFingerprint.personal_growth && currentFingerprint.personal_growth.length > 0 && (
                       <div className="flex flex-col">
                         <span className="text-muted-foreground">personal_growth:</span>
                         <div className="ml-4 text-foreground">
-                          {demoFingerprints[selectedDemoFingerprint].personal_growth.map((growth: string, idx: number) => (
+                          {currentFingerprint.personal_growth.map((growth: string, idx: number) => (
                             <div key={idx} className="text-xs">• {growth.replace('_', ' ')}</div>
                           ))}
                         </div>
                       </div>
                     )}
 
-                    {demoFingerprints[selectedDemoFingerprint].key_phases && demoFingerprints[selectedDemoFingerprint].key_phases.length > 0 && (
+                    {currentFingerprint.key_phases && currentFingerprint.key_phases.length > 0 && (
                       <div className="flex flex-col">
                         <span className="text-muted-foreground">key_phases:</span>
                         <div className="ml-4 text-foreground">
-                          {demoFingerprints[selectedDemoFingerprint].key_phases.map((phase: string, idx: number) => (
-                            <div key={idx} className="text-xs">• {phase.replace('_', ' ')}</div>
+                          {currentFingerprint.key_phases.map((phase: any, idx: number) => (
+                            <div key={idx} className="text-xs">• {typeof phase === 'string' ? phase.replace('_', ' ') : phase.name || phase}</div>
                           ))}
                         </div>
                       </div>
                     )}
 
-                    {demoFingerprints[selectedDemoFingerprint].tangible_deliverables && demoFingerprints[selectedDemoFingerprint].tangible_deliverables.length > 0 && (
+                    {currentFingerprint.tangible_deliverables && currentFingerprint.tangible_deliverables.length > 0 && (
                       <div className="flex flex-col">
                         <span className="text-muted-foreground">tangible_deliverables:</span>
                         <div className="ml-4 text-foreground">
-                          {demoFingerprints[selectedDemoFingerprint].tangible_deliverables.map((deliverable: string, idx: number) => (
+                          {currentFingerprint.tangible_deliverables.map((deliverable: string, idx: number) => (
                             <div key={idx} className="text-xs">• {deliverable.replace('_', ' ')}</div>
                           ))}
                         </div>
                       </div>
                     )}
 
-                    {demoFingerprints[selectedDemoFingerprint].potential_obstacles && demoFingerprints[selectedDemoFingerprint].potential_obstacles.length > 0 && (
+                    {currentFingerprint.potential_obstacles && currentFingerprint.potential_obstacles.length > 0 && (
                       <div className="flex flex-col">
                         <span className="text-muted-foreground">potential_obstacles:</span>
                         <div className="ml-4 text-foreground">
-                          {demoFingerprints[selectedDemoFingerprint].potential_obstacles.map((obstacle: string, idx: number) => (
+                          {currentFingerprint.potential_obstacles.map((obstacle: string, idx: number) => (
                             <div key={idx} className="text-xs">• {obstacle.replace('_', ' ')}</div>
                           ))}
                         </div>
                       </div>
                     )}
 
-                    {demoFingerprints[selectedDemoFingerprint].support_systems && demoFingerprints[selectedDemoFingerprint].support_systems.length > 0 && (
+                    {currentFingerprint.support_systems && currentFingerprint.support_systems.length > 0 && (
                       <div className="flex flex-col">
                         <span className="text-muted-foreground">support_systems:</span>
                         <div className="ml-4 text-foreground">
-                          {demoFingerprints[selectedDemoFingerprint].support_systems.map((system: string, idx: number) => (
+                          {currentFingerprint.support_systems.map((system: string, idx: number) => (
                             <div key={idx} className="text-xs">• {system.replace('_', ' ')}</div>
                           ))}
                         </div>
                       </div>
                     )}
 
-                    {demoFingerprints[selectedDemoFingerprint].status && (
-                      <div><span className="text-muted-foreground">status:</span> <span className="text-foreground">"{demoFingerprints[selectedDemoFingerprint].status}"</span></div>
+                    {currentFingerprint.status && (
+                      <div><span className="text-muted-foreground">status:</span> <span className="text-foreground">"{currentFingerprint.status}"</span></div>
                     )}
                   </div>
                 </div>
@@ -281,17 +208,9 @@ export function ProjectReveal({
               <div className="pt-2 border-t border-border/20">
                 <div className="text-sm font-medium text-foreground mb-2">Widget Configuration:</div>
                 <div className="text-xs text-muted-foreground/70 bg-muted/30 px-3 py-2 rounded-md">
-                  <div><span className="font-medium text-foreground">Generated Widgets:</span> {sampleWidgets.length} widgets from sample data</div>
+                  <div><span className="font-medium text-foreground">Generated Widgets:</span> Widgets will be generated by the agent system</div>
                   <div className="mt-1">
-                    <span className="font-medium text-foreground">Widget Types:</span>
-                    <div className="ml-2 mt-1 space-y-1">
-                      {sampleWidgets.map((widget, idx) => (
-                        <div key={idx} className="flex justify-between text-xs">
-                          <span>{widget.type}</span>
-                          <span className="text-muted-foreground">({widget.size}, prio: {widget.priority})</span>
-                        </div>
-                      ))}
-                    </div>
+                    <span className="font-medium text-foreground">Status:</span> <span className="text-muted-foreground">Waiting for agent generation</span>
                   </div>
                 </div>
               </div>
@@ -330,32 +249,6 @@ export function ProjectReveal({
               </div>
 
               <div className="flex items-center gap-4">
-                {/* Demo project selector - moved further left to avoid overlap with fingerprint overlay */}
-                <div className="flex items-center gap-3 min-w-0 mr-8">
-                  <span className="text-sm text-muted-foreground/70 font-medium whitespace-nowrap">Select Project:</span>
-                  <Select
-                    value={selectedDemoFingerprint.toString()}
-                    onValueChange={(value) => setSelectedDemoFingerprint(parseInt(value))}
-                  >
-                    <SelectTrigger className="min-w-[200px] max-w-[300px] border-border/40 hover:border-border/60 transition-colors">
-                      <SelectValue placeholder="Choose a project..." />
-                    </SelectTrigger>
-                    <SelectContent className="min-w-[280px]">
-                      {demoFingerprints.map((fp, index) => (
-                        <SelectItem key={fp.projectId} value={index.toString()}>
-                          <div className="flex flex-col py-2 min-w-0">
-                            <span className="font-medium text-sm truncate">{fp.name}</span>
-                            <span className="text-xs text-muted-foreground/70 truncate">
-                              {fp.domain} • {fp.primary_pattern?.replace('_', ' ')} • {fp.collaboration_style?.replace('_', ' ')}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-
                 {/* Reset button */}
                 {showProjectView && (
                   <Button
@@ -375,21 +268,14 @@ export function ProjectReveal({
 
         {/* Main content */}
         <div className="relative">
-        {!showProjectView ? (
-          <div>
-            {/* Living Project Demo - seamless connection */}
-            <LivingProjectViewDemo selectedFingerprint={selectedDemoFingerprint} />
-          </div>
-        ) : (
           <LivingProjectView fingerprint={currentFingerprint} />
-        )}
 
-        {/* Transition overlay */}
-        <ConstellationTransition
-          isActive={showTransition}
-          onComplete={handleTransitionComplete}
-          duration={3000}
-        />
+          {/* Transition overlay */}
+          <ConstellationTransition
+            isActive={showTransition}
+            onComplete={handleTransitionComplete}
+            duration={3000}
+          />
         </div>
       </div>
     </>
