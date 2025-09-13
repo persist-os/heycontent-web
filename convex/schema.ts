@@ -216,6 +216,24 @@ export default defineSchema({
   .index("by_creation", ["createdAt"])
   .index("by_type", ["type"]),
 
+  // Shared Notes - for collaborative note access
+  shared_notes: defineTable({
+    noteId: v.id("notes"),
+    ownerId: v.string(), // Original note owner
+    sharedWithUserId: v.string(), // User who has access
+    permission: v.union(
+      v.literal("read"),
+      v.literal("edit")
+    ),
+    sharedAt: v.number(),
+    sharedBy: v.string(), // Who shared it (could be owner or another editor)
+    isActive: v.boolean(), // for soft deletion
+  })
+  .index("by_note", ["noteId"])
+  .index("by_shared_user", ["sharedWithUserId"])
+  .index("by_owner", ["ownerId"])
+  .index("by_note_user", ["noteId", "sharedWithUserId"]),
+
   // Projects
   projects: defineTable({
     userId: v.string(),
@@ -1376,4 +1394,67 @@ export default defineSchema({
   .index("by_segment", ["segmentId"])
   .index("by_created", ["createdAt"])
   .index("by_user_project", ["userId", "projectId"]),
+
+  // Friendships - User friendship management
+  friendships: defineTable({
+    userId1: v.string(),
+    userId2: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("accepted"),
+      v.literal("blocked")
+    ),
+    requestedBy: v.string(),
+    requestMessage: v.optional(v.string()),
+    requestedAt: v.number(),
+    acceptedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_userId1", ["userId1"])
+  .index("by_userId2", ["userId2"])
+  .index("by_status", ["status"])
+  .index("by_requestedBy", ["requestedBy"])
+  .index("by_user_pair", ["userId1", "userId2"])
+  .index("by_user1_status", ["userId1", "status"])
+  .index("by_user2_status", ["userId2", "status"]),
+
+  // Shared Content - Content sharing between users
+  shared_content: defineTable({
+    contentType: v.union(
+      v.literal("note"),
+      v.literal("project")
+    ),
+    contentId: v.string(),
+    ownerId: v.string(),
+    sharedWithUserId: v.string(),
+    permission: v.union(
+      v.literal("read"),
+      v.literal("edit")
+    ),
+    sharedBy: v.string(),
+    sharedAt: v.number(),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_contentId", ["contentId"])
+  .index("by_ownerId", ["ownerId"])
+  .index("by_sharedWithUserId", ["sharedWithUserId"])
+  .index("by_contentType", ["contentType"])
+  .index("by_content_user", ["contentId", "sharedWithUserId"])
+  .index("by_owner_type", ["ownerId", "contentType"])
+  .index("by_shared_user_type", ["sharedWithUserId", "contentType"])
+  .index("by_active", ["isActive"]),
+
+  // User Preferences - User privacy and notification settings
+  user_preferences: defineTable({
+    userId: v.string(),
+    showPersonaToFriends: v.boolean(),
+    allowFriendRequests: v.boolean(),
+    friendRequestNotifications: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_userId", ["userId"]),
 });

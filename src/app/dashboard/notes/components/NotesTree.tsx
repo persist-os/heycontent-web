@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Plus, ChevronRight, ChevronDown, FileText, Folder, Calendar, Tag, Star, Clock, Filter, FolderPlus } from 'lucide-react';
+import { Search, Plus, ChevronRight, ChevronDown, FileText, Folder, Calendar, Tag, Star, Clock, Filter, FolderPlus, Users } from 'lucide-react';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { Note } from '../types';
 import { Project } from '../types/project';
 import { cn } from '@/lib/utils';
@@ -63,7 +65,7 @@ export function NotesTree({
 }: NotesTreeProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'important' | 'recent' | 'projects'>('all');
-  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['recent', 'projects', 'tags', 'important']));
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['recent', 'projects', 'tags', 'important', 'shared']));
   const [isCreatingNote, setIsCreatingNote] = useState(false);
   const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
   const [draggedNote, setDraggedNote] = useState<Note | null>(null);
@@ -73,6 +75,12 @@ export function NotesTree({
   const { createNote } = useCreateNote();
   const { setActiveNoteId, updateNote } = useNotes();
   const { firebaseUser } = useAuth();
+  
+  // Get shared notes
+  const sharedNotes = useQuery(
+    api.noteSharing.getSharedNotes,
+    firebaseUser?.uid ? { userId: firebaseUser.uid } : 'skip'
+  );
   const router = useRouter();
   const { 
     projects: hookProjects, 
@@ -129,6 +137,28 @@ export function NotesTree({
           type: 'note' as const,
           title: note.title || 'Untitled',
           note,
+          level: 1,
+          children: []
+        }))
+      });
+    }
+
+    // Shared notes
+    if (sharedNotes && sharedNotes.length > 0) {
+      tree.push({
+        id: 'shared',
+        type: 'folder',
+        title: 'Shared with me',
+        count: sharedNotes.length,
+        level: 0,
+        children: sharedNotes.map(sharedNote => ({
+          id: sharedNote._id,
+          type: 'note' as const,
+          title: `${sharedNote.title || 'Untitled'} (by ${sharedNote.ownerName})`,
+          note: {
+            ...sharedNote,
+            userId: sharedNote.ownerId, // Map back to expected structure
+          } as Note,
           level: 1,
           children: []
         }))
@@ -551,10 +581,14 @@ export function NotesTree({
               ) : (
                 <div className="w-4" />
               )}
-              <Folder className={cn(
-                "w-5 h-5 transition-colors",
-                node.level === 0 ? "text-blue-500/70" : "text-muted-foreground/60"
-              )} />
+              {node.id === 'shared' ? (
+                <Users className="w-5 h-5 text-green-500/70 transition-colors" />
+              ) : (
+                <Folder className={cn(
+                  "w-5 h-5 transition-colors",
+                  node.level === 0 ? "text-blue-500/70" : "text-muted-foreground/60"
+                )} />
+              )}
             </div>
             <span className={cn(
               "font-medium transition-colors",

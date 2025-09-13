@@ -13,6 +13,7 @@ import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 
 import { mapAuthErrorCodeToMessage } from '@/app/api/auth/firebase/helpers';
 import { Input } from '@/components/ui/input';
 import { onAuthStateChanged } from 'firebase/auth';
+import { AutomaticEmbeddingStatus } from './platform-connect/AutomaticEmbeddingStatus';
 
 const DataTab = () => {
   const router = useRouter();
@@ -140,171 +141,232 @@ const DataTab = () => {
   };
 
   return (
-    <div className="grid gap-4 sm:gap-6 max-w-full">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg sm:text-xl">Security & Privacy</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Change Password Section */}
-          <form onSubmit={handleChangePassword} className="flex flex-col p-4 bg-muted/50 rounded-lg gap-4">
-            <div className="flex items-center gap-2">
-              <Lock className="w-4 h-4 text-muted-foreground" />
-              <h3 className="font-medium">Change Password</h3>
-            </div>
-            <div className="space-y-3">
+    <div className="space-y-12">
+      {/* Security Section */}
+      <div className="space-y-6">
+        <div className="space-y-1">
+          <h2 className="text-2xl font-light tracking-tight text-foreground">Security</h2>
+          <p className="text-muted-foreground">Manage your password and account security</p>
+        </div>
+
+        <form onSubmit={handleChangePassword} className="space-y-6">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Current Password</label>
               <div className="relative">
                 <Input
                   type={showCurrentPassword ? "text" : "password"}
-                  placeholder="Current password"
+                  placeholder="Enter your current password"
                   value={currentPassword}
                   onChange={e => setCurrentPassword(e.target.value)}
                   disabled={isChangingPassword || isDeleting}
                   required
-                  className="pr-10"
+                  className="pr-10 border-border/50 focus:border-foreground/20 transition-colors duration-200"
                 />
                 <button
                   type="button"
                   onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors duration-200"
                 >
-                  {showCurrentPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
+                  {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">New Password</label>
               <div className="relative">
                 <Input
                   type={showNewPassword ? "text" : "password"}
-                  placeholder="New password"
+                  placeholder="Enter your new password"
                   value={newPassword}
                   onChange={e => setNewPassword(e.target.value)}
                   disabled={isChangingPassword || isDeleting}
                   required
-                  className="pr-10"
+                  className="pr-10 border-border/50 focus:border-foreground/20 transition-colors duration-200"
                 />
                 <button
                   type="button"
                   onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors duration-200"
                 >
-                  {showNewPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
+                  {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Confirm New Password</label>
               <div className="relative">
                 <Input
                   type={showConfirmPassword ? "text" : "password"}
-                  placeholder="Confirm new password"
+                  placeholder="Confirm your new password"
                   value={confirmPassword}
                   onChange={e => setConfirmPassword(e.target.value)}
                   disabled={isChangingPassword || isDeleting}
                   required
-                  className="pr-10"
+                  className="pr-10 border-border/50 focus:border-foreground/20 transition-colors duration-200"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors duration-200"
                 >
-                  {showConfirmPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
-            <div className="flex justify-end">
-              <Button 
-                type="submit" 
-                disabled={isChangingPassword || isDeleting}
-                className="w-full sm:w-auto"
-              >
-                {isChangingPassword ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  'Update Password'
-                )}
-              </Button>
-            </div>
-          </form>
-
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-muted/50 rounded-lg gap-3">
-            <div>
-              <h3 className="font-medium">Data Collection</h3>
-              <p className="text-sm text-muted-foreground">
-                By using HeyContext, you consent to us saving, using, and analyzing your data from your integrations. We use this to improve your experience and our services.
-              </p>
-            </div>
-            <Button variant="outline" disabled={isDeleting}>Configure</Button>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-muted/50 rounded-lg gap-3 border border-red-100">
-            <div>
-              <h3 className="font-medium text-red-600">Delete Account</h3>
-              <p className="text-sm text-muted-foreground">Permanently delete your account and all associated data. This action cannot be undone.</p>
+          <div className="flex justify-end">
+            <Button 
+              type="submit" 
+              disabled={isChangingPassword || isDeleting}
+              className="bg-foreground text-background hover:bg-foreground/90 transition-colors duration-200"
+            >
+              {isChangingPassword ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating Password...
+                </>
+              ) : (
+                'Update Password'
+              )}
+            </Button>
+          </div>
+        </form>
+      </div>
+
+      <div className="h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
+
+      {/* Privacy Section */}
+      <div className="space-y-6">
+        <div className="space-y-1">
+          <h2 className="text-2xl font-light tracking-tight text-foreground">Privacy</h2>
+          <p className="text-muted-foreground">Control how your data is collected and used</p>
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex items-start justify-between py-4">
+            <div className="space-y-1 flex-1">
+              <h3 className="font-medium text-foreground">Data Collection</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl">
+                We collect and analyze data from your connected platforms to provide personalized insights and improve your content strategy. This helps us deliver better recommendations and features.
+              </p>
+            </div>
+            <Button 
+              variant="ghost" 
+              disabled={isDeleting}
+              className="text-muted-foreground hover:text-foreground transition-colors duration-200 ml-6"
+            >
+              Configure
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
+
+      {/* Danger Zone */}
+      <div className="space-y-6">
+        <div className="space-y-1">
+          <h2 className="text-2xl font-light tracking-tight text-foreground">Danger Zone</h2>
+          <p className="text-muted-foreground">Irreversible actions that affect your account</p>
+        </div>
+
+        <div className="border border-red-200/50 dark:border-red-800/30 rounded-2xl p-6 bg-red-50/30 dark:bg-red-950/20">
+          <div className="flex items-start justify-between">
+            <div className="space-y-2 flex-1">
+              <h3 className="font-medium text-red-600 dark:text-red-400">Delete Account</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl">
+                Permanently delete your account and all associated data. This action cannot be undone and will immediately remove all your content, connections, and settings.
+              </p>
             </div>
             <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive" onClick={() => setShowDeleteDialog(true)} disabled={isDeleting}>
+                <Button 
+                  variant="destructive" 
+                  onClick={() => setShowDeleteDialog(true)} 
+                  disabled={isDeleting}
+                  className="ml-6 bg-red-600 hover:bg-red-700 text-white transition-colors duration-200"
+                >
                   Delete Account
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Account</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    <div className="mb-2 font-semibold text-red-700">Are you absolutely sure?</div>
-                    <div className="mb-4">This action cannot be undone. This will permanently delete your account and all associated data.</div>
-                    <div className="mb-2">Please enter your password to confirm account deletion:</div>
-                    <div className="relative mb-2">
-                      <Input
-                        type={showDeletePassword ? 'text' : 'password'}
-                        placeholder="Password"
-                        value={deletePassword}
-                        onChange={e => { setDeletePassword(e.target.value); setDeletePasswordError(null); }}
-                        disabled={isDeleting}
-                        required
-                        className="pr-10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowDeletePassword(!showDeletePassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                        tabIndex={-1}
-                      >
-                        {showDeletePassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
+              <AlertDialogContent className="max-w-md">
+                <AlertDialogHeader className="space-y-3">
+                  <AlertDialogTitle className="text-xl font-light tracking-tight">Delete Account</AlertDialogTitle>
+                  <AlertDialogDescription className="space-y-4 text-sm leading-relaxed">
+                    <div className="font-medium text-red-600 dark:text-red-400">
+                      This action cannot be undone.
                     </div>
-                    {deletePasswordError && <div className="text-red-600 text-sm mb-2">{deletePasswordError}</div>}
+                    <div className="text-muted-foreground">
+                      This will permanently delete your account and all associated data, including your content, connections, and settings.
+                    </div>
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-foreground">
+                        Enter your password to confirm:
+                      </label>
+                      <div className="relative">
+                        <Input
+                          type={showDeletePassword ? 'text' : 'password'}
+                          placeholder="Password"
+                          value={deletePassword}
+                          onChange={e => { setDeletePassword(e.target.value); setDeletePasswordError(null); }}
+                          disabled={isDeleting}
+                          required
+                          className="pr-10 border-border/50 focus:border-red-400/50 transition-colors duration-200"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowDeletePassword(!showDeletePassword)}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors duration-200"
+                          tabIndex={-1}
+                        >
+                          {showDeletePassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                      {deletePasswordError && (
+                        <div className="text-red-600 dark:text-red-400 text-sm">{deletePasswordError}</div>
+                      )}
+                    </div>
                   </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                <AlertDialogFooter className="gap-3">
+                  <AlertDialogCancel 
+                    disabled={isDeleting}
+                    className="text-muted-foreground hover:text-foreground transition-colors duration-200"
+                  >
+                    Cancel
+                  </AlertDialogCancel>
                   <AlertDialogAction asChild>
                     <Button
                       variant="destructive"
                       onClick={handleDeleteAccount}
                       disabled={isDeleting || !deletePassword}
+                      className="bg-red-600 hover:bg-red-700 text-white transition-colors duration-200"
                     >
-                      {isDeleting ? 'Deleting...' : 'Delete'}
+                      {isDeleting ? 'Deleting...' : 'Delete Account'}
                     </Button>
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+
+      <div className="h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
+
+      {/* Content Intelligence Section */}
+      <div className="space-y-6">
+        <div className="space-y-1">
+          <h2 className="text-2xl font-light tracking-tight text-foreground">Content Intelligence</h2>
+          <p className="text-muted-foreground">Smart search and AI-powered insights for your content</p>
+        </div>
+
+        {userId && <AutomaticEmbeddingStatus userId={userId} />}
+      </div>
     </div>
   )
 }

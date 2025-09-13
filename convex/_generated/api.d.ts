@@ -29,6 +29,8 @@ import type * as fingerprintEvolutionMutations from "../fingerprintEvolutionMuta
 import type * as fingerprintEvolutionQueries from "../fingerprintEvolutionQueries.js";
 import type * as fingerprintMutations from "../fingerprintMutations.js";
 import type * as fingerprintQueries from "../fingerprintQueries.js";
+import type * as friendshipMutations from "../friendshipMutations.js";
+import type * as friendshipQueries from "../friendshipQueries.js";
 import type * as gmailMutations from "../gmailMutations.js";
 import type * as gmailQueries from "../gmailQueries.js";
 import type * as http from "../http.js";
@@ -37,6 +39,7 @@ import type * as instagramQueries from "../instagramQueries.js";
 import type * as internal_ from "../internal.js";
 import type * as noteMutations from "../noteMutations.js";
 import type * as noteQueries from "../noteQueries.js";
+import type * as noteSharing from "../noteSharing.js";
 import type * as notes from "../notes.js";
 import type * as personaQueries from "../personaQueries.js";
 import type * as personas from "../personas.js";
@@ -87,6 +90,8 @@ declare const fullApi: ApiFromModules<{
   fingerprintEvolutionQueries: typeof fingerprintEvolutionQueries;
   fingerprintMutations: typeof fingerprintMutations;
   fingerprintQueries: typeof fingerprintQueries;
+  friendshipMutations: typeof friendshipMutations;
+  friendshipQueries: typeof friendshipQueries;
   gmailMutations: typeof gmailMutations;
   gmailQueries: typeof gmailQueries;
   http: typeof http;
@@ -95,6 +100,7 @@ declare const fullApi: ApiFromModules<{
   internal: typeof internal_;
   noteMutations: typeof noteMutations;
   noteQueries: typeof noteQueries;
+  noteSharing: typeof noteSharing;
   notes: typeof notes;
   personaQueries: typeof personaQueries;
   personas: typeof personas;

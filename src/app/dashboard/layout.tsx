@@ -13,6 +13,8 @@ import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import UpgradeModal from '@/app/settings/tabs/subscription/upgrade-modal';
 import { useContentContextActions } from '@/store/content-context-store';
+import { UsernameRequiredModal } from '@/components/auth/UsernameRequiredModal';
+import { useUsernameRequired } from '@/hooks/useUsernameRequired';
 
 // Pages that don't require a subscription
 const PUBLIC_PATHS = [
@@ -55,6 +57,10 @@ export default function DashboardLayout({
   // State for subscription enforcement modal
   const [showSubscriptionRequired, setShowSubscriptionRequired] = useState(false);
 
+  // Check if username is required
+  const { needsUsername, isLoading: isUsernameLoading } = useUsernameRequired();
+  const [showUsernameModal, setShowUsernameModal] = useState(false);
+
   // Monitor API key validity (only when authenticated)
   useApiKeyMonitor(); // 🔒 ENABLED: Provides immediate logout when logged in elsewhere
   
@@ -81,6 +87,15 @@ export default function DashboardLayout({
       window.location.href = '/auth/login';
     }
   }, [firebaseUser, authLoading]);
+
+  // Show username modal if user needs to set username
+  useEffect(() => {
+    if (!isUsernameLoading && needsUsername && firebaseUser) {
+      setShowUsernameModal(true);
+    } else {
+      setShowUsernameModal(false);
+    }
+  }, [needsUsername, isUsernameLoading, firebaseUser]);
 
   // Handle subscription checks and redirects
   useEffect(() => {
@@ -254,6 +269,15 @@ export default function DashboardLayout({
           }
         }}
         context="subscription_required"
+      />
+
+      <UsernameRequiredModal
+        isOpen={showUsernameModal}
+        onUsernameSet={() => {
+          setShowUsernameModal(false);
+          // Optionally refresh the page or trigger a re-fetch of user data
+          window.location.reload();
+        }}
       />
     </div>
   );

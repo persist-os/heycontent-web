@@ -16,6 +16,7 @@ import { useNotes } from '@/app/context/notes-context';
 import { NoteContentRenderer } from './components/NoteContentRenderer';
 import { useContentResolver } from '@/lib/content-resolver';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
+import { ShareNoteModal } from './components/ShareNoteModal';
 
 interface NoteAreaProps {
   note: Note;
@@ -222,6 +223,7 @@ export function NoteArea({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [content, setContent] = useState(note.content || '');
   const [showImageGallery, setShowImageGallery] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   // Initialize the inline AI hook
   const { askAI, requestAnalysis, requestIdeas } = useInlineAI({
@@ -403,6 +405,7 @@ export function NoteArea({
         backButtonContext={getBackButtonContext()}
         navigationStack={navigationStack}
         notes={notes}
+        onShare={() => setShowShareModal(true)}
       />
       
       {/* Note metadata and type selector */}
@@ -517,6 +520,14 @@ export function NoteArea({
         noteId={String(note._id)}
         images={note.images || []}
         onClose={() => setShowImageGallery(false)}
+      />
+
+      {/* Share Note Modal */}
+      <ShareNoteModal
+        noteId={note._id as Id<'notes'>}
+        noteTitle={note.title || 'Untitled Note'}
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
       />
     </div>
   );
