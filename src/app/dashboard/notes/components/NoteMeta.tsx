@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useRef } from 'react';
 import { Note } from '../types';
-import { MinimalTypeDisplay } from './TypeSelector';
 import { X, Plus, Hash } from 'lucide-react';
 import { getRecentTags, type NoteTagData } from '../utils/tag-utils';
 
@@ -116,19 +115,22 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onTagsChange, onEditin
 
       {/* Minimal metadata row */}
       <div className="flex items-center justify-between">
-        {/* Left: timestamp and type */}
-        <div className="flex items-center gap-3 text-xs text-muted-foreground/70">
+        {/* Left: full timestamp */}
+        <div className="flex items-center text-xs text-muted-foreground/70">
           <time className="font-medium tracking-wide">
             {note.updatedAt
               ? new Date(note.updatedAt).toLocaleDateString('en-US', {
                   month: 'short',
-                  day: 'numeric'
+                  day: 'numeric',
+                  year: 'numeric'
+                }) + ' at ' + new Date(note.updatedAt).toLocaleTimeString('en-US', {
+                  hour: 'numeric',
+                  minute: '2-digit',
+                  hour12: true
                 })
               : 'Now'
             }
           </time>
-          <div className="w-px h-3 bg-gradient-to-b from-transparent via-muted-foreground/30 to-transparent" />
-          <MinimalTypeDisplay currentType={note.type || 'idea_bank'} />
         </div>
 
         {/* Right: tags */}

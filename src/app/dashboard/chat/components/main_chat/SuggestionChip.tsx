@@ -26,15 +26,37 @@ export const SuggestionChip = ({ suggestion, onClick, onInputPopulate }: Suggest
     ? cleanSuggestionText(suggestion)
     : cleanSuggestionText((suggestion as SuggestedAction).description);
   
+  const [isHovered, setIsHovered] = React.useState(false);
+  
   return (
-    <div className="group relative inline-block">
+    <div className="group relative inline-block max-w-full">
       <button
         onClick={onClick}
-        className="text-left transition-all duration-300 hover:scale-105 select-none chat-font"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className="text-left select-none chat-font"
+        style={{
+          width: '100%',
+          maxWidth: '310px',
+          minHeight: '30px',
+          height: 'auto',
+          borderRadius: '6px',
+          opacity: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+          padding: '8px 12px',
+          border: '0.6px solid #2A66CB',
+          wordWrap: 'break-word',
+          whiteSpace: 'normal',
+          // Hover state styling - subtle blue tint on hover, no solid colors
+          backgroundColor: isHovered ? 'rgba(42, 102, 203, 0.2)' : 'transparent',
+          color: '#2A66CB',
+          transition: 'all 150ms ease-out',
+          cursor: 'pointer',
+        }}
       >
-        <span className="text-sm text-primary/80 hover:text-primary underline underline-offset-4 
-          decoration-primary/30 hover:decoration-primary/60 transition-all duration-300 
-          decoration-dotted hover:decoration-solid break-words leading-relaxed">
+        <span className="text-sm leading-relaxed break-words w-full text-left">
           {displayText}
         </span>
       </button>

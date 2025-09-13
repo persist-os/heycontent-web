@@ -16,7 +16,7 @@ export const InsightIcon = ({ icon: Icon, type }: InsightIconProps) => {
   } else if (type === "strategy") {
     colorClass = "text-orange-500"; // Partnerships - orange
   } else if (type === "notes") {
-    colorClass = "text-blue-500"; // Smart Notes - blue
+    colorClass = "text-blue-500"; // File System - blue
   }
   
   return <Icon className={`w-5 h-5 ${colorClass}`} />;

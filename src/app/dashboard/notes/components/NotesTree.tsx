@@ -283,7 +283,7 @@ export function NotesTree({
                  }
                }}>
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              <Folder className="w-4 h-4 text-blue-500/70 flex-shrink-0" />
+              <Folder className="w-5 h-5 text-blue-500/70 flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-foreground truncate">
@@ -385,7 +385,7 @@ export function NotesTree({
               <div className="w-4" />
             )}
             <Folder className={cn(
-              "w-4 h-4 transition-colors",
+              "w-5 h-5 transition-colors",
               node.level === 0 ? "text-blue-500/70" : "text-muted-foreground/60"
             )} />
           </div>
@@ -442,7 +442,7 @@ export function NotesTree({
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h1 className="text-3xl font-light tracking-tight text-foreground">
-                  Smart Notes
+                  File System
                 </h1>
                 <p className="text-muted-foreground/70 mt-1">
                   Your thoughts, organized and accessible
@@ -457,7 +457,7 @@ export function NotesTree({
                   {isCreatingProject ? (
                     <div className="w-4 h-4 border-2 border-foreground/30 border-t-foreground rounded-full animate-spin" />
                   ) : (
-                    <FolderPlus className="w-4 h-4" />
+                    <FolderPlus className="w-5 h-5" />
                   )}
                   New Project
                 </button>
@@ -506,7 +506,7 @@ export function NotesTree({
                         : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
                     )}
                   >
-                    <Icon className="w-4 h-4" />
+                    <Icon className={cn("w-4 h-4", key === 'projects' && "w-5 h-5")} />
                     {label}
                   </button>
                 ))}

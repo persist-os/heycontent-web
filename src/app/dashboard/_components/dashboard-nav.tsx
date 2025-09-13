@@ -27,7 +27,7 @@ const navItems = [
   },
   {
     id: 'notes',
-    label: 'Smart Notes',
+    label: 'File System',
     description: 'AI-enhanced thoughts and ideas',
     icon: FileText,
     href: '/dashboard/notes',

@@ -9,8 +9,9 @@ import { MarkdownRenderer, ChatContentRenderer } from './markdown-renderer'
 import { PersonaCardRenderer } from './components/PersonaCardRenderer'
 import { HorizontalProgressiveThinking } from './components/main_chat/HorizontalProgressiveThinking'
 import { CopyButton } from '@/components/ui/copy-button'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { AnimatePresence } from 'framer-motion'
+import { useGlobalSelectionState } from './hooks/useGlobalSelectionState'
 
 interface MessageBubbleProps {
   message: Message
@@ -60,6 +61,33 @@ export function MessageBubble({
   } | null>(null)
   const [highlightRects, setHighlightRects] = useState<DOMRect[]>([])
   const { theme } = useTheme()
+  const { addActiveSelection, removeActiveSelection } = useGlobalSelectionState()
+  
+  // Create unique selection ID for this message
+  const selectionId = useMemo(() => `selection-${message.id}`, [message.id])
+  
+  // Cache for position calculations to avoid excessive DOM queries
+  const lastValidRect = useRef<DOMRect | null>(null)
+  const lastValidRects = useRef<DOMRect[]>([])
+  
+  // Utility function to validate if a range is still valid
+  const isRangeValid = useCallback((range: Range | null): range is Range => {
+    if (!range) return false
+    
+    try {
+      // Check if nodes are still connected to DOM
+      if (!range.startContainer.isConnected || !range.endContainer.isConnected) {
+        return false
+      }
+      
+      // Check if range has valid bounds
+      const rects = range.getClientRects()
+      return rects.length > 0
+    } catch {
+      return false
+    }
+  }, [])
+  
   const isDark = theme === 'dark'
   const accentColor = isDark ? 'primary' : 'primary'
   const accentBg = isDark ? 'bg-primary' : 'bg-primary'
@@ -90,21 +118,69 @@ export function MessageBubble({
     })
   }
 
-  // Stable selection handler with scroll support
+  // Debounced position update function
+  const debouncedUpdatePositions = useCallback((
+    updateFn: () => void,
+    timerRef: { current: NodeJS.Timeout | null }
+  ) => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => {
+      updateFn()
+    }, 16) // ~60fps update rate
+  }, [])
+
+  // Optimized text selection with debounced scroll handling
   useEffect(() => {
     const messageElement = document.getElementById(`message-${message.id}`)
     if (!messageElement) return
 
     let persistentRange: Range | null = null
+    const positionUpdateTimer = { current: null as NodeJS.Timeout | null }
 
     const updateHighlightPositions = () => {
-      if (!persistentRange) return
+      if (!showQuoteButton) return
+      
+      // Validate the range before proceeding
+      if (!isRangeValid(persistentRange)) {
+        clearSelection()
+        return
+      }
 
       try {
         const rects = Array.from(persistentRange.getClientRects())
-        const mainRect = rects.length > 0 ? rects[0] : persistentRange.getBoundingClientRect()
+        if (rects.length === 0) {
+          // Try to use cached rects if available and still reasonable
+          if (lastValidRects.current.length > 0 && lastValidRect.current) {
+            // Only use cache if it's recent (avoid stale positions)
+            setHighlightRects(lastValidRects.current)
+            setSelectionRect({
+              top: lastValidRect.current.top,
+              left: lastValidRect.current.left,
+              width: lastValidRect.current.width,
+              height: lastValidRect.current.height,
+              viewportTop: lastValidRect.current.top,
+              viewportLeft: lastValidRect.current.left
+            })
+          } else {
+            // No valid cache, clear selection
+            clearSelection()
+          }
+          return
+        }
         
-        if (mainRect.width <= 0 || mainRect.height <= 0) return
+        const mainRect = rects[0]
+        if (mainRect.width <= 0 || mainRect.height <= 0) {
+          // Invalid dimensions, try cache or clear
+          if (lastValidRect.current && lastValidRect.current.width > 0) {
+            return // Keep using cache
+          }
+          clearSelection()
+          return
+        }
+
+        // Cache valid rects for fallback
+        lastValidRect.current = mainRect
+        lastValidRects.current = rects
 
         setSelectionRect({
           top: mainRect.top,
@@ -116,8 +192,8 @@ export function MessageBubble({
         })
         setHighlightRects(rects)
       } catch (error) {
-        // Range might be invalid, clear selection
-        console.log('Range invalid, clearing selection')
+        // Any error in position calculation should clear selection
+        console.warn('Text selection position update failed:', error)
         clearSelection()
       }
     }
@@ -128,81 +204,125 @@ export function MessageBubble({
       setSelectedText('')
       setSelectionRect(null)
       persistentRange = null
+      removeActiveSelection(selectionId)
+      
+      // Clear cached positions
+      lastValidRect.current = null
+      lastValidRects.current = []
+      
+      if (positionUpdateTimer.current) {
+        clearTimeout(positionUpdateTimer.current)
+        positionUpdateTimer.current = null
+      }
     }
 
     const handleMouseUp = () => {
       setTimeout(() => {
-        const selection = window.getSelection()
-        const text = selection?.toString().trim()
-        
-        if (!text || text.length === 0) {
-          return
+        try {
+          const selection = window.getSelection()
+          const text = selection?.toString().trim()
+          
+          // Enhanced validation
+          if (!text || text.length === 0 || text.length > 10000) return
+          if (!selection || selection.rangeCount === 0) return
+          
+          const range = selection.getRangeAt(0)
+          
+          // Comprehensive validation of the selection
+          if (!range || range.collapsed) return
+          
+          // Validate selection is within this message and makes sense
+          const isInMessage = messageElement.contains(range.startContainer) && 
+                             messageElement.contains(range.endContainer)
+          
+          if (!isInMessage) return
+          
+          // Check that the range is valid before proceeding
+          if (!isRangeValid(range)) return
+
+          // Clear any existing selection
+          clearSelection()
+
+          // Store the selection with validation
+          try {
+            persistentRange = range.cloneRange()
+            setSelectedText(text)
+            setShowQuoteButton(true)
+            addActiveSelection(selectionId)
+            updateHighlightPositions()
+
+            // Clear browser selection after brief delay
+            setTimeout(() => {
+              const currentSelection = window.getSelection()
+              if (currentSelection && currentSelection.rangeCount > 0) {
+                currentSelection.removeAllRanges()
+              }
+            }, 100)
+          } catch (error) {
+            console.warn('Failed to create text selection:', error)
+            clearSelection()
+          }
+        } catch (error) {
+          console.warn('Mouse selection handler error:', error)
         }
-
-        if (!selection || selection.rangeCount === 0) return
-        
-        const range = selection.getRangeAt(0)
-        
-        // Simple check: is the selection in this message?
-        const isInMessage = messageElement.contains(range.startContainer) && 
-                           messageElement.contains(range.endContainer)
-        
-        if (!isInMessage) return
-
-        // Clear any existing selection first to prevent overlaps
-        clearSelection()
-
-        // Clone the range to persist it
-        persistentRange = range.cloneRange()
-        
-        console.log('✅ Selection captured:', text)
-
-        setSelectedText(text)
-        updateHighlightPositions()
-        setShowQuoteButton(true)
-
-        // Don't clear the browser selection immediately - let user see it briefly
-        setTimeout(() => {
-          window.getSelection()?.removeAllRanges()
-        }, 100)
-      }, 100)
+      }, 50) // Reduced timing to minimize conflicts
     }
 
-    // Handle scroll to update positions
+    // Passive scroll handler with debouncing
     const handleScroll = () => {
       if (persistentRange && showQuoteButton) {
-        updateHighlightPositions()
+        debouncedUpdatePositions(updateHighlightPositions, positionUpdateTimer)
       }
     }
 
-    // Clear selection on click outside this message
+    // Enhanced click outside detection with better target validation
     const handleClickOutside = (event: MouseEvent) => {
-      if (!messageElement.contains(event.target as Node) && showQuoteButton) {
+      if (!showQuoteButton) return
+      
+      const target = event.target as Node
+      if (!target || !messageElement.contains(target)) {
+        // Check if click is on quote button or any related UI
+        const element = target as Element
+        if (element?.closest && (
+          element.closest('[data-quote-button]') ||
+          element.closest('.quote-overlay') ||
+          element.closest('[data-selection-ui]')
+        )) {
+          return
+        }
         clearSelection()
       }
     }
 
-    // Clear selection only on explicit dismiss (clicking quote button or ESC key)
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && showQuoteButton) {
         clearSelection()
       }
     }
 
+    // Add event listeners with passive scroll for better performance
     messageElement.addEventListener('mouseup', handleMouseUp)
-    window.addEventListener('scroll', handleScroll, true) // Use capture to catch all scroll events
-    window.addEventListener('resize', handleScroll) // Also update on resize
+    window.addEventListener('scroll', handleScroll, { passive: true, capture: true })
+    window.addEventListener('resize', handleScroll, { passive: true })
     document.addEventListener('click', handleClickOutside, true)
     document.addEventListener('keydown', handleKeyDown)
     
     return () => {
       messageElement.removeEventListener('mouseup', handleMouseUp)
       window.removeEventListener('scroll', handleScroll, true)
-      window.removeEventListener('resize', handleScroll)
+      window.removeEventListener('resize', handleScroll, true)
       document.removeEventListener('click', handleClickOutside, true)
       document.removeEventListener('keydown', handleKeyDown)
+      if (positionUpdateTimer.current) clearTimeout(positionUpdateTimer.current)
     }
-  }, [message.id, showQuoteButton])
+  }, [message.id, showQuoteButton, addActiveSelection, removeActiveSelection, selectionId, debouncedUpdatePositions, isRangeValid])
+
+  // Cleanup effect when component unmounts or message changes
+  useEffect(() => {
+    return () => {
+      removeActiveSelection(selectionId)
+    }
+  }, [removeActiveSelection, selectionId])
 
   // Handle quote button click
   const handleQuoteText = () => {
@@ -279,7 +399,8 @@ export function MessageBubble({
       {showQuoteButton && highlightRects.map((rect, index) => (
         <div
           key={`${message.id}-highlight-${index}`}
-          className={`fixed pointer-events-none z-30 ${isDark ? 'bg-primary/20' : 'bg-primary/20'} transition-opacity duration-200`}
+          data-selection-ui
+          className={`fixed pointer-events-none z-30 ${isDark ? 'bg-primary/20' : 'bg-primary/20'} transition-opacity duration-200 quote-overlay`}
           style={{
             left: rect.left,
             top: rect.top,
@@ -292,6 +413,7 @@ export function MessageBubble({
       {/* Floating Quote Button - clean and simple */}
       {showQuoteButton && selectionRect && (onInputPopulate || (notepadOpen && onQuoteToNotepad)) && (
         <div
+          data-selection-ui
           className="fixed z-50 pointer-events-none"
           style={{
             left: selectionRect.viewportLeft + (selectionRect.width / 2) - 20,
@@ -300,6 +422,7 @@ export function MessageBubble({
         >
           <button
             onClick={handleQuoteText}
+            data-quote-button
             className={`pointer-events-auto bg-primary text-primary-foreground p-2 rounded-lg shadow-lg hover:bg-primary/90 hover:text-primary-foreground transition-all duration-200 transform hover:scale-105`}
             title={`Quote "${selectedText.length > 20 ? selectedText.substring(0, 20) + '...' : selectedText}"`}
           >
@@ -311,19 +434,16 @@ export function MessageBubble({
       {/* Chat Bubble Container */}
       <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-1`}>
         <div
-          className={`max-w-full sm:max-w-[80%] ${isUser ? '' : 'sm:max-w-[85%]'} w-full`}
+          className={`max-w-full sm:max-w-[95%] w-full`}
         >
           <div
             id={`message-${message.id}`}
             className={`
-              rounded-2xl
-              px-5 sm:px-7 py-2 sm:py-3
-              ${isUser ? 'bg-primary text-primary-foreground dark:text-black [&_*]:!text-primary-foreground dark:[&_*]:!text-black' : 'bg-card border text-foreground'}
+              ${isUser ? 'rounded-2xl px-5 sm:px-7 py-2 sm:py-3 bg-primary text-primary-foreground dark:text-black [&_*]:!text-primary-foreground dark:[&_*]:!text-black mr-1 sm:mr-2' : 'px-0 py-1 text-foreground'}
               relative
               group
               w-full
               min-w-0
-              mr-1 sm:mr-2
             `}
           >
             {/* Referenced message preview */}

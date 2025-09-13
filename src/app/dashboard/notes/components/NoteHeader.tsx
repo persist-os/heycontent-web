@@ -62,7 +62,7 @@ export function NoteHeader({
 
   return (
     <CentralizedHeader
-      title="Smart Notes"
+      title="File System"
       showBackButton={false}
       backButtonContext={backButtonContext}
       onBack={onBack}

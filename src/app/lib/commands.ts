@@ -227,7 +227,7 @@ const navigationCommands: NavigationCommand[] = [
     id: 'nav-notes',
     type: 'navigation',
     category: 'navigation',
-    label: 'Smart Notes',
+    label: 'File System',
     description: 'Access your content notes',
     icon: FileText,
     href: '/dashboard/notes',

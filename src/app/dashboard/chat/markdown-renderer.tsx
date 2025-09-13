@@ -264,7 +264,7 @@ function ChatContentRenderer({
     }
     
     // Handle content ID format @[contentId]@ (e.g., @[note:123]@, @[youtube:456]@, @[conversations:789]@)
-    let processedContent = content.replace(/@\[([^\]]+)\]@/g, (match, contentId) => {
+    const processedContent = content.replace(/@\[([^\]]+)\]@/g, (match, contentId) => {
       console.log('🔗 Processing content link:', { contentId })
       
       // First try to find content in the resolved content from the message
