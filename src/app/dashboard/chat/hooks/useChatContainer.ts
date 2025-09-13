@@ -39,7 +39,7 @@ export function useChatContainer(chatId: string | undefined, contentContext: any
 
   // Input and context state
   const [inputValue, setInputValue] = useState('')
-  const [useContextSearch, setUseContextSearch] = useState(true)
+  const [useContextSearch, setUseContextSearch] = useState(false)
   const [welcomeStep, setWelcomeStep] = useState(0)
   const [hasStartedNewChat, setHasStartedNewChat] = useState(false)
   const [embeddingInfo, setEmbeddingInfo] = useState<{ hasEmbeddings: boolean; count: number }>({ hasEmbeddings: false, count: 0 })

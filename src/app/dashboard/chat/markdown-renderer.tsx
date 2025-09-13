@@ -465,7 +465,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
             }
             
             return (
-              <p className="mb-3 last:mb-0 text-base leading-relaxed w-full break-words hyphens-auto">
+              <p className="mb-3 last:mb-0 text-base leading-relaxed w-full break-words word-break-break-word hyphens-auto overflow-wrap-anywhere">
                 {children}
               </p>
             );
@@ -508,7 +508,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           
           // List items with proper sizing and word wrapping
           li: ({ children }) => (
-            <li className="text-base leading-relaxed text-gray-800 dark:text-gray-200 w-full break-words hyphens-auto whitespace-normal overflow-visible pr-2">
+            <li className="text-base leading-relaxed text-gray-800 dark:text-gray-200 w-full break-words word-break-break-word hyphens-auto whitespace-normal overflow-wrap-anywhere">
               {children}
             </li>
           ),

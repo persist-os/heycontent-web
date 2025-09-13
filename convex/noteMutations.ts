@@ -20,6 +20,7 @@ export const createNote = mutation({
     type: v.optional(noteType),
     tags: v.optional(v.array(v.string())),
     platform: v.optional(v.string()),
+    sourceConversationId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -30,6 +31,7 @@ export const createNote = mutation({
       type: args.type ?? "idea_bank",
       tags: args.tags ?? [],
       platform: args.platform ?? "",
+      sourceConversationId: args.sourceConversationId,
       important: false,
       createdAt: now,
       updatedAt: now,

@@ -34,6 +34,7 @@ export interface Note {
   isLocal?: boolean;
   isTemporary?: boolean; // Flag for optimistic updates during note creation
   images?: ImageData[];
+  sourceConversationId?: string;
 }
 
 export interface NoteUpdate {

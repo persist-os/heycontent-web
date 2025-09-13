@@ -206,6 +206,7 @@ export default defineSchema({
       width: v.optional(v.number()),
       height: v.optional(v.number())
     }))),
+    sourceConversationId: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
     titleGenerated: v.optional(v.boolean()),

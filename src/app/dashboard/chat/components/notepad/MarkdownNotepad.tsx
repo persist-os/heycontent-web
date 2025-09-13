@@ -65,6 +65,8 @@ interface MarkdownNotepadProps {
   fromChat?: boolean
   canNavigateBack?: boolean
   onBack?: () => void
+  // Conversation linking
+  sessionId?: string | null
 }
 
 export const MarkdownNotepad = forwardRef(function MarkdownNotepad({ 
@@ -83,7 +85,8 @@ export const MarkdownNotepad = forwardRef(function MarkdownNotepad({
   noteId,
   fromChat = false,
   canNavigateBack = false,
-  onBack
+  onBack,
+  sessionId
 }: MarkdownNotepadProps, ref) {
   const { firebaseUser } = useAuth()
   const { notes, generateMetadataManually, isGeneratingMetadata, updateNote } = useNotes()
@@ -178,11 +181,12 @@ export const MarkdownNotepad = forwardRef(function MarkdownNotepad({
     if (!content.trim()) return
     
     if (isNewNote) {
-      // Create new note
+      // Create new note with conversation link
       const newNoteId = await createNote(content.trim(), {
         redirect: false,
         customTitle: note.title !== 'Untitled Note' ? note.title : undefined,
-        customType: note.type
+        customType: note.type,
+        sourceConversationId: sessionId || undefined
       })
       
       if (newNoteId) {
@@ -197,7 +201,7 @@ export const MarkdownNotepad = forwardRef(function MarkdownNotepad({
       return currentNoteId
     }
     return null
-  }, [content, isNewNote, createNote, note])
+  }, [content, isNewNote, createNote, note, sessionId])
 
   // Smart metadata generation
   const shouldShowSmartButton = React.useMemo(() => {

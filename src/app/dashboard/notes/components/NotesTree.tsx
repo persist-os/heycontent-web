@@ -325,8 +325,13 @@ export function NotesTree({
           
           <div className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-muted/30 transition-all duration-200 cursor-pointer relative"
                onClick={() => {
-                 // Navigate to chat with noteId parameter to open note in MarkdownNotepad
-                 router.push(`/dashboard/chat?noteId=${node.note!._id}`);
+                 // Check if note has source conversation
+                 const conversationParam = node.note!.sourceConversationId 
+                   ? `&conversationId=${node.note!.sourceConversationId}` 
+                   : '';
+                 
+                 // Navigate to chat with both noteId and conversationId
+                 router.push(`/dashboard/chat?noteId=${node.note!._id}${conversationParam}`);
                }}>
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <FileText className="w-4 h-4 text-muted-foreground/60 flex-shrink-0" />
