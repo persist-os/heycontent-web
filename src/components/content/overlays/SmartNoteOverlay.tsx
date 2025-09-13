@@ -99,7 +99,7 @@ const SmartNoteOverlay: React.FC<SmartNoteOverlayProps> = ({ noteId, onClose }) 
               <div className="text-muted-foreground italic">No content</div>
             )}
           </div>
-          {/* Go to Smart Notes button */}
+          {/* Go to File System button */}
           <div className="flex justify-end mt-2">
             <button
               className="bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg px-5 py-2 text-base transition-colors shadow"
@@ -109,7 +109,7 @@ const SmartNoteOverlay: React.FC<SmartNoteOverlayProps> = ({ noteId, onClose }) 
                 router.push(url);
               }}
             >
-              Go to Smart Notes
+              Go to Files
             </button>
           </div>
         </div>

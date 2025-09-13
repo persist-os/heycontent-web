@@ -121,11 +121,12 @@ function NoteRefComponent({ noteId, noteTitle, nodeKey }: NoteRefComponentProps)
     e.preventDefault()
     e.stopPropagation()
     
-    // Could dispatch an event or call a callback to handle note opening
-    console.log('Note reference clicked:', noteId)
-    
-    // For now, just prevent interaction
-    // In a full implementation, this could open the note in a modal or navigate to it
+    // Dispatch a custom event that the notepad can listen to
+    const noteClickEvent = new CustomEvent('noteRefClick', {
+      detail: { noteId },
+      bubbles: true
+    })
+    e.currentTarget.dispatchEvent(noteClickEvent)
   }
 
   return (

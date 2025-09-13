@@ -185,11 +185,11 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
             </div>
             <div className="flex items-center gap-2">
               <button
-                title="Go to Smart Notes"
+                title="Go to Files"
                 onClick={handleCloseToSmartNotes}
                 className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-md transition-colors"
               >
-                Go to Smart Notes
+                Go to Files
               </button>
               <button
                 title="Close"

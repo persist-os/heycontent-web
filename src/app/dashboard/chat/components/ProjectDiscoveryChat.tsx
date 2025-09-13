@@ -24,6 +24,7 @@ import AmbientFingerprintCanvas from './AmbientFingerprintCanvas'
 import { ConstellationTransition } from '@/app/dashboard/living-projects/components/widgets/ConstellationTransition'
 import { ProjectReveal } from '@/app/dashboard/living-projects/components/widgets/ProjectReveal'
 import { ConvexHttpClient } from 'convex/browser'
+import { useGlobalSelectionState } from '../hooks/useGlobalSelectionState'
 
 interface ProjectDiscoveryChatProps {
   projectId?: string
@@ -346,6 +347,9 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
   // Get content context from Zustand store
   const { context: currentContext, hasContext } = useContentContext()
   const { clearContentContext, setContentContext } = useContentContextActions()
+  
+  // Get global selection state to prevent scroll interference
+  const { isScrollingSuppressed } = useGlobalSelectionState()
 
   // Initialize shared state and hooks
   const chatState = useChatState()
@@ -594,12 +598,15 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
     setShowProjectReveal(false)
   }, [])
 
-  // Autoscroll functionality
+  // Selection-aware autoscroll functionality
   useEffect(() => {
-    if (chatContainerRef.current && messages.length > 0) {
+    if (chatContainerRef.current && messages.length > 0 && !isScrollingSuppressed) {
       const scrollContainer = chatContainerRef.current
       
       const scrollToBottom = () => {
+        // Double-check selection state before scrolling
+        if (isScrollingSuppressed) return
+        
         const scrollHeight = scrollContainer.scrollHeight
         const height = scrollContainer.clientHeight
         const maxScrollTop = scrollHeight - height
@@ -615,11 +622,16 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
       }
 
       scrollToBottom()
-      const timeoutId = setTimeout(scrollToBottom, 100)
+      const timeoutId = setTimeout(() => {
+        // Final check before delayed scroll
+        if (!isScrollingSuppressed) {
+          scrollToBottom()
+        }
+      }, 100)
       
       return () => clearTimeout(timeoutId)
     }
-  }, [messages, isLoading])
+  }, [messages, isLoading, isScrollingSuppressed])
 
   // Clear state on mount for clean start
   useEffect(() => {

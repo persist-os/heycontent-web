@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Message } from '@/app/types/chat'
 import { AmbientInsight, SuggestedAction } from '../types'
 import { getApiKey } from '@/app/lib/api-helpers'
+import { useGlobalSelectionState } from './useGlobalSelectionState'
 
 export const useUIEffects = (
   messages: Message[],
@@ -13,15 +14,18 @@ export const useUIEffects = (
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
   const [ambientError, setAmbientError] = useState<string | null>(null)
+  
+  // Get selection state to prevent scroll conflicts
+  const { isScrollingSuppressed } = useGlobalSelectionState()
 
   const scrollToBottom = useCallback(() => {
-    if (chatContainerRef.current) {
+    if (chatContainerRef.current && !isScrollingSuppressed) {
       chatContainerRef.current.scrollTo({
         top: chatContainerRef.current.scrollHeight,
         behavior: 'smooth'
       })
     }
-  }, [])
+  }, [isScrollingSuppressed])
 
   const scrollToMessage = useCallback((messageId: number) => {
     const messageElement = document.getElementById(`message-${messageId}`);
@@ -74,35 +78,39 @@ export const useUIEffects = (
     setShowAmbient(messages.length === 0);
   }, [messages.length])
 
-  // Auto-scroll to bottom when messages change
+  // Selection-aware auto-scroll when messages change
   useEffect(() => {
-    if (messages.length > 0) {
+    if (messages.length > 0 && !isScrollingSuppressed) {
       scrollToBottom()
     }
-  }, [messages.length, scrollToBottom])
+  }, [messages.length, scrollToBottom, isScrollingSuppressed])
 
-  // Scroll to bottom when sidebar state changes
+  // Selection-aware scroll when sidebar state changes
   useEffect(() => {
-    if (messages.length > 0) {
+    if (messages.length > 0 && !isScrollingSuppressed) {
       // Add a small delay to allow the layout to update
       const timer = setTimeout(() => {
-        scrollToBottom()
+        if (!isScrollingSuppressed) {
+          scrollToBottom()
+        }
       }, 300)
       return () => clearTimeout(timer)
     }
-  }, [isExpanded, scrollToBottom, messages.length])
+  }, [isExpanded, scrollToBottom, messages.length, isScrollingSuppressed])
 
-  // Add resize observer to handle window resizing
+  // Selection-aware resize handling
   useEffect(() => {
     if (messages.length > 0) {
       const handleResize = () => {
-        scrollToBottom()
+        if (!isScrollingSuppressed) {
+          scrollToBottom()
+        }
       }
 
       window.addEventListener('resize', handleResize)
       return () => window.removeEventListener('resize', handleResize)
     }
-  }, [scrollToBottom, messages.length])
+  }, [scrollToBottom, messages.length, isScrollingSuppressed])
 
   return {
     chatContainerRef,

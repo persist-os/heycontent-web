@@ -468,7 +468,7 @@ Based on our discussion about job searching and potential relocation, here are t
         <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-medium text-foreground">
-              Smart Notes
+              File System
             </h3>
           </div>
           
@@ -532,7 +532,7 @@ Based on our discussion about job searching and potential relocation, here are t
       <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-medium text-foreground">
-            Smart Notes
+            File System
           </h3>
         </div>
         
@@ -652,7 +652,7 @@ export function AgentsShowcase() {
                 <button
                   onClick={toggleNotepad}
                   className="p-1.5 sm:p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors active:scale-95"
-                  title="Toggle Smart Notes"
+                  title="Toggle File System"
                 >
                   <FileText className="w-3 sm:w-4 h-3 sm:h-4" />
                 </button>

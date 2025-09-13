@@ -94,7 +94,7 @@ export function UIPreview() {
                 {/* Notes side */}
                 <div className="w-80 border-l border-slate-200 dark:border-slate-700 flex flex-col">
                   <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
-                    <h3 className="font-medium text-slate-900 dark:text-slate-100">Smart Notes</h3>
+                    <h3 className="font-medium text-slate-900 dark:text-slate-100">File System</h3>
                   </div>
                   <div className="flex-1 p-4 space-y-4 overflow-y-auto">
                     <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-3">
