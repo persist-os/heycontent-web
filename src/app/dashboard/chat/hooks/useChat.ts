@@ -14,7 +14,8 @@ import { v4 as uuidv4 } from 'uuid';
 export const useChat = (
   chatState: ChatStateReturnType,
   userId?: string,
-  useContextSearch: boolean = true
+  useContextSearch: boolean = true,
+  getNotepadContent?: () => { content: string; title?: string } | null
 ) => {
   const {
     sessionId,
@@ -46,10 +47,12 @@ export const useChat = (
 
   const router = useRouter();
 
-  const handleSendMessage = useCallback(async (content: string) => {
-    console.log('🔗 useChat handleSendMessage called with:', {
+  const handleSendMessage = useCallback(async (content: string, includeNotepad?: boolean) => {
+    console.log('🔗 [USE CHAT] handleSendMessage called with:', {
       content: content.substring(0, 100) + '...',
-      hasContentLinks: content.includes('@[')
+      hasContentLinks: content.includes('@['),
+      includeNotepad,
+      hasNotepadGetter: !!getNotepadContent
     })
     
     if (!content || typeof content !== 'string' || !content.trim()) return;
@@ -201,9 +204,40 @@ export const useChat = (
 
       // Send the enhanced query to the backend (with analysis injected if enabled)
       // Now includes vector search with status updates
+      // Get notepad context if requested
+      let notepadContext = null;
+      if (includeNotepad && getNotepadContent) {
+        console.log('🔗 [USE CHAT] Attempting to get notepad content...');
+        try {
+          const notepadData = getNotepadContent();
+          console.log('🔗 [USE CHAT] Notepad data retrieved:', {
+            hasData: !!notepadData,
+            hasContent: !!(notepadData && notepadData.content),
+            contentLength: notepadData?.content?.length || 0,
+            contentPreview: notepadData?.content?.substring(0, 100) || '',
+            title: notepadData?.title || 'No title'
+          });
+          if (notepadData && notepadData.content.trim()) {
+            notepadContext = notepadData;
+            console.log('🔗 [USE CHAT] Notepad context will be included:', notepadContext);
+          } else {
+            console.log('🔗 [USE CHAT] Notepad content is empty, not including');
+          }
+        } catch (error) {
+          console.error('🔗 [USE CHAT] Error getting notepad content:', error);
+        }
+      } else {
+        console.log('🔗 [USE CHAT] Not including notepad:', {
+          includeNotepad,
+          hasGetter: !!getNotepadContent
+        });
+      }
+
       console.log('🔗 useChat: Sending to backend:', {
         userQueryPreview: userQuery.substring(0, 100) + '...',
-        hasContentLinks: userQuery.includes('@[')
+        hasContentLinks: userQuery.includes('@['),
+        includeNotepad,
+        hasNotepadContext: !!notepadContext
       })
       
       const data = await sendChatMessage(
@@ -213,7 +247,8 @@ export const useChat = (
         contentContext, 
         false,
         handleStatusUpdate, // Pass status update callback
-        useContextSearch // Pass context search toggle
+        useContextSearch, // Pass context search toggle
+        notepadContext // Pass notepad context
       );
 
       // Add final completion status update

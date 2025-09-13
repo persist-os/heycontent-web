@@ -109,6 +109,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   // Context search state - enable by default regardless of context availability
   const [useContextSearch, setUseContextSearch] = useState(true)
   
+  // Notepad inclusion state
+  const [includeNotepadInMessages, setIncludeNotepadInMessages] = useState(false)
+  
 
 
 
@@ -170,7 +173,40 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     handleOptionClick,
     handleFollowUpClick,
     handleReferenceClick: handleReferenceClickProp
-  } = useChat(chatState, authData.userId, useContextSearch)
+  } = useChat(
+    chatState, 
+    authData.userId, 
+    useContextSearch,
+    () => {
+      console.log('🔔 [CHAT CONTAINER] Notepad getter called:', {
+        hasNotepadRef: !!notepadRef.current,
+        hasGetCurrentNote: !!(notepadRef.current?.getCurrentNote),
+        hasGetContent: !!(notepadRef.current?.getContent)
+      });
+      
+      if (notepadRef.current?.getCurrentNote) {
+        try {
+          const content = notepadRef.current.getContent();
+          const note = notepadRef.current.getCurrentNote();
+          console.log('🔔 [CHAT CONTAINER] Notepad content retrieved:', {
+            content: content.substring(0, 100) + '...',
+            contentLength: content.length,
+            title: note?.title || 'No title'
+          });
+          return {
+            content,
+            title: note?.title
+          };
+        } catch (error) {
+          console.error('🔔 [CHAT CONTAINER] Error getting notepad content:', error);
+          return null;
+        }
+      } else {
+        console.log('🔔 [CHAT CONTAINER] No notepad ref or getCurrentNote method');
+        return null;
+      }
+    }
+  )
 
   // Initialize ambient insights actions
   const ambientInsightsActions = useAmbientInsightsActions(handleSendMessage);
@@ -212,6 +248,15 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     saveScrollPosition
   } = useNotepadUI()
 
+  // Debug logging for notepad state changes (after all variables are initialized)
+  console.log('🔔 [CHAT CONTAINER] Component render:', {
+    includeNotepadInMessages,
+    notepadOpen,
+    hasEmbeddings: embeddingInfo?.hasEmbeddings,
+    embeddingCount: embeddingInfo?.count,
+    useContextSearch
+  })
+
   // Add ref for MarkdownNotepad
   const notepadRef = useRef<{ 
     hasUnsavedContent: () => boolean, 
@@ -246,8 +291,11 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   }, []);
   const [pendingNewChat, setPendingNewChat] = useState(false);
 
-  // Handle noteId parameter - automatically open notepad with the specified note
+  // Handle noteId and conversationId parameters
   React.useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const conversationIdParam = searchParams.get('conversationId');
+    
     if (noteId && notepadRef.current) {
       // Open the notepad if not already open
       if (!notepadOpen) {
@@ -259,12 +307,18 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         notepadRef.current.setNoteForEditing(noteId);
       }
       
+      // Load conversation if specified
+      if (conversationIdParam && handleLoadConversation) {
+        console.log('🔗 Loading conversation from note:', conversationIdParam);
+        handleLoadConversation(conversationIdParam);
+      }
+      
       // On mobile, switch to notes tab
       if (isMobile && activeTab !== 'notes') {
         switchToTab('notes');
       }
     }
-  }, [noteId, notepadOpen, toggleNotepad, isMobile, activeTab, switchToTab]);
+  }, [noteId, notepadOpen, toggleNotepad, isMobile, activeTab, switchToTab, handleLoadConversation]);
 
   const { 
     quotedForNotepad, 
@@ -292,8 +346,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       refreshPersonaData(authData.userId, convex);
     }
     
-    handleSendMessage(message);
-  }, [handleSendMessage, authData.userId, convex, refreshPersonaData]);
+    // Pass the includeNotepadInMessages state to handleSendMessage
+    handleSendMessage(message, includeNotepadInMessages);
+  }, [handleSendMessage, authData.userId, convex, refreshPersonaData, includeNotepadInMessages]);
 
   const handleNewChat = useCallback(() => {
     // If notepad is open and has unsaved content, show warning modal
@@ -547,10 +602,17 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   // Check for existing embeddings when user changes
   useEffect(() => {
     const checkEmbeddings = async () => {
-      const currentUserId = getCurrentUserId();
-      if (currentUserId) {
-        const info = await checkUserEmbeddings(currentUserId);
-        setEmbeddingInfo(info);
+      if (authData.userId) {
+        console.log('🔍 [CHAT CONTAINER] Checking user embeddings for:', authData.userId);
+        try {
+          const info = await checkUserEmbeddings(authData.userId);
+          console.log('🔍 [CHAT CONTAINER] Embedding info received:', info);
+          setEmbeddingInfo(info);
+        } catch (error) {
+          console.error('🔍 [CHAT CONTAINER] Error checking embeddings:', error);
+          // Set default values on error
+          setEmbeddingInfo({ hasEmbeddings: false, count: 0 });
+        }
       }
     };
 
@@ -682,11 +744,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           className="flex flex-col h-screen bg-background"
           style={getMainContentStyle()}
         >
-    
-    
-    
-    
-
         {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Mobile Tab Bar */}
@@ -714,17 +771,15 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
               <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden">
                 <div className="p-4 sm:p-6">
                   <div className="max-w-4xl mx-auto space-y-6">
-                    {/* Chat Header with New Chat Button */}
-                    <div className="flex justify-end items-center gap-2 pb-2">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="gap-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors px-3 py-1.5 h-auto"
+                    {/* Clean header - no controls crowding */}
+                    <div className="flex justify-end items-center pb-3">
+                      {/* Only New Chat button - clean and minimal */}
+                      <button 
                         onClick={handleNewChat}
+                        className="text-sm font-light text-muted-foreground hover:text-foreground transition-colors duration-300 border-b border-transparent hover:border-current pb-1"
                       >
-                        <Plus className="h-3.5 w-3.5" />
-                        <span className="text-xs">New Chat</span>
-                      </Button>
+                        New conversation
+                      </button>
                     </div>
 
                     {/* Context box */}
@@ -834,6 +889,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                 fromChat={true}
                 canNavigateBack={true}
                 onBack={() => router.back()}
+                sessionId={chatState.sessionId}
               />
             </div>
           )}
@@ -863,9 +919,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
               inputValue={inputValue}
               onInputChange={setInputValue}
               onInputPopulate={handleInputAppend}
-              useContextSearch={useContextSearch}
-              onToggleContextSearch={setUseContextSearch}
-              embeddingInfo={embeddingInfo}
               notepadOpen={true} // Always open on desktop
               openNotepad={isMobile ? toggleNotepad : undefined} // Only show toggle on mobile
               quotedForNotepad={quotedForNotepad}
@@ -873,12 +926,18 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
               isAuthenticated={authData.isAuthenticated}
               isMobile={isMobile}
               activeTab={activeTab}
+              // Anti-corporate controls
+              embeddingInfo={embeddingInfo}
+              useContextSearch={useContextSearch}
+              onToggleContextSearch={setUseContextSearch}
+              includeNotepadInMessages={includeNotepadInMessages}
+              onToggleNotepadInMessages={setIncludeNotepadInMessages}
             />
           </div>
         )}
-        </div>
+      </div>
 
-        {/* Desktop Notepad - Always visible, taking 50% of space */}
+      {/* Desktop Notepad - Always visible, taking 50% of space */}
         {!isMobile && (
           <MarkdownNotepad
             ref={notepadRef}
@@ -895,10 +954,11 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             fromChat={true}
             canNavigateBack={true}
             onBack={() => router.back()}
+            sessionId={chatState.sessionId}
           />
         )}
       </div>
-
+        
       {/* Notepad warning modal */}
       <Dialog open={showNotepadWarning} onOpenChange={setShowNotepadWarning}>
         <DialogContent>
@@ -925,10 +985,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         </DialogContent>
       </Dialog>
       
-
-
-
-
       {/* Chat Overlay */}
       {overlayContent && (
         <ChatOverlay

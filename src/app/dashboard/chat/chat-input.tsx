@@ -26,9 +26,6 @@ interface ChatInputProps {
   hasAnalysis?: boolean
   inputValue?: string
   onInputChange?: (value: string) => void
-  useContextSearch?: boolean
-  onToggleContextSearch?: (enabled: boolean) => void
-  embeddingInfo?: { hasEmbeddings: boolean; count: number }
   notepadOpen?: boolean
   openNotepad?: () => void
   quotedForNotepad?: string
@@ -67,9 +64,6 @@ export function ChatInput({
   hasAnalysis = false,
   inputValue,
   onInputChange,
-  useContextSearch,
-  onToggleContextSearch,
-  embeddingInfo,
   notepadOpen = false,
   openNotepad,
   quotedForNotepad,
@@ -82,8 +76,6 @@ export function ChatInput({
   const [input, setInput] = useState('')
   const [placeholder, setPlaceholder] = useState(placeholders[0])
   const [showFullReply, setShowFullReply] = useState(false)
-  const [smartSearchHovered, setSmartSearchHovered] = useState(false)
-  const [showSmartSearchText, setShowSmartSearchText] = useState(true)
   const internalInputRef = useRef<HTMLTextAreaElement>(null)
   const textareaRef = inputRef || internalInputRef
   const { theme } = useTheme()
@@ -286,9 +278,20 @@ export function ChatInput({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    console.log('🔔 [CHAT INPUT] handleSubmit called:', {
+      hasContent: !!currentInput.trim(),
+      isLoading,
+      inputLength: currentInput.length,
+      maxLength
+    })
+    
     if (currentInput.trim() && !isLoading && currentInput.length <= maxLength) {
       // Convert truncated titles back to content IDs before sending
       const processedMessage = convertTitlesToContentIds(currentInput.trim())
+      console.log('🔔 [CHAT INPUT] Sending message:', {
+        originalMessage: currentInput.trim(),
+        processedMessage
+      })
       onSend(processedMessage)
       setCurrentInput('')
     }
@@ -479,44 +482,8 @@ export function ChatInput({
             <div className={`flex items-center justify-between rounded-b-xl
               px-3 py-2 h-10
             `}>
-              {/* Left side - Smart Search */}
+              {/* Left side - empty now, toggles moved to top bar */}
               <div className="flex items-center">
-                {embeddingInfo?.hasEmbeddings && (
-                  <div className="relative flex items-center"
-                    onMouseEnter={() => setSmartSearchHovered(true)}
-                    onMouseLeave={() => setSmartSearchHovered(false)}
-                  >
-                    {/* Smart Search Toggle Button */}
-                    <button
-                      type="button"
-                      onClick={() => onToggleContextSearch?.(!useContextSearch)}
-                      className={`relative flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300 transform hover:scale-105 ${
-                        useContextSearch 
-                          ? `${accentBgLight} ${accentColor} shadow-sm` 
-                          : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                      }`}
-                      aria-label="Toggle Smart Search"
-                      title={useContextSearch ? 'Smart Search: ON' : 'Smart Search: OFF'}
-                      data-context-toggle
-                    >
-                      <Brain className="w-4 h-4" />
-                    </button>
-
-                    {/* Smart Search Text Label - hidden on mobile */}
-                    <div className="ml-3 min-w-0 hidden sm:block">
-                      <span className={`text-xs font-medium transition-colors duration-300 break-words ${
-                        useContextSearch 
-                          ? 'text-foreground' 
-                          : 'text-muted-foreground'
-                      }`}>
-                        {useContextSearch 
-                          ? `Smart search activated - ${embeddingInfo.count} items included` 
-                          : `Activate smart search to include ${embeddingInfo.count} items as context`
-                        }
-                      </span>
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Right side - Character count, Notes, Send */}

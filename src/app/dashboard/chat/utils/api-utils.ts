@@ -1244,14 +1244,21 @@ export async function sendChatMessage(
   contentContext?: ContentContext | null,
   hasContextInjection?: boolean,
   onStatusUpdate?: (status: string) => void,
-  useContextSearch: boolean = true
+  useContextSearch: boolean = true,
+  notepadContext?: { content: string; title?: string } | null
 ): Promise<ChatResponseData> {
-  console.log('🐛 [DEBUG] sendChatMessage called with:', {
+  console.log('🐛 [API UTILS] sendChatMessage called with:', {
     content: content.substring(0, 50) + '...',
     isFirstMessage,
     sessionId,
     hasContextInjection,
-    contentContext: !!contentContext
+    contentContext: !!contentContext,
+    notepadContext: !!notepadContext,
+    notepadContextDetails: notepadContext ? {
+      hasContent: !!notepadContext.content,
+      contentLength: notepadContext.content?.length || 0,
+      title: notepadContext.title || 'No title'
+    } : null
   });
 
   // Get API key - make sure we have one before proceeding
@@ -1412,7 +1419,8 @@ export async function sendChatMessage(
   const requestBody: any = {
     query: content,
     is_first_message: isFirstMessageBool,
-    use_vector_search: useContextSearch && needsContext, // ✅ CRITICAL: Only use vector search if needed
+    use_vector_search: useContextSearch, // ✅ User toggle controls vector search directly
+    notepad_context: notepadContext,
     intent_analysis: intentAnalysis ? {
       needs_context: needsContext,
       confidence_score: intentAnalysis.confidence_score,
@@ -1698,7 +1706,7 @@ export async function sendChatMessage(
   }
 
   // Log the request details with better debugging
-  console.log('📤 SENDING MESSAGE TO BACKEND (Stage 2):', {
+  console.log('📤 [API UTILS] SENDING MESSAGE TO BACKEND (Stage 2):', {
     is_first_message: requestBody.is_first_message,
     session_id: requestBody.session_id,
     current_session_id: sessionId,
@@ -1714,6 +1722,14 @@ export async function sendChatMessage(
     has_link_content: !!requestBody.link_content,
     link_content_count: requestBody.link_content?.length || 0,
     link_content_types: requestBody.link_content?.map((item: any) => item.type) || [],
+    // ✅ Add notepad context logging
+    has_notepad_context: !!requestBody.notepad_context,
+    notepad_context_details: requestBody.notepad_context ? {
+      hasContent: !!requestBody.notepad_context.content,
+      contentLength: requestBody.notepad_context.content?.length || 0,
+      title: requestBody.notepad_context.title || 'No title',
+      contentPreview: requestBody.notepad_context.content?.substring(0, 100) || ''
+    } : null,
     content_context: contentContext ? {
       platform: contentContext.platform,
       contentId: contentContext.contentId,
