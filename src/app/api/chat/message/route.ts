@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { query, is_first_message, session_id, content_context, vector_search_metadata, link_content } = body;
+    const { query, is_first_message, session_id, content_context, vector_search_metadata, link_content, notepad_context } = body;
     
     // Extract content IDs for context resolution
     const contentIdPattern = /@\[([^\]]+)\]@/g;
@@ -48,6 +48,8 @@ export async function POST(request: Request) {
       has_link_content: !!link_content,
       link_content_count: link_content?.length || 0,
       link_content_types: link_content?.map((item: any) => item.type) || [],
+      has_notepad_context: !!notepad_context,
+      notepad_context_length: notepad_context?.content?.length || 0,
       body_keys: Object.keys(body)
     });
 
@@ -77,7 +79,12 @@ export async function POST(request: Request) {
       content_context_platform: content_context?.platform,
       has_vector_search: !!vector_search_metadata,
       has_link_content: !!(link_content && Array.isArray(link_content) && link_content.length > 0),
-      link_content_count: link_content?.length || 0
+      link_content_count: link_content?.length || 0,
+      has_notepad_context: !!notepad_context,
+      notepad_context_details: notepad_context ? {
+        content_length: notepad_context.content?.length || 0,
+        title: notepad_context.title || 'No title'
+      } : null
     });
 
     // Prepare the request body for the backend
@@ -99,6 +106,11 @@ export async function POST(request: Request) {
     // Include vector search metadata if provided
     if (vector_search_metadata) {
         backendRequestBody.vector_search_metadata = vector_search_metadata;
+    }
+
+    // Include notepad context if provided
+    if (notepad_context) {
+        backendRequestBody.notepad_context = notepad_context;
     }
 
     // Process and inject link content into the query context

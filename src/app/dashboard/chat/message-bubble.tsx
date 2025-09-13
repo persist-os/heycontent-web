@@ -311,20 +311,19 @@ export function MessageBubble({
       {/* Chat Bubble Container */}
       <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-1`}>
         <div
-          className={`flex-shrink max-w-full sm:max-w-[70%] ${isUser ? '' : 'sm:max-w-[80%]'} min-w-0 w-full`}
+          className={`max-w-full sm:max-w-[80%] ${isUser ? '' : 'sm:max-w-[85%]'} w-full`}
         >
           <div
             id={`message-${message.id}`}
             className={`
               rounded-2xl
-              px-3 sm:px-4 py-2 sm:py-3
+              px-5 sm:px-7 py-2 sm:py-3
               ${isUser ? 'bg-primary text-primary-foreground dark:text-black [&_*]:!text-primary-foreground dark:[&_*]:!text-black' : 'bg-card border text-foreground'}
               relative
               group
               w-full
               min-w-0
-              mr-2 sm:mr-4
-              overflow-hidden
+              mr-1 sm:mr-2
             `}
           >
             {/* Referenced message preview */}
@@ -339,7 +338,7 @@ export function MessageBubble({
             )}
 
             {/* Main message content */}
-            <div className="prose prose-sm dark:prose-invert prose-p:my-2 prose-headings:my-3 max-w-none break-words pr-1 w-full overflow-hidden">
+            <div className="prose prose-sm dark:prose-invert prose-p:my-2 prose-headings:my-3 max-w-none break-words word-break-break-word hyphens-auto w-full">
               {mightHavePersona && userId ? (
                 <PersonaCardRenderer message={message} userId={userId} />
               ) : isUser && hasLinkedContent ? (

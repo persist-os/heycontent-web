@@ -62,13 +62,14 @@ export const useCreateNote = () => {
       callback?: () => void;
       customTitle?: string;
       customType?: string;
+      sourceConversationId?: string;
     } = {}
   ): Promise<string | null> => {
-    const { redirect = false, callback, customTitle, customType } = options;
+    const { redirect = false, callback, customTitle, customType, sourceConversationId } = options;
     setIsCreating(true);
     setError(null);
     try {
-      const noteUpdate: any = { content, title: customTitle };
+      const noteUpdate: any = { content, title: customTitle, sourceConversationId };
       if (customType && ['idea_bank','content_script','collaboration_note','analytics_insight','reflection_journal','task_checklist'].includes(customType)) {
         noteUpdate.type = customType;
       }
