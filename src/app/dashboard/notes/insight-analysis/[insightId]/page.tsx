@@ -84,7 +84,7 @@ export default function InsightAnalysisPage() {
           <div className="flex items-center gap-4">
             <Button variant="ghost" onClick={() => fromChat ? router.push(chatId ? `/dashboard/chat?id=${chatId}` : '/dashboard/chat') : router.push('/dashboard/notes')}>
               <ArrowLeft className="w-4 h-4 mr-2" />
-              {fromChat ? 'Back to Chat' : 'Back to File System'}
+              {fromChat ? 'Back to Chat' : 'Back to Files'}
             </Button>
             <div className="flex items-center gap-3">
               <Lightbulb className="w-8 h-8 text-yellow-500" />

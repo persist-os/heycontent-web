@@ -109,7 +109,7 @@ const SmartNoteOverlay: React.FC<SmartNoteOverlayProps> = ({ noteId, onClose }) 
                 router.push(url);
               }}
             >
-              Go to File System
+              Go to Files
             </button>
           </div>
         </div>

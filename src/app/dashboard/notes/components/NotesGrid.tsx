@@ -356,12 +356,12 @@ export function NotesGrid({
               <div className="lg:col-span-2">
                 <div className="flex items-baseline gap-3 sm:gap-6 mb-2">
                   <h1 className="text-3xl sm:text-4xl lg:text-5xl font-light tracking-tight text-foreground">
-                    File System
+                    Files
                   </h1>
                   <div className="h-px bg-gradient-to-r from-border/50 to-transparent flex-1 mb-2 sm:mb-3" />
                 </div>
                 <h2 className="text-base sm:text-lg font-light text-muted-foreground ml-1 sm:ml-2 tracking-wide">
-                  AI-enhanced thoughts and ideas
+                  Your thoughts and ideas
                 </h2>
               </div>
               <div className="flex flex-col items-start lg:items-end gap-2 sm:gap-4">

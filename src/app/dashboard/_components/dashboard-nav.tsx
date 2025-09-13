@@ -27,7 +27,7 @@ const navItems = [
   },
   {
     id: 'notes',
-    label: 'File System',
+    label: 'Files',
     description: 'AI-enhanced thoughts and ideas',
     icon: FileText,
     href: '/dashboard/notes',
@@ -326,8 +326,8 @@ export const DashboardNav = memo(function DashboardNav() {
                 </div>
               </div>
               <div className="flex items-center gap-2 ml-auto">
-                <div className="p-1.5 bg-muted/20 rounded-lg">
-                  <Command className="w-4 h-4 text-muted-foreground/60" />
+                <div className="px-2 py-1 bg-muted/20 rounded-lg">
+                  <span className="text-xs font-mono text-muted-foreground/60">⌘K</span>
                 </div>
                 <button
                   onClick={() => setIsExpanded(false)}

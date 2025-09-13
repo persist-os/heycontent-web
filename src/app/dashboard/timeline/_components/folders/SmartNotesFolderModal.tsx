@@ -49,7 +49,7 @@ export const SmartNotesFolderModal: React.FC<FolderModalProps> = ({
             <div className="w-6 h-6 bg-primary rounded-md flex items-center justify-center">
               <FileText className="w-4 h-4 text-primary-foreground" />
             </div>
-            File System
+            Files
             <span className="text-sm text-muted-foreground">({folderData.count} items)</span>
           </DialogTitle>
         </DialogHeader>

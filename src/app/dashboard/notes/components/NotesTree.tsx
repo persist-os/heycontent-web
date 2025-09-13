@@ -621,7 +621,7 @@ export function NotesTree({
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h1 className="text-3xl font-light tracking-tight text-foreground">
-                  File System
+                  Files
                 </h1>
                 <p className="text-muted-foreground/70 mt-1">
                   Your thoughts, organized and accessible

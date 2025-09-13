@@ -62,7 +62,7 @@ export function NoteHeader({
 
   return (
     <CentralizedHeader
-      title="File System"
+      title="Files"
       showBackButton={false}
       backButtonContext={backButtonContext}
       onBack={onBack}
