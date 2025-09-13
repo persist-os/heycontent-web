@@ -14,7 +14,7 @@ import { v4 as uuidv4 } from 'uuid';
 export const useChat = (
   chatState: ChatStateReturnType,
   userId?: string,
-  useContextSearch: boolean = true,
+  useContextSearch: boolean = false,
   getNotepadContent?: () => { content: string; title?: string } | null
 ) => {
   const {

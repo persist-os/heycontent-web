@@ -52,7 +52,7 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
     hasEmbeddings: false,
     count: 0
   })
-  const [useContextSearch, setUseContextSearch] = useState(true)
+  const [useContextSearch, setUseContextSearch] = useState(false)
   const [contextConsumption, setContextConsumption] = useState({
     hasConsumed: false,
     isDisplayed: false

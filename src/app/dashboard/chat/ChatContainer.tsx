@@ -106,11 +106,11 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   const { context: currentContext, hasContext } = useContentContext()
   const { clearContentContext } = useContentContextActions()
 
-  // Context search state - enable by default regardless of context availability
-  const [useContextSearch, setUseContextSearch] = useState(true)
+  // Context search state - disable by default to reduce complexity
+  const [useContextSearch, setUseContextSearch] = useState(false)
   
-  // Notepad inclusion state
-  const [includeNotepadInMessages, setIncludeNotepadInMessages] = useState(false)
+  // Notepad inclusion state - enable by default for better context
+  const [includeNotepadInMessages, setIncludeNotepadInMessages] = useState(true)
   
 
 
@@ -164,7 +164,17 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     resetChat
   } = useUIEffects(messages, isExpanded)
 
-  // Initialize chat hook with shared state and userId
+  // Add ref for MarkdownNotepad (moved up to fix declaration order)
+  const notepadRef = useRef<{ 
+    hasUnsavedContent: () => boolean, 
+    clearContent: () => void, 
+    getContent: () => string,
+    saveNote: () => Promise<string | null>,
+    getCurrentNote: () => any,
+    isNewNote: () => boolean,
+    setNoteForEditing: (noteId: string) => void
+  }>(null);
+
   const {
     referencedMessage,
     handleSendMessage,
@@ -256,17 +266,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     embeddingCount: embeddingInfo?.count,
     useContextSearch
   })
-
-  // Add ref for MarkdownNotepad
-  const notepadRef = useRef<{ 
-    hasUnsavedContent: () => boolean, 
-    clearContent: () => void, 
-    getContent: () => string,
-    saveNote: () => Promise<string | null>,
-    getCurrentNote: () => any,
-    isNewNote: () => boolean,
-    setNoteForEditing: (noteId: string) => void
-  }>(null);
 
   // Modal state for notepad warning
   const [showNotepadWarning, setShowNotepadWarning] = useState(false);

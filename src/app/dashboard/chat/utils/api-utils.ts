@@ -1244,7 +1244,7 @@ export async function sendChatMessage(
   contentContext?: ContentContext | null,
   hasContextInjection?: boolean,
   onStatusUpdate?: (status: string) => void,
-  useContextSearch: boolean = true,
+  useContextSearch: boolean = false,
   notepadContext?: { content: string; title?: string } | null
 ): Promise<ChatResponseData> {
   console.log('🐛 [API UTILS] sendChatMessage called with:', {
