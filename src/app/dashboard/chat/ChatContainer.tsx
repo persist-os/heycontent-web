@@ -38,6 +38,7 @@ import { useNotes } from '@/app/context/notes-context'
 import { usePersonaStore } from '@/store/persona-store'
 import { useConvex } from 'convex/react'
 import { useContentContext, useContentContextActions, useContentContextStore } from '@/store/content-context-store'
+import { useGlobalSelectionState } from './hooks/useGlobalSelectionState'
 
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -105,6 +106,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   // Get content context from Zustand store
   const { context: currentContext, hasContext } = useContentContext()
   const { clearContentContext } = useContentContextActions()
+  
+  // Get global selection state to prevent scroll interference
+  const { isScrollingSuppressed } = useGlobalSelectionState()
 
   // Context search state - disable by default to reduce complexity
   const [useContextSearch, setUseContextSearch] = useState(false)
@@ -322,8 +326,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   const { 
     quotedForNotepad, 
     handleClearQuoted, 
-    handleQuoteToNotepad, 
-    handleNotepadSendToChat,
+    handleQuoteToNotepad,
     createReferenceClickHandler 
   } = useChatHandlers(handleSendMessage, handleClearReference, messages)
 
@@ -635,12 +638,15 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     loadedConversationRef.current = null;
   }, []); // Only run on mount
 
-  // Autoscroll functionality
+  // Selection-aware autoscroll functionality
   useEffect(() => {
-    if (chatContainerRef.current && messages.length > 0) {
+    if (chatContainerRef.current && messages.length > 0 && !isScrollingSuppressed) {
       const scrollContainer = chatContainerRef.current;
       
       const scrollToBottom = () => {
+        // Double-check selection state before scrolling
+        if (isScrollingSuppressed) return;
+        
         const scrollHeight = scrollContainer.scrollHeight;
         const height = scrollContainer.clientHeight;
         const maxScrollTop = scrollHeight - height;
@@ -656,11 +662,16 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       };
 
       scrollToBottom();
-      const timeoutId = setTimeout(scrollToBottom, 100);
+      const timeoutId = setTimeout(() => {
+        // Final check before delayed scroll
+        if (!isScrollingSuppressed) {
+          scrollToBottom();
+        }
+      }, 100);
       
       return () => clearTimeout(timeoutId);
     }
-  }, [messages, isLoading]);
+  }, [messages, isLoading, isScrollingSuppressed]);
 
   // Scroll position management for mobile tab switching
   useEffect(() => {
@@ -876,7 +887,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                 ref={notepadRef}
                 isOpen={true}
                 onClose={() => switchToTab('chat')}
-                onSendToChat={handleNotepadSendToChat}
                 quotedContent={quotedForNotepad}
                 onClearQuoted={handleClearQuoted}
                 width={notepadWidth}
@@ -942,7 +952,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             ref={notepadRef}
             isOpen={true} // Always open
             onClose={() => {}} // Disable close functionality
-            onSendToChat={handleNotepadSendToChat}
             quotedContent={quotedForNotepad}
             onClearQuoted={handleClearQuoted}
             width={notepadWidth}

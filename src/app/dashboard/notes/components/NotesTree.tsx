@@ -13,6 +13,19 @@ import { useProjects } from '../hooks/useProjects';
 import { useAuth } from '@/app/context/auth-context';
 import { CreateProjectModal } from './projects/CreateProjectModal';
 import { useRouter } from 'next/navigation';
+import {
+  DndContext,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragOverEvent,
+  useDroppable,
+  useDraggable,
+} from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
 
 interface NotesTreeProps {
   notes: Note[];
@@ -34,6 +47,9 @@ interface TreeNode {
   count?: number;
   isExpanded?: boolean;
   level: number;
+  droppableType?: 'starred' | 'project' | 'tag' | 'all-notes';
+  tagName?: string;
+  projectId?: string;
 }
 
 export function NotesTree({
@@ -50,17 +66,30 @@ export function NotesTree({
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['recent', 'projects', 'tags', 'important']));
   const [isCreatingNote, setIsCreatingNote] = useState(false);
   const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
+  const [draggedNote, setDraggedNote] = useState<Note | null>(null);
+  const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
   
   // Use the creation hooks
   const { createNote } = useCreateNote();
-  const { setActiveNoteId } = useNotes();
+  const { setActiveNoteId, updateNote } = useNotes();
   const { firebaseUser } = useAuth();
   const router = useRouter();
   const { 
     projects: hookProjects, 
     createProject, 
-    isCreating: isCreatingProject 
+    isCreating: isCreatingProject,
+    addItemToProject,
+    removeItemFromProject
   } = useProjects(firebaseUser?.uid);
+
+  // Configure sensors for drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Minimum distance to start dragging
+      },
+    })
+  );
   
   // Use projects from props if provided, otherwise from hook
   const projects = propProjects || hookProjects;
@@ -118,6 +147,7 @@ export function NotesTree({
         title: 'Starred',
         count: importantNotes.length,
         level: 0,
+        droppableType: 'starred',
         children: importantNotes.map(note => ({
           id: note._id,
           type: 'note' as const,
@@ -149,7 +179,9 @@ export function NotesTree({
         title: project.name || 'Untitled Project',
         project,
         level: 1,
-        children: []
+        children: [],
+        droppableType: 'project',
+        projectId: project._id
       }))
     });
 
@@ -172,23 +204,25 @@ export function NotesTree({
         .sort(([, a], [, b]) => b.length - a.length)
         .slice(0, 8) // Show top 8 tags
         .forEach(([tag, tagNotes]) => {
-          tagChildren.push({
-            id: `tag-${tag}`,
-            type: 'folder',
-            title: tag,
-            count: tagNotes.length,
-            level: 1,
-            children: tagNotes
-              .sort((a, b) => b.updatedAt - a.updatedAt)
-              .map(note => ({
-                id: `${tag}-${note._id}`,
-                type: 'note' as const,
-                title: note.title || 'Untitled',
-                note,
-                level: 2,
-                children: []
-              }))
-          });
+        tagChildren.push({
+          id: `tag-${tag}`,
+          type: 'folder',
+          title: tag,
+          count: tagNotes.length,
+          level: 1,
+          droppableType: 'tag',
+          tagName: tag,
+          children: tagNotes
+            .sort((a, b) => b.updatedAt - a.updatedAt)
+            .map(note => ({
+              id: `${tag}-${note._id}`,
+              type: 'note' as const,
+              title: note.title || 'Untitled',
+              note,
+              level: 2,
+              children: []
+            }))
+        });
         });
 
       tree.push({
@@ -217,6 +251,7 @@ export function NotesTree({
         title: 'All Notes',
         count: otherNotes.length,
         level: 0,
+        droppableType: 'all-notes',
         children: otherNotes.map(note => ({
           id: `all-${note._id}`,
           type: 'note' as const,
@@ -229,7 +264,7 @@ export function NotesTree({
     }
 
     return tree;
-  }, [notes, searchTerm, selectedFilter]);
+  }, [notes, projects, searchTerm, selectedFilter]);
 
   const toggleNode = useCallback((nodeId: string) => {
     setExpandedNodes(prev => {
@@ -265,6 +300,183 @@ export function NotesTree({
     return projectId;
   }, [createProject]);
 
+  // Drag and drop handlers
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const { active } = event;
+    if (active.data.current?.type === 'note') {
+      setDraggedNote(active.data.current.note);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const { over } = event;
+    if (over?.data.current?.droppableType) {
+      setDragOverFolder(String(over.id));
+    } else {
+      setDragOverFolder(null);
+    }
+  }, []);
+
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    setDraggedNote(null);
+    setDragOverFolder(null);
+
+    if (!over || !active.data.current?.note) return;
+
+    const note = active.data.current.note as Note;
+    const dropData = over.data.current;
+    const droppableType = dropData?.droppableType;
+
+    try {
+      switch (droppableType) {
+        case 'starred':
+          // Toggle the important field to add to starred
+          await updateNote(String(note._id), { important: true });
+          break;
+          
+        case 'project':
+          // Add note to project
+          if (dropData?.projectId) {
+            await addItemToProject(dropData.projectId, 'note', String(note._id));
+          }
+          break;
+          
+        case 'tag':
+          // Add tag to note
+          if (dropData?.tagName) {
+            const currentTags = note.tags || [];
+            if (!currentTags.includes(dropData.tagName)) {
+              await updateNote(String(note._id), { 
+                tags: [...currentTags, dropData.tagName] 
+              });
+            }
+          }
+          break;
+          
+        case 'all-notes':
+          // Remove from special categories (make it a regular note)
+          const updates: any = {};
+          if (note.important) {
+            updates.important = false;
+          }
+          if (Object.keys(updates).length > 0) {
+            await updateNote(String(note._id), updates);
+          }
+          break;
+      }
+    } catch (error) {
+      console.error('Failed to move note:', error);
+    }
+  }, [updateNote, addItemToProject]);
+
+  // Droppable folder component
+  const DroppableFolder = ({ node, children }: { node: TreeNode; children: React.ReactNode }) => {
+    const { setNodeRef, isOver } = useDroppable({
+      id: node.id,
+      data: {
+        droppableType: node.droppableType,
+        tagName: node.tagName,
+        projectId: node.projectId,
+      },
+      disabled: !node.droppableType,
+    });
+
+    return (
+      <div 
+        ref={setNodeRef}
+        className={cn(
+          "transition-all duration-200",
+          isOver && draggedNote && "bg-primary/10 rounded-lg"
+        )}
+      >
+        {children}
+      </div>
+    );
+  };
+
+  // Draggable note component
+  const DraggableNote = ({ node }: { node: TreeNode }) => {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      isDragging,
+    } = useDraggable({
+      id: String(node.id),
+      data: {
+        type: 'note',
+        note: node.note,
+      },
+      disabled: !node.note,
+    });
+
+    const transformStyle = transform ? CSS.Translate.toString(transform) : undefined;
+
+    return (
+      <div
+        ref={setNodeRef}
+        // eslint-disable-next-line react/forbid-dom-props
+        style={transformStyle ? { transform: transformStyle } : undefined}
+        {...listeners}
+        {...attributes}
+        className={cn(
+          "group relative",
+          node.level === 1 && "ml-6",
+          node.level === 2 && "ml-12",
+          isDragging && "opacity-50"
+        )}
+      >
+        {/* Subtle connection line */}
+        <div 
+          className={cn(
+            "absolute top-0 bottom-0 w-px bg-border/20",
+            node.level === 1 && "left-3",
+            node.level === 2 && "left-7"
+          )}
+        />
+        
+        <div className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-muted/30 transition-all duration-200 cursor-pointer relative"
+             onClick={() => {
+               // Check if note has source conversation
+               const conversationParam = node.note!.sourceConversationId 
+                 ? `&conversationId=${node.note!.sourceConversationId}` 
+                 : '';
+               
+               // Navigate to chat with both noteId and conversationId
+               router.push(`/dashboard/chat?noteId=${node.note!._id}${conversationParam}`);
+             }}>
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <FileText className="w-4 h-4 text-muted-foreground/60 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className={cn(
+                  "text-sm font-medium truncate transition-colors",
+                  searchTerm && node.title.toLowerCase().includes(searchTerm.toLowerCase())
+                    ? "text-blue-600 dark:text-blue-400"
+                    : "text-foreground"
+                )}>
+                  {node.title}
+                </span>
+                {node.note!.important && (
+                  <Star className="w-3 h-3 text-amber-500 fill-current flex-shrink-0" />
+                )}
+              </div>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground/70 mt-0.5">
+                <span>{formatDistanceToNow(new Date(node.note!.updatedAt), { addSuffix: true })}</span>
+                {node.note!.tags && node.note!.tags.length > 0 && (
+                  <span>• {node.note!.tags.slice(0, 2).join(', ')}</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderTreeNode = useCallback((node: TreeNode): React.ReactNode => {
     const isExpanded = expandedNodes.has(node.id);
     const hasChildren = node.children.length > 0;
@@ -283,7 +495,7 @@ export function NotesTree({
                  }
                }}>
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              <Folder className="w-4 h-4 text-blue-500/70 flex-shrink-0" />
+              <Folder className="w-5 h-5 text-blue-500/70 flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-foreground truncate">
@@ -309,112 +521,73 @@ export function NotesTree({
 
     if (node.type === 'note' && node.note) {
       return (
-        <div key={node.id} className={cn(
-          "group relative",
-          node.level === 1 && "ml-6",
-          node.level === 2 && "ml-12"
-        )}>
-          {/* Subtle connection line */}
-          <div 
-            className={cn(
-              "absolute top-0 bottom-0 w-px bg-border/20",
-              node.level === 1 && "left-3",
-              node.level === 2 && "left-7"
-            )}
-          />
-          
-          <div className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-muted/30 transition-all duration-200 cursor-pointer relative"
-               onClick={() => {
-                 // Check if note has source conversation
-                 const conversationParam = node.note!.sourceConversationId 
-                   ? `&conversationId=${node.note!.sourceConversationId}` 
-                   : '';
-                 
-                 // Navigate to chat with both noteId and conversationId
-                 router.push(`/dashboard/chat?noteId=${node.note!._id}${conversationParam}`);
-               }}>
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <FileText className="w-4 h-4 text-muted-foreground/60 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className={cn(
-                    "text-sm font-medium truncate transition-colors",
-                    searchTerm && node.title.toLowerCase().includes(searchTerm.toLowerCase())
-                      ? "text-blue-600 dark:text-blue-400"
-                      : "text-foreground"
-                  )}>
-                    {node.title}
-                  </span>
-                  {node.note.important && (
-                    <Star className="w-3 h-3 text-amber-500 fill-current flex-shrink-0" />
-                  )}
-                </div>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground/70 mt-0.5">
-                  <span>{formatDistanceToNow(new Date(node.note.updatedAt), { addSuffix: true })}</span>
-                  {node.note.tags && node.note.tags.length > 0 && (
-                    <span>• {node.note.tags.slice(0, 2).join(', ')}</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <DraggableNote key={node.id} node={node} />
       );
     }
 
     return (
-      <div key={node.id} className={cn(
-        "relative",
-        node.level === 1 && "ml-4",
-        node.level === 2 && "ml-8"
-      )}>
-        <div 
-          className="flex items-center gap-2 py-2.5 px-3 rounded-lg hover:bg-muted/20 transition-all duration-200 cursor-pointer group"
-          onClick={() => hasChildren && toggleNode(node.id)}
-        >
-          <div className="flex items-center gap-2">
-            {hasChildren ? (
-              <div className="transition-transform duration-200">
-                {isExpanded ? (
-                  <ChevronDown className="w-4 h-4 text-muted-foreground/60" />
-                ) : (
-                  <ChevronRight className="w-4 h-4 text-muted-foreground/60" />
-                )}
-              </div>
-            ) : (
-              <div className="w-4" />
+      <DroppableFolder key={node.id} node={node}>
+        <div className={cn(
+          "relative",
+          node.level === 1 && "ml-4",
+          node.level === 2 && "ml-8"
+        )}>
+          <div 
+            className={cn(
+              "flex items-center gap-2 py-2.5 px-3 rounded-lg hover:bg-muted/20 transition-all duration-200 cursor-pointer group",
+              dragOverFolder === node.id && draggedNote && "bg-primary/10 border border-primary/30 border-dashed"
             )}
-            <Folder className={cn(
-              "w-4 h-4 transition-colors",
-              node.level === 0 ? "text-blue-500/70" : "text-muted-foreground/60"
-            )} />
-          </div>
-          <span className={cn(
-            "font-medium transition-colors",
-            node.level === 0 ? "text-foreground text-sm" : "text-muted-foreground/90 text-sm"
-          )}>
-            {node.title}
-          </span>
-          {node.count && (
-            <span className="text-xs text-muted-foreground/50 bg-muted/40 px-1.5 py-0.5 rounded transition-colors">
-              {node.count}
+            onClick={() => hasChildren && toggleNode(node.id)}
+          >
+            <div className="flex items-center gap-2">
+              {hasChildren ? (
+                <div className="transition-transform duration-200">
+                  {isExpanded ? (
+                    <ChevronDown className="w-4 h-4 text-muted-foreground/60" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 text-muted-foreground/60" />
+                  )}
+                </div>
+              ) : (
+                <div className="w-4" />
+              )}
+              <Folder className={cn(
+                "w-5 h-5 transition-colors",
+                node.level === 0 ? "text-blue-500/70" : "text-muted-foreground/60"
+              )} />
+            </div>
+            <span className={cn(
+              "font-medium transition-colors",
+              node.level === 0 ? "text-foreground text-sm" : "text-muted-foreground/90 text-sm"
+            )}>
+              {node.title}
             </span>
+            {node.count && (
+              <span className="text-xs text-muted-foreground/50 bg-muted/40 px-1.5 py-0.5 rounded transition-colors">
+                {node.count}
+              </span>
+            )}
+            {dragOverFolder === node.id && draggedNote && node.droppableType && (
+              <span className="text-xs text-primary font-medium ml-auto">
+                Drop here
+              </span>
+            )}
+          </div>
+          
+          {hasChildren && (
+            <div className={cn(
+              "overflow-hidden transition-all duration-300 ease-out",
+              isExpanded ? "max-h-screen opacity-100 mt-1" : "max-h-0 opacity-0"
+            )}>
+              <div className="space-y-0.5">
+                {node.children.map(child => renderTreeNode(child))}
+              </div>
+            </div>
           )}
         </div>
-        
-        {hasChildren && (
-          <div className={cn(
-            "overflow-hidden transition-all duration-300 ease-out",
-            isExpanded ? "max-h-screen opacity-100 mt-1" : "max-h-0 opacity-0"
-          )}>
-            <div className="space-y-0.5">
-              {node.children.map(child => renderTreeNode(child))}
-            </div>
-          </div>
-        )}
-      </div>
+      </DroppableFolder>
     );
-  }, [expandedNodes, toggleNode, onEditNote]);
+  }, [expandedNodes, toggleNode, onEditNote, dragOverFolder, draggedNote, router, searchTerm]);
 
   if (isLoading) {
     return (
@@ -434,15 +607,21 @@ export function NotesTree({
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-6xl mx-auto">
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="min-h-screen bg-background">
+        <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="border-b border-border/30 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
           <div className="p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h1 className="text-3xl font-light tracking-tight text-foreground">
-                  Smart Notes
+                  Files
                 </h1>
                 <p className="text-muted-foreground/70 mt-1">
                   Your thoughts, organized and accessible
@@ -457,7 +636,7 @@ export function NotesTree({
                   {isCreatingProject ? (
                     <div className="w-4 h-4 border-2 border-foreground/30 border-t-foreground rounded-full animate-spin" />
                   ) : (
-                    <FolderPlus className="w-4 h-4" />
+                    <FolderPlus className="w-5 h-5" />
                   )}
                   New Project
                 </button>
@@ -506,7 +685,7 @@ export function NotesTree({
                         : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
                     )}
                   >
-                    <Icon className="w-4 h-4" />
+                    <Icon className={cn("w-4 h-4", key === 'projects' && "w-5 h-5")} />
                     {label}
                   </button>
                 ))}
@@ -537,16 +716,34 @@ export function NotesTree({
               {treeStructure.map(node => renderTreeNode(node))}
             </div>
           )}
+          </div>
         </div>
+
+        {/* Create Project Modal */}
+        <CreateProjectModal
+          isOpen={showCreateProjectModal}
+          onClose={() => setShowCreateProjectModal(false)}
+          onCreateProject={handleCreateProject}
+          isCreating={isCreatingProject}
+        />
       </div>
 
-      {/* Create Project Modal */}
-      <CreateProjectModal
-        isOpen={showCreateProjectModal}
-        onClose={() => setShowCreateProjectModal(false)}
-        onCreateProject={handleCreateProject}
-        isCreating={isCreatingProject}
-      />
-    </div>
+      {/* Drag Overlay */}
+      <DragOverlay>
+        {draggedNote ? (
+          <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-muted-foreground/60" />
+              <span className="text-sm font-medium">
+                {draggedNote.title || 'Untitled'}
+              </span>
+              {draggedNote.important && (
+                <Star className="w-3 h-3 text-amber-500 fill-current" />
+              )}
+            </div>
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 }

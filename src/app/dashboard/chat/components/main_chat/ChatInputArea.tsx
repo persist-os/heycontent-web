@@ -124,7 +124,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
                   : 'text-muted-foreground border-transparent hover:text-foreground hover:border-current'
               }`}
             >
-              Notes {includeNotepadInMessages ? 'on' : 'off'}
+              Notepad {includeNotepadInMessages ? 'on' : 'off'}
             </button>
           </div>
           
