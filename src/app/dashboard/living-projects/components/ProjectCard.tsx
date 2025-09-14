@@ -1,6 +1,11 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+import { MoreHorizontal, Trash2 } from 'lucide-react'
+import { useMutation } from 'convex/react'
+import { api } from '@/convex/_generated/api'
+import { useAuth } from '@/app/context/auth-context'
+import { DeleteProjectModal } from '../[projectId]/components/DeleteProjectModal'
 // Simple date formatting utility
 const formatDistanceToNow = (date: Date, options?: { addSuffix?: boolean }) => {
   const now = new Date()
@@ -27,11 +32,36 @@ interface ProjectCardProps {
     updatedAt: number
   }
   onClick: () => void
+  onDelete?: () => void
 }
 
-export function ProjectCard({ project, onClick }: ProjectCardProps) {
+export function ProjectCard({ project, onClick, onDelete }: ProjectCardProps) {
+  const { firebaseUser } = useAuth()
+  const [showMenu, setShowMenu] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const deleteProject = useMutation(api.projectsMutations.deleteProject)
+  const menuRef = useRef<HTMLDivElement>(null)
+  
   const hasFingerprint = !!project.fingerprintId
   const isRecent = Date.now() - project.updatedAt < 24 * 60 * 60 * 1000 // Less than 24 hours
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false)
+      }
+    }
+
+    if (showMenu) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showMenu])
   
   const getProjectStatus = () => {
     if (!hasFingerprint) {
@@ -55,6 +85,40 @@ export function ProjectCard({ project, onClick }: ProjectCardProps) {
   }
 
   const status = getProjectStatus()
+
+  const handleDelete = async () => {
+    if (!firebaseUser?.uid) return
+    
+    try {
+      setIsDeleting(true)
+      await deleteProject({ 
+        projectId: project._id as any, 
+        userId: firebaseUser.uid 
+      })
+      
+      // Call the onDelete callback if provided
+      if (onDelete) {
+        onDelete()
+      }
+    } catch (error) {
+      console.error('Failed to delete project:', error)
+      alert('Failed to delete project. Please try again.')
+    } finally {
+      setIsDeleting(false)
+      setShowDeleteModal(false)
+    }
+  }
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent card click
+    setShowMenu(false)
+    setShowDeleteModal(true)
+  }
+
+  const handleMenuClick = (e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent card click
+    setShowMenu(!showMenu)
+  }
 
   return (
     <div 
@@ -83,8 +147,30 @@ export function ProjectCard({ project, onClick }: ProjectCardProps) {
                   {status.label.toLowerCase()}
                 </div>
               </div>
-              <div className="text-xs text-muted-foreground/50 font-mono">
-                →
+              <div className="flex items-center gap-2">
+                {/* 3-dots menu */}
+                <div className="relative" ref={menuRef}>
+                  <button
+                    onClick={handleMenuClick}
+                    className="p-1 hover:bg-muted/50 rounded-md transition-colors opacity-0 group-hover:opacity-100"
+                    disabled={isDeleting}
+                  >
+                    <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                  
+                  {showMenu && (
+                    <div className="absolute right-0 top-8 bg-background border border-border rounded-md shadow-lg z-10 min-w-[120px]">
+                      <button
+                        onClick={handleDeleteClick}
+                        disabled={isDeleting}
+                        className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 flex items-center gap-2 transition-colors"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             
@@ -139,6 +225,15 @@ export function ProjectCard({ project, onClick }: ProjectCardProps) {
       
       {/* Hover Effect */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+      
+      {/* Delete Project Modal */}
+      <DeleteProjectModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDelete}
+        projectName={project.name}
+        isDeleting={isDeleting}
+      />
     </div>
   )
 }

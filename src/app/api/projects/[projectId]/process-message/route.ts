@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { extractAuthInfo } from '@/app/lib/api-helpers-server';
 import { ConvexHttpClient } from 'convex/browser';
 import { api } from '@/convex/_generated/api';
+import { adminAuth } from '@/app/lib/firebase-admin';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
@@ -23,21 +24,10 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized - Missing Firebase ID token' }, { status: 401 });
     }
 
-    // Extract userId from Firebase ID token
+    // Extract userId from Firebase ID token using centralized adminAuth
     let userId = null;
     try {
-      const admin = require('firebase-admin');
-      if (!admin.apps.length) {
-        admin.initializeApp({
-          credential: admin.credential.cert({
-            projectId: process.env.FIREBASE_PROJECT_ID,
-            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-            privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-          }),
-        });
-      }
-      
-      const decodedToken = await admin.auth().verifyIdToken(idToken);
+      const decodedToken = await adminAuth.verifyIdToken(idToken);
       userId = decodedToken.uid;
       console.log(`[process-message:${requestId}] Retrieved user ID:`, userId);
     } catch (error) {

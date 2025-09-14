@@ -1,9 +1,9 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/app/context/auth-context'
-import { useQuery } from 'convex/react'
+import { useQuery, useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { useProjectFingerprintStore } from '@/store/project-fingerprint-store'
 import { useConvex } from 'convex/react'
@@ -12,11 +12,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
-  ArrowLeft
+  ArrowLeft,
+  MoreHorizontal,
+  Edit3,
+  RefreshCw,
+  Trash2,
+  X,
+  Calendar,
+  Clock,
+  Target,
+  Palette,
+  Layers,
+  Activity
 } from 'lucide-react'
-import { FingerprintDisplay } from '@/app/dashboard/chat/components/notepad/FingerprintDisplay'
 import { AgentGeneratedWidgets } from './widgets/AgentGeneratedWidgets'
 import { ConstellationTransition } from '@/app/dashboard/living-projects/components/widgets/ConstellationTransition'
+import { DeleteProjectModal } from './DeleteProjectModal'
 import { ProjectWidgetsData, WidgetConfig } from '@/types/projectWidgets'
 import { usePanZoom } from '../../hooks/usePanZoom'
 import { ConnectionLines } from '../../components/ConnectionLines'
@@ -299,7 +310,8 @@ function FloatingWidgetCard({
       large: { width: 360, minHeight: 280 }
     }
     
-    const baseSize = baseSizes[size]
+    // Default to medium if size is undefined
+    const baseSize = baseSizes[size] || baseSizes.medium
     
     // Scale up dimensions based on zoom level for better readability
     const zoomMultiplier = Math.max(0.8, scale * 0.8) // Subtle scaling with zoom
@@ -430,6 +442,165 @@ function FloatingWidgetCard({
   )
 }
 
+// Widget Details Panel Component
+const WidgetDetailsPanel = ({ 
+  widget, 
+  isOpen, 
+  onClose 
+}: { 
+  widget: WidgetConfig | null
+  isOpen: boolean
+  onClose: () => void
+}) => {
+  if (!isOpen || !widget) return null
+
+  const getPriorityColor = (priority: number) => {
+    if (priority >= 8) return 'text-red-600 dark:text-red-400'
+    if (priority >= 6) return 'text-orange-600 dark:text-orange-400'
+    if (priority >= 4) return 'text-yellow-600 dark:text-yellow-400'
+    return 'text-green-600 dark:text-green-400'
+  }
+
+  const getPriorityLabel = (priority: number) => {
+    if (priority >= 8) return 'Critical'
+    if (priority >= 6) return 'High'
+    if (priority >= 4) return 'Medium'
+    return 'Low'
+  }
+
+  return (
+    <div className="fixed inset-y-0 right-0 w-96 bg-background/95 backdrop-blur-sm border-l border-border/50 shadow-xl z-30 transform transition-transform duration-300 ease-out">
+      <div className="h-full flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-border/30">
+          <div className="flex items-center gap-3">
+            <div className={`w-3 h-3 rounded-full ${getWidgetThemeClasses(widget.theme).includes('orange') ? 'bg-orange-400' : getWidgetThemeClasses(widget.theme).includes('blue') ? 'bg-blue-400' : getWidgetThemeClasses(widget.theme).includes('purple') ? 'bg-purple-400' : 'bg-slate-400'}`} />
+            <h2 className="text-lg font-semibold text-foreground">{widget.title}</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-muted/50 rounded-md transition-colors"
+          >
+            <X className="w-4 h-4 text-muted-foreground" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Description */}
+          <div>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">Description</h3>
+            <p className="text-sm text-foreground leading-relaxed">{widget.description}</p>
+          </div>
+
+          {/* Widget Type & Category */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-2">Type</h3>
+              <Badge variant="secondary" className="text-xs">
+                {widget.widget_type}
+              </Badge>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-2">Category</h3>
+              <Badge variant="outline" className="text-xs">
+                {widget.category}
+              </Badge>
+            </div>
+          </div>
+
+          {/* Priority */}
+          <div>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">Priority</h3>
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    widget.priority >= 8 ? 'bg-gradient-to-r from-red-500 to-red-600' :
+                    widget.priority >= 6 ? 'bg-gradient-to-r from-orange-500 to-orange-600' :
+                    widget.priority >= 4 ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' :
+                    'bg-gradient-to-r from-green-500 to-green-600'
+                  }`}
+                  style={{ width: `${(widget.priority / 10) * 100}%` }}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`text-sm font-medium ${getPriorityColor(widget.priority)}`}>
+                  {getPriorityLabel(widget.priority)}
+                </span>
+                <span className="text-xs text-muted-foreground">({widget.priority}/10)</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Size & Theme */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-2">Size</h3>
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm text-foreground capitalize">{widget.size}</span>
+              </div>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-2">Theme</h3>
+              <div className="flex items-center gap-2">
+                <Palette className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm text-foreground capitalize">{widget.theme}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Update Frequency */}
+          <div>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">Update Frequency</h3>
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-foreground capitalize">{widget.update_frequency}</span>
+            </div>
+          </div>
+
+          {/* Widget ID */}
+          <div>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">Widget ID</h3>
+            <div className="bg-muted/30 rounded-md p-3">
+              <code className="text-xs text-muted-foreground font-mono break-all">
+                {widget.widget_id}
+              </code>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="pt-4 border-t border-border/30">
+            <h3 className="text-sm font-medium text-muted-foreground mb-3">Actions</h3>
+            <div className="space-y-2">
+              <Button variant="outline" size="sm" className="w-full justify-start">
+                <Activity className="w-4 h-4 mr-2" />
+                View Activity
+              </Button>
+              <Button variant="outline" size="sm" className="w-full justify-start">
+                <Target className="w-4 h-4 mr-2" />
+                Configure Settings
+              </Button>
+              <Button variant="outline" size="sm" className="w-full justify-start">
+                <Calendar className="w-4 h-4 mr-2" />
+                Schedule Updates
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-6 border-t border-border/30">
+          <div className="text-xs text-muted-foreground/60 text-center">
+            Widget created by AI • Last updated: {new Date().toLocaleDateString()}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Widget Generation Loading Animation Component
 const WidgetGenerationLoader = () => (
   <div className="min-h-screen p-8 flex items-center justify-center">
@@ -528,10 +699,19 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   const [isGeneratingWidgets, setIsGeneratingWidgets] = useState(false)
   const [widgetGenerationAttempted, setWidgetGenerationAttempted] = useState(false)
   const [highlightedWidget, setHighlightedWidget] = useState<string | null>(null)
+  const [selectedWidget, setSelectedWidget] = useState<WidgetConfig | null>(null)
+  const [showWidgetPanel, setShowWidgetPanel] = useState(false)
   const [viewportSize, setViewportSize] = useState({
     width: typeof window !== 'undefined' ? window.innerWidth : 1200,
     height: typeof window !== 'undefined' ? window.innerHeight : 800
   })
+  
+  // Menu and delete state
+  const [showMenu, setShowMenu] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const deleteProject = useMutation(api.projectsMutations.deleteProject)
 
   // Fetch project data
   const project = useQuery(
@@ -584,6 +764,23 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false)
+      }
+    }
+
+    if (showMenu) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showMenu])
 
   // Prevent page scroll when constellation is active
   useEffect(() => {
@@ -663,6 +860,8 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   // Handle widget click
   const handleWidgetClick = React.useCallback((widget: WidgetConfig) => {
     console.log('Widget clicked:', widget.title, widget.widget_type)
+    setSelectedWidget(widget)
+    setShowWidgetPanel(true)
   }, [])
 
   // Handle minimap viewport click
@@ -805,6 +1004,36 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
     }
   }
 
+  const handleDeleteProject = async () => {
+    if (!firebaseUser?.uid) return
+    
+    try {
+      setIsDeleting(true)
+      await deleteProject({ 
+        projectId: projectId as any, 
+        userId: firebaseUser.uid 
+      })
+      
+      // Redirect to projects list after successful deletion
+      router.push('/dashboard/living-projects')
+    } catch (error) {
+      console.error('Failed to delete project:', error)
+      alert('Failed to delete project. Please try again.')
+    } finally {
+      setIsDeleting(false)
+      setShowDeleteModal(false)
+    }
+  }
+
+  const handleMenuClick = () => {
+    setShowMenu(!showMenu)
+  }
+
+  const handleCloseWidgetPanel = () => {
+    setShowWidgetPanel(false)
+    setSelectedWidget(null)
+  }
+
   const handleStarsDiscovered = () => {
     setShowTransition(true)
   }
@@ -858,9 +1087,10 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
       <div className="min-h-screen bg-background">
         {/* Header with controls */}
         <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-sm border-b border-border/30">
-          <div className="max-w-6xl mx-auto px-6 py-4">
+          <div className="max-w-6xl mx-auto px-6 py-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+              {/* Left: Back button */}
+              <div className="flex-shrink-0">
                 <button 
                   onClick={() => router.push('/dashboard/living-projects')}
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
@@ -868,21 +1098,19 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
                   <ArrowLeft className="w-4 h-4" />
                   Back to projects
                 </button>
-
-                <div>
-                  <h1 className="text-lg font-medium text-foreground">
-                    {project?.name || 'Project Dashboard'}
-                  </h1>
-                  <p className="text-sm text-muted-foreground/70">
-                    {project?.description || 'AI-powered project management and insights'}
-                  </p>
-                </div>
               </div>
 
-              <div className="flex items-center gap-4">
-                <div className="text-sm text-muted-foreground/60">
+              {/* Center: Project title and description */}
+              <div className="flex-1 text-center px-8">
+                <h1 className="text-2xl font-medium text-foreground mb-1">
+                  {project?.name || 'Project Dashboard'}
+                </h1>
+                <p className="text-sm text-muted-foreground/70">
+                  {project?.description || 'AI-powered project management and insights'}
+                </p>
+                <div className="text-xs text-muted-foreground/60 mt-2">
                   {isGeneratingWidgets ? (
-                    <span className="flex items-center gap-2">
+                    <span className="flex items-center justify-center gap-2">
                       <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                       Generating widgets...
                     </span>
@@ -890,23 +1118,53 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
                     `Active: ${projectWidgets?.widgets?.length || 0} widgets • ${projectWidgets?.categories?.length || 0} categories • ${currentFingerprint ? '100%' : '0%'} zoom`
                   )}
                 </div>
-                <Button
-                  onClick={handleEditFingerprint}
-                  variant="outline"
-                  size="sm"
-                  className="text-sm"
+              </div>
+
+              {/* Right: 3-dots menu */}
+              <div className="flex-shrink-0 relative" ref={menuRef}>
+                <button
+                  onClick={handleMenuClick}
+                  className="p-2 hover:bg-muted/50 rounded-md transition-colors"
                 >
-                  Edit fingerprint
-                </Button>
-                <Button
-                  onClick={handleRegenerateWidgets}
-                  variant="outline"
-                  size="sm"
-                  className="text-sm"
-                  disabled={isGeneratingWidgets}
-                >
-                  {isGeneratingWidgets ? 'Generating...' : 'Regenerate widgets'}
-                </Button>
+                  <MoreHorizontal className="w-5 h-5 text-muted-foreground" />
+                </button>
+                
+                {showMenu && (
+                  <div className="absolute right-0 top-12 bg-background border border-border rounded-md shadow-lg z-30 min-w-[180px]">
+                    <button
+                      onClick={() => {
+                        setShowMenu(false)
+                        handleEditFingerprint()
+                      }}
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-muted/50 flex items-center gap-2 transition-colors"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                      Edit fingerprint
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false)
+                        handleRegenerateWidgets()
+                      }}
+                      disabled={isGeneratingWidgets}
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-muted/50 flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      {isGeneratingWidgets ? 'Generating...' : 'Regenerate widgets'}
+                    </button>
+                    <div className="border-t border-border/20 my-1" />
+                    <button
+                      onClick={() => {
+                        setShowMenu(false)
+                        setShowDeleteModal(true)
+                      }}
+                      className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 flex items-center gap-2 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete project
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -921,7 +1179,7 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
             {isGeneratingWidgets ? (
               <WidgetGenerationLoader />
             ) : currentFingerprint ? (
-              <div className="relative w-screen h-screen bg-gradient-to-br from-background via-background to-muted/20 overflow-hidden" style={{ overscrollBehavior: 'none' }}>
+              <div className={`relative h-screen bg-gradient-to-br from-background via-background to-muted/20 overflow-hidden transition-all duration-300 ${showWidgetPanel ? 'w-[calc(100vw-24rem)]' : 'w-screen'}`} style={{ overscrollBehavior: 'none' }}>
                 {/* Widget Constellation Canvas */}
                 <div
                   ref={containerRef}
@@ -1059,6 +1317,22 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
         </div>
 
       </div>
+
+      {/* Delete Project Modal */}
+      <DeleteProjectModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteProject}
+        projectName={project?.name || 'Project'}
+        isDeleting={isDeleting}
+      />
+
+      {/* Widget Details Panel */}
+      <WidgetDetailsPanel
+        widget={selectedWidget}
+        isOpen={showWidgetPanel}
+        onClose={handleCloseWidgetPanel}
+      />
     </>
   )
 }

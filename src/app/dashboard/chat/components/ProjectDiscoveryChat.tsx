@@ -21,8 +21,6 @@ import ChatContextBox from './main_chat/ChatContextBox'
 import { useContentContext, useContentContextActions } from '@/store/content-context-store'
 import { useProjectContext } from '../hooks/useProjectContext'
 import AmbientFingerprintCanvas from './AmbientFingerprintCanvas'
-import { ConstellationTransition } from '@/app/dashboard/living-projects/components/widgets/ConstellationTransition'
-import { ProjectReveal } from '@/app/dashboard/living-projects/components/widgets/ProjectReveal'
 import { ConvexHttpClient } from 'convex/browser'
 
 interface ProjectDiscoveryChatProps {
@@ -58,16 +56,12 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
     isDisplayed: false
   })
 
-  // Project reveal state
-  const [showProjectReveal, setShowProjectReveal] = useState(false)
-  const [showTransition, setShowTransition] = useState(false)
 
   // Fingerprint completion state
   const [fingerprintComplete, setFingerprintComplete] = useState(false)
   const [currentFingerprint, setCurrentFingerprint] = useState<any>(null)
   const [fingerprintEvolution, setFingerprintEvolution] = useState<any>(null)
   const [conversationSummaries, setConversationSummaries] = useState<any[]>([])
-  const [isGeneratingFingerprint, setIsGeneratingFingerprint] = useState(false)
   const prevRealUserCountRef = useRef<number>(0)
   const convexClientRef = useRef<ConvexHttpClient | null>(null)
   const startedPollingRef = useRef<boolean>(false)
@@ -89,7 +83,6 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
         messagePreview: (message?.content || '').slice(0, 120),
         conversationLength: Array.isArray(conversationHistory) ? conversationHistory.length : 'n/a'
       })
-      setIsGeneratingFingerprint(true)
       
       // Get Firebase ID token for backend auth
       const idToken = await authData.user?.getIdToken?.()
@@ -193,10 +186,8 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
       }
     } catch (error) {
       console.error('Error processing conversation message:', error)
-    } finally {
-      setIsGeneratingFingerprint(false)
-      console.log('[DISCOVERY][processConversationMessage:end]')
     }
+    console.log('[DISCOVERY][processConversationMessage:end]')
   }, [authData.userId, projectId])
 
   // Wait for fingerprint to be saved to Convex, then generate widgets
@@ -293,29 +284,84 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
     }
   }, [authData.userId, projectId])
 
-  // Generate widgets and redirect when fingerprint is complete (based on Convex confirmation)
+  // Wait for fingerprint to be saved to Convex (without generating widgets)
+  const waitForFingerprintOnly = useCallback(async () => {
+    if (!authData.userId || !projectId) return false
+
+    try {
+      console.log('[DISCOVERY][fingerprint:wait:start]', {
+        hasUserId: !!authData.userId,
+        projectId
+      })
+
+      // Poll for fingerprint in Convex with timeout
+      const maxAttempts = 30 // 30 seconds max
+      const pollInterval = 1000 // 1 second intervals
+      let attempts = 0
+      let fingerprintExists = false
+
+      while (attempts < maxAttempts && !fingerprintExists) {
+        try {
+          // Check if fingerprint exists in Convex
+          const response = await fetch(`/api/projects/${projectId}/generate-widgets`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${await getApiKey()}`
+            },
+            body: JSON.stringify({
+              user_preferences: {},
+              check_fingerprint_only: true // Signal to just check if fingerprint exists
+            })
+          })
+
+          if (response.ok) {
+            const result = await response.json()
+            if (result.fingerprint_exists) {
+              fingerprintExists = true
+              console.log('[DISCOVERY][fingerprint:wait:found]', { attempts })
+              break
+            }
+          }
+        } catch (error) {
+          console.warn('[DISCOVERY][fingerprint:wait:poll:error]', error)
+        }
+
+        attempts++
+        await new Promise(resolve => setTimeout(resolve, pollInterval))
+      }
+
+      if (!fingerprintExists) {
+        throw new Error('Fingerprint not found in Convex after waiting')
+      }
+
+      return true
+    } catch (error) {
+      console.error('Error waiting for fingerprint:', error)
+      return false
+    }
+  }, [authData.userId, projectId])
+
+  // Redirect immediately when fingerprint is complete - let living project view handle widget generation
   useEffect(() => {
     if (fingerprintComplete) {
       const handleFingerprintComplete = async () => {
         try {
           console.log('[DISCOVERY][complete:start]', { projectId, hasCurrentFingerprint: !!currentFingerprint })
           
-          // Wait for fingerprint to be saved to Convex, then generate widgets
-          const widgetsGenerated = await waitForFingerprintAndGenerateWidgets()
+          // Wait for fingerprint to be saved to Convex (but don't generate widgets here)
+          const fingerprintExists = await waitForFingerprintOnly()
           
-          if (widgetsGenerated) {
-            console.log('[DISCOVERY][complete:widgets:done]')
+          if (fingerprintExists) {
+            console.log('[DISCOVERY][complete:fingerprint:saved]')
             
-            // Wait a moment for widgets to be generated
-            setTimeout(() => {
-              // Redirect to the project view
-              if (projectId) {
-                console.log('[DISCOVERY][complete:redirect]', { to: `/dashboard/living-projects/${projectId}` })
-                window.location.href = `/dashboard/living-projects/${projectId}`
-              }
-            }, 2000) // 2 second delay to show completion
+            // Redirect immediately to living project view - it will handle widget generation
+            if (projectId) {
+              console.log('[DISCOVERY][complete:redirect]', { to: `/dashboard/living-projects/${projectId}` })
+              window.location.replace(`/dashboard/living-projects/${projectId}`)
+            }
           } else {
-            console.error('[DISCOVERY][complete:widgets:failed]')
+            console.error('[DISCOVERY][complete:fingerprint:not:saved]')
             // Could show error message to user here
           }
         } catch (error) {
@@ -325,7 +371,7 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
       
       handleFingerprintComplete()
     }
-  }, [fingerprintComplete, currentFingerprint, waitForFingerprintAndGenerateWidgets, projectId])
+  }, [fingerprintComplete, currentFingerprint, projectId])
 
   // Refs
   const chatContainerRef = useRef<HTMLDivElement>(null)
@@ -358,7 +404,7 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
     )
   }, [messages])
 
-  // Simplified trigger: once total messages (excluding welcome) reach random threshold, run full flow
+  // Simplified trigger: once total messages (excluding welcome) reach random threshold, wait for AI response completion
   useEffect(() => {
     if (!projectId || !authData.userId || fingerprintComplete || hasTriggeredRef.current) return
 
@@ -369,9 +415,57 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
 
     if (totalCount >= threshold) {
       hasTriggeredRef.current = true
+      console.log('[DISCOVERY][threshold:reached]', { 
+        totalCount, 
+        threshold, 
+        messages: effectiveMessages.map(m => ({ 
+          role: m.role, 
+          status: m.status, 
+          content: m.content?.substring(0, 50) + '...' 
+        }))
+      })
+      
+      // Wait for AI response to complete before triggering fingerprint generation
+      const waitForAIResponse = () => {
+        return new Promise<void>((resolve) => {
+          let attempts = 0
+          const maxAttempts = 20 // 10 seconds max (20 * 500ms)
+          
+          // Check if any message is still typing
+          const checkForCompletion = () => {
+            const hasTypingMessage = messages.some(msg => msg.status === 'typing')
+            
+            if (hasTypingMessage && attempts < maxAttempts) {
+              // Still typing, check again in 500ms
+              attempts++
+              console.log('[DISCOVERY][ai:response:checking]', { 
+                totalMessages: messages.length,
+                hasTypingMessage: true,
+                attempts
+              })
+              setTimeout(checkForCompletion, 500)
+            } else {
+              // No typing messages or timeout reached, proceed with fingerprint generation
+              console.log('[DISCOVERY][ai:response:complete]', { 
+                totalMessages: messages.length,
+                hasTypingMessage: false,
+                attempts,
+                lastMessageStatus: messages[messages.length - 1]?.status,
+                lastMessageRole: messages[messages.length - 1]?.role 
+              })
+              resolve()
+            }
+          }
+          
+          // Start checking after a short delay
+          setTimeout(checkForCompletion, 1000)
+        })
+      }
+
       const run = async () => {
         try {
-          setIsGeneratingFingerprint(true)
+          // Wait for AI response to complete
+          await waitForAIResponse()
           const idToken = await authData.user?.getIdToken?.()
           if (!idToken) throw new Error('Authentication required')
 
@@ -424,25 +518,22 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
           setCurrentFingerprint(projectFingerprint)
           setFingerprintComplete(true)
 
-          console.log('[DISCOVERY][simple:widgets:start]')
-          const widgetsGenerated = await waitForFingerprintAndGenerateWidgets()
+          console.log('[DISCOVERY][simple:fingerprint:wait]')
+          const fingerprintExists = await waitForFingerprintOnly()
 
-          if (widgetsGenerated) {
-            setTimeout(() => {
-              window.location.href = `/dashboard/living-projects/${projectId}`
-            }, 1500)
+          if (fingerprintExists) {
+            // Redirect immediately to living project view - it will handle widget generation
+            window.location.replace(`/dashboard/living-projects/${projectId}`)
           } else {
-            console.error('[DISCOVERY][simple:widgets:failed]')
+            console.error('[DISCOVERY][simple:fingerprint:not:saved]')
           }
         } catch (e) {
           console.error('[DISCOVERY][simple:flow:error]', e)
-        } finally {
-          setIsGeneratingFingerprint(false)
         }
       }
       run()
     }
-  }, [messages, projectId, authData.userId, fingerprintComplete, waitForFingerprintAndGenerateWidgets, authData.user])
+  }, [messages, projectId, authData.userId, fingerprintComplete, waitForFingerprintOnly, authData.user])
 
   // Set project context when component mounts - force set if we have project data
   useEffect(() => {
@@ -581,17 +672,7 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
 
   // Transition handlers
   const handleStarsDiscovered = useCallback(() => {
-    // Gate overlay strictly on fingerprint completion to avoid premature UI
-    if (fingerprintComplete) setShowTransition(true)
-  }, [fingerprintComplete])
-
-  const handleTransitionComplete = useCallback(() => {
-    setShowTransition(false)
-    setShowProjectReveal(true)
-  }, [])
-
-  const handleBackFromProjectReveal = useCallback(() => {
-    setShowProjectReveal(false)
+    // No longer needed - we redirect immediately
   }, [])
 
   // Autoscroll functionality
@@ -630,15 +711,6 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
     askQueryProcessedRef.current = null
   }, []) // Only run on mount
 
-  // Show project reveal if triggered
-  if (showProjectReveal) {
-    return (
-      <ProjectReveal
-        fingerprint={currentFingerprint}
-        onBack={handleBackFromProjectReveal}
-      />
-    )
-  }
 
   if (!authData.isAuthenticated) {
     return (
@@ -789,12 +861,7 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
         </div>
       </div>
 
-      {/* Project Reveal - shows when fingerprint is complete */}
-      {fingerprintComplete && (
-        <div className="flex-1 overflow-hidden">
-          <ProjectReveal fingerprint={currentFingerprint} />
-        </div>
-      )}
+
 
       {/* Input Area - hide when fingerprint is complete */}
       {!fingerprintComplete && (
@@ -812,9 +879,6 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
             hasAnalysis={currentContext?.analysis ? true : false}
             inputValue={inputValue}
             onInputChange={setInputValue}
-            useContextSearch={useContextSearch}
-            onToggleContextSearch={setUseContextSearch}
-            embeddingInfo={embeddingInfo}
             notepadOpen={false}
             openNotepad={() => {}}
             quotedForNotepad={null}
@@ -824,12 +888,6 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
       </div>
       )}
 
-      {/* Constellation Transition Overlay */}
-      <ConstellationTransition
-        isActive={showTransition}
-        onComplete={handleTransitionComplete}
-        duration={3000}
-      />
     </div>
   )
 }

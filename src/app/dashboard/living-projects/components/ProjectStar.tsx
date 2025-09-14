@@ -1,6 +1,11 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+import { MoreHorizontal, Trash2 } from 'lucide-react'
+import { useMutation } from 'convex/react'
+import { api } from '@/convex/_generated/api'
+import { useAuth } from '@/app/context/auth-context'
+import { DeleteProjectModal } from '../[projectId]/components/DeleteProjectModal'
 
 interface Project {
   _id: string
@@ -21,6 +26,7 @@ interface ProjectStarProps {
   scale: number
   onClick: () => void
   onHover?: (projectId: string | null) => void
+  onDelete?: () => void
 }
 
 // Simple date formatting utility
@@ -48,10 +54,35 @@ export function ProjectStar({
   isHighlighted = false,
   scale,
   onClick,
-  onHover
+  onHover,
+  onDelete
 }: ProjectStarProps) {
+  const { firebaseUser } = useAuth()
+  const [showMenu, setShowMenu] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const deleteProject = useMutation(api.projectsMutations.deleteProject)
+  const menuRef = useRef<HTMLDivElement>(null)
+  
   const hasFingerprint = !!project.fingerprintId
   const isRecent = Date.now() - project.updatedAt < 24 * 60 * 60 * 1000
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false)
+      }
+    }
+
+    if (showMenu) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showMenu])
 
   // Calculate card dimensions based on size
   const cardSizes = {
@@ -94,6 +125,40 @@ export function ProjectStar({
   }
 
   const status = getProjectStatus()
+
+  const handleDelete = async () => {
+    if (!firebaseUser?.uid) return
+    
+    try {
+      setIsDeleting(true)
+      await deleteProject({ 
+        projectId: project._id as any, 
+        userId: firebaseUser.uid 
+      })
+      
+      // Call the onDelete callback if provided
+      if (onDelete) {
+        onDelete()
+      }
+    } catch (error) {
+      console.error('Failed to delete project:', error)
+      alert('Failed to delete project. Please try again.')
+    } finally {
+      setIsDeleting(false)
+      setShowDeleteModal(false)
+    }
+  }
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent card click
+    setShowMenu(false)
+    setShowDeleteModal(true)
+  }
+
+  const handleMenuClick = (e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent card click
+    setShowMenu(!showMenu)
+  }
 
   // Show different levels of detail based on zoom
   const showDescription = scale > 0.8
@@ -146,8 +211,32 @@ export function ProjectStar({
               `}>
                 {project.name}
               </h3>
-              <div className="text-muted-foreground/50 group-hover:text-muted-foreground transition-colors text-xs">
-                →
+              <div className="flex items-center gap-1">
+                {/* 3-dots menu - only show at medium zoom and above */}
+                {scale > 0.8 && (
+                  <div className="relative" ref={menuRef}>
+                    <button
+                      onClick={handleMenuClick}
+                      className="p-1 hover:bg-muted/50 rounded-md transition-colors opacity-0 group-hover:opacity-100"
+                      disabled={isDeleting}
+                    >
+                      <MoreHorizontal className="w-3 h-3 text-muted-foreground" />
+                    </button>
+                    
+                    {showMenu && (
+                      <div className="absolute right-0 top-6 bg-background border border-border rounded-md shadow-lg z-20 min-w-[100px]">
+                        <button
+                          onClick={handleDeleteClick}
+                          disabled={isDeleting}
+                          className="w-full px-2 py-1.5 text-left text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 flex items-center gap-1.5 transition-colors"
+                        >
+                          <Trash2 className="w-2.5 h-2.5" />
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             
@@ -224,6 +313,15 @@ export function ProjectStar({
           `}
         />
       </div>
+
+      {/* Delete Project Modal */}
+      <DeleteProjectModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDelete}
+        projectName={project.name}
+        isDeleting={isDeleting}
+      />
     </div>
   )
 }
