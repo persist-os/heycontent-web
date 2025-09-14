@@ -27,32 +27,6 @@ export function useSplitScreenLayout(): UseSplitScreenLayoutResult {
   const [panelState, setPanelState] = useState<PanelState>('split')
   const [isAnimating, setIsAnimating] = useState(false)
 
-  // Handle keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Only handle shortcuts when Cmd/Ctrl is pressed
-      if (!(e.metaKey || e.ctrlKey)) return
-      
-      switch (e.key) {
-        case '1':
-          e.preventDefault()
-          setChatFullScreen()
-          break
-        case '2':
-          e.preventDefault()
-          setNotepadFullScreen()
-          break
-        case '0':
-          e.preventDefault()
-          restoreSplitView()
-          break
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
-
   const startAnimation = useCallback(() => {
     setIsAnimating(true)
     setTimeout(() => setIsAnimating(false), ANIMATION_DURATION)
@@ -78,6 +52,32 @@ export function useSplitScreenLayout(): UseSplitScreenLayoutResult {
       setPanelState('split')
     }
   }, [panelState, startAnimation])
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle shortcuts when Cmd/Ctrl is pressed
+      if (!(e.metaKey || e.ctrlKey)) return
+      
+      switch (e.key) {
+        case '1':
+          e.preventDefault()
+          setChatFullScreen()
+          break
+        case '2':
+          e.preventDefault()
+          setNotepadFullScreen()
+          break
+        case '0':
+          e.preventDefault()
+          restoreSplitView()
+          break
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [setChatFullScreen, setNotepadFullScreen, restoreSplitView])
 
   // Calculate widths based on panel state
   const { chatWidth, notepadWidth } = (() => {
