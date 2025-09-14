@@ -108,8 +108,8 @@ export function SimpleTypeSelector({
       onSelect={(value) => onTypeChange(value as NoteType)}
       placeholder="Select type"
       isMobile={isMobile}
-      width={isMobile ? "w-24" : "w-28"}
-      triggerClassName="min-w-0"
+      width={isMobile ? "w-24 max-w-24" : "w-28 max-w-28 lg:w-32 lg:max-w-32"}
+      triggerClassName="min-w-0 flex-shrink-0 h-8"
       disabled={isReadOnly}
     />
   )

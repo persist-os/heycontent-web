@@ -54,22 +54,24 @@ export function NotepadHeader({
   notePermission = null,
   panelState
 }: NotepadHeaderProps) {
-  // Calculate padding based on device and panel state
-  // When notepad is in full-screen mode, add extra left padding to avoid dashboard nav button
+  // Calculate responsive padding with anti-corporate asymmetric spacing
   const isFullScreen = panelState === 'notepad-full'
-  const basePaddingX = isMobile ? "px-4" : "px-6"
-  const fullScreenPaddingX = isMobile ? "px-4" : "pl-20 pr-6" // Extra left padding for dashboard nav button
+  
+  // More thoughtful padding that creates breathing room
+  const basePaddingX = isMobile ? "px-4" : "px-6 lg:px-8"
+  const fullScreenPaddingX = isMobile ? "px-4" : "pl-20 pr-6 lg:pl-24 lg:pr-8"
   const paddingX = isFullScreen ? fullScreenPaddingX : basePaddingX
-  const paddingY = isMobile ? "py-4" : "py-5"
+  const paddingY = isMobile ? "py-4" : "py-6 lg:py-7"
   const containerPadding = `${paddingX} ${paddingY}`
   
-  const spacing = isMobile ? "space-y-4" : "space-y-5"
-  const controlsSpacing = isMobile ? "space-y-3 pt-2" : "space-y-4 pt-3"
+  // Progressive spacing that scales elegantly
+  const metaSpacing = isMobile ? "mb-4" : "mb-5 lg:mb-6"
+  const controlsMarginTop = isMobile ? "mt-3" : "mt-4 lg:mt-5"
 
   return (
     <div className={`${containerPadding} border-b border-border/30 bg-background/95`}>
-      <div className={spacing}>
-        {/* Note Metadata */}
+      {/* Note Metadata Section */}
+      <div className={metaSpacing}>
         <NoteMeta
           note={note}
           onUpdate={onNoteUpdate}
@@ -80,30 +82,33 @@ export function NotepadHeader({
           isReadOnly={isReadOnly}
           notePermission={notePermission}
         />
-        
-        {/* Controls Section - Single row with all controls */}
-        <div className={controlsSpacing}>
-          <div className="flex items-center justify-between">
-            {/* Left side: Type and Note selectors */}
-            <div className={`flex items-center ${isMobile ? 'gap-2' : 'gap-3'}`}>
-              <SimpleTypeSelector
-                noteId={note._id}
-                currentType={note.type || 'idea_bank'}
-                onTypeChange={(type) => onNoteUpdate(note._id, { type })}
-                isMobile={isMobile}
-                isReadOnly={isReadOnly}
-              />
-              
-              <NoteSelector
-                currentNoteId={currentNoteId}
-                availableNotes={availableNotes}
-                onCreateNew={onCreateNewNote}
-                onSwitchNote={onSwitchNote}
-                isMobile={isMobile}
-              />
-            </div>
+      </div>
+      
+      {/* Controls Section - Responsive layout that prevents overlap */}
+      <div className={controlsMarginTop}>
+        {/* Mobile: Stack controls vertically for clarity */}
+        <div className="sm:hidden space-y-3">
+          {/* Top row: Type and Note selectors with generous spacing */}
+          <div className="flex items-center gap-2">
+            <SimpleTypeSelector
+              noteId={note._id}
+              currentType={note.type || 'idea_bank'}
+              onTypeChange={(type) => onNoteUpdate(note._id, { type })}
+              isMobile={isMobile}
+              isReadOnly={isReadOnly}
+            />
+            
+            <NoteSelector
+              currentNoteId={currentNoteId}
+              availableNotes={availableNotes}
+              onCreateNew={onCreateNewNote}
+              onSwitchNote={onSwitchNote}
+              isMobile={isMobile}
+            />
+          </div>
 
-            {/* Right side: Action buttons */}
+          {/* Bottom row: Action buttons centered with breathing room */}
+          <div className="flex justify-center pt-1">
             <ActionButtons
               onTriggerCommandPalette={onTriggerCommandPalette}
               onGenerateMetadata={onGenerateMetadata}
@@ -116,6 +121,49 @@ export function NotepadHeader({
               isReadOnly={isReadOnly}
               notePermission={notePermission}
             />
+          </div>
+        </div>
+
+        {/* Tablet and up: Asymmetric horizontal layout with calculated space */}
+        <div className="hidden sm:block">
+          <div className="flex items-center">
+            {/* Left side: Selectors with controlled width - max width to prevent overlap */}
+            <div className="flex items-center gap-3 min-w-0 flex-shrink max-w-[60%] sm:max-w-[70%] lg:max-w-[75%]">
+              <SimpleTypeSelector
+                noteId={note._id}
+                currentType={note.type || 'idea_bank'}
+                onTypeChange={(type) => onNoteUpdate(note._id, { type })}
+                isMobile={false}
+                isReadOnly={isReadOnly}
+              />
+              
+              <NoteSelector
+                currentNoteId={currentNoteId}
+                availableNotes={availableNotes}
+                onCreateNew={onCreateNewNote}
+                onSwitchNote={onSwitchNote}
+                isMobile={false}
+              />
+            </div>
+
+            {/* Flexible spacer with minimum gap to prevent overlap */}
+            <div className="flex-1 min-w-4 sm:min-w-6 lg:min-w-8" />
+
+            {/* Right side: Action buttons with fixed positioning */}
+            <div className="flex-shrink-0">
+              <ActionButtons
+                onTriggerCommandPalette={onTriggerCommandPalette}
+                onGenerateMetadata={onGenerateMetadata}
+                onSaveNote={onSaveNote}
+                onShare={onShare}
+                shouldShowSmartButton={shouldShowSmartButton}
+                isGeneratingMetadata={isGeneratingMetadata}
+                isCreating={isCreating}
+                isMobile={false}
+                isReadOnly={isReadOnly}
+                notePermission={notePermission}
+              />
+            </div>
           </div>
         </div>
       </div>

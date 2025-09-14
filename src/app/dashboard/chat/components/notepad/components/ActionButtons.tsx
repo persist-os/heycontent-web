@@ -28,12 +28,13 @@ export function ActionButtons({
   isReadOnly = false,
   notePermission = null
 }: ActionButtonsProps) {
-  const buttonSize = isMobile ? "p-1.5" : "p-2"
-  const iconSize = isMobile ? "w-3.5 h-3.5" : "w-4 h-4"
-  const gap = isMobile ? "gap-1" : "gap-2"
+  // Anti-corporate design: More thoughtful sizing and spacing
+  const buttonSize = isMobile ? "p-1.5" : "p-2 lg:p-2.5"
+  const iconSize = isMobile ? "w-3.5 h-3.5" : "w-4 h-4 lg:w-[18px] lg:h-[18px]"
+  const gap = isMobile ? "gap-1" : "gap-2 lg:gap-3"
 
   return (
-    <div className={`flex items-center ${gap}`}>
+    <div className={`flex items-center ${gap} flex-shrink-0 h-8`}>
       {/* AI Assistant Button (Sparkles) */}
       <button
         onClick={isReadOnly ? undefined : onTriggerCommandPalette}

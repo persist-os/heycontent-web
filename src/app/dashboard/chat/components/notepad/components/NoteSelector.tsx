@@ -82,8 +82,8 @@ export function NoteSelector({
       onSelect={handleSelect}
       placeholder="Select note"
       isMobile={isMobile}
-      width={isMobile ? "w-28" : "w-32"}
-      triggerClassName="min-w-0"
+      width={isMobile ? "w-36 max-w-36" : "w-44 max-w-44 lg:w-48 lg:max-w-48"}
+      triggerClassName="min-w-0 flex-shrink-0 h-8"
     />
   )
 }
