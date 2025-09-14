@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/app/context/auth-context'
 import { useMutation } from 'convex/react'
@@ -14,6 +14,7 @@ const ProjectDiscoveryPage: React.FC = () => {
   const router = useRouter()
   const { firebaseUser } = useAuth()
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null)
+  const isCreatingProjectRef = useRef(false)
   
   // Get parameters
   const mode = searchParams.get('mode')
@@ -36,15 +37,18 @@ const ProjectDiscoveryPage: React.FC = () => {
 
   // Handle project creation when in create mode
   useEffect(() => {
-    if (mode === 'create' && name && firebaseUser?.uid && !currentProjectId) {
+    if (mode === 'create' && name && firebaseUser?.uid && !currentProjectId && !isCreatingProjectRef.current) {
+      isCreatingProjectRef.current = true
       const createProject = async () => {
         try {
+          console.log('🚀 Creating new project:', { name, description, userId: firebaseUser.uid })
           const newProjectId = await createProjectMutation({
             userId: firebaseUser.uid,
             name,
             description: description || undefined,
           })
           
+          console.log('✅ Project created successfully:', newProjectId)
           setCurrentProjectId(newProjectId)
           
           // Update URL to reflect the new project
@@ -54,9 +58,11 @@ const ProjectDiscoveryPage: React.FC = () => {
           
           router.replace(`/dashboard/project-discovery?${newParams}`)
         } catch (error) {
-          console.error('Failed to create project:', error)
+          console.error('❌ Failed to create project:', error)
           // Redirect back to living projects on error
           router.push('/dashboard/living-projects')
+        } finally {
+          isCreatingProjectRef.current = false
         }
       }
       

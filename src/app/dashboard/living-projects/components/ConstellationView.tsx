@@ -245,6 +245,10 @@ export function ConstellationView() {
                 scale={transform.scale}
                 onClick={() => handleProjectClick(project)}
                 onHover={handleProjectHover}
+                onDelete={() => {
+                  // Refresh the projects list after deletion
+                  // The query will automatically update due to Convex reactivity
+                }}
               />
             )
           })}
@@ -260,16 +264,16 @@ export function ConstellationView() {
         </div>
       </div>
 
-      {/* Header - Floating */}
-      <div className="absolute top-6 left-20 z-10">
+      {/* Header - Centered */}
+      <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-10">
         <div className="bg-background/80 backdrop-blur-sm border border-border/50 rounded-lg px-6 py-4 shadow-lg">
-          <div className="flex items-baseline gap-4">
+          <div className="flex items-baseline gap-4 justify-center">
             <h1 className="text-2xl font-light text-foreground">Constellation</h1>
             <div className="text-sm text-muted-foreground/70 font-mono">
               {projects.length} project{projects.length !== 1 ? 's' : ''}
             </div>
           </div>
-          <p className="text-sm text-muted-foreground/60 mt-1 max-w-md">
+          <p className="text-sm text-muted-foreground/60 mt-1 text-center">
             Your universe of projects, connected and evolving
           </p>
         </div>
@@ -307,7 +311,7 @@ export function ConstellationView() {
       />
 
       {/* Stats Overlay - Bottom Center */}
-      <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 z-10 pointer-events-none">
+      <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 z-10 pointer-events-none">
         <div className="bg-background/60 backdrop-blur-sm border border-border/30 rounded-lg px-4 py-2 shadow-sm">
           <div className="flex items-center gap-4 text-xs text-muted-foreground/70">
             <span>

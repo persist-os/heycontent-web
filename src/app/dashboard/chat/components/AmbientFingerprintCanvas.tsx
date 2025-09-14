@@ -249,11 +249,13 @@ const AmbientFingerprintCanvas: React.FC<AmbientFingerprintCanvasProps> = ({
   if (!isActive) return null
 
   return (
-    <div className={`fixed transition-all duration-500 ease-out z-20 ${
-      isExpanded 
-        ? 'bottom-4 right-4 w-[32rem] h-[85vh] bg-background/95 backdrop-blur-lg border border-border/30 rounded-lg shadow-lg' 
-        : 'bottom-4 right-4 w-80 h-64 bg-card/90 backdrop-blur-sm border border-border/20 rounded-lg shadow-sm hover:shadow-md'
-    }`}>
+    <>
+
+      <div className={`fixed transition-all duration-500 ease-out z-20 ${
+        isExpanded 
+          ? 'bottom-4 right-4 w-[32rem] h-[85vh] bg-background/95 backdrop-blur-lg border border-border/30 rounded-lg shadow-lg' 
+          : 'bottom-4 right-4 w-80 h-64 bg-card/90 backdrop-blur-sm border border-border/20 rounded-lg shadow-sm hover:shadow-md'
+      }`}>
       
       {/* Header - Typography-focused, minimal */}
       <div className={`flex items-baseline justify-between ${isExpanded ? 'p-6 pb-4' : 'p-3 pb-2'}`}>
@@ -266,7 +268,7 @@ const AmbientFingerprintCanvas: React.FC<AmbientFingerprintCanvasProps> = ({
           )}
           {!isExpanded && (
             <div className="text-xs text-muted-foreground font-medium">
-              {discoveredFields.size}<span className="text-muted-foreground/60">/{FINGERPRINT_STARS.length}</span>
+              {discoveredFields.size > 0 ? 'Active' : 'Ready'}
             </div>
           )}
         </div>
@@ -551,6 +553,8 @@ const AmbientFingerprintCanvas: React.FC<AmbientFingerprintCanvasProps> = ({
         )}
       </div>
     </div>
+    
+    </>
   )
 }
 

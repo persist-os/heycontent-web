@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ConvexHttpClient } from 'convex/browser'
 import { api } from '@/convex/_generated/api'
+import { adminAuth } from '@/app/lib/firebase-admin'
+import { validateApiKey } from '@/app/lib/validateApiKey'
+import { getUserIdFromToken } from '@/app/lib/getUserIdFromToken'
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
 
@@ -21,29 +24,29 @@ export async function POST(
 
     const idToken = authHeader.split('Bearer ')[1]
 
-    // Get user ID from Firebase token (like in chat route)
+    // Get user ID from token (handles both API keys and Firebase tokens)
     let userId = null
-    try {
-      const admin = require('firebase-admin')
-      if (!admin.apps.length) {
-        admin.initializeApp({
-          credential: admin.credential.cert({
-            projectId: process.env.FIREBASE_PROJECT_ID,
-            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-            privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-          }),
-        })
+
+    // Check if this is a custom API key (starts with 'heycontent_')
+    if (idToken.startsWith('heycontent_')) {
+      console.log('Detected custom API key format')
+      const validation = validateApiKey(idToken)
+      if (validation.isValid && validation.userId) {
+        userId = validation.userId
+        console.log('Successfully validated API key for userId:', userId)
+      } else {
+        console.warn('Invalid API key format')
+        return NextResponse.json({ error: 'Invalid API key' }, { status: 401 })
       }
-      
-      const decodedToken = await admin.auth().verifyIdToken(idToken)
-      userId = decodedToken.uid
-      console.log('Retrieved user ID:', userId)
-    } catch (error) {
-      console.error('Failed to verify Firebase token:', error)
-      return NextResponse.json(
-        { error: 'Invalid authentication token' },
-        { status: 401 }
-      )
+    } else {
+      // Fall back to Firebase token validation
+      console.log('Attempting Firebase token validation')
+      userId = await getUserIdFromToken(idToken)
+      if (!userId) {
+        console.warn('Invalid Firebase token: Could not get user ID')
+        return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+      }
+      console.log('Firebase token validated for userId:', userId)
     }
 
     // Get fingerprint data from Convex by project ID

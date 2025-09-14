@@ -148,7 +148,7 @@ export const updateProject = mutation({
   },
 });
 
-// Delete a project
+// Delete a project and all associated data
 export const deleteProject = mutation({
   args: {
     projectId: v.id("projects"),
@@ -159,7 +159,64 @@ export const deleteProject = mutation({
     await validateProjectOwnership(ctx, args.projectId, args.userId);
 
     try {
+      // Get the project to find associated fingerprint
+      const project = await ctx.db.get(args.projectId);
+      if (!project) {
+        throw new Error("Project not found");
+      }
+
+      // Delete associated fingerprints (both by fingerprintId field and by projectId query)
+      const fingerprintsToDelete = new Set<string>();
+      
+      // Add fingerprint from project.fingerprintId if it exists
+      if (project.fingerprintId) {
+        fingerprintsToDelete.add(project.fingerprintId);
+      }
+      
+      // Also search for fingerprints by projectId (in case fingerprintId field is missing/corrupted)
+      try {
+        const fingerprintsByProject = await ctx.db
+          .query("project_fingerprints")
+          .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+          .collect();
+        
+        for (const fingerprint of fingerprintsByProject) {
+          fingerprintsToDelete.add(fingerprint._id);
+        }
+        console.log(`Found ${fingerprintsByProject.length} fingerprints by projectId query`);
+      } catch (error) {
+        console.warn("Failed to query fingerprints by projectId:", error);
+      }
+      
+      // Delete all found fingerprints
+      for (const fingerprintId of fingerprintsToDelete) {
+        try {
+          await ctx.db.delete(fingerprintId as any);
+          console.log("Deleted fingerprint:", fingerprintId);
+        } catch (error) {
+          console.warn("Failed to delete fingerprint:", fingerprintId, error);
+        }
+      }
+
+      // Delete all associated widgets by projectId
+      try {
+        const widgets = await ctx.db
+          .query("project_widgets")
+          .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+          .collect();
+
+        for (const widget of widgets) {
+          await ctx.db.delete(widget._id);
+        }
+        console.log(`Deleted ${widgets.length} associated widgets`);
+      } catch (error) {
+        console.warn("Failed to delete widgets:", error);
+        // Continue with project deletion even if widget deletion fails
+      }
+
+      // Finally, delete the project itself
       await ctx.db.delete(args.projectId);
+      console.log("Successfully deleted project:", args.projectId);
       return true;
     } catch (error) {
       console.error("Failed to delete project:", error);

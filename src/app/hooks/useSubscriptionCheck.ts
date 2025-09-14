@@ -27,8 +27,6 @@ export function useSubscriptionCheck(requiredPlan: SubscriptionPlan = 'free') {
     api.subscriptionQueries.getUserSubscription, 
     firebaseUser?.uid ? { userId: firebaseUser.uid } : 'skip'
   );
-  
-  console.log('🔍 [SUBSCRIPTION CHECK] Convex query result:', subscriptionData);
 
   // Check subscription status when data changes
   useEffect(() => {
@@ -100,10 +98,7 @@ export function useSubscriptionCheck(requiredPlan: SubscriptionPlan = 'free') {
           includedRequests: subscriptionData.includedRequests,
           usedRequests: subscriptionData.usedRequests
         };
-        
-        console.log('🔍 [SUBSCRIPTION CHECK] Raw data:', subscriptionData);
-        console.log('🔍 [SUBSCRIPTION CHECK] Parsed status:', status);
-        
+                
         setSubscriptionStatus(status);
         
         // Set the base subscription status first

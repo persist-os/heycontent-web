@@ -5,9 +5,9 @@ import {
   analyzeFingerprintForWidgets,
   getWidgetThemeColors,
   getWidgetSizeClasses,
-  type ProjectFingerprint,
-  type WidgetConfig
+  type ProjectFingerprint
 } from './WidgetFactory'
+import { WidgetConfig } from '@/types/projectWidgets'
 import { Sparkles, Heart, Coffee, BookOpen, Target, Users } from 'lucide-react'
 
 // TODO: Replace all sample data imports with real backend queries
@@ -158,10 +158,10 @@ function useWidgetLayout(widgets: WidgetConfig[]): {
       }
 
       positions.push({
-        id: widget.id,
+        id: widget.widget_id,
         x: bestPosition.x,
         y: bestPosition.y,
-        size: widget.size,
+        size: widget.size === 'xlarge' ? 'large' : widget.size as 'small' | 'medium' | 'large',
         importance: widget.importance,
         cluster: Math.floor(index / Math.ceil(widgets.length / numClusters))
       })
@@ -172,8 +172,8 @@ function useWidgetLayout(widgets: WidgetConfig[]): {
 
     positions.forEach((pos1, i) => {
       positions.slice(i + 1).forEach(pos2 => {
-        const widget1 = widgetsWithImportance.find(w => w.id === pos1.id)!
-        const widget2 = widgetsWithImportance.find(w => w.id === pos2.id)!
+        const widget1 = widgetsWithImportance.find(w => w.widget_id === pos1.id)!
+        const widget2 = widgetsWithImportance.find(w => w.widget_id === pos2.id)!
 
         let connectionStrength = 0
 
@@ -350,7 +350,7 @@ function WidgetStar({
         opacity: finalOpacity
       }}
       onClick={onClick}
-      onMouseEnter={() => onHover?.(widget.id)}
+      onMouseEnter={() => onHover?.(widget.widget_id)}
       onMouseLeave={() => onHover?.(null)}
     >
       {/* Main Card - Now uses min-height instead of fixed height */}
@@ -415,7 +415,7 @@ function WidgetStar({
                     {widget.theme} theme
                   </div>
                   <div className="text-muted-foreground/50 font-mono">
-                    {widget.type}
+                    {widget.widget_type}
                   </div>
                 </div>
                 {showFullDetails && (
@@ -436,7 +436,7 @@ function WidgetStar({
           {!showMetadata && (
             <div className="flex-shrink-0 pt-2 mt-auto">
               <div className="text-xs text-muted-foreground/50 font-mono">
-                {widget.type}
+                {widget.widget_type}
               </div>
             </div>
           )}
@@ -1147,7 +1147,7 @@ export function LivingProjectView({ fingerprint, sampleWidgets }: LivingProjectV
     // TODO: Add widget usage analytics and personalization data collection
     // TODO: Implement widget-specific navigation and state management
     // TODO: Add widget collaboration features (comments, shared views, etc.)
-    console.log('Widget clicked:', widget.title, widget.type)
+    console.log('Widget clicked:', widget.title, widget.widget_type)
   }, [])
 
   // Handle minimap viewport click
@@ -1163,7 +1163,7 @@ export function LivingProjectView({ fingerprint, sampleWidgets }: LivingProjectV
   // Create widget lookup for performance
   const widgetMap = useMemo(() => {
     const map = new Map<string, WidgetConfig>()
-    widgets.forEach(widget => map.set(widget.id, widget))
+    widgets.forEach(widget => map.set(widget.widget_id, widget))
     return map
   }, [widgets])
 
@@ -1324,7 +1324,7 @@ export function LivingProjectView({ fingerprint, sampleWidgets }: LivingProjectV
       />
 
       {/* Stats Overlay - Subtle */}
-      <div className="absolute top-6 right-6 left-1/2 z-10 pointer-events-none">
+      <div className="absolute top-16 right-6 left-1/2 z-10 pointer-events-none">
         <div className="bg-background/60 backdrop-blur-sm border border-border/30 rounded-lg px-4 py-2 shadow-sm max-w-xs">
           <div className="flex items-center gap-4 text-xs text-muted-foreground/70">
             <span>
