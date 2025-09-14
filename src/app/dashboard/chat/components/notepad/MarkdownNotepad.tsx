@@ -101,7 +101,7 @@ export const MarkdownNotepad = forwardRef<MarkdownNotepadRef, MarkdownNotepadPro
     createNewNote: () => {
       noteHandlers.handleCreateNewNote()
     }
-  }), [note, state.isNewNote, noteHandlers, refs.lexicalEditorRef]);
+  }), [note, state.isNewNote, noteHandlers, refs.lexicalEditorRef, state.currentNoteId]);
 
   // Don't render on mobile if not the active tab
   if (isMobile && activeTab !== 'notes') {

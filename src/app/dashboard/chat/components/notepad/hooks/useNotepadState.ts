@@ -38,6 +38,14 @@ export function useNotepadState({
   const [refinementPreview, setRefinementPreview] = useState<string | null>(null)
   const [isRefining, setIsRefining] = useState(false)
 
+  // Only sync noteId prop on initial load, not on every change
+  useEffect(() => {
+    if (noteId && !currentNoteId) {
+      setCurrentNoteId(noteId)
+      setIsNewNote(false)
+    }
+  }, [noteId]) // Removed currentNoteId dependency to prevent overriding internal switches
+
   // Refs
   const sidebarRef = useRef<HTMLDivElement>(null)
   const lexicalEditorRef = useRef<LexicalNotepadEditorRef>(null)
@@ -87,10 +95,13 @@ export function useNotepadState({
 
   // Initialize content from existing note
   useEffect(() => {
-    if (existingNote && existingNote.content && !content) {
+    if (existingNote && existingNote.content !== undefined && content !== existingNote.content) {
       setContent(existingNote.content)
+    } else if (!existingNote && !isNewNote && currentNoteId) {
+      // Clear content when switching to a note that hasn't loaded yet
+      setContent('')
     }
-  }, [existingNote, content])
+  }, [existingNote?.content, existingNote?._id, currentNoteId, isNewNote, content])
 
   // Handle quoted content insertion
   useEffect(() => {

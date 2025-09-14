@@ -200,27 +200,38 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   
   // Handle noteId parameter
   React.useEffect(() => {
+    if (!noteId) return
+    
     const searchParams = new URLSearchParams(window.location.search)
     const conversationIdParam = searchParams.get('conversationId')
     
-    if (noteId && refs.notepadRef.current) {
-      if (!notepadOpen) {
-        toggleNotepad()
-      }
-      
-      if (refs.notepadRef.current.setNoteForEditing) {
-        refs.notepadRef.current.setNoteForEditing(noteId)
-      }
-      
-      if (conversationIdParam && handleLoadConversation) {
-        handleLoadConversation(conversationIdParam)
-      }
-      
-      if (isMobile && activeTab !== 'notes') {
-        switchToTab('notes')
-      }
+    // Always open notepad for note editing
+    if (!notepadOpen) {
+      toggleNotepad()
+    }
+    
+    // Switch to notes tab on mobile
+    if (isMobile && activeTab !== 'notes') {
+      switchToTab('notes')
+    }
+    
+    // Load conversation if specified
+    if (conversationIdParam && handleLoadConversation) {
+      handleLoadConversation(conversationIdParam)
+    }
+    
+    // Set note for editing when ref is ready
+    if (refs.notepadRef.current?.setNoteForEditing) {
+      refs.notepadRef.current.setNoteForEditing(noteId)
     }
   }, [noteId, notepadOpen, toggleNotepad, isMobile, activeTab, switchToTab, handleLoadConversation, refs])
+  
+  // Separate effect to handle setting note when notepad ref becomes available
+  React.useEffect(() => {
+    if (noteId && refs.notepadRef.current?.setNoteForEditing) {
+      refs.notepadRef.current.setNoteForEditing(noteId)
+    }
+  }, [noteId, refs.notepadRef.current])
 
   // Get notes for notepad
   const { notes } = useNotes()

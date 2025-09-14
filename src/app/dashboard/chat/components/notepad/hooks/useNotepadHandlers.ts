@@ -140,8 +140,7 @@ export function useNotepadHandlers({
   const handleSwitchToNote = useCallback((noteId: string) => {
     setCurrentNoteId(noteId)
     setIsNewNote(false)
-    setContent('') // Clear content so it loads from the selected note
-  }, [setCurrentNoteId, setIsNewNote, setContent])
+  }, [setCurrentNoteId, setIsNewNote])
 
   // Handle new note creation
   const handleCreateNewNote = useCallback(() => {
@@ -151,17 +150,10 @@ export function useNotepadHandlers({
     lexicalEditorRef.current?.clear()
   }, [setCurrentNoteId, setIsNewNote, setContent, lexicalEditorRef])
 
-  // Content state changes with debug logging
+  // Content state changes
   const handleContentChange = useCallback((newContent: string) => {
-    console.log('📝 [MarkdownNotepad] Content state changing:', {
-      oldLength: content.length,
-      newLength: newContent.length,
-      oldPreview: content.substring(0, 50) + '...',
-      newPreview: newContent.substring(0, 50) + '...',
-      contentChanged: content !== newContent
-    })
     setContent(newContent)
-  }, [content, setContent])
+  }, [setContent])
 
   // Handle command palette trigger
   const handleTriggerCommandPalette = useCallback(() => {
