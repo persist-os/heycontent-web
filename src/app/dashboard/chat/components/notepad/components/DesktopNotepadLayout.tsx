@@ -7,6 +7,7 @@ import type { Note, NoteUpdate } from '../../../../notes/types/index'
 import type { Id } from "@/convex/_generated/dataModel"
 import type { AIHandlers, NoteHandlers } from '../types'
 import type { LexicalNotepadEditorRef } from '@/components/ui/lexical-editor/LexicalNotepadEditor'
+import type { PanelState } from '../../../hooks/useSplitScreenLayout'
 
 interface DesktopNotepadLayoutProps {
   note: Note
@@ -31,6 +32,7 @@ interface DesktopNotepadLayoutProps {
   onShare?: () => void
   isReadOnly?: boolean
   notePermission?: "owner" | "read" | "edit" | null
+  panelState?: PanelState
 }
 
 export function DesktopNotepadLayout({
@@ -53,7 +55,8 @@ export function DesktopNotepadLayout({
   onLinkNote,
   onShare,
   isReadOnly = false,
-  notePermission = null
+  notePermission = null,
+  panelState
 }: DesktopNotepadLayoutProps) {
   return (
     <div 
@@ -81,6 +84,7 @@ export function DesktopNotepadLayout({
         onShare={onShare}
         isReadOnly={isReadOnly}
         notePermission={notePermission}
+        panelState={panelState}
       />
 
       {/* Editor Area */}

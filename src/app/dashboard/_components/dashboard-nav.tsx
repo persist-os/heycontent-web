@@ -313,8 +313,8 @@ export const DashboardNav = memo(function DashboardNav() {
           <div className="p-6 border-b border-border/20">
             <div className="flex items-center gap-4 mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-primary/70" />
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                  <Sparkles className="w-6 h-6 text-primary/70" />
                 </div>
                 <div>
                   <h2 className="text-xl font-light tracking-tight text-foreground">
@@ -380,13 +380,13 @@ export const DashboardNav = memo(function DashboardNav() {
                       {...{[item.dataAttr]: true}}
                     >
                       <div className={cn(
-                        "w-12 h-12 rounded-2xl flex items-center justify-center transition-all",
+                        "w-14 h-14 rounded-2xl flex items-center justify-center transition-all",
                         isItemActive(item)
                           ? "bg-primary/20"
                           : "bg-muted/20 group-hover:bg-muted/40"
                       )}>
                         <item.icon className={cn(
-                          "w-5 h-5 transition-colors",
+                          "w-7 h-7 transition-colors",
                           isItemActive(item)
                             ? "text-primary"
                             : "text-muted-foreground group-hover:text-foreground"
@@ -437,8 +437,8 @@ export const DashboardNav = memo(function DashboardNav() {
                         className="flex items-center gap-3 flex-1 min-w-0"
                         title={chat.topic}
                       >
-                        <div className="w-8 h-8 rounded-xl bg-muted/20 flex items-center justify-center flex-shrink-0">
-                          <MessageSquare className="w-4 h-4 text-muted-foreground/60" />
+                        <div className="w-12 h-12 rounded-xl bg-muted/20 flex items-center justify-center flex-shrink-0">
+                          <MessageSquare className="w-6 h-6 text-muted-foreground/60" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-foreground truncate">
@@ -472,7 +472,7 @@ export const DashboardNav = memo(function DashboardNav() {
                     pathname === '/settings' && "bg-muted/40"
                   )}
                 >
-                  <Settings className="w-4 h-4 text-muted-foreground" />
+                  <Settings className="w-6 h-6 text-muted-foreground" />
                   <span className="text-sm font-light text-foreground">Settings</span>
                 </button>
                 <ThemeToggle />

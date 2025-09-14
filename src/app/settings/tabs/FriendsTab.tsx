@@ -20,6 +20,7 @@ import {
   UserMinus,
   Clock
 } from 'lucide-react'
+import PrivacySettingsSection from '../components/PrivacySettingsSection'
 
 interface FriendsTabProps {
   userId?: string
@@ -495,6 +496,11 @@ const FriendsTab = ({ userId }: FriendsTabProps) => {
           </div>
         )}
       </div>
+
+      <div className="h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
+
+      {/* Privacy Settings Section */}
+      <PrivacySettingsSection />
     </div>
   )
 }

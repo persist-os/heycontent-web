@@ -14,8 +14,6 @@ import { useAuth } from '@/app/context/auth-context'
 import { ReadOnlyField, ReadOnlyTextArea } from './account/ReadOnlyField'
 import { ProfileFields, ReferralFields, PersonaFields } from './account/FormSections'
 import { Skeleton } from '@/components/ui/skeleton'
-import MyFriendsSection from '../components/MyFriendsSection'
-import PrivacySettingsSection from '../components/PrivacySettingsSection'
 
 const MAX_PERSONA_LENGTH = 500
 const MAX_VISION_LENGTH = 500
@@ -232,23 +230,6 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
         </form>
       </div>
 
-      {/* Divider */}
-      <div className="h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
-
-      {/* My Friends Section */}
-      <MyFriendsSection 
-        friends={[
-          // Mock data for now - replace with real data later
-          // { id: '1', username: 'sarah_creator', friendsSince: 'March 2024' },
-          // { id: '2', username: 'mike_content', friendsSince: 'January 2024' },
-        ]}
-      />
-
-      {/* Divider */}
-      <div className="h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
-
-      {/* Privacy Settings Section */}
-      <PrivacySettingsSection />
     </div>
   )
 }

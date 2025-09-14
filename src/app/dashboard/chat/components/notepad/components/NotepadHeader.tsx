@@ -7,6 +7,7 @@ import { SimpleTypeSelector } from './SimpleTypeSelector'
 import { ActionButtons } from './ActionButtons'
 import type { Note, NoteUpdate } from '../../../../notes/types/index'
 import type { Id } from "@/convex/_generated/dataModel"
+import type { PanelState } from '../../../hooks/useSplitScreenLayout'
 
 interface NotepadHeaderProps {
   note: Note
@@ -29,6 +30,7 @@ interface NotepadHeaderProps {
   onShare?: () => void
   isReadOnly?: boolean
   notePermission?: "owner" | "read" | "edit" | null
+  panelState?: PanelState
 }
 
 export function NotepadHeader({
@@ -49,9 +51,18 @@ export function NotepadHeader({
   onSaveNote,
   onShare,
   isReadOnly = false,
-  notePermission = null
+  notePermission = null,
+  panelState
 }: NotepadHeaderProps) {
-  const containerPadding = isMobile ? "px-4 py-4" : "px-6 py-5"
+  // Calculate padding based on device and panel state
+  // When notepad is in full-screen mode, add extra left padding to avoid dashboard nav button
+  const isFullScreen = panelState === 'notepad-full'
+  const basePaddingX = isMobile ? "px-4" : "px-6"
+  const fullScreenPaddingX = isMobile ? "px-4" : "pl-20 pr-6" // Extra left padding for dashboard nav button
+  const paddingX = isFullScreen ? fullScreenPaddingX : basePaddingX
+  const paddingY = isMobile ? "py-4" : "py-5"
+  const containerPadding = `${paddingX} ${paddingY}`
+  
   const spacing = isMobile ? "space-y-4" : "space-y-5"
   const controlsSpacing = isMobile ? "space-y-3 pt-2" : "space-y-4 pt-3"
 

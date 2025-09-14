@@ -32,12 +32,15 @@ import { checkUserEmbeddings } from './utils/api-utils';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { useChatHandlers } from './hooks/useChatHandlers'
 import { MarkdownNotepad } from './components/notepad/MarkdownNotepad'
+import type { MarkdownNotepadRef } from './components/notepad/types'
 import { MobileTabBar } from './components/notepad/MobileTabBar'
 import { useNotepadUI } from './hooks/useNotepadUI'
 import { useNotes } from '@/app/context/notes-context'
 import { usePersonaStore } from '@/store/persona-store'
 import { useConvex } from 'convex/react'
 import { useContentContext, useContentContextActions, useContentContextStore } from '@/store/content-context-store'
+import { useSplitScreenLayout } from './hooks/useSplitScreenLayout'
+import { PanelExpandButton } from './components/PanelExpandButton'
 import { useGlobalSelectionState } from './hooks/useGlobalSelectionState'
 
 
@@ -169,15 +172,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   } = useUIEffects(messages, isExpanded)
 
   // Add ref for MarkdownNotepad (moved up to fix declaration order)
-  const notepadRef = useRef<{ 
-    hasUnsavedContent: () => boolean, 
-    clearContent: () => void, 
-    getContent: () => string,
-    saveNote: () => Promise<string | null>,
-    getCurrentNote: () => any,
-    isNewNote: () => boolean,
-    setNoteForEditing: (noteId: string) => void
-  }>(null);
+  const notepadRef = useRef<MarkdownNotepadRef>(null);
 
   const {
     referencedMessage,
@@ -261,6 +256,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     clearNotepadBadge,
     saveScrollPosition
   } = useNotepadUI()
+
+  // Split-screen layout management
+  const splitScreen = useSplitScreenLayout()
 
   // Debug logging for notepad state changes (after all variables are initialized)
   console.log('🔔 [CHAT CONTAINER] Component render:', {
@@ -751,9 +749,18 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         {/* Main chat content */}
         <div 
           data-chat-container
-          className="flex flex-col h-screen bg-background"
-          style={getMainContentStyle()}
+          className="flex flex-col h-screen bg-background relative group"
+          style={!isMobile ? splitScreen.getChatContainerStyle() : getMainContentStyle()}
         >
+          {/* Chat Panel Expand Button */}
+          {!isMobile && (
+            <PanelExpandButton
+              panelType="chat"
+              panelState={splitScreen.panelState}
+              onExpand={splitScreen.setChatFullScreen}
+              onRestore={splitScreen.restoreSplitView}
+            />
+          )}
         {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Mobile Tab Bar */}
@@ -782,7 +789,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                 <div className="p-4 sm:p-6">
                   <div className="max-w-4xl mx-auto space-y-6">
                     {/* Clean header - no controls crowding */}
-                    <div className="flex justify-end items-center pb-3">
+                    <div className="flex justify-end items-center pb-6 pr-6 pt-6">
                       {/* Only New Chat button - clean and minimal */}
                       <button 
                         onClick={handleNewChat}
@@ -946,24 +953,38 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         )}
       </div>
 
-      {/* Desktop Notepad - Always visible, taking 50% of space */}
+      {/* Desktop Notepad - Always visible, with split-screen functionality */}
         {!isMobile && (
-          <MarkdownNotepad
-            ref={notepadRef}
-            isOpen={true} // Always open
-            onClose={() => {}} // Disable close functionality
-            quotedContent={quotedForNotepad}
-            onClearQuoted={handleClearQuoted}
-            width={notepadWidth}
-            style={getNotepadStyle()}
-            availableNotes={availableNotes}
-            isMobile={false}
-            noteId={noteId}
-            fromChat={true}
-            canNavigateBack={true}
-            onBack={() => router.back()}
-            sessionId={chatState.sessionId}
-          />
+          <div 
+            className="relative group"
+            style={splitScreen.getNotepadContainerStyle()}
+          >
+            {/* Notepad Panel Expand Button */}
+            <PanelExpandButton
+              panelType="notepad"
+              panelState={splitScreen.panelState}
+              onExpand={splitScreen.setNotepadFullScreen}
+              onRestore={splitScreen.restoreSplitView}
+            />
+            
+            <MarkdownNotepad
+              ref={notepadRef}
+              isOpen={true} // Always open
+              onClose={() => {}} // Disable close functionality
+              quotedContent={quotedForNotepad}
+              onClearQuoted={handleClearQuoted}
+              width="100%" // Use full width of container
+              style={{}} // Remove custom styles, use container styling
+              availableNotes={availableNotes}
+              isMobile={false}
+              noteId={noteId}
+              fromChat={true}
+              canNavigateBack={true}
+              onBack={() => router.back()}
+              sessionId={chatState.sessionId}
+              panelState={splitScreen.panelState}
+            />
+          </div>
         )}
       </div>
         

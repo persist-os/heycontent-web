@@ -1,6 +1,7 @@
 import type { Note, NoteUpdate, NoteType } from '../../../notes/types/index'
 import type { Id } from "@/convex/_generated/dataModel"
 import type { LexicalNotepadEditorRef } from '@/components/ui/lexical-editor/LexicalNotepadEditor'
+import type { PanelState } from '../../hooks/useSplitScreenLayout'
 
 export interface MarkdownNotepadProps {
   isOpen: boolean
@@ -23,6 +24,8 @@ export interface MarkdownNotepadProps {
   onBack?: () => void
   // Conversation linking
   sessionId?: string | null
+  // Split screen layout state
+  panelState?: PanelState
 }
 
 export interface MarkdownNotepadRef {

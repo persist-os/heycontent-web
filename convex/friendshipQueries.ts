@@ -177,6 +177,7 @@ export const searchUsersByUsername = query({
   },
   returns: v.array(v.object({
     _id: v.id("users"),
+    _creationTime: v.number(),
     userId: v.string(),
     name: v.string(),
     email: v.string(),
@@ -247,6 +248,7 @@ export const searchUsersByEmail = query({
   },
   returns: v.array(v.object({
     _id: v.id("users"),
+    _creationTime: v.number(),
     userId: v.string(),
     name: v.string(),
     email: v.string(),
@@ -336,6 +338,7 @@ export const getUserPreferences = query({
   returns: v.union(
     v.object({
       _id: v.id("user_preferences"),
+      _creationTime: v.number(),
       userId: v.string(),
       showPersonaToFriends: v.boolean(),
       allowFriendRequests: v.boolean(),

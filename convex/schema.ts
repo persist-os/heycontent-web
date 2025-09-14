@@ -1457,4 +1457,66 @@ export default defineSchema({
     updatedAt: v.number(),
   })
   .index("by_userId", ["userId"]),
+
+  // Operational Transform - Text Operations for real-time collaboration
+  text_operations: defineTable({
+    noteId: v.id("notes"),
+    userId: v.string(),
+    operationId: v.string(), // Unique ID for this operation (UUID)
+    sequenceNumber: v.number(), // Global sequence number for ordering
+    vectorClock: v.record(v.string(), v.number()), // Vector clock for conflict resolution
+    operation: v.object({
+      type: v.union(
+        v.literal("insert"),
+        v.literal("delete"),
+        v.literal("retain")
+      ),
+      position: v.number(), // Character position in document
+      content: v.optional(v.string()), // Text content for insert operations
+      length: v.optional(v.number()), // Length for delete/retain operations
+      attributes: v.optional(v.record(v.string(), v.any())), // For formatting attributes
+    }),
+    transformedFrom: v.optional(v.array(v.string())), // IDs of operations this was transformed from
+    isCommitted: v.boolean(), // Whether this operation is committed to the document
+    timestamp: v.number(),
+    createdAt: v.number(),
+  })
+  .index("by_note", ["noteId"])
+  .index("by_note_sequence", ["noteId", "sequenceNumber"])
+  .index("by_note_user", ["noteId", "userId"])
+  .index("by_operation_id", ["operationId"])
+  .index("by_committed", ["isCommitted"])
+  .index("by_timestamp", ["timestamp"]),
+
+  // Note Snapshots - Periodic full-text snapshots for faster loading
+  note_snapshots: defineTable({
+    noteId: v.id("notes"),
+    content: v.string(), // Full document content at this point
+    sequenceNumber: v.number(), // Last operation sequence number included
+    operationCount: v.number(), // Number of operations applied to reach this state
+    checksum: v.string(), // MD5 hash of content for integrity verification
+    createdAt: v.number(),
+    createdBy: v.string(), // User who triggered the snapshot
+    snapshotReason: v.union(
+      v.literal("periodic"), // Regular interval snapshot
+      v.literal("operation_threshold"), // Too many operations since last snapshot
+      v.literal("manual"), // User-triggered
+      v.literal("conflict_resolution") // Created during conflict resolution
+    ),
+  })
+  .index("by_note", ["noteId"])
+  .index("by_note_sequence", ["noteId", "sequenceNumber"])
+  .index("by_created", ["createdAt"]),
+
+  // Operation Acknowledgments - Track which operations have been acknowledged by which users
+  operation_acknowledgments: defineTable({
+    operationId: v.string(),
+    noteId: v.id("notes"),
+    userId: v.string(),
+    acknowledgedAt: v.number(),
+    clientId: v.string(), // Client session ID for tracking multiple sessions
+  })
+  .index("by_operation", ["operationId"])
+  .index("by_note_user", ["noteId", "userId"])
+  .index("by_user_client", ["userId", "clientId"]),
 });

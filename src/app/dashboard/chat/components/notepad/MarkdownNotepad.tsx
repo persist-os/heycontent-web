@@ -27,7 +27,8 @@ export const MarkdownNotepad = forwardRef<MarkdownNotepadRef, MarkdownNotepadPro
   fromChat = false,
   canNavigateBack = false,
   onBack,
-  sessionId
+  sessionId,
+  panelState
 }, ref) {
   const { firebaseUser } = useAuth()
   const [isEditingTitle, setIsEditingTitle] = useState(false)
@@ -130,6 +131,7 @@ export const MarkdownNotepad = forwardRef<MarkdownNotepadRef, MarkdownNotepadPro
           onShare={handleShare}
           isReadOnly={isReadOnly}
           notePermission={notePermission}
+          panelState={panelState}
         />
         
         {/* Share Modal */}
@@ -168,6 +170,7 @@ export const MarkdownNotepad = forwardRef<MarkdownNotepadRef, MarkdownNotepadPro
         onShare={handleShare}
         isReadOnly={isReadOnly}
         notePermission={notePermission}
+        panelState={panelState}
       />
       
       {/* Share Modal */}
