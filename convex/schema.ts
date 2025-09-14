@@ -207,6 +207,7 @@ export default defineSchema({
       height: v.optional(v.number())
     }))),
     sourceConversationId: v.optional(v.string()),
+    folderId: v.optional(v.id("folders")), // Reference to parent folder
     createdAt: v.number(),
     updatedAt: v.number(),
     titleGenerated: v.optional(v.boolean()),
@@ -214,7 +215,23 @@ export default defineSchema({
   })
   .index("by_user", ["userId"])
   .index("by_creation", ["createdAt"])
-  .index("by_type", ["type"]),
+  .index("by_type", ["type"])
+  .index("by_folder", ["folderId"]),
+
+  // Folders
+  folders: defineTable({
+    userId: v.string(),
+    name: v.string(),
+    description: v.optional(v.string()),
+    parentFolderId: v.optional(v.id("folders")), // For nested folders
+    color: v.optional(v.string()), // Optional color for visual organization
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_user", ["userId"])
+  .index("by_parent", ["parentFolderId"])
+  .index("by_user_parent", ["userId", "parentFolderId"])
+  .index("by_creation", ["createdAt"]),
 
   // Shared Notes - for collaborative note access
   shared_notes: defineTable({

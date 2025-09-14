@@ -35,6 +35,7 @@ export interface Note {
   isTemporary?: boolean; // Flag for optimistic updates during note creation
   images?: ImageData[];
   sourceConversationId?: string;
+  folderId?: string | Id<"folders">; // Reference to parent folder
   // Sharing information
   isShared?: boolean; // True if this note is shared with others
   isSharedWithMe?: boolean; // True if this note is shared with current user
