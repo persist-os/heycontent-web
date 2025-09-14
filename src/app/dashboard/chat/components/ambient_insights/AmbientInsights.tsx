@@ -4,7 +4,6 @@ import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { getApiKey } from '@/app/lib/api-helpers';
 import { Id } from '@/convex/_generated/dataModel';
-import { RefreshState } from '@/components/ui/refresh-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 
@@ -55,10 +54,10 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
   // Manual reveal state
   const [showSecondary, setShowSecondary] = useState(false);
 
-  // Always call useQuery, passing undefined if userId is not available
+  // Always call useQuery, passing skip if userId is not available
   const convexInsights = useQuery(
     api.ambientInsights.getMostRecentByUserId,
-    userId ? { userId } : undefined
+    userId ? { userId } : "skip"
   );
 
   // Only log once when insights actually change, not on every render
