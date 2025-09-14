@@ -244,10 +244,12 @@ export const getNoteWithPermissions = query({
         .unique();
 
       if (shareRecord) {
+        const isReadOnly = shareRecord.permission !== "edit";
+        
         return {
           note,
           permission: shareRecord.permission,
-          isReadOnly: shareRecord.permission === "read",
+          isReadOnly,
         };
       }
       

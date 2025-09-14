@@ -85,7 +85,7 @@ export const MarkdownNotepad = forwardRef<MarkdownNotepadRef, MarkdownNotepadPro
     }
   }, [noteHandlers.handleSwitchToNote, refs.sidebarRef])
 
-  // Expose enhanced note functionality to parent
+  // Expose enhanced note functionality to parent - FIXED: Removed state.currentNoteId dependency
   useImperativeHandle(ref, () => ({
     hasUnsavedContent: () => refs.lexicalEditorRef.current?.hasContent() || false,
     clearContent: () => {
@@ -101,7 +101,7 @@ export const MarkdownNotepad = forwardRef<MarkdownNotepadRef, MarkdownNotepadPro
     createNewNote: () => {
       noteHandlers.handleCreateNewNote()
     }
-  }), [note, state.isNewNote, noteHandlers, refs.lexicalEditorRef, state.currentNoteId]);
+  }), [note, state.isNewNote, noteHandlers, refs.lexicalEditorRef]);
 
   // Don't render on mobile if not the active tab
   if (isMobile && activeTab !== 'notes') {

@@ -198,7 +198,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     saveScrollPosition
   })
   
-  // Handle noteId parameter
+  // Handle noteId parameter - FIXED: Consolidated dual effects to prevent cascade
   React.useEffect(() => {
     if (!noteId) return
     
@@ -220,18 +220,13 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       handleLoadConversation(conversationIdParam)
     }
     
-    // Set note for editing when ref is ready
+    // Set note for editing when ref is ready - SINGLE CALL ONLY
     if (refs.notepadRef.current?.setNoteForEditing) {
       refs.notepadRef.current.setNoteForEditing(noteId)
     }
-  }, [noteId, notepadOpen, toggleNotepad, isMobile, activeTab, switchToTab, handleLoadConversation, refs])
+  }, [noteId, notepadOpen, toggleNotepad, isMobile, activeTab, switchToTab, handleLoadConversation])
   
-  // Separate effect to handle setting note when notepad ref becomes available
-  React.useEffect(() => {
-    if (noteId && refs.notepadRef.current?.setNoteForEditing) {
-      refs.notepadRef.current.setNoteForEditing(noteId)
-    }
-  }, [noteId, refs.notepadRef.current])
+  // REMOVED: Duplicate effect that caused cascading switches
 
   // Get notes for notepad
   const { notes } = useNotes()

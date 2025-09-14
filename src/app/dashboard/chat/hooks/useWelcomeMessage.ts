@@ -13,17 +13,8 @@ export function useWelcomeMessage(
 
   // Handle welcome message for users without a persona (onboarding) - DISABLED
   useEffect(() => {
-    console.log('🔄 Welcome message effect (onboarding disabled):', {
-      hasPersona,
-      isPersonaLoading,
-      messagesLength: messages.length,
-      isLoading,
-      hasUser: !!user
-    });
-
     // Onboarding is now disabled - users will see ambient insights instead
     // if (hasPersona === false && !isPersonaLoading && messages.length === 0 && !isLoading && user) {
-    //   console.log('✅ Triggering welcome message for user without persona');
     //   setWelcomeStep(0);
     //   setMessages([getWelcomeStepMessage(0)]);
     // }

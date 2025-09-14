@@ -60,13 +60,13 @@ export const shareContent = mutation({
       const friendship = await ctx.db
         .query("friendships")
         .withIndex("by_userId1", (q) => q.eq("userId1", userId))
-        .filter((q) => q.eq(q.field("userId2"), friendUserId).eq(q.field("status"), "accepted"))
+        .filter((q) => q.and(q.eq(q.field("userId2"), friendUserId), q.eq(q.field("status"), "accepted")))
         .first();
 
       const reverseFriendship = await ctx.db
         .query("friendships")
         .withIndex("by_userId1", (q) => q.eq("userId1", friendUserId))
-        .filter((q) => q.eq(q.field("userId2"), userId).eq(q.field("status"), "accepted"))
+        .filter((q) => q.and(q.eq(q.field("userId2"), userId), q.eq(q.field("status"), "accepted")))
         .first();
 
       if (!friendship && !reverseFriendship) {
@@ -113,7 +113,7 @@ export const shareContent = mutation({
             .withIndex("by_note_user", (q) => 
               q.eq("noteId", contentId as Id<"notes">).eq("sharedWithUserId", userId)
             )
-            .filter((q) => q.eq(q.field("isActive"), true).eq(q.field("permission"), "edit"))
+            .filter((q) => q.and(q.eq(q.field("isActive"), true), q.eq(q.field("permission"), "edit")))
             .first();
           
           canShare = !!sharedNote;
@@ -189,7 +189,7 @@ export const shareContent = mutation({
           .withIndex("by_content_user", (q) => 
             q.eq("contentId", contentId).eq("sharedWithUserId", friendUserId)
           )
-          .filter((q) => q.eq(q.field("contentType"), "project").eq(q.field("isActive"), true))
+          .filter((q) => q.and(q.eq(q.field("contentType"), "project"), q.eq(q.field("isActive"), true)))
           .first();
 
         if (existingShare) {

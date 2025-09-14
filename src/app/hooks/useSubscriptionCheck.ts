@@ -27,8 +27,6 @@ export function useSubscriptionCheck(requiredPlan: SubscriptionPlan = 'free') {
     api.subscriptionQueries.getUserSubscription, 
     firebaseUser?.uid ? { userId: firebaseUser.uid } : 'skip'
   );
-  
-  console.log('🔍 [SUBSCRIPTION CHECK] Convex query result:', subscriptionData);
 
   // Check subscription status when data changes
   useEffect(() => {
@@ -74,7 +72,7 @@ export function useSubscriptionCheck(requiredPlan: SubscriptionPlan = 'free') {
               }
             }
           } catch (backendError) {
-            console.warn('Backend subscription check failed, using Convex data:', backendError);
+            // Backend subscription check failed, using Convex data
           }
           
           // No subscription data means user is NOT subscribed
@@ -101,9 +99,6 @@ export function useSubscriptionCheck(requiredPlan: SubscriptionPlan = 'free') {
           usedRequests: subscriptionData.usedRequests
         };
         
-        console.log('🔍 [SUBSCRIPTION CHECK] Raw data:', subscriptionData);
-        console.log('🔍 [SUBSCRIPTION CHECK] Parsed status:', status);
-        
         setSubscriptionStatus(status);
         
         // Set the base subscription status first
@@ -125,7 +120,6 @@ export function useSubscriptionCheck(requiredPlan: SubscriptionPlan = 'free') {
         // Note: Redirect logic is handled by the dashboard layout, not here
         // This prevents conflicts between modal display and page redirects
       } catch (err) {
-        console.error('Error checking subscription:', err);
         const errorMessage = err instanceof Error ? err.message : 'Failed to check subscription status';
         setError(errorMessage);
         // On error, for non-free plans, we'll assume they need to subscribe

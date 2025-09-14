@@ -118,10 +118,11 @@ function EditorContent({
     })
   }, [onContentChange])
 
-  // Set initial content
+  // Set initial content when content prop changes
   React.useEffect(() => {
     const currentMarkdown = getCurrentMarkdown()
     
+    // Only update if content is actually different
     if (content !== currentMarkdown) {
       editor.update(() => {
         const root = $getRoot()
@@ -240,6 +241,7 @@ export const LexicalNotepadEditor = forwardRef<LexicalNotepadEditorRef, LexicalN
       ],
       editable: !disabled,
     }
+    
 
     const editorRef = React.useRef<LexicalNotepadEditorRef>(null)
     

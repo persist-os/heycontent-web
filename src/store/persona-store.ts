@@ -59,53 +59,25 @@ export const usePersonaStore = create<PersonaStoreState>()(
       // Initialize persona data with aggressive caching
       initializePersonaData: async (userId: string, convex: ConvexReactClient) => {
         const state = get();
-        const initStartTime = performance.now();
-        
-        if (process.env.NODE_ENV === 'development') {
-          console.log('🚀 [PERSONA STORE] FAST initializePersonaData called for userId:', userId, 'at:', new Date().toISOString());
-        }
         
         // Check if we have valid cached data for this user
         if (state.isInitialized && 
             state.lastFetchedUserId === userId && 
             state.isCacheValid() && 
             state.allPersonas.length > 0) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('🚀 [PERSONA STORE] ⚡ USING CACHED DATA - skipping network request!');
-          }
           return;
         }
 
         // Skip if already loading for this user
         if (state.isLoading && state.lastFetchedUserId === userId) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('🚀 [PERSONA STORE] Skipping init - already loading for user:', userId);
-          }
           return;
         }
 
-        const setLoadingTime = performance.now();
         set({ isLoading: true, error: null, lastFetchedUserId: userId });
         
-        if (process.env.NODE_ENV === 'development') {
-          console.log('🚀 [PERSONA STORE] Set loading state in:', Math.round(setLoadingTime - initStartTime), 'ms');
-        }
-
         try {
-          // Use optimized single query
-          if (process.env.NODE_ENV === 'development') {
-            console.log('🚀 [PERSONA STORE] Starting FAST Convex query at:', new Date().toISOString());
-          }
-          const queryStartTime = performance.now();
-          
           const personaData = await convex.query(api.personas.getPersonaData, { userId });
           
-          const queryEndTime = performance.now();
-          if (process.env.NODE_ENV === 'development') {
-            console.log('🚀 [PERSONA STORE] ⚡ FAST query completed in:', Math.round(queryEndTime - queryStartTime), 'ms');
-          }
-
-          const setStateStartTime = performance.now();
           set({
             allPersonas: personaData.allPersonas || [],
             personaHistory: personaData.personaHistory || [],
@@ -115,18 +87,8 @@ export const usePersonaStore = create<PersonaStoreState>()(
             cacheTimestamp: Date.now(), // Set cache timestamp
             error: null
           });
-          const setStateEndTime = performance.now();
-          
-          const totalTime = setStateEndTime - initStartTime;
-          if (process.env.NODE_ENV === 'development') {
-            console.log('🚀 [PERSONA STORE] ⚡ FAST initializePersonaData COMPLETED in:', Math.round(totalTime), 'ms');
-          }
           
         } catch (error) {
-          const errorTime = performance.now();
-          if (process.env.NODE_ENV === 'development') {
-            console.error('❌ [PERSONA STORE] Failed to initialize persona data in:', Math.round(errorTime - initStartTime), 'ms, error:', error);
-          }
           set({
             isLoading: false,
             error: error instanceof Error ? error.message : 'Failed to load persona data',
@@ -139,11 +101,6 @@ export const usePersonaStore = create<PersonaStoreState>()(
 
       // Refresh persona data (force refetch)
       refreshPersonaData: async (userId: string, convex: ConvexReactClient) => {
-        const refreshStartTime = performance.now();
-        if (process.env.NODE_ENV === 'development') {
-          console.log('🔄 [PERSONA STORE] refreshPersonaData called for userId:', userId, 'at:', new Date().toISOString());
-        }
-        
         // Force clear cache first for true refresh
         set({ 
           isLoading: true, 
@@ -153,23 +110,8 @@ export const usePersonaStore = create<PersonaStoreState>()(
         });
 
         try {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('🔄 [PERSONA STORE] Starting FORCED refresh query (cache invalidated) at:', new Date().toISOString());
-          }
-          const queryStartTime = performance.now();
-          
           const personaData = await convex.query(api.personas.getPersonaData, { userId });
           
-          const queryEndTime = performance.now();
-          if (process.env.NODE_ENV === 'development') {
-            console.log('🔄 [PERSONA STORE] FORCED refresh query completed in:', Math.round(queryEndTime - queryStartTime), 'ms');
-            console.log('🔄 [PERSONA STORE] Fresh persona data received:', {
-              allPersonasCount: personaData.allPersonas?.length || 0,
-              hasActivePersona: !!personaData.activePersona,
-              activePersonaName: personaData.activePersona?.current_name || 'none'
-            });
-          }
-
           set({
             allPersonas: personaData.allPersonas || [],
             personaHistory: personaData.personaHistory || [],
@@ -180,16 +122,7 @@ export const usePersonaStore = create<PersonaStoreState>()(
             error: null
           });
           
-          const totalRefreshTime = performance.now() - refreshStartTime;
-          if (process.env.NODE_ENV === 'development') {
-            console.log('🔄 [PERSONA STORE] ✅ FORCED refreshPersonaData COMPLETED in:', Math.round(totalRefreshTime), 'ms');
-          }
-          
         } catch (error) {
-          const errorTime = performance.now();
-          if (process.env.NODE_ENV === 'development') {
-            console.error('❌ [PERSONA STORE] Failed to refresh persona data in:', Math.round(errorTime - refreshStartTime), 'ms, error:', error);
-          }
           set({
             isLoading: false,
             error: error instanceof Error ? error.message : 'Failed to refresh persona data'
@@ -199,9 +132,6 @@ export const usePersonaStore = create<PersonaStoreState>()(
 
       // Invalidate data (force next fetch)
       invalidatePersonaData: () => {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('🗑️ [PERSONA STORE] invalidatePersonaData called - clearing all cached data');
-        }
         set({
           isInitialized: false,
           lastFetchedUserId: null,
@@ -320,11 +250,6 @@ export const useAllPersonas = () => {
 
 // Optimized persona manager hook that uses the centralized store
 export const useOptimizedPersonaManager = (userId: string | undefined) => {
-  const hookStartTime = performance.now();
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🔧 [PERSONA MANAGER] Hook called for userId:', userId, 'at:', new Date().toISOString());
-  }
-  
   const convex = useConvex(); // Reuse existing convex instance
   const updatePersonaMutation = useMutation(api.personas.updatePersona);
   const createPersonaMutation = useMutation(api.personas.createPersona);
@@ -340,18 +265,6 @@ export const useOptimizedPersonaManager = (userId: string | undefined) => {
   const updatePersonaInStore = usePersonaStore(state => state.updatePersona);
   const addPersonaToStore = usePersonaStore(state => state.addPersona);
   const removePersonaFromStore = usePersonaStore(state => state.removePersona);
-
-  const hookEndTime = performance.now();
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🔧 [PERSONA MANAGER] Hook data retrieval completed in:', Math.round(hookEndTime - hookStartTime), 'ms');
-    console.log('🔧 [PERSONA MANAGER] Store state:', {
-      hasCurrentPersona: !!currentPersona,
-      allPersonasCount: allPersonas.length,
-      personaHistoryCount: personaHistory.length,
-      isLoading,
-      timestamp: new Date().toISOString()
-    });
-  }
 
   const updatePersona = async (updates: Partial<Doc<'personas'>>): Promise<boolean> => {
     if (!currentPersona || !userId) return false;

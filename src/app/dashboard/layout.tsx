@@ -71,7 +71,6 @@ export default function DashboardLayout({
     
     // If user changed (including logout), clear context
     if (previousUserId !== null && previousUserId !== currentUserId) {
-      console.log('🧹 User changed, clearing content context', { previousUserId, currentUserId });
       clearContentContext();
     }
     
@@ -104,21 +103,12 @@ export default function DashboardLayout({
     
     // Don't show modal if subscription status is still being determined (null means not yet checked)
     if (isSubscribed === null) {
-      console.log('🔍 [DASHBOARD] Subscription status not yet determined, waiting...');
       return;
     }
     
     // Check if user has a valid subscription
     // Users must have isSubscribed=true to access the platform
-    console.log('🔍 [DASHBOARD] Subscription check:', {
-      isSubscribed,
-      isSubscriptionLoading,
-      subscriptionError,
-      firebaseUser: firebaseUser?.uid
-    });
-    
     if (!isSubscribed) {
-      console.log('🔒 [DASHBOARD] User not subscribed, showing subscription modal');
       if (!showSubscriptionRequired) {
         setShowSubscriptionRequired(true);
       }
@@ -140,7 +130,6 @@ export default function DashboardLayout({
         if (resp.status === 402) {
           // Check if it's a subscription required error
           if (resp.headers.get('X-Subscription-Required') === 'true') {
-            console.log('🔒 [DASHBOARD] Backend returned subscription required, showing modal');
             if (!showSubscriptionRequired) {
               setShowSubscriptionRequired(true);
             }
@@ -165,7 +154,6 @@ export default function DashboardLayout({
         if (res.status === 402) {
           // Check if it's a subscription required error
           if (res.headers.get('X-Subscription-Required') === 'true') {
-            console.log('🔒 [DASHBOARD] Global fetch interceptor caught subscription required, showing modal');
             if (!showSubscriptionRequired) {
               setShowSubscriptionRequired(true);
             }
