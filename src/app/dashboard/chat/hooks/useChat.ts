@@ -5,7 +5,6 @@ import { ChatStateReturnType } from './useChatState'
 import { getHelpMessage } from '../data/help-message'
 import { useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
-import { useContentContext } from '@/store/content-context-store'
 import { useRouter } from 'next/navigation'
 import { AuthenticationError } from '@/app/lib/errors'
 
@@ -31,8 +30,8 @@ export const useChat = (
     includeAnalysisInQuery,
   } = chatState
 
-  // Get content context from Zustand store
-  const { context: contentContext } = useContentContext()
+  // Content context is no longer used
+  const contentContext = null
 
   const [referencedMessage, setReferencedMessage] = useState<Message | null>(null)
   const [searchStatus, setSearchStatus] = useState<string>('')

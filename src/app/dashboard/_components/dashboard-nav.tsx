@@ -12,7 +12,6 @@ import { useSidebar } from '@/app/context/sidebar-context'
 import { getApiKey } from '@/app/lib/api-helpers'
 import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDialog'
 import { useAdminAuth } from '@/app/lib/admin-auth'
-import { usePlatformConnections } from '@/app/hooks/usePlatformConnections'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -42,26 +41,6 @@ const navItems = [
     href: '/dashboard/chat',
     dataAttr: 'data-chat-link',
     category: 'explore',
-  },
-  {
-    id: 'content-hub',
-    label: 'Content Hub',
-    description: 'Curated insights from your platforms',
-    icon: BarChart3,
-    href: '/dashboard/content-hub',
-    dataAttr: 'data-content-hub-link',
-    requiresConnection: 'instagram_or_youtube',
-    category: 'analyze',
-  },
-  {
-    id: 'partnerships',
-    label: 'Partnership Hub',
-    description: 'Meaningful collaborations await',
-    icon: Handshake,
-    href: '/dashboard/partnerships',
-    dataAttr: 'data-partnerships-link',
-    requiresConnection: 'gmail',
-    category: 'connect',
   },
 ]
 
@@ -103,21 +82,10 @@ export const DashboardNav = memo(function DashboardNav() {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   
-  // Get platform connections for conditional navigation
-  const platformConnections = usePlatformConnections();
 
-  // Build nav items based on user permissions and platform connections
+  // Build nav items based on user permissions
   const dynamicNavItems = [
-    ...navItems.filter(item => {
-      // Filter out items based on connection requirements
-      if (item.requiresConnection === 'gmail') {
-        return platformConnections.gmail;
-      }
-      if (item.requiresConnection === 'instagram_or_youtube') {
-        return platformConnections.instagram || platformConnections.youtube;
-      }
-      return true; // Show items without connection requirements
-    }),
+    ...navItems,
     // Only show admin to users with admin access
     ...(canAccessAdmin ? [{
       id: 'admin',
@@ -274,12 +242,6 @@ export const DashboardNav = memo(function DashboardNav() {
       case 'living-projects':
         // This tab is active for living projects and project discovery routes
         return pathname.startsWith('/dashboard/living-projects') || pathname.startsWith('/dashboard/project-discovery');
-      case 'content-hub':
-        // This tab is active for multiple, non-nested routes
-        return pathname.startsWith('/dashboard/content') || pathname.startsWith('/dashboard/ai-insights');
-      case 'partnerships':
-        // This tab is active for all its sub-routes
-        return pathname.startsWith('/dashboard/partnerships');
       case 'chat':
       case 'notes':
       case 'admin':

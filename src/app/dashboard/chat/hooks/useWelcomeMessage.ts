@@ -11,9 +11,9 @@ export function useWelcomeMessage(
 ) {
   const [welcomeStep, setWelcomeStep] = useState(0);
 
-  // Handle welcome message for users without a persona (onboarding)
+  // Handle welcome message for users without a persona (onboarding) - DISABLED
   useEffect(() => {
-    console.log('🔄 Welcome message effect:', {
+    console.log('🔄 Welcome message effect (onboarding disabled):', {
       hasPersona,
       isPersonaLoading,
       messagesLength: messages.length,
@@ -21,13 +21,12 @@ export function useWelcomeMessage(
       hasUser: !!user
     });
 
-    // Show onboarding if user doesn't have a persona and chat is empty
-    // Wait for both chat loading and persona loading to complete
-    if (hasPersona === false && !isPersonaLoading && messages.length === 0 && !isLoading && user) {
-      console.log('✅ Triggering welcome message for user without persona');
-      setWelcomeStep(0);
-      setMessages([getWelcomeStepMessage(0)]);
-    }
+    // Onboarding is now disabled - users will see ambient insights instead
+    // if (hasPersona === false && !isPersonaLoading && messages.length === 0 && !isLoading && user) {
+    //   console.log('✅ Triggering welcome message for user without persona');
+    //   setWelcomeStep(0);
+    //   setMessages([getWelcomeStepMessage(0)]);
+    // }
   }, [hasPersona, isPersonaLoading, messages.length, isLoading, setMessages, user]);
 
   // Modified handleSuggestionClick to send messages automatically

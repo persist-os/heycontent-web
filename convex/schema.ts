@@ -76,8 +76,6 @@ export default defineSchema({
       expMonth: v.number(),
       expYear: v.number()
     })),
-    // Gmail quota optimization
-    lastGmailFetch: v.optional(v.number()),
     // Email preferences
     emailUnsubscribed: v.optional(v.boolean()),
     // Referral statistics
@@ -108,27 +106,6 @@ export default defineSchema({
   })
   .index("by_userId", ["userId"]),
 
-  // Content Hub Insights
-  contentHubInsights: defineTable({
-    userId: v.string(),
-    insight: v.object({
-      remix_insight: v.string(),
-      youtube_hook: v.string(),
-      youtube_format: v.string(),
-      youtube_cta: v.string(),
-      instagram_hook: v.string(),
-      instagram_format: v.string(),
-      instagram_cta: v.string(),
-      gmail_hook: v.string(),
-      gmail_format: v.string(),
-      gmail_cta: v.string(),
-      smartnote_summary: v.string(),
-      conversation_starter: v.string(),
-    }),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_userId", ["userId"]),
 
   // Personas
   personas: defineTable({
@@ -258,9 +235,6 @@ export default defineSchema({
     description: v.optional(v.string()),
     noteIds: v.optional(v.array(v.string())),
     conversationIds: v.optional(v.array(v.string())),
-    instagramPostIds: v.optional(v.array(v.string())),
-    youtubeVideoIds: v.optional(v.array(v.string())),
-    gmailIds: v.optional(v.array(v.string())),
     analysisIds: v.optional(v.array(v.string())),
     fingerprintId: v.optional(v.id("project_fingerprints")), // Links to project fingerprint
     createdAt: v.number(),
@@ -293,507 +267,14 @@ export default defineSchema({
   })
   .index("by_user_resource", ["user_id", "resource"]),
 
-  // Gmail Tokens (from third schema)
-  gmailTokens: defineTable({
-    userId: v.string(),
-    accessToken: v.string(),
-    refreshToken: v.string(),
-    expiryDate: v.number(),
-    scope: v.string(),
-    lastRefreshed: v.number(),
-    tokenType: v.string(),
-  }).index("by_userId", ["userId"]),
 
-  // Gmail Account Info
-  gmailAccounts: defineTable({
-    userId: v.string(),
-    email: v.string(),
-    historyId: v.optional(v.string()),
-    messagesTotal: v.optional(v.number()),
-    threadsTotal: v.optional(v.number()),
-    labelsTotal: v.optional(v.union(v.number(), v.null())),
-    data: v.optional(v.any()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_userId", ["userId"])
-  .index("by_email", ["email"]),
 
-  // Gmail Threads
-  gmailThreads: defineTable({
-    userId: v.string(),
-    email: v.string(),
-    threadId: v.string(),
-    from: v.optional(v.string()),
-    subject: v.optional(v.string()),
-    snippet: v.optional(v.string()),
-    message_count: v.optional(v.number()),
-    messages: v.optional(v.array(v.object({
-      id: v.string(),
-      from: v.optional(v.string()),
-      subject: v.optional(v.string()),
-      snippet: v.optional(v.string()),
-      label_ids: v.optional(v.array(v.string())),
-    }))),
-    data: v.optional(v.any()),
-    analysis: v.optional(v.any()),
-    category: v.optional(v.union(
-      v.literal("partnership"),
-      v.literal("media"),
-      v.literal("business"),
-      v.literal("community"),
-      v.literal("none")
-    )),
-    spamStatus: v.optional(v.union(
-      v.literal('unreviewed'),
-      v.literal('flagged'),
-      v.literal('confirmed_spam'),
-      v.literal('not_spam')
-    )),
-    spamScore: v.optional(v.number()),
-    reviewedByUser: v.optional(v.boolean()),
-    reviewedAt: v.optional(v.number()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_userId", ["userId"])
-  .index("by_email", ["email"])
-  .index("by_threadId", ["threadId"])
-  .index("by_user_email", ["userId", "email"])
-  .index("by_category", ["category"])
-  .index("by_user_category", ["userId", "category"]),
 
-  // Gmail Messages
-  gmailMessages: defineTable({
-    userId: v.string(),
-    email: v.string(),
-    messageId: v.string(),
-    threadId: v.string(),
-    from: v.optional(v.string()),
-    subject: v.optional(v.string()),
-    snippet: v.optional(v.string()),
-    labelIds: v.optional(v.array(v.string())),
-    internalDate: v.optional(v.string()),
-    sizeEstimate: v.optional(v.number()),
-    historyId: v.optional(v.string()),
-    data: v.optional(v.any()),
-    category: v.optional(v.union(
-      v.literal("partnership"),
-      v.literal("media"),
-      v.literal("business"),
-      v.literal("community"),
-      v.literal("none")
-    )),
-    spamStatus: v.optional(v.union(
-      v.literal('unreviewed'),
-      v.literal('flagged'),
-      v.literal('confirmed_spam'),
-      v.literal('not_spam')
-    )),
-    spamScore: v.optional(v.number()),
-    reviewedByUser: v.optional(v.boolean()),
-    reviewedAt: v.optional(v.number()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_userId", ["userId"])
-  .index("by_email", ["email"])
-  .index("by_messageId", ["messageId"])
-  .index("by_threadId", ["threadId"])
-  .index("by_user_email", ["userId", "email"])
-  .index("by_category", ["category"])
-  .index("by_user_category", ["userId", "category"]),
 
-  // Gmail History
-  gmailHistory: defineTable({
-    userId: v.string(),
-    email: v.string(),
-    historyId: v.string(),
-    timestamp: v.optional(v.number()),
-    data: v.optional(v.any()),
-    createdAt: v.number(),
-  })
-  .index("by_userId", ["userId"])
-  .index("by_email", ["email"])
-  .index("by_historyId", ["historyId"])
-  .index("by_timestamp", ["timestamp"]),
 
-  // YouTube Tokens
-  youtubeTokens: defineTable({
-    userId: v.string(),
-    accessToken: v.string(),
-    refreshToken: v.string(),
-    expiryDate: v.number(),
-    scope: v.string(),
-    lastRefreshed: v.number(),
-  }).index("by_userId", ["userId"]),
 
-  // YouTube Channels
-  youtubeChannels: defineTable({
-    userId: v.string(),
-    analysis: v.optional(v.any()),
-    createdAt: v.float64(),
-    updatedAt: v.float64(),
-    id: v.string(),
-    snippet: v.optional(
-      v.object({
-        customUrl: v.optional(v.string()),
-        description: v.optional(v.string()),
-        localized: v.optional(
-          v.object({
-            description: v.optional(v.string()),
-            title: v.optional(v.string()),
-          })
-        ),
-        publishedAt: v.optional(v.string()),
-        thumbnails: v.optional(
-          v.object({
-            default: v.optional(
-              v.object({
-                height: v.optional(v.float64()),
-                url: v.optional(v.string()),
-                width: v.optional(v.float64()),
-              })
-            ),
-            high: v.optional(
-              v.object({
-                height: v.optional(v.float64()),
-                url: v.optional(v.string()),
-                width: v.optional(v.float64()),
-              })
-            ),
-            medium: v.optional(
-              v.object({
-                height: v.optional(v.float64()),
-                url: v.optional(v.string()),
-                width: v.optional(v.float64()),
-              })
-            ),
-          })
-        ),
-        title: v.optional(v.string()),
-      })
-    ),
-    statistics: v.optional(
-      v.object({
-        hiddenSubscriberCount: v.optional(v.boolean()),
-        subscriberCount: v.optional(v.string()),
-        videoCount: v.optional(v.string()),
-        viewCount: v.optional(v.string()),
-      })
-    ),
-    diffs: v.optional(v.array(v.object({
-      changedAt: v.number(),
-      changedFields: v.array(v.string()),
-      current: v.any(),
-      changeType: v.optional(v.string()),
-    })))
-  })
-  .index("by_userId", ["userId"])
-  .index("by_channelId", ["id"])
-  .index("by_publishedAt", ["snippet.publishedAt"]),
 
-  // YouTube Videos
-  youtubeVideos: defineTable({
-    userId: v.string(),
-    videoId: v.string(),
-    channelId: v.optional(v.string()),
-    id: v.optional(v.string()),
-    url: v.optional(v.string()),
-    analysis: v.optional(v.any()),
-    analysisMarkdown: v.optional(v.string()),
-    analytics: v.optional(v.any()),
-    public_stats: v.optional(v.any()),
-    snippet: v.optional(v.object({
-      title: v.optional(v.string()),
-      description: v.optional(v.string()),
-      published_at: v.optional(v.string()),
-      channel: v.optional(v.object({
-        id: v.optional(v.union(v.string(), v.null())),
-        title: v.optional(v.union(v.string(), v.null())),
-      })),
-      thumbnails: v.optional(v.object({
-        default: v.optional(v.union(v.string(), v.null())),
-        medium: v.optional(v.union(v.string(), v.null())),
-        high: v.optional(v.union(v.string(), v.null())),
-        standard: v.optional(v.union(v.string(), v.null())),
-        maxres: v.optional(v.union(v.string(), v.null())),
-      })),
-      tags: v.optional(v.array(v.string())),
-    })),
-    content_details: v.optional(v.object({
-      duration: v.optional(v.string()),
-      dimension: v.optional(v.string()),
-      definition: v.optional(v.string()),
-      has_captions: v.optional(v.boolean()),
-      is_live: v.optional(v.boolean()),
-    })),
-    statistics: v.optional(v.object({
-      views: v.optional(v.float64()),
-      likes: v.optional(v.float64()),
-      dislikes: v.optional(v.float64()),
-      comments: v.optional(v.float64()),
-    })),
-    status: v.optional(v.object({
-      privacyStatus: v.optional(v.string()),
-      uploadStatus: v.optional(v.string()),
-      embeddable: v.optional(v.boolean()),
-      license: v.optional(v.string()),
-      madeForKids: v.optional(v.boolean()),
-      selfDeclaredMadeForKids: v.optional(v.boolean()),
-      publicStatsViewable: v.optional(v.boolean()),
-    })),
-    captions: v.optional(v.object({
-      status: v.optional(v.string()),
-      message: v.optional(v.string()),
-      video_url: v.optional(v.string()),
-      caption_track: v.optional(v.object({
-        id: v.optional(v.string()),
-        format: v.optional(v.string()),
-        language: v.optional(v.string()),
-        name: v.optional(v.string()),
-        text: v.optional(v.string()),
-      })),
-      data: v.optional(v.any()),
-    })),
-    comments: v.optional(v.object({
-      status: v.optional(v.string()),
-      video_url: v.optional(v.string()),
-      message: v.optional(v.string()),
-      total_comments: v.optional(v.float64()),
-      top_level_comments: v.optional(v.float64()),
-      comments: v.optional(v.array(v.object({
-        id: v.optional(v.string()),
-        text: v.optional(v.string()),
-        published_at: v.optional(v.string()),
-        likes: v.optional(v.float64()),
-        replies: v.optional(v.float64()),
-        is_reply: v.optional(v.boolean()),
-        author: v.optional(v.object({
-          channel_id: v.optional(v.string()),
-          display_name: v.optional(v.string()),
-          profile_image: v.optional(v.string()),
-        })),
-      }))),
-    })),
-    createdAt: v.optional(v.float64()),
-    updatedAt: v.optional(v.float64()),
-    diffs: v.optional(v.array(v.object({
-      changedAt: v.number(),
-      changedFields: v.array(v.string()),
-      current: v.any(),
-      changeType: v.optional(v.string()),
-    })))
-  })
-  .index("by_userId", ["userId"])
-  .index("by_videoId", ["videoId"])
-  .index("by_channelId", ["snippet.channel.id"])
-  .index("by_publishedAt", ["snippet.published_at"])
-  .index("by_views", ["statistics.views"])
-  .index("by_likes", ["statistics.likes"]),
 
-  // Instagram Accounts (consolidated with tokens and insights)
-  instagramAccounts: defineTable({
-    age_breakdown: v.optional(
-      v.array(
-        v.object({ metric: v.string(), values: v.any() })
-      )
-    ),
-    city_breakdown: v.optional(
-      v.array(
-        v.object({ metric: v.string(), values: v.any() })
-      )
-    ),
-    contact_button_type_breakdown: v.optional(
-      v.array(
-        v.object({ metric: v.string(), values: v.any() })
-      )
-    ),
-    country_breakdown: v.optional(
-      v.array(
-        v.object({ metric: v.string(), values: v.any() })
-      )
-    ),
-    createdAt: v.optional(v.number()),
-    diffs: v.optional(
-      v.array(
-        v.object({
-          changeType: v.optional(v.string()),
-          changedAt: v.optional(v.number()),
-          changedFields: v.optional(v.array(v.string())),
-          current: v.optional(v.any()),
-        })
-      )
-    ),
-    follow_type_breakdown: v.optional(
-      v.array(
-        v.object({ metric: v.string(), values: v.any() })
-      )
-    ),
-    gender_breakdown: v.optional(
-      v.array(
-        v.object({ metric: v.string(), values: v.any() })
-      )
-    ),
-    insights: v.optional(v.any()),
-    instagramAccountId: v.optional(v.string()),
-    media_product_type_breakdown: v.optional(
-      v.array(
-        v.object({ metric: v.string(), values: v.any() })
-      )
-    ),
-    pagination: v.optional(
-      v.object({
-        hasMorePosts: v.optional(v.boolean()),
-        lastFetchedAt: v.optional(v.number()),
-        nextUrl: v.optional(v.union(v.string(), v.null())),
-        totalPostsFetched: v.optional(v.number()),
-      })
-    ),
-    profileData: v.optional(v.object({
-      account_type: v.optional(v.any()),
-      biography: v.optional(v.string()),
-      followers_count: v.optional(v.any()),
-      follows_count: v.optional(v.any()),
-      id: v.optional(v.string()),
-      media_count: v.optional(v.any()),
-      name: v.optional(v.string()),
-      profile_picture_url: v.optional(v.any()),
-      username: v.optional(v.string()),
-      website: v.optional(v.string()),
-    })),
-    token: v.optional(
-      v.object({
-        accessToken: v.optional(v.string()),
-        expiryDate: v.optional(v.number()),
-        lastRefreshed: v.optional(v.number()),
-        scope: v.optional(v.string()),
-      })
-    ),
-    updatedAt: v.optional(v.number()),
-    userId: v.optional(v.string()),
-    username: v.optional(v.string()),
-  })
-    .index("by_instagramAccountId", ["instagramAccountId"])
-    .index("by_userId", ["userId"])
-    .index("by_username", ["username"]),
-  // Unified Instagram Posts Table - Handles all media types (IMAGE, VIDEO, CAROUSEL_ALBUM, REELS)
-  instagramPosts: defineTable({
-    userId: v.optional(v.string()),
-    instagramAccountId: v.optional(v.string()),
-    postId: v.optional(v.string()),
-    mediaType: v.optional(v.union(
-      v.literal("IMAGE"),
-      v.literal("VIDEO"), 
-      v.literal("CAROUSEL_ALBUM"),
-      v.literal("REELS")
-    )),
-    data: v.optional(v.object({
-      // Core fields (common to all types)
-      id: v.optional(v.string()),
-      caption: v.optional(v.string()),
-      media_url: v.optional(v.string()),
-      permalink: v.optional(v.string()),
-      timestamp: v.optional(v.number()),
-      username: v.optional(v.string()),
-      like_count: v.optional(v.number()),
-      comments_count: v.optional(v.number()),
-      
-      // Type-specific fields (made optional since different media types have different fields)
-      thumbnail_url: v.optional(v.union(v.string(), v.null())), // For videos/reels only
-      children: v.optional(v.union(v.array(v.object({
-        id: v.optional(v.string()),
-        media_url: v.optional(v.string()),
-        media_type: v.optional(v.string()),
-        thumbnail_url: v.optional(v.union(v.string(), v.null()))
-      })), v.null())), // For carousels only
-      
-      // Embedded insights (flattened for easy access)
-      insights: v.optional(v.object({
-        impressions: v.optional(v.number()),
-        reach: v.optional(v.number()),
-        likes: v.optional(v.number()),
-        comments: v.optional(v.number()),
-        saved: v.optional(v.number()),
-        shares: v.optional(v.number()),
-        total_interactions: v.optional(v.number()),
-        profile_visits: v.optional(v.number()),
-        profile_activity: v.optional(v.number()),
-        views: v.optional(v.number()),
-        follows: v.optional(v.number()),
-        // Reels-specific insights
-        ig_reels_avg_watch_time: v.optional(v.number()),
-        ig_reels_video_view_total_time: v.optional(v.number()),
-        period: v.optional(v.string()),
-        timestamp: v.optional(v.number())
-      })),
-      
-      // Embedded comments (for recent/important ones)
-      comments: v.optional(v.array(v.object({
-        id: v.optional(v.string()),
-        text: v.optional(v.string()),
-        timestamp: v.optional(v.number()),
-        username: v.optional(v.string()),
-        like_count: v.optional(v.union(v.number(), v.null())),
-        replies: v.optional(v.array(v.object({
-          id: v.optional(v.string()),
-          text: v.optional(v.string()),
-          timestamp: v.optional(v.number()),
-          username: v.optional(v.string()),
-          like_count: v.optional(v.union(v.number(), v.null()))
-        })))
-      })))
-    })),
-    
-    // Analysis fields
-    analysis: v.optional(v.any()),
-    analysisMarkdown: v.optional(v.string()),
-    
-    createdAt: v.optional(v.number()),
-    updatedAt: v.optional(v.number()),
-    diffs: v.optional(v.array(v.object({
-      changedAt: v.optional(v.number()),
-      changedFields: v.optional(v.array(v.string())),
-      current: v.optional(v.any()),
-      changeType: v.optional(v.string()),
-    })))
-  })
-  .index("by_userId", ["userId"])
-  .index("by_instagramAccountId", ["instagramAccountId"])
-  .index("by_postId", ["postId"])
-  .index("by_mediaType", ["mediaType"])
-  .index("by_timestamp", ["data.timestamp"])
-  .index("by_user_account", ["userId", "instagramAccountId"]),
-
-  // Instagram Analysis Tables (keeping these for backward compatibility and specific analysis tracking)
-  instagramTrackerAnalysis: defineTable({
-    userId: v.string(),
-    instagramAccountId: v.string(),
-    analysis: v.any(),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-    diffs: v.optional(v.array(v.object({
-      changedAt: v.number(),
-      changedFields: v.array(v.string()),
-      current: v.any(),
-      changeType: v.optional(v.string()),
-    })))
-  })
-  .index("by_userId", ["userId"])
-  .index("by_account", ["instagramAccountId"]),
-
-  instagramBatchAnalysis: defineTable({
-    insights: v.optional(v.any()),
-    status: v.optional(v.any()),
-    createdAt: v.number(),
-    instagramAccountId: v.string(),
-    updatedAt: v.number(),
-    userId: v.string(),
-    analysisType: v.literal("batch"),
-  })
-    .index("by_account", ["instagramAccountId"])
-    .index("by_userId", ["userId"])
-    .index("by_user_account", ["userId", "instagramAccountId"]),
 
   // Usage Events
   usageEvents: defineTable({
@@ -815,31 +296,7 @@ export default defineSchema({
   .index("by_endpoint", ["endpoint"])
   .index("by_status", ["status"]),
 
-  // YouTube Batch Analysis
-  youtubeBatchAnalysis: defineTable({
-    insights: v.optional(v.any()),
-    status: v.optional(v.any()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-    userId: v.string(),
-    channelId: v.string(),
-    analysisType: v.literal("batch"),
-  })
-    .index("by_userId", ["userId"])
-    .index("by_user_channel", ["userId", "channelId"]),
 
-  // Gmail Batch Analysis
-  gmailBatchAnalysis: defineTable({
-    insights: v.optional(v.any()),
-    status: v.optional(v.any()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-    userId: v.string(),
-    gmailAccountId: v.string(),
-    analysisType: v.literal("batch"),
-  })
-    .index("by_userId", ["userId"])
-    .index("by_user_account", ["userId", "gmailAccountId"]),
 
   // Vector embeddings for search
   contentEmbeddings: defineTable({
@@ -847,11 +304,7 @@ export default defineSchema({
     contentId: v.string(), // ID of the original content (conversation, post, etc.)
     contentType: v.union(
       v.literal("conversation"),
-      v.literal("instagram_post"),
-      v.literal("youtube_video"),
-      v.literal("gmail_thread"),
-      v.literal("note"),
-      v.literal("insight")
+      v.literal("note")
     ),
     title: v.string(),
     content: v.string(),
@@ -868,142 +321,9 @@ export default defineSchema({
     filterFields: ["userId", "contentType"],
   }),
 
-  // Instagram Webhook Events
-  instagramWebhookEvents: defineTable({
-    userId: v.string(),
-    instagramAccountId: v.string(),
-    eventType: v.string(),
-    eventData: v.any(),
-    timestamp: v.number(),
-    processed: v.boolean(),
-    processedAt: v.optional(v.number()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_userId", ["userId"])
-  .index("by_processed", ["processed"])
-  .index("by_eventType", ["eventType"])
-  .index("by_user_account", ["userId", "instagramAccountId"]),
 
-  // Instagram Webhook Subscriptions
-  instagramWebhookSubscriptions: defineTable({
-    userId: v.string(),
-    instagramAccountId: v.string(),
-    subscribedFields: v.array(v.string()),
-    subscriptionStatus: v.string(),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_userId", ["userId"])
-  .index("by_user_account", ["userId", "instagramAccountId"]),
 
-  // Instagram Story Insights
-  instagramStoryInsights: defineTable({
-    userId: v.string(),
-    instagramAccountId: v.string(),
-    mediaId: v.string(),
-    insights: v.object({
-      impressions: v.optional(v.number()),
-      reach: v.optional(v.number()),
-      replies: v.optional(v.number()),
-      taps_forward: v.optional(v.number()),
-      taps_back: v.optional(v.number()),
-      exits: v.optional(v.number()),
-      profile_visits: v.optional(v.number()),
-      website_clicks: v.optional(v.number()),
-      follows: v.optional(v.number()),
-      shares: v.optional(v.number()),
-      saves: v.optional(v.number()),
-    }),
-    storyData: v.optional(v.object({
-      story_url: v.optional(v.string()),
-      story_type: v.optional(v.string()),
-      timestamp: v.optional(v.number()),
-      expires_at: v.optional(v.number()),
-    })),
-    webhookTimestamp: v.number(),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_userId", ["userId"])
-  .index("by_mediaId", ["mediaId"])
-  .index("by_user_account", ["userId", "instagramAccountId"])
-  .index("by_timestamp", ["webhookTimestamp"]),
 
-  // Instagram Posts Queue - Staging table for lazy loading
-  instagramPostsQueue: defineTable({
-    userId: v.optional(v.string()),
-    instagramAccountId: v.optional(v.string()),
-    postId: v.optional(v.string()),
-    mediaType: v.optional(v.union(
-      v.literal("IMAGE"),
-      v.literal("VIDEO"), 
-      v.literal("CAROUSEL_ALBUM"),
-      v.literal("REELS")
-    )),
-    data: v.optional(v.object({
-      // Core fields (common to all types)
-      id: v.optional(v.string()),
-      caption: v.optional(v.string()),
-      media_url: v.optional(v.string()),
-      permalink: v.optional(v.string()),
-      timestamp: v.optional(v.number()),
-      username: v.optional(v.string()),
-      like_count: v.optional(v.number()),
-      comments_count: v.optional(v.number()),
-      // Type-specific fields (made optional since different media types have different fields)
-      thumbnail_url: v.optional(v.union(v.string(), v.null())), // For videos/reels only
-      children: v.optional(v.union(v.array(v.object({
-        id: v.optional(v.string()),
-        media_url: v.optional(v.string()),
-        media_type: v.optional(v.string()),
-        thumbnail_url: v.optional(v.union(v.string(), v.null()))
-      })), v.null())), // For carousels only
-      // Embedded insights (flattened for easy access)
-      insights: v.optional(v.object({
-        impressions: v.optional(v.number()),
-        reach: v.optional(v.number()),
-        likes: v.optional(v.number()),
-        comments: v.optional(v.number()),
-        saved: v.optional(v.number()),
-        shares: v.optional(v.number()),
-        total_interactions: v.optional(v.number()),
-        profile_visits: v.optional(v.number()),
-        profile_activity: v.optional(v.number()),
-        views: v.optional(v.number()),
-        follows: v.optional(v.number()),
-        // Reels-specific insights
-        ig_reels_avg_watch_time: v.optional(v.number()),
-        ig_reels_video_view_total_time: v.optional(v.number()),
-        period: v.optional(v.string()),
-        timestamp: v.optional(v.number())
-      })),
-      // Embedded comments (for recent/important ones)
-      comments: v.optional(v.array(v.object({
-        id: v.optional(v.string()),
-        text: v.optional(v.string()),
-        timestamp: v.optional(v.number()),
-        username: v.optional(v.string()),
-        like_count: v.optional(v.union(v.number(), v.null())),
-        replies: v.optional(v.array(v.object({
-          id: v.optional(v.string()),
-          text: v.optional(v.string()),
-          timestamp: v.optional(v.number()),
-          username: v.optional(v.string()),
-          like_count: v.optional(v.union(v.number(), v.null()))
-        })))
-      })))
-    })),
-    // Analysis fields
-    analysis: v.optional(v.any()),
-    analysisMarkdown: v.optional(v.string()),
-    createdAt: v.optional(v.number()),
-    updatedAt: v.optional(v.number()),
-  })
-  .index("by_userId", ["userId"])
-  .index("by_instagramAccountId", ["instagramAccountId"])
-  .index("by_postId", ["postId"])
-  .index("by_user_account", ["userId", "instagramAccountId"]),
 
   // Embedding update tracking
   embeddingUpdates: defineTable({
@@ -1016,21 +336,13 @@ export default defineSchema({
       v.literal("content_update")
     ),
     platform: v.optional(v.union(
-      v.literal("instagram"),
-      v.literal("youtube"),
-      v.literal("gmail"),
       v.literal("conversations"),
       v.literal("notes"),
-      v.literal("insights"),
       v.literal("all")
     )),
     contentType: v.optional(v.union(
       v.literal("conversation"),
-      v.literal("instagram_post"),
-      v.literal("youtube_video"),
-      v.literal("gmail_thread"),
-      v.literal("note"),
-      v.literal("insight")
+      v.literal("note")
     )),
     contentId: v.optional(v.string()),
     itemsProcessed: v.optional(v.number()),
@@ -1047,12 +359,8 @@ export default defineSchema({
     userId: v.string(),
     contentId: v.string(), // Standardized format: platform:actualId
     platform: v.union(
-      v.literal("youtube"),
-      v.literal("instagram"),
-      v.literal("gmail"),
       v.literal("notes"),
-      v.literal("conversations"),
-      v.literal("insights")
+      v.literal("conversations")
     ),
     changeType: v.union(
       v.literal("created"),

@@ -15,16 +15,17 @@ import {
   Plus,
   Minus,
   MessageCircle,
-  Lightbulb,
-  CheckCircle
+  CheckCircle,
+  Eye,
+  Heart
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Unified content item interface using the platform router
 interface UnifiedContentItem {
   id: string; // Standardized format: platform:actualId
-  platform: 'youtube' | 'instagram' | 'gmail' | 'notes' | 'conversations' | 'insights';
-  contentType: 'youtube_video' | 'instagram_post' | 'gmail_thread' | 'note' | 'conversation' | 'insight';
+  platform: 'notes' | 'conversations';
+  contentType: 'note' | 'conversation';
   title: string;
   content: string;
   metadata: {
@@ -77,12 +78,6 @@ const PLATFORM_CONFIGS = {
     label: 'Chats',
     icon: MessageCircle,
     color: 'bg-green-500/10 text-green-600 dark:text-green-400'
-  },
-  insights: {
-    key: 'insights',
-    label: 'Insights',
-    icon: Lightbulb,
-    color: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400'
   }
 } as const;
 
@@ -255,27 +250,11 @@ export const UnifiedContentSelector: React.FC<UnifiedContentSelectorProps> = ({
             <span>{new Date(item.metadata.createdAt).toLocaleDateString()}</span>
             
             {/* Platform-specific metadata */}
-            {item.platform === 'gmail' && item.metadata.messageCount && (
+            {item.platform === 'conversations' && item.metadata.messageCount && (
               <>
                 <span>•</span>
                 <MessageCircle className="w-3 h-3" />
                 <span>{item.metadata.messageCount} messages</span>
-              </>
-            )}
-            
-            {item.platform === 'youtube' && item.metadata.statistics?.views && (
-              <>
-                <span>•</span>
-                <Eye className="w-3 h-3" />
-                <span>{item.metadata.statistics.views} views</span>
-              </>
-            )}
-            
-            {item.platform === 'instagram' && item.metadata.statistics?.likes && (
-              <>
-                <span>•</span>
-                <Heart className="w-3 h-3" />
-                <span>{item.metadata.statistics.likes} likes</span>
               </>
             )}
           </div>

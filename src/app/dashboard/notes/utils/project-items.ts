@@ -36,16 +36,10 @@ export function extractRawId(unifiedId: string): string {
 export function convertToAttachableItems(
   notes: any[],
   conversations: any[],
-  instagramPosts: any[], // Keep params for backward compatibility but won't use
-  youtubeVideos: any[], // Keep params for backward compatibility but won't use
-  gmailContent: any[], // Keep params for backward compatibility but won't use
   analysisContent: any[],
   project?: {
     noteIds?: string[];
     conversationIds?: string[];
-    instagramPostIds?: string[]; // Keep for backward compatibility but won't use
-    youtubeVideoIds?: string[]; // Keep for backward compatibility but won't use
-    gmailIds?: string[]; // Keep for backward compatibility but won't use
     analysisIds?: string[];
   }
 ): AttachableItem[] {
@@ -83,31 +77,13 @@ export function convertToAttachableItems(
 
   // Social media platforms removed - no longer processing Instagram, YouTube, or Gmail content
 
-  // Add analysis content
-  (analysisContent || []).forEach(analysis => {
-    // For analysis items, we use the full insight ID (e.g., "insight:youtube:abc123:0")
-    // not the extracted raw ID, since these are synthetic IDs
-    const fullId = String(analysis.id);
-    items.push({
-      id: fullId,
-      type: 'analysis',
-      title: analysis.title || 'Analysis Report',
-      preview: analysis.summary?.substring(0, 100) || analysis.content?.substring(0, 100),
-      date: analysis.createdAt || 0,
-      data: analysis,
-      isAttached: project?.analysisIds?.includes(fullId) || false,
-    });
-  });
   
-  console.log('=== CONTENT DEBUG ===');
-  console.log('analysisContent:', analysisContent?.slice(0, 2));
   
   // Debug project data
   if (project) {
     console.log('=== PROJECT DEBUG ===');
     console.log('Project ID:', project._id);
     console.log('Project noteIds:', project.noteIds);
-    console.log('Project analysisIds:', project.analysisIds);
   }
 
   return items;
@@ -171,28 +147,15 @@ export function processAnalysisData(item: AttachableItem): ProcessedPlatformData
     type: data.type || data.analysisType || 'general',
     status: data.status || 'completed',
     summary: data.summary || data.description || item.preview,
-    metrics: data.metrics || data.insights || {},
+    metrics: data.metrics || {},
     timestamp: data.createdAt || data.completedAt || item.date,
   };
 }
 
-// Get category color for Gmail
-export function getGmailCategoryColor(category: string) {
-  switch (category) {
-    case 'partnership': return 'text-purple-500';
-    case 'media': return 'text-blue-500';
-    case 'business': return 'text-green-500';
-    case 'community': return 'text-orange-500';
-    default: return 'text-gray-500';
-  }
-}
 
 // Get analysis type color
 export function getAnalysisTypeColor(type: string) {
   switch (type) {
-    case 'instagram': return 'text-pink-500';
-    case 'youtube': return 'text-red-500';
-    case 'gmail': return 'text-blue-500';
     case 'audience': return 'text-green-500';
     case 'performance': return 'text-purple-500';
     default: return 'text-indigo-500';

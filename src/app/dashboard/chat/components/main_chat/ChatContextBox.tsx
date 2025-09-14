@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Instagram, Mail, X, ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
-import { YouTubeBrandIcon } from '../../../../../lib/YoutubeBrandIcon';
 
 interface ChatContextBoxProps {
   currentContext: any;
@@ -47,15 +46,9 @@ const ChatContextBox: React.FC<ChatContextBoxProps> = ({
     switch (currentContext.platform) {
       case 'youtube':
         return {
-          icon: <YouTubeBrandIcon href="https://youtube.com/" className="w-4 h-4" />,
+          icon: null,
           name: 'YouTube',
           contentType: 'video'
-        };
-      case 'instagram':
-        return {
-          icon: <Instagram className="w-4 h-4 text-pink-500" />,
-          name: 'Instagram',
-          contentType: 'post'
         };
       case 'gmail':
         return {
@@ -79,8 +72,6 @@ const ChatContextBox: React.FC<ChatContextBoxProps> = ({
     switch (currentContext.platform) {
       case 'youtube':
         return `https://www.youtube.com/watch?v=${currentContext.contentId}`;
-      case 'instagram':
-        return currentContext.permalink || `https://www.instagram.com/p/${currentContext.contentId}`;
       case 'gmail':
         return null; // Gmail doesn't have external links
       default:
@@ -110,8 +101,6 @@ const ChatContextBox: React.FC<ChatContextBoxProps> = ({
                     `From ${currentContext.content.messages[0].from}`}
                   {currentContext.platform === 'youtube' && currentContext.content?.channelTitle && 
                     `By ${currentContext.content.channelTitle}`}
-                  {currentContext.platform === 'instagram' && currentContext.content?.username && 
-                    `@${currentContext.content.username}`}
                 </p>
               )}
             </div>
@@ -186,16 +175,6 @@ const ChatContextBox: React.FC<ChatContextBoxProps> = ({
                 </>
               )}
 
-              {currentContext.platform === 'instagram' && (
-                <>
-                  {currentContext.content?.username && (
-                    <span>@{currentContext.content.username}</span>
-                  )}
-                  {currentContext.content?.timestamp && (
-                    <span>{new Date(currentContext.content.timestamp).toLocaleDateString()}</span>
-                  )}
-                </>
-              )}
 
               {/* External link */}
               {externalLink && (
@@ -219,11 +198,7 @@ const ChatContextBox: React.FC<ChatContextBoxProps> = ({
                   <img
                     src={currentContext.thumbnailUrl}
                     alt="Content preview"
-                    className={`rounded object-cover ${
-                      currentContext.platform === 'instagram' 
-                        ? 'w-64 h-64' 
-                        : 'w-80 h-48'
-                    }`}
+                    className="rounded object-cover w-80 h-48"
                   />
                 </div>
               )}
@@ -282,15 +257,6 @@ const ChatContextBox: React.FC<ChatContextBoxProps> = ({
                     </div>
                   )}
 
-                  {/* Instagram content */}
-                  {currentContext.platform === 'instagram' && currentContext.content?.caption && (
-                    <div className="bg-muted/20 rounded-lg p-4">
-                      <h5 className="font-medium text-foreground mb-3">Caption</h5>
-                      <div className="text-sm text-muted-foreground max-h-48 overflow-y-auto leading-relaxed">
-                        {currentContext.content.caption}
-          </div>
-        </div>
-      )}
 
                   {/* Insights content - removed "Analysis" label */}
                   {currentContext.analysis && (

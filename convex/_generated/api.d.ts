@@ -21,7 +21,6 @@ import type * as auth from "../auth.js";
 import type * as chatMutations from "../chatMutations.js";
 import type * as chatQueries from "../chatQueries.js";
 import type * as contentAccessHelpers from "../contentAccessHelpers.js";
-import type * as contentHub from "../contentHub.js";
 import type * as contentSharingMutations from "../contentSharingMutations.js";
 import type * as contentSharingQueries from "../contentSharingQueries.js";
 import type * as conversationSummariesMutations from "../conversationSummariesMutations.js";
@@ -36,11 +35,7 @@ import type * as folderMutations from "../folderMutations.js";
 import type * as folderQueries from "../folderQueries.js";
 import type * as friendshipMutations from "../friendshipMutations.js";
 import type * as friendshipQueries from "../friendshipQueries.js";
-import type * as gmailMutations from "../gmailMutations.js";
-import type * as gmailQueries from "../gmailQueries.js";
 import type * as http from "../http.js";
-import type * as instagramMutations from "../instagramMutations.js";
-import type * as instagramQueries from "../instagramQueries.js";
 import type * as internal_ from "../internal.js";
 import type * as noteMutations from "../noteMutations.js";
 import type * as noteQueries from "../noteQueries.js";
@@ -70,8 +65,6 @@ import type * as userActions from "../userActions.js";
 import type * as userMutations from "../userMutations.js";
 import type * as userQueries from "../userQueries.js";
 import type * as vectorSearch from "../vectorSearch.js";
-import type * as youtubeMutations from "../youtubeMutations.js";
-import type * as youtubeQueries from "../youtubeQueries.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -90,7 +83,6 @@ declare const fullApi: ApiFromModules<{
   chatMutations: typeof chatMutations;
   chatQueries: typeof chatQueries;
   contentAccessHelpers: typeof contentAccessHelpers;
-  contentHub: typeof contentHub;
   contentSharingMutations: typeof contentSharingMutations;
   contentSharingQueries: typeof contentSharingQueries;
   conversationSummariesMutations: typeof conversationSummariesMutations;
@@ -105,11 +97,7 @@ declare const fullApi: ApiFromModules<{
   folderQueries: typeof folderQueries;
   friendshipMutations: typeof friendshipMutations;
   friendshipQueries: typeof friendshipQueries;
-  gmailMutations: typeof gmailMutations;
-  gmailQueries: typeof gmailQueries;
   http: typeof http;
-  instagramMutations: typeof instagramMutations;
-  instagramQueries: typeof instagramQueries;
   internal: typeof internal_;
   noteMutations: typeof noteMutations;
   noteQueries: typeof noteQueries;
@@ -139,8 +127,6 @@ declare const fullApi: ApiFromModules<{
   userMutations: typeof userMutations;
   userQueries: typeof userQueries;
   vectorSearch: typeof vectorSearch;
-  youtubeMutations: typeof youtubeMutations;
-  youtubeQueries: typeof youtubeQueries;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,

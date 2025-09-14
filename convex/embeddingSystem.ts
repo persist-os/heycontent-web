@@ -103,111 +103,13 @@ export const syncEmbeddingsOnHeartbeat = action({
         }
       }
 
-      // Instagram Posts
-      const instagramPosts = await ctx.runQuery(api.instagramQueries.getAllInstagramPosts, { userId });
-      for (const post of instagramPosts) {
-        const contentId = `instagram:${post.postId}`;
-        if (!existingEmbeddingIds.has(contentId)) {
-          try {
-            const content = post.data?.caption || post.title || 'Instagram Post';
-            
-            // Skip Instagram posts with empty content
-            if (!content || !content.trim()) {
-              console.warn('⚠️ [EMBEDDING] Skipping Instagram post with empty content:', post._id);
-              results.errors.push(`Skipped Instagram post with empty content: ${post._id}`);
-              continue;
-            }
-            
-            await ctx.runAction(api.vectorSearch.autoCreateEmbedding, {
-              userId,
-              contentId,
-              contentType: 'instagram_post',
-              title: post.title || 'Instagram Post',
-              content: content,
-              triggerType: 'automatic_update',
-              platform: 'instagram'
-            });
-            results.created++;
-          } catch (error) {
-            results.errors.push(`Failed to create Instagram embedding: ${error instanceof Error ? error.message : 'Unknown error'}`);
-          }
-        }
-      }
 
-      // YouTube Videos
-      const youtubeResult = await ctx.runQuery(api.youtubeQueries.getYouTubeVideos, { userId, limit: 1000 });
-      const youtubeVideos = youtubeResult.videos || youtubeResult.page || [];
-      for (const video of youtubeVideos) {
-        const contentId = `youtube:${video.videoId}`;
-        if (!existingEmbeddingIds.has(contentId)) {
-          try {
-            const content = (video.snippet?.title || 'YouTube Video') + '\n\n' + (video.snippet?.description || '');
-            
-            // Skip YouTube videos with empty content
-            if (!content || !content.trim()) {
-              console.warn('⚠️ [EMBEDDING] Skipping YouTube video with empty content:', video._id);
-              results.errors.push(`Skipped YouTube video with empty content: ${video._id}`);
-              continue;
-            }
-            
-            await ctx.runAction(api.vectorSearch.autoCreateEmbedding, {
-              userId,
-              contentId,
-              contentType: 'youtube_video',
-              title: video.snippet?.title || 'YouTube Video',
-              content: content,
-              triggerType: 'automatic_update',
-              platform: 'youtube'
-            });
-            results.created++;
-          } catch (error) {
-            results.errors.push(`Failed to create YouTube embedding: ${error instanceof Error ? error.message : 'Unknown error'}`);
-          }
-        }
-      }
 
-      // Gmail Threads
-      const gmailResult = await ctx.runQuery(api.gmailQueries.getGmailThreadsPaginated, { 
-        userId, 
-        paginationOpts: { numItems: 1000, cursor: null }
-      });
-      const gmailThreads = gmailResult.page || [];
-      for (const thread of gmailThreads) {
-        const contentId = `gmail:${thread.threadId}`;
-        if (!existingEmbeddingIds.has(contentId)) {
-          try {
-            const content = (thread.subject || thread.data?.subject || 'No Subject') + '\n\n' + (thread.snippet || thread.data?.snippet || '');
-            
-            // Skip Gmail threads with empty content
-            if (!content || !content.trim()) {
-              console.warn('⚠️ [EMBEDDING] Skipping Gmail thread with empty content:', thread._id);
-              results.errors.push(`Skipped Gmail thread with empty content: ${thread._id}`);
-              continue;
-            }
-            
-            await ctx.runAction(api.vectorSearch.autoCreateEmbedding, {
-              userId,
-              contentId,
-              contentType: 'gmail_thread',
-              title: thread.subject || thread.data?.subject || 'Gmail Thread',
-              content: content,
-              triggerType: 'automatic_update',
-              platform: 'gmail'
-            });
-            results.created++;
-          } catch (error) {
-            results.errors.push(`Failed to create Gmail embedding: ${error instanceof Error ? error.message : 'Unknown error'}`);
-          }
-        }
-      }
 
       // 3. Clean up orphaned embeddings (embeddings without corresponding content)
       const allContentIds = new Set([
         ...notes.map(n => `notes:${n._id}`),
-        ...conversations.map(c => `conversations:${c._id}`),
-        ...instagramPosts.map(p => `instagram:${p.postId}`),
-        ...youtubeVideos.map(v => `youtube:${v.videoId}`),
-        ...gmailThreads.map(t => `gmail:${t.threadId}`)
+        ...conversations.map(c => `conversations:${c._id}`)
       ]);
 
       for (const embedding of existingEmbeddings) {

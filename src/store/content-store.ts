@@ -63,10 +63,6 @@ export const useContentStore = create<ContentStoreState>()(
         set({ 
           loading: {
             notes: true,
-            youtube: true,
-            instagram: true,
-            gmail: true,
-            insights: true,
             conversations: true,
           },
           errors: initialPlatformErrorState,
@@ -77,10 +73,6 @@ export const useContentStore = create<ContentStoreState>()(
           // Initialize all platforms in parallel
           await Promise.all([
             get().initializePlatform(userId, 'notes', convex),
-            get().initializePlatform(userId, 'youtube', convex),
-            get().initializePlatform(userId, 'instagram', convex),
-            get().initializePlatform(userId, 'gmail', convex),
-            get().initializePlatform(userId, 'insights', convex),
             get().initializePlatform(userId, 'conversations', convex),
           ]);
 
@@ -88,25 +80,15 @@ export const useContentStore = create<ContentStoreState>()(
           const currentState = get();
           const allContent = [
             ...currentState.content.notes.items,
-            ...currentState.content.youtube.items,
-            ...currentState.content.instagram.items,
-            ...currentState.content.gmail.items,
-            ...currentState.content.insights.items,
             ...currentState.content.conversations.items,
           ];
 
-          // Debug logging for Gmail content
+          // Debug logging for content
           if (process.env.NODE_ENV === 'development') {
-            console.log('🚀 [CONTENT STORE] Gmail content debug:', {
-              gmailItemsCount: currentState.content.gmail.items.length,
-              gmailItems: currentState.content.gmail.items.slice(0, 3).map(item => ({
-                id: item.id,
-                title: item.title,
-                type: item.type,
-                platform: item.platform
-              })),
-              allContentGmailCount: allContent.filter(item => item.id?.startsWith('gmail:')).length,
-              allContentGmailIds: allContent.filter(item => item.id?.startsWith('gmail:')).map(item => item.id).slice(0, 5)
+            console.log('🚀 [CONTENT STORE] Content debug:', {
+              notesCount: currentState.content.notes.items.length,
+              conversationsCount: currentState.content.conversations.items.length,
+              totalContent: allContent.length
             });
           }
 
@@ -123,10 +105,7 @@ export const useContentStore = create<ContentStoreState>()(
             console.log('🚀 [CONTENT STORE] ⚡ initializeContent COMPLETED in:', Math.round(totalTime), 'ms');
             console.log('🚀 [CONTENT STORE] Content summary:', {
               notes: currentState.content.notes.items.length,
-              youtube: currentState.content.youtube.items.length,
-              instagram: currentState.content.instagram.items.length,
-              gmail: currentState.content.gmail.items.length,
-              insights: currentState.content.insights.items.length,
+              conversations: currentState.content.conversations.items.length,
               total: allContent.length,
             });
           }
@@ -139,10 +118,7 @@ export const useContentStore = create<ContentStoreState>()(
             loading: initialPlatformLoadingState,
             errors: {
               notes: error instanceof Error ? error.message : 'Failed to load content',
-              youtube: error instanceof Error ? error.message : 'Failed to load content',
-              instagram: error instanceof Error ? error.message : 'Failed to load content',
-              gmail: error instanceof Error ? error.message : 'Failed to load content',
-              insights: error instanceof Error ? error.message : 'Failed to load content',
+              conversations: error instanceof Error ? error.message : 'Failed to load content',
             },
           });
         }
@@ -272,10 +248,7 @@ export const useContentStore = create<ContentStoreState>()(
           const updatedState = get();
           const allContent = [
             ...updatedState.content.notes.items,
-            ...updatedState.content.youtube.items,
-            ...updatedState.content.instagram.items,
-            ...updatedState.content.gmail.items,
-            ...updatedState.content.insights.items,
+            ...updatedState.content.conversations.items,
           ];
 
           set({ allContent });
@@ -316,10 +289,6 @@ export const useContentStore = create<ContentStoreState>()(
         set({ 
           loading: {
             notes: true,
-            youtube: true,
-            instagram: true,
-            gmail: true,
-            insights: true,
             conversations: true,
           },
           errors: initialPlatformErrorState,
@@ -345,10 +314,7 @@ export const useContentStore = create<ContentStoreState>()(
             loading: initialPlatformLoadingState,
             errors: {
               notes: error instanceof Error ? error.message : 'Failed to refresh content',
-              youtube: error instanceof Error ? error.message : 'Failed to refresh content',
-              instagram: error instanceof Error ? error.message : 'Failed to refresh content',
-              gmail: error instanceof Error ? error.message : 'Failed to refresh content',
-              insights: error instanceof Error ? error.message : 'Failed to refresh content',
+              conversations: error instanceof Error ? error.message : 'Failed to refresh content',
             },
           });
         }
@@ -370,10 +336,6 @@ export const useContentStore = create<ContentStoreState>()(
         const updatedState = get();
         const allContent = [
           ...updatedState.content.notes.items,
-          ...updatedState.content.youtube.items,
-          ...updatedState.content.instagram.items,
-          ...updatedState.content.gmail.items,
-          ...updatedState.content.insights.items,
           ...updatedState.content.conversations.items,
         ];
 
@@ -425,21 +387,9 @@ export const useContentStore = create<ContentStoreState>()(
             result = state.content.notes.items;
             break;
           
-          case 'youtube':
-            result = state.content.youtube.items;
-            break;
-          
-          case 'instagram':
-            result = state.content.instagram.items;
-            break;
-          
-          case 'gmail':
-            result = state.content.gmail.items;
-            break;
-          
-          case 'insights':
-          case 'ai-insights':
-            result = state.content.insights.items;
+          case 'conversations':
+          case 'chat':
+            result = state.content.conversations.items;
             break;
           
           case 'all':
