@@ -762,7 +762,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             />
           )}
         {/* Main Content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className={`flex-1 flex flex-col overflow-hidden ${isMobile ? 'pt-6' : ''}`}>
           {/* Mobile Tab Bar */}
           {isMobile && (
             <MobileTabBar
@@ -857,33 +857,36 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
               </div>
             )
           ) : (
-            // Ambient insights - only show for users with personas
-            hasPersona ? (
-              <div className="flex-1 flex flex-col">
-                <AmbientInsightsContainer 
-                  userId={authData.userId}
-                  handleSendMessage={(msg, context) => {
-                    handleNewChat();
-                    setTimeout(() => {
-                      if (context) clearContentContext();
-                      handleSendMessageWithUpdateCheck(msg);
-                    }, 0);
-                  }}
-                />
-              </div>
-            ) : (
-              // For users without personas, show empty state but welcome message should populate messages
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center space-y-4">
-                  <div className="flex flex-col items-center space-y-3">
-                    <div className={`h-12 w-12 rounded-full ${themeColors.accentBgLight} animate-pulse`}></div>
-                    <div className="space-y-2">
-                      <div className={`h-4 w-48 ${themeColors.accentBgLight} rounded animate-pulse`}></div>
-                      <div className={`h-3 w-32 ${themeColors.accentBgLight} rounded animate-pulse`}></div>
+            // Don't show ambient insights when on mobile notes tab
+            !(isMobile && activeTab === 'notes') && (
+              // Ambient insights - only show for users with personas
+              hasPersona ? (
+                <div className="flex-1 flex flex-col">
+                  <AmbientInsightsContainer 
+                    userId={authData.userId}
+                    handleSendMessage={(msg, context) => {
+                      handleNewChat();
+                      setTimeout(() => {
+                        if (context) clearContentContext();
+                        handleSendMessageWithUpdateCheck(msg);
+                      }, 0);
+                    }}
+                  />
+                </div>
+              ) : (
+                // For users without personas, show empty state but welcome message should populate messages
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center space-y-4">
+                    <div className="flex flex-col items-center space-y-3">
+                      <div className={`h-12 w-12 rounded-full ${themeColors.accentBgLight} animate-pulse`}></div>
+                      <div className="space-y-2">
+                        <div className={`h-4 w-48 ${themeColors.accentBgLight} rounded animate-pulse`}></div>
+                        <div className={`h-3 w-32 ${themeColors.accentBgLight} rounded animate-pulse`}></div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )
             )
           )}
 
