@@ -225,6 +225,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
               )}
               
               <input
+                title="Upload screenshots"
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
@@ -248,6 +249,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                           className="w-full h-32 object-cover rounded-md border"
                         />
                         <button
+                          title="Remove screenshot"
                           onClick={() => removeScreenshot(index)}
                           className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                         >
@@ -269,6 +271,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                 <span className="text-sm text-red-700">{error}</span>
               </div>
               <button
+                title="Close"
                 onClick={() => setError(null)}
                 className="text-red-500 hover:text-red-700 transition-colors"
               >

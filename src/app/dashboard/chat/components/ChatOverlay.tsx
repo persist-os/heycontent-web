@@ -1,11 +1,6 @@
 "use client";
 
 import React from 'react';
-import { YouTubeOverlay } from '@/components/content/overlays/YouTubeOverlay';
-import { InstagramOverlay } from '@/components/content/overlays/InstagramOverlay';
-import { GmailOverlay } from '@/components/content/overlays/GmailOverlay';
-import { InsightOverlay } from '@/components/content/overlays/InsightOverlay';
-import { InsightCard } from '@/components/content/InsightCard';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -13,7 +8,7 @@ import { NoteContentRenderer } from '@/app/dashboard/notes/components/NoteConten
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 
 interface ChatOverlayProps {
-  contentType: 'youtube' | 'instagram' | 'gmail' | 'insight' | 'note' | 'smart_note';
+  contentType: 'note' | 'smart_note';
   contentId: string;
   onClose: () => void;
   insightData?: any;
@@ -35,7 +30,7 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
     : contentId;
 
   const note = useQuery(
-    api.notes.getNote,
+    api.noteQueries.getNote,
     (contentType === 'note' || contentType === 'smart_note') ? { noteId: actualNoteId, userId } : 'skip'
   );
 
@@ -67,32 +62,6 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
 
   const chatId = searchParams.get('id');
 
-  // Render functions for each content type
-  const renderYouTubeOverlay = () => (
-    <YouTubeOverlay
-      videoId={contentId}
-      onClose={onClose}
-      showAnalysis={true}
-    />
-  );
-
-  const renderInstagramOverlay = () => (
-    <InstagramOverlay
-      postId={contentId}
-      onClose={onClose}
-      showAnalysis={true}
-      hideDiscussButton={true}
-    />
-  );
-
-  const renderGmailOverlay = () => (
-    <GmailOverlay
-      threadId={contentId}
-      onClose={onClose}
-      showAnalysis={true}
-    />
-  );
-
   const renderInsightOverlay = () => {
     if (insightData) {
       return (
@@ -123,16 +92,6 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
                   </button>
                 </div>
               </div>
-            </div>
-            <div className="max-w-7xl mx-auto p-6 overflow-y-auto flex-1">
-              <InsightCard
-                {...insightData}
-                expanded={true}
-                showAnalysis={true}
-                onDiscuss={(content: string, title: string) => {
-                  console.log('Discuss insight:', { content, title });
-                }}
-              />
             </div>
           </div>
         </div>
@@ -300,14 +259,6 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
 
   // Render based on content type
   switch (contentType) {
-    case 'youtube':
-      return renderYouTubeOverlay();
-    case 'instagram':
-      return renderInstagramOverlay();
-    case 'gmail':
-      return renderGmailOverlay();
-    case 'insight':
-      return renderInsightOverlay();
     case 'note':
     case 'smart_note':
       return renderNoteOverlay();

@@ -72,7 +72,7 @@ export function useSubscriptionCheck(requiredPlan: SubscriptionPlan = 'free') {
               }
             }
           } catch (backendError) {
-            console.warn('Backend subscription check failed, using Convex data:', backendError);
+            // Backend subscription check failed, using Convex data
           }
           
           // No subscription data means user is NOT subscribed
@@ -98,7 +98,7 @@ export function useSubscriptionCheck(requiredPlan: SubscriptionPlan = 'free') {
           includedRequests: subscriptionData.includedRequests,
           usedRequests: subscriptionData.usedRequests
         };
-                
+        
         setSubscriptionStatus(status);
         
         // Set the base subscription status first
@@ -120,7 +120,6 @@ export function useSubscriptionCheck(requiredPlan: SubscriptionPlan = 'free') {
         // Note: Redirect logic is handled by the dashboard layout, not here
         // This prevents conflicts between modal display and page redirects
       } catch (err) {
-        console.error('Error checking subscription:', err);
         const errorMessage = err instanceof Error ? err.message : 'Failed to check subscription status';
         setError(errorMessage);
         // On error, for non-free plans, we'll assume they need to subscribe

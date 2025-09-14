@@ -6,7 +6,7 @@ import { useNotes } from '@/app/context/notes-context'
 import { useCreateNote } from '@/app/dashboard/notes/hooks/useCreateNote'
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
-import type { Note, NoteUpdate } from '../../../../notes/types'
+import type { Note, NoteUpdate } from '../../../../notes/types/index'
 import type { Id } from "@/convex/_generated/dataModel"
 import type { LexicalNotepadEditorRef } from '@/components/ui/lexical-editor/LexicalNotepadEditor'
 import type { NotepadState, NotepadRefs } from '../types'
@@ -30,29 +30,39 @@ export function useNotepadState({
   const { notes, generateMetadataManually, isGeneratingMetadata, updateNote } = useNotes()
   const { createNote, isCreating } = useCreateNote()
 
-  // State management
+  // State management - SIMPLIFIED to remove cascading re-renders
   const [isEditingTitle, setIsEditingTitle] = useState(false)
-  const [isNewNote, setIsNewNote] = useState(!noteId)
-  const [currentNoteId, setCurrentNoteId] = useState<string | Id<"notes"> | null>(noteId || null)
   const [content, setContent] = useState('')
   const [refinementPreview, setRefinementPreview] = useState<string | null>(null)
   const [isRefining, setIsRefining] = useState(false)
+  
+  // Internal state for note management (controlled by handlers, not props)
+  const [isNewNote, setIsNewNote] = useState(!noteId)
+  const [currentNoteId, setCurrentNoteId] = useState<string | Id<"notes"> | null>(noteId || null)
+  
+  // REMOVED: Problematic state sync effect that caused cascading switches
 
   // Refs
   const sidebarRef = useRef<HTMLDivElement>(null)
   const lexicalEditorRef = useRef<LexicalNotepadEditorRef>(null)
   const metadataGenerationInProgress = useRef(false)
 
-  // Fetch existing note if editing
-  const existingNote = useQuery(
-    api.notes.getNote, 
+  // Fetch existing note if editing (with proper shared note support and permissions)
+  const noteWithPermissions = useQuery(
+    api.noteQueries.getNoteWithPermissions, 
     currentNoteId && !isNewNote
       ? {
-          noteId: currentNoteId as Id<"notes">, 
+          noteId: currentNoteId as string, 
           userId: firebaseUser?.uid || ''
         }
       : "skip"
   )
+
+  // Extract note and permission info
+  const existingNote = noteWithPermissions?.note || null
+  const notePermission = noteWithPermissions?.permission || null
+  const isReadOnly = noteWithPermissions?.isReadOnly || false
+  
 
   // Create a note object for components that expect it
   const note: Note = useMemo(() => {
@@ -80,12 +90,14 @@ export function useNotepadState({
     }
   }, [existingNote, isNewNote, content, currentNoteId, firebaseUser?.uid])
 
-  // Initialize content from existing note
+  // Initialize content from existing note only when note actually loads
   useEffect(() => {
-    if (existingNote && existingNote.content && !content) {
+    if (existingNote && existingNote.content !== undefined) {
       setContent(existingNote.content)
     }
-  }, [existingNote, content])
+    // REMOVED: Premature content clearing that caused erratic behavior
+    // Only set content when we actually have note data, never clear preemptively
+  }, [existingNote?._id]) // Simplified dependencies - only re-run when note ID changes
 
   // Handle quoted content insertion
   useEffect(() => {
@@ -133,16 +145,18 @@ export function useNotepadState({
     metadataGenerationInProgress
   }
 
-  const setters = {
+  // FIXED: Memoize setters to prevent handlers recreation
+  const setters = useMemo(() => ({
     setIsEditingTitle,
     setIsNewNote,
     setCurrentNoteId,
     setContent,
     setRefinementPreview,
     setIsRefining
-  }
+  }), [setIsEditingTitle, setIsNewNote, setCurrentNoteId, setContent, setRefinementPreview, setIsRefining])
 
-  const contextData = {
+  // FIXED: Memoize contextData to prevent handlers recreation
+  const contextData = useMemo(() => ({
     firebaseUser,
     notes,
     generateMetadataManually,
@@ -153,14 +167,18 @@ export function useNotepadState({
     existingNote,
     noteTagData,
     shouldShowSmartButton,
-    sessionId
-  }
+    sessionId,
+    notePermission,
+    isReadOnly
+  }), [firebaseUser, notes, generateMetadataManually, isGeneratingMetadata, updateNote, createNote, isCreating, existingNote, noteTagData, shouldShowSmartButton, sessionId, notePermission, isReadOnly])
 
   return {
     state,
     refs,
     setters,
     contextData,
-    note
+    note,
+    notePermission,
+    isReadOnly
   }
 }

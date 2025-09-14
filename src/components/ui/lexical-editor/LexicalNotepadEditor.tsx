@@ -114,36 +114,23 @@ function EditorContent({
   const handleChange = useCallback((editorState: EditorState) => {
     editorState.read(() => {
       const markdown = $convertToMarkdownString(transformers)
-      console.log('📝 [LexicalEditor] Content changed:', {
-        markdownLength: markdown.length,
-        markdownPreview: markdown.substring(0, 100) + '...',
-        timestamp: new Date().toISOString()
-      })
       onContentChange(markdown)
     })
   }, [onContentChange])
 
-  // Set initial content
+  // Set initial content when content prop changes
   React.useEffect(() => {
     const currentMarkdown = getCurrentMarkdown()
-    console.log('🔄 [LexicalEditor] Content prop changed:', {
-      newContentLength: content.length,
-      currentMarkdownLength: currentMarkdown.length,
-      contentChanged: content !== currentMarkdown,
-      newContentPreview: content.substring(0, 100) + '...',
-      currentMarkdownPreview: currentMarkdown.substring(0, 100) + '...'
-    })
     
-    if (content && content !== currentMarkdown) {
-      console.log('✅ [LexicalEditor] Updating editor with new content')
+    // Only update if content is actually different
+    if (content !== currentMarkdown) {
       editor.update(() => {
         const root = $getRoot()
         root.clear()
         
-        if (content.trim()) {
+        if (content && content.trim()) {
           $convertFromMarkdownString(content, transformers)
         } else {
-          // Empty content - add a paragraph
           const paragraph = $createParagraphNode()
           root.append(paragraph)
         }
@@ -254,6 +241,7 @@ export const LexicalNotepadEditor = forwardRef<LexicalNotepadEditorRef, LexicalN
       ],
       editable: !disabled,
     }
+    
 
     const editorRef = React.useRef<LexicalNotepadEditorRef>(null)
     

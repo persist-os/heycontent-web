@@ -348,6 +348,53 @@ export const deleteUserAndData = mutation({
   },
 });
 
+// Update username for a user
+export const updateUsername = mutation({
+  args: { 
+    userId: v.string(),
+    username: v.string()
+  },
+  handler: async (ctx, args) => {
+    if (!args.username || args.username.trim().length === 0) {
+      throw new Error("Username cannot be empty");
+    }
+
+    // Validate username format (alphanumeric + underscore, 3-20 chars)
+    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+    if (!usernameRegex.test(args.username)) {
+      throw new Error("Username must be 3-20 characters long and contain only letters, numbers, and underscores");
+    }
+
+    // Check if username is already taken by another user
+    const existingUser = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", args.username))
+      .first();
+
+    if (existingUser && existingUser.userId !== args.userId) {
+      throw new Error("Username is already taken");
+    }
+
+    // Find the user to update
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Update the username
+    await ctx.db.patch(user._id, {
+      username: args.username,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true, username: args.username };
+  },
+});
+
 // Email preferences - update email unsubscribe status
 export const updateEmailPreferences = mutation({
   args: { 

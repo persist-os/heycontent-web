@@ -679,6 +679,10 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
     // No longer needed - we redirect immediately
   }, [])
 
+  const handleBackFromProjectReveal = useCallback(() => {
+    setShowProjectReveal(false)
+  }, [])
+
   // Selection-aware autoscroll functionality
   useEffect(() => {
     if (chatContainerRef.current && messages.length > 0 && !isScrollingSuppressed) {

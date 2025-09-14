@@ -44,16 +44,14 @@ export const FolderModalManager: React.FC<FolderModalManagerProps> = ({ children
 
   // Handler for content navigation from ContentFolderModal
   const handleContentClick = (contentId: string, item?: any) => {
-    router.push(`/dashboard/content-hub?contentId=${contentId}`);
+    router.push(`/dashboard/chat?contentId=${contentId}`);
     closeModal();
   };
 
   // Handler for analytics navigation from AnalyticsFolderModal
   const handleAnalyticsClick = (analyticsId: string, item?: any) => {
-    // Navigate to content-analytics page with the analytics item
-    // This will redirect to content-hub with proper parameters
-    const platform = item?.platform?.toLowerCase() || 'all';
-    router.push(`/dashboard/content-analytics?analyticsId=${analyticsId}&platform=${platform}&tab=posts`);
+    // Navigate to chat with analytics context
+    router.push(`/dashboard/chat?analyticsId=${analyticsId}`);
     closeModal();
   };
 
