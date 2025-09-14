@@ -37,6 +37,7 @@ import type * as friendshipMutations from "../friendshipMutations.js";
 import type * as friendshipQueries from "../friendshipQueries.js";
 import type * as http from "../http.js";
 import type * as internal_ from "../internal.js";
+import type * as migrations from "../migrations.js";
 import type * as noteMutations from "../noteMutations.js";
 import type * as noteQueries from "../noteQueries.js";
 import type * as noteSharing from "../noteSharing.js";
@@ -99,6 +100,7 @@ declare const fullApi: ApiFromModules<{
   friendshipQueries: typeof friendshipQueries;
   http: typeof http;
   internal: typeof internal_;
+  migrations: typeof migrations;
   noteMutations: typeof noteMutations;
   noteQueries: typeof noteQueries;
   noteSharing: typeof noteSharing;

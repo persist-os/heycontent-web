@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Lightbulb, FileText, Users, BarChart3, BookOpen, CheckSquare, Edit3, Sparkles } from 'lucide-react';
+import { ChevronDown, Lightbulb, FileText, Users, BarChart3, BookOpen, CheckSquare, Edit3, Sparkles, Folder, Zap } from 'lucide-react';
 import { NoteType } from '../utils/refinement-configs';
 
 interface ModeSelectorProps {
@@ -41,6 +41,14 @@ const NOTE_TYPE_CONFIG: Record<NoteType, { label: string; icon: React.ReactNode 
   email_draft: { 
     label: 'Messages', 
     icon: <FileText className="w-4 h-4" /> 
+  },
+  project: { 
+    label: 'Projects', 
+    icon: <Folder className="w-4 h-4" /> 
+  },
+  idea: { 
+    label: 'Ideas', 
+    icon: <Zap className="w-4 h-4" /> 
   }
 };
 

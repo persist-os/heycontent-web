@@ -84,6 +84,8 @@ export default defineSchema({
       firstReferralDate: v.optional(v.number()),
       lastReferralDate: v.optional(v.number())
     })),
+    // TEMPORARY: Fields to be removed by migration
+    lastGmailFetch: v.optional(v.number()),
   })
   .index("by_userId", ["userId"])
   .index("by_email", ["email"])
@@ -239,6 +241,10 @@ export default defineSchema({
     fingerprintId: v.optional(v.id("project_fingerprints")), // Links to project fingerprint
     createdAt: v.number(),
     updatedAt: v.number(),
+    // TEMPORARY: Fields to be removed by migration
+    gmailIds: v.optional(v.array(v.string())),
+    instagramPostIds: v.optional(v.array(v.string())),
+    youtubeVideoIds: v.optional(v.array(v.string())),
   })
   .index("by_user", ["userId"])
   .index("by_fingerprint", ["fingerprintId"])
@@ -266,14 +272,6 @@ export default defineSchema({
     lastUpdated: v.number(),
   })
   .index("by_user_resource", ["user_id", "resource"]),
-
-
-
-
-
-
-
-
 
 
   // Usage Events
