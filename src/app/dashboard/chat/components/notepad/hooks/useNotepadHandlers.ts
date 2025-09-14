@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect } from 'react'
-import type { Note, NoteUpdate } from '../../../../notes/types'
+import type { Note, NoteUpdate } from '../../../../notes/types/index'
 import type { Id } from "@/convex/_generated/dataModel"
 import type { NoteHandlers, NotepadState, NotepadRefs } from '../types'
 import type { LexicalNotepadEditorRef } from '@/components/ui/lexical-editor/LexicalNotepadEditor'

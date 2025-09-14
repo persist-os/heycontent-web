@@ -1,4 +1,4 @@
-import type { Note, NoteUpdate, NoteType } from '../../../notes/types'
+import type { Note, NoteUpdate, NoteType } from '../../../notes/types/index'
 import type { Id } from "@/convex/_generated/dataModel"
 import type { LexicalNotepadEditorRef } from '@/components/ui/lexical-editor/LexicalNotepadEditor'
 

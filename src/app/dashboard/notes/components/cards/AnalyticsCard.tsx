@@ -10,6 +10,7 @@ interface AnalyticsCardProps {
   onEdit?: (note: Note) => void;
   onDelete?: (noteId: string) => void;
   onToggleImportant?: (noteId: string) => void;
+  onShare?: (noteId: string) => void;
 }
 
 export function AnalyticsCard({ 
@@ -17,7 +18,8 @@ export function AnalyticsCard({
   availableNotes = [],
   onEdit, 
   onDelete, 
-  onToggleImportant 
+  onToggleImportant,
+  onShare 
 }: AnalyticsCardProps) {
   // Extract real metrics from content
   const extractMetrics = (content: string) => {
@@ -44,6 +46,7 @@ export function AnalyticsCard({
       onEdit={onEdit}
       onDelete={onDelete}
       onToggleImportant={onToggleImportant}
+      onShare={onShare}
     >
       <div className="space-y-4">
         {/* Header with elegant typography */}

@@ -3,7 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Project } from '../../types/project';
-import { Folder, Calendar, Trash2 } from 'lucide-react';
+import { Folder, Calendar, Trash2, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useDroppable } from '@dnd-kit/core';
@@ -12,10 +12,11 @@ interface ProjectCardProps {
   project: Project;
   onEdit: (project: Project) => void;
   onDelete: () => void;
+  onShare?: (projectId: string) => void;
   dragOverProject?: string | null;
 }
 
-export function ProjectCard({ project, onEdit, onDelete, dragOverProject }: ProjectCardProps) {
+export function ProjectCard({ project, onEdit, onDelete, onShare, dragOverProject }: ProjectCardProps) {
   const router = useRouter();
 
   // Set up droppable functionality
@@ -32,6 +33,11 @@ export function ProjectCard({ project, onEdit, onDelete, dragOverProject }: Proj
     if (window.confirm(`Are you sure you want to delete "${project.name}"? This action cannot be undone.`)) {
       onDelete();
     }
+  };
+
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onShare?.(String(project._id));
   };
 
   const handleCardClick = () => {
@@ -87,6 +93,16 @@ export function ProjectCard({ project, onEdit, onDelete, dragOverProject }: Proj
           
           {/* Actions */}
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            {onShare && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleShare}
+                className="h-8 w-8 p-0 hover:bg-muted hover:text-blue-500"
+              >
+                <Share2 className="w-3 h-3" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"

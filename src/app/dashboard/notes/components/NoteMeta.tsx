@@ -11,9 +11,11 @@ interface NoteMetaProps {
   onTagsChange?: (tags: string[]) => void;
   onEditingTitleChange?: (isEditing: boolean) => void;
   noteTagData?: NoteTagData[]; // Array of tag data from all notes for suggestions
+  isReadOnly?: boolean;
+  notePermission?: "owner" | "read" | "edit" | null;
 }
 
-export function NoteMeta({ note, onUpdate, onTitleChange, onTagsChange, onEditingTitleChange, noteTagData = [] }: NoteMetaProps) {
+export function NoteMeta({ note, onUpdate, onTitleChange, onTagsChange, onEditingTitleChange, noteTagData = [], isReadOnly = false, notePermission = null }: NoteMetaProps) {
   const [editedTitle, setEditedTitle] = useState<string | null>(null);
   const [showTagInput, setShowTagInput] = useState(false);
   const [newTag, setNewTag] = useState('');
@@ -104,9 +106,13 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onTagsChange, onEditin
           />
         ) : (
           <h1
-            onClick={startTitleEdit}
-            className="text-2xl font-light tracking-tight text-foreground cursor-pointer hover:text-foreground/80 transition-all duration-300 hover:scale-[1.01] transform-gpu"
-            title="Click to edit title"
+            onClick={isReadOnly ? undefined : startTitleEdit}
+            className={`text-2xl font-light tracking-tight text-foreground transition-all duration-300 ${
+              isReadOnly 
+                ? 'cursor-default' 
+                : 'cursor-pointer hover:text-foreground/80 hover:scale-[1.01] transform-gpu'
+            }`}
+            title={isReadOnly ? "Read-only note" : "Click to edit title"}
           >
             {displayTitle}
           </h1>
@@ -133,7 +139,7 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onTagsChange, onEditin
           </time>
         </div>
 
-        {/* Right: tags */}
+        {/* Right: tags and actions */}
         <div className="flex items-center gap-2">
           {currentTags.length > 0 && (
             <div className="flex items-center gap-1.5">
@@ -203,6 +209,7 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onTagsChange, onEditin
               <Plus className="w-3.5 h-3.5" />
             </button>
           )}
+
         </div>
       </div>
     </div>

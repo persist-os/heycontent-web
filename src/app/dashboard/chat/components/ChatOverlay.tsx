@@ -35,7 +35,7 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
     : contentId;
 
   const note = useQuery(
-    api.notes.getNote,
+    api.noteQueries.getNote,
     (contentType === 'note' || contentType === 'smart_note') ? { noteId: actualNoteId, userId } : 'skip'
   );
 

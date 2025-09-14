@@ -9,6 +9,7 @@ import { useNotepadHandlers } from './hooks/useNotepadHandlers'
 import { useNotepadAI } from './hooks/useNotepadAI'
 import type { MarkdownNotepadProps, MarkdownNotepadRef } from './types'
 import type { Id } from "@/convex/_generated/dataModel"
+import { ShareNoteModal } from '../../../notes/components/ShareNoteModal'
 
 export const MarkdownNotepad = forwardRef<MarkdownNotepadRef, MarkdownNotepadProps>(function MarkdownNotepad({ 
   isOpen, 
@@ -30,9 +31,10 @@ export const MarkdownNotepad = forwardRef<MarkdownNotepadRef, MarkdownNotepadPro
 }, ref) {
   const { firebaseUser } = useAuth()
   const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
 
   // Use our custom hooks for state and logic
-  const { state, refs, setters, contextData, note } = useNotepadState({
+  const { state, refs, setters, contextData, note, notePermission, isReadOnly } = useNotepadState({
     noteId,
     quotedContent,
     isOpen,
@@ -56,6 +58,13 @@ export const MarkdownNotepad = forwardRef<MarkdownNotepadRef, MarkdownNotepadPro
     setRefinementPreview: setters.setRefinementPreview,
     setIsRefining: setters.setIsRefining
   })
+
+  // Share handler
+  const handleShare = () => {
+    if (note && !note.isTemporary) {
+      setShowShareModal(true)
+    }
+  }
 
   // Listen for note reference clicks
   useEffect(() => {
@@ -101,7 +110,44 @@ export const MarkdownNotepad = forwardRef<MarkdownNotepadRef, MarkdownNotepadPro
   // Render appropriate layout based on device type
   if (isMobile) {
     return (
-      <MobileNotepadLayout
+      <>
+        <MobileNotepadLayout
+          note={note}
+          content={state.content}
+          currentNoteId={state.currentNoteId}
+          availableNotes={availableNotes}
+          noteTagData={contextData.noteTagData}
+          shouldShowSmartButton={contextData.shouldShowSmartButton}
+          isGeneratingMetadata={contextData.isGeneratingMetadata}
+          isCreating={contextData.isCreating}
+          firebaseUserId={firebaseUser?.uid}
+          sidebarRef={refs.sidebarRef}
+          lexicalEditorRef={refs.lexicalEditorRef}
+          noteHandlers={noteHandlers}
+          aiHandlers={aiHandlers}
+          onEditingTitleChange={setIsEditingTitle}
+          onLinkNote={onLinkNote}
+          onShare={handleShare}
+          isReadOnly={isReadOnly}
+          notePermission={notePermission}
+        />
+        
+        {/* Share Modal */}
+        {note && !note.isTemporary && (
+          <ShareNoteModal
+            noteId={note._id as Id<'notes'>}
+            noteTitle={note.title || 'Untitled Note'}
+            isOpen={showShareModal}
+            onClose={() => setShowShareModal(false)}
+          />
+        )}
+      </>
+    )
+  }
+
+  return (
+    <>
+      <DesktopNotepadLayout
         note={note}
         content={state.content}
         currentNoteId={state.currentNoteId}
@@ -111,35 +157,28 @@ export const MarkdownNotepad = forwardRef<MarkdownNotepadRef, MarkdownNotepadPro
         isGeneratingMetadata={contextData.isGeneratingMetadata}
         isCreating={contextData.isCreating}
         firebaseUserId={firebaseUser?.uid}
+        width={width}
+        style={style}
         sidebarRef={refs.sidebarRef}
         lexicalEditorRef={refs.lexicalEditorRef}
         noteHandlers={noteHandlers}
         aiHandlers={aiHandlers}
         onEditingTitleChange={setIsEditingTitle}
         onLinkNote={onLinkNote}
+        onShare={handleShare}
+        isReadOnly={isReadOnly}
+        notePermission={notePermission}
       />
-    )
-  }
-
-  return (
-    <DesktopNotepadLayout
-      note={note}
-      content={state.content}
-      currentNoteId={state.currentNoteId}
-      availableNotes={availableNotes}
-      noteTagData={contextData.noteTagData}
-      shouldShowSmartButton={contextData.shouldShowSmartButton}
-      isGeneratingMetadata={contextData.isGeneratingMetadata}
-      isCreating={contextData.isCreating}
-      firebaseUserId={firebaseUser?.uid}
-      width={width}
-      style={style}
-      sidebarRef={refs.sidebarRef}
-      lexicalEditorRef={refs.lexicalEditorRef}
-      noteHandlers={noteHandlers}
-      aiHandlers={aiHandlers}
-      onEditingTitleChange={setIsEditingTitle}
-      onLinkNote={onLinkNote}
-    />
+      
+      {/* Share Modal */}
+      {note && !note.isTemporary && (
+        <ShareNoteModal
+          noteId={note._id as Id<'notes'>}
+          noteTitle={note.title || 'Untitled Note'}
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+        />
+      )}
+    </>
   )
 });

@@ -194,3 +194,67 @@ export const getNote = query({
     }
   },
 });
+
+/**
+ * Get a single note by ID with permission information
+ * @param noteId - The ID of the note to retrieve
+ * @param userId - The ID of the user making the request (for auth)
+ */
+export const getNoteWithPermissions = query({
+  args: {
+    noteId: v.string(),
+    userId: v.string(),
+  },
+  returns: v.union(
+    v.null(),
+    v.object({
+      note: v.any(), // The note object
+      permission: v.union(
+        v.literal("owner"),
+        v.literal("read"),
+        v.literal("edit")
+      ),
+      isReadOnly: v.boolean(),
+    })
+  ),
+  handler: async (ctx, { noteId, userId }) => {
+    try {
+      const note = await ctx.db.get(noteId as Id<"notes">);
+      
+      if (!note) {
+        return null;
+      }
+
+      // Check if user owns the note
+      if (note.userId === userId) {
+        return {
+          note,
+          permission: "owner" as const,
+          isReadOnly: false,
+        };
+      }
+
+      // Check if note is shared with user
+      const shareRecord = await ctx.db
+        .query("shared_notes")
+        .withIndex("by_note_user", (q) => 
+          q.eq("noteId", noteId as Id<"notes">).eq("sharedWithUserId", userId)
+        )
+        .filter((q) => q.eq(q.field("isActive"), true))
+        .unique();
+
+      if (shareRecord) {
+        return {
+          note,
+          permission: shareRecord.permission,
+          isReadOnly: shareRecord.permission === "read",
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error fetching note with permissions:', error);
+      return null;
+    }
+  },
+});

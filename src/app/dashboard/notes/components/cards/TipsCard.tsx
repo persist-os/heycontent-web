@@ -8,13 +8,15 @@ interface TipsCardProps {
   onEdit?: (note: Note) => void;
   onDelete?: (noteId: string) => void;
   onToggleImportant?: (noteId: string) => void;
+  onShare?: (noteId: string) => void;
 }
 
 export function TipsCard({ 
   note, 
   onEdit, 
   onDelete, 
-  onToggleImportant 
+  onToggleImportant,
+  onShare 
 }: TipsCardProps) {
   // Parse tips from note content
   const parseTips = (content: string): string[] => {
@@ -56,6 +58,7 @@ export function TipsCard({
       onEdit={onEdit}
       onDelete={onDelete}
       onToggleImportant={onToggleImportant}
+      onShare={onShare}
     >
       <div className="p-4">
         {/* Header with HeyContent icon */}

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Plus, ChevronRight, ChevronDown, FileText, Folder, Calendar, Tag, Star, Clock, Filter, FolderPlus, Users } from 'lucide-react';
+import { Search, Plus, ChevronRight, ChevronDown, FileText, Folder, Calendar, Tag, Star, Clock, Filter, FolderPlus, Users, Share2, Eye, Edit3, UserCheck, ArrowUpRight } from 'lucide-react';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Note } from '../types';
@@ -64,8 +64,8 @@ export function NotesTree({
   isLoading
 }: NotesTreeProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'important' | 'recent' | 'projects'>('all');
-  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['recent', 'projects', 'tags', 'important', 'shared']));
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'important' | 'recent' | 'projects' | 'shared' | 'my-shared'>('all');
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['recent', 'projects', 'tags', 'important', 'shared', 'my-shared']));
   const [isCreatingNote, setIsCreatingNote] = useState(false);
   const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
   const [draggedNote, setDraggedNote] = useState<Note | null>(null);
@@ -80,6 +80,12 @@ export function NotesTree({
   const sharedNotes = useQuery(
     api.noteSharing.getSharedNotes,
     firebaseUser?.uid ? { userId: firebaseUser.uid } : 'skip'
+  );
+  
+  // Get content shared by current user
+  const mySharedContent = useQuery(
+    api.contentSharingQueries.getMySharedContent,
+    firebaseUser?.uid ? { userId: firebaseUser.uid, contentType: 'note' } : 'skip'
   );
   const router = useRouter();
   const { 
@@ -112,7 +118,9 @@ export function NotesTree({
       const matchesFilter = selectedFilter === 'all' || 
         (selectedFilter === 'important' && note.important) ||
         (selectedFilter === 'recent' && Date.now() - note.updatedAt < 7 * 24 * 60 * 60 * 1000) ||
-        (selectedFilter === 'projects' && note.type === 'project');
+        (selectedFilter === 'projects' && note.type === 'project') ||
+        (selectedFilter === 'shared' && note.isSharedWithMe) ||
+        (selectedFilter === 'my-shared' && note.isShared);
       
       return matchesSearch && matchesFilter;
     });
@@ -143,25 +151,78 @@ export function NotesTree({
       });
     }
 
-    // Shared notes
+    // Shared with me notes
     if (sharedNotes && sharedNotes.length > 0) {
+      // Group shared notes by owner for better organization
+      const sharedByOwner = new Map<string, typeof sharedNotes>();
+      sharedNotes.forEach(note => {
+        const ownerKey = `${note.ownerId}-${note.ownerName}`;
+        if (!sharedByOwner.has(ownerKey)) {
+          sharedByOwner.set(ownerKey, []);
+        }
+        sharedByOwner.get(ownerKey)!.push(note);
+      });
+
+      const sharedChildren: TreeNode[] = [];
+      
+      // If only one owner, show notes directly
+      if (sharedByOwner.size === 1) {
+        const [ownerNotes] = Array.from(sharedByOwner.values());
+        sharedChildren.push(...ownerNotes.map(sharedNote => ({
+          id: `shared-${sharedNote._id}`,
+          type: 'note' as const,
+          title: sharedNote.title || 'Untitled',
+          note: {
+            ...sharedNote,
+            userId: sharedNote.ownerId,
+            isSharedWithMe: true,
+            ownerName: sharedNote.ownerName,
+            ownerId: sharedNote.ownerId,
+            permission: sharedNote.permission,
+            sharedAt: sharedNote.sharedAt,
+          } as Note,
+          level: 1,
+          children: []
+        })));
+      } else {
+        // Multiple owners, group by owner
+        Array.from(sharedByOwner.entries())
+          .sort(([, a], [, b]) => b[0].sharedAt - a[0].sharedAt)
+          .forEach(([ownerKey, ownerNotes]) => {
+            const ownerName = ownerNotes[0].ownerName;
+            sharedChildren.push({
+              id: `shared-owner-${ownerKey}`,
+              type: 'folder',
+              title: `${ownerName} (${ownerNotes.length})`,
+              count: ownerNotes.length,
+              level: 1,
+              children: ownerNotes.map(sharedNote => ({
+                id: `shared-${sharedNote._id}`,
+                type: 'note' as const,
+                title: sharedNote.title || 'Untitled',
+                note: {
+                  ...sharedNote,
+                  userId: sharedNote.ownerId,
+                  isSharedWithMe: true,
+                  ownerName: sharedNote.ownerName,
+                  ownerId: sharedNote.ownerId,
+                  permission: sharedNote.permission,
+                  sharedAt: sharedNote.sharedAt,
+                } as Note,
+                level: 2,
+                children: []
+              }))
+            });
+          });
+      }
+
       tree.push({
         id: 'shared',
         type: 'folder',
         title: 'Shared with me',
         count: sharedNotes.length,
         level: 0,
-        children: sharedNotes.map(sharedNote => ({
-          id: sharedNote._id,
-          type: 'note' as const,
-          title: `${sharedNote.title || 'Untitled'} (by ${sharedNote.ownerName})`,
-          note: {
-            ...sharedNote,
-            userId: sharedNote.ownerId, // Map back to expected structure
-          } as Note,
-          level: 1,
-          children: []
-        }))
+        children: sharedChildren
       });
     }
 
@@ -265,12 +326,46 @@ export function NotesTree({
       });
     }
 
+    // My shared content
+    if (mySharedContent && mySharedContent.length > 0) {
+      tree.push({
+        id: 'my-shared',
+        type: 'folder',
+        title: 'My shared content',
+        count: mySharedContent.length,
+        level: 0,
+        children: mySharedContent.map(sharedItem => ({
+          id: `my-shared-${sharedItem._id}`,
+          type: 'note' as const,
+          title: sharedItem.title || 'Untitled',
+          note: {
+            _id: sharedItem._id,
+            _creationTime: sharedItem.createdAt,
+            userId: firebaseUser?.uid || '',
+            title: sharedItem.title,
+            content: sharedItem.content,
+            createdAt: sharedItem.createdAt,
+            updatedAt: sharedItem.updatedAt,
+            type: sharedItem.type,
+            tags: sharedItem.tags || [],
+            important: sharedItem.important,
+            isShared: true,
+            sharedWithCount: sharedItem.sharedWithCount,
+            sharedUsers: sharedItem.sharedUsers,
+          } as Note,
+          level: 1,
+          children: []
+        }))
+      });
+    }
+
     // All other notes
     const otherNotes = filteredNotes
       .filter(note => 
         !note.important && 
         Date.now() - note.updatedAt >= 7 * 24 * 60 * 60 * 1000 &&
-        note.type !== 'project'
+        note.type !== 'project' &&
+        !note.isSharedWithMe // Exclude shared notes from "All Notes" section
       )
       .sort((a, b) => b.updatedAt - a.updatedAt);
 
@@ -334,7 +429,11 @@ export function NotesTree({
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const { active } = event;
     if (active.data.current?.type === 'note') {
-      setDraggedNote(active.data.current.note);
+      const note = active.data.current.note;
+      // Only allow dragging if user has edit permission or owns the note
+      if (!note.isSharedWithMe || note.permission === 'edit') {
+        setDraggedNote(note);
+      }
     }
   }, []);
 
@@ -428,6 +527,9 @@ export function NotesTree({
 
   // Draggable note component
   const DraggableNote = ({ node }: { node: TreeNode }) => {
+    // Disable dragging for read-only shared notes
+    const canDrag = node.note && (!node.note.isSharedWithMe || node.note.permission === 'edit');
+    
     const {
       attributes,
       listeners,
@@ -440,7 +542,7 @@ export function NotesTree({
         type: 'note',
         note: node.note,
       },
-      disabled: !node.note,
+      disabled: !canDrag,
     });
 
     const transformStyle = transform ? CSS.Translate.toString(transform) : undefined;
@@ -448,16 +550,16 @@ export function NotesTree({
     return (
       <div
         ref={setNodeRef}
-        // eslint-disable-next-line react/forbid-dom-props
-        style={transformStyle ? { transform: transformStyle } : undefined}
-        {...listeners}
-        {...attributes}
+        {...(canDrag ? listeners : {})}
+        {...(canDrag ? attributes : {})}
         className={cn(
           "group relative",
           node.level === 1 && "ml-6",
           node.level === 2 && "ml-12",
-          isDragging && "opacity-50"
+          isDragging && "opacity-50",
+          !canDrag && "cursor-default"
         )}
+        style={transformStyle ? { transform: transformStyle } : undefined}
       >
         {/* Subtle connection line */}
         <div 
@@ -479,7 +581,19 @@ export function NotesTree({
                router.push(`/dashboard/chat?noteId=${node.note!._id}${conversationParam}`);
              }}>
           <div className="flex items-center gap-2 flex-1 min-w-0">
-            <FileText className="w-4 h-4 text-muted-foreground/60 flex-shrink-0" />
+            <div className="relative flex-shrink-0">
+              <FileText className="w-4 h-4 text-muted-foreground/60" />
+              {/* Sharing indicator overlay */}
+              {(node.note!.isSharedWithMe || node.note!.isShared) && (
+                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-blue-500 border border-background flex items-center justify-center">
+                  {node.note!.isSharedWithMe ? (
+                    <ArrowUpRight className="w-1.5 h-1.5 text-white" />
+                  ) : (
+                    <Share2 className="w-1.5 h-1.5 text-white" />
+                  )}
+                </div>
+              )}
+            </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <span className={cn(
@@ -493,9 +607,34 @@ export function NotesTree({
                 {node.note!.important && (
                   <Star className="w-3 h-3 text-amber-500 fill-current flex-shrink-0" />
                 )}
+                {/* Sharing badges */}
+                {node.note!.isSharedWithMe && (
+                  <div className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 dark:bg-blue-950/30 rounded text-xs text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                    <Users className="w-2.5 h-2.5" />
+                    <span className="font-medium">{node.note!.permission === 'edit' ? 'Edit' : 'View'}</span>
+                  </div>
+                )}
+                {node.note!.isShared && node.note!.sharedWithCount && node.note!.sharedWithCount > 0 && (
+                  <div className="flex items-center gap-1 px-1.5 py-0.5 bg-green-50 dark:bg-green-950/30 rounded text-xs text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800">
+                    <Share2 className="w-2.5 h-2.5" />
+                    <span className="font-medium">{node.note!.sharedWithCount}</span>
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-3 text-xs text-muted-foreground/70 mt-0.5">
-                <span>{formatDistanceToNow(new Date(node.note!.updatedAt), { addSuffix: true })}</span>
+                {/* Owner attribution for shared notes */}
+                {node.note!.isSharedWithMe && node.note!.ownerName && (
+                  <span className="flex items-center gap-1 text-blue-600/70 dark:text-blue-400/70">
+                    <UserCheck className="w-3 h-3" />
+                    by {node.note!.ownerName}
+                  </span>
+                )}
+                {!node.note!.isSharedWithMe && (
+                  <span>{formatDistanceToNow(new Date(node.note!.updatedAt), { addSuffix: true })}</span>
+                )}
+                {node.note!.isSharedWithMe && node.note!.sharedAt && (
+                  <span>shared {formatDistanceToNow(new Date(node.note!.sharedAt), { addSuffix: true })}</span>
+                )}
                 {node.note!.tags && node.note!.tags.length > 0 && (
                   <span>• {node.note!.tags.slice(0, 2).join(', ')}</span>
                 )}
@@ -582,7 +721,9 @@ export function NotesTree({
                 <div className="w-4" />
               )}
               {node.id === 'shared' ? (
-                <Users className="w-5 h-5 text-green-500/70 transition-colors" />
+                <Users className="w-5 h-5 text-blue-500/70 transition-colors" />
+              ) : node.id === 'my-shared' ? (
+                <Share2 className="w-5 h-5 text-green-500/70 transition-colors" />
               ) : (
                 <Folder className={cn(
                   "w-5 h-5 transition-colors",
@@ -702,25 +843,37 @@ export function NotesTree({
                 />
               </div>
               
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 {[
                   { key: 'all', label: 'All', icon: FileText },
                   { key: 'important', label: 'Starred', icon: Star },
                   { key: 'recent', label: 'Recent', icon: Clock },
-                  { key: 'projects', label: 'Projects', icon: Folder }
-                ].map(({ key, label, icon: Icon }) => (
+                  { key: 'projects', label: 'Projects', icon: Folder },
+                  { key: 'shared', label: 'Shared with me', icon: Users, count: sharedNotes?.length },
+                  { key: 'my-shared', label: 'My shared', icon: Share2, count: mySharedContent?.length }
+                ].map(({ key, label, icon: Icon, count }) => (
                   <button
                     key={key}
                     onClick={() => setSelectedFilter(key as any)}
                     className={cn(
-                      "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors",
+                      "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors relative",
                       selectedFilter === key
                         ? "bg-foreground text-background"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
                     )}
                   >
                     <Icon className={cn("w-4 h-4", key === 'projects' && "w-5 h-5")} />
-                    {label}
+                    <span>{label}</span>
+                    {count && count > 0 && (
+                      <span className={cn(
+                        "text-xs px-1.5 py-0.5 rounded-full font-medium",
+                        selectedFilter === key
+                          ? "bg-background/20 text-background"
+                          : "bg-muted text-muted-foreground"
+                      )}>
+                        {count}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -739,7 +892,11 @@ export function NotesTree({
                 {searchTerm || selectedFilter !== 'all' ? 'No notes found' : 'No notes yet'}
               </h3>
               <p className="text-muted-foreground/70 max-w-sm mx-auto">
-                {searchTerm || selectedFilter !== 'all' 
+                {selectedFilter === 'shared' 
+                  ? 'No notes have been shared with you yet'
+                  : selectedFilter === 'my-shared'
+                  ? 'You haven\'t shared any notes with others yet'
+                  : searchTerm || selectedFilter !== 'all' 
                   ? 'Try adjusting your search or filter criteria'
                   : 'Create your first note to get started with organizing your thoughts'
                 }

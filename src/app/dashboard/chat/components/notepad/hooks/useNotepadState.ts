@@ -6,7 +6,7 @@ import { useNotes } from '@/app/context/notes-context'
 import { useCreateNote } from '@/app/dashboard/notes/hooks/useCreateNote'
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
-import type { Note, NoteUpdate } from '../../../../notes/types'
+import type { Note, NoteUpdate } from '../../../../notes/types/index'
 import type { Id } from "@/convex/_generated/dataModel"
 import type { LexicalNotepadEditorRef } from '@/components/ui/lexical-editor/LexicalNotepadEditor'
 import type { NotepadState, NotepadRefs } from '../types'
@@ -43,16 +43,21 @@ export function useNotepadState({
   const lexicalEditorRef = useRef<LexicalNotepadEditorRef>(null)
   const metadataGenerationInProgress = useRef(false)
 
-  // Fetch existing note if editing
-  const existingNote = useQuery(
-    api.notes.getNote, 
+  // Fetch existing note if editing (with proper shared note support and permissions)
+  const noteWithPermissions = useQuery(
+    api.noteQueries.getNoteWithPermissions, 
     currentNoteId && !isNewNote
       ? {
-          noteId: currentNoteId as Id<"notes">, 
+          noteId: currentNoteId as string, 
           userId: firebaseUser?.uid || ''
         }
       : "skip"
   )
+
+  // Extract note and permission info
+  const existingNote = noteWithPermissions?.note || null
+  const notePermission = noteWithPermissions?.permission || null
+  const isReadOnly = noteWithPermissions?.isReadOnly || false
 
   // Create a note object for components that expect it
   const note: Note = useMemo(() => {
@@ -153,7 +158,9 @@ export function useNotepadState({
     existingNote,
     noteTagData,
     shouldShowSmartButton,
-    sessionId
+    sessionId,
+    notePermission,
+    isReadOnly
   }
 
   return {
@@ -161,6 +168,8 @@ export function useNotepadState({
     refs,
     setters,
     contextData,
-    note
+    note,
+    notePermission,
+    isReadOnly
   }
 }

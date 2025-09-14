@@ -5,7 +5,7 @@ import { NoteMeta } from '../../../../notes/components/NoteMeta'
 import { NoteSelector } from './NoteSelector'
 import { SimpleTypeSelector } from './SimpleTypeSelector'
 import { ActionButtons } from './ActionButtons'
-import type { Note, NoteUpdate } from '../../../../notes/types'
+import type { Note, NoteUpdate } from '../../../../notes/types/index'
 import type { Id } from "@/convex/_generated/dataModel"
 
 interface NotepadHeaderProps {
@@ -26,6 +26,9 @@ interface NotepadHeaderProps {
   onTriggerCommandPalette: () => void
   onGenerateMetadata: () => void
   onSaveNote: () => void
+  onShare?: () => void
+  isReadOnly?: boolean
+  notePermission?: "owner" | "read" | "edit" | null
 }
 
 export function NotepadHeader({
@@ -43,7 +46,10 @@ export function NotepadHeader({
   onSwitchNote,
   onTriggerCommandPalette,
   onGenerateMetadata,
-  onSaveNote
+  onSaveNote,
+  onShare,
+  isReadOnly = false,
+  notePermission = null
 }: NotepadHeaderProps) {
   const containerPadding = isMobile ? "px-4 py-4" : "px-6 py-5"
   const spacing = isMobile ? "space-y-4" : "space-y-5"
@@ -60,6 +66,8 @@ export function NotepadHeader({
           onTagsChange={(tags) => onNoteUpdate(note._id, { tags })}
           onEditingTitleChange={onEditingTitleChange}
           noteTagData={noteTagData}
+          isReadOnly={isReadOnly}
+          notePermission={notePermission}
         />
         
         {/* Controls Section - Single row with all controls */}
@@ -72,6 +80,7 @@ export function NotepadHeader({
                 currentType={note.type || 'idea_bank'}
                 onTypeChange={(type) => onNoteUpdate(note._id, { type })}
                 isMobile={isMobile}
+                isReadOnly={isReadOnly}
               />
               
               <NoteSelector
@@ -88,10 +97,13 @@ export function NotepadHeader({
               onTriggerCommandPalette={onTriggerCommandPalette}
               onGenerateMetadata={onGenerateMetadata}
               onSaveNote={onSaveNote}
+              onShare={onShare}
               shouldShowSmartButton={shouldShowSmartButton}
               isGeneratingMetadata={isGeneratingMetadata}
               isCreating={isCreating}
               isMobile={isMobile}
+              isReadOnly={isReadOnly}
+              notePermission={notePermission}
             />
           </div>
         </div>

@@ -18,6 +18,7 @@ interface NoteCardProps {
   onDelete?: (noteId: string) => void;
   onToggleImportant?: (noteId: string) => void;
   onUpdate?: (noteId: string, updates: any) => void;
+  onShare?: (noteId: string) => void;
   isDraggable?: boolean;
   isOverlay?: boolean;
 }
@@ -29,6 +30,7 @@ export function NoteCard({
   onDelete, 
   onToggleImportant, 
   onUpdate,
+  onShare,
   isDraggable = false,
   isOverlay = false
 }: NoteCardProps) {
@@ -199,6 +201,7 @@ export function NoteCard({
       onDelete,
       onToggleImportant,
       onUpdate,
+      onShare,
       isDragging: isDraggable && isDragging,
       isOverlay,
     };

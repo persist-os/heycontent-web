@@ -4,6 +4,7 @@ import { NoteCard } from './cards/NoteCard';
 import { EmailCard } from './cards/EmailCard';
 import { ProjectCard } from './projects/ProjectCard';
 import { CreateProjectModal } from './projects/CreateProjectModal';
+import { ShareContentModal } from '@/components/sharing/ShareContentModal';
 import { Plus, Search, Folder, X, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCreateNote } from '../hooks/useCreateNote';
@@ -85,6 +86,14 @@ export function NotesGrid({
   const [pendingProjectNote, setPendingProjectNote] = useState<{ note: Note; projectName?: string } | null>(null);
   const [isCreateProjectZoneDraggedOver, setIsCreateProjectZoneDraggedOver] = useState(false);
   
+  // Share modal state
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [shareContent, setShareContent] = useState<{
+    type: 'note' | 'project';
+    id: string;
+    title: string;
+  } | null>(null);
+  
   const { createNote, isCreating: isCreatingNote } = useCreateNote();
   const { setActiveNoteId } = useNotes();
   const { firebaseUser } = useAuth();
@@ -158,6 +167,36 @@ export function NotesGrid({
 
   const clearTagFilter = () => {
     setSelectedTagFilter(null);
+  };
+
+  // Share handlers
+  const handleShareNote = (noteId: string) => {
+    const note = notes.find(n => String(n._id) === noteId);
+    if (note) {
+      setShareContent({
+        type: 'note',
+        id: noteId,
+        title: note.title || 'Untitled Note'
+      });
+      setShareModalOpen(true);
+    }
+  };
+
+  const handleShareProject = (projectId: string) => {
+    const project = projects?.find(p => String(p._id) === projectId);
+    if (project) {
+      setShareContent({
+        type: 'project',
+        id: projectId,
+        title: project.name || 'Untitled Project'
+      });
+      setShareModalOpen(true);
+    }
+  };
+
+  const handleCloseShareModal = () => {
+    setShareModalOpen(false);
+    setShareContent(null);
   };
 
   // Drag and drop handlers
@@ -290,6 +329,7 @@ export function NotesGrid({
           onDelete={onDeleteNote}
           onToggleImportant={onToggleImportant}
           onUpdate={onUpdateNote}
+          onShare={handleShareNote}
           isDraggable={true}
         />
       );
@@ -303,6 +343,7 @@ export function NotesGrid({
         onDelete={onDeleteNote}
         onToggleImportant={onToggleImportant}
         onUpdate={onUpdateNote}
+        onShare={handleShareNote}
         isDraggable={true}
       />
     );
@@ -332,6 +373,7 @@ export function NotesGrid({
           project={item}
           onEdit={handleEditProject}
           onDelete={() => deleteProject(item._id)}
+          onShare={handleShareProject}
           dragOverProject={dragOverProject}
         />
       );
@@ -631,6 +673,17 @@ export function NotesGrid({
           </div>
         ) : null}
       </DragOverlay>
+
+      {/* Share Content Modal */}
+      {shareContent && (
+        <ShareContentModal
+          isOpen={shareModalOpen}
+          onClose={handleCloseShareModal}
+          contentType={shareContent.type}
+          contentId={shareContent.id}
+          contentTitle={shareContent.title}
+        />
+      )}
     </DndContext>
   );
 } 

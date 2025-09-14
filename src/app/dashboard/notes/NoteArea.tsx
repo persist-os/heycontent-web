@@ -210,11 +210,11 @@ export function NoteArea({
   
   // Use the live query conditionally with "skip" parameter to avoid conditional hook call
   const liveNoteData = useQuery(
-    api.notes.getNote, 
+    api.noteQueries.getNote, 
     initialNote.isTemporary 
       ? "skip" 
       : {
-          noteId: initialNote._id as Id<"notes">, 
+          noteId: initialNote._id as string, 
           userId: String(initialNote.userId) 
         }
   );
@@ -417,6 +417,7 @@ export function NoteArea({
           onTagsChange={handleTagsChange} // Pass cleaned tags change handler
           onEditingTitleChange={setIsEditingTitle}
           noteTagData={noteTagData}
+          onShare={() => setShowShareModal(true)}
         />
         
         {/* Smart Title + Tags Button */}

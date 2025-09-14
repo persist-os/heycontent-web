@@ -33,7 +33,7 @@ function renderContentWithNewlines(content: string) {
 const SmartNoteOverlay: React.FC<SmartNoteOverlayProps> = ({ noteId, onClose }) => {
   const { firebaseUser } = useAuth();
   const userId = firebaseUser?.uid || '';
-  const note = useQuery(api.notes.getNote, { noteId, userId });
+  const note = useQuery(api.noteQueries.getNote, { noteId, userId });
   const { notes: availableNotes } = useNotes();
   const router = useRouter();
   const searchParams = useSearchParams();

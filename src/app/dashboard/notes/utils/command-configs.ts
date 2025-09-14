@@ -80,7 +80,8 @@ export type NoteType =
   | 'reflection_journal' 
   | 'task_checklist'
   | 'email_draft'
-  | 'project';
+  | 'project'
+  | 'idea';
 
 // Helper function to create icon components
 const createIcon = (IconComponent: React.ComponentType<{ className?: string }>) => 

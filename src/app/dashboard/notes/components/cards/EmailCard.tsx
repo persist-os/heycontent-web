@@ -12,6 +12,7 @@ interface EmailCardProps {
   onDelete?: (noteId: string) => void;
   onToggleImportant?: (noteId: string) => void;
   onUpdate?: (noteId: string, updates: any) => void;
+  onShare?: (noteId: string) => void;
   isDraggable?: boolean;
   isOverlay?: boolean;
 }
@@ -23,6 +24,7 @@ export function EmailCard({
   onDelete,
   onToggleImportant,
   onUpdate,
+  onShare,
   isDraggable = false,
   isOverlay = false
 }: EmailCardProps) {
@@ -164,6 +166,7 @@ export function EmailCard({
         onEdit={onEdit}
         onDelete={onDelete}
         onToggleImportant={onToggleImportant}
+        onShare={onShare}
         isDragging={isDragging}
         isOverlay={isOverlay}
       >

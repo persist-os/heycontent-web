@@ -1,6 +1,6 @@
 import { Id } from "@/convex/_generated/dataModel";
 
-export type NoteType = 'idea_bank' | 'content_script' | 'collaboration_note' | 'analytics_insight' | 'reflection_journal' | 'task_checklist' | 'email_draft' | 'project';
+export type NoteType = 'idea_bank' | 'content_script' | 'collaboration_note' | 'analytics_insight' | 'reflection_journal' | 'task_checklist' | 'email_draft' | 'project' | 'idea';
 
 export interface ImageData {
   url: string;
@@ -35,6 +35,22 @@ export interface Note {
   isTemporary?: boolean; // Flag for optimistic updates during note creation
   images?: ImageData[];
   sourceConversationId?: string;
+  // Sharing information
+  isShared?: boolean; // True if this note is shared with others
+  isSharedWithMe?: boolean; // True if this note is shared with current user
+  ownerId?: string; // Original owner ID (for shared notes)
+  ownerName?: string; // Original owner name (for shared notes)
+  ownerEmail?: string; // Original owner email (for shared notes)
+  permission?: 'read' | 'edit'; // User's permission level (for shared notes)
+  sharedAt?: number; // When it was shared (for shared notes)
+  sharedBy?: string; // Who shared it (for shared notes)
+  sharedWithCount?: number; // Number of users this note is shared with (for owned notes)
+  sharedUsers?: Array<{
+    userId: string;
+    permission: 'read' | 'edit';
+    sharedAt: number;
+    sharedBy: string;
+  }>; // Users this note is shared with (for owned notes)
 }
 
 export interface NoteUpdate {

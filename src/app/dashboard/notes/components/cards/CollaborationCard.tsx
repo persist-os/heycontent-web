@@ -11,6 +11,7 @@ interface CollaborationCardProps {
   onEdit?: (note: Note) => void;
   onDelete?: (noteId: string) => void;
   onToggleImportant?: (noteId: string) => void;
+  onShare?: (noteId: string) => void;
 }
 
 export function CollaborationCard({ 
@@ -18,7 +19,8 @@ export function CollaborationCard({
   availableNotes = [],
   onEdit, 
   onDelete, 
-  onToggleImportant 
+  onToggleImportant,
+  onShare 
 }: CollaborationCardProps) {
   // Determine collaboration type based on content
   const getCollaborationType = () => {
@@ -73,6 +75,7 @@ export function CollaborationCard({
       onEdit={onEdit}
       onDelete={onDelete}
       onToggleImportant={onToggleImportant}
+      onShare={onShare}
     >
       <div className="p-4">
         {/* Header with collaboration icon */}

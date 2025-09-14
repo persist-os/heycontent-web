@@ -10,6 +10,7 @@ interface ReflectionCardProps {
   onEdit?: (note: Note) => void;
   onDelete?: (noteId: string) => void;
   onToggleImportant?: (noteId: string) => void;
+  onShare?: (noteId: string) => void;
 }
 
 export function ReflectionCard({ 
@@ -17,7 +18,8 @@ export function ReflectionCard({
   availableNotes = [],
   onEdit, 
   onDelete, 
-  onToggleImportant 
+  onToggleImportant,
+  onShare 
 }: ReflectionCardProps) {
   // Extract mood or sentiment from content
   const extractMood = (content: string): 'positive' | 'reflective' | 'growth' | 'neutral' => {
@@ -134,6 +136,7 @@ export function ReflectionCard({
       onEdit={onEdit}
       onDelete={onDelete}
       onToggleImportant={onToggleImportant}
+      onShare={onShare}
     >
       <div className="space-y-4">
         {/* Header with elegant mood indication */}
