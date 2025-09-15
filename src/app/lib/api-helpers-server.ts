@@ -51,3 +51,44 @@ export function extractAuthInfo(authHeader: string | null): { apiKey: string | n
   
   return { apiKey, userId };
 }
+
+/**
+ * Standard authentication result type
+ */
+export interface AuthResult {
+  apiKey: string;
+  userId: string;
+}
+
+/**
+ * Standard authentication error response
+ */
+export interface AuthError {
+  error: string;
+  details?: string;
+}
+
+/**
+ * Authenticate request and extract user information
+ * @param authHeader The Authorization header value
+ * @returns AuthResult on success, AuthError on failure
+ */
+export function authenticateRequest(authHeader: string | null): AuthResult | AuthError {
+  const { apiKey, userId } = extractAuthInfo(authHeader);
+  
+  if (!apiKey) {
+    return {
+      error: 'Authentication failed: Missing or invalid Authorization header',
+      details: 'Expected format: "Bearer <api_key>" where api_key follows the format heycontent_<userId>_<randomPart>'
+    };
+  }
+  
+  if (!userId) {
+    return {
+      error: 'Authentication failed: Could not determine user ID from API key',
+      details: 'API key must be in the format: heycontent_<userId>_<randomPart>'
+    };
+  }
+  
+  return { apiKey, userId };
+}
