@@ -189,39 +189,51 @@ export function TreeNodeRenderer({
 }: TreeNodeRendererProps) {
   if (node.type === 'project' && node.project) {
     return (
-      <div className={cn(
-        "group relative",
-        node.level === 1 && "ml-6",
-        node.level === 2 && "ml-12"
-      )}>
-        <div className="flex items-center gap-3 py-3 sm:py-2 px-3 rounded-lg hover:bg-muted/30 active:bg-muted/40 transition-colors cursor-pointer min-h-[48px] sm:min-h-0"
-             onClick={() => {
-               if (node.project) {
-                 router.push(`/dashboard/notes/projects/${node.project._id}`);
-               }
-             }}>
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <Folder className="w-5 h-5 text-blue-500/70 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-foreground truncate">
-                  {node.title}
-                </span>
-              </div>
-              {node.project.description && (
-                <p className="text-xs text-muted-foreground/70 truncate mt-0.5">
-                  {node.project.description}
-                </p>
-              )}
-              <div className="flex items-center gap-3 mt-1">
-                <span className="text-xs text-muted-foreground/50">
-                  {formatDistanceToNow(node.project.updatedAt)} ago
-                </span>
+      <DroppableFolder node={node} dragOverFolder={dragOverFolder} draggedNote={draggedNote}>
+        <div className={cn(
+          "group relative",
+          node.level === 1 && "ml-6",
+          node.level === 2 && "ml-12"
+        )}>
+          <div 
+            className={cn(
+              "flex items-center gap-3 py-3 sm:py-2 px-3 rounded-lg hover:bg-muted/30 active:bg-muted/40 transition-colors cursor-pointer min-h-[48px] sm:min-h-0",
+              dragOverFolder === node.id && draggedNote && "bg-primary/10 border border-primary/30 border-dashed"
+            )}
+            onClick={() => {
+              if (node.project) {
+                router.push(`/dashboard/notes/projects/${node.project._id}`);
+              }
+            }}
+          >
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <Folder className="w-5 h-5 text-blue-500/70 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-foreground truncate">
+                    {node.title}
+                  </span>
+                </div>
+                {node.project.description && (
+                  <p className="text-xs text-muted-foreground/70 truncate mt-0.5">
+                    {node.project.description}
+                  </p>
+                )}
+                <div className="flex items-center gap-3 mt-1">
+                  <span className="text-xs text-muted-foreground/50">
+                    {formatDistanceToNow(node.project.updatedAt)} ago
+                  </span>
+                </div>
               </div>
             </div>
+            {dragOverFolder === node.id && draggedNote && (
+              <span className="text-xs text-primary font-medium ml-auto">
+                Add to project
+              </span>
+            )}
           </div>
         </div>
-      </div>
+      </DroppableFolder>
     );
   }
 

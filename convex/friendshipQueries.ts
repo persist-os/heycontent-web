@@ -10,7 +10,7 @@ export const getPendingFriendRequests = query({
   },
   returns: v.array(v.object({
     _id: v.id("friendships"),
-    _creationTime: v.number(),
+    _creationTime: v.float64(),
     userId1: v.string(),
     userId2: v.string(),
     status: v.union(v.literal("pending"), v.literal("accepted"), v.literal("blocked")),
@@ -86,7 +86,7 @@ export const getMyFriends = query({
   },
   returns: v.array(v.object({
     _id: v.id("friendships"),
-    _creationTime: v.number(),
+    _creationTime: v.float64(),
     userId1: v.string(),
     userId2: v.string(),
     status: v.union(v.literal("pending"), v.literal("accepted"), v.literal("blocked")),
@@ -177,7 +177,7 @@ export const searchUsersByUsername = query({
   },
   returns: v.array(v.object({
     _id: v.id("users"),
-    _creationTime: v.number(),
+    _creationTime: v.float64(),
     userId: v.string(),
     name: v.string(),
     email: v.string(),
@@ -248,7 +248,7 @@ export const searchUsersByEmail = query({
   },
   returns: v.array(v.object({
     _id: v.id("users"),
-    _creationTime: v.number(),
+    _creationTime: v.float64(),
     userId: v.string(),
     name: v.string(),
     email: v.string(),
@@ -338,7 +338,7 @@ export const getUserPreferences = query({
   returns: v.union(
     v.object({
       _id: v.id("user_preferences"),
-      _creationTime: v.number(),
+      _creationTime: v.float64(),
       userId: v.string(),
       showPersonaToFriends: v.boolean(),
       allowFriendRequests: v.boolean(),
@@ -357,16 +357,6 @@ export const getUserPreferences = query({
     }
 
     try {
-      // Check if user exists
-      const user = await ctx.db
-        .query("users")
-        .withIndex("by_userId", (q) => q.eq("userId", userId))
-        .first();
-      if (!user) {
-        throw new Error("User not found");
-      }
-
-      // Get user preferences
       const preferences = await ctx.db
         .query("user_preferences")
         .withIndex("by_userId", (q) => q.eq("userId", userId))
@@ -375,84 +365,7 @@ export const getUserPreferences = query({
       return preferences || null;
     } catch (error) {
       console.error("Error getting user preferences:", error);
-      if (error instanceof Error && error.message === "User not found") {
-        throw error;
-      }
       throw new Error(`Failed to get user preferences: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  },
-});
-
-/**
- * Check friendship status between two users
- */
-export const checkFriendshipStatus = query({
-  args: {
-    userId: v.string(),
-    targetUserId: v.string(),
-  },
-  returns: v.union(
-    v.object({
-      status: v.union(v.literal("pending"), v.literal("accepted"), v.literal("blocked")),
-      friendship: v.object({
-        _id: v.id("friendships"),
-        requestedBy: v.string(),
-        requestedAt: v.number(),
-        acceptedAt: v.optional(v.number()),
-        requestMessage: v.optional(v.string()),
-      }),
-    }),
-    v.object({
-      status: v.literal("none"),
-    })
-  ),
-  handler: async (ctx, args) => {
-    const { userId, targetUserId } = args;
-
-    // Validation
-    if (!userId || userId.trim() === '') {
-      throw new Error("User ID is required");
-    }
-    if (!targetUserId || targetUserId.trim() === '') {
-      throw new Error("Target user ID is required");
-    }
-    if (userId === targetUserId) {
-      throw new Error("Cannot check friendship status with yourself");
-    }
-
-    try {
-      // Check if friendship exists (in either direction)
-      let friendship = await ctx.db
-        .query("friendships")
-        .withIndex("by_userId1", (q) => q.eq("userId1", userId))
-        .filter((q) => q.eq(q.field("userId2"), targetUserId))
-        .first();
-
-      if (!friendship) {
-        friendship = await ctx.db
-          .query("friendships")
-          .withIndex("by_userId1", (q) => q.eq("userId1", targetUserId))
-          .filter((q) => q.eq(q.field("userId2"), userId))
-          .first();
-      }
-
-      if (!friendship) {
-        return { status: "none" };
-      }
-
-      return {
-        status: friendship.status,
-        friendship: {
-          _id: friendship._id,
-          requestedBy: friendship.requestedBy,
-          requestedAt: friendship.requestedAt,
-          acceptedAt: friendship.acceptedAt,
-          requestMessage: friendship.requestMessage,
-        },
-      };
-    } catch (error) {
-      console.error("Error checking friendship status:", error);
-      throw new Error(`Failed to check friendship status: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
 });
