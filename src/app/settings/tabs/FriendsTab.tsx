@@ -107,7 +107,7 @@ const FriendsTab = ({ userId }: FriendsTabProps) => {
             return {
               ...user,
               friendshipStatus: status.status,
-              requestSent: status.status === 'pending'
+              requestSent: status.status === 'pending_sent'
             }
           } catch (error) {
             console.error('Error checking friendship status:', error)
@@ -163,22 +163,27 @@ const FriendsTab = ({ userId }: FriendsTabProps) => {
     if (!userId) return
     
     try {
-      await sendFriendRequest({
+      const result = await sendFriendRequest({
         userId,
         targetUserId,
         message
       })
       
-      // Update search results to show request sent
-      setSearchResults(prev => 
-        prev.map(user => 
-          user.userId === targetUserId 
-            ? { ...user, requestSent: true, friendshipStatus: 'pending' }
-            : user
+      if (result.success) {
+        // Update search results to show request sent
+        setSearchResults(prev => 
+          prev.map(user => 
+            user.userId === targetUserId 
+              ? { ...user, requestSent: true, friendshipStatus: 'pending' }
+              : user
+          )
         )
-      )
-      
-      toast.success('Friend request sent!')
+        toast.success('Friend request sent!')
+      } else {
+        // Handle different error cases gracefully
+        console.warn('Friend request failed:', result.message)
+        toast.error(result.message)
+      }
     } catch (error) {
       console.error('Error sending friend request:', error)
       toast.error(error instanceof Error ? error.message : 'Failed to send friend request')
