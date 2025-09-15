@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Star, Trash2 } from 'lucide-react';
+import { Star, Trash2, Share2, Users, UserCheck, Eye, Edit3, ArrowUpRight } from 'lucide-react';
 import { Note } from '../../types';
 import { cn } from '@/lib/utils';
 import { ImageMosaic } from '../ImageMosaic';
@@ -13,6 +13,7 @@ interface BaseCardProps {
   onEdit?: (note: Note) => void;
   onDelete?: (noteId: string) => void;
   onToggleImportant?: (noteId: string) => void;
+  onShare?: (noteId: string) => void;
   isDragging?: boolean;
   isOverlay?: boolean;
 }
@@ -25,6 +26,7 @@ export function BaseCard({
   onEdit,
   onDelete,
   onToggleImportant,
+  onShare,
   isDragging = false,
   isOverlay = false
 }: BaseCardProps) {
@@ -47,6 +49,11 @@ export function BaseCard({
     onToggleImportant?.(String(note._id));
   };
 
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onShare?.(String(note._id));
+  };
+
   return (
     <>
       <div
@@ -62,10 +69,16 @@ export function BaseCard({
         )}
         onClick={!isDragging && !isOverlay ? handleEdit : undefined}
       >
-        {/* Subtle top accent line - AI-generated status indicator */}
+        {/* Subtle top accent line - sharing and AI status indicator */}
         <div className={cn(
           "h-px w-full transition-all duration-500",
-          note.titleGenerated && note.typeGenerated 
+          // Sharing status takes priority
+          note.isSharedWithMe
+            ? "bg-gradient-to-r from-transparent via-blue-500/60 to-transparent"
+            : note.isShared
+            ? "bg-gradient-to-r from-transparent via-green-500/60 to-transparent"
+            // Then AI generation status
+            : note.titleGenerated && note.typeGenerated 
             ? "bg-gradient-to-r from-transparent via-blue-400/60 to-transparent"
             : note.titleGenerated || note.typeGenerated
             ? "bg-gradient-to-r from-transparent via-amber-400/60 to-transparent" 
@@ -89,6 +102,15 @@ export function BaseCard({
               >
                 <Star className="w-3.5 h-3.5" fill={note.important ? "currentColor" : "none"} />
               </button>
+              {onShare && (
+                <button
+                  onClick={handleShare}
+                  title="Share note"
+                  className="p-2 sm:p-2 rounded-full backdrop-blur-sm bg-background/50 text-muted-foreground/60 hover:text-blue-500 hover:bg-blue-50/80 dark:hover:bg-blue-950/30 transition-all duration-300 hover:scale-110 touch-manipulation min-w-[44px] min-h-[44px] sm:min-w-[auto] sm:min-h-[auto]"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                </button>
+              )}
               <button
                 onClick={handleDelete}
                 title="Delete note"
@@ -147,16 +169,55 @@ export function BaseCard({
           </div>
         )}
 
+        {/* Sharing information banner */}
+        {(note.isSharedWithMe || note.isShared) && (
+          <div className="px-4 sm:px-6 pb-2">
+            <div className={cn(
+              "flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium",
+              note.isSharedWithMe 
+                ? "bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                : "bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800"
+            )}>
+              {note.isSharedWithMe ? (
+                <>
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                  <span>Shared by {note.ownerName}</span>
+                  <div className="ml-auto flex items-center gap-1">
+                    {note.permission === 'edit' ? (
+                      <><Edit3 className="w-3 h-3" /> Can edit</>
+                    ) : (
+                      <><Eye className="w-3 h-3" /> View only</>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span>Shared with {note.sharedWithCount} {note.sharedWithCount === 1 ? 'person' : 'people'}</span>
+                  <Users className="w-3 h-3 ml-auto" />
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Date with responsive spacing and typography */}
         <div className="px-4 sm:px-6 pb-3 sm:pb-4">
           <div className="h-px bg-gradient-to-r from-transparent via-border/30 to-transparent mb-2 sm:mb-3" />
           <div className="flex items-center justify-between text-xs text-muted-foreground/60">
             <span className="font-light">
-              {new Date(note.updatedAt).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: new Date(note.updatedAt).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
-              })}
+              {note.isSharedWithMe && note.sharedAt 
+                ? `Shared ${new Date(note.sharedAt).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: new Date(note.sharedAt).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                  })}`
+                : new Date(note.updatedAt).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: new Date(note.updatedAt).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                  })
+              }
             </span>
             {/* AI generation status indicator */}
             {(note.titleGenerated || note.typeGenerated) && (

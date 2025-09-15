@@ -167,112 +167,115 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
   }
 
   return (
-    <div className="grid gap-4 sm:gap-6 max-w-full">
-      {/* Profile Information Card */}
-      <Card className={cn(
-        "transition-all duration-300 ease-in-out",
-        isEditMode 
-          ? "bg-accent/10 border-accent/50" 
-          : "bg-card"
-      )}>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
+    <div className="space-y-12">
+      {/* Profile Section */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h2 className="text-2xl font-light tracking-tight text-foreground">Profile</h2>
+            <p className="text-muted-foreground">Your personal information and account details</p>
+          </div>
+          
+          {!isEditMode ? (
+            <Button
+              variant="ghost"
+              onClick={handleEdit}
+              className="text-muted-foreground hover:text-foreground transition-colors duration-200"
+            >
+              <Edit2 className="w-4 h-4 mr-2" />
+              Edit
+            </Button>
+          ) : (
             <div className="flex items-center gap-3">
-              <CardTitle className="text-lg sm:text-xl">Profile Information</CardTitle>
-              {isEditMode && (
-                <Badge variant="default" className="bg-accent/20 text-accent-foreground">
-                  <Edit2 className="w-3 h-3 mr-1" />
-                  Editing
-                </Badge>
-              )}
+              <Button
+                variant="ghost"
+                onClick={handleCancel}
+                disabled={isUpdating}
+                className="text-muted-foreground hover:text-foreground transition-colors duration-200"
+              >
+                <X className="w-4 h-4 mr-2" />
+                Cancel
+              </Button>
+              <Button
+                onClick={(e) => handleProfileUpdate(e, formData, setIsUpdating, setFormData, updateUser, userId, userEmail, setIsEditMode, firebaseUser?.photoURL)}
+                disabled={isUpdating}
+                className="bg-foreground text-background hover:bg-foreground/90 transition-colors duration-200"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {isUpdating ? 'Saving...' : 'Save Changes'}
+              </Button>
             </div>
+          )}
+        </div>
+
+        {/* Status Indicator */}
+        {isEditMode && (
+          <div className="h-px bg-gradient-to-r from-transparent via-blue-400/60 to-transparent" />
+        )}
+
+        <form onSubmit={(e) => {
+          if (!isEditMode) {
+            e.preventDefault();
+            return;
+          }
+          handleProfileUpdate(e, formData, setIsUpdating, setFormData, updateUser, userId, userEmail, setIsEditMode, firebaseUser?.photoURL);
+        }}>
+          <div className="space-y-8">
+            <ProfileFields formData={formData} setFormData={setFormData} isEditMode={isEditMode} />
             
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-              <div className="flex items-center gap-2 ml-2">
-                {!isEditMode ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleEdit}
-                    className="flex items-center gap-2"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                    <span className="hidden sm:inline">Edit</span>
-                  </Button>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleCancel}
-                      disabled={isUpdating}
-                      className="flex items-center gap-2"
-                    >
-                      <X className="w-4 h-4" />
-                      <span className="hidden sm:inline">Cancel</span>
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={(e) => handleProfileUpdate(e, formData, setIsUpdating, setFormData, updateUser, userId, userEmail, setIsEditMode, firebaseUser?.photoURL)}
-                      disabled={isUpdating}
-                      className="flex items-center gap-2"
-                    >
-                      <Save className="w-4 h-4" />
-                      <span className="hidden sm:inline">{isUpdating ? 'Saving...' : 'Save'}</span>
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
+            <div className="h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
+            
+            <ReferralFields formData={formData} referrerName={referrerName} referrerLoading={referrerLoading} />
           </div>
-        </CardHeader>
-        
-        <CardContent className="space-y-4">
-          <div className={cn(
-            "transition-all duration-300 ease-in-out",
-            isEditMode ? "opacity-100" : "opacity-100"
-          )}>
-            <form onSubmit={(e) => {
-              if (!isEditMode) {
-                e.preventDefault();
-                return;
-              }
-              handleProfileUpdate(e, formData, setIsUpdating, setFormData, updateUser, userId, userEmail, setIsEditMode, firebaseUser?.photoURL);
-            }}>
-              <div className="grid grid-cols-1 gap-4">
-                <ProfileFields formData={formData} setFormData={setFormData} isEditMode={isEditMode} />
-                <ReferralFields formData={formData} referrerName={referrerName} referrerLoading={referrerLoading} />
-              </div>
-            </form>
-          </div>
-        </CardContent>
-      </Card>
+        </form>
+      </div>
+
     </div>
   )
 }
 
 function FormSkeleton() {
   return (
-    <div className="grid gap-6">
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-7 w-48" />
-        </CardHeader>
-        <CardContent className="space-y-6">
+    <div className="space-y-12">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
           <div className="space-y-2">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-5 w-64" />
           </div>
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-9 w-20" />
+        </div>
+        
+        <div className="space-y-8">
+          <div className="space-y-6">
+            <div className="space-y-3">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <div className="space-y-3">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <div className="space-y-3">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-10 w-full" />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-10 w-full" />
+          
+          <div className="h-px bg-gradient-to-r from-transparent via-border/30 to-transparent" />
+          
+          <div className="space-y-6">
+            <div className="space-y-3">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <div className="space-y-3">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-10 w-full" />
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }

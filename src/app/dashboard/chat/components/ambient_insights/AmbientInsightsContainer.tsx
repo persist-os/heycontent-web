@@ -78,7 +78,7 @@ export function AmbientInsightsContainer({ userId, handleSendMessage, onNewChat 
       <div className="flex-shrink-0 pt-3 pb-2">
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           {/* Action Buttons - Compact and Right-aligned */}
-          <div className="flex justify-end items-center gap-2">
+          <div className="flex justify-end items-center gap-2 pr-6 pt-6">
             {onNewChat && (
               <Button 
                 variant="ghost" 

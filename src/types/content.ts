@@ -4,7 +4,7 @@ import { ConvexReactClient } from 'convex/react';
 export interface UnifiedContent {
   id: string;
   title: string;
-  type: 'note' | 'youtube' | 'instagram' | 'gmail' | 'insight' | 'conversation';
+  type: 'note' | 'conversation';
   contentType: string;
   platform: string;
   createdAt: number;
@@ -14,21 +14,6 @@ export interface UnifiedContent {
   analysis?: any;
   analysisMarkdown?: string; // Markdown-formatted analysis
   content?: string;
-  // YouTube specific
-  thumbnailUrl?: string;
-  statistics?: any;
-  // Instagram specific
-  mediaUrl?: string;
-  mediaType?: string; // Original media type (IMAGE, VIDEO, CAROUSEL_ALBUM, REELS)
-  permalink?: string; // Direct link to the post
-  insights?: any;
-  comments?: any[]; // Comments array
-  children?: any[]; // Children for carousel posts
-  convexData?: any; // Full Convex document for complete data access
-  // Gmail specific
-  from?: string;
-  messageCount?: number;
-  category?: string;
   // Conversation specific
   messages?: any[];
   recommendations?: any[];
@@ -54,40 +39,24 @@ export interface InfiniteScrollState {
 // Loading states per platform
 export interface PlatformLoadingState {
   notes: boolean;
-  youtube: boolean;
-  instagram: boolean;
-  gmail: boolean;
-  insights: boolean;
   conversations: boolean;
 }
 
 // Error states per platform
 export interface PlatformErrorState {
   notes: string | null;
-  youtube: string | null;
-  instagram: string | null;
-  gmail: string | null;
-  insights: string | null;
   conversations: string | null;
 }
 
 // Content data per platform with infinite scroll support
 export interface PlatformContentData {
   notes: InfiniteScrollState;
-  youtube: InfiniteScrollState;
-  instagram: InfiniteScrollState;
-  gmail: InfiniteScrollState;
-  insights: InfiniteScrollState;
   conversations: InfiniteScrollState;
 }
 
 // Legacy flat content arrays for backward compatibility
 export interface LegacyPlatformContentData {
   notes: UnifiedContent[];
-  youtube: UnifiedContent[];
-  instagram: UnifiedContent[];
-  gmail: UnifiedContent[];
-  insights: UnifiedContent[];
   conversations: UnifiedContent[];
 }
 
@@ -156,27 +125,15 @@ export const createInitialInfiniteScrollState = (): InfiniteScrollState => ({
 
 export const initialPlatformLoadingState: PlatformLoadingState = {
   notes: false,
-  youtube: false,
-  instagram: false,
-  gmail: false,
-  insights: false,
   conversations: false,
 };
 
 export const initialPlatformErrorState: PlatformErrorState = {
   notes: null,
-  youtube: null,
-  instagram: null,
-  gmail: null,
-  insights: null,
   conversations: null,
 };
 
 export const initialContentState: PlatformContentData = {
   notes: createInitialInfiniteScrollState(),
-  youtube: createInitialInfiniteScrollState(),
-  instagram: createInitialInfiniteScrollState(),
-  gmail: createInitialInfiniteScrollState(),
-  insights: createInitialInfiniteScrollState(),
   conversations: createInitialInfiniteScrollState(),
 }; 

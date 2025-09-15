@@ -8,11 +8,6 @@ import { useNotes } from '@/app/context/notes-context';
 import { useProjects } from './hooks/useProjects';
 import { Note } from './types';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { YouTubeVideoCard } from './components/YouTubeVideoCard';
-import { InstagramPostCard } from './components/InstagramPostCard';
-import { GmailThreadCard } from './components/GmailThreadCard';
-import { InsightCard } from '../ai-insights/_components/InsightCard';
-import { InsightOverlay } from '@/components/content/overlays/InsightOverlay';
 
 export default function SmartNotes() {
   const { firebaseUser } = useAuth();
@@ -29,10 +24,6 @@ export default function SmartNotes() {
   const { projects } = useProjects(userId);
 
   // Content overlay states
-  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
-  const [selectedInstagramPostId, setSelectedInstagramPostId] = useState<string | null>(null);
-  const [selectedGmailThreadId, setSelectedGmailThreadId] = useState<string | null>(null);
-  const [selectedInsightId, setSelectedInsightId] = useState<string | null>(null);
 
   // Handle note editing - redirect to chat with noteId
   const handleEditNote = (note: Note) => {
@@ -61,17 +52,7 @@ export default function SmartNotes() {
     return await updateNote(String(noteId), updates);
   }, [updateNote]);
 
-  // Handle YouTube video analysis navigation
-  const handleOpenAnalysis = async (videoId: string) => {
-    setSelectedVideoId(null); // Close the card
-    router.push(`/dashboard/notes/youtube-analysis/${videoId}`);
-  };
 
-  // Handle insight analysis navigation
-  const handleOpenInsightAnalysis = async (insightId: string) => {
-    setSelectedInsightId(null); // Close the card
-    router.push(`/dashboard/notes/insight-analysis/${encodeURIComponent(insightId)}`);
-  };
 
   // Show the tree view with clean organization
   return (
@@ -87,44 +68,6 @@ export default function SmartNotes() {
       />
       
       {/* Content overlays */}
-      {selectedVideoId && (
-        <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 animate-in fade-in duration-300">
-          <YouTubeVideoCard
-            videoId={selectedVideoId}
-            onClose={() => setSelectedVideoId(null)}
-            onOpenAnalysis={handleOpenAnalysis}
-          />
-        </div>
-      )}
-      
-      {selectedInstagramPostId && (
-        <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 animate-in fade-in duration-300">
-          <InstagramPostCard
-            postId={selectedInstagramPostId}
-            onClose={() => setSelectedInstagramPostId(null)}
-            onOpenAnalysis={handleOpenAnalysis}
-          />
-        </div>
-      )}
-      
-      {selectedGmailThreadId && (
-        <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 animate-in fade-in duration-300">
-          <GmailThreadCard
-            threadId={selectedGmailThreadId}
-            onClose={() => setSelectedGmailThreadId(null)}
-          />
-        </div>
-      )}
-      
-      {selectedInsightId && (
-        <div className="animate-in fade-in duration-300">
-          <InsightOverlay
-            insightId={selectedInsightId}
-            onClose={() => setSelectedInsightId(null)}
-            showAnalysis={true}
-          />
-        </div>
-      )}
     </div>
   );
 }

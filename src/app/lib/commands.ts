@@ -31,7 +31,7 @@ import {
 export interface SearchResultBase {
   id: string;
   title: string;
-  type: 'conversation' | 'note' | 'analytics' | 'insight' | 'audience' | 'partnership' | 'conversation_history';
+  type: 'conversation' | 'note' | 'analytics' | 'audience' | 'conversation_history';
   icon: typeof MessageSquare;
   color: string;
   updatedAt: string;
@@ -57,11 +57,6 @@ export interface AnalyticsResult extends SearchResultBase {
   trend: 'up' | 'down' | 'neutral';
 }
 
-export interface InsightResult extends SearchResultBase {
-  type: 'insight';
-  category: string;
-  summary: string;
-}
 
 export interface AudienceResult extends SearchResultBase {
   type: 'audience';
@@ -69,12 +64,6 @@ export interface AudienceResult extends SearchResultBase {
   metrics: { label: string; value: string }[];
 }
 
-export interface PartnershipResult extends SearchResultBase {
-  type: 'partnership';
-  status: 'active' | 'pending' | 'completed';
-  company: string;
-  details: string;
-}
 
 export interface ConversationHistory extends SearchResultBase {
   type: 'conversation_history';
@@ -87,9 +76,7 @@ export type SearchResult =
   | ConversationResult 
   | NoteResult 
   | AnalyticsResult 
-  | InsightResult 
   | AudienceResult 
-  | PartnershipResult
   | ConversationHistory;
 
 // Mock data for content search
@@ -112,7 +99,7 @@ const mockSearchResults: SearchResult[] = [
     icon: FileText,
     color: 'text-purple-500',
     preview: '1. Use trending audio\n2. Post consistently\n3. Engage with followers',
-    tags: ['instagram', 'growth', 'social media'],
+    tags: ['growth', 'social media'],
     updatedAt: '2024-03-27',
     path: '/notes/note1',
   },
@@ -129,17 +116,6 @@ const mockSearchResults: SearchResult[] = [
     path: '/analytics/report1',
   },
   {
-    id: 'insight1',
-    type: 'insight',
-    title: 'Content Performance Analysis',
-    icon: Brain,
-    color: 'text-indigo-500',
-    category: 'AI Insights',
-    summary: 'Videos posted between 6-8 PM get 30% more engagement',
-    updatedAt: '2024-03-25',
-    path: '/insights/insight1',
-  },
-  {
     id: 'audience1',
     type: 'audience',
     title: 'Core Audience Demographics',
@@ -152,18 +128,6 @@ const mockSearchResults: SearchResult[] = [
     ],
     updatedAt: '2024-03-24',
     path: '/audience/segment1',
-  },
-  {
-    id: 'partnership1',
-    type: 'partnership',
-    title: 'Tech Brand Collaboration',
-    icon: Briefcase,
-    color: 'text-orange-500',
-    status: 'active',
-    company: 'TechCo',
-    details: 'Content series about productivity tools',
-    updatedAt: '2024-03-23',
-    path: '/partnerships/tech-co',
   },
 ];
 
@@ -211,17 +175,6 @@ const navigationCommands: NavigationCommand[] = [
   },
 
 
-  {
-    id: 'nav-content-hub',
-    type: 'navigation',
-    category: 'navigation',
-    label: 'Content Hub',
-    description: 'Access content creation tools',
-    icon: Users,
-    href: '/dashboard/content-hub',
-    shortcut: ['g', 'h'],
-    tags: ['content', 'hub', 'creation'],
-  },
 
   {
     id: 'nav-notes',
@@ -395,7 +348,7 @@ export const commandGroups: CommandGroup[] = [
 
 // Update SearchFilter type to include conversation_history
 export type SearchFilter = {
-  type?: 'conversation' | 'note' | 'analytics' | 'insight' | 'audience' | 'partnership' | 'conversation_history';
+  type?: 'conversation' | 'note' | 'analytics' | 'audience' | 'conversation_history';
   dateRange?: {
     start: Date;
     end: Date;
@@ -477,7 +430,6 @@ export async function searchCommands(input: string): Promise<(Command | SearchRe
       const filteredVectorResults = vectorResults.filter(result => {
         if (filters.type && result.type !== filters.type) return false;
         if (filters.tags && result.type === 'note' && 'tags' in result && !filters.tags.every(tag => result.tags.includes(tag))) return false;
-        if (filters.status && result.type === 'partnership' && 'status' in result && result.status !== filters.status) return false;
         if (filters.dateRange) {
           const resultDate = new Date(result.type === 'conversation_history' && 'timestamp' in result ? result.timestamp : result.updatedAt);
           if (resultDate < filters.dateRange.start || resultDate > filters.dateRange.end) return false;
@@ -499,7 +451,6 @@ export async function searchCommands(input: string): Promise<(Command | SearchRe
     // Apply filters
     if (filters.type && result.type !== filters.type) return false;
     if (filters.tags && result.type === 'note' && !filters.tags.every(tag => result.tags.includes(tag))) return false;
-    if (filters.status && result.type === 'partnership' && result.status !== filters.status) return false;
     if (filters.dateRange) {
       const resultDate = new Date(result.type === 'conversation_history' ? result.timestamp : result.updatedAt);
       if (resultDate < filters.dateRange.start || resultDate > filters.dateRange.end) return false;
@@ -568,7 +519,7 @@ async function vectorSearchContent(query: string, limit: number = 5): Promise<Se
         userId,
         query,
         limit,
-        contentTypes: ["conversation", "note", "instagram_post", "youtube_video", "gmail_thread"],
+        contentTypes: ["conversation", "note"],
         minSimilarity: 0.3 // Lower threshold for command palette search
       });
 
@@ -601,23 +552,13 @@ async function vectorSearchContent(query: string, limit: number = 5): Promise<Se
                 tags: [],
               } as NoteResult;
             
-            case 'instagram_post':
-            case 'youtube_video':
-            case 'gmail_thread':
-              return {
-                ...baseResult,
-                type: 'insight',
-                category: result.contentType,
-                summary: result.content.substring(0, 100) + '...',
-              } as InsightResult;
-            
             default:
               return {
                 ...baseResult,
-                type: 'insight',
-                category: 'Content',
-                summary: result.content.substring(0, 100) + '...',
-              } as InsightResult;
+                type: 'note',
+                preview: result.content.substring(0, 100) + '...',
+                tags: [],
+              } as NoteResult;
           }
         });
       }
@@ -630,7 +571,7 @@ async function vectorSearchContent(query: string, limit: number = 5): Promise<Se
       userId,
       query,
       limit,
-      contentTypes: ["conversation", "note", "instagram_post", "youtube_video", "gmail_thread"],
+      contentTypes: ["conversation", "note"],
       minSimilarity: 0.3 // Lower threshold for command palette search
     });
 
@@ -663,23 +604,13 @@ async function vectorSearchContent(query: string, limit: number = 5): Promise<Se
             tags: [], // Could extract tags from content if needed
           } as NoteResult;
         
-        case 'instagram_post':
-        case 'youtube_video':
-        case 'gmail_thread':
-          return {
-            ...baseResult,
-            type: 'insight',
-            category: result.contentType,
-            summary: result.content.substring(0, 100) + '...',
-          } as InsightResult;
-        
         default:
           return {
             ...baseResult,
-            type: 'insight',
-            category: 'Content',
-            summary: result.content.substring(0, 100) + '...',
-          } as InsightResult;
+            type: 'note',
+            preview: result.content.substring(0, 100) + '...',
+            tags: [],
+          } as NoteResult;
       }
     });
   } catch (error) {
@@ -692,9 +623,6 @@ function getIconForContentType(contentType: string) {
   switch (contentType) {
     case 'conversation': return MessageSquare;
     case 'note': return FileText;
-    case 'instagram_post': return Users;
-    case 'youtube_video': return TrendingUp;
-    case 'gmail_thread': return MessageSquare;
     default: return Brain;
   }
 }
@@ -703,9 +631,6 @@ function getColorForContentType(contentType: string) {
   switch (contentType) {
     case 'conversation': return 'text-blue-500';
     case 'note': return 'text-purple-500';
-    case 'instagram_post': return 'text-pink-500';
-    case 'youtube_video': return 'text-red-500';
-    case 'gmail_thread': return 'text-green-500';
     default: return 'text-gray-500';
   }
 }
@@ -714,9 +639,6 @@ function getPathForContentType(contentType: string, contentId: string) {
   switch (contentType) {
     case 'conversation': return `/dashboard/chat/${contentId}`;
     case 'note': return `/dashboard/notes/${contentId}`;
-    case 'instagram_post': return `/dashboard/content-analytics?highlight=${contentId}`;
-    case 'youtube_video': return `/dashboard/content-analytics?highlight=${contentId}`;
-    case 'gmail_thread': return `/dashboard/content-analytics?highlight=${contentId}`;
     default: return '/dashboard';
   }
 } 

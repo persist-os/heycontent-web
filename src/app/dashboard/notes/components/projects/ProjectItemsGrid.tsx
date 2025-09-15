@@ -6,11 +6,6 @@ import { ProjectWithItems } from '../../types/project';
 import { NoteCard } from '../cards/NoteCard';
 import { Play, Heart, Eye, Users, MessageCircle, ExternalLink, ThumbsUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { YouTubeOverlay } from '@/components/content/overlays/YouTubeOverlay';
-import { InstagramOverlay } from '@/components/content/overlays/InstagramOverlay';
-import { GmailCard } from '@/app/dashboard/content-analytics/cards/GmailCard';
-import { GmailModal } from '@/app/dashboard/content-analytics/modals/GmailModal';
-import { GmailContentItem } from '@/app/dashboard/content-analytics/types';
 import { formatNumber, formatDate, formatDuration } from '@/lib/content-utils';
 import { useNotes } from '@/app/context/notes-context';
 import { useQuery } from 'convex/react';
@@ -24,11 +19,7 @@ import {
   convertToAttachableItems,
   groupItemsByType,
   getSectionConfig,
-  processInstagramData,
-  processYouTubeData,
-  processGmailData,
   processAnalysisData,
-  getGmailCategoryColor,
   getAnalysisTypeColor,
 } from '../../utils/project-items';
 
@@ -42,10 +33,7 @@ export function ProjectItemsGrid({ project }: ProjectItemsGridProps) {
   const { removeItemFromProject } = useProjects(userId);
   const router = useRouter();
   
-  // State for overlay modals
-  const [selectedYouTubeVideo, setSelectedYouTubeVideo] = useState<string | null>(null);
-  const [selectedInstagramPost, setSelectedInstagramPost] = useState<string | null>(null);
-  const [selectedGmailContent, setSelectedGmailContent] = useState<GmailContentItem | null>(null);
+  // State for overlay modals - social media overlays removed
 
   // Initialize content manager
   const contentManager = useContentManager(userId);
@@ -62,27 +50,15 @@ export function ProjectItemsGrid({ project }: ProjectItemsGridProps) {
     userId ? { userId } : "skip"
   );
 
-  // Fetch platform content using content hooks
-  const { content: instagramPosts, loading: instagramLoading } = usePlatformContent('instagram');
-  const { content: youtubeVideos, loading: youtubeLoading } = usePlatformContent('youtube');
-  const { content: gmailContent, loading: gmailLoading } = usePlatformContent('gmail');
-  const { content: analysisContent, loading: analysisLoading } = usePlatformContent('insights');
+  // Analysis content removed since insights platform was removed
+  const analysisContent: any[] = [];
+  const analysisLoading = false;
   
   // Debug content loading
   console.log('Content Loading Debug:', {
     userId,
-    instagramPosts: instagramPosts?.length || 0,
-    instagramLoading,
-    youtubeVideos: youtubeVideos?.length || 0,
-    youtubeLoading,
-    gmailContent: gmailContent?.length || 0,
-    gmailLoading,
     analysisContent: analysisContent?.length || 0,
     analysisLoading,
-    // Sample data to see what's being loaded
-    sampleInstagram: instagramPosts?.[0]?.id,
-    sampleYouTube: youtubeVideos?.[0]?.id,
-    sampleGmail: gmailContent?.[0]?.id,
     sampleAnalysis: analysisContent?.[0]?.id,
     // Check if there are analysis items available but not attached
     availableAnalysisCount: analysisContent?.length || 0,
@@ -102,9 +78,6 @@ export function ProjectItemsGrid({ project }: ProjectItemsGridProps) {
     attachedItems: project.attachedItems,
     notes: project.attachedItems?.notes?.length || 0,
     conversations: project.attachedItems?.conversations?.length || 0,
-    instagramPosts: project.attachedItems?.instagramPosts?.length || 0,
-    youtubeVideos: project.attachedItems?.youtubeVideos?.length || 0,
-    gmailItems: project.attachedItems?.gmailItems?.length || 0,
     analysisItems: project.attachedItems?.analysisItems?.length || 0,
     // Sample analysis items
     sampleAnalysis: project.attachedItems?.analysisItems?.[0],
@@ -117,9 +90,6 @@ export function ProjectItemsGrid({ project }: ProjectItemsGridProps) {
     const convertedItems = {
       notes: items?.notes || [],
       conversations: items?.conversations || [],
-      instagramPosts: items?.instagramPosts || [],
-      youtubeVideos: items?.youtubeVideos || [],
-      gmail: items?.gmailItems || [],
       analysis: items?.analysisItems || [],
     };
 
@@ -155,61 +125,9 @@ export function ProjectItemsGrid({ project }: ProjectItemsGridProps) {
     }
   };
 
-  // Overlay handlers for Instagram and YouTube
-  const handleInstagramClick = (postId: string) => {
-    setSelectedInstagramPost(postId);
-  };
+  // Social media overlay handlers removed
 
-  const handleYouTubeClick = (videoId: string) => {
-    setSelectedYouTubeVideo(videoId);
-  };
-
-  // Convert AttachableItem to GmailContentItem format
-  const convertToGmailContentItem = (item: any): GmailContentItem => {
-    // Extract data directly from the Gmail thread object
-    const subject = item.subject || 'No Subject';
-    const from = item.from || 'Unknown Sender';
-    const snippet = item.snippet || '';
-    const messageCount = item.message_count || 1;
-    const timestamp = item.createdAt || item.updatedAt || 0;
-    
-    return {
-      id: String(item._id || item.threadId || ''),
-      platform: 'gmail',
-      content: {
-        data: {
-          threadId: String(item.threadId || item._id || ''),
-          subject: subject,
-          from: from,
-          snippet: snippet,
-          emailId: String(item.threadId || item._id || ''),
-          emailType: 'other',
-          messages: item.messages || [],
-          messageCount: messageCount,
-        }
-      },
-      metrics: {
-        replies: messageCount,
-      },
-      publishedAt: timestamp ? new Date(timestamp).toISOString() : new Date().toISOString(),
-      analysis: item.analysis || null,
-      analysisMarkdown: item.analysisMarkdown || null,
-      convexData: item || null,
-    };
-  };
-
-  // Gmail handlers
-  const handleGmailDiscuss = (item: any) => {
-    const gmailItem = convertToGmailContentItem(item);
-    // The GmailCard will handle the discuss functionality internally
-    console.log('Gmail discuss clicked:', gmailItem);
-  };
-
-  const handleGmailAnalytics = (item: any) => {
-    const gmailItem = convertToGmailContentItem(item);
-    setSelectedGmailContent(gmailItem);
-    console.log('Gmail analytics clicked:', gmailItem);
-  };
+  // Gmail-related functions removed
 
   const handleAnalysisClick = (item: any) => {
     console.log('Analysis item clicked:', item);
@@ -220,10 +138,6 @@ export function ProjectItemsGrid({ project }: ProjectItemsGridProps) {
   const allItems = [
     ...(attachedItems.notes || []).map(item => ({ ...item, itemType: 'note' as const })),
     ...(attachedItems.conversations || []).map(item => ({ ...item, itemType: 'conversation' as const })),
-    ...(attachedItems.instagramPosts || []).map(item => ({ ...item, itemType: 'instagramPost' as const })),
-    ...(attachedItems.youtubeVideos || []).map(item => ({ ...item, itemType: 'youtubeVideo' as const })),
-    ...(attachedItems.gmail || []).map(item => ({ ...item, itemType: 'gmail' as const })),
-    ...(attachedItems.analysis || []).map(item => ({ ...item, itemType: 'analysis' as const })),
   ];
 
   console.log('All Items Debug:', {
@@ -293,161 +207,8 @@ export function ProjectItemsGrid({ project }: ProjectItemsGridProps) {
     };
   };
 
-  // Instagram Card Component
-  const InstagramCard = ({ item }: { item: any }) => {
-    console.log('InstagramCard received item:', item);
-    const id = String(item._id || item.id || '');
-    const attachableItem = createAttachableItem(item, 'instagramPost');
-    const { likes, comments, mediaUrl, caption, timestamp } = processInstagramData(attachableItem);
+  // Social media card components removed
 
-    return (
-      <div
-        key={id}
-        className="bg-background border border-border rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer group h-fit"
-        onClick={() => handleInstagramClick(id)}
-      >
-        {/* Media Preview */}
-        {mediaUrl ? (
-          <div className="relative aspect-square bg-muted">
-            <img
-              src={mediaUrl}
-              alt={caption.substring(0, 50) || 'Instagram Post'}
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-              <div className="bg-white/90 rounded-full p-2">
-                <ExternalLink className="w-4 h-4 text-gray-900" />
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="relative aspect-square bg-muted flex items-center justify-center">
-            {React.createElement(getSectionConfig('instagramPost').icon, { className: "w-12 h-12 text-pink-400" })}
-            <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded">
-              No Image
-            </div>
-          </div>
-        )}
-        
-        {/* Content */}
-        <div className="p-3">
-          <h3 className="font-medium text-foreground line-clamp-2 mb-1 text-sm">
-            {caption.substring(0, 50) || 'Instagram Post'}
-            {caption.length > 50 && '...'}
-          </h3>
-          
-          {/* Stats Row */}
-          <div className="flex items-center gap-3 text-xs text-muted-foreground mb-1">
-            {likes > 0 && (
-              <div className="flex items-center gap-1">
-                <Heart className="w-3 h-3 text-red-500" />
-                <span>{formatNumber(likes)}</span>
-              </div>
-            )}
-            {comments > 0 && (
-              <div className="flex items-center gap-1">
-                <MessageCircle className="w-3 h-3 text-blue-500" />
-                <span>{formatNumber(comments)}</span>
-              </div>
-            )}
-            {likes === 0 && comments === 0 && (
-              <span className="text-xs text-muted-foreground">No stats</span>
-            )}
-          </div>
-          
-          {/* Date */}
-          {timestamp && (
-            <p className="text-xs text-muted-foreground">
-              {formatDate(new Date(timestamp).getTime())}
-            </p>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  // YouTube Card Component
-  const YouTubeCard = ({ item }: { item: any }) => {
-    console.log('YouTubeCard received item:', item);
-    const id = String(item._id || item.id || '');
-    const attachableItem = createAttachableItem(item, 'youtubeVideo');
-    const { views, likes, comments, thumbnailUrl, title, duration, publishedAt } = processYouTubeData(attachableItem);
-
-    return (
-      <div
-        key={id}
-        className="bg-background border border-border rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer group h-fit"
-        onClick={() => handleYouTubeClick(id)}
-      >
-        {/* Thumbnail Preview */}
-        {thumbnailUrl ? (
-          <div className="relative aspect-video bg-muted">
-            <img
-              src={thumbnailUrl}
-              alt={title}
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-              <div className="bg-red-600 rounded-full p-3">
-                <Play className="w-6 h-6 text-white fill-white" />
-              </div>
-            </div>
-            {duration && (
-              <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded">
-                {duration}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="relative aspect-video bg-muted flex items-center justify-center">
-            {React.createElement(getSectionConfig('youtubeVideo').icon, { className: "w-12 h-12 text-red-400" })}
-            <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded">
-              No Thumbnail
-            </div>
-          </div>
-        )}
-        
-        {/* Content */}
-        <div className="p-3">
-          <h3 className="font-medium text-foreground line-clamp-2 mb-1 text-sm">
-            {title || 'YouTube Video'}
-          </h3>
-          
-          {/* Stats Row */}
-          <div className="flex items-center gap-3 text-xs text-muted-foreground mb-1">
-            {views > 0 && (
-              <div className="flex items-center gap-1">
-                <Eye className="w-3 h-3" />
-                <span>{formatNumber(views)}</span>
-              </div>
-            )}
-            {likes > 0 && (
-              <div className="flex items-center gap-1">
-                <ThumbsUp className="w-3 h-3" />
-                <span>{formatNumber(likes)}</span>
-              </div>
-            )}
-            {comments > 0 && (
-              <div className="flex items-center gap-1">
-                <MessageCircle className="w-3 h-3" />
-                <span>{formatNumber(comments)}</span>
-              </div>
-            )}
-            {views === 0 && likes === 0 && comments === 0 && (
-              <span className="text-xs text-muted-foreground">No stats</span>
-            )}
-          </div>
-          
-          {/* Date */}
-          {publishedAt && (
-            <p className="text-xs text-muted-foreground">
-              {formatDate(new Date(publishedAt).getTime())}
-            </p>
-          )}
-        </div>
-      </div>
-    );
-  };
 
   return (
     <>
@@ -504,25 +265,7 @@ export function ProjectItemsGrid({ project }: ProjectItemsGridProps) {
               );
             }
 
-            if (item.itemType === 'instagramPost') {
-              return <InstagramCard key={item._id} item={item} />;
-            }
-
-            if (item.itemType === 'youtubeVideo') {
-              return <YouTubeCard key={item._id} item={item} />;
-            }
-
-            if (item.itemType === 'gmail') {
-              const gmailItem = convertToGmailContentItem(item);
-              return (
-                <GmailCard
-                  key={item._id}
-                  item={gmailItem}
-                  onDiscussContent={() => handleGmailDiscuss(item)}
-                  onViewDetailedAnalytics={() => handleGmailAnalytics(item)}
-                />
-              );
-            }
+            // Social media item types removed
 
             if (item.itemType === 'analysis') {
               console.log('Rendering analysis item:', item);
@@ -616,29 +359,7 @@ export function ProjectItemsGrid({ project }: ProjectItemsGridProps) {
         </div>
       </div>
 
-      {/* Overlay Modals */}
-      {selectedYouTubeVideo && (
-        <YouTubeOverlay
-          videoId={selectedYouTubeVideo}
-          onClose={() => setSelectedYouTubeVideo(null)}
-          showAnalysis={true}
-        />
-      )}
-
-      {selectedInstagramPost && (
-        <InstagramOverlay
-          postId={selectedInstagramPost}
-          onClose={() => setSelectedInstagramPost(null)}
-          showAnalysis={true}
-        />
-      )}
-
-      {selectedGmailContent && (
-        <GmailModal
-          selectedContent={selectedGmailContent}
-          onClose={() => setSelectedGmailContent(null)}
-        />
-      )}
+      {/* Social media overlay modals removed */}
     </>
   );
 } 

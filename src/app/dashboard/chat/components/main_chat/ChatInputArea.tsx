@@ -6,7 +6,7 @@ import { Message } from '@/app/types/chat';
 
 interface ChatInputAreaProps {
   showAmbient: boolean;
-  currentContext: any;
+  currentContext?: any;
   handleActionClick: (action: string) => void;
   handleSendMessage: (message: string) => void;
   inputRef: React.RefObject<HTMLTextAreaElement>;

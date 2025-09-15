@@ -3,7 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Project } from '../../types/project';
-import { Folder, Calendar, Trash2 } from 'lucide-react';
+import { Folder, Calendar, Trash2, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useDroppable } from '@dnd-kit/core';
@@ -12,10 +12,11 @@ interface ProjectCardProps {
   project: Project;
   onEdit: (project: Project) => void;
   onDelete: () => void;
+  onShare?: (projectId: string) => void;
   dragOverProject?: string | null;
 }
 
-export function ProjectCard({ project, onEdit, onDelete, dragOverProject }: ProjectCardProps) {
+export function ProjectCard({ project, onEdit, onDelete, onShare, dragOverProject }: ProjectCardProps) {
   const router = useRouter();
 
   // Set up droppable functionality
@@ -34,15 +35,18 @@ export function ProjectCard({ project, onEdit, onDelete, dragOverProject }: Proj
     }
   };
 
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onShare?.(String(project._id));
+  };
+
   const handleCardClick = () => {
     router.push(`/dashboard/notes/projects/${project._id}`);
   };
 
   const itemCount = 
     (project.noteIds?.length || 0) + 
-    (project.conversationIds?.length || 0) + 
-    (project.instagramPostIds?.length || 0) + 
-    (project.youtubeVideoIds?.length || 0);
+    (project.conversationIds?.length || 0);
 
   // Determine if this project is being dragged over
   const isDraggedOver = isOver || dragOverProject === String(project._id);
@@ -87,6 +91,16 @@ export function ProjectCard({ project, onEdit, onDelete, dragOverProject }: Proj
           
           {/* Actions */}
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            {onShare && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleShare}
+                className="h-8 w-8 p-0 hover:bg-muted hover:text-blue-500"
+              >
+                <Share2 className="w-3 h-3" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -136,16 +150,6 @@ export function ProjectCard({ project, onEdit, onDelete, dragOverProject }: Proj
               {project.conversationIds && project.conversationIds.length > 0 && (
                 <span className="px-2 py-1 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded">
                   {project.conversationIds.length} chat{project.conversationIds.length !== 1 ? 's' : ''}
-                </span>
-              )}
-              {project.instagramPostIds && project.instagramPostIds.length > 0 && (
-                <span className="px-2 py-1 bg-pink-100 dark:bg-pink-900/20 text-pink-700 dark:text-pink-300 rounded">
-                  {project.instagramPostIds.length} IG post{project.instagramPostIds.length !== 1 ? 's' : ''}
-                </span>
-              )}
-              {project.youtubeVideoIds && project.youtubeVideoIds.length > 0 && (
-                <span className="px-2 py-1 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded">
-                  {project.youtubeVideoIds.length} video{project.youtubeVideoIds.length !== 1 ? 's' : ''}
                 </span>
               )}
             </div>

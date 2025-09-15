@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { Note, NoteType } from '../types/index';
 import { CentralizedHeader, createSaveAction, createStarAction, createLightbulbAction } from '@/components/ui/centralized-header';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Share2 } from 'lucide-react';
 
 interface NoteHeaderProps {
   note: Note;
@@ -15,6 +15,7 @@ interface NoteHeaderProps {
   backButtonContext?: string;
   navigationStack?: Array<{ noteId: string; timestamp: number; fromLink: boolean }>;
   notes?: Array<{ _id: string; title: string }>;
+  onShare?: () => void;
 }
 
 export function NoteHeader({ 
@@ -28,7 +29,8 @@ export function NoteHeader({
   canNavigateBack = false,
   backButtonContext = "Back",
   navigationStack = [],
-  notes = []
+  notes = [],
+  onShare
 }: NoteHeaderProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
@@ -48,8 +50,19 @@ export function NoteHeader({
     });
   };
 
+  // Create share action
+  const createShareAction = () => ({
+    id: 'share',
+    icon: Share2,
+    label: 'Share note',
+    onClick: onShare || (() => {}),
+    disabled: !onShare,
+    variant: 'ghost' as const,
+  });
+
   // Create actions (removed save button)
   const rightActions = [
+    createShareAction(),
     createLightbulbAction(
       note.type === 'idea_bank',
       () => onUpdate(String(note._id), { type: note.type === 'idea_bank' ? 'content_script' : 'idea_bank' as NoteType })

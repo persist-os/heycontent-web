@@ -22,6 +22,28 @@ export function NoteSelector({
 }: NoteSelectorProps) {
   const maxNotesToShow = isMobile ? 6 : 8
 
+  // Ensure the current note is always included in the options
+  const notesToShow = React.useMemo(() => {
+    const currentNoteIdStr = currentNoteId ? String(currentNoteId) : null
+    
+    // Find current note
+    const currentNote = currentNoteIdStr ? availableNotes.find(note => note._id === currentNoteIdStr) : null
+    
+    // Get other notes (excluding current)
+    const otherNotes = availableNotes.filter(note => note._id !== currentNoteIdStr)
+    
+    // Build final list: current note first (if exists), then others up to limit
+    const result = []
+    if (currentNote) {
+      result.push(currentNote)
+    }
+    
+    const remainingSlots = maxNotesToShow - result.length
+    result.push(...otherNotes.slice(0, remainingSlots))
+    
+    return result
+  }, [availableNotes, currentNoteId, maxNotesToShow])
+
   // Create dropdown options
   const options = [
     {
@@ -31,7 +53,7 @@ export function NoteSelector({
       icon: <Plus className="w-3.5 h-3.5" />,
       color: 'bg-blue-500/80'
     },
-    ...availableNotes.slice(0, maxNotesToShow).map((note, index) => ({
+    ...notesToShow.map((note, index) => ({
       value: note._id,
       label: note.title || 'Untitled',
       description: note.type?.replace('_', ' ') || 'idea bank',
@@ -50,7 +72,8 @@ export function NoteSelector({
     }
   }
 
-  const selectedValue = currentNoteId || 'new'
+  // Ensure currentNoteId is properly converted to string for comparison
+  const selectedValue = currentNoteId ? String(currentNoteId) : 'new'
 
   return (
     <SharedDropdown
@@ -59,8 +82,8 @@ export function NoteSelector({
       onSelect={handleSelect}
       placeholder="Select note"
       isMobile={isMobile}
-      width={isMobile ? "w-28" : "w-32"}
-      triggerClassName="min-w-0"
+      width={isMobile ? "w-36 max-w-36" : "w-44 max-w-44 lg:w-48 lg:max-w-48"}
+      triggerClassName="min-w-0 flex-shrink-0 h-8"
     />
   )
 }
