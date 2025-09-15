@@ -6,7 +6,7 @@ import { Note } from '../types';
 
 interface UseNotesTreeDragDropProps {
   updateNote: (noteId: string, updates: Partial<Note>) => Promise<void>;
-  addItemToProject: (projectId: string, itemType: string, itemId: string) => Promise<boolean>;
+  addItemToProject: (projectId: any, itemType: string, itemId: string) => Promise<boolean>;
   moveNoteToFolder: (noteId: any, folderId: any) => Promise<void>;
 }
 
