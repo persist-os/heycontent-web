@@ -62,4 +62,6 @@ export interface ChatContainerHandlers {
   handleContentClick: (contentType: string, contentId: string) => void
   handleOverlayClose: () => void
   handleQuoteToNotepadEnhanced: (text: string) => void
+  quotedForNotepad: string
+  handleClearQuoted: () => void
 }

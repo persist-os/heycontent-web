@@ -10,6 +10,7 @@ import type { Note, NoteUpdate } from '../../../../notes/types/index'
 import type { Id } from "@/convex/_generated/dataModel"
 import type { LexicalNotepadEditorRef } from '@/components/ui/lexical-editor/LexicalNotepadEditor'
 import type { NotepadState, NotepadRefs } from '../types'
+import { toast } from 'sonner'
 
 interface UseNotepadStateProps {
   noteId?: string | Id<"notes">
@@ -99,19 +100,88 @@ export function useNotepadState({
     // Only set content when we actually have note data, never clear preemptively
   }, [existingNote?._id]) // Simplified dependencies - only re-run when note ID changes
 
-  // Handle quoted content insertion
+  // Handle quoted content insertion with comprehensive error handling
   useEffect(() => {
     if (quotedContent && isOpen) {
-      // Remove only leading/trailing quotes while preserving all markdown formatting (bold, italics, etc.) and newlines
-      let cleanedContent = quotedContent.replace(/^['"]|['"]$/g, '').trim()
-      // Remove leading '>' and whitespace from each line
-      cleanedContent = cleanedContent
-        .split('\n')
-        .map(line => line.replace(/^\s*>\s?/, ''))
-        .join('\n')
-      const quotedText = `${cleanedContent}\n\n`
-      setContent(prev => prev + quotedText)
-      onClearQuoted?.()
+      try {
+        // Validate quoted content
+        if (typeof quotedContent !== 'string') {
+          console.error('Invalid quotedContent type:', typeof quotedContent);
+          toast.error('Invalid content format for quoting');
+          onClearQuoted?.();
+          return;
+        }
+
+        if (!quotedContent.trim()) {
+          console.warn('Empty quotedContent provided');
+          toast.warning('No content to quote');
+          onClearQuoted?.();
+          return;
+        }
+
+        // Validate content length
+        if (quotedContent.length > 50000) {
+          console.error('Quoted content too large:', quotedContent.length);
+          toast.error('Content is too large to quote (max 50,000 characters)');
+          onClearQuoted?.();
+          return;
+        }
+
+        // Safely process the content
+        let cleanedContent: string;
+        try {
+          // Remove only leading/trailing quotes while preserving all markdown formatting (bold, italics, etc.) and newlines
+          cleanedContent = quotedContent.replace(/^['"]|['"]$/g, '').trim();
+          
+          // Remove leading '>' and whitespace from each line
+          cleanedContent = cleanedContent
+            .split('\n')
+            .map(line => line.replace(/^\s*>\s?/, ''))
+            .join('\n');
+        } catch (error) {
+          console.error('Error processing quoted content:', error);
+          toast.error('Failed to process quoted content');
+          onClearQuoted?.();
+          return;
+        }
+
+        // Validate processed content
+        if (!cleanedContent || cleanedContent.trim() === '') {
+          console.warn('Processed content is empty');
+          toast.warning('Processed content is empty');
+          onClearQuoted?.();
+          return;
+        }
+
+        const quotedText = `${cleanedContent}\n\n`;
+
+        // Safely update content
+        try {
+          setContent(prev => {
+            const currentLength = prev?.length || 0;
+            const newLength = currentLength + quotedText.length;
+            
+            // Check total content length limit
+            if (newLength > 100000) {
+              toast.error('Adding this quote would exceed the note size limit');
+              return prev;
+            }
+            
+            return prev + quotedText;
+          });
+          
+          // Only clear quoted content if insertion was successful
+          onClearQuoted?.();
+          toast.success('Content quoted to notepad');
+        } catch (error) {
+          console.error('Error inserting quoted content:', error);
+          toast.error('Failed to insert quoted content');
+        }
+      } catch (error) {
+        console.error('Unexpected error handling quoted content:', error);
+        toast.error('An unexpected error occurred while processing quote');
+        onClearQuoted?.();
+      }
     }
   }, [quotedContent, isOpen, onClearQuoted])
 

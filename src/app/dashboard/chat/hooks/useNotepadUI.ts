@@ -24,7 +24,6 @@ interface UseNotepadUIResult {
   notepadScrollPosition: number
   hasUnreadNotepadChanges: boolean
   switchToTab: (tab: 'chat' | 'notes') => void
-  insertTextToNotepad: (text: string) => void
   clearNotepadBadge: () => void
   saveScrollPosition: (tab: 'chat' | 'notes', position: number) => void
 }
@@ -83,18 +82,6 @@ export function useNotepadUI(): UseNotepadUIResult {
     }
   }, [isMobile])
 
-  const insertTextToNotepad = useCallback((text: string) => {
-    if (isMobile) {
-      // Switch to notes tab and set badge
-      setActiveTab('notes')
-      setHasUnreadNotepadChanges(true)
-    } else {
-      // On desktop, just open notepad
-      setIsOpen(true)
-    }
-    // Note: The actual text insertion will be handled by the parent component
-    // This function just manages the UI state
-  }, [isMobile])
 
   const clearNotepadBadge = useCallback(() => {
     setHasUnreadNotepadChanges(false)
@@ -159,7 +146,6 @@ export function useNotepadUI(): UseNotepadUIResult {
     notepadScrollPosition,
     hasUnreadNotepadChanges,
     switchToTab,
-    insertTextToNotepad,
     clearNotepadBadge,
     saveScrollPosition
   }

@@ -12,6 +12,7 @@ import { CopyButton } from '@/components/ui/copy-button'
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { useGlobalSelectionState } from './hooks/useGlobalSelectionState'
+import { toast } from 'sonner'
 
 interface MessageBubbleProps {
   message: Message
@@ -324,38 +325,127 @@ export function MessageBubble({
     }
   }, [removeActiveSelection, selectionId])
 
-  // Handle quote button click
-  const handleQuoteText = () => {
-    if (!selectedText) return;
+  // Single condition for when quoting is available
+  const canQuote = onInputPopulate || (notepadOpen && onQuoteToNotepad);
 
-    // Get the rendered message text (as plain text, for comparison)
-    const messageElement = document.getElementById(`message-${message.id}`);
-    let renderedText = '';
-    if (messageElement) {
-      renderedText = messageElement.innerText.trim();
-    }
-    const selected = selectedText.trim();
-    // If the selection matches the entire message, use the markdown source
-    let quoteToInsert: string;
-    if (renderedText && selected === renderedText) {
-      quoteToInsert = message.content;
-    } else {
-      // Otherwise, insert as markdown blockquote (preserve line breaks)
-      quoteToInsert = selected
+  // Handle quote button click for selected text
+  const handleQuoteText = () => {
+    try {
+      // Validate selection
+      if (!selectedText || !selectedText.trim()) {
+        toast.error('No text selected to quote');
+        return;
+      }
+
+      // Validate text length (prevent extremely large quotes)
+      if (selectedText.length > 10000) {
+        toast.error('Selected text is too long to quote (max 10,000 characters)');
+        return;
+      }
+
+      // Validate that we have valid handlers
+      if (!canQuote) {
+        toast.error('Quote functionality is not available');
+        return;
+      }
+
+      // Format as blockquote - split by lines, prefix with "> ", and append newlines
+      const quoteToInsert = selectedText
         .split('\n')
         .map(line => line ? `> ${line}` : '>')
-        .join('\n');
+        .join('\n') + '\n\n';
+
+      // Validate the formatted quote
+      if (!quoteToInsert || quoteToInsert.trim() === '') {
+        toast.error('Failed to format quote text');
+        return;
+      }
+
+      // Attempt to insert the quote
+      let insertionSuccessful = false;
+      if (notepadOpen && onQuoteToNotepad) {
+        try {
+          onQuoteToNotepad(quoteToInsert);
+          insertionSuccessful = true;
+          toast.success('Text quoted to notepad');
+        } catch (error) {
+          console.error('Failed to quote to notepad:', error);
+          toast.error('Failed to add quote to notepad');
+        }
+      } else if (onInputPopulate) {
+        try {
+          onInputPopulate(quoteToInsert);
+          insertionSuccessful = true;
+          toast.success('Text quoted to chat input');
+        } catch (error) {
+          console.error('Failed to quote to input:', error);
+          toast.error('Failed to add quote to chat input');
+        }
+      }
+      
+      // Only clear selection if insertion was successful
+      if (insertionSuccessful) {
+        setSelectedText('');
+        setSelectionRect(null);
+        setHighlightRects([]);
+        setShowQuoteButton(false);
+      }
+    } catch (error) {
+      console.error('Unexpected error in handleQuoteText:', error);
+      toast.error('An unexpected error occurred while quoting text');
     }
-    if (notepadOpen && onQuoteToNotepad) {
-      onQuoteToNotepad(quoteToInsert);
-    } else if (onInputPopulate) {
-      onInputPopulate(quoteToInsert);
+  };
+
+  // Handle quote entire message
+  const handleQuoteEntireMessage = () => {
+    try {
+      // Validate message content
+      if (!message.content || !message.content.trim()) {
+        toast.error('Message has no content to quote');
+        return;
+      }
+
+      // Validate content length
+      if (message.content.length > 20000) {
+        toast.error('Message is too long to quote (max 20,000 characters)');
+        return;
+      }
+
+      // Validate that we have valid handlers
+      if (!canQuote) {
+        toast.error('Quote functionality is not available');
+        return;
+      }
+
+      // Attempt to insert the quote
+      let insertionSuccessful = false;
+      if (notepadOpen && onQuoteToNotepad) {
+        try {
+          onQuoteToNotepad(message.content);
+          insertionSuccessful = true;
+          toast.success('Message quoted to notepad');
+        } catch (error) {
+          console.error('Failed to quote message to notepad:', error);
+          toast.error('Failed to add message to notepad');
+        }
+      } else if (onInputPopulate) {
+        try {
+          onInputPopulate(message.content);
+          insertionSuccessful = true;
+          toast.success('Message quoted to chat input');
+        } catch (error) {
+          console.error('Failed to quote message to input:', error);
+          toast.error('Failed to add message to chat input');
+        }
+      }
+
+      if (!insertionSuccessful) {
+        toast.error('No valid destination for quote');
+      }
+    } catch (error) {
+      console.error('Unexpected error in handleQuoteEntireMessage:', error);
+      toast.error('An unexpected error occurred while quoting message');
     }
-    // Clear the selection after using it
-    setSelectedText('');
-    setSelectionRect(null);
-    setHighlightRects([]);
-    setShowQuoteButton(false);
   };
 
   // Determine if this message might contain a completed persona
@@ -398,7 +488,7 @@ export function MessageBubble({
       ))}
 
       {/* Floating Quote Button - clean and simple */}
-      {showQuoteButton && selectionRect && (onInputPopulate || (notepadOpen && onQuoteToNotepad)) && (
+      {showQuoteButton && selectionRect && canQuote && (
         <div
           data-selection-ui
           className="fixed z-50 pointer-events-none"
@@ -495,18 +585,12 @@ export function MessageBubble({
                   <MessageSquare className="w-3 h-3" />
                 </button>
               )}
-              {/* New: Quote All (markdown) button */}
-              {(onInputPopulate || (notepadOpen && onQuoteToNotepad)) && (
+              {/* Quote entire message button */}
+              {canQuote && (
                 <button
-                  onClick={() => {
-                    if (notepadOpen && onQuoteToNotepad) {
-                      onQuoteToNotepad(message.content);
-                    } else if (onInputPopulate) {
-                      onInputPopulate(message.content);
-                    }
-                  }}
+                  onClick={handleQuoteEntireMessage}
                   className="p-1 rounded-full bg-background/70 backdrop-blur-sm border text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all"
-                  title="Quote entire message (markdown)"
+                  title="Quote entire message"
                 >
                   <Quote className="w-3 h-3" />
                 </button>

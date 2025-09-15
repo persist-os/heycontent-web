@@ -13,6 +13,8 @@ import type { MarkdownNotepadRef } from './components/notepad/types'
 import { BottomBarActions } from './components/main_chat/BottomBarActions'
 import ChatInputArea from './components/main_chat/ChatInputArea'
 import { MarkdownNotepad } from './components/notepad/MarkdownNotepad'
+import { PersonaTriggerPolling } from '@/components/PersonaTriggerPolling'
+import { PersonaCrystallizationProvider, PersonaCrystallizationDebugPanel } from '@/components/PersonaCrystallizationProvider'
 import { PanelExpandButton } from './components/PanelExpandButton'
 import { ChatContainerLayout } from './components/ChatContainerLayout'
 import { ChatContent } from './components/ChatContent'
@@ -154,7 +156,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     notepadScrollPosition,
     hasUnreadNotepadChanges,
     switchToTab,
-    insertTextToNotepad,
     clearNotepadBadge,
     saveScrollPosition
   } = useNotepadUI()
@@ -175,8 +176,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     resetChat,
     messages,
     hasPersona,
-    notepadOpen,
-    insertTextToNotepad
+    notepadOpen
   })
   
   const finalHandlers = handlers
@@ -247,7 +247,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   // Mobile layout
   if (isMobile) {
     return (
-      <>
+      <PersonaCrystallizationProvider userId={authData.userId}>
         <ChatContainerLayout
           isMobile={isMobile}
           splitScreen={splitScreen}
@@ -307,8 +307,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                 ref={refs.notepadRef}
                 isOpen={true}
                 onClose={() => switchToTab('chat')}
-                quotedContent=""
-                onClearQuoted={() => {}}
+                quotedContent={finalHandlers.quotedForNotepad}
+                onClearQuoted={finalHandlers.handleClearQuoted}
                 width={notepadWidth}
                 style={getNotepadStyle()}
                 availableNotes={availableNotes}
@@ -350,8 +350,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                 onInputPopulate={finalHandlers.handleInputAppend}
                 notepadOpen={true}
                 openNotepad={toggleNotepad}
-                quotedForNotepad=""
-                onClearQuoted={() => {}}
+                quotedForNotepad={finalHandlers.quotedForNotepad}
+                onClearQuoted={finalHandlers.handleClearQuoted}
                 isAuthenticated={authData.isAuthenticated}
                 isMobile={isMobile}
                 activeTab={activeTab}
@@ -375,13 +375,22 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           handleCancelDiscardNotepad={finalHandlers.handleCancelDiscardNotepad}
           handleOverlayClose={finalHandlers.handleOverlayClose}
         />
-      </>
+
+        {/* Background Persona Trigger Polling */}
+        <PersonaTriggerPolling 
+          userId={authData.userId}
+          enabled={authData.isAuthenticated}
+        />
+        
+        {/* Development Debug Panel */}
+        <PersonaCrystallizationDebugPanel />
+      </PersonaCrystallizationProvider>
     )
   }
 
   // Desktop layout - proper split screen
   return (
-    <>
+    <PersonaCrystallizationProvider userId={authData.userId}>
       <div className="flex h-screen bg-background">
         {/* Chat Panel */}
         <div 
@@ -468,8 +477,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
               onInputPopulate={finalHandlers.handleInputAppend}
               notepadOpen={true}
               openNotepad={toggleNotepad}
-              quotedForNotepad=""
-              onClearQuoted={() => {}}
+              quotedForNotepad={finalHandlers.quotedForNotepad}
+              onClearQuoted={finalHandlers.handleClearQuoted}
               isAuthenticated={authData.isAuthenticated}
               isMobile={false}
               activeTab={activeTab}
@@ -498,8 +507,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             ref={refs.notepadRef}
             isOpen={true}
             onClose={() => {}}
-            quotedContent=""
-            onClearQuoted={() => {}}
+            quotedContent={finalHandlers.quotedForNotepad}
+            onClearQuoted={finalHandlers.handleClearQuoted}
             width="100%"
             style={{}}
             availableNotes={availableNotes}
@@ -524,7 +533,16 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         handleCancelDiscardNotepad={finalHandlers.handleCancelDiscardNotepad}
         handleOverlayClose={finalHandlers.handleOverlayClose}
       />
-    </>
+
+      {/* Background Persona Trigger Polling */}
+      <PersonaTriggerPolling 
+        userId={authData.userId}
+        enabled={authData.isAuthenticated}
+      />
+      
+      {/* Development Debug Panel */}
+      <PersonaCrystallizationDebugPanel />
+    </PersonaCrystallizationProvider>
   )
 }
 

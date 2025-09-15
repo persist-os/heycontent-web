@@ -10,6 +10,7 @@ import { api } from '@/convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { X } from 'lucide-react';
+import { PersonaCrystallizationProvider, PersonaCrystallizationStatus } from '@/components/PersonaCrystallizationProvider';
 
 // Lazy load PersonaUpdateManager to reduce initial bundle size
 const PersonaUpdateManager = React.lazy(() => 
@@ -288,29 +289,41 @@ export const PersonaTab = React.memo(({ isEditMode = false, onEditModeChange }: 
   }
 
   return (
-    <div className="w-full" data-persona-history>
-      <Suspense fallback={<PersonaTabSkeleton />}>
-        <PersonaUpdateManager 
-          userId={firebaseUser?.uid} 
-          isEditMode={isEditMode}
-          onEditModeChange={onEditModeChange}
-          renderNewPersonaButton={() => (
-            <Button
-              onClick={handleNewPersona}
-              disabled={!eligibility?.canGenerate}
-              variant="outline"
-              size="sm"
-              className="text-purple-500 border-purple-500 hover:bg-purple-50 dark:text-accent dark:border-accent dark:hover:bg-accent/10 min-h-[44px] w-full sm:w-auto"
-              aria-disabled={!eligibility?.canGenerate}
-            >
-              {eligibility?.canGenerate
-                ? (currentPersona ? 'Update Persona' : 'Create Persona')
-                : `Next reflection in ${eligibility?.daysRemaining ?? 'a few'} day${eligibility?.daysRemaining !== 1 ? 's' : ''}`}
-            </Button>
-          )}
-        />
-      </Suspense>
-    </div>
+    <PersonaCrystallizationProvider userId={firebaseUser?.uid}>
+      <div className="w-full" data-persona-history>
+        {/* Crystallization Status */}
+        <div className="mb-6 p-4 bg-muted/30 rounded-lg border">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-medium text-foreground mb-1">Persona Crystallization</h3>
+              <PersonaCrystallizationStatus />
+            </div>
+          </div>
+        </div>
+
+        <Suspense fallback={<PersonaTabSkeleton />}>
+          <PersonaUpdateManager 
+            userId={firebaseUser?.uid} 
+            isEditMode={isEditMode}
+            onEditModeChange={onEditModeChange}
+            renderNewPersonaButton={() => (
+              <Button
+                onClick={handleNewPersona}
+                disabled={!eligibility?.canGenerate}
+                variant="outline"
+                size="sm"
+                className="text-purple-500 border-purple-500 hover:bg-purple-50 dark:text-accent dark:border-accent dark:hover:bg-accent/10 min-h-[44px] w-full sm:w-auto"
+                aria-disabled={!eligibility?.canGenerate}
+              >
+                {eligibility?.canGenerate
+                  ? (currentPersona ? 'Update Persona' : 'Create Persona')
+                  : `Next reflection in ${eligibility?.daysRemaining ?? 'a few'} day${eligibility?.daysRemaining !== 1 ? 's' : ''}`}
+              </Button>
+            )}
+          />
+        </Suspense>
+      </div>
+    </PersonaCrystallizationProvider>
   );
 });
 

@@ -21,7 +21,6 @@ interface UseChatContainerHandlersProps {
   messages: any[]
   hasPersona: boolean
   notepadOpen: boolean
-  insertTextToNotepad: (text: string) => void
 }
 
 export function useChatContainerHandlers({
@@ -36,8 +35,7 @@ export function useChatContainerHandlers({
   resetChat,
   messages,
   hasPersona,
-  notepadOpen,
-  insertTextToNotepad
+  notepadOpen
 }: UseChatContainerHandlersProps): ChatContainerHandlers {
   const router = useRouter()
   const convex = useConvex()
@@ -60,11 +58,11 @@ export function useChatContainerHandlers({
     createReferenceClickHandler 
   } = useChatHandlers(handleSendMessage, handleClearReference, messages)
 
-  // Enhanced quote to notepad handler with mobile support
+  // Enhanced quote to notepad handler - now just handles the text insertion
+  // UI state management (opening notepad, switching tabs) is handled by the UI components themselves
   const handleQuoteToNotepadEnhanced = useCallback((text: string) => {
     handleQuoteToNotepad(text)
-    insertTextToNotepad(text)
-  }, [handleQuoteToNotepad, insertTextToNotepad])
+  }, [handleQuoteToNotepad])
 
   // Memoized handlers to prevent unnecessary re-renders
   const handleSendMessageWithUpdateCheck = useCallback((message: string) => {
@@ -228,6 +226,8 @@ export function useChatContainerHandlers({
     handleInputAppend,
     handleContentClick,
     handleOverlayClose,
-    handleQuoteToNotepadEnhanced
+    handleQuoteToNotepadEnhanced,
+    quotedForNotepad,
+    handleClearQuoted
   }
 }
