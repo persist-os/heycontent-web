@@ -30,6 +30,17 @@ export const createConversation = mutation({
       // REMOVED: Old per-message persona crystallization triggers
       // Previously scheduled triggerFrontendPersonaCrystallization here - moved to batch processing
 
+      // Token dam evaluation for conversation creation
+      try {
+        await ctx.runMutation(api.tokenDamMutations.updateDamState, {
+          userId: args.userId,
+          conversationId,
+          tokensUsed: args.messages.reduce((total, msg) => total + Math.ceil(msg.content.length / 4), 0), // Rough token estimation
+        });
+      } catch (error) {
+        console.warn('⚠️ [TOKEN DAM] Failed to update dam state:', error);
+      }
+
       return conversationId;
     },
   });
@@ -63,6 +74,17 @@ handler: async (ctx, args) => {
 
     // REMOVED: Old per-message persona crystallization triggers
     // Previously scheduled triggerFrontendPersonaCrystallization here - moved to batch processing
+
+    // Token dam evaluation for message addition
+    try {
+      await ctx.runMutation(api.tokenDamMutations.updateDamState, {
+        userId: args.userId,
+        conversationId: args.conversationId,
+        tokensUsed: Math.ceil(args.message.content.length / 4), // Rough token estimation
+      });
+    } catch (error) {
+      console.warn('⚠️ [TOKEN DAM] Failed to update dam state:', error);
+    }
 
     return args.conversationId;
 },
