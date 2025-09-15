@@ -8,7 +8,6 @@ import { useSidebar } from '@/app/context/sidebar-context';
 import { useSubscriptionCheck } from '@/app/hooks/useSubscriptionCheck';
 import { getApiKey } from '@/app/lib/api-helpers';
 import { useApiKeyMonitor } from '@/app/hooks/useApiKeyMonitor';
-import { RefreshState } from '@/components/ui/refresh-state';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import UpgradeModal from '@/app/settings/tabs/subscription/upgrade-modal';
