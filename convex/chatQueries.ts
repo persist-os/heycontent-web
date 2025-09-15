@@ -46,4 +46,27 @@ export const getConversation = query({
   },
 });
 
+export const getRecentConversations = query({
+  args: {
+    userId: v.string(),
+    hours: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const cutoffTime = Date.now() - (args.hours * 60 * 60 * 1000);
+    
+    const conversations = await ctx.db
+      .query("conversations")
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("userId"), args.userId),
+          q.gt(q.field("updatedAt"), cutoffTime)
+        )
+      )
+      .order("desc")
+      .collect();
+
+    return conversations;
+  },
+});
+
 

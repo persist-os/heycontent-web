@@ -150,39 +150,9 @@ export const getUserDataBundle = query({
       notes = [];
     }
 
-    // Fetch last 3 YouTube video analyses
-    let youtubeAnalyses: any[] = [];
-    try {
-      youtubeAnalyses = await ctx.db
-        .query("youtubeVideos")
-        .withIndex("by_userId", q => q.eq("userId", userId))
-        .filter(q => q.neq(q.field("analysis"), null))
-        .order("desc")
-        .take(3);
-    } catch (e) {
-      youtubeAnalyses = [];
-    }
-
-    // Fetch current persona
-    let persona = null;
-    try {
-      persona = await ctx.db
-        .query("personas")
-        .withIndex("by_userId", q => q.eq("userId", userId))
-        .filter(q => q.eq(q.field("isActive"), true))
-        .first();
-    } catch (e) {
-      persona = null;
-    }
-
-    // Note: Ambient insights are intentionally excluded from the data bundle
-    // to prevent the AI from being influenced by previous insights when generating new ones
-
     return {
       conversations,
-      notes,
-      youtubeAnalyses,
-      persona,
+      notes
     };
   },
 });

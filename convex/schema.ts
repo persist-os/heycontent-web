@@ -842,4 +842,119 @@ export default defineSchema({
   .index("by_operation", ["operationId"])
   .index("by_note_user", ["noteId", "userId"])
   .index("by_user_client", ["userId", "clientId"]),
+
+  // Persona Traces - Psychological traces exactly as backend returns them
+  persona_traces: defineTable({
+    // Convex-specific fields
+    user_id: v.string(),
+    conversation_id: v.id("conversations"),
+    // Backend PersonaTrace fields (exact structure)
+    trace_id: v.string(),
+    trace_type: v.union(
+      v.literal("preference"),
+      v.literal("behavior"),
+      v.literal("goal"),
+      v.literal("constraint"),
+      v.literal("pattern"),
+      v.literal("value"),
+      v.literal("workflow"),
+      v.literal("communication_style"),
+      v.literal("temporal_preference"),
+      v.literal("emotional_pattern")
+    ),
+    verbatim_quote: v.string(),
+    extracted_insight: v.string(),
+    confidence: v.number(),
+    context: v.string(),
+    temporal_weight: v.number(),
+    preference_strength: v.number(),
+    metadata: v.object({
+      conversation_id: v.string(),
+      message_timestamp: v.number(),
+      extraction_timestamp: v.number(),
+      linguistic_markers: v.array(v.string()),
+      context_length: v.number(),
+      user_id: v.string()
+    })
+  })
+  .index("by_user", ["user_id"])
+  .index("by_conversation", ["conversation_id"])
+  .index("by_trace_type", ["trace_type"])
+  .index("by_user_and_type", ["user_id", "trace_type"])
+  .index("by_confidence", ["confidence"])
+  // New indexes for backend query optimization
+  .index("by_user_confidence", ["user_id", "confidence"])
+  .index("by_conversation_user", ["conversation_id", "user_id"])
+  .index("by_trace_type_confidence", ["trace_type", "confidence"])
+  .index("by_user_type_confidence", ["user_id", "trace_type", "confidence"]),
+
+  // Crystallized Insights - Stable psychological patterns derived from traces
+  crystallized_insights: defineTable({
+    user_id: v.string(),
+    insight_type: v.string(),
+    crystallized_insight: v.string(),
+    crystallized_insight_embedding: v.optional(v.array(v.float64())), // Vector embedding for similarity search
+    confidence: v.number(),
+    supporting_traces: v.array(v.id("persona_traces")),
+    contradiction_flags: v.array(v.string()),
+    evolution_history: v.array(v.object({
+      timestamp: v.number(),
+      event_type: v.union(
+        v.literal("strengthened"),
+        v.literal("weakened"), 
+        v.literal("contradicted"),
+        v.literal("refined")
+      ),
+      old_value: v.union(v.string(), v.null()),
+      new_value: v.string(),
+      trigger_trace_id: v.string(),
+      confidence_change: v.number(),
+      reason: v.string()
+    })),
+    temporal_stability: v.number(),
+    cross_pattern_correlations: v.array(v.string()),
+    metadata: v.object({
+      first_observed: v.number(),
+      last_observed: v.number(),
+      frequency: v.number(),
+      contexts: v.array(v.string()),
+      confidence_history: v.array(v.object({
+        timestamp: v.number(),
+        confidence: v.number()
+      }))
+    }),
+    created_at: v.number(),
+    updated_at: v.number()
+  })
+  .index("by_user", ["user_id"])
+  .index("by_type", ["insight_type"])
+  .index("by_confidence", ["confidence"])
+  .index("by_stability", ["temporal_stability"])
+  // New indexes for backend query optimization
+  .index("by_user_confidence", ["user_id", "confidence"])
+  .index("by_user_type", ["user_id", "insight_type"])
+  .index("by_user_stability", ["user_id", "temporal_stability"])
+  .index("by_user_updated", ["user_id", "updated_at"])
+  .index("by_type_confidence", ["insight_type", "confidence"])
+  .index("by_user_type_confidence", ["user_id", "insight_type", "confidence"])
+  .vectorIndex("by_insight", {
+    vectorField: "crystallized_insight_embedding",
+    dimensions: 768,
+    filterFields: ["user_id", "insight_type"]
+  }),
+
+  // Persona Crystallization Triggers - Events to trigger frontend persona processing
+  persona_crystallization_triggers: defineTable({
+    user_id: v.string(),
+    conversation_id: v.id("conversations"),
+    trigger_type: v.string(), // "conversation_update", "message_added", "manual"
+    metadata: v.any(), // Additional context about the trigger
+    processed: v.boolean(), // Whether the frontend has processed this trigger
+    created_at: v.number(),
+    processed_at: v.optional(v.number())
+  })
+  .index("by_user", ["user_id"])
+  .index("by_conversation", ["conversation_id"])
+  .index("by_processed", ["processed"])
+  .index("by_user_unprocessed", ["user_id", "processed"]),
 });

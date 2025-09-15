@@ -126,6 +126,42 @@ export const syncEmbeddingsOnHeartbeat = action({
         }
       }
 
+      // NEW: Trigger crystallization for users with recent activity
+      try {
+        const recentConversations = await ctx.runQuery(api.chatQueries.getRecentConversations, {
+          userId,
+          hours: 24
+        });
+        
+        if (recentConversations.length > 0) {
+          // Check if crystallization should be triggered
+          const { shouldTriggerCrystallization } = await import("./lib/personaIntegration");
+          const shouldTrigger = await shouldTriggerCrystallization(ctx, userId);
+          
+          if (shouldTrigger) {
+            // Create frontend crystallization trigger instead of direct backend call
+            try {
+              await ctx.runMutation(api.chatMutations.createPersonaCrystallizationTrigger, {
+                user_id: userId,
+                conversation_id: recentConversations[0]._id, // Use most recent conversation
+                trigger_type: 'embedding_heartbeat',
+                metadata: {
+                  timestamp: Date.now(),
+                  source: 'embedding_system',
+                  conversationsProcessed: recentConversations.length
+                }
+              });
+              console.log('✅ [CRYSTALLIZATION] Created frontend trigger for user:', userId);
+            } catch (error) {
+              console.error('❌ [CRYSTALLIZATION] Failed to create frontend trigger:', error);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('⚠️ [CRYSTALLIZATION] Failed to trigger persona crystallization:', error);
+        // Continue with normal heartbeat flow
+      }
+
       console.log('✅ [EMBEDDING] Heartbeat sync completed:', results);
       return { success: true, ...results };
 
