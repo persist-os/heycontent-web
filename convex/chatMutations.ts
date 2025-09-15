@@ -27,17 +27,8 @@ export const createConversation = mutation({
       // Note: Embeddings will be created automatically on next heartbeat
       console.log('📝 [CONVERSATION] Embedding will be created on next heartbeat sync');
 
-      // NEW: Schedule frontend persona crystallization (non-blocking)
-      try {
-        await ctx.scheduler.runAfter(2000, api.chatMutations.triggerFrontendPersonaCrystallization, {
-          userId: args.userId,
-          conversationId
-        });
-        console.log('🧠 [TRACE EXTRACTION] Scheduled frontend persona crystallization for conversation:', conversationId);
-      } catch (error) {
-        console.error('❌ [TRACE EXTRACTION] Failed to schedule frontend persona crystallization:', conversationId, error);
-        // Don't fail the conversation creation if scheduling fails
-      }
+      // REMOVED: Old per-message persona crystallization triggers
+      // Previously scheduled triggerFrontendPersonaCrystallization here - moved to batch processing
 
       return conversationId;
     },
@@ -70,17 +61,8 @@ handler: async (ctx, args) => {
     // Note: Embeddings will be updated automatically on next heartbeat
     console.log('📝 [CONVERSATION] Embedding will be updated on next heartbeat sync');
 
-    // NEW: Schedule frontend persona crystallization (non-blocking)
-    try {
-      await ctx.scheduler.runAfter(2000, api.chatMutations.triggerFrontendPersonaCrystallization, {
-        userId: args.userId,
-        conversationId: args.conversationId
-      });
-      console.log('🧠 [TRACE EXTRACTION] Scheduled frontend persona crystallization for message update:', args.conversationId);
-    } catch (error) {
-      console.error('❌ [TRACE EXTRACTION] Failed to schedule frontend persona crystallization for message update:', args.conversationId, error);
-      // Don't fail the message update if scheduling fails
-    }
+    // REMOVED: Old per-message persona crystallization triggers
+    // Previously scheduled triggerFrontendPersonaCrystallization here - moved to batch processing
 
     return args.conversationId;
 },
@@ -152,62 +134,13 @@ handler: async (ctx, args) => {
 },
 });
 
-/**
- * Action to trigger frontend persona crystallization
- * This stores a trigger event that the frontend can poll for
- */
-export const triggerFrontendPersonaCrystallization = action({
-  args: {
-    userId: v.string(),
-    conversationId: v.id("conversations"),
-  },
-  handler: async (ctx, args) => {
-    try {
-      console.log('🎯 [FRONTEND TRIGGER] Creating persona crystallization trigger for conversation:', args.conversationId);
-      
-      // Store a trigger event that the frontend can detect
-      await ctx.runMutation(api.chatMutations.createPersonaCrystallizationTrigger, {
-        user_id: args.userId,
-        conversation_id: args.conversationId,
-        trigger_type: 'conversation_update',
-        metadata: {
-          timestamp: Date.now(),
-          source: 'chat_mutation'
-        }
-      });
-      
-      console.log('✅ [FRONTEND TRIGGER] Persona crystallization trigger created successfully');
-    } catch (error) {
-      console.error('❌ [FRONTEND TRIGGER] Failed to create persona crystallization trigger:', error);
-      // Don't throw - this is a background process
-    }
-  }
-});
+// REMOVED: triggerFrontendPersonaCrystallization action
+// This old per-message trigger system has been replaced with efficient batch processing
+// The action previously created database triggers that the frontend would poll for
 
-/**
- * Mutation to create a persona crystallization trigger event
- */
-export const createPersonaCrystallizationTrigger = mutation({
-  args: {
-    user_id: v.string(),
-    conversation_id: v.id("conversations"),
-    trigger_type: v.string(),
-    metadata: v.any()
-  },
-  returns: v.id("persona_crystallization_triggers"),
-  handler: async (ctx, args) => {
-    console.log('📝 [TRIGGER MUTATION] Creating crystallization trigger:', args.trigger_type);
-    
-    return await ctx.db.insert("persona_crystallization_triggers", {
-      user_id: args.user_id,
-      conversation_id: args.conversation_id,
-      trigger_type: args.trigger_type,
-      metadata: args.metadata,
-      processed: false,
-      created_at: Date.now()
-    });
-  }
-});
+// REMOVED: createPersonaCrystallizationTrigger mutation
+// This old trigger storage system has been replaced with efficient batch processing
+// Previously stored trigger events in persona_crystallization_triggers table for frontend polling
 
 /**
  * Enhanced chat action that searches for relevant content before responding

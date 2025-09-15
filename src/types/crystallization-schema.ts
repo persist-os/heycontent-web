@@ -224,6 +224,101 @@ export const PERSONA_TRACE_FIELDS: CrystallizationField[] = [
     }
   },
   {
+    name: 'decision_context',
+    type: 'float',
+    required: false,
+    description: 'Decision-making context intensity',
+    validation: {
+      ge: 0.0,
+      le: 1.0
+    },
+    default: 0.0
+  },
+  {
+    name: 'emotional_intensity',
+    type: 'float',
+    required: false,
+    description: 'Emotional weight of the psychological insight',
+    validation: {
+      ge: 0.0,
+      le: 1.0
+    },
+    default: 0.0
+  },
+  {
+    name: 'consistency_indicator',
+    type: 'float',
+    required: false,
+    description: 'Consistency with previous behavioral patterns',
+    validation: {
+      ge: 0.0,
+      le: 1.0
+    },
+    default: 0.0
+  },
+  {
+    name: 'evolution_marker',
+    type: 'float',
+    required: false,
+    description: 'Likelihood of behavioral pattern evolution',
+    validation: {
+      ge: 0.0,
+      le: 1.0
+    },
+    default: 0.0
+  },
+  {
+    name: 'interaction_style',
+    type: 'float',
+    required: false,
+    description: 'Social interaction pattern strength',
+    validation: {
+      ge: 0.0,
+      le: 1.0
+    },
+    default: 0.0
+  },
+  {
+    name: 'value_alignment',
+    type: 'float',
+    required: false,
+    description: 'Alignment with user core values',
+    validation: {
+      ge: 0.0,
+      le: 1.0
+    },
+    default: 0.0
+  },
+  {
+    name: 'cognitive_pattern',
+    type: 'float',
+    required: false,
+    description: 'Cognitive processing pattern strength',
+    validation: {
+      ge: 0.0,
+      le: 1.0
+    },
+    default: 0.0
+  },
+  {
+    name: 'behavioral_trigger',
+    type: 'float',
+    required: false,
+    description: 'Behavioral trigger identification strength',
+    validation: {
+      ge: 0.0,
+      le: 1.0
+    },
+    default: 0.0
+  },
+  {
+    name: 'processing_context',
+    type: 'object',
+    required: false,
+    description: 'Token dam and processing metadata',
+    default: {}
+  },
+  {
     name: 'metadata',
     type: 'object',
     required: true,
@@ -604,6 +699,15 @@ export interface PersonaTrace {
   context: string;
   temporal_weight: number;
   preference_strength: number;
+  decision_context?: number;
+  emotional_intensity?: number;
+  consistency_indicator?: number;
+  evolution_marker?: number;
+  interaction_style?: number;
+  value_alignment?: number;
+  cognitive_pattern?: number;
+  behavioral_trigger?: number;
+  processing_context?: Record<string, any>;
   metadata: TraceMetadata;
 }
 
@@ -763,6 +867,19 @@ export const EXAMPLE_PERSONA_TRACE: PersonaTrace = {
   context: "Discussion about daily routines and productivity optimization",
   temporal_weight: 0.7,
   preference_strength: 0.9,
+  decision_context: 0.8,
+  emotional_intensity: 0.6,
+  consistency_indicator: 0.9,
+  evolution_marker: 0.3,
+  interaction_style: 0.4,
+  value_alignment: 0.8,
+  cognitive_pattern: 0.7,
+  behavioral_trigger: 0.5,
+  processing_context: {
+    token_dam_threshold: 0.75,
+    extraction_method: "llm_analysis",
+    confidence_boosters: ["temporal_indicators", "preference_markers"]
+  },
   metadata: EXAMPLE_TRACE_METADATA
 };
 

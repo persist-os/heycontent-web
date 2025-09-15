@@ -843,7 +843,7 @@ export default defineSchema({
   .index("by_note_user", ["noteId", "userId"])
   .index("by_user_client", ["userId", "clientId"]),
 
-  // Persona Traces - Psychological traces exactly as backend returns them
+  // Persona Traces - Enhanced psychological traces for crystallization system
   persona_traces: defineTable({
     // Convex-specific fields
     user_id: v.string(),
@@ -875,18 +875,37 @@ export default defineSchema({
       linguistic_markers: v.array(v.string()),
       context_length: v.number(),
       user_id: v.string()
-    })
+    }),
+    // Enhanced fields for crystallization system
+    processing_version: v.optional(v.string()), // Track which version of processing extracted this
+    quality_score: v.optional(v.number()), // Overall quality assessment of the trace
+    semantic_tags: v.optional(v.array(v.string())), // Semantic categorization tags
+    emotional_valence: v.optional(v.number()), // Emotional tone (-1 to 1)
+    behavioral_consistency: v.optional(v.number()), // How consistent this trace is with other user behavior
+    contradiction_flags: v.optional(v.array(v.string())), // IDs of contradicting traces
+    source_message_index: v.optional(v.number()), // Index of the message that generated this trace
+    contextual_relevance: v.optional(v.number()), // Relevance within conversation context
+    crystallization_priority: v.optional(v.number()), // Priority for crystallization processing
+    last_accessed: v.optional(v.number()), // Timestamp of last access for optimization
   })
   .index("by_user", ["user_id"])
   .index("by_conversation", ["conversation_id"])
   .index("by_trace_type", ["trace_type"])
   .index("by_user_and_type", ["user_id", "trace_type"])
   .index("by_confidence", ["confidence"])
-  // New indexes for backend query optimization
+  // Enhanced indexes for backend query optimization and crystallization
   .index("by_user_confidence", ["user_id", "confidence"])
   .index("by_conversation_user", ["conversation_id", "user_id"])
   .index("by_trace_type_confidence", ["trace_type", "confidence"])
-  .index("by_user_type_confidence", ["user_id", "trace_type", "confidence"]),
+  .index("by_user_type_confidence", ["user_id", "trace_type", "confidence"])
+  .index("by_quality_score", ["quality_score"])
+  .index("by_user_quality", ["user_id", "quality_score"])
+  .index("by_crystallization_priority", ["crystallization_priority"])
+  .index("by_user_priority", ["user_id", "crystallization_priority"])
+  .index("by_temporal_weight", ["temporal_weight"])
+  .index("by_user_temporal", ["user_id", "temporal_weight"])
+  .index("by_processing_version", ["processing_version"])
+  .index("by_last_accessed", ["last_accessed"]),
 
   // Crystallized Insights - Stable psychological patterns derived from traces
   crystallized_insights: defineTable({
@@ -957,4 +976,106 @@ export default defineSchema({
   .index("by_conversation", ["conversation_id"])
   .index("by_processed", ["processed"])
   .index("by_user_unprocessed", ["user_id", "processed"]),
+
+  // Token Dam State - Tracks conversation token consumption and limits
+  token_dam_state: defineTable({
+    userId: v.string(),
+    conversationId: v.id("conversations"),
+    // Current state
+    currentTokens: v.number(), // Total tokens used in conversation
+    tokenLimit: v.number(), // User's token limit based on subscription
+    damStatus: v.union(
+      v.literal("open"), // Normal flow
+      v.literal("approaching"), // Near limit (80-95%)
+      v.literal("full"), // At limit (95-100%)
+      v.literal("blocked") // Over limit
+    ),
+    // Progress tracking
+    percentageFull: v.number(), // 0-100 percentage of token limit used
+    tokensRemaining: v.number(), // Calculated tokens left
+    // Metadata
+    lastMessageTokens: v.optional(v.number()), // Tokens from last message
+    lastUpdated: v.number(),
+    createdAt: v.number(),
+    // Processing state
+    processingPaused: v.boolean(), // Whether processing is paused due to limits
+    nextProcessingAllowed: v.optional(v.number()), // When next processing is allowed
+  })
+  .index("by_user", ["userId"])
+  .index("by_conversation", ["conversationId"])
+  .index("by_user_conversation", ["userId", "conversationId"])
+  .index("by_status", ["damStatus"])
+  .index("by_user_status", ["userId", "damStatus"])
+  .index("by_processing_paused", ["processingPaused"])
+  .index("by_next_processing", ["nextProcessingAllowed"]),
+
+  // Token Dam Processing History - Track processing events and decisions
+  token_dam_processing_history: defineTable({
+    userId: v.string(),
+    conversationId: v.id("conversations"),
+    damStateId: v.id("token_dam_state"),
+    // Event details
+    eventType: v.union(
+      v.literal("message_processed"), // New message processed
+      v.literal("dam_updated"), // Dam state changed
+      v.literal("processing_paused"), // Processing paused due to limits
+      v.literal("processing_resumed"), // Processing resumed
+      v.literal("limit_exceeded"), // Token limit exceeded
+      v.literal("manual_trigger") // Manual processing triggered
+    ),
+    // Token tracking
+    tokensBefore: v.number(),
+    tokensAfter: v.number(),
+    tokensDelta: v.number(),
+    // Processing details
+    processingAllowed: v.boolean(),
+    reasonBlocked: v.optional(v.string()), // Why processing was blocked
+    messageContent: v.optional(v.string()), // Preview of message content
+    // Metadata
+    timestamp: v.number(),
+    requestId: v.optional(v.string()),
+    metadata: v.optional(v.any()), // Additional context
+  })
+  .index("by_user", ["userId"])
+  .index("by_conversation", ["conversationId"])
+  .index("by_dam_state", ["damStateId"])
+  .index("by_event_type", ["eventType"])
+  .index("by_timestamp", ["timestamp"])
+  .index("by_user_timestamp", ["userId", "timestamp"])
+  .index("by_conversation_timestamp", ["conversationId", "timestamp"]),
+
+  // Token Usage Statistics - Aggregate usage stats for monitoring
+  token_usage_stats: defineTable({
+    userId: v.string(),
+    // Time period
+    periodType: v.union(
+      v.literal("daily"),
+      v.literal("weekly"), 
+      v.literal("monthly")
+    ),
+    periodStart: v.number(),
+    periodEnd: v.number(),
+    // Usage statistics
+    totalTokensUsed: v.number(),
+    totalMessages: v.number(),
+    conversationsActive: v.number(),
+    averageTokensPerMessage: v.number(),
+    peakTokensPerConversation: v.number(),
+    // Limit tracking
+    tokenLimit: v.number(),
+    percentageUsed: v.number(),
+    timesLimitExceeded: v.number(),
+    timesPaused: v.number(),
+    // Performance metrics
+    averageResponseTime: v.optional(v.number()),
+    totalProcessingTime: v.optional(v.number()),
+    // Metadata
+    lastUpdated: v.number(),
+    createdAt: v.number(),
+  })
+  .index("by_user", ["userId"])
+  .index("by_period_type", ["periodType"])
+  .index("by_period_start", ["periodStart"])
+  .index("by_user_period", ["userId", "periodType"])
+  .index("by_user_period_start", ["userId", "periodType", "periodStart"]),
 });

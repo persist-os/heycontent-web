@@ -75,6 +75,8 @@ import type * as setAdminRole from "../setAdminRole.js";
 import type * as subscriptionActions from "../subscriptionActions.js";
 import type * as subscriptionQueries from "../subscriptionQueries.js";
 import type * as textOperations from "../textOperations.js";
+import type * as tokenDamMutations from "../tokenDamMutations.js";
+import type * as tokenDamQueries from "../tokenDamQueries.js";
 import type * as usageEvents from "../usageEvents.js";
 import type * as userActions from "../userActions.js";
 import type * as userMutations from "../userMutations.js";
@@ -152,6 +154,8 @@ declare const fullApi: ApiFromModules<{
   subscriptionActions: typeof subscriptionActions;
   subscriptionQueries: typeof subscriptionQueries;
   textOperations: typeof textOperations;
+  tokenDamMutations: typeof tokenDamMutations;
+  tokenDamQueries: typeof tokenDamQueries;
   usageEvents: typeof usageEvents;
   userActions: typeof userActions;
   userMutations: typeof userMutations;

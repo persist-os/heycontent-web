@@ -50,6 +50,17 @@ export interface ConvexPersonaTrace extends PersonaTrace {
   _id?: Id<"persona_traces">;
   user_id: string;
   conversation_id: Id<"conversations">;
+  // Enhanced fields for crystallization system
+  processing_version?: string; // Track which version of processing extracted this
+  quality_score?: number; // Overall quality assessment of the trace
+  semantic_tags?: string[]; // Semantic categorization tags
+  emotional_valence?: number; // Emotional tone (-1 to 1)
+  behavioral_consistency?: number; // How consistent this trace is with other user behavior
+  contradiction_flags?: string[]; // IDs of contradicting traces
+  source_message_index?: number; // Index of the message that generated this trace
+  contextual_relevance?: number; // Relevance within conversation context
+  crystallization_priority?: number; // Priority for crystallization processing
+  last_accessed?: number; // Timestamp of last access for optimization
 }
 
 // Evolution history entry for crystallized insights (matches backend EvolutionEvent)
