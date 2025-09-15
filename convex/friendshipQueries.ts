@@ -10,16 +10,16 @@ export const getPendingFriendRequests = query({
   },
   returns: v.array(v.object({
     _id: v.id("friendships"),
-    _creationTime: v.number(),
+    _creationTime: v.float64(),
     userId1: v.string(),
     userId2: v.string(),
     status: v.union(v.literal("pending"), v.literal("accepted"), v.literal("blocked")),
     requestedBy: v.string(),
     requestMessage: v.optional(v.string()),
-    requestedAt: v.number(),
-    acceptedAt: v.optional(v.number()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
+    requestedAt: v.float64(),
+    acceptedAt: v.optional(v.float64()),
+    createdAt: v.float64(),
+    updatedAt: v.float64(),
     requesterInfo: v.object({
       name: v.string(),
       email: v.string(),
@@ -86,16 +86,16 @@ export const getMyFriends = query({
   },
   returns: v.array(v.object({
     _id: v.id("friendships"),
-    _creationTime: v.number(),
+    _creationTime: v.float64(),
     userId1: v.string(),
     userId2: v.string(),
     status: v.union(v.literal("pending"), v.literal("accepted"), v.literal("blocked")),
     requestedBy: v.string(),
     requestMessage: v.optional(v.string()),
-    requestedAt: v.number(),
-    acceptedAt: v.optional(v.number()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
+    requestedAt: v.float64(),
+    acceptedAt: v.optional(v.float64()),
+    createdAt: v.float64(),
+    updatedAt: v.float64(),
     friendInfo: v.object({
       userId: v.string(),
       name: v.string(),
@@ -181,13 +181,13 @@ export const searchUsersByUsername = query({
   },
   returns: v.array(v.object({
     _id: v.id("users"),
-    _creationTime: v.number(),
+    _creationTime: v.float64(),
     userId: v.string(),
     name: v.string(),
     email: v.string(),
     username: v.optional(v.string()),
     image: v.optional(v.string()),
-    createdAt: v.number(),
+    createdAt: v.float64(),
   })),
   handler: async (ctx, args) => {
     const { searchTerm, currentUserId, limit = 20 } = args;
@@ -253,13 +253,13 @@ export const searchUsersByEmail = query({
   },
   returns: v.array(v.object({
     _id: v.id("users"),
-    _creationTime: v.number(),
+    _creationTime: v.float64(),
     userId: v.string(),
     name: v.string(),
     email: v.string(),
     username: v.optional(v.string()),
     image: v.optional(v.string()),
-    createdAt: v.number(),
+    createdAt: v.float64(),
   })),
   handler: async (ctx, args) => {
     const { searchTerm, currentUserId, limit = 20 } = args;
@@ -345,13 +345,13 @@ export const getUserPreferences = query({
   returns: v.union(
     v.object({
       _id: v.id("user_preferences"),
-      _creationTime: v.number(),
+      _creationTime: v.float64(),
       userId: v.string(),
       showPersonaToFriends: v.boolean(),
       allowFriendRequests: v.boolean(),
       friendRequestNotifications: v.boolean(),
-      createdAt: v.number(),
-      updatedAt: v.number(),
+      createdAt: v.float64(),
+      updatedAt: v.float64(),
     }),
     v.null()
   ),
