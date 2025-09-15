@@ -90,7 +90,7 @@ const PrivacySettingsSection: React.FC<PrivacySettingsSectionProps> = ({
     {
       key: 'showPersonaToFriends' as const,
       title: 'Show my persona to friends',
-      description: 'Allow friends to see your creator persona and profile information'
+      description: 'Allow friends to see your persona and profile information'
     },
     {
       key: 'allowFriendRequests' as const,
