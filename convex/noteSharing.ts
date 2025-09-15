@@ -299,6 +299,144 @@ export const getSharedNotes = query({
 });
 
 /**
+ * Share a note with a friend using their userId (for friend list sharing)
+ */
+export const shareNoteWithFriend = mutation({
+  args: {
+    noteId: v.id("notes"),
+    friendUserId: v.string(),
+    permission: v.union(v.literal("read"), v.literal("edit")),
+    sharedBy: v.string(), // userId of person sharing
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+    sharedWithUser: v.optional(v.object({
+      _id: v.id("users"),
+      name: v.string(),
+      email: v.string(),
+    })),
+  }),
+  handler: async (ctx, args) => {
+    // Get the note to verify ownership or edit permission
+    const note = await ctx.db.get(args.noteId);
+    if (!note) {
+      return {
+        success: false,
+        message: "Note not found",
+      };
+    }
+
+    // Check if the sharer has permission to share this note
+    const canShare = note.userId === args.sharedBy || 
+      await hasEditPermission(ctx, args.noteId, args.sharedBy);
+    
+    if (!canShare) {
+      return {
+        success: false,
+        message: "You don't have permission to share this note",
+      };
+    }
+
+    // Find the friend user by userId
+    const friendUser = await ctx.db
+      .query("users")
+      .withIndex("by_userId", (q) => q.eq("userId", args.friendUserId))
+      .unique();
+
+    if (!friendUser) {
+      return {
+        success: false,
+        message: "Friend not found",
+      };
+    }
+
+    // Don't allow sharing with yourself
+    if (friendUser.userId === args.sharedBy) {
+      return {
+        success: false,
+        message: "You cannot share a note with yourself",
+      };
+    }
+
+    // Verify they are friends
+    const friendship = await ctx.db
+      .query("friendships")
+      .withIndex("by_userId1", (q) => q.eq("userId1", args.sharedBy))
+      .filter((q) => q.and(
+        q.eq(q.field("userId2"), args.friendUserId),
+        q.eq(q.field("status"), "accepted")
+      ))
+      .first();
+
+    const reverseFriendship = await ctx.db
+      .query("friendships")
+      .withIndex("by_userId1", (q) => q.eq("userId1", args.friendUserId))
+      .filter((q) => q.and(
+        q.eq(q.field("userId2"), args.sharedBy),
+        q.eq(q.field("status"), "accepted")
+      ))
+      .first();
+
+    if (!friendship && !reverseFriendship) {
+      return {
+        success: false,
+        message: "You can only share notes with friends",
+      };
+    }
+
+    // Check if already shared with this user
+    const existingShare = await ctx.db
+      .query("shared_notes")
+      .withIndex("by_note_user", (q) => 
+        q.eq("noteId", args.noteId).eq("sharedWithUserId", friendUser.userId)
+      )
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .unique();
+
+    if (existingShare) {
+      // Update existing share permission
+      await ctx.db.patch(existingShare._id, {
+        permission: args.permission,
+        sharedAt: Date.now(),
+        sharedBy: args.sharedBy,
+      });
+      
+      return {
+        success: true,
+        message: `Updated sharing permissions for ${friendUser.name}`,
+        sharedWithUser: {
+          _id: friendUser._id,
+          name: friendUser.name,
+          email: friendUser.email,
+        },
+      };
+    }
+
+    // Create new share record
+    await ctx.db.insert("shared_notes", {
+      noteId: args.noteId,
+      ownerId: note.userId,
+      sharedWithUserId: friendUser.userId,
+      permission: args.permission,
+      sharedAt: Date.now(),
+      sharedBy: args.sharedBy,
+      isActive: true,
+    });
+
+    return {
+      success: true,
+      message: `Note shared with ${friendUser.name}`,
+      sharedWithUser: {
+        _id: friendUser._id,
+        name: friendUser.name,
+        email: friendUser.email,
+      },
+    };
+  },
+});
+
+/**
  * Helper function to check if a user has access to a note
  */
 async function hasNoteAccess(ctx: any, noteId: Id<"notes">, userId: string): Promise<boolean> {
