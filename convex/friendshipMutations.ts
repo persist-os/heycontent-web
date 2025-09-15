@@ -11,19 +11,39 @@ export const sendFriendRequest = mutation({
     targetUserId: v.string(),
     message: v.optional(v.string()),
   },
-  returns: v.id("friendships"),
+  returns: v.object({
+    success: v.boolean(),
+    friendshipId: v.optional(v.id("friendships")),
+    message: v.string(),
+    status: v.optional(v.union(
+      v.literal("created"),
+      v.literal("already_friends"),
+      v.literal("already_pending"),
+      v.literal("blocked"),
+      v.literal("user_not_found")
+    ))
+  }),
   handler: async (ctx, args) => {
     const { userId, targetUserId, message } = args;
 
     // Validation
     if (!userId || userId.trim() === '') {
-      throw new Error("User ID is required");
+      return {
+        success: false,
+        message: "User ID is required"
+      };
     }
     if (!targetUserId || targetUserId.trim() === '') {
-      throw new Error("Target user ID is required");
+      return {
+        success: false,
+        message: "Target user ID is required"
+      };
     }
     if (userId === targetUserId) {
-      throw new Error("Cannot send friend request to yourself");
+      return {
+        success: false,
+        message: "Cannot send friend request to yourself"
+      };
     }
 
     // Check if users exist
@@ -32,7 +52,11 @@ export const sendFriendRequest = mutation({
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .first();
     if (!user) {
-      throw new Error("User not found");
+      return {
+        success: false,
+        message: "User not found",
+        status: "user_not_found" as const
+      };
     }
 
     const targetUser = await ctx.db
@@ -40,7 +64,11 @@ export const sendFriendRequest = mutation({
       .withIndex("by_userId", (q) => q.eq("userId", targetUserId))
       .first();
     if (!targetUser) {
-      throw new Error("Target user not found");
+      return {
+        success: false,
+        message: "Target user not found",
+        status: "user_not_found" as const
+      };
     }
 
     // Check target user's preferences
@@ -50,7 +78,11 @@ export const sendFriendRequest = mutation({
       .first();
     
     if (targetPreferences && !targetPreferences.allowFriendRequests) {
-      throw new Error("This user is not accepting friend requests");
+      return {
+        success: false,
+        message: "This user is not accepting friend requests",
+        status: "blocked" as const
+      };
     }
 
     // Check if friendship already exists (in either direction)
@@ -69,11 +101,23 @@ export const sendFriendRequest = mutation({
     if (existingFriendship || existingReverseFriendship) {
       const friendship = existingFriendship || existingReverseFriendship;
       if (friendship?.status === "accepted") {
-        throw new Error("You are already friends with this user");
+        return {
+          success: false,
+          message: "You are already friends with this user",
+          status: "already_friends" as const
+        };
       } else if (friendship?.status === "pending") {
-        throw new Error("A friend request is already pending");
+        return {
+          success: false,
+          message: "A friend request is already pending",
+          status: "already_pending" as const
+        };
       } else if (friendship?.status === "blocked") {
-        throw new Error("Cannot send friend request to this user");
+        return {
+          success: false,
+          message: "Cannot send friend request to this user",
+          status: "blocked" as const
+        };
       }
     }
 
@@ -91,7 +135,12 @@ export const sendFriendRequest = mutation({
       updatedAt: now,
     });
 
-    return friendshipId;
+    return {
+      success: true,
+      friendshipId,
+      message: "Friend request sent successfully",
+      status: "created" as const
+    };
   },
 });
 
@@ -230,6 +279,137 @@ export const removeFriend = mutation({
 
     // Delete the friendship record
     await ctx.db.delete(friendship._id);
+
+    return null;
+  },
+});
+
+/**
+ * Block a user
+ */
+export const blockUser = mutation({
+  args: {
+    userId: v.string(),
+    targetUserId: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const { userId, targetUserId } = args;
+
+    // Validation
+    if (!userId || userId.trim() === '') {
+      throw new Error("User ID is required");
+    }
+    if (!targetUserId || targetUserId.trim() === '') {
+      throw new Error("Target user ID is required");
+    }
+    if (userId === targetUserId) {
+      throw new Error("Cannot block yourself");
+    }
+
+    // Check if users exist
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .first();
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const targetUser = await ctx.db
+      .query("users")
+      .withIndex("by_userId", (q) => q.eq("userId", targetUserId))
+      .first();
+    if (!targetUser) {
+      throw new Error("Target user not found");
+    }
+
+    // Check if any existing friendship exists
+    let existingFriendship = await ctx.db
+      .query("friendships")
+      .withIndex("by_userId1", (q) => q.eq("userId1", userId))
+      .filter((q) => q.eq(q.field("userId2"), targetUserId))
+      .first();
+
+    if (!existingFriendship) {
+      existingFriendship = await ctx.db
+        .query("friendships")
+        .withIndex("by_userId1", (q) => q.eq("userId1", targetUserId))
+        .filter((q) => q.eq(q.field("userId2"), userId))
+        .first();
+    }
+
+    const now = Date.now();
+
+    if (existingFriendship) {
+      // Update existing friendship to blocked
+      await ctx.db.patch(existingFriendship._id, {
+        status: "blocked",
+        updatedAt: now,
+      });
+    } else {
+      // Create new blocked relationship
+      await ctx.db.insert("friendships", {
+        userId1: userId,
+        userId2: targetUserId,
+        status: "blocked",
+        requestedBy: userId,
+        requestedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    return null;
+  },
+});
+
+/**
+ * Unblock a user
+ */
+export const unblockUser = mutation({
+  args: {
+    userId: v.string(),
+    targetUserId: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const { userId, targetUserId } = args;
+
+    // Validation
+    if (!userId || userId.trim() === '') {
+      throw new Error("User ID is required");
+    }
+    if (!targetUserId || targetUserId.trim() === '') {
+      throw new Error("Target user ID is required");
+    }
+    if (userId === targetUserId) {
+      throw new Error("Cannot unblock yourself");
+    }
+
+    // Find the blocked relationship
+    let blockedRelationship = await ctx.db
+      .query("friendships")
+      .withIndex("by_userId1", (q) => q.eq("userId1", userId))
+      .filter((q) => q.eq(q.field("userId2"), targetUserId))
+      .filter((q) => q.eq(q.field("status"), "blocked"))
+      .first();
+
+    if (!blockedRelationship) {
+      blockedRelationship = await ctx.db
+        .query("friendships")
+        .withIndex("by_userId1", (q) => q.eq("userId1", targetUserId))
+        .filter((q) => q.eq(q.field("userId2"), userId))
+        .filter((q) => q.eq(q.field("status"), "blocked"))
+        .first();
+    }
+
+    if (!blockedRelationship) {
+      throw new Error("No blocked relationship found");
+    }
+
+    // Remove the blocked relationship
+    await ctx.db.delete(blockedRelationship._id);
 
     return null;
   },
