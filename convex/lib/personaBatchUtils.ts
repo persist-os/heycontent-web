@@ -16,10 +16,10 @@ export const createBatchResult = (batchId: string): BatchProcessingResult & {
   traceConversionErrors: PersonaCrystallizationError[]
 } => ({
   batchId,
-  totalProcessed: 0,
+  total_processed: 0,
   successful: 0,
   failed: 0,
-  processingTime: 0,
+  processing_time: 0,
   errors: [],
   validationErrors: [],
   traceConversionErrors: []

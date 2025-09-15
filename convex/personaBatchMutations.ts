@@ -12,6 +12,14 @@ import {
   crystallizedInsightMetadataValidator,
   PersonaCrystallizationError
 } from "./lib/personaTypes";
+
+// Reusable error validator that matches PersonaCrystallizationError
+const personaErrorValidator = v.object({
+  code: v.string(),
+  message: v.string(),
+  details: v.any(),
+  timestamp: v.number()
+});
 import {
   generateMutationId,
   logMutationStart,
@@ -75,24 +83,9 @@ export const batchUpdateCrystallizedInsights = internalMutation({
     new_insights: v.number(),
     evolved_insights: v.number(),
     processing_time: v.number(),
-    errors: v.array(v.object({
-      code: v.string(),
-      message: v.string(),
-      details: v.any(),
-      timestamp: v.number()
-    })),
-    validation_errors: v.array(v.object({
-      code: v.string(),
-      message: v.string(),
-      details: v.any(),
-      timestamp: v.number()
-    })),
-    trace_conversion_errors: v.array(v.object({
-      code: v.string(),
-      message: v.string(),
-      details: v.any(),
-      timestamp: v.number()
-    }))
+    errors: v.array(personaErrorValidator),
+    validation_errors: v.array(personaErrorValidator),
+    trace_conversion_errors: v.array(personaErrorValidator)
   }),
   handler: async (ctx, args) => {
     const batchId = generateBatchId();
@@ -125,7 +118,10 @@ export const batchUpdateCrystallizedInsights = internalMutation({
       const argValidation = validateBatchArgs(args.userId, batchSize, 10);
       if (argValidation) {
         results.errors.push(argValidation);
-        return results;
+        return {
+          success: false,
+          ...results
+        };
       }
 
       // Pre-fetch existing insights for the user to optimize lookups
@@ -330,12 +326,7 @@ export const transactionSafeInsightUpdate = internalMutation({
     operation_type: v.union(v.literal("create"), v.literal("update"), v.literal("no-change")),
     insight_id: v.optional(v.id("crystallized_insights")),
     validated_traces: v.array(v.id("persona_traces")),
-    errors: v.array(v.object({
-      code: v.string(),
-      message: v.string(),
-      details: v.any(),
-      timestamp: v.number()
-    })),
+    errors: v.array(personaErrorValidator),
     dry_run: v.boolean()
   }),
   handler: async (ctx, args) => {
