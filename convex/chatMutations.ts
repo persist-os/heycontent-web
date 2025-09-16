@@ -27,8 +27,26 @@ export const createConversation = mutation({
       // Note: Embeddings will be created automatically on next heartbeat
       console.log('📝 [CONVERSATION] Embedding will be created on next heartbeat sync');
 
-      // REMOVED: Old per-message persona crystallization triggers
-      // Previously scheduled triggerFrontendPersonaCrystallization here - moved to batch processing
+      // Create persona crystallization trigger for new conversations with meaningful content
+      if (args.messages.length >= 2) { // Only create triggers for conversations with at least 2 messages
+        try {
+          await ctx.runMutation(api.chatMutations.createPersonaCrystallizationTrigger, {
+            user_id: args.userId,
+            conversation_id: conversationId,
+            trigger_type: 'conversation_created',
+            metadata: {
+              timestamp: Date.now(),
+              source: 'conversation_creation',
+              messageCount: args.messages.length
+            }
+          });
+          console.log('✅ [CONVERSATION] Created persona crystallization trigger');
+        } catch (error) {
+          console.warn('⚠️ [CONVERSATION] Failed to create persona crystallization trigger:', error);
+        }
+      } else {
+        console.log('📝 [CONVERSATION] Skipping trigger creation - conversation too short');
+      }
 
       // Token dam evaluation for conversation creation
       try {
@@ -71,6 +89,28 @@ handler: async (ctx, args) => {
 
     // Note: Embeddings will be updated automatically on next heartbeat
     console.log('📝 [CONVERSATION] Embedding will be updated on next heartbeat sync');
+
+    // Create persona crystallization trigger for message additions (only for user messages)
+    if (args.message.role === 'user' && updatedMessages.length >= 3) { // Only for user messages in conversations with at least 3 messages
+      try {
+        await ctx.runMutation(api.chatMutations.createPersonaCrystallizationTrigger, {
+          user_id: args.userId,
+          conversation_id: args.conversationId,
+          trigger_type: 'message_added',
+          metadata: {
+            timestamp: Date.now(),
+            source: 'message_addition',
+            messageRole: args.message.role,
+            totalMessages: updatedMessages.length
+          }
+        });
+        console.log('✅ [CONVERSATION] Created persona crystallization trigger for message addition');
+      } catch (error) {
+        console.warn('⚠️ [CONVERSATION] Failed to create persona crystallization trigger:', error);
+      }
+    } else {
+      console.log('📝 [CONVERSATION] Skipping trigger creation - not a user message or conversation too short');
+    }
 
     // REMOVED: Old per-message persona crystallization triggers
     // Previously scheduled triggerFrontendPersonaCrystallization here - moved to batch processing
@@ -160,9 +200,33 @@ handler: async (ctx, args) => {
 // This old per-message trigger system has been replaced with efficient batch processing
 // The action previously created database triggers that the frontend would poll for
 
-// REMOVED: createPersonaCrystallizationTrigger mutation
-// This old trigger storage system has been replaced with efficient batch processing
-// Previously stored trigger events in persona_crystallization_triggers table for frontend polling
+/**
+ * Create a persona crystallization trigger for frontend processing
+ */
+export const createPersonaCrystallizationTrigger = mutation({
+  args: {
+    user_id: v.string(),
+    conversation_id: v.id("conversations"),
+    trigger_type: v.string(),
+    metadata: v.any()
+  },
+  returns: v.id("persona_crystallization_triggers"),
+  handler: async (ctx, args) => {
+    console.log('🎯 [CRYSTALLIZATION] Creating trigger for user:', args.user_id);
+    
+    const triggerId = await ctx.db.insert("persona_crystallization_triggers", {
+      user_id: args.user_id,
+      conversation_id: args.conversation_id,
+      trigger_type: args.trigger_type,
+      metadata: args.metadata,
+      processed: false,
+      created_at: Date.now()
+    });
+    
+    console.log('✅ [CRYSTALLIZATION] Created trigger:', triggerId);
+    return triggerId;
+  }
+});
 
 /**
  * Enhanced chat action that searches for relevant content before responding

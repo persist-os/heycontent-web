@@ -2,54 +2,13 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useQuery, useConvex } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { usePersonaCrystallization } from '@/hooks/usePersonaCrystallization';
-
-interface PersonaCrystallizationContextType {
-  // Data
-  recentTraces: any[];
-  crystallizedInsights: any[];
-  isLoading: boolean;
-  
-  // Processing status
-  isProcessing: boolean;
-  lastUpdate: number | null;
-  
-  // Profile info
-  profileCompleteness: number;
-  overallConfidence: number;
-  totalTraces: number;
-  totalInsights: number;
-  
-  // Token Dam info
-  damStatus?: {
-    totalDams: number;
-    dams: Array<{
-      conversation_id: string;
-      status: string;
-      accumulated_tokens: number;
-      token_limit: number;
-      progress_percentage: number;
-      message_count: number;
-      is_processing: boolean;
-    }>;
-  };
-  
-  // Actions
-  refreshData: () => void;
-  
-  // Development info
-  debugInfo?: {
-    triggerCount: number;
-    processingStatus: string;
-    userId?: string;
-  };
-}
+import type { 
+  PersonaCrystallizationContextType, 
+  PersonaCrystallizationProviderProps,
+  DamStatus 
+} from './types';
 
 const PersonaCrystallizationContext = createContext<PersonaCrystallizationContextType | undefined>(undefined);
-
-interface PersonaCrystallizationProviderProps {
-  userId?: string;
-  children: React.ReactNode;
-}
 
 /**
  * Provider that makes persona crystallization data available throughout the app
@@ -62,14 +21,14 @@ export function PersonaCrystallizationProvider({
   const convex = useConvex();
   const [lastRefresh, setLastRefresh] = useState(Date.now());
   
-  // Get comprehensive persona profile
+  // Get comprehensive persona profile with increased limits for better display
   const personaProfile = useQuery(
     api.personaCrystallizationQueries.getUserPersonaProfile,
     userId ? { 
       user_id: userId, 
       include_recent_traces: true,
-      trace_limit: 50,
-      insight_limit: 20,
+      trace_limit: 100, // Increased for more traces display
+      insight_limit: 50, // Increased for more insights display
       _refresh_key: lastRefresh
     } : "skip"
   );
@@ -85,7 +44,7 @@ export function PersonaCrystallizationProvider({
   );
 
   // Get dam status (for development/debugging)
-  const [damStatus, setDamStatus] = useState<any>(null);
+  const [damStatus, setDamStatus] = useState<DamStatus | null>(null);
   
   // Fetch dam status periodically
   useEffect(() => {
@@ -115,7 +74,7 @@ export function PersonaCrystallizationProvider({
   const { state: processingState } = usePersonaCrystallization(userId);
 
   const refreshData = () => {
-    console.log('🔄 [PERSONA DEBUG] Manual refresh triggered');
+    console.log('[PERSONA DEBUG] Manual refresh triggered');
     setLastRefresh(Date.now());
   };
 
@@ -123,16 +82,16 @@ export function PersonaCrystallizationProvider({
   useEffect(() => {
     if (!userId) return;
 
-    console.log('🔄 [PERSONA DEBUG] Setting up refresh interval for user:', userId);
+    console.log('[PERSONA DEBUG] Setting up refresh interval for user:', userId);
     
     const interval = setInterval(() => {
       const now = Date.now();
-      console.log('🔄 [PERSONA DEBUG] Auto-refreshing data at:', new Date(now).toISOString());
+      console.log('[PERSONA DEBUG] Auto-refreshing data at:', new Date(now).toISOString());
       setLastRefresh(now);
     }, 10000); // Refresh every 10 seconds for debugging
 
     return () => {
-      console.log('🛑 [PERSONA DEBUG] Clearing refresh interval');
+      console.log('[PERSONA DEBUG] Clearing refresh interval');
       clearInterval(interval);
     };
   }, [userId]);
@@ -140,7 +99,7 @@ export function PersonaCrystallizationProvider({
   // Debug logging for data changes
   useEffect(() => {
     if (personaProfile) {
-      console.log('📊 [PERSONA DEBUG] PersonaProfile updated:', {
+      console.log('[PERSONA DEBUG] PersonaProfile updated:', {
         totalTraces: personaProfile.summary?.total_traces || 0,
         totalInsights: personaProfile.summary?.total_insights || 0,
         recentTraces: personaProfile.recent_traces?.length || 0,
@@ -151,7 +110,7 @@ export function PersonaCrystallizationProvider({
 
   useEffect(() => {
     if (triggers) {
-      console.log('🎯 [PERSONA DEBUG] Triggers updated:', {
+      console.log('[PERSONA DEBUG] Triggers updated:', {
         count: triggers.length,
         triggers: triggers.map(t => ({ id: t._id, type: t.trigger_type, processed: t.processed }))
       });
@@ -175,7 +134,7 @@ export function PersonaCrystallizationProvider({
     totalInsights: personaProfile?.summary?.total_insights || 0,
     
     // Token Dam info
-    damStatus: damStatus,
+    damStatus: damStatus || undefined,
     
     // Actions
     refreshData,
@@ -209,7 +168,7 @@ export function usePersonaCrystallizationData() {
 
 /**
  * Persona Crystallization Status Widget
- * Shows processing status and basic stats
+ * Shows processing status and basic stats in a compact format
  */
 export function PersonaCrystallizationStatus({ className }: { className?: string }) {
   const data = usePersonaCrystallizationData();
@@ -242,4 +201,3 @@ export function PersonaCrystallizationStatus({ className }: { className?: string
     </div>
   );
 }
-

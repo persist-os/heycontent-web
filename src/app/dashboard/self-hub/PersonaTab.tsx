@@ -10,7 +10,7 @@ import { api } from '@/convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { X } from 'lucide-react';
-import { PersonaCrystallizationProvider, PersonaCrystallizationStatus } from '@/components/PersonaCrystallizationProvider';
+import { PersonaCrystallizationProvider, PersonaCrystallizationStatus } from '@/app/dashboard/chat/persona_crystallization/PersonaCrystallizationContext';
 
 // Lazy load PersonaUpdateManager to reduce initial bundle size
 const PersonaUpdateManager = React.lazy(() => 
