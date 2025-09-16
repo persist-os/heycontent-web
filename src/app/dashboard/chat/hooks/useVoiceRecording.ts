@@ -5,12 +5,14 @@ interface UseVoiceRecordingProps {
   currentInput: string;
   onInputChange?: (value: string) => void;
   setCurrentInput: (value: string) => void;
+  isRecordingRef: React.MutableRefObject<boolean>;
 }
 
 export function useVoiceRecording({ 
   currentInput, 
   onInputChange, 
-  setCurrentInput 
+  setCurrentInput,
+  isRecordingRef
 }: UseVoiceRecordingProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(false);
@@ -22,32 +24,34 @@ export function useVoiceRecording({
     setVoiceSupported(VoiceRecordingManager.isVoiceSupported());
   }, []);
 
-  // Stable callback functions
+  // Stable callback functions - simplified to avoid interference
   const stableOnTextUpdate = useCallback((text: string) => {
     setCurrentInput(text);
-    if (onInputChange) {
-      onInputChange(text);
-    }
+    // Call onInputChange for controlled components, but keep it simple
+    onInputChange?.(text);
   }, [setCurrentInput, onInputChange]);
 
   const stableOnRecordingStart = useCallback(() => {
     console.log('🎤 Recording started - updating state to true');
     setIsRecording(true);
-  }, []);
+    isRecordingRef.current = true;
+  }, [isRecordingRef]);
 
   const stableOnRecordingStop = useCallback(() => {
     console.log('🎤 Recording stopped - updating state to false');
     setIsRecording(false);
-  }, []);
+    isRecordingRef.current = false;
+  }, [isRecordingRef]);
 
   const stableOnError = useCallback((error: string) => {
     console.error('Voice recording error:', error);
     setLastError(error);
     setIsRecording(false);
+    isRecordingRef.current = false;
     
     // Clear error after a few seconds
     setTimeout(() => setLastError(null), 5000);
-  }, []);
+  }, [isRecordingRef]);
 
   // Create voice manager with callbacks ONCE
   useEffect(() => {
@@ -81,11 +85,17 @@ export function useVoiceRecording({
   useEffect(() => {
     if (voiceManagerRef.current) {
       // Update the manager's callbacks without recreating it
-      console.log('📝 Updating voice manager callbacks');
+      const callbacks: VoiceRecordingCallbacks = {
+        onTextUpdate: stableOnTextUpdate,
+        onRecordingStart: stableOnRecordingStart,
+        onRecordingStop: stableOnRecordingStop,
+        onError: stableOnError
+      };
+      voiceManagerRef.current.updateCallbacks(callbacks);
     }
   }, [stableOnTextUpdate, stableOnRecordingStart, stableOnRecordingStop, stableOnError]);
 
-  // Update current input in voice manager when it changes
+  // Update current input in voice manager when it changes externally
   useEffect(() => {
     if (voiceManagerRef.current) {
       voiceManagerRef.current.updateCurrentInput(currentInput);
@@ -105,10 +115,14 @@ export function useVoiceRecording({
     }
   }, []);
 
+  // Toggle recording based on current state
   const toggleRecording = useCallback(async () => {
+    console.log('🔄 Toggle recording - current state:', isRecording);
     if (isRecording) {
+      console.log('🛑 Stopping recording...');
       stopRecording();
     } else {
+      console.log('🎤 Starting recording...');
       await startRecording();
     }
   }, [isRecording, startRecording, stopRecording]);
@@ -126,6 +140,12 @@ export function useVoiceRecording({
     return '';
   }, []);
 
+  const clearAllText = useCallback(() => {
+    if (voiceManagerRef.current) {
+      voiceManagerRef.current.clearAllText();
+    }
+  }, []);
+
   return {
     isRecording,
     voiceSupported,
@@ -134,6 +154,7 @@ export function useVoiceRecording({
     stopRecording,
     toggleRecording,
     resetAccumulatedText,
-    getAccumulatedText
+    getAccumulatedText,
+    clearAllText
   };
 }

@@ -11,6 +11,7 @@ interface UseKeyboardHandlersProps {
   closeContentSelector: () => void
   showEnhancedContentSelector: boolean
   resetAccumulatedText?: () => void
+  isRecordingRef: React.MutableRefObject<boolean>
 }
 
 export const useKeyboardHandlers = ({
@@ -23,7 +24,8 @@ export const useKeyboardHandlers = ({
   openContentSelector,
   closeContentSelector,
   showEnhancedContentSelector,
-  resetAccumulatedText
+  resetAccumulatedText,
+  isRecordingRef
 }: UseKeyboardHandlersProps) => {
   
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -72,7 +74,8 @@ export const useKeyboardHandlers = ({
     openContentSelector,
     closeContentSelector,
     showEnhancedContentSelector,
-    resetAccumulatedText
+    resetAccumulatedText,
+    isRecordingRef
   ])
 
   const handleTextareaChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -80,12 +83,13 @@ export const useKeyboardHandlers = ({
     const oldValue = currentInput
     
     // If the user has cleared the input (from non-empty to empty), reset voice accumulation
-    if (oldValue && !newValue && resetAccumulatedText) {
+    // But don't reset if voice recording is currently active to prevent clearing accumulated voice text
+    if (oldValue && !newValue && resetAccumulatedText && !isRecordingRef.current) {
       resetAccumulatedText()
     }
     
     setCurrentInput(newValue)
-  }, [setCurrentInput, currentInput, resetAccumulatedText])
+  }, [setCurrentInput, currentInput, resetAccumulatedText, isRecordingRef])
 
   const handleTextareaSelect = useCallback((e: React.SyntheticEvent<HTMLTextAreaElement>) => {
     // Simple cursor positioning - no complex link handling needed

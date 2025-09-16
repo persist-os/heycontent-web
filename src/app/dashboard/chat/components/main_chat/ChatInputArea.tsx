@@ -6,7 +6,6 @@ import { Message } from '@/app/types/chat';
 
 interface ChatInputAreaProps {
   showAmbient: boolean;
-  currentContext?: any;
   handleActionClick: (action: string) => void;
   handleSendMessage: (message: string) => void;
   inputRef: React.RefObject<HTMLTextAreaElement>;
@@ -22,11 +21,11 @@ interface ChatInputAreaProps {
   quotedForNotepad: string | null;
   onClearQuoted: () => void;
   isAuthenticated?: boolean;
-  currentTab?: string; // Add currentTab prop for tab-specific @ linking
+  currentTab?: string;
   // Mobile props
   isMobile?: boolean;
   activeTab?: 'chat' | 'notes';
-  // New anti-corporate controls
+  // Anti-corporate controls
   embeddingInfo?: { hasEmbeddings: boolean; count: number };
   useContextSearch?: boolean;
   onToggleContextSearch?: (enabled: boolean) => void;
@@ -36,7 +35,6 @@ interface ChatInputAreaProps {
 
 const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   showAmbient,
-  currentContext,
   handleActionClick,
   handleSendMessage,
   inputRef,
@@ -61,8 +59,8 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   includeNotepadInMessages,
   onToggleNotepadInMessages
 }) => {
-  // Only show ambient content when there are no messages
-  const showAmbientContent = showAmbient && !currentContext;
+  // Only show ambient content when explicitly requested
+  const showAmbientContent = showAmbient;
   
   return (
     <div className={`bg-background ${showAmbientContent ? 'h-full flex flex-col' : ''}`}>
@@ -135,18 +133,8 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
             disabled={!isAuthenticated}
             referencedMessage={referencedMessage}
             onClearReference={handleClearReference}
-            hasContext={!!currentContext}
-            contextPlatform={currentContext?.platform}
-            hasAnalysis={
-              includeAnalysisInQuery && (
-                !!currentContext?.analysis || 
-                (currentContext?.platform === 'ai-insights' && (
-                  !!currentContext?.actionStep || 
-                  !!currentContext?.title || 
-                  !!currentContext?.additionalContext
-                ))
-              )
-            }
+            hasContext={false}
+            hasAnalysis={false}
             inputValue={inputValue}
             onInputChange={onInputChange}
             notepadOpen={notepadOpen}

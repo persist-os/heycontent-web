@@ -9,6 +9,7 @@ interface UseInputStateProps {
   isLoading?: boolean
   referencedMessage?: any
   textareaRef: React.RefObject<HTMLTextAreaElement>
+  isRecordingRef: React.MutableRefObject<boolean>
 }
 
 const placeholders = [
@@ -33,15 +34,17 @@ export const useInputState = ({
   autoFocus = true,
   isLoading = false,
   referencedMessage,
-  textareaRef
+  textareaRef,
+  isRecordingRef
 }: UseInputStateProps) => {
   const [input, setInput] = useState('')
   const [placeholder, setPlaceholder] = useState(placeholders[0])
 
   // Use external input value if provided, otherwise use internal state
-  const currentInput = inputValue !== undefined ? inputValue : input
+  // GUARD: When voice recording is active, defer to voice and ignore external prop changes
+  const currentInput = (inputValue !== undefined && !isRecordingRef.current) ? inputValue : input
   const setCurrentInput = (value: string) => {
-    if (inputValue !== undefined) {
+    if (inputValue !== undefined && !isRecordingRef.current) {
       onInputChange?.(value)
     } else {
       setInput(value)

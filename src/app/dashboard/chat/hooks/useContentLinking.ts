@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
@@ -16,17 +16,22 @@ interface UseContentLinkingProps {
   currentTab?: string
   textareaRef: React.RefObject<HTMLTextAreaElement>
   setCurrentInput: (value: string) => void
+  isRecordingRef: React.MutableRefObject<boolean>
 }
 
 export const useContentLinking = ({
   currentTab = 'all',
   textareaRef,
-  setCurrentInput
+  setCurrentInput,
+  isRecordingRef
 }: UseContentLinkingProps) => {
   // @ functionality state
   const [showEnhancedContentSelector, setShowEnhancedContentSelector] = useState(false)
   const [contentSelectorPosition, setContentSelectorPosition] = useState({ top: 100, left: 100 })
   const [contentSearchTerm, setContentSearchTerm] = useState('')
+  
+  // Queue for content insertion when voice recording is active
+  const queuedContentRef = useRef<string | null>(null)
   
   // Get current user ID from API key
   const userId = getCurrentUserId()
@@ -97,8 +102,8 @@ export const useContentLinking = ({
     }
   }, [])
 
-  // Handle linking content from the selector
-  const handleLinkContent = useCallback((contentId: string) => {
+  // Internal function to actually insert content (used both immediately and from queue)
+  const insertContentNow = useCallback((contentId: string) => {
     if (!textareaRef.current) return
     const textarea = textareaRef.current
     const cursorPos = textarea.selectionStart
@@ -126,6 +131,32 @@ export const useContentLinking = ({
     setShowEnhancedContentSelector(false)
     setContentSearchTerm('')
   }, [textareaRef, allLinkableContent, setCurrentInput])
+
+  // Effect to handle queued content insertion when voice recording stops
+  useEffect(() => {
+    if (!isRecordingRef.current && queuedContentRef.current) {
+      const contentId = queuedContentRef.current
+      queuedContentRef.current = null
+      
+      // Execute the queued content insertion
+      insertContentNow(contentId)
+    }
+  }, [insertContentNow]) // Only update callbacks when functions actually change, not on every render
+
+  // Handle linking content from the selector
+  const handleLinkContent = useCallback((contentId: string) => {
+    // Check if voice recording is active
+    if (isRecordingRef.current) {
+      // Queue the content insertion for after recording stops
+      queuedContentRef.current = contentId
+      setShowEnhancedContentSelector(false)
+      setContentSearchTerm('')
+      return
+    }
+    
+    // Insert content immediately
+    insertContentNow(contentId)
+  }, [isRecordingRef, insertContentNow])
 
   // Open content selector
   const openContentSelector = useCallback(() => {

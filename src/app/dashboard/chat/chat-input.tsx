@@ -62,6 +62,9 @@ export function ChatInput({
   const internalInputRef = useRef<HTMLTextAreaElement>(null)
   const textareaRef = inputRef || internalInputRef
   
+  // Shared ref for recording state - prevents dependency cycles between hooks
+  const isRecordingRef = useRef(false)
+  
   // Initialize hooks
   const themeColors = useThemeColors()
   
@@ -73,30 +76,32 @@ export function ChatInput({
     autoFocus,
     isLoading,
     referencedMessage,
-    textareaRef
-  })
-  
-  const contentLinking = useContentLinking({
-    currentTab,
     textareaRef,
-    setCurrentInput: inputState.setCurrentInput
+    isRecordingRef
   })
   
-  const textProcessing = useTextProcessing({ 
-    allLinkableContent: contentLinking.allLinkableContent 
-  })
-  
-  // Voice recording functionality - initialize before keyboard handlers
+  // Voice recording functionality - pass correct input state functions
   const { 
-    isRecording, 
+    isRecording,
     voiceSupported, 
     toggleRecording,
     resetAccumulatedText,
     getAccumulatedText
   } = useVoiceRecording({
     currentInput: inputState.currentInput,
-    onInputChange,
-    setCurrentInput: inputState.setCurrentInput
+    setCurrentInput: inputState.setCurrentInput,
+    isRecordingRef
+  })
+  
+  const contentLinking = useContentLinking({
+    currentTab,
+    textareaRef,
+    setCurrentInput: inputState.setCurrentInput,
+    isRecordingRef
+  })
+  
+  const textProcessing = useTextProcessing({ 
+    allLinkableContent: contentLinking.allLinkableContent 
   })
   
   const keyboardHandlers = useKeyboardHandlers({
@@ -109,10 +114,9 @@ export function ChatInput({
     openContentSelector: contentLinking.openContentSelector,
     closeContentSelector: contentLinking.closeContentSelector,
     showEnhancedContentSelector: contentLinking.showEnhancedContentSelector,
-    resetAccumulatedText
+    resetAccumulatedText,
+    isRecordingRef
   })
-
-
 
 
   const handleSubmit = (e: React.FormEvent) => {
