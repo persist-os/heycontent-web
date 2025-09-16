@@ -1,316 +1,185 @@
 /**
- * TypeScript type definitions for the Autonomous Persona Crystallization System (APCS)
- * These types match the Pydantic models from Agent 1's backend implementation
+ * Clean TypeScript types for the Simplified Persona System
+ * All legacy types removed - clean slate implementation
  */
 
 import { Id } from "../_generated/dataModel";
 import { v } from "convex/values";
 
-// Trace types enum matching Agent 1's implementation
-export const TRACE_TYPES = [
-  "preference",
-  "behavior", 
-  "goal",
-  "constraint",
-  "pattern",
-  "value",
-  "workflow",
-  "communication_style",
-  "temporal_preference",
-  "emotional_pattern"
-] as const;
+// ===== CORE INTERFACES =====
 
-export type TraceType = typeof TRACE_TYPES[number];
-
-// Backend trace metadata structure (matches Pydantic TraceMetadata exactly)
-export interface BackendTraceMetadata {
-  conversation_id: string;
-  message_timestamp: number;
-  extraction_timestamp: number;
-  linguistic_markers: string[];
-  context_length: number;
-  user_id: string;
-}
-
-// Core persona trace interface (matches backend PersonaTrace exactly)
+// Persona trace interface (matches simplified schema)
 export interface PersonaTrace {
-  trace_id: string;
-  trace_type: TraceType;
-  verbatim_quote: string;
-  extracted_insight: string;
-  confidence: number;
-  context: string;
-  temporal_weight: number;
-  preference_strength: number;
-  metadata: BackendTraceMetadata;
-}
-
-// Convex database trace (with Convex-specific fields added)
-export interface ConvexPersonaTrace extends PersonaTrace {
   _id?: Id<"persona_traces">;
-  user_id: string;
-  conversation_id: Id<"conversations">;
-  // Enhanced fields for crystallization system
-  processing_version?: string; // Track which version of processing extracted this
-  quality_score?: number; // Overall quality assessment of the trace
-  semantic_tags?: string[]; // Semantic categorization tags
-  emotional_valence?: number; // Emotional tone (-1 to 1)
-  behavioral_consistency?: number; // How consistent this trace is with other user behavior
-  contradiction_flags?: string[]; // IDs of contradicting traces
-  source_message_index?: number; // Index of the message that generated this trace
-  contextual_relevance?: number; // Relevance within conversation context
-  crystallization_priority?: number; // Priority for crystallization processing
-  last_accessed?: number; // Timestamp of last access for optimization
-}
-
-// Evolution history entry for crystallized insights (matches backend EvolutionEvent)
-export interface EvolutionHistoryEntry {
-  timestamp: number;
-  event_type: "strengthened" | "weakened" | "contradicted" | "refined";
-  old_value: string | null;
-  new_value: string;
-  trigger_trace_id: string;
-  confidence_change: number;
-  reason: string;
-}
-
-// Confidence history entry
-export interface ConfidenceHistoryEntry {
+  userId: string;
+  content: any;      // Backend-generated trace (any structure the backend wants)
   timestamp: number;
   confidence: number;
 }
 
-// Metadata structure for crystallized insights
-export interface CrystallizedInsightMetadata {
-  first_observed: number;
-  last_observed: number;
-  frequency: number;
-  contexts: string[];
-  confidence_history: ConfidenceHistoryEntry[];
+// Previous version of a crystallized insight (for evolution tracking)
+export interface InsightPreviousVersion {
+  content: string;
+  confidence: number;
+  timestamp: number;
+  reason: string;     // Why it evolved
 }
 
-// Core crystallized insight interface (database format)
+// Crystallized insight interface (matches simplified schema with evolution)
 export interface CrystallizedInsight {
   _id?: Id<"crystallized_insights">;
-  user_id: string;
-  insight_type: string;
-  crystallized_insight: string;
+  userId: string;
+  content: string;   // Backend-generated insight
+  category: string;
+  timestamp: number;
   confidence: number;
-  supporting_traces: Id<"persona_traces">[]; // Stored as Convex IDs in database
-  contradiction_flags: string[];
-  evolution_history: EvolutionHistoryEntry[];
-  temporal_stability: number;
-  cross_pattern_correlations: string[];
-  metadata: CrystallizedInsightMetadata;
-  created_at: number;
-  updated_at: number;
+  sources: Id<"persona_traces">[];
+  // Evolution tracking
+  version: number;
+  previousVersions?: InsightPreviousVersion[];
+  evolutionCount: number;
 }
 
-// Input format for crystallized insights (from backend - uses string IDs)
+// ===== INPUT TYPES (from backend) =====
+
+// Input format for traces coming from backend
+export interface PersonaTraceInput {
+  userId: string;
+  content: any;
+  timestamp: number;
+  confidence: number;
+}
+
+// Input format for insights coming from backend
 export interface CrystallizedInsightInput {
-  insight_type: string;
-  crystallized_insight: string;
+  userId: string;
+  content: string;
+  category: string;
+  timestamp: number;
   confidence: number;
-  supporting_traces: string[]; // Received as string IDs from backend
-  contradiction_flags: string[];
-  evolution_history: EvolutionHistoryEntry[];
-  temporal_stability: number;
-  cross_pattern_correlations: string[];
-  metadata: CrystallizedInsightMetadata;
-  created_at: number;
-  updated_at: number;
+  sources: string[]; // String IDs from backend, converted to Convex IDs
+  // Evolution data (optional - for updates)
+  version?: number;
+  previousVersions?: InsightPreviousVersion[];
+  evolutionCount?: number;
+  evolutionReason?: string; // Why this version evolved from the previous
 }
 
-// Input types for trace extraction from Agent 1
-export interface TraceExtractionRequest {
-  user_id: string;
-  conversation_id: Id<"conversations">;
-  force_reprocess?: boolean;
-}
+// ===== CONVEX VALIDATORS =====
 
-export interface TraceExtractionResponse {
-  traces: PersonaTrace[];
-  extraction_metadata: any;
-  processing_time_ms: number;
-}
-
-// Input types for crystallization process
-export interface CrystallizationRequest {
-  user_id: string;
-  time_window?: number; // days
-}
-
-export interface CrystallizationResponse {
-  insights: CrystallizedInsight[];
-  crystallization_metadata: any;
-  processing_time_ms: number;
-}
-
-// User persona profile for Agent 3's AI context injection
-export interface UserPersonaProfile {
-  user_id: string;
-  recent_traces: PersonaTrace[];
-  crystallized_insights: CrystallizedInsight[];
-  confidence_scores: Record<string, number>;
-  last_updated: number;
-  profile_completeness: number;
-}
-
-// Validators for Convex functions (matching the types above)
-export const traceTypeValidator = v.union(
-  v.literal("preference"),
-  v.literal("behavior"),
-  v.literal("goal"),
-  v.literal("constraint"),
-  v.literal("pattern"),
-  v.literal("value"),
-  v.literal("workflow"),
-  v.literal("communication_style"),
-  v.literal("temporal_preference"),
-  v.literal("emotional_pattern")
-);
-
-export const backendTraceMetadataValidator = v.object({
-  conversation_id: v.string(),
-  message_timestamp: v.float64(),
-  extraction_timestamp: v.float64(),
-  linguistic_markers: v.array(v.string()),
-  context_length: v.float64(), // Changed to float64 to match Convex schema
-  user_id: v.string()
-});
-
+// Validator for persona traces
 export const personaTraceValidator = v.object({
-  trace_id: v.string(),
-  trace_type: traceTypeValidator,
-  verbatim_quote: v.string(),
-  extracted_insight: v.string(),
-  confidence: v.float64(),
-  context: v.string(),
-  temporal_weight: v.float64(),
-  preference_strength: v.float64(),
-  metadata: backendTraceMetadataValidator
+  userId: v.string(),
+  content: v.any(),
+  timestamp: v.number(),
+  confidence: v.number()
 });
 
-// Enhanced trace validator for backend traces with all optional fields
-export const enhancedPersonaTraceValidator = v.object({
-  // Required fields
-  trace_id: v.string(),
-  user_id: v.string(),
-  conversation_id: v.string(), // Backend sends as string, converted internally
-  trace_type: traceTypeValidator,
-  verbatim_quote: v.string(),
-  extracted_insight: v.string(),
-  confidence: v.float64(),
-  context: v.string(),
-  temporal_weight: v.float64(),
-  preference_strength: v.float64(),
-  metadata: backendTraceMetadataValidator,
-  
-  // Optional enhanced fields
-  behavioral_consistency: v.optional(v.float64()),
-  contextual_relevance: v.optional(v.float64()),
-  contradiction_flags: v.optional(v.union(v.array(v.string()), v.null())),
-  crystallization_priority: v.optional(v.float64()),
-  emotional_valence: v.optional(v.float64()),
-  last_accessed: v.optional(v.float64()),
-  processing_version: v.optional(v.string()),
-  quality_score: v.optional(v.float64()),
-  semantic_tags: v.optional(v.array(v.string())),
-  source_message_index: v.optional(v.float64()),
-  
-  // Legacy field for backward compatibility
-  convex_id: v.optional(v.string())
-});
-
-// Internal mutation validator (receives enhanced traces but omits user_id and conversation_id since they're separate args)
-export const internalTraceValidator = v.object({
-  // Required fields
-  trace_id: v.string(),
-  trace_type: traceTypeValidator,
-  verbatim_quote: v.string(),
-  extracted_insight: v.string(),
-  confidence: v.float64(),
-  context: v.string(),
-  temporal_weight: v.float64(),
-  preference_strength: v.float64(),
-  metadata: backendTraceMetadataValidator,
-  
-  // Optional enhanced fields
-  behavioral_consistency: v.optional(v.float64()),
-  contextual_relevance: v.optional(v.float64()),
-  contradiction_flags: v.optional(v.union(v.array(v.string()), v.null())),
-  crystallization_priority: v.optional(v.float64()),
-  emotional_valence: v.optional(v.float64()),
-  last_accessed: v.optional(v.float64()),
-  processing_version: v.optional(v.string()),
-  quality_score: v.optional(v.float64()),
-  semantic_tags: v.optional(v.array(v.string())),
-  source_message_index: v.optional(v.float64()),
-  
-  // Fields that may be passed but are handled separately
-  user_id: v.optional(v.string()), // Passed separately in args
-  conversation_id: v.optional(v.string()), // Passed separately in args and converted to ID
-  convex_id: v.optional(v.string()) // Legacy field
-});
-
-export const evolutionHistoryValidator = v.array(v.any());
-
-export const confidenceHistoryValidator = v.array(v.any());
-
-export const crystallizedInsightMetadataValidator = v.any();
-
-export const convexPersonaTraceValidator = v.object({
-  _id: v.optional(v.id("persona_traces")),
-  user_id: v.string(),
-  conversation_id: v.id("conversations"),
-  trace_id: v.string(),
-  trace_type: traceTypeValidator,
-  verbatim_quote: v.string(),
-  extracted_insight: v.string(),
+// Validator for previous versions in insight evolution
+export const insightPreviousVersionValidator = v.object({
+  content: v.string(),
   confidence: v.number(),
-  context: v.string(),
-  temporal_weight: v.number(),
-  preference_strength: v.number(),
-  metadata: backendTraceMetadataValidator
+  timestamp: v.number(),
+  reason: v.string()
 });
 
-// Validator for database format (with Convex IDs)
+// Validator for crystallized insights
 export const crystallizedInsightValidator = v.object({
-  _id: v.optional(v.id("crystallized_insights")),
-  user_id: v.string(),
-  insight_type: v.string(),
-  crystallized_insight: v.string(),
+  userId: v.string(),
+  content: v.string(),
+  category: v.string(),
+  timestamp: v.number(),
   confidence: v.number(),
-  supporting_traces: v.array(v.id("persona_traces")), // Stored as Convex IDs
-  contradiction_flags: v.union(v.array(v.string()), v.null()),
-  evolution_history: evolutionHistoryValidator,
-  temporal_stability: v.number(),
-  cross_pattern_correlations: v.array(v.string()),
-  metadata: crystallizedInsightMetadataValidator,
-  created_at: v.number(),
-  updated_at: v.number()
+  sources: v.array(v.id("persona_traces")),
+  version: v.number(),
+  previousVersions: v.optional(v.array(insightPreviousVersionValidator)),
+  evolutionCount: v.number()
 });
 
-// Validator for input format (with string IDs that get converted)
+// Input validators (for data coming from backend)
+export const personaTraceInputValidator = v.object({
+  userId: v.string(),
+  content: v.any(),
+  timestamp: v.number(),
+  confidence: v.number()
+});
+
 export const crystallizedInsightInputValidator = v.object({
-  insight_type: v.string(),
-  crystallized_insight: v.string(),
-  confidence: v.float64(),
-  supporting_traces: v.array(v.string()), // Input as strings, converted to Convex IDs
-  contradiction_flags: v.union(v.array(v.string()), v.null()),
-  evolution_history: evolutionHistoryValidator,
-  temporal_stability: v.float64(),
-  cross_pattern_correlations: v.array(v.string()),
-  metadata: crystallizedInsightMetadataValidator,
-  created_at: v.float64(),
-  updated_at: v.float64()
+  userId: v.string(),
+  content: v.string(),
+  category: v.string(),
+  timestamp: v.number(),
+  confidence: v.number(),
+  sources: v.array(v.string()), // String IDs from backend
+  version: v.optional(v.number()),
+  previousVersions: v.optional(v.array(insightPreviousVersionValidator)),
+  evolutionCount: v.optional(v.number()),
+  evolutionReason: v.optional(v.string())
 });
 
-// API endpoints configuration for Agent 1 backend integration
-export const AGENT1_ENDPOINTS = {
-  TRACE_EXTRACTION: "/api/v1/persona-crystallization/extract-traces",
-  CRYSTALLIZATION: "/api/v1/persona-crystallization/crystallize-insights",
-  HEALTH_CHECK: "/api/v1/persona-crystallization/health"
+// ===== API TYPES =====
+
+// Response types for API endpoints
+export interface TraceStorageResponse {
+  success: boolean;
+  tracesStored: number;
+  errors: string[];
+}
+
+export interface InsightStorageResponse {
+  success: boolean;
+  insightsStored: number;
+  newInsights: number;
+  evolvedInsights: number;
+  errors: string[];
+}
+
+// User persona profile for AI context injection
+export interface UserPersonaProfile {
+  userId: string;
+  recentTraces: PersonaTrace[];
+  crystallizedInsights: CrystallizedInsight[];
+  confidenceScores: {
+    overall: number;
+    byCategory: Record<string, number>;
+  };
+  lastUpdated: number;
+  profileCompleteness: number;
+  summary: {
+    totalTraces: number;
+    totalInsights: number;
+    topCategories: string[];
+    recentActivity: number;
+  };
+}
+
+// ===== ERROR TYPES =====
+
+export interface PersonaCrystallizationError {
+  code: string;
+  message: string;
+  details: any;
+  timestamp: number;
+}
+
+// ===== BATCH PROCESSING TYPES =====
+
+export interface BatchProcessingResult {
+  success: boolean;
+  totalProcessed: number;
+  successful: number;
+  failed: number;
+  errors: string[]; // Simplified to string array
+  processingTime: number;
+}
+
+// ===== CONSTANTS =====
+
+// API endpoints for backend integration
+export const PERSONA_ENDPOINTS = {
+  STORE_TRACES: "/api/v1/persona/traces",
+  STORE_INSIGHTS: "/api/v1/persona/insights",
+  GET_PROFILE: "/api/v1/persona/profile"
 } as const;
 
 // Processing status constants
@@ -322,20 +191,3 @@ export const PROCESSING_STATUS = {
 } as const;
 
 export type ProcessingStatus = typeof PROCESSING_STATUS[keyof typeof PROCESSING_STATUS];
-
-// Error types for better error handling
-export interface PersonaCrystallizationError {
-  code: string;
-  message: string;
-  details: any;
-  timestamp: number;
-}
-
-// Batch processing types
-export interface BatchProcessingResult {
-  total_processed: number;
-  successful: number;
-  failed: number;
-  errors: PersonaCrystallizationError[];
-  processing_time: number;
-}

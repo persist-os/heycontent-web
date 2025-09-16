@@ -13,7 +13,6 @@ import type { MarkdownNotepadRef } from './components/notepad/types'
 import { BottomBarActions } from './components/main_chat/BottomBarActions'
 import ChatInputArea from './components/main_chat/ChatInputArea'
 import { MarkdownNotepad } from './components/notepad/MarkdownNotepad'
-import { PersonaTriggerPolling } from '@/components/PersonaTriggerPolling'
 import { PersonaCrystallizationProvider } from '@/app/dashboard/chat/persona_crystallization/PersonaCrystallizationContext'
 import { PersonaCrystallizationDebugPanel } from '@/app/dashboard/chat/persona_crystallization/PersonaCrystallizationDebugPanel'
 import { PanelExpandButton } from './components/PanelExpandButton'
@@ -377,11 +376,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           handleOverlayClose={finalHandlers.handleOverlayClose}
         />
 
-        {/* Background Persona Trigger Polling */}
-        <PersonaTriggerPolling 
-          userId={authData.userId}
-          enabled={authData.isAuthenticated}
-        />
+        {/* No polling - backend handles all triggers */}
         
         {/* Development Debug Panel */}
         <PersonaCrystallizationDebugPanel />
@@ -535,11 +530,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         handleOverlayClose={finalHandlers.handleOverlayClose}
       />
 
-      {/* Background Persona Trigger Polling */}
-      <PersonaTriggerPolling 
-        userId={authData.userId}
-        enabled={authData.isAuthenticated}
-      />
+      {/* No polling - backend handles all triggers */}
       
       {/* Development Debug Panel */}
       <PersonaCrystallizationDebugPanel />

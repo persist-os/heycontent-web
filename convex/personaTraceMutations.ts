@@ -1,282 +1,125 @@
 /**
- * Persona Trace Mutations
- * Handles individual trace operations (add, delete, update confidence)
+ * Clean Persona Trace Mutations
+ * Simplified operations for the new content-based schema
  */
 
 import { v } from "convex/values";
-import { mutation, internalMutation, query } from "./_generated/server";
+import { mutation, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import {
-  traceTypeValidator,
-  backendTraceMetadataValidator,
-  enhancedPersonaTraceValidator,
-  internalTraceValidator,
-  PersonaCrystallizationError
+  personaTraceInputValidator,
+  PersonaTraceInput,
+  TraceStorageResponse
 } from "./lib/personaTypes";
-import {
-  generateMutationId,
-  logMutationStart,
-  logMutationComplete,
-  logMutationError,
-  createPersonaError,
-  createSuccessResult,
-  createFailureResult
-} from "./lib/personaErrorHandling";
-import {
-  generateManualTraceId,
-  createDefaultTraceMetadata
-} from "./lib/personaTraceUtils";
-import { validateUserId, validateConfidence } from "./lib/personaValidation";
 
 /**
- * Store persona traces from Agent 1's extraction process (internal)
+ * Store persona traces from backend (internal)
  */
 export const storePersonaTraces = internalMutation({
   args: {
-    user_id: v.string(),
-    conversation_id: v.id("conversations"),
-    traces: v.array(internalTraceValidator)
+    traces: v.array(personaTraceInputValidator)
   },
   returns: v.object({
     success: v.boolean(),
-    traces_stored: v.number(),
+    tracesStored: v.number(),
     errors: v.array(v.string())
   }),
-  handler: async (ctx, args) => {
-    const mutationId = generateMutationId();
-    const startTime = Date.now();
+  handler: async (ctx, args): Promise<TraceStorageResponse> => {
+    console.log(`🔄 [STORE-TRACES] Processing ${args.traces.length} traces`);
     
-    logMutationStart(mutationId, "STORE-TRACES", {
-      user_id: args.user_id,
-      conversation_id: args.conversation_id,
-      tracesCount: args.traces.length
-    });
-    
-    const results = {
+    const results: TraceStorageResponse = {
       success: true,
-      traces_stored: 0,
-      errors: [] as string[]
+      tracesStored: 0,
+      errors: []
     };
 
     try {
-      console.log(`🔄 [STORE-TRACES:${mutationId}] Starting batch insert of ${args.traces.length} traces`);
-      
-      // Batch insert traces
       for (let i = 0; i < args.traces.length; i++) {
-        const traceData = args.traces[i];
-        console.log(`📝 [STORE-TRACES:${mutationId}] Processing trace ${i + 1}/${args.traces.length}`, {
-          trace_id: traceData.trace_id,
-          trace_type: traceData.trace_type,
-          confidence: traceData.confidence,
-          insightLength: traceData.extracted_insight.length
-        });
+        const trace = args.traces[i];
         
         try {
-          // Check for duplicate traces (same conversation, trace_id, and trace_type)
-          const existingTrace = await ctx.db
-            .query("persona_traces")
-            .withIndex("by_conversation", (q) => q.eq("conversation_id", args.conversation_id))
-            .filter((q) => 
-              q.and(
-                q.eq(q.field("trace_id"), traceData.trace_id),
-                q.eq(q.field("trace_type"), traceData.trace_type),
-                q.eq(q.field("verbatim_quote"), traceData.verbatim_quote)
-              )
-            )
-            .first();
-
-          if (existingTrace) {
-            console.log('⚠️ [STORE-TRACES] Skipping duplicate trace:', traceData.trace_type, 'with ID', traceData.trace_id);
+          // Simple validation
+          if (!trace.userId || !trace.content || typeof trace.confidence !== 'number') {
+            results.errors.push(`Invalid trace data at index ${i}`);
             continue;
           }
 
-          // Insert new trace with all enhanced fields as backend provides them
+          // Store trace with simplified schema
           await ctx.db.insert("persona_traces", {
-            // Required fields
-            user_id: args.user_id,
-            conversation_id: args.conversation_id,
-            trace_id: traceData.trace_id,
-            trace_type: traceData.trace_type,
-            verbatim_quote: traceData.verbatim_quote,
-            extracted_insight: traceData.extracted_insight,
-            confidence: traceData.confidence,
-            context: traceData.context,
-            temporal_weight: traceData.temporal_weight,
-            preference_strength: traceData.preference_strength,
-            metadata: traceData.metadata,
-            
-            // Optional enhanced fields (only include if present in backend data)
-            ...(traceData.behavioral_consistency !== undefined && { behavioral_consistency: traceData.behavioral_consistency }),
-            ...(traceData.contextual_relevance !== undefined && { contextual_relevance: traceData.contextual_relevance }),
-            ...(traceData.contradiction_flags !== undefined && { 
-              contradiction_flags: traceData.contradiction_flags === null ? [] : traceData.contradiction_flags 
-            }),
-            ...(traceData.crystallization_priority !== undefined && { crystallization_priority: traceData.crystallization_priority }),
-            ...(traceData.emotional_valence !== undefined && { emotional_valence: traceData.emotional_valence }),
-            ...(traceData.last_accessed !== undefined && { last_accessed: traceData.last_accessed }),
-            ...(traceData.processing_version !== undefined && { processing_version: traceData.processing_version }),
-            ...(traceData.quality_score !== undefined && { quality_score: traceData.quality_score }),
-            ...(traceData.semantic_tags !== undefined && { semantic_tags: traceData.semantic_tags }),
-            ...(traceData.source_message_index !== undefined && { source_message_index: traceData.source_message_index })
+            userId: trace.userId,
+            content: trace.content,
+            timestamp: trace.timestamp || Date.now(),
+            confidence: Math.max(0, Math.min(1, trace.confidence)) // Clamp 0-1
           });
 
-          results.traces_stored++;
-
+          results.tracesStored++;
+          
         } catch (error) {
-          const errorMsg = `Failed to store trace ${traceData.trace_type}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          const errorMsg = `Failed to store trace ${i}: ${error instanceof Error ? error.message : 'Unknown error'}`;
           console.error('❌ [STORE-TRACES]', errorMsg);
           results.errors.push(errorMsg);
-          results.success = false;
         }
       }
 
-      const processingTime = Date.now() - startTime;
-      logMutationComplete(mutationId, "STORE-TRACES", processingTime, {
-        traces_stored: results.traces_stored,
-        totalTraces: args.traces.length,
-        errors: results.errors.length
-      });
-      
+      if (results.errors.length > 0) {
+        results.success = false;
+      }
+
+      console.log(`✅ [STORE-TRACES] Completed: ${results.tracesStored}/${args.traces.length} traces stored`);
       return results;
 
     } catch (error) {
-      const processingTime = Date.now() - startTime;
-      logMutationError(mutationId, "STORE-TRACES", error as Error, processingTime);
-      
+      console.error('❌ [STORE-TRACES] Critical error:', error);
       return {
         success: false,
-        traces_stored: 0,
-        errors: [error instanceof Error ? error.message : 'Unknown error']
+        tracesStored: results.tracesStored,
+        errors: [...results.errors, error instanceof Error ? error.message : 'Critical error']
       };
     }
   }
 });
 
 /**
- * Manually add a persona trace (for testing or manual curation)
+ * Manually add a persona trace (for testing or manual input)
  */
 export const addPersonaTrace = mutation({
   args: {
-    user_id: v.string(),
-    conversation_id: v.id("conversations"),
-    trace_type: traceTypeValidator,
-    verbatim_quote: v.string(),
-    extracted_insight: v.string(),
-    confidence: v.float64(),
-    context: v.string(),
-    temporal_weight: v.optional(v.float64()),
-    preference_strength: v.optional(v.float64()),
-    metadata: v.optional(backendTraceMetadataValidator),
-    // Optional enhanced fields
-    behavioral_consistency: v.optional(v.float64()),
-    contextual_relevance: v.optional(v.float64()),
-    contradiction_flags: v.optional(v.union(v.array(v.string()), v.null())),
-    crystallization_priority: v.optional(v.float64()),
-    emotional_valence: v.optional(v.float64()),
-    last_accessed: v.optional(v.float64()),
-    processing_version: v.optional(v.string()),
-    quality_score: v.optional(v.float64()),
-    semantic_tags: v.optional(v.array(v.string())),
-    source_message_index: v.optional(v.float64())
+    userId: v.string(),
+    content: v.any(),
+    confidence: v.number()
   },
   returns: v.object({
     success: v.boolean(),
-    trace_id: v.optional(v.id("persona_traces")),
+    traceId: v.optional(v.id("persona_traces")),
     error: v.optional(v.string())
   }),
   handler: async (ctx, args) => {
-    const mutationId = generateMutationId();
-    const startTime = Date.now();
-    
-    logMutationStart(mutationId, "ADD-TRACE", {
-      user_id: args.user_id,
-      trace_type: args.trace_type
-    });
+    console.log('📝 [ADD-TRACE] Adding manual trace for user:', args.userId);
     
     try {
-      // Validate user ID
-      const userValidation = validateUserId(args.user_id);
-      if (userValidation) {
-        return createFailureResult([userValidation]);
-      }
-
-      // Validate confidence
-      const confidenceValidation = validateConfidence(args.confidence);
-      if (confidenceValidation) {
-        return createFailureResult([confidenceValidation]);
-      }
-
-      // Validate conversation belongs to user
-      const conversation = await ctx.db.get(args.conversation_id);
-      if (!conversation || conversation.userId !== args.user_id) {
-        throw new Error("Conversation not found or unauthorized");
-      }
-
-      // Check for duplicates
-      const existingTrace = await ctx.db
-        .query("persona_traces")
-        .withIndex("by_conversation", (q) => q.eq("conversation_id", args.conversation_id))
-        .filter((q) => 
-          q.and(
-            q.eq(q.field("trace_type"), args.trace_type),
-            q.eq(q.field("verbatim_quote"), args.verbatim_quote)
-          )
-        )
-        .first();
-
-      if (existingTrace) {
+      // Basic validation
+      if (!args.userId || args.content === undefined || typeof args.confidence !== 'number') {
         return {
           success: false,
-          error: "Duplicate trace already exists"
+          error: "Invalid input: userId, content, and confidence are required"
         };
       }
 
-      const now = Date.now();
       const traceId = await ctx.db.insert("persona_traces", {
-        // Required fields
-        user_id: args.user_id,
-        conversation_id: args.conversation_id,
-        trace_id: generateManualTraceId(),
-        trace_type: args.trace_type,
-        verbatim_quote: args.verbatim_quote,
-        extracted_insight: args.extracted_insight,
-        confidence: args.confidence,
-        context: args.context,
-        temporal_weight: args.temporal_weight || 1.0,
-        preference_strength: args.preference_strength || 0.5,
-        metadata: args.metadata || createDefaultTraceMetadata(
-          args.conversation_id,
-          args.verbatim_quote,
-          args.user_id
-        ),
-        
-        // Optional enhanced fields (only include if provided)
-        ...(args.behavioral_consistency !== undefined && { behavioral_consistency: args.behavioral_consistency }),
-        ...(args.contextual_relevance !== undefined && { contextual_relevance: args.contextual_relevance }),
-        ...(args.contradiction_flags !== undefined && { 
-          contradiction_flags: args.contradiction_flags === null ? [] : args.contradiction_flags 
-        }),
-        ...(args.crystallization_priority !== undefined && { crystallization_priority: args.crystallization_priority }),
-        ...(args.emotional_valence !== undefined && { emotional_valence: args.emotional_valence }),
-        ...(args.last_accessed !== undefined && { last_accessed: args.last_accessed }),
-        ...(args.processing_version !== undefined && { processing_version: args.processing_version }),
-        ...(args.quality_score !== undefined && { quality_score: args.quality_score }),
-        ...(args.semantic_tags !== undefined && { semantic_tags: args.semantic_tags }),
-        ...(args.source_message_index !== undefined && { source_message_index: args.source_message_index })
+        userId: args.userId,
+        content: args.content,
+        timestamp: Date.now(),
+        confidence: Math.max(0, Math.min(1, args.confidence))
       });
 
-      const processingTime = Date.now() - startTime;
-      logMutationComplete(mutationId, "ADD-TRACE", processingTime, { trace_id: traceId });
-      
+      console.log('✅ [ADD-TRACE] Successfully added trace:', traceId);
       return {
         success: true,
-        trace_id: traceId
+        traceId
       };
 
     } catch (error) {
-      const processingTime = Date.now() - startTime;
-      logMutationError(mutationId, "ADD-TRACE", error as Error, processingTime);
-      
+      console.error('❌ [ADD-TRACE] Error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -290,48 +133,40 @@ export const addPersonaTrace = mutation({
  */
 export const deletePersonaTrace = mutation({
   args: {
-    user_id: v.string(),
-    trace_id: v.id("persona_traces")
+    userId: v.string(),
+    traceId: v.id("persona_traces")
   },
   returns: v.object({
     success: v.boolean(),
     error: v.optional(v.string())
   }),
   handler: async (ctx, args) => {
-    const mutationId = generateMutationId();
-    const startTime = Date.now();
-    
-    logMutationStart(mutationId, "DELETE-TRACE", {
-      user_id: args.user_id,
-      trace_id: args.trace_id
-    });
+    console.log('🗑️ [DELETE-TRACE] Deleting trace:', args.traceId);
     
     try {
-      // Validate user ID
-      const userValidation = validateUserId(args.user_id);
-      if (userValidation) {
+      // Verify trace belongs to user
+      const trace = await ctx.db.get(args.traceId);
+      if (!trace) {
         return {
           success: false,
-          error: userValidation.message
+          error: "Trace not found"
         };
       }
 
-      const trace = await ctx.db.get(args.trace_id);
-      if (!trace || trace.user_id !== args.user_id) {
-        throw new Error("Trace not found or unauthorized");
+      if (trace.userId !== args.userId) {
+        return {
+          success: false,
+          error: "Unauthorized: trace belongs to different user"
+        };
       }
 
-      await ctx.db.delete(args.trace_id);
-
-      const processingTime = Date.now() - startTime;
-      logMutationComplete(mutationId, "DELETE-TRACE", processingTime);
+      await ctx.db.delete(args.traceId);
       
+      console.log('✅ [DELETE-TRACE] Successfully deleted trace');
       return { success: true };
 
     } catch (error) {
-      const processingTime = Date.now() - startTime;
-      logMutationError(mutationId, "DELETE-TRACE", error as Error, processingTime);
-      
+      console.error('❌ [DELETE-TRACE] Error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -341,12 +176,12 @@ export const deletePersonaTrace = mutation({
 });
 
 /**
- * Update trace confidence (for manual curation)
+ * Update trace confidence
  */
 export const updateTraceConfidence = mutation({
   args: {
-    user_id: v.string(),
-    trace_id: v.id("persona_traces"),
+    userId: v.string(),
+    traceId: v.id("persona_traces"),
     confidence: v.number()
   },
   returns: v.object({
@@ -354,54 +189,80 @@ export const updateTraceConfidence = mutation({
     error: v.optional(v.string())
   }),
   handler: async (ctx, args) => {
-    const mutationId = generateMutationId();
-    const startTime = Date.now();
-    
-    logMutationStart(mutationId, "UPDATE-TRACE-CONFIDENCE", {
-      user_id: args.user_id,
-      trace_id: args.trace_id,
-      confidence: args.confidence
-    });
+    console.log('📊 [UPDATE-CONFIDENCE] Updating trace confidence:', args.traceId);
     
     try {
-      // Validate user ID
-      const userValidation = validateUserId(args.user_id);
-      if (userValidation) {
+      // Verify trace belongs to user
+      const trace = await ctx.db.get(args.traceId);
+      if (!trace) {
         return {
           success: false,
-          error: userValidation.message
+          error: "Trace not found"
         };
       }
 
-      // Validate confidence
-      const confidenceValidation = validateConfidence(args.confidence);
-      if (confidenceValidation) {
+      if (trace.userId !== args.userId) {
         return {
           success: false,
-          error: confidenceValidation.message
+          error: "Unauthorized: trace belongs to different user"
         };
       }
 
-      const trace = await ctx.db.get(args.trace_id);
-      if (!trace || trace.user_id !== args.user_id) {
-        throw new Error("Trace not found or unauthorized");
-      }
-
-      await ctx.db.patch(args.trace_id, {
-        confidence: args.confidence
+      await ctx.db.patch(args.traceId, {
+        confidence: Math.max(0, Math.min(1, args.confidence))
       });
 
-      const processingTime = Date.now() - startTime;
-      logMutationComplete(mutationId, "UPDATE-TRACE-CONFIDENCE", processingTime);
-      
+      console.log('✅ [UPDATE-CONFIDENCE] Successfully updated confidence');
       return { success: true };
 
     } catch (error) {
-      const processingTime = Date.now() - startTime;
-      logMutationError(mutationId, "UPDATE-TRACE-CONFIDENCE", error as Error, processingTime);
-      
+      console.error('❌ [UPDATE-CONFIDENCE] Error:', error);
       return {
         success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+});
+
+/**
+ * Delete all traces for a user (cleanup operation)
+ */
+export const deleteAllUserTraces = mutation({
+  args: {
+    userId: v.string()
+  },
+  returns: v.object({
+    success: v.boolean(),
+    deletedCount: v.number(),
+    error: v.optional(v.string())
+  }),
+  handler: async (ctx, args) => {
+    console.log('🧹 [DELETE-ALL-TRACES] Cleaning up traces for user:', args.userId);
+    
+    try {
+      const traces = await ctx.db
+        .query("persona_traces")
+        .withIndex("by_user", (q) => q.eq("userId", args.userId))
+        .collect();
+
+      let deletedCount = 0;
+      for (const trace of traces) {
+        await ctx.db.delete(trace._id);
+        deletedCount++;
+      }
+
+      console.log(`✅ [DELETE-ALL-TRACES] Deleted ${deletedCount} traces`);
+      return {
+        success: true,
+        deletedCount
+      };
+
+    } catch (error) {
+      console.error('❌ [DELETE-ALL-TRACES] Error:', error);
+      return {
+        success: false,
+        deletedCount: 0,
         error: error instanceof Error ? error.message : 'Unknown error'
       };
     }

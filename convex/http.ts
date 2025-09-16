@@ -1372,13 +1372,30 @@ app.delete("/api/projects/:projectId/widgets/:widgetsId", async (c) => {
 // Store crystallized insights
 app.post("/api/persona-crystallization/store-insights", async (c) => {
   const ctx = c.env;
-  const { user_id, insights } = await c.req.json();
+  const { insights } = await c.req.json();
   
   try {
-    console.log(`⚠️  [HTTP-CONVEX] storeCrystallizedInsightsAction called with user_id: ${user_id}, insights count: ${insights?.length || 0}`);
+    console.log(`⚠️  [HTTP-CONVEX] storeCrystallizedInsightsAction called with insights count: ${insights?.length || 0}`);
+    
+    // Validate that insights array contains proper data
+    if (!insights || !Array.isArray(insights)) {
+      return c.json({
+        success: false,
+        error: "Missing or invalid insights array"
+      }, 400);
+    }
+
+    // Validate each insight has required fields for simplified schema
+    for (const insight of insights) {
+      if (!insight.userId || !insight.content || !insight.category) {
+        return c.json({
+          success: false,
+          error: "Each insight must have userId, content, and category fields"
+        }, 400);
+      }
+    }
     
     const result = await ctx.runAction(api.personaCrystallizationMutations.storeCrystallizedInsightsAction, {
-      user_id,
       insights
     });
     
@@ -1401,14 +1418,30 @@ app.post("/api/persona-crystallization/store-insights", async (c) => {
 // Store persona traces
 app.post("/api/persona-crystallization/store-traces", async (c) => {
   const ctx = c.env;
-  const { user_id, conversation_id, traces } = await c.req.json();
+  const { traces } = await c.req.json();
   
   try {
-    console.log(`⚠️  [HTTP-CONVEX] storePersonaTracesAction called with user_id: ${user_id}, traces count: ${traces?.length || 0}`);
+    console.log(`⚠️  [HTTP-CONVEX] storePersonaTracesAction called with traces count: ${traces?.length || 0}`);
+    
+    // Validate that traces array contains proper data
+    if (!traces || !Array.isArray(traces)) {
+      return c.json({
+        success: false,
+        error: "Missing or invalid traces array"
+      }, 400);
+    }
+
+    // Validate each trace has required fields for simplified schema
+    for (const trace of traces) {
+      if (!trace.userId || trace.content === undefined || typeof trace.confidence !== 'number') {
+        return c.json({
+          success: false,
+          error: "Each trace must have userId, content, and confidence fields"
+        }, 400);
+      }
+    }
     
     const result = await ctx.runAction(api.personaCrystallizationMutations.storePersonaTracesAction, {
-      user_id,
-      conversation_id,
       traces
     });
     
@@ -1431,47 +1464,34 @@ app.post("/api/persona-crystallization/store-traces", async (c) => {
 // Get persona traces
 app.get("/api/persona-crystallization/get-traces", async (c) => {
   const ctx = c.env;
-  const userId = c.req.query("user_id");
-  
-  // Handle both limit as number and as trace IDs (backend sends trace IDs as multiple limit params)
-  const limitParams = c.req.queries("limit") || [];
-  const conversationIds = c.req.query("conversation_ids") ? JSON.parse(c.req.query("conversation_ids") as string) : undefined;
-  
-  // If limit params look like trace IDs, treat them as such
-  const isTraceIds = limitParams.length > 1 || (limitParams.length === 1 && limitParams[0].startsWith("trace_"));
-  const limit = isTraceIds ? undefined : (limitParams[0] ? parseInt(limitParams[0]) : 100);
-  const traceIds = isTraceIds ? limitParams : undefined;
+  const userId = c.req.query("userId");
+  const limit = c.req.query("limit") ? parseInt(c.req.query("limit") as string) : 50;
+  const minConfidence = c.req.query("minConfidence") ? parseFloat(c.req.query("minConfidence") as string) : undefined;
   
   try {
-    console.log(`⚠️  [HTTP-CONVEX] get-traces called with userId: ${userId}, limit: ${limit}, traceIds: ${traceIds?.length || 0}`);
+    console.log(`⚠️  [HTTP-CONVEX] get-traces called with userId: ${userId}, limit: ${limit}, minConfidence: ${minConfidence}`);
     
-    // If trace IDs are specified, use simple trace lookup
-    if (traceIds && traceIds.length > 0) {
-      console.log(`🔍 [HTTP-CONVEX] Fetching specific traces by IDs: ${traceIds.join(', ')}`);
-      
-      const result = await ctx.runQuery(api.personaCrystallizationQueries.getTracesByIds, {
-        userId,
-        traceIds
-      });
-      
-      return c.json({ 
-        success: true, 
-        data: result 
-      });
+    if (!userId) {
+      return c.json({
+        success: false,
+        error: "Missing required parameter: userId"
+      }, 400);
     }
     
-    // For other cases, use the existing backend query
-    const result = await ctx.runQuery(api.personaBackendQueries.getPersonaTracesForBackend, {
-      user_id: userId,
+    const result = await ctx.runQuery(api.personaCrystallizationQueries.getPersonaTraces, {
+      userId,
       limit,
-      conversation_ids: conversationIds
+      minConfidence
     });
     
-    console.log(`⚠️  [HTTP-CONVEX] getPersonaTracesForBackend result:`, result);
+    console.log(`⚠️  [HTTP-CONVEX] getPersonaTraces result: ${result.length} traces`);
     
     return c.json({ 
       success: true, 
-      data: result 
+      data: {
+        traces: result,
+        pagination: { hasMore: false } // Simplified pagination
+      }
     });
   } catch (error: any) {
     console.error("⚠️  [HTTP-CONVEX] Failed to get persona traces:", error);
@@ -1486,30 +1506,83 @@ app.get("/api/persona-crystallization/get-traces", async (c) => {
 // Get crystallized insights
 app.get("/api/persona-crystallization/get-insights", async (c) => {
   const ctx = c.env;
-  const userId = c.req.query("user_id");
-  const minConfidence = c.req.query("min_confidence") ? parseFloat(c.req.query("min_confidence") as string) : 0.0;
-  const limit = c.req.query("limit") ? parseInt(c.req.query("limit") as string) : 100;
+  const userId = c.req.query("userId");
+  const category = c.req.query("category");
+  const minConfidence = c.req.query("minConfidence") ? parseFloat(c.req.query("minConfidence") as string) : undefined;
+  const limit = c.req.query("limit") ? parseInt(c.req.query("limit") as string) : 20;
   
   try {
-    console.log(`⚠️  [HTTP-CONVEX] getCrystallizedInsightsForBackend called with userId: ${userId}, minConfidence: ${minConfidence}, limit: ${limit}`);
+    console.log(`⚠️  [HTTP-CONVEX] getCrystallizedInsights called with userId: ${userId}, category: ${category}, minConfidence: ${minConfidence}, limit: ${limit}`);
     
-    const result = await ctx.runQuery(api.personaBackendQueries.getCrystallizedInsightsForBackend, {
-      user_id: userId,
-      min_confidence: minConfidence,
+    if (!userId) {
+      return c.json({
+        success: false,
+        error: "Missing required parameter: userId"
+      }, 400);
+    }
+    
+    const result = await ctx.runQuery(api.personaCrystallizationQueries.getCrystallizedInsights, {
+      userId,
+      category,
+      minConfidence,
       limit
     });
     
-    console.log(`⚠️  [HTTP-CONVEX] getCrystallizedInsightsForBackend result:`, result);
+    console.log(`⚠️  [HTTP-CONVEX] getCrystallizedInsights result: ${result.length} insights`);
     
     return c.json({ 
       success: true, 
-      data: result 
+      data: {
+        insights: result,
+        pagination: { hasMore: false } // Simplified pagination
+      }
     });
   } catch (error: any) {
     console.error("⚠️  [HTTP-CONVEX] Failed to get crystallized insights:", error);
     return c.json({ 
       success: false, 
       error: "Failed to get crystallized insights",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get user persona profile for AI context injection
+app.get("/api/persona-crystallization/get-profile", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.query("userId");
+  const includeRecentTraces = c.req.query("includeRecentTraces") !== "false"; // Default to true
+  const traceLimit = c.req.query("traceLimit") ? parseInt(c.req.query("traceLimit") as string) : 20;
+  const insightLimit = c.req.query("insightLimit") ? parseInt(c.req.query("insightLimit") as string) : 10;
+  
+  try {
+    console.log(`⚠️  [HTTP-CONVEX] getUserPersonaProfile called with userId: ${userId}`);
+    
+    if (!userId) {
+      return c.json({
+        success: false,
+        error: "Missing required parameter: userId"
+      }, 400);
+    }
+    
+    const result = await ctx.runQuery(api.personaCrystallizationQueries.getUserPersonaProfile, {
+      userId,
+      includeRecentTraces,
+      traceLimit,
+      insightLimit
+    });
+    
+    console.log(`⚠️  [HTTP-CONVEX] getUserPersonaProfile result: ${result.summary.totalTraces} traces, ${result.summary.totalInsights} insights`);
+    
+    return c.json({ 
+      success: true, 
+      data: result
+    });
+  } catch (error: any) {
+    console.error("⚠️  [HTTP-CONVEX] Failed to get user persona profile:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get user persona profile",
       message: error.message || "Internal Server Error"
     }, 500);
   }

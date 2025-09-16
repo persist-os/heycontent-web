@@ -1,500 +1,347 @@
 /**
- * Persona Batch Mutations
- * Handles batch processing operations for high-throughput scenarios
+ * Clean Persona Batch Mutations
+ * Simplified batch processing for content-based schema
  */
 
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
-import { internal } from "./_generated/api";
 import {
-  evolutionHistoryValidator,
-  crystallizedInsightMetadataValidator,
-  PersonaCrystallizationError
+  personaTraceInputValidator,
+  crystallizedInsightInputValidator,
+  CrystallizedInsightInput,
+  PersonaTraceInput,
+  BatchProcessingResult
 } from "./lib/personaTypes";
 
-// Reusable error validator that matches PersonaCrystallizationError
-const personaErrorValidator = v.object({
-  code: v.string(),
-  message: v.string(),
-  details: v.any(),
-  timestamp: v.number()
-});
-import {
-  generateMutationId,
-  logMutationStart,
-  logMutationComplete,
-  logMutationError,
-  createPersonaError,
-  createBatchError,
-  createCriticalError
-} from "./lib/personaErrorHandling";
-import {
-  createBatchResult,
-  generateBatchId,
-  createInsightsCache,
-  chunkArray,
-  processInParallel,
-  validateBatchArgs,
-  logBatchProgress,
-  logBatchCompletion
-} from "./lib/personaBatchUtils";
-import {
-  convertTraceIdsRobustly,
-  mergeEvolutionHistory
-} from "./lib/personaTraceUtils";
-import {
-  validateInsightData,
-  sanitizeInsightData,
-  VALIDATION_THRESHOLDS,
-  getActionableErrorMessage
-} from "./lib/personaValidation";
-
 /**
- * Batch update multiple crystallized insights with optimized processing
- * Includes transaction-like handling and performance improvements for large sets
+ * Batch store persona traces with optimized processing
  */
-export const batchUpdateCrystallizedInsights = internalMutation({
+export const batchStorePersonaTraces = internalMutation({
   args: {
-    userId: v.string(),
-    insightsBatch: v.array(v.object({
-      insight_type: v.string(),
-      crystallized_insight: v.string(),
-      confidence: v.number(),
-      supporting_traces: v.array(v.string()), // Trace IDs as strings (converted internally)
-      contradiction_flags: v.union(v.array(v.string()), v.null()),
-      evolution_history: evolutionHistoryValidator,
-      temporal_stability: v.number(),
-      cross_pattern_correlations: v.array(v.string()),
-      metadata: crystallizedInsightMetadataValidator,
-      created_at: v.number(),
-      updated_at: v.number()
-    })),
-    batchSize: v.optional(v.number()), // For chunking large batches
-    skipValidation: v.optional(v.boolean()) // For trusted sources
+    traces: v.array(personaTraceInputValidator),
+    batchSize: v.optional(v.number())
   },
   returns: v.object({
     success: v.boolean(),
-    batch_id: v.string(),
-    total_processed: v.number(),
+    totalProcessed: v.number(),
     successful: v.number(),
     failed: v.number(),
-    insights_updated: v.number(),
-    new_insights: v.number(),
-    evolved_insights: v.number(),
-    processing_time: v.number(),
-    errors: v.array(personaErrorValidator),
-    validation_errors: v.array(personaErrorValidator),
-    trace_conversion_errors: v.array(personaErrorValidator)
+    errors: v.array(v.string()),
+    processingTime: v.number()
   }),
   handler: async (ctx, args) => {
-    const batchId = generateBatchId();
     const startTime = Date.now();
-    const batchSize = args.batchSize || 50; // Default batch size for processing
+    const batchSize = args.batchSize || 50;
     
-    logMutationStart(batchId, "BATCH-UPDATE", {
-      userId: args.userId,
-      batchSize,
-      skipValidation: args.skipValidation || false,
-      insightsCount: args.insightsBatch.length
-    });
+    console.log(`🔄 [BATCH-TRACES] Processing ${args.traces.length} traces in batches of ${batchSize}`);
     
     const results = {
-      batch_id: batchId,
-      total_processed: 0,
+      success: true,
+      totalProcessed: 0,
       successful: 0,
       failed: 0,
-      insights_updated: 0,
-      new_insights: 0,
-      evolved_insights: 0,
-      processing_time: 0,
-      errors: [] as PersonaCrystallizationError[],
-      validation_errors: [] as PersonaCrystallizationError[],
-      trace_conversion_errors: [] as PersonaCrystallizationError[]
+      errors: [] as string[],
+      processingTime: 0
     };
 
     try {
-      // Validate batch arguments
-      const argValidation = validateBatchArgs(args.userId, batchSize, 10);
-      if (argValidation) {
-        results.errors.push(argValidation);
-        return {
-          success: false,
-          ...results
-        };
-      }
-
-      // Pre-fetch existing insights for the user to optimize lookups
-      console.log(`📋 [BATCH-UPDATE:${batchId}] Pre-fetching existing insights for optimization`);
-      const existingInsights = await ctx.db
-        .query("crystallized_insights")
-        .withIndex("by_user", (q) => q.eq("user_id", args.userId))
-        .collect();
-      
-      const existingInsightsByType = createInsightsCache(existingInsights);
-
-      console.log(`📊 [BATCH-UPDATE:${batchId}] Found ${existingInsights.length} existing insights, processing in chunks of ${batchSize}`);
-
-      // Process insights in chunks for better performance and memory management
-      const chunks = chunkArray(args.insightsBatch, batchSize);
-      
-      for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
-        const chunk = chunks[chunkIndex];
+      // Process traces in chunks for better performance
+      for (let i = 0; i < args.traces.length; i += batchSize) {
+        const chunk = args.traces.slice(i, i + batchSize);
+        console.log(`📦 [BATCH-TRACES] Processing chunk ${Math.floor(i / batchSize) + 1}/${Math.ceil(args.traces.length / batchSize)}`);
         
-        console.log(`🔄 [BATCH-UPDATE:${batchId}] Processing chunk ${chunkIndex + 1}/${chunks.length} (${chunk.length} insights)`);
-
-        // Process chunk with parallel operations where possible
-        for (let i = 0; i < chunk.length; i++) {
-          const insightData = chunk[i];
-          const globalIndex = chunkIndex * batchSize + i + 1;
-          const insightContext = `insight ${globalIndex}/${args.insightsBatch.length} (${insightData.insight_type})`;
-          
-          results.total_processed++;
+        for (const trace of chunk) {
+          results.totalProcessed++;
           
           try {
-            // Step 1: Validation (skip if requested for trusted sources)
-            if (!args.skipValidation) {
-              const validationError = validateInsightData(insightData);
-              if (validationError) {
-                console.warn(`⚠️ [BATCH-UPDATE:${batchId}] Validation failed for ${insightContext}:`, validationError);
-                results.validation_errors.push(validationError);
-                results.failed++;
-                continue;
-              }
+            // Basic validation
+            if (!trace.userId || trace.content === undefined || typeof trace.confidence !== 'number') {
+              results.errors.push(`Invalid trace data for user ${trace.userId}`);
+              results.failed++;
+              continue;
             }
 
-            // Step 2: Efficient trace ID conversion with caching
-            const { validIds: supportingTraceIds, errors: traceErrors } = await convertTraceIdsRobustly(
-              ctx, 
-              insightData.supporting_traces, 
-              args.userId
-            );
-            
-            if (traceErrors.length > 0) {
-              results.trace_conversion_errors.push(...traceErrors);
-            }
-
-            // Step 3: Check existing insight using pre-fetched map
-            const existingInsight = existingInsightsByType.get(insightData.insight_type);
-
-            // Step 4: Prepare optimized insight record
-            const insightRecord = sanitizeInsightData({
-              userId: args.userId,
-              insight_type: insightData.insight_type,
-              crystallized_insight: insightData.crystallized_insight,
-              confidence: insightData.confidence,
-              supporting_traces: supportingTraceIds,
-              contradiction_flags: insightData.contradiction_flags,
-              evolution_history: insightData.evolution_history,
-              temporal_stability: insightData.temporal_stability,
-              cross_pattern_correlations: insightData.cross_pattern_correlations,
-              metadata: insightData.metadata,
-              created_at: insightData.created_at,
-              updated_at: insightData.updated_at
+            // Store trace
+            await ctx.db.insert("persona_traces", {
+              userId: trace.userId,
+              content: trace.content,
+              timestamp: trace.timestamp || Date.now(),
+              confidence: Math.max(0, Math.min(1, trace.confidence))
             });
 
-            // Step 5: Atomic update or create operation
-            if (existingInsight) {
-              // Merge evolution history efficiently
-              const mergedEvolutionHistory = mergeEvolutionHistory(
-                existingInsight.evolution_history,
-                insightRecord.evolution_history
-              );
-
-              await ctx.db.patch(existingInsight._id, {
-                crystallized_insight: insightRecord.crystallized_insight,
-                confidence: insightRecord.confidence,
-                supporting_traces: insightRecord.supporting_traces,
-                contradiction_flags: insightRecord.contradiction_flags,
-                evolution_history: mergedEvolutionHistory,
-                temporal_stability: insightRecord.temporal_stability,
-                cross_pattern_correlations: insightRecord.cross_pattern_correlations,
-                metadata: {
-                  ...insightRecord.metadata,
-                  confidence_history: [
-                    ...existingInsight.metadata.confidence_history,
-                    {
-                      timestamp: insightRecord.updated_at,
-                      confidence: insightRecord.confidence
-                    }
-                  ]
-                },
-                updated_at: insightRecord.updated_at
-              });
-
-              results.evolved_insights++;
-              // Update our cache for subsequent insights in this batch
-              existingInsightsByType.set(insightData.insight_type, {
-                ...existingInsight,
-                ...insightRecord
-              });
-            } else {
-              const newInsightId = await ctx.db.insert("crystallized_insights", insightRecord);
-              results.new_insights++;
-              // Add to cache for subsequent insights in this batch
-              existingInsightsByType.set(insightData.insight_type, {
-                _id: newInsightId,
-                ...insightRecord
-              });
-            }
-
-            results.insights_updated++;
             results.successful++;
 
           } catch (error) {
-            const               errorObj = createBatchError(
-              `Failed to process ${insightContext}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-              { 
-                insight_type: insightData.insight_type,
-                globalIndex,
-                chunkIndex,
-                error: error instanceof Error ? error.message : 'Unknown error'
-              }
-            );
-            
-            console.error(`❌ [BATCH-UPDATE:${batchId}] ${errorObj.message}`, error);
-            results.errors.push(errorObj);
+            const errorMsg = `Failed to store trace for user ${trace.userId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+            results.errors.push(errorMsg);
             results.failed++;
           }
         }
-
-        // Log chunk completion
-        logBatchProgress(batchId, "BATCH-UPDATE", chunkIndex + 1, chunks.length, 
-          results.total_processed, results.successful, results.failed);
       }
 
-      results.processing_time = Date.now() - startTime;
+      results.processingTime = Date.now() - startTime;
       
-      logBatchCompletion(batchId, "BATCH-UPDATE", results, results.processing_time);
+      console.log(`✅ [BATCH-TRACES] Completed: ${results.successful}/${results.totalProcessed} traces stored in ${results.processingTime}ms`);
       
-      return {
-        success: results.failed === 0, // Success if no failures
-        ...results
-      };
+      results.success = results.failed === 0;
+      return results;
 
     } catch (error) {
-      results.processing_time = Date.now() - startTime;
-      const criticalError = createCriticalError(
-        `Critical error in batch processing: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        { batchId, processingTime: results.processing_time }
-      );
+      results.processingTime = Date.now() - startTime;
+      const criticalError = `Critical error in batch trace processing: ${error instanceof Error ? error.message : 'Unknown error'}`;
       
-      logMutationError(batchId, "BATCH-UPDATE", error as Error, results.processing_time);
+      console.error('❌ [BATCH-TRACES]', criticalError);
       
-      return {
-        success: false,
-        batch_id: batchId,
-        total_processed: results.total_processed,
-        successful: results.successful,
-        failed: results.failed + 1, // +1 for the critical error
-        insights_updated: results.insights_updated,
-        new_insights: results.new_insights,
-        evolved_insights: results.evolved_insights,
-        processing_time: results.processing_time,
-        errors: [...results.errors, criticalError],
-        validation_errors: results.validation_errors,
-        trace_conversion_errors: results.trace_conversion_errors
-      };
+      results.success = false;
+      results.failed = results.failed + 1;
+      results.errors.push(criticalError);
+      return results;
     }
   }
 });
 
 /**
- * Transaction-safe insight update with rollback capability
- * Ensures consistency when updating insights with complex relationships
+ * Batch store crystallized insights with evolution tracking
  */
-export const transactionSafeInsightUpdate = internalMutation({
+export const batchStoreCrystallizedInsights = internalMutation({
   args: {
-    userId: v.string(),
-    insight: v.object({
-      insight_type: v.string(),
-      crystallized_insight: v.string(),
-      confidence: v.number(),
-      supporting_traces: v.array(v.string()), // Trace IDs as strings (converted internally)
-      contradiction_flags: v.union(v.array(v.string()), v.null()),
-      evolution_history: evolutionHistoryValidator,
-      temporal_stability: v.number(),
-      cross_pattern_correlations: v.array(v.string()),
-      metadata: crystallizedInsightMetadataValidator,
-      created_at: v.number(),
-      updated_at: v.number()
-    }),
-    dryRun: v.optional(v.boolean()) // Test the operation without committing
+    insights: v.array(crystallizedInsightInputValidator),
+    batchSize: v.optional(v.number())
   },
   returns: v.object({
     success: v.boolean(),
-    operation_type: v.union(v.literal("create"), v.literal("update"), v.literal("no-change")),
-    insight_id: v.optional(v.id("crystallized_insights")),
-    validated_traces: v.array(v.id("persona_traces")),
-    errors: v.array(personaErrorValidator),
-    dry_run: v.boolean()
+    totalProcessed: v.number(),
+    successful: v.number(),
+    failed: v.number(),
+    newInsights: v.number(),
+    evolvedInsights: v.number(),
+    errors: v.array(v.string()),
+    processingTime: v.number()
   }),
   handler: async (ctx, args) => {
-    const mutationId = generateMutationId();
     const startTime = Date.now();
+    const batchSize = args.batchSize || 25; // Smaller batch size for insights
     
-    logMutationStart(mutationId, "TRANSACTION-SAFE", {
-      userId: args.userId,
-      insight_type: args.insight.insight_type,
-      dryRun: args.dryRun || false
-    });
-
-    const result = {
-      success: false,
-      operation_type: "no-change" as "create" | "update" | "no-change",
-      insight_id: undefined as Id<"crystallized_insights"> | undefined,
-      validated_traces: [] as Id<"persona_traces">[],
-      errors: [] as PersonaCrystallizationError[],
-      dry_run: args.dryRun || false
+    console.log(`🔮 [BATCH-INSIGHTS] Processing ${args.insights.length} insights in batches of ${batchSize}`);
+    
+    const results = {
+      success: true,
+      totalProcessed: 0,
+      successful: 0,
+      failed: 0,
+      newInsights: 0,
+      evolvedInsights: 0,
+      errors: [] as string[],
+      processingTime: 0
     };
 
     try {
-      // Step 1: Comprehensive validation for updates
-      const validationError = validateInsightData(args.insight, true);
-      if (validationError) {
-        const actionableMessage = getActionableErrorMessage(validationError);
-        result.errors.push({
-          ...validationError,
-          message: actionableMessage
+      // Pre-fetch existing insights for optimization
+      const allUserIds = [...new Set(args.insights.map(i => i.userId))];
+      const existingInsightsMap = new Map<string, any>();
+      
+      for (const userId of allUserIds) {
+        const userInsights = await ctx.db
+          .query("crystallized_insights")
+          .withIndex("by_user", (q) => q.eq("userId", userId))
+          .collect();
+        
+        userInsights.forEach(insight => {
+          const key = `${userId}:${insight.category}`;
+          existingInsightsMap.set(key, insight);
         });
-        console.warn(`⚠️ [TRANSACTION-SAFE:${mutationId}] Validation failed:`, actionableMessage);
-        return result;
       }
 
-      // Step 2: Validate trace references with atomic consistency
-      const { validIds: supportingTraceIds, errors: traceErrors } = await convertTraceIdsRobustly(
-        ctx, 
-        args.insight.supporting_traces, 
-        args.userId
-      );
-      
-      if (traceErrors.length > 0) {
-        result.errors.push(...traceErrors);
-        // Don't fail for trace conversion errors, but record them
-      }
-      
-      result.validated_traces = supportingTraceIds;
-      console.log(`✅ [TRANSACTION-SAFE:${mutationId}] Validated ${supportingTraceIds.length}/${args.insight.supporting_traces.length} trace references`);
-
-      // Step 3: Check existing insight state
-      const existingInsight = await ctx.db
-        .query("crystallized_insights")
-        .withIndex("by_user_type", (q) => q.eq("user_id", args.userId).eq("insight_type", args.insight.insight_type))
-        .first();
-
-      // Step 4: Prepare the insight record with data consistency checks
-      const insightRecord = sanitizeInsightData({
-        user_id: args.userId,
-        insight_type: args.insight.insight_type,
-        crystallized_insight: args.insight.crystallized_insight,
-        confidence: args.insight.confidence,
-        supporting_traces: supportingTraceIds,
-        contradiction_flags: args.insight.contradiction_flags,
-        evolution_history: args.insight.evolution_history,
-        temporal_stability: args.insight.temporal_stability,
-        cross_pattern_correlations: args.insight.cross_pattern_correlations,
-        metadata: args.insight.metadata,
-        created_at: args.insight.created_at,
-        updated_at: args.insight.updated_at
-      });
-
-      // Step 5: Determine operation type and check for actual changes
-      if (existingInsight) {
-        // Check if update is actually needed (deep comparison)
-        const hasChanged = (
-          existingInsight.crystallized_insight !== insightRecord.crystallized_insight ||
-          Math.abs(existingInsight.confidence - insightRecord.confidence) > 0.001 ||
-          Math.abs(existingInsight.temporal_stability - insightRecord.temporal_stability) > 0.001 ||
-          JSON.stringify(existingInsight.supporting_traces.sort()) !== JSON.stringify(supportingTraceIds.sort()) ||
-          JSON.stringify(existingInsight.contradiction_flags.sort()) !== JSON.stringify(insightRecord.contradiction_flags.sort()) ||
-          JSON.stringify(existingInsight.cross_pattern_correlations.sort()) !== JSON.stringify(insightRecord.cross_pattern_correlations.sort())
-        );
-
-        if (!hasChanged) {
-          result.operation_type = "no-change";
-          result.success = true;
-          result.insight_id = existingInsight._id;
-          console.log(`📋 [TRANSACTION-SAFE:${mutationId}] No changes detected for insight: ${args.insight.insight_type}`);
-          return result;
-        }
-
-        result.operation_type = "update";
-        result.insight_id = existingInsight._id;
-      } else {
-        result.operation_type = "create";
-      }
-
-      // Step 6: Execute the operation (if not dry run)
-      if (!args.dryRun) {
-        if (result.operation_type === "update" && existingInsight) {
-          // Atomic update with evolution history merging
-          const mergedEvolutionHistory = mergeEvolutionHistory(
-            existingInsight.evolution_history,
-            insightRecord.evolution_history
-          );
-
-          await ctx.db.patch(existingInsight._id, {
-            crystallized_insight: insightRecord.crystallized_insight,
-            confidence: insightRecord.confidence,
-            supporting_traces: insightRecord.supporting_traces,
-            contradiction_flags: insightRecord.contradiction_flags,
-            evolution_history: mergedEvolutionHistory,
-            temporal_stability: insightRecord.temporal_stability,
-            cross_pattern_correlations: insightRecord.cross_pattern_correlations,
-            metadata: {
-              ...insightRecord.metadata,
-              confidence_history: [
-                ...existingInsight.metadata.confidence_history,
-                {
-                  timestamp: insightRecord.updated_at,
-                  confidence: insightRecord.confidence
-                }
-              ]
-            },
-            updated_at: insightRecord.updated_at
-          });
-
-          console.log(`🔄 [TRANSACTION-SAFE:${mutationId}] Successfully updated insight: ${args.insight.insight_type}`);
-        } else {
-          // Atomic create
-          const newInsightId = await ctx.db.insert("crystallized_insights", insightRecord);
-          result.insight_id = newInsightId;
+      // Process insights in chunks
+      for (let i = 0; i < args.insights.length; i += batchSize) {
+        const chunk = args.insights.slice(i, i + batchSize);
+        console.log(`📦 [BATCH-INSIGHTS] Processing chunk ${Math.floor(i / batchSize) + 1}/${Math.ceil(args.insights.length / batchSize)}`);
+        
+        for (const insight of chunk) {
+          results.totalProcessed++;
           
-          console.log(`✨ [TRANSACTION-SAFE:${mutationId}] Successfully created insight: ${args.insight.insight_type}`);
+          try {
+            // Validate insight data
+            if (!insight.userId || !insight.content || !insight.category) {
+              results.errors.push(`Invalid insight data for user ${insight.userId}`);
+                results.failed++;
+                continue;
+            }
+
+            // Convert string source IDs to Convex IDs (simplified approach)
+            const sourceIds: Id<"persona_traces">[] = [];
+            for (const sourceId of insight.sources) {
+              try {
+                if (typeof sourceId === 'string') {
+                  const sourceAsId = sourceId as Id<"persona_traces">;
+                  const trace = await ctx.db.get(sourceAsId);
+                  if (trace && trace.userId === insight.userId) {
+                    sourceIds.push(sourceAsId);
+                  }
+                }
+              } catch (error) {
+                // Skip invalid source IDs
+                console.warn(`Invalid source ID ${sourceId} for insight ${insight.category}`);
+              }
+            }
+
+            // Check if insight exists
+            const existingKey = `${insight.userId}:${insight.category}`;
+            const existingInsight = existingInsightsMap.get(existingKey);
+
+            if (existingInsight) {
+              // Evolution: update existing insight
+              const previousVersion = {
+                content: existingInsight.content,
+                confidence: existingInsight.confidence,
+                timestamp: existingInsight.timestamp,
+                reason: insight.evolutionReason || "Backend batch evolution"
+              };
+
+              const updatedPreviousVersions = [
+                ...(existingInsight.previousVersions || []),
+                previousVersion
+              ];
+
+              await ctx.db.patch(existingInsight._id, {
+                content: insight.content,
+                confidence: Math.max(0, Math.min(1, insight.confidence)),
+                timestamp: insight.timestamp || Date.now(),
+                sources: sourceIds,
+                version: (existingInsight.version || 1) + 1,
+                previousVersions: updatedPreviousVersions,
+                evolutionCount: (existingInsight.evolutionCount || 0) + 1
+              });
+
+              // Update our cache
+              existingInsightsMap.set(existingKey, {
+                ...existingInsight,
+                content: insight.content,
+                confidence: insight.confidence,
+                version: (existingInsight.version || 1) + 1,
+                evolutionCount: (existingInsight.evolutionCount || 0) + 1
+              });
+
+              results.evolvedInsights++;
+              
+            } else {
+              // New insight
+              const newInsightId = await ctx.db.insert("crystallized_insights", {
+                userId: insight.userId,
+                content: insight.content,
+                category: insight.category,
+                timestamp: insight.timestamp || Date.now(),
+                confidence: Math.max(0, Math.min(1, insight.confidence)),
+                sources: sourceIds,
+                version: 1,
+                previousVersions: [],
+                evolutionCount: 0
+              });
+
+              // Add to cache
+              existingInsightsMap.set(existingKey, {
+                _id: newInsightId,
+                userId: insight.userId,
+                category: insight.category,
+                content: insight.content,
+                confidence: insight.confidence,
+                version: 1,
+                evolutionCount: 0
+              });
+
+              results.newInsights++;
+            }
+
+            results.successful++;
+
+          } catch (error) {
+            const errorMsg = `Failed to store insight ${insight.category} for user ${insight.userId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+            results.errors.push(errorMsg);
+            results.failed++;
+          }
         }
-      } else {
-        console.log(`🧪 [TRANSACTION-SAFE:${mutationId}] Dry run completed - would ${result.operation_type} insight: ${args.insight.insight_type}`);
       }
 
-      result.success = true;
+      results.processingTime = Date.now() - startTime;
       
-      const processingTime = Date.now() - startTime;
-      logMutationComplete(mutationId, "TRANSACTION-SAFE", processingTime, {
-        operation_type: result.operation_type,
-        insight_type: args.insight.insight_type,
-        validated_traces: result.validated_traces.length,
-        errors: result.errors.length,
-        dry_run: result.dry_run
-      });
-
-      return result;
+      console.log(`✅ [BATCH-INSIGHTS] Completed: ${results.successful}/${results.totalProcessed} insights processed in ${results.processingTime}ms`);
+      console.log(`📊 [BATCH-INSIGHTS] Summary: ${results.newInsights} new, ${results.evolvedInsights} evolved`);
+      
+      results.success = results.failed === 0;
+      return results;
 
     } catch (error) {
-      const processingTime = Date.now() - startTime;
-      const criticalError = createPersonaError(
-        'TRANSACTION_ERROR',
-        `Transaction failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        { 
-          insight_type: args.insight.insight_type,
-          operation_type: result.operation_type,
-          processingTime
-        }
-      );
+      results.processingTime = Date.now() - startTime;
+      const criticalError = `Critical error in batch insight processing: ${error instanceof Error ? error.message : 'Unknown error'}`;
       
-      result.errors.push(criticalError);
-      logMutationError(mutationId, "TRANSACTION-SAFE", error as Error, processingTime);
+      console.error('❌ [BATCH-INSIGHTS]', criticalError);
       
-      return result;
+      results.success = false;
+      results.failed = results.failed + 1;
+      results.errors.push(criticalError);
+      return results;
+    }
+  }
+});
+
+/**
+ * Cleanup operation: delete all persona data for a user
+ */
+export const cleanupUserPersonaData = internalMutation({
+  args: {
+    userId: v.string()
+  },
+  returns: v.object({
+    success: v.boolean(),
+    deletedTraces: v.number(),
+    deletedInsights: v.number(),
+    error: v.optional(v.string())
+  }),
+  handler: async (ctx, args) => {
+    console.log('🧹 [CLEANUP] Starting persona data cleanup for user:', args.userId);
+    
+    try {
+      // Delete all traces
+      const traces = await ctx.db
+        .query("persona_traces")
+        .withIndex("by_user", (q) => q.eq("userId", args.userId))
+        .collect();
+
+      let deletedTraces = 0;
+      for (const trace of traces) {
+        await ctx.db.delete(trace._id);
+        deletedTraces++;
+      }
+
+      // Delete all insights
+      const insights = await ctx.db
+        .query("crystallized_insights")
+        .withIndex("by_user", (q) => q.eq("userId", args.userId))
+        .collect();
+
+      let deletedInsights = 0;
+      for (const insight of insights) {
+        await ctx.db.delete(insight._id);
+        deletedInsights++;
+      }
+
+      console.log(`✅ [CLEANUP] Completed: deleted ${deletedTraces} traces and ${deletedInsights} insights`);
+      
+      return {
+        success: true,
+        deletedTraces,
+        deletedInsights
+      };
+
+    } catch (error) {
+      console.error('❌ [CLEANUP] Error:', error);
+      return {
+        success: false,
+        deletedTraces: 0,
+        deletedInsights: 0,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
     }
   }
 });
