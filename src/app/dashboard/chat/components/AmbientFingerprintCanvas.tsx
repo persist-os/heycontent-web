@@ -144,12 +144,14 @@ interface AmbientFingerprintCanvasProps {
   messageCount: number
   isActive: boolean
   onAllStarsDiscovered?: () => void
+  isThresholdReached?: boolean
 }
 
 const AmbientFingerprintCanvas: React.FC<AmbientFingerprintCanvasProps> = ({
   messageCount,
   isActive,
-  onAllStarsDiscovered
+  onAllStarsDiscovered,
+  isThresholdReached = false
 }) => {
   const [discoveredFields, setDiscoveredFields] = useState<Set<string>>(new Set())
   const [floatingInsights, setFloatingInsights] = useState<FloatingInsight[]>([])
@@ -362,7 +364,7 @@ const AmbientFingerprintCanvas: React.FC<AmbientFingerprintCanvasProps> = ({
                   isHovered
                     ? 'opacity-60 dark:opacity-70'
                     : 'opacity-30 dark:opacity-40'
-                } ${isCompleting ? 'animate-pulse' : ''}`}
+                } ${isCompleting ? 'animate-pulse' : ''} ${isThresholdReached ? 'animate-pulse' : ''}`}
               >
                 {!isCompleting && (
                   <animate

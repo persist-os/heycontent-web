@@ -41,6 +41,7 @@ import type * as notes from "../notes.js";
 import type * as personaQueries from "../personaQueries.js";
 import type * as personas from "../personas.js";
 import type * as platformRouter from "../platformRouter.js";
+import type * as positioningUtils from "../positioningUtils.js";
 import type * as priceConfig from "../priceConfig.js";
 import type * as projectFingerprintMutations from "../projectFingerprintMutations.js";
 import type * as projectFingerprintQueries from "../projectFingerprintQueries.js";
@@ -99,6 +100,7 @@ declare const fullApi: ApiFromModules<{
   personaQueries: typeof personaQueries;
   personas: typeof personas;
   platformRouter: typeof platformRouter;
+  positioningUtils: typeof positioningUtils;
   priceConfig: typeof priceConfig;
   projectFingerprintMutations: typeof projectFingerprintMutations;
   projectFingerprintQueries: typeof projectFingerprintQueries;

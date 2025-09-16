@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { generateProjectPosition, calculateProjectSpaceRadius } from "./positioningUtils";
 
 // Helper to extract raw Convex document ID from a unified content ID
 function extractRawId(unifiedId: string): string {
@@ -46,7 +47,7 @@ async function validateProjectOwnership(ctx: any, projectId: Id<"projects">, use
   }
 }
 
-// Create a new project
+// Create a new project with static positioning
 export const createProject = mutation({
   args: {
     userId: v.string(),
@@ -79,6 +80,18 @@ export const createProject = mutation({
     const now = Date.now();
     
     try {
+      // Get existing projects for collision detection
+      const existingProjects = await ctx.db
+        .query("projects")
+        .withIndex("by_user", (q) => q.eq("userId", args.userId))
+        .collect();
+
+      // Generate non-overlapping position
+      const position = await generateProjectPosition(ctx, args.userId, existingProjects);
+      
+      // Calculate initial space radius (will be updated when widgets are added)
+      const spaceRadius = calculateProjectSpaceRadius(0);
+
       const projectId = await ctx.db.insert("projects", {
         userId: args.userId,
         name: sanitizedName,
@@ -91,6 +104,10 @@ export const createProject = mutation({
         analysisIds: [],
         createdAt: now,
         updatedAt: now,
+        // Static positioning fields
+        position_x: position.x,
+        position_y: position.y,
+        space_radius: spaceRadius,
       });
 
       return projectId;

@@ -230,6 +230,11 @@ export default defineSchema({
     fingerprintId: v.optional(v.id("project_fingerprints")), // Links to project fingerprint
     createdAt: v.number(),
     updatedAt: v.number(),
+    
+    // Static positioning fields
+    position_x: v.number(),           // Required - no optional
+    position_y: v.number(),           // Required - no optional  
+    space_radius: v.number(),         // Calculated based on widget count
   })
   .index("by_user", ["userId"])
   .index("by_fingerprint", ["fingerprintId"])
@@ -1275,66 +1280,54 @@ export default defineSchema({
   .index("by_timestamp", ["timestamp"])
   .index("by_user_timestamp", ["userId", "timestamp"]),
 
-  // Project Widgets - Personalized widgets for each project
+  // Project Widgets - Individual widgets with flattened structure
   project_widgets: defineTable({
-    projectId: v.id("projects"),
-    fingerprintId: v.id("project_fingerprints"),
-    userId: v.string(),
-
-    // Dynamic categories/tabs
-    categories: v.array(v.object({
-      name: v.string(),
-      icon: v.string(),
-      description: v.string(),
-    })),
-
-    // Widget configuration
-    widgets: v.array(v.object({
-      widget_id: v.string(),
-      widget_type: v.string(), // tracker, chart, board, timeline, meter, etc.
-      title: v.string(),
-      description: v.string(),
-      category: v.string(), // Category/tab this widget belongs to
-      priority: v.number(), // 1-10
-      size: v.string(), // small, medium, large, xlarge
-      theme: v.string(), // warm, clean, professional, creative
-      position: v.number(), // Position in dashboard (1-based)
-      config: v.any(), // Widget-specific configuration
-      data_sources: v.array(v.string()),
-      update_frequency: v.string(), // realtime, hourly, daily, weekly
-      interactive: v.boolean(),
-      editable: v.boolean(),
-      shareable: v.boolean(),
-    })),
-
-    // Layout configuration
-    layout_type: v.string(), // grid, dashboard, kanban, timeline
-    columns: v.number(),
-    rows: v.number(),
-
-    // Theme and styling
-    global_theme: v.string(),
-    color_scheme: v.string(), // monochrome, colorful, pastel, vibrant
-    font_style: v.string(), // modern, classic, playful, professional
-
-    // Interaction settings
-    allow_customization: v.boolean(),
-    allow_reordering: v.boolean(),
-    allow_resizing: v.boolean(),
-
-    // Data integration
-    required_integrations: v.array(v.string()),
-    data_refresh_strategy: v.string(),
-
+    // Core Identification
+    widget_id: v.string(),           // Unique widget identifier
+    project_id: v.id("projects"),     // Parent project
+    user_id: v.string(),              // Owner
+    fingerprint_id: v.id("project_fingerprints"), // AI generation source
+    
+    // Widget Configuration
+    widget_type: v.string(),         // Type: tracker, chart, board, timeline, meter
+    title: v.string(),               // Display name
+    description: v.string(),         // What it does
+    category: v.string(),            // Category/tab (e.g., "Research", "Analysis")
+    
+    // Layout & Positioning
+    priority: v.number(),            // 1-10, determines importance
+    size: v.string(),               // small, medium, large, xlarge
+    theme: v.string(),              // warm, clean, professional, creative
+    position: v.number(),           // Position in dashboard (1-based)
+    layout_type: v.string(),        // grid, dashboard, kanban, timeline
+    
+    // Widget-Specific Configuration
+    config: v.any(),                // Widget-specific settings
+    data_sources: v.array(v.string()), // Required data sources
+    update_frequency: v.string(),   // realtime, hourly, daily, weekly
+    
+    // Interaction Settings
+    interactive: v.boolean(),       // Whether widget is interactive
+    editable: v.boolean(),          // Whether widget can be edited
+    shareable: v.boolean(),         // Whether widget can be shared
+    
+    // Orbital Positioning (for constellation system)
+    orbital_angle: v.number(),      // 0 to 2π radians
+    orbital_distance: v.number(),   // Distance from project center
+    
     // Metadata
-    generated_at: v.number(),
-    version: v.string(),
-    confidence: v.number(), // 0-1 confidence in widget recommendations
-    status: v.string(), // "generating", "active", "archived"
+    created_at: v.number(),
+    updated_at: v.number(),
+    generated_at: v.number(),       // When AI generated this widget
+    version: v.string(),            // Widget configuration version
+    confidence: v.number(),         // 0-1 confidence in recommendation
+    status: v.string(),            // active, archived, generating
   })
-  .index("by_project", ["projectId"])
-  .index("by_fingerprint", ["fingerprintId"])
-  .index("by_user", ["userId"])
+  .index("by_project", ["project_id"])
+  .index("by_user", ["user_id"])
+  .index("by_fingerprint", ["fingerprint_id"])
+  .index("by_category", ["category"])
+  .index("by_widget_type", ["widget_type"])
   .index("by_status", ["status"])
   .index("by_generated", ["generated_at"]),
 

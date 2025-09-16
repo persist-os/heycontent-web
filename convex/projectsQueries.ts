@@ -42,6 +42,10 @@ export const getProjectById = query({
       fingerprintId: v.optional(v.id("project_fingerprints")),
       createdAt: v.number(),
       updatedAt: v.number(),
+      // Static positioning fields
+      position_x: v.number(),
+      position_y: v.number(),
+      space_radius: v.number(),
     })
   ),
   handler: async (ctx, args) => {
@@ -65,6 +69,10 @@ export const getProjectById = query({
         fingerprintId: project.fingerprintId,
         createdAt: project.createdAt,
         updatedAt: project.updatedAt,
+        // Static positioning fields
+        position_x: project.position_x,
+        position_y: project.position_y,
+        space_radius: project.space_radius,
       };
     } catch (error) {
       console.error("Failed to fetch project:", error);
@@ -96,6 +104,10 @@ export const getProjectsForUser = query({
     analysisIds: v.optional(v.array(v.string())),
     createdAt: v.number(),
     updatedAt: v.number(),
+    // Static positioning fields
+    position_x: v.number(),
+    position_y: v.number(),
+    space_radius: v.number(),
   })),
   handler: async (ctx, args) => {
     // Validate user ID
@@ -150,6 +162,10 @@ export const getProjectDetails = query({
       analysisIds: v.optional(v.array(v.string())),
       createdAt: v.number(),
       updatedAt: v.number(),
+      // Static positioning fields
+      position_x: v.number(),
+      position_y: v.number(),
+      space_radius: v.number(),
       attachedItems: v.object({
         notes: v.array(v.any()),
         conversations: v.array(v.any()),

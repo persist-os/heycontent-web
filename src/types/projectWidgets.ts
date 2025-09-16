@@ -10,21 +10,46 @@ export interface CategoryConfig {
 }
 
 export interface WidgetConfig {
+  // Core Identification
   widget_id: string;
+  project_id: string;
+  user_id: string;
+  fingerprint_id: string;
+  
+  // Widget Configuration
   widget_type: string;
   title: string;
   description: string;
   category: string;
+  
+  // Layout & Positioning
   priority: number; // 1-10
   size: 'small' | 'medium' | 'large' | 'xlarge';
   theme: 'warm' | 'clean' | 'professional' | 'creative';
   position: number;
+  layout_type: string;
+  
+  // Widget-Specific Configuration
   config: any;
   data_sources: string[];
   update_frequency: 'realtime' | 'hourly' | 'daily' | 'weekly';
+  
+  // Interaction Settings
   interactive: boolean;
   editable: boolean;
   shareable: boolean;
+  
+  // Orbital Positioning (for constellation system)
+  orbital_angle: number;
+  orbital_distance: number;
+  
+  // Metadata
+  created_at: number;
+  updated_at: number;
+  generated_at: number;
+  version: string;
+  confidence: number;
+  status: 'active' | 'archived' | 'generating';
 }
 
 export interface ProjectWidgetsData {

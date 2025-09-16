@@ -1,368 +1,242 @@
 # Living Projects Hooks
 
-Specialized React hooks for managing project intelligence, layout algorithms, and interactive behaviors in the living projects system.
+This directory contains all the custom React hooks for the Living Projects constellation system.
 
-## 🎣 Available Hooks
+## 🏗️ Hook Architecture
 
-### `useProjectContext` (in chat)
+### **Core Hooks**
 
-Manages project data fetching and content integration for discovery conversations.
-
-```tsx
-import { useProjectContext } from '../../chat/hooks/useProjectContext'
-
-function ProjectDiscoveryChat({ projectId, userId }) {
-  const { projectContext, isLoading, error, contentSummary } = useProjectContext(
-    projectId,
-    undefined, // fingerprintId
-    userId
-  )
-
-  if (isLoading) return <LoadingSpinner />
-  if (error) return <ErrorMessage error={error} />
-
-  return (
-    <ChatInterface
-      context={projectContext}
-      contentSummary={contentSummary}
-    />
-  )
-}
-```
-
-**Returns:**
-
-- `projectContext: ContentContext | null` - Formatted context for chat
-- `isLoading: boolean` - Loading state
-- `error: string | null` - Error message if any
-- `contentSummary: ProjectContentSummary | null` - Structured project data
+#### `useStaticConstellationLayout.ts`
+Generates constellation layout using stored static positions of projects.
 
 **Features:**
+- Uses database-stored project positions
+- Calculates canvas bounds automatically
+- No force-directed layout calculations
+- Efficient for large numbers of projects
 
-- Fetches project details with attached notes and conversations
-- Formats content for optimal AI context window usage
-- Handles content truncation and prioritization
-- Provides real-time loading states
-
-### `useConstellationLayout`
-
-Physics-based layout algorithm for positioning projects in constellation view.
-
+**Usage:**
 ```tsx
-import { useConstellationLayout } from '../hooks/useConstellationLayout'
+import { useStaticConstellationLayout } from '../hooks/useStaticConstellationLayout'
 
-function ConstellationCanvas({ projects }) {
-  const layout = useConstellationLayout(projects)
-
-  return (
-    <svg width={layout.canvasWidth} height={layout.canvasHeight}>
-      {layout.positions.map(position => (
-        <ProjectNode
-          key={position.id}
-          x={position.x}
-          y={position.y}
-          size={position.size}
-          importance={position.importance}
-        />
-      ))}
-
-      {layout.connections.map(connection => (
-        <ConnectionLine
-          key={`${connection.from}-${connection.to}`}
-          from={connection.from}
-          to={connection.to}
-          strength={connection.strength}
-        />
-      ))}
-    </svg>
-  )
-}
+const layout = useStaticConstellationLayout(projects)
+// Returns: { positions, connections, canvasWidth, canvasHeight }
 ```
 
-**Parameters:**
-
-- `projects: Project[]` - Array of project objects with fingerprint data
-
-**Returns:**
-
-- `positions: ProjectPosition[]` - Positioned project nodes with coordinates
-- `canvasWidth: number` - Calculated canvas dimensions
-- `canvasHeight: number`
-- `connections: Connection[]` - Relationship connections between projects
-
-**Algorithm Features:**
-
-- **Force-directed positioning** using spring physics
-- **Importance-based clustering** - high-priority projects attract related ones
-- **Collision avoidance** - prevents overlapping nodes
-- **Responsive scaling** - adapts to different screen sizes
-- **Performance optimized** - memoized calculations prevent unnecessary re-layout
-
-### `usePanZoom`
-
-Smooth pan and zoom functionality with gesture support for constellation navigation.
-
-```tsx
-import { usePanZoom } from '../hooks/usePanZoom'
-
-function InteractiveCanvas({ canvasWidth, canvasHeight }) {
-  const {
-    transform,
-    containerRef,
-    handleWheel,
-    handleMouseDown,
-    zoomIn,
-    zoomOut,
-    resetView,
-    focusOnPoint
-  } = usePanZoom(canvasWidth, canvasHeight)
-
-  return (
-    <div
-      ref={containerRef}
-      className="canvas-container"
-      onWheel={handleWheel}
-      onMouseDown={handleMouseDown}
-      style={{
-        transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`
-      }}
-    >
-      <CanvasContent />
-    </div>
-  )
-}
-```
-
-**Parameters:**
-
-- `canvasWidth: number` - Canvas width for bounds calculation
-- `canvasHeight: number` - Canvas height for bounds calculation
-- `viewportWidth?: number` - Viewport width (defaults to window.innerWidth)
-- `viewportHeight?: number` - Viewport height (defaults to window.innerHeight)
-
-**Returns:**
-
-- `transform: PanZoomState` - Current { x, y, scale } transformation
-- `containerRef: React.RefObject<HTMLDivElement>` - Container reference for event handling
-- `handleWheel: (e: React.WheelEvent) => void` - Wheel event handler
-- `handleMouseDown: (e: React.MouseEvent) => void` - Mouse event handler
-- `zoomIn: () => void` - Zoom in function
-- `zoomOut: () => void` - Zoom out function
-- `resetView: () => void` - Reset to initial view
-- `focusOnPoint: (x: number, y: number) => void` - Focus on specific point
+#### `useMultiLevelPanZoom.ts`
+Handles multi-level pan and zoom with automatic view mode switching.
 
 **Features:**
+- Cursor-centric zoom behavior
+- Smooth animations with easing
+- Automatic view mode switching (overview ↔ project-detail)
+- 80% viewport threshold for project focus
+- Progressive disclosure thresholds
 
-- **Smooth animations** with momentum and easing
-- **Multi-touch support** for mobile devices
-- **Bounds checking** prevents panning outside canvas
-- **Zoom constraints** with configurable min/max values
-- **Keyboard shortcuts** for accessibility
-- **Touch gesture recognition** for pinch-to-zoom
-
-### `useProjectConnections`
-
-Analyzes project relationships to create meaningful connections between related projects.
-
+**Usage:**
 ```tsx
-import { useProjectConnections } from '../hooks/useProjectConnections'
+import { useMultiLevelPanZoom } from '../hooks/useMultiLevelPanZoom'
 
-function ProjectNetwork({ projects }) {
-  const connections = useProjectConnections(projects)
-
-  return (
-    <div className="project-network">
-      {connections.map(connection => (
-        <div
-          key={`${connection.from}-${connection.to}`}
-          className="connection-line"
-          style={{
-            opacity: connection.strength,
-            // Additional styling based on connection strength
-          }}
-        >
-          {/* Connection visualization */}
-        </div>
-      ))}
-    </div>
-  )
-}
+const {
+  containerRef,
+  transform,
+  viewMode,
+  focusedProjectId,
+  handleWheel,
+  handleMouseDown,
+  zoomIn,
+  zoomOut,
+  resetView,
+  focusOnProject
+} = useMultiLevelPanZoom({
+  canvasWidth,
+  canvasHeight,
+  viewportWidth,
+  viewportHeight,
+  onViewModeChange,
+  onProjectFocus
+})
 ```
 
-**Parameters:**
+#### `useWidgetOrbitalLayout.ts`
+Calculates orbital positions for widgets around a project center.
 
-- `projects: Project[]` - Array of projects to analyze relationships
+**Features:**
+- Uses stored orbital angles and distances
+- Maintains positions across zoom sessions
+- Efficient positioning algorithm
+- Supports different widget sizes
 
-**Returns:**
-
-- `Connection[]` - Array of connection objects with strength and reasons
-
-**Connection Analysis:**
-
-- **Domain similarity** - Projects in same domain are connected
-- **Collaboration style** - Projects with compatible team structures
-- **Time horizon overlap** - Projects with similar timescales
-- **Shared dependencies** - Projects requiring similar resources
-- **Pattern compatibility** - Working style compatibility
-
-## 🔧 Hook Architecture
-
-### Design Principles
-
-- **Single Responsibility** - Each hook handles one specific concern
-- **Memoization** - Expensive calculations are cached appropriately
-- **Error Handling** - Graceful degradation with meaningful error states
-- **Type Safety** - Full TypeScript support with strict typing
-- **Performance** - Optimized for large datasets and frequent updates
-
-### State Management
-
-- **Local State** - UI-specific state managed within hooks
-- **Server State** - Convex queries for persistent data
-- **Derived State** - Computed values based on props and server state
-- **Shared State** - Zustand stores for cross-component communication
-
-### Performance Optimizations
-
-- **useMemo** for expensive calculations
-- **useCallback** for event handlers
-- **Debouncing** for rapid state changes
-- **Virtual rendering** support for large datasets
-- **Memory leak prevention** with proper cleanup
-
-## 📊 Usage Patterns
-
-### Basic Hook Composition
-
+**Usage:**
 ```tsx
-function ProjectDashboard({ projectId }) {
-  // Data fetching
-  const { projectContext, isLoading } = useProjectContext(projectId) // from chat/hooks
+import { useWidgetOrbitalLayout } from '../hooks/useWidgetOrbitalLayout'
 
-  // Layout calculation
-  const layout = useConstellationLayout([projectContext])
-
-  // Interactive behavior
-  const panZoom = usePanZoom(layout.canvasWidth, layout.canvasHeight)
-
-  // Relationship analysis
-  const connections = useProjectConnections([projectContext])
-
-  if (isLoading) return <LoadingState />
-
-  return (
-    <InteractiveCanvas
-      layout={layout}
-      connections={connections}
-      panZoom={panZoom}
-    />
-  )
-}
+const widgetLayout = useWidgetOrbitalLayout(
+  projectX,
+  projectY,
+  widgets
+)
+// Returns: { positions, spaceRadius }
 ```
 
-### Advanced Hook Chaining
+#### `useProjectStates.ts`
+Manages project states and provides styling helpers.
 
+**Features:**
+- Calculates project states (new, active, complete)
+- Provides visual styling based on state
+- Efficient state calculations
+- Consistent state management
+
+**Usage:**
 ```tsx
-function ComplexProjectView({ projectIds }) {
-  // Fetch multiple projects
-  const projectContexts = projectIds.map(id =>
-    useProjectContext(id) // from chat/hooks
-  )
+import { useProjectStates } from '../hooks/useProjectStates'
 
-  // Combine layouts
-  const combinedLayout = useMemo(() => {
-    const allProjects = projectContexts
-      .filter(ctx => ctx.projectContext)
-      .map(ctx => ctx.projectContext)
-
-    return useConstellationLayout(allProjects)
-  }, [projectContexts])
-
-  // Cross-project connections
-  const crossConnections = useProjectConnections(
-    combinedLayout.positions
-  )
-
-  return <MultiProjectCanvas layout={combinedLayout} />
-}
+const projectStates = useProjectStates(projects)
+const stateStyles = getProjectStateStyles(projectState)
 ```
 
-## 🧪 Testing
+## 🎯 Hook Dependencies
 
-### Hook Testing Strategy
+### **Data Dependencies**
+- **Projects**: Array of project objects with positioning data
+- **Widgets**: Array of widget objects with orbital positioning
+- **Viewport**: Current viewport dimensions and transform
 
+### **External Dependencies**
+- **React**: useState, useCallback, useEffect, useMemo
+- **Convex**: useQuery, useMutation for real-time data
+- **Next.js**: useRouter for navigation
+
+## 🔧 Hook Patterns
+
+### **State Management Pattern**
 ```tsx
-import { renderHook } from '@testing-library/react'
-import { useProjectContext } from '../chat/hooks/useProjectContext'
+const [state, setState] = useState(initialState)
+const [isLoading, setIsLoading] = useState(false)
 
-describe('useProjectContext', () => {
-  it('returns loading state initially', () => {
-    const { result } = renderHook(() =>
-      useProjectContext('project-id', undefined, 'user-id')
+const handleAction = useCallback(async (data) => {
+  setIsLoading(true)
+  try {
+    await mutation(data)
+    // Handle success
+  } catch (error) {
+    // Handle error
+  } finally {
+    setIsLoading(false)
+  }
+}, [mutation])
+```
+
+### **Layout Calculation Pattern**
+```tsx
+const layout = useMemo(() => {
+  if (!data) return defaultLayout
+  
+  return calculateLayout(data)
+}, [data, dependencies])
+```
+
+### **Event Handling Pattern**
+```tsx
+const handleEvent = useCallback((event) => {
+  event.preventDefault()
+  // Handle event
+}, [dependencies])
+
+useEffect(() => {
+  element.addEventListener('event', handleEvent)
+  return () => element.removeEventListener('event', handleEvent)
+}, [handleEvent])
+```
+
+## 🚀 Performance Optimizations
+
+### **Memoization**
+- Use `useMemo` for expensive calculations
+- Use `useCallback` for event handlers
+- Avoid unnecessary re-renders
+
+### **Dependency Arrays**
+- Include all dependencies in useEffect/useMemo/useCallback
+- Use stable references when possible
+- Avoid object/array dependencies that change on every render
+
+### **Cleanup**
+- Clean up event listeners in useEffect
+- Cancel animations on unmount
+- Clear timeouts and intervals
+
+## 🔍 Testing Hooks
+
+### **Custom Hook Testing**
+```tsx
+import { renderHook, act } from '@testing-library/react'
+import { useStaticConstellationLayout } from './useStaticConstellationLayout'
+
+describe('useStaticConstellationLayout', () => {
+  it('calculates layout correctly', () => {
+    const { result } = renderHook(() => 
+      useStaticConstellationLayout(mockProjects)
     )
-
-    expect(result.current.isLoading).toBe(true)
-    expect(result.current.projectContext).toBe(null)
-  })
-
-  it('formats project content correctly', async () => {
-    // Mock Convex query
-    const mockProject = { /* project data */ }
-
-    const { result } = renderHook(() =>
-      useProjectContext('project-id', undefined, 'user-id')
-    )
-
-    // Wait for query to resolve
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-
-    expect(result.current.contentSummary).toBeDefined()
-    expect(result.current.projectContext).toBeDefined()
+    
+    expect(result.current.positions).toHaveLength(mockProjects.length)
+    expect(result.current.canvasWidth).toBeGreaterThan(0)
   })
 })
 ```
 
-### Mock Data Strategy
+### **Integration Testing**
+```tsx
+import { render, screen } from '@testing-library/react'
+import { UnifiedConstellationView } from '../components/UnifiedConstellationView'
+
+describe('Hook Integration', () => {
+  it('renders with all hooks working', () => {
+    render(<UnifiedConstellationView />)
+    // Test that all hooks work together
+  })
+})
+```
+
+## 📚 Related Files
+
+- `../components/` - Components that use these hooks
+- `../../convex/` - Database queries and mutations
+- `../../../types/projectWidgets.ts` - TypeScript interfaces
+
+## 🎯 Development Guidelines
+
+### **Adding New Hooks**
+
+1. Follow the existing naming conventions
+2. Use TypeScript for all interfaces
+3. Include proper error handling
+4. Add comprehensive JSDoc comments
+5. Write tests for all hook functionality
+
+### **Hook Documentation**
 
 ```tsx
-const mockProjectData = {
-  _id: 'project-123',
-  name: 'Test Project',
-  description: 'A test project for development',
-  attachedItems: {
-    notes: [
-      { title: 'Research Notes', content: 'Important findings...' }
-    ],
-    conversations: [
-      { title: 'Planning Session', messages: [] }
-    ]
-  }
+/**
+ * Calculates orbital positions for widgets around a project center
+ * @param projectX - X coordinate of project center
+ * @param projectY - Y coordinate of project center
+ * @param widgets - Array of widget objects
+ * @returns Object with positions and space radius
+ */
+export function useWidgetOrbitalLayout(
+  projectX: number,
+  projectY: number,
+  widgets: WidgetConfig[]
+): OrbitalLayoutResult {
+  // Implementation
 }
 ```
 
-## 🔧 Development Guidelines
+### **Performance Monitoring**
 
-### Creating New Hooks
-
-1. **Clear Purpose** - Define single responsibility clearly
-2. **Type Safety** - Full TypeScript interfaces for inputs/outputs
-3. **Error Handling** - Proper error states and user feedback
-4. **Performance** - Memoization and cleanup where appropriate
-5. **Testing** - Comprehensive test coverage including edge cases
-
-### Hook Dependencies
-
-- **React** - Core React hooks and utilities
-- **Convex** - Database queries and mutations
-- **Zustand** - Global state management
-- **Custom utilities** - Project-specific helper functions
-
-### Best Practices
-
-- **Consistent Naming** - `use[Feature]` pattern
-- **Documentation** - JSDoc comments with examples
-- **Error Boundaries** - Graceful error handling
-- **Accessibility** - Keyboard navigation support
-- **Performance Monitoring** - Track hook performance in production
+- Use React DevTools Profiler
+- Monitor hook execution time
+- Check for unnecessary re-renders
+- Test with large datasets

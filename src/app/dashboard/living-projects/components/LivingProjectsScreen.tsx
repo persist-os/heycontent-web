@@ -1,8 +1,8 @@
 'use client'
 
 import React from 'react'
-import { ConstellationView } from './ConstellationView'
+import { UnifiedConstellationView } from './UnifiedConstellationView'
 
 export function LivingProjectsScreen() {
-  return <ConstellationView />
+  return <UnifiedConstellationView />
 }

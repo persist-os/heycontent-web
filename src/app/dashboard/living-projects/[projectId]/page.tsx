@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { ProjectViewScreen } from './components/ProjectViewScreen'
+import { UnifiedConstellationView } from '../components/UnifiedConstellationView'
 
 interface ProjectPageProps {
   params: Promise<{
@@ -11,5 +11,7 @@ interface ProjectPageProps {
 
 export default function ProjectPage({ params }: ProjectPageProps) {
   const { projectId } = React.use(params)
-  return <ProjectViewScreen projectId={projectId} />
+
+  // Show the unified view with the specific project focused
+  return <UnifiedConstellationView initialProjectId={projectId} />
 }

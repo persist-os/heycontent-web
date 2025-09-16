@@ -104,7 +104,7 @@ export async function POST(
     }
 
     // Call the backend FastAPI service
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://backend.hicontent.co'
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'
     const requestBody = {
       project_id: project_id || projectId,
       fingerprint_id: fingerprint_data?._id || fingerprint_id, // Use the actual fingerprint ID from the data

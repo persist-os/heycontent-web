@@ -1,297 +1,412 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
 
-// Get project widgets by ID
-export const getProjectWidgets = query({
-  args: {
-    widgetsId: v.id("project_widgets"),
-  },
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.widgetsId);
-  },
-});
-
-// Get project widgets by project ID
-export const getProjectWidgetsByProject = query({
+/**
+ * Get all widgets for a specific project
+ */
+export const getWidgetsByProject = query({
   args: {
     projectId: v.id("projects"),
+    userId: v.optional(v.string()),
   },
+  returns: v.array(
+    v.object({
+      _id: v.id("project_widgets"),
+      _creationTime: v.number(),
+      widget_id: v.string(),
+      project_id: v.id("projects"),
+      user_id: v.string(),
+      fingerprint_id: v.id("project_fingerprints"),
+      widget_type: v.string(),
+      title: v.string(),
+      description: v.string(),
+      category: v.string(),
+      priority: v.number(),
+      size: v.string(),
+      theme: v.string(),
+      position: v.number(),
+      layout_type: v.string(),
+      config: v.any(),
+      data_sources: v.array(v.string()),
+      update_frequency: v.string(),
+      interactive: v.boolean(),
+      editable: v.boolean(),
+      shareable: v.boolean(),
+      orbital_angle: v.number(),
+      orbital_distance: v.number(),
+      created_at: v.number(),
+      updated_at: v.number(),
+      generated_at: v.number(),
+      version: v.string(),
+      confidence: v.number(),
+      status: v.string(),
+    })
+  ),
   handler: async (ctx, args) => {
-    const widgets = await ctx.db
-      .query("project_widgets")
-      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
-      .filter((q) => q.eq(q.field("status"), "active"))
-      .first();
-
-    return widgets;
-  },
-});
-
-// Get project widgets by fingerprint ID
-export const getProjectWidgetsByFingerprint = query({
-  args: {
-    fingerprintId: v.id("project_fingerprints"),
-  },
-  handler: async (ctx, args) => {
-    const widgets = await ctx.db
-      .query("project_widgets")
-      .withIndex("by_fingerprint", (q) => q.eq("fingerprintId", args.fingerprintId))
-      .filter((q) => q.eq(q.field("status"), "active"))
-      .first();
-
-    return widgets;
-  },
-});
-
-// Get project widgets for a user
-export const getUserProjectWidgets = query({
-  args: {
-    userId: v.string(),
-    limit: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    let query = ctx.db
-      .query("project_widgets")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .filter((q) => q.eq(q.field("status"), "active"))
-      .order("desc");
-
-    if (args.limit) {
-      query = query.take(args.limit);
+    // Optional: Validate user access to project
+    if (args.userId) {
+      const project = await ctx.db.get(args.projectId);
+      if (!project || project.userId !== args.userId) {
+        throw new Error("Access denied: Project not found or user doesn't own this project");
+      }
     }
 
-    return await query.collect();
+    const widgets = await ctx.db
+      .query("project_widgets")
+      .withIndex("by_project", (q) => q.eq("project_id", args.projectId))
+      .collect();
+
+    return widgets;
   },
 });
 
-// Get widgets by type
+/**
+ * Get all widgets for a specific user across all projects
+ */
+export const getWidgetsByUser = query({
+  args: {
+    userId: v.string(),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id("project_widgets"),
+      _creationTime: v.number(),
+      widget_id: v.string(),
+      project_id: v.id("projects"),
+      user_id: v.string(),
+      fingerprint_id: v.id("project_fingerprints"),
+      widget_type: v.string(),
+      title: v.string(),
+      description: v.string(),
+      category: v.string(),
+      priority: v.number(),
+      size: v.string(),
+      theme: v.string(),
+      position: v.number(),
+      layout_type: v.string(),
+      config: v.any(),
+      data_sources: v.array(v.string()),
+      update_frequency: v.string(),
+      interactive: v.boolean(),
+      editable: v.boolean(),
+      shareable: v.boolean(),
+      orbital_angle: v.number(),
+      orbital_distance: v.number(),
+      created_at: v.number(),
+      updated_at: v.number(),
+      generated_at: v.number(),
+      version: v.string(),
+      confidence: v.number(),
+      status: v.string(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const widgets = await ctx.db
+      .query("project_widgets")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+
+    return widgets;
+  },
+});
+
+/**
+ * Get a specific widget by its widget_id
+ */
+export const getWidgetById = query({
+  args: {
+    widgetId: v.string(),
+    userId: v.optional(v.string()),
+  },
+  returns: v.union(
+    v.null(),
+    v.object({
+      _id: v.id("project_widgets"),
+      _creationTime: v.number(),
+      widget_id: v.string(),
+      project_id: v.id("projects"),
+      user_id: v.string(),
+      fingerprint_id: v.id("project_fingerprints"),
+      widget_type: v.string(),
+      title: v.string(),
+      description: v.string(),
+      category: v.string(),
+      priority: v.number(),
+      size: v.string(),
+      theme: v.string(),
+      position: v.number(),
+      layout_type: v.string(),
+      config: v.any(),
+      data_sources: v.array(v.string()),
+      update_frequency: v.string(),
+      interactive: v.boolean(),
+      editable: v.boolean(),
+      shareable: v.boolean(),
+      orbital_angle: v.number(),
+      orbital_distance: v.number(),
+      created_at: v.number(),
+      updated_at: v.number(),
+      generated_at: v.number(),
+      version: v.string(),
+      confidence: v.number(),
+      status: v.string(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const widget = await ctx.db
+      .query("project_widgets")
+      .filter((q) => q.eq(q.field("widget_id"), args.widgetId))
+      .first();
+
+    if (!widget) {
+      return null;
+    }
+
+    // Optional: Validate user access
+    if (args.userId && widget.user_id !== args.userId) {
+      throw new Error("Access denied: User doesn't own this widget");
+    }
+
+    return widget;
+  },
+});
+
+/**
+ * Get widgets by category for a specific project
+ */
+export const getWidgetsByCategory = query({
+  args: {
+    projectId: v.id("projects"),
+    category: v.string(),
+    userId: v.optional(v.string()),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id("project_widgets"),
+      _creationTime: v.number(),
+      widget_id: v.string(),
+      project_id: v.id("projects"),
+      user_id: v.string(),
+      fingerprint_id: v.id("project_fingerprints"),
+      widget_type: v.string(),
+      title: v.string(),
+      description: v.string(),
+      category: v.string(),
+      priority: v.number(),
+      size: v.string(),
+      theme: v.string(),
+      position: v.number(),
+      layout_type: v.string(),
+      config: v.any(),
+      data_sources: v.array(v.string()),
+      update_frequency: v.string(),
+      interactive: v.boolean(),
+      editable: v.boolean(),
+      shareable: v.boolean(),
+      orbital_angle: v.number(),
+      orbital_distance: v.number(),
+      created_at: v.number(),
+      updated_at: v.number(),
+      generated_at: v.number(),
+      version: v.string(),
+      confidence: v.number(),
+      status: v.string(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    // Optional: Validate user access to project
+    if (args.userId) {
+      const project = await ctx.db.get(args.projectId);
+      if (!project || project.userId !== args.userId) {
+        throw new Error("Access denied: Project not found or user doesn't own this project");
+      }
+    }
+
+    const widgets = await ctx.db
+      .query("project_widgets")
+      .withIndex("by_project", (q) => q.eq("project_id", args.projectId))
+      .filter((q) => q.eq(q.field("category"), args.category))
+      .collect();
+
+    return widgets;
+  },
+});
+
+/**
+ * Get widgets by type for a specific project
+ */
 export const getWidgetsByType = query({
   args: {
     projectId: v.id("projects"),
     widgetType: v.string(),
+    userId: v.optional(v.string()),
   },
+  returns: v.array(
+    v.object({
+      _id: v.id("project_widgets"),
+      _creationTime: v.number(),
+      widget_id: v.string(),
+      project_id: v.id("projects"),
+      user_id: v.string(),
+      fingerprint_id: v.id("project_fingerprints"),
+      widget_type: v.string(),
+      title: v.string(),
+      description: v.string(),
+      category: v.string(),
+      priority: v.number(),
+      size: v.string(),
+      theme: v.string(),
+      position: v.number(),
+      layout_type: v.string(),
+      config: v.any(),
+      data_sources: v.array(v.string()),
+      update_frequency: v.string(),
+      interactive: v.boolean(),
+      editable: v.boolean(),
+      shareable: v.boolean(),
+      orbital_angle: v.number(),
+      orbital_distance: v.number(),
+      created_at: v.number(),
+      updated_at: v.number(),
+      generated_at: v.number(),
+      version: v.string(),
+      confidence: v.number(),
+      status: v.string(),
+    })
+  ),
   handler: async (ctx, args) => {
-    const widgets = await ctx.db
-      .query("project_widgets")
-      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
-      .filter((q) => q.eq(q.field("status"), "active"))
-      .first();
-
-    if (!widgets) {
-      return [];
-    }
-
-    return widgets.widgets.filter(widget => widget.widget_type === args.widgetType);
-  },
-});
-
-// Get widgets by priority
-export const getWidgetsByPriority = query({
-  args: {
-    projectId: v.id("projects"),
-    minPriority: v.optional(v.number()),
-    maxPriority: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const widgets = await ctx.db
-      .query("project_widgets")
-      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
-      .filter((q) => q.eq(q.field("status"), "active"))
-      .first();
-
-    if (!widgets) {
-      return [];
-    }
-
-    return widgets.widgets.filter(widget => {
-      const priority = widget.priority;
-      if (args.minPriority !== undefined && priority < args.minPriority) {
-        return false;
+    // Optional: Validate user access to project
+    if (args.userId) {
+      const project = await ctx.db.get(args.projectId);
+      if (!project || project.userId !== args.userId) {
+        throw new Error("Access denied: Project not found or user doesn't own this project");
       }
-      if (args.maxPriority !== undefined && priority > args.maxPriority) {
-        return false;
-      }
-      return true;
-    });
+    }
+
+    const widgets = await ctx.db
+      .query("project_widgets")
+      .withIndex("by_project", (q) => q.eq("project_id", args.projectId))
+      .filter((q) => q.eq(q.field("widget_type"), args.widgetType))
+      .collect();
+
+    return widgets;
   },
 });
 
-// Get widgets by theme
-export const getWidgetsByTheme = query({
+/**
+ * Get widgets with their parent project information
+ */
+export const getWidgetsWithProjects = query({
   args: {
-    projectId: v.id("projects"),
-    theme: v.string(),
+    userId: v.string(),
   },
+  returns: v.array(
+    v.object({
+      widget: v.object({
+        _id: v.id("project_widgets"),
+        _creationTime: v.number(),
+        widget_id: v.string(),
+        project_id: v.id("projects"),
+        user_id: v.string(),
+        fingerprint_id: v.id("project_fingerprints"),
+        widget_type: v.string(),
+        title: v.string(),
+        description: v.string(),
+        category: v.string(),
+        priority: v.number(),
+        size: v.string(),
+        theme: v.string(),
+        position: v.number(),
+        layout_type: v.string(),
+        config: v.any(),
+        data_sources: v.array(v.string()),
+        update_frequency: v.string(),
+        interactive: v.boolean(),
+        editable: v.boolean(),
+        shareable: v.boolean(),
+        orbital_angle: v.number(),
+        orbital_distance: v.number(),
+        created_at: v.number(),
+        updated_at: v.number(),
+        generated_at: v.number(),
+        version: v.string(),
+        confidence: v.number(),
+        status: v.string(),
+      }),
+      project: v.object({
+        _id: v.id("projects"),
+        _creationTime: v.number(),
+        userId: v.string(),
+        name: v.string(),
+        description: v.optional(v.string()),
+        position_x: v.number(),
+        position_y: v.number(),
+        space_radius: v.number(),
+        createdAt: v.number(),
+        updatedAt: v.number(),
+      }),
+    })
+  ),
   handler: async (ctx, args) => {
     const widgets = await ctx.db
       .query("project_widgets")
-      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
-      .filter((q) => q.eq(q.field("status"), "active"))
-      .first();
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
 
-    if (!widgets) {
-      return [];
-    }
-
-    return widgets.widgets.filter(widget => widget.theme === args.theme);
-  },
-});
-
-// Get widgets by size
-export const getWidgetsBySize = query({
-  args: {
-    projectId: v.id("projects"),
-    size: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const widgets = await ctx.db
-      .query("project_widgets")
-      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
-      .filter((q) => q.eq(q.field("status"), "active"))
-      .first();
-
-    if (!widgets) {
-      return [];
-    }
-
-    return widgets.widgets.filter(widget => widget.size === args.size);
-  },
-});
-
-// Get interactive widgets
-export const getInteractiveWidgets = query({
-  args: {
-    projectId: v.id("projects"),
-  },
-  handler: async (ctx, args) => {
-    const widgets = await ctx.db
-      .query("project_widgets")
-      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
-      .filter((q) => q.eq(q.field("status"), "active"))
-      .first();
-
-    if (!widgets) {
-      return [];
-    }
-
-    return widgets.widgets.filter(widget => widget.interactive);
-  },
-});
-
-// Get editable widgets
-export const getEditableWidgets = query({
-  args: {
-    projectId: v.id("projects"),
-  },
-  handler: async (ctx, args) => {
-    const widgets = await ctx.db
-      .query("project_widgets")
-      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
-      .filter((q) => q.eq(q.field("status"), "active"))
-      .first();
-
-    if (!widgets) {
-      return [];
-    }
-
-    return widgets.widgets.filter(widget => widget.editable);
-  },
-});
-
-// Get shareable widgets
-export const getShareableWidgets = query({
-  args: {
-    projectId: v.id("projects"),
-  },
-  handler: async (ctx, args) => {
-    const widgets = await ctx.db
-      .query("project_widgets")
-      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
-      .filter((q) => q.eq(q.field("status"), "active"))
-      .first();
-
-    if (!widgets) {
-      return [];
-    }
-
-    return widgets.widgets.filter(widget => widget.shareable);
-  },
-});
-
-// Get widgets by update frequency
-export const getWidgetsByUpdateFrequency = query({
-  args: {
-    projectId: v.id("projects"),
-    updateFrequency: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const widgets = await ctx.db
-      .query("project_widgets")
-      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
-      .filter((q) => q.eq(q.field("status"), "active"))
-      .first();
-
-    if (!widgets) {
-      return [];
-    }
-
-    return widgets.widgets.filter(widget => widget.update_frequency === args.updateFrequency);
-  },
-});
-
-// Get widgets by data source
-export const getWidgetsByDataSource = query({
-  args: {
-    projectId: v.id("projects"),
-    dataSource: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const widgets = await ctx.db
-      .query("project_widgets")
-      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
-      .filter((q) => q.eq(q.field("status"), "active"))
-      .first();
-
-    if (!widgets) {
-      return [];
-    }
-
-    return widgets.widgets.filter(widget => 
-      widget.data_sources.includes(args.dataSource)
+    const widgetsWithProjects = await Promise.all(
+      widgets.map(async (widget) => {
+        const project = await ctx.db.get(widget.project_id);
+        if (!project) {
+          throw new Error(`Project not found for widget ${widget.widget_id}`);
+        }
+        return {
+          widget,
+          project: {
+            _id: project._id,
+            _creationTime: project._creationTime,
+            userId: project.userId,
+            name: project.name,
+            description: project.description,
+            position_x: project.position_x,
+            position_y: project.position_y,
+            space_radius: project.space_radius,
+            createdAt: project.createdAt,
+            updatedAt: project.updatedAt,
+          },
+        };
+      })
     );
+
+    return widgetsWithProjects;
   },
 });
 
-// Get all project widgets (including archived)
-export const getAllProjectWidgets = query({
+/**
+ * Get unique categories for a specific project
+ */
+export const getProjectCategories = query({
   args: {
     projectId: v.id("projects"),
+    userId: v.optional(v.string()),
   },
+  returns: v.array(v.string()),
   handler: async (ctx, args) => {
+    // Optional: Validate user access to project
+    if (args.userId) {
+      const project = await ctx.db.get(args.projectId);
+      if (!project || project.userId !== args.userId) {
+        throw new Error("Access denied: Project not found or user doesn't own this project");
+      }
+    }
+
     const widgets = await ctx.db
       .query("project_widgets")
-      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
-      .order("desc")
+      .withIndex("by_project", (q) => q.eq("project_id", args.projectId))
       .collect();
 
-    return widgets;
-  },
-});
-
-// Get project widgets by status
-export const getProjectWidgetsByStatus = query({
-  args: {
-    projectId: v.id("projects"),
-    status: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const widgets = await ctx.db
-      .query("project_widgets")
-      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
-      .filter((q) => q.eq(q.field("status"), args.status))
-      .order("desc")
-      .collect();
-
-    return widgets;
+    // Extract unique categories
+    const categories = [...new Set(widgets.map(widget => widget.category))];
+    return categories.sort();
   },
 });

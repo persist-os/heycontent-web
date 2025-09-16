@@ -2980,7 +2980,7 @@ app.get("/api/projects/:projectId/widgets", async (c) => {
   const projectId = c.req.param("projectId") as Id<"projects">;
   
   try {
-    const widgets = await ctx.runQuery(api.projectWidgetsQueries.getProjectWidgetsByProject, { projectId });
+    const widgets = await ctx.runQuery(api.projectWidgetsQueries.getWidgetsByProject, { projectId });
     return c.json({ success: true, widgets });
   } catch (error: any) {
     console.error("Failed to get project widgets:", error);
@@ -3110,30 +3110,23 @@ app.post("/api/users/:userId/projects/:projectId/process-message", async (c) => 
   }
 });
 
-// Generate project widgets
-app.post("/api/users/:userId/projects/:projectId/generate-widgets", async (c) => {
+// HTTP endpoint for AI agent widget generation
+app.post("/api/projectWidgetsMutations/createWidgetsFromAgent", async (c) => {
   const ctx = c.env;
-  const userId = c.req.param("userId");
-  const projectId = c.req.param("projectId") as Id<"projects">;
-  const { fingerprintId } = await c.req.json();
+  const widgetsData = await c.req.json();
   
   try {
-    // This would call the backend agent services
-    // For now, return a placeholder response
-    return c.json({ 
-      success: true, 
-      message: "Widget generation not yet implemented",
-      data: {
-        userId,
-        projectId,
-        fingerprintId
-      }
+    const widgetIds = await ctx.runMutation(api.projectWidgetsMutations.createWidgetsFromAgent, widgetsData);
+    
+    return c.json({
+      success: true,
+      data: widgetIds
     });
   } catch (error: any) {
-    console.error("Failed to generate widgets:", error);
+    console.error("Failed to create widgets from agent:", error);
     return c.json({ 
       success: false, 
-      error: "Failed to generate widgets",
+      error: "Failed to create widgets from agent",
       message: error.message || "Internal Server Error"
     }, 500);
   }
@@ -3173,7 +3166,7 @@ app.get("/api/project-widgets/getProjectWidgets", async (c) => {
       }, 400);
     }
 
-    const widgets = await ctx.runQuery(api.projectWidgetsQueries.getProjectWidgets, { widgetsId: widgetsId as Id<"project_widgets"> });
+    const widgets = await ctx.runQuery(api.projectWidgetsQueries.getWidgetById, { widgetId: widgetsId });
     
     return c.json({
       success: true,
@@ -3201,7 +3194,7 @@ app.get("/api/project-widgets/getProjectWidgetsByProject", async (c) => {
       }, 400);
     }
 
-    const widgets = await ctx.runQuery(api.projectWidgetsQueries.getProjectWidgetsByProject, { projectId: projectId as Id<"projects"> });
+    const widgets = await ctx.runQuery(api.projectWidgetsQueries.getWidgetsByProject, { projectId: projectId as Id<"projects"> });
     
     return c.json({
       success: true,

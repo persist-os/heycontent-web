@@ -63,13 +63,14 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
   const [currentFingerprint, setCurrentFingerprint] = useState<any>(null)
   const [fingerprintEvolution, setFingerprintEvolution] = useState<any>(null)
   const [conversationSummaries, setConversationSummaries] = useState<any[]>([])
+  const [isThresholdReached, setIsThresholdReached] = useState(false)
   const prevRealUserCountRef = useRef<number>(0)
   const convexClientRef = useRef<ConvexHttpClient | null>(null)
   const startedPollingRef = useRef<boolean>(false)
   const lastProcessedUserMessageIdRef = useRef<string | null>(null)
 
-  // Simplified flow: trigger once when total messages (incl. assistant) reach random 6-8
-  const triggerThresholdRef = useRef<number>(6 + Math.floor(Math.random() * 3))
+  // Simplified flow: trigger once when total messages (incl. assistant) reach 6
+  const triggerThresholdRef = useRef<number>(6)
   const hasTriggeredRef = useRef<boolean>(false)
 
   // Agent-based fingerprinting functions
@@ -343,36 +344,31 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
     }
   }, [authData.userId, projectId])
 
-  // Redirect immediately when fingerprint is complete - let living project view handle widget generation
+  // Generate widgets and redirect when fingerprint is complete
   useEffect(() => {
     if (fingerprintComplete) {
       const handleFingerprintComplete = async () => {
         try {
           console.log('[DISCOVERY][complete:start]', { projectId, hasCurrentFingerprint: !!currentFingerprint })
           
-          // Wait for fingerprint to be saved to Convex (but don't generate widgets here)
-          const fingerprintExists = await waitForFingerprintOnly()
-          
-          if (fingerprintExists) {
-            console.log('[DISCOVERY][complete:fingerprint:saved]')
-            
-            // Redirect immediately to living project view - it will handle widget generation
-            if (projectId) {
-              console.log('[DISCOVERY][complete:redirect]', { to: `/dashboard/living-projects/${projectId}` })
-              window.location.replace(`/dashboard/living-projects/${projectId}`)
-            }
-          } else {
-            console.error('[DISCOVERY][complete:fingerprint:not:saved]')
-            // Could show error message to user here
+          // Redirect immediately - living projects view will handle widget generation
+          if (projectId) {
+            console.log('[DISCOVERY][complete:redirect:immediate]', { to: `/dashboard/living-projects/${projectId}` })
+            window.location.replace(`/dashboard/living-projects/${projectId}`)
           }
         } catch (error) {
           console.error('Error completing fingerprint process:', error)
+          // Redirect anyway - living projects view will handle widget generation
+          if (projectId) {
+            console.log('[DISCOVERY][complete:redirect:error]', { to: `/dashboard/living-projects/${projectId}` })
+            window.location.replace(`/dashboard/living-projects/${projectId}`)
+          }
         }
       }
       
       handleFingerprintComplete()
     }
-  }, [fingerprintComplete, currentFingerprint, projectId])
+  }, [fingerprintComplete, currentFingerprint, projectId, waitForFingerprintAndGenerateWidgets])
 
   // Refs
   const chatContainerRef = useRef<HTMLDivElement>(null)
@@ -419,6 +415,7 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
 
     if (totalCount >= threshold) {
       hasTriggeredRef.current = true
+      setIsThresholdReached(true)
       console.log('[DISCOVERY][threshold:reached]', { 
         totalCount, 
         threshold, 
@@ -522,22 +519,16 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
           setCurrentFingerprint(projectFingerprint)
           setFingerprintComplete(true)
 
-          console.log('[DISCOVERY][simple:fingerprint:wait]')
-          const fingerprintExists = await waitForFingerprintOnly()
-
-          if (fingerprintExists) {
-            // Redirect immediately to living project view - it will handle widget generation
-            window.location.replace(`/dashboard/living-projects/${projectId}`)
-          } else {
-            console.error('[DISCOVERY][simple:fingerprint:not:saved]')
-          }
+          // Start redirect immediately - living projects view will handle widget generation
+          console.log('[DISCOVERY][simple:redirect:immediate]')
+          window.location.replace(`/dashboard/living-projects/${projectId}`)
         } catch (e) {
           console.error('[DISCOVERY][simple:flow:error]', e)
         }
       }
       run()
     }
-  }, [messages, projectId, authData.userId, fingerprintComplete, waitForFingerprintOnly, authData.user])
+  }, [messages, projectId, authData.userId, fingerprintComplete, waitForFingerprintAndGenerateWidgets, authData.user])
 
   // Set project context when component mounts - force set if we have project data
   useEffect(() => {
@@ -750,6 +741,7 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
         messageCount={messages.length}
         isActive={authData.isAuthenticated}
         onAllStarsDiscovered={handleStarsDiscovered}
+        isThresholdReached={isThresholdReached}
       />
       
       {/* Chat Messages Area */}
