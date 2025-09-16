@@ -175,7 +175,7 @@ export const backendTraceMetadataValidator = v.object({
   message_timestamp: v.float64(),
   extraction_timestamp: v.float64(),
   linguistic_markers: v.array(v.string()),
-  context_length: v.number(),
+  context_length: v.float64(), // Changed to float64 to match Convex schema
   user_id: v.string()
 });
 
@@ -184,40 +184,80 @@ export const personaTraceValidator = v.object({
   trace_type: traceTypeValidator,
   verbatim_quote: v.string(),
   extracted_insight: v.string(),
-  confidence: v.number(),
+  confidence: v.float64(),
   context: v.string(),
-  temporal_weight: v.number(),
-  preference_strength: v.number(),
+  temporal_weight: v.float64(),
+  preference_strength: v.float64(),
   metadata: backendTraceMetadataValidator
 });
 
-export const evolutionHistoryValidator = v.array(v.object({
-  timestamp: v.float64(),
-  event_type: v.union(
-    v.literal("strengthened"),
-    v.literal("weakened"),
-    v.literal("contradicted"),
-    v.literal("refined")
-  ),
-  old_value: v.union(v.string(), v.null()),
-  new_value: v.string(),
-  trigger_trace_id: v.string(),
-  confidence_change: v.float64(),
-  reason: v.string()
-}));
-
-export const confidenceHistoryValidator = v.array(v.object({
-  timestamp: v.float64(),
-  confidence: v.float64()
-}));
-
-export const crystallizedInsightMetadataValidator = v.object({
-  first_observed: v.float64(),
-  last_observed: v.float64(),
-  frequency: v.float64(),
-  contexts: v.array(v.string()),
-  confidence_history: confidenceHistoryValidator
+// Enhanced trace validator for backend traces with all optional fields
+export const enhancedPersonaTraceValidator = v.object({
+  // Required fields
+  trace_id: v.string(),
+  user_id: v.string(),
+  conversation_id: v.string(), // Backend sends as string, converted internally
+  trace_type: traceTypeValidator,
+  verbatim_quote: v.string(),
+  extracted_insight: v.string(),
+  confidence: v.float64(),
+  context: v.string(),
+  temporal_weight: v.float64(),
+  preference_strength: v.float64(),
+  metadata: backendTraceMetadataValidator,
+  
+  // Optional enhanced fields
+  behavioral_consistency: v.optional(v.float64()),
+  contextual_relevance: v.optional(v.float64()),
+  contradiction_flags: v.optional(v.union(v.array(v.string()), v.null())),
+  crystallization_priority: v.optional(v.float64()),
+  emotional_valence: v.optional(v.float64()),
+  last_accessed: v.optional(v.float64()),
+  processing_version: v.optional(v.string()),
+  quality_score: v.optional(v.float64()),
+  semantic_tags: v.optional(v.array(v.string())),
+  source_message_index: v.optional(v.float64()),
+  
+  // Legacy field for backward compatibility
+  convex_id: v.optional(v.string())
 });
+
+// Internal mutation validator (receives enhanced traces but omits user_id and conversation_id since they're separate args)
+export const internalTraceValidator = v.object({
+  // Required fields
+  trace_id: v.string(),
+  trace_type: traceTypeValidator,
+  verbatim_quote: v.string(),
+  extracted_insight: v.string(),
+  confidence: v.float64(),
+  context: v.string(),
+  temporal_weight: v.float64(),
+  preference_strength: v.float64(),
+  metadata: backendTraceMetadataValidator,
+  
+  // Optional enhanced fields
+  behavioral_consistency: v.optional(v.float64()),
+  contextual_relevance: v.optional(v.float64()),
+  contradiction_flags: v.optional(v.union(v.array(v.string()), v.null())),
+  crystallization_priority: v.optional(v.float64()),
+  emotional_valence: v.optional(v.float64()),
+  last_accessed: v.optional(v.float64()),
+  processing_version: v.optional(v.string()),
+  quality_score: v.optional(v.float64()),
+  semantic_tags: v.optional(v.array(v.string())),
+  source_message_index: v.optional(v.float64()),
+  
+  // Fields that may be passed but are handled separately
+  user_id: v.optional(v.string()), // Passed separately in args
+  conversation_id: v.optional(v.string()), // Passed separately in args and converted to ID
+  convex_id: v.optional(v.string()) // Legacy field
+});
+
+export const evolutionHistoryValidator = v.array(v.any());
+
+export const confidenceHistoryValidator = v.array(v.any());
+
+export const crystallizedInsightMetadataValidator = v.any();
 
 export const convexPersonaTraceValidator = v.object({
   _id: v.optional(v.id("persona_traces")),
@@ -242,7 +282,7 @@ export const crystallizedInsightValidator = v.object({
   crystallized_insight: v.string(),
   confidence: v.number(),
   supporting_traces: v.array(v.id("persona_traces")), // Stored as Convex IDs
-  contradiction_flags: v.array(v.string()),
+  contradiction_flags: v.union(v.array(v.string()), v.null()),
   evolution_history: evolutionHistoryValidator,
   temporal_stability: v.number(),
   cross_pattern_correlations: v.array(v.string()),
@@ -257,7 +297,7 @@ export const crystallizedInsightInputValidator = v.object({
   crystallized_insight: v.string(),
   confidence: v.float64(),
   supporting_traces: v.array(v.string()), // Input as strings, converted to Convex IDs
-  contradiction_flags: v.array(v.string()),
+  contradiction_flags: v.union(v.array(v.string()), v.null()),
   evolution_history: evolutionHistoryValidator,
   temporal_stability: v.float64(),
   cross_pattern_correlations: v.array(v.string()),

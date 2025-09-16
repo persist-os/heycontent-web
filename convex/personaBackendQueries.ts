@@ -142,7 +142,7 @@ export const getCrystallizedInsightsForBackend = query({
       crystallized_insight: v.string(),
       confidence: v.number(),
       supporting_traces: v.optional(v.array(v.id("persona_traces"))),
-      contradiction_flags: v.array(v.string()),
+      contradiction_flags: v.union(v.array(v.string()), v.null()),
       evolution_history: v.optional(v.array(v.object({
         timestamp: v.number(),
         event_type: v.union(

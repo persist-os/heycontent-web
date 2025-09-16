@@ -12,7 +12,8 @@ import {
   traceTypeValidator,
   backendTraceMetadataValidator,
   evolutionHistoryValidator,
-  crystallizedInsightMetadataValidator
+  crystallizedInsightMetadataValidator,
+  enhancedPersonaTraceValidator
 } from "./lib/personaTypes";
 
 /**
@@ -22,17 +23,7 @@ export const storePersonaTracesAction = action({
   args: {
     user_id: v.string(),
     conversation_id: v.string(), // Backend sends as string, converted internally
-    traces: v.array(v.object({
-      trace_id: v.string(),
-      trace_type: traceTypeValidator,
-      verbatim_quote: v.string(),
-      extracted_insight: v.string(),
-      confidence: v.float64(),
-      context: v.string(),
-      temporal_weight: v.float64(),
-      preference_strength: v.float64(),
-      metadata: backendTraceMetadataValidator
-    }))
+    traces: v.array(enhancedPersonaTraceValidator)
   },
   returns: v.object({
     success: v.boolean(),
@@ -62,7 +53,7 @@ export const storeCrystallizedInsightsAction = action({
       crystallized_insight: v.string(),
       confidence: v.float64(),
       supporting_traces: v.array(v.string()), // Trace IDs as strings (converted internally)
-      contradiction_flags: v.array(v.string()),
+      contradiction_flags: v.union(v.array(v.string()), v.null()),
       evolution_history: evolutionHistoryValidator,
       temporal_stability: v.float64(),
       cross_pattern_correlations: v.array(v.string()),
@@ -109,7 +100,7 @@ export const batchStoreCrystallizedInsightsAction = action({
       crystallized_insight: v.string(),
       confidence: v.float64(),
       supporting_traces: v.array(v.string()), // Trace IDs as strings (converted internally)
-      contradiction_flags: v.array(v.string()),
+      contradiction_flags: v.union(v.array(v.string()), v.null()),
       evolution_history: evolutionHistoryValidator,
       temporal_stability: v.float64(),
       cross_pattern_correlations: v.array(v.string()),

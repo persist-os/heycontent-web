@@ -9,6 +9,8 @@ import { Id } from "./_generated/dataModel";
 import {
   traceTypeValidator,
   backendTraceMetadataValidator,
+  enhancedPersonaTraceValidator,
+  internalTraceValidator,
   PersonaCrystallizationError
 } from "./lib/personaTypes";
 import {
@@ -33,17 +35,7 @@ export const storePersonaTraces = internalMutation({
   args: {
     user_id: v.string(),
     conversation_id: v.id("conversations"),
-    traces: v.array(v.object({
-      trace_id: v.string(),
-      trace_type: traceTypeValidator,
-      verbatim_quote: v.string(),
-      extracted_insight: v.string(),
-      confidence: v.float64(),
-      context: v.string(),
-      temporal_weight: v.float64(),
-      preference_strength: v.float64(),
-      metadata: backendTraceMetadataValidator
-    }))
+    traces: v.array(internalTraceValidator)
   },
   returns: v.object({
     success: v.boolean(),
@@ -98,8 +90,9 @@ export const storePersonaTraces = internalMutation({
             continue;
           }
 
-          // Insert new trace exactly as backend provides it
+          // Insert new trace with all enhanced fields as backend provides them
           await ctx.db.insert("persona_traces", {
+            // Required fields
             user_id: args.user_id,
             conversation_id: args.conversation_id,
             trace_id: traceData.trace_id,
@@ -110,7 +103,21 @@ export const storePersonaTraces = internalMutation({
             context: traceData.context,
             temporal_weight: traceData.temporal_weight,
             preference_strength: traceData.preference_strength,
-            metadata: traceData.metadata
+            metadata: traceData.metadata,
+            
+            // Optional enhanced fields (only include if present in backend data)
+            ...(traceData.behavioral_consistency !== undefined && { behavioral_consistency: traceData.behavioral_consistency }),
+            ...(traceData.contextual_relevance !== undefined && { contextual_relevance: traceData.contextual_relevance }),
+            ...(traceData.contradiction_flags !== undefined && { 
+              contradiction_flags: traceData.contradiction_flags === null ? [] : traceData.contradiction_flags 
+            }),
+            ...(traceData.crystallization_priority !== undefined && { crystallization_priority: traceData.crystallization_priority }),
+            ...(traceData.emotional_valence !== undefined && { emotional_valence: traceData.emotional_valence }),
+            ...(traceData.last_accessed !== undefined && { last_accessed: traceData.last_accessed }),
+            ...(traceData.processing_version !== undefined && { processing_version: traceData.processing_version }),
+            ...(traceData.quality_score !== undefined && { quality_score: traceData.quality_score }),
+            ...(traceData.semantic_tags !== undefined && { semantic_tags: traceData.semantic_tags }),
+            ...(traceData.source_message_index !== undefined && { source_message_index: traceData.source_message_index })
           });
 
           results.traces_stored++;
@@ -155,11 +162,22 @@ export const addPersonaTrace = mutation({
     trace_type: traceTypeValidator,
     verbatim_quote: v.string(),
     extracted_insight: v.string(),
-    confidence: v.number(),
+    confidence: v.float64(),
     context: v.string(),
-    temporal_weight: v.optional(v.number()),
-    preference_strength: v.optional(v.number()),
-    metadata: v.optional(v.any())
+    temporal_weight: v.optional(v.float64()),
+    preference_strength: v.optional(v.float64()),
+    metadata: v.optional(backendTraceMetadataValidator),
+    // Optional enhanced fields
+    behavioral_consistency: v.optional(v.float64()),
+    contextual_relevance: v.optional(v.float64()),
+    contradiction_flags: v.optional(v.union(v.array(v.string()), v.null())),
+    crystallization_priority: v.optional(v.float64()),
+    emotional_valence: v.optional(v.float64()),
+    last_accessed: v.optional(v.float64()),
+    processing_version: v.optional(v.string()),
+    quality_score: v.optional(v.float64()),
+    semantic_tags: v.optional(v.array(v.string())),
+    source_message_index: v.optional(v.float64())
   },
   returns: v.object({
     success: v.boolean(),
@@ -215,6 +233,7 @@ export const addPersonaTrace = mutation({
 
       const now = Date.now();
       const traceId = await ctx.db.insert("persona_traces", {
+        // Required fields
         user_id: args.user_id,
         conversation_id: args.conversation_id,
         trace_id: generateManualTraceId(),
@@ -229,7 +248,21 @@ export const addPersonaTrace = mutation({
           args.conversation_id,
           args.verbatim_quote,
           args.user_id
-        )
+        ),
+        
+        // Optional enhanced fields (only include if provided)
+        ...(args.behavioral_consistency !== undefined && { behavioral_consistency: args.behavioral_consistency }),
+        ...(args.contextual_relevance !== undefined && { contextual_relevance: args.contextual_relevance }),
+        ...(args.contradiction_flags !== undefined && { 
+          contradiction_flags: args.contradiction_flags === null ? [] : args.contradiction_flags 
+        }),
+        ...(args.crystallization_priority !== undefined && { crystallization_priority: args.crystallization_priority }),
+        ...(args.emotional_valence !== undefined && { emotional_valence: args.emotional_valence }),
+        ...(args.last_accessed !== undefined && { last_accessed: args.last_accessed }),
+        ...(args.processing_version !== undefined && { processing_version: args.processing_version }),
+        ...(args.quality_score !== undefined && { quality_score: args.quality_score }),
+        ...(args.semantic_tags !== undefined && { semantic_tags: args.semantic_tags }),
+        ...(args.source_message_index !== undefined && { source_message_index: args.source_message_index })
       });
 
       const processingTime = Date.now() - startTime;

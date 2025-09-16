@@ -882,7 +882,7 @@ export default defineSchema({
     semantic_tags: v.optional(v.array(v.string())), // Semantic categorization tags
     emotional_valence: v.optional(v.number()), // Emotional tone (-1 to 1)
     behavioral_consistency: v.optional(v.number()), // How consistent this trace is with other user behavior
-    contradiction_flags: v.optional(v.array(v.string())), // IDs of contradicting traces
+    contradiction_flags: v.optional(v.union(v.array(v.string()), v.null())), // IDs of contradicting traces
     source_message_index: v.optional(v.number()), // Index of the message that generated this trace
     contextual_relevance: v.optional(v.number()), // Relevance within conversation context
     crystallization_priority: v.optional(v.number()), // Priority for crystallization processing
@@ -915,7 +915,7 @@ export default defineSchema({
     crystallized_insight_embedding: v.optional(v.array(v.float64())), // Vector embedding for similarity search
     confidence: v.number(),
     supporting_traces: v.array(v.id("persona_traces")),
-    contradiction_flags: v.array(v.string()),
+    contradiction_flags: v.union(v.array(v.string()), v.null()),
     evolution_history: v.array(v.object({
       timestamp: v.number(),
       event_type: v.union(

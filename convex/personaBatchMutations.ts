@@ -62,7 +62,7 @@ export const batchUpdateCrystallizedInsights = internalMutation({
       crystallized_insight: v.string(),
       confidence: v.number(),
       supporting_traces: v.array(v.string()), // Trace IDs as strings (converted internally)
-      contradiction_flags: v.array(v.string()),
+      contradiction_flags: v.union(v.array(v.string()), v.null()),
       evolution_history: evolutionHistoryValidator,
       temporal_stability: v.number(),
       cross_pattern_correlations: v.array(v.string()),
@@ -311,7 +311,7 @@ export const transactionSafeInsightUpdate = internalMutation({
       crystallized_insight: v.string(),
       confidence: v.number(),
       supporting_traces: v.array(v.string()), // Trace IDs as strings (converted internally)
-      contradiction_flags: v.array(v.string()),
+      contradiction_flags: v.union(v.array(v.string()), v.null()),
       evolution_history: evolutionHistoryValidator,
       temporal_stability: v.number(),
       cross_pattern_correlations: v.array(v.string()),

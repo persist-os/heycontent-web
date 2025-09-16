@@ -1576,6 +1576,164 @@ app.post("/api/users/:userId/projects/:projectId/generate-widgets", async (c) =>
   }
 });
 
+// TOKEN DAM ROUTES
+
+// Check if processing is allowed for a user's token dam
+app.get("/api/token-dam/is-processing-allowed", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.query("userId");
+  
+  if (!userId) {
+    return c.json({ 
+      success: false, 
+      error: "Missing required parameter: userId" 
+    }, 400);
+  }
+  
+  try {
+    const result = await ctx.runQuery(api.tokenDamQueries.isProcessingAllowed, { 
+      userId 
+    });
+    
+    return c.json({ 
+      success: true, 
+      data: result 
+    });
+  } catch (error: any) {
+    console.error("Failed to check processing allowed:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to check processing status",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get token dam status for a user
+app.get("/api/token-dam/status", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.query("userId");
+  
+  if (!userId) {
+    return c.json({ 
+      success: false, 
+      error: "Missing required parameter: userId" 
+    }, 400);
+  }
+  
+  try {
+    const result = await ctx.runQuery(api.tokenDamQueries.getDamStatus, { 
+      userId 
+    });
+    
+    return c.json({ 
+      success: true, 
+      data: result 
+    });
+  } catch (error: any) {
+    console.error("Failed to get dam status:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get dam status",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get user dam overview
+app.get("/api/token-dam/overview", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.query("userId");
+  
+  if (!userId) {
+    return c.json({ 
+      success: false, 
+      error: "Missing required parameter: userId" 
+    }, 400);
+  }
+  
+  try {
+    const result = await ctx.runQuery(api.tokenDamQueries.getUserDamOverview, { 
+      userId 
+    });
+    
+    return c.json({ 
+      success: true, 
+      data: result 
+    });
+  } catch (error: any) {
+    console.error("Failed to get dam overview:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get dam overview",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get token usage statistics for a user
+app.get("/api/token-dam/usage-stats", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.query("userId");
+  const timeRange = c.req.query("timeRange") || "24h"; // Default to 24 hours
+  
+  if (!userId) {
+    return c.json({ 
+      success: false, 
+      error: "Missing required parameter: userId" 
+    }, 400);
+  }
+  
+  try {
+    const result = await ctx.runQuery(api.tokenDamQueries.getTokenUsageStats, { 
+      userId,
+      timeRange
+    });
+    
+    return c.json({ 
+      success: true, 
+      data: result 
+    });
+  } catch (error: any) {
+    console.error("Failed to get token usage stats:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get token usage stats",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Token dam health check
+app.get("/api/token-dam/health", async (c) => {
+  const ctx = c.env;
+  
+  try {
+    // Test token dam system health by running a simple query
+    const testUserId = "health_test";
+    const result = await ctx.runQuery(api.tokenDamQueries.isProcessingAllowed, { 
+      userId: testUserId 
+    });
+    
+    return c.json({ 
+      success: true, 
+      status: "healthy",
+      timestamp: Date.now(),
+      service: "token_dam"
+    });
+  } catch (error: any) {
+    console.error("Token dam health check failed:", error);
+    return c.json({ 
+      success: false, 
+      status: "unhealthy",
+      error: "Token dam system unavailable",
+      message: error.message || "Internal Server Error",
+      timestamp: Date.now(),
+      service: "token_dam"
+    }, 500);
+  }
+});
+
 // HTTP Routes for Backend Integration
 app.post("/api/project-widgets/createProjectWidgets", async (c) => {
   const ctx = c.env;
