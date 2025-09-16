@@ -59,7 +59,7 @@ export function useChatContainer(chatId: string | undefined, contentContext: any
   const uiEffects = useUIEffects(messages, isExpanded)
 
   // Initialize chat hook with shared state and userId
-  const chatHook = useChat(chatState, userId, useContextSearch)
+  const chatHook = useChat(chatState, userId, useContextSearch, undefined, null, 'chat')
 
   // Initialize ambient insights actions
   const ambientInsightsActions = useAmbientInsightsActions(chatHook.handleSendMessage)

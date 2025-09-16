@@ -125,7 +125,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
         }
       }
       return null
-    }
+    },
+    null, // ChatContainer doesn't use project context
+    'chat' // Use regular chat mode
   )
 
   // Track onboarding state for persona tip - REMOVED (onboarding eliminated)

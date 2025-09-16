@@ -550,7 +550,7 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
       })
       setContentContext(projectContext as any)
     }
-  }, [projectContext, currentContext, setContentContext, isProjectLoading, contentSummary])
+  }, [projectContext, setContentContext, isProjectLoading, contentSummary])
 
   // Show project discovery welcome message when component mounts
   useEffect(() => {
@@ -572,7 +572,7 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
     handleOptionClick,
     handleFollowUpClick,
     handleReferenceClick
-  } = useChat(chatState, authData.userId, useContextSearch)
+  } = useChat(chatState, authData.userId, useContextSearch, undefined, currentContext, 'project-discovery')
 
   // Initialize conversation hook
   const { initSession } = useConversation(chatState, authData.user)
@@ -600,20 +600,26 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
     }
   }, [currentContext, contextConsumption.hasConsumed])
 
-  // Mark context as consumed after first message
+  // Mark context as consumed after first actual message with context is sent to backend
   useEffect(() => {
     if (currentContext && 
         contextConsumption.isDisplayed && 
         !contextConsumption.hasConsumed && 
         messages.length > 0) {
       
-      const hasRealMessage = messages.some(msg => !msg.metadata?.isWelcome)
+      // Look for messages that have been sent to backend (have a session ID and are not welcome messages)
+      const hasBackendMessage = messages.some(msg => 
+        msg.sessionId && 
+        !msg.metadata?.isWelcome && 
+        msg.role === 'user'
+      )
       
-      if (hasRealMessage) {
+      if (hasBackendMessage) {
+        console.log('🔗 [ProjectDiscoveryChat] Marking context as consumed - message sent to backend with context')
         setContextConsumption(prev => ({ ...prev, hasConsumed: true }))
       }
     }
-  }, [messages.length, currentContext, contextConsumption])
+  }, [messages, currentContext, contextConsumption.isDisplayed, contextConsumption.hasConsumed])
 
   // Handle initial ask query
   const askQuery = searchParams.get('ask')
@@ -677,10 +683,6 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
   // Transition handlers
   const handleStarsDiscovered = useCallback(() => {
     // No longer needed - we redirect immediately
-  }, [])
-
-  const handleBackFromProjectReveal = useCallback(() => {
-    setShowProjectReveal(false)
   }, [])
 
   // Selection-aware autoscroll functionality
