@@ -22,16 +22,7 @@ export function AdvancedOptionsSection({
 }: AdvancedOptionsSectionProps) {
   const data = usePersonaCrystallizationData();
 
-  const handleForceProcess = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      const { triggerInsightCrystallization } = await import('@/app/lib/persona-api');
-      await triggerInsightCrystallization(data.debugInfo?.userId || '', [], 0.3);
-      data.refreshData();
-    } catch (error) {
-      console.error('Force crystallization failed:', error);
-    }
-  };
+  // No more force processing - backend handles all triggers
 
   return (
     <div className="border border-border/30 rounded-lg overflow-hidden">
@@ -43,7 +34,7 @@ export function AdvancedOptionsSection({
         <ExpandableSectionHeader
           isExpanded={isExpanded}
           title="Advanced Options"
-          count={data.debugInfo?.triggerCount || 0}
+          count={0}
         />
         <Settings2 className="h-4 w-4 text-muted-foreground" />
       </button>
@@ -57,14 +48,12 @@ export function AdvancedOptionsSection({
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Processing:</span>
-                  <span className={`font-medium ${data.isProcessing ? 'text-yellow-600' : 'text-green-600'}`}>
-                    {data.debugInfo?.processingStatus || 'idle'}
-                  </span>
+                  <span className="text-muted-foreground">Status:</span>
+                  <span className="font-medium text-green-600">Display Only</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Triggers:</span>
-                  <span className="font-medium">{data.debugInfo?.triggerCount || 0}</span>
+                  <span className="text-muted-foreground">Traces:</span>
+                  <span className="font-medium">{data.totalTraces}</span>
                 </div>
               </div>
               
@@ -107,28 +96,11 @@ export function AdvancedOptionsSection({
             </div>
           </div>
           
-          {/* Action Buttons Section */}
+          {/* Display Only - No Actions */}
           <div className="space-y-3">
-            <h4 className="text-sm font-semibold text-foreground border-b border-border/20 pb-1">Actions</h4>
-            
-            <div className="grid grid-cols-1 gap-2">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  data.refreshData();
-                }}
-                className="w-full px-3 py-2 bg-accent text-accent-foreground rounded-lg text-sm hover:bg-accent/80 transition-colors font-medium"
-              >
-                Refresh All Data
-              </button>
-              {process.env.NODE_ENV === 'development' && (
-                <button
-                  onClick={handleForceProcess}
-                  className="w-full px-3 py-2 bg-orange-600 text-white rounded-lg text-sm hover:bg-orange-700 transition-colors font-medium"
-                >
-                  Force Crystallization
-                </button>
-              )}
+            <h4 className="text-sm font-semibold text-foreground border-b border-border/20 pb-1">Info</h4>
+            <div className="text-sm text-muted-foreground p-3 bg-muted/30 rounded-lg">
+              This is a read-only display. All processing is handled by the backend.
             </div>
           </div>
           
@@ -141,12 +113,6 @@ export function AdvancedOptionsSection({
                 <div className="flex justify-between p-2 bg-muted/30 rounded">
                   <span className="text-muted-foreground">Last Update:</span>
                   <span className="font-medium">{formatTimeOnly(data.lastUpdate)}</span>
-                </div>
-              )}
-              {data.debugInfo?.userId && (
-                <div className="flex justify-between p-2 bg-muted/30 rounded">
-                  <span className="text-muted-foreground">User ID:</span>
-                  <span className="font-mono text-xs">{data.debugInfo.userId.slice(-12)}</span>
                 </div>
               )}
               <div className="flex justify-between p-2 bg-muted/30 rounded">

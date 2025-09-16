@@ -91,29 +91,17 @@ export interface DebugInfo {
 }
 
 export interface PersonaCrystallizationContextType {
-  // Data
+  // Data from Convex (read-only)
   recentTraces: PersonaTrace[];
   crystallizedInsights: PersonaInsight[];
   isLoading: boolean;
   
-  // Processing status
-  isProcessing: boolean;
+  // Basic profile info
   lastUpdate: number | null;
-  
-  // Profile info
   profileCompleteness: number;
   overallConfidence: number;
   totalTraces: number;
   totalInsights: number;
-  
-  // Token Dam info
-  damStatus?: DamStatus;
-  
-  // Actions
-  refreshData: () => void;
-  
-  // Development info
-  debugInfo?: DebugInfo;
 }
 
 export interface PersonaCrystallizationProviderProps {

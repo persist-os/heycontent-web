@@ -89,69 +89,6 @@ export const storeCrystallizedInsightsAction = action({
   }
 });
 
-/**
- * Public action to batch store crystallized insights with optimized processing
- */
-export const batchStoreCrystallizedInsightsAction = action({
-  args: {
-    user_id: v.string(),
-    insights: v.array(v.object({
-      insight_type: v.string(),
-      crystallized_insight: v.string(),
-      confidence: v.float64(),
-      supporting_traces: v.array(v.string()), // Trace IDs as strings (converted internally)
-      contradiction_flags: v.union(v.array(v.string()), v.null()),
-      evolution_history: evolutionHistoryValidator,
-      temporal_stability: v.float64(),
-      cross_pattern_correlations: v.array(v.string()),
-      metadata: crystallizedInsightMetadataValidator,
-      created_at: v.float64(), // Backend correctly maps to created_at
-      updated_at: v.float64() // Backend correctly maps to updated_at
-    })),
-    batch_size: v.optional(v.number()),
-    skip_validation: v.optional(v.boolean())
-  },
-  returns: v.object({
-    success: v.boolean(),
-    batch_id: v.string(),
-    total_processed: v.number(),
-    successful: v.number(),
-    failed: v.number(),
-    insights_updated: v.number(),
-    new_insights: v.number(),
-    evolved_insights: v.number(),
-    processing_time: v.number(),
-    errors: v.array(v.object({
-      code: v.string(),
-      message: v.string(),
-      details: v.any(),
-      timestamp: v.number()
-    })),
-    validation_errors: v.array(v.object({
-      code: v.string(),
-      message: v.string(),
-      details: v.any(),
-      timestamp: v.number()
-    })),
-    trace_conversion_errors: v.array(v.object({
-      code: v.string(),
-      message: v.string(),
-      details: v.any(),
-      timestamp: v.number()
-    }))
-  }),
-  handler: async (ctx, args) => {
-    console.log('🎬 [PUBLIC ACTION] Batch storing crystallized insights via internal mutation');
-    
-    return await ctx.runMutation(internal.personaBatchMutations.batchUpdateCrystallizedInsights, {
-      user_id: args.user_id,
-      insights_batch: args.insights,
-      batch_size: args.batch_size,
-      skip_validation: args.skip_validation
-    });
-  }
-});
-
 // Re-export all the individual mutations from their respective files
 // This allows existing imports to continue working without changes
 

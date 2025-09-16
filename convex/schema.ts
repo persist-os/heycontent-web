@@ -843,6 +843,30 @@ export default defineSchema({
   .index("by_note_user", ["noteId", "userId"])
   .index("by_user_client", ["userId", "clientId"]),
 
+
+  // Redefine these to be simpler
+  // // Super simple schema
+  // export default defineSchema({
+  //   persona_traces: defineTable({
+  //     userId: v.string(),
+  //     content: v.any(),      // Backend-generated trace
+  //     timestamp: v.number(),
+  //     confidence: v.number()
+  //   }),
+  //
+  //   persona_insights: defineTable({
+  //     userId: v.string(),
+  //     content: v.string(),   // Backend-generated insight
+  //     category: v.string(),
+  //     timestamp: v.number(),
+  //     sources: v.array(v.id("persona_traces"))
+  //   })
+  // })
+
+// No token dam table needed - backend manages in memory!
+// No trigger tables needed - backend handles timing!
+// No status tables needed - backend calculates on demand!
+
   // Persona Traces - Enhanced psychological traces for crystallization system
   persona_traces: defineTable({
     // Convex-specific fields
@@ -850,32 +874,14 @@ export default defineSchema({
     conversation_id: v.id("conversations"),
     // Backend PersonaTrace fields (exact structure)
     trace_id: v.string(),
-    trace_type: v.union(
-      v.literal("preference"),
-      v.literal("behavior"),
-      v.literal("goal"),
-      v.literal("constraint"),
-      v.literal("pattern"),
-      v.literal("value"),
-      v.literal("workflow"),
-      v.literal("communication_style"),
-      v.literal("temporal_preference"),
-      v.literal("emotional_pattern")
-    ),
+    trace_type: v.string(), // Flexible string to support any trace type backend wants to send
     verbatim_quote: v.string(),
     extracted_insight: v.string(),
     confidence: v.number(),
     context: v.string(),
     temporal_weight: v.number(),
     preference_strength: v.number(),
-    metadata: v.object({
-      conversation_id: v.string(),
-      message_timestamp: v.number(),
-      extraction_timestamp: v.number(),
-      linguistic_markers: v.array(v.string()),
-      context_length: v.number(),
-      user_id: v.string()
-    }),
+    metadata: v.any(), // Flexible metadata for any trace type - backend can add any fields
     // Enhanced fields for crystallization system
     processing_version: v.optional(v.string()), // Track which version of processing extracted this
     quality_score: v.optional(v.number()), // Overall quality assessment of the trace
@@ -932,16 +938,7 @@ export default defineSchema({
     })),
     temporal_stability: v.number(),
     cross_pattern_correlations: v.array(v.string()),
-    metadata: v.object({
-      first_observed: v.number(),
-      last_observed: v.number(),
-      frequency: v.number(),
-      contexts: v.array(v.string()),
-      confidence_history: v.array(v.object({
-        timestamp: v.number(),
-        confidence: v.number()
-      }))
-    }),
+    metadata: v.any(), // Flexible metadata for any insight type - backend can add any fields
     created_at: v.number(),
     updated_at: v.number()
   })

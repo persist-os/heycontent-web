@@ -65,7 +65,6 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
   const [conversationSummaries, setConversationSummaries] = useState<any[]>([])
   const prevRealUserCountRef = useRef<number>(0)
   const convexClientRef = useRef<ConvexHttpClient | null>(null)
-  const startedPollingRef = useRef<boolean>(false)
   const lastProcessedUserMessageIdRef = useRef<string | null>(null)
 
   // Simplified flow: trigger once when total messages (incl. assistant) reach random 6-8
@@ -576,22 +575,6 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
 
   // Initialize conversation hook
   const { initSession } = useConversation(chatState, authData.user)
-
-
-  // Embedding sync heartbeat for active chat users  
-  useEffect(() => {
-    if (!authData.userId) return
-
-    const heartbeatInterval = setInterval(async () => {
-      try {
-        await userHeartbeat({ userId: authData.userId! })
-      } catch (error) {
-        console.error('Chat heartbeat sync failed:', error)
-      }
-    }, 2 * 60 * 1000) // 2 minutes
-
-    return () => clearInterval(heartbeatInterval)
-  }, [authData.userId, userHeartbeat])
 
   // Handle content context display and consumption
   useEffect(() => {

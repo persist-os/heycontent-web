@@ -4,7 +4,6 @@ import { Info, X } from "lucide-react";
 import { usePersonaCrystallizationData } from './PersonaCrystallizationContext';
 import { InsightsSection } from './InsightsSection';
 import { TracesSection } from './TracesSection';
-import { DamStatusSection } from './DamStatusSection';
 import { AdvancedOptionsSection } from './AdvancedOptionsSection';
 
 /**
@@ -135,13 +134,10 @@ export function PersonaCrystallizationDebugPanel() {
                   </div>
                 </div>
                 
-                {/* Processing Status Banner */}
-                {data.isProcessing && (
-                  <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-center gap-2">
-                    <div className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse" />
-                    <span className="text-yellow-800 font-medium text-sm">
-                      Processing persona data... ({data.debugInfo?.processingStatus})
-                    </span>
+                {/* Status Update */}
+                {data.lastUpdate && (
+                  <div className="mt-3 text-xs text-muted-foreground">
+                    Last updated: {new Date(data.lastUpdate).toLocaleString()}
                   </div>
                 )}
               </div>
@@ -175,13 +171,7 @@ export function PersonaCrystallizationDebugPanel() {
                       showAdvanced={showAdvanced}
                     />
 
-                    {/* Token Dam Status Section */}
-                    {data.damStatus && (
-                      <DamStatusSection
-                        isExpanded={expandedSections.has('dam')}
-                        onToggle={() => toggleSection('dam')}
-                      />
-                    )}
+                    {/* Data Display Only - No Dam Status Management */}
 
                     {/* Advanced Options */}
                     <AdvancedOptionsSection

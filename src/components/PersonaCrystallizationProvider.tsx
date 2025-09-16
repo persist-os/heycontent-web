@@ -1,47 +1,19 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useQuery, useConvex } from 'convex/react';
+import React, { createContext, useContext } from 'react';
+import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { usePersonaCrystallization } from '@/hooks/usePersonaCrystallization';
 
 interface PersonaCrystallizationContextType {
-  // Data
+  // Data from Convex queries (read-only)
   recentTraces: any[];
   crystallizedInsights: any[];
   isLoading: boolean;
   
-  // Processing status
-  isProcessing: boolean;
-  lastUpdate: number | null;
-  
-  // Profile info
+  // Basic profile info
   profileCompleteness: number;
   overallConfidence: number;
   totalTraces: number;
   totalInsights: number;
-  
-  // Token Dam info
-  damStatus?: {
-    totalDams: number;
-    dams: Array<{
-      conversation_id: string;
-      status: string;
-      accumulated_tokens: number;
-      token_limit: number;
-      progress_percentage: number;
-      message_count: number;
-      is_processing: boolean;
-    }>;
-  };
-  
-  // Actions
-  refreshData: () => void;
-  
-  // Development info
-  debugInfo?: {
-    triggerCount: number;
-    processingStatus: string;
-    userId?: string;
-  };
+  lastUpdate: number | null;
 }
 
 const PersonaCrystallizationContext = createContext<PersonaCrystallizationContextType | undefined>(undefined);
@@ -52,141 +24,36 @@ interface PersonaCrystallizationProviderProps {
 }
 
 /**
- * Provider that makes persona crystallization data available throughout the app
- * This connects the crystallization system to UI components
+ * Simple provider that fetches persona crystallization data from Convex
+ * No business logic, polling, or triggers - just data display
  */
 export function PersonaCrystallizationProvider({ 
   userId, 
   children 
 }: PersonaCrystallizationProviderProps) {
-  const convex = useConvex();
-  const [lastRefresh, setLastRefresh] = useState(Date.now());
-  
-  // Get comprehensive persona profile
+  // Simple Convex query - no polling, Convex handles real-time updates
   const personaProfile = useQuery(
     api.personaCrystallizationQueries.getUserPersonaProfile,
     userId ? { 
       user_id: userId, 
       include_recent_traces: true,
       trace_limit: 50,
-      insight_limit: 20,
-      _refresh_key: lastRefresh
+      insight_limit: 20
     } : "skip"
   );
-
-  // Get unprocessed triggers for debug info
-  const triggers = useQuery(
-    api.personaCrystallizationQueries.getUnprocessedTriggers,
-    userId ? { 
-      user_id: userId, 
-      limit: 5,
-      _refresh_key: lastRefresh
-    } : "skip"
-  );
-
-  // Get dam status (for development/debugging)
-  const [damStatus, setDamStatus] = useState<any>(null);
-  
-  // Fetch dam status periodically
-  useEffect(() => {
-    if (!userId || process.env.NODE_ENV !== 'development') return;
-
-    const fetchDamStatus = async () => {
-      try {
-        const response = await fetch(`/api/persona-crystallization/dam-status/${userId}`, {
-          credentials: 'include'
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setDamStatus(data.dam_status);
-        }
-      } catch (error) {
-        console.warn('Failed to fetch dam status:', error);
-      }
-    };
-
-    fetchDamStatus();
-    const interval = setInterval(fetchDamStatus, 5000); // Check every 5 seconds in dev
-
-    return () => clearInterval(interval);
-  }, [userId, lastRefresh]);
-
-  // Hook for processing status
-  const { state: processingState } = usePersonaCrystallization(userId);
-
-  const refreshData = () => {
-    console.log('🔄 [PERSONA DEBUG] Manual refresh triggered');
-    setLastRefresh(Date.now());
-  };
-
-  // Auto-refresh data periodically
-  useEffect(() => {
-    if (!userId) return;
-
-    console.log('🔄 [PERSONA DEBUG] Setting up refresh interval for user:', userId);
-    
-    const interval = setInterval(() => {
-      const now = Date.now();
-      console.log('🔄 [PERSONA DEBUG] Auto-refreshing data at:', new Date(now).toISOString());
-      setLastRefresh(now);
-    }, 10000); // Refresh every 10 seconds for debugging
-
-    return () => {
-      console.log('🛑 [PERSONA DEBUG] Clearing refresh interval');
-      clearInterval(interval);
-    };
-  }, [userId]);
-
-  // Debug logging for data changes
-  useEffect(() => {
-    if (personaProfile) {
-      console.log('📊 [PERSONA DEBUG] PersonaProfile updated:', {
-        totalTraces: personaProfile.summary?.total_traces || 0,
-        totalInsights: personaProfile.summary?.total_insights || 0,
-        recentTraces: personaProfile.recent_traces?.length || 0,
-        lastUpdated: personaProfile.last_updated ? new Date(personaProfile.last_updated).toISOString() : 'never'
-      });
-    }
-  }, [personaProfile]);
-
-  useEffect(() => {
-    if (triggers) {
-      console.log('🎯 [PERSONA DEBUG] Triggers updated:', {
-        count: triggers.length,
-        triggers: triggers.map(t => ({ id: t._id, type: t.trigger_type, processed: t.processed }))
-      });
-    }
-  }, [triggers]);
 
   const contextValue: PersonaCrystallizationContextType = {
-    // Data
+    // Data from Convex (read-only display)
     recentTraces: personaProfile?.recent_traces || [],
     crystallizedInsights: personaProfile?.crystallized_insights || [],
     isLoading: personaProfile === undefined,
     
-    // Processing status
-    isProcessing: processingState.isExtracting || processingState.isCrystallizing,
-    lastUpdate: personaProfile?.last_updated || null,
-    
-    // Profile info
+    // Basic profile info for display
     profileCompleteness: personaProfile?.profile_completeness || 0,
     overallConfidence: personaProfile?.confidence_scores?.overall || 0,
     totalTraces: personaProfile?.summary?.total_traces || 0,
     totalInsights: personaProfile?.summary?.total_insights || 0,
-    
-    // Token Dam info
-    damStatus: damStatus,
-    
-    // Actions
-    refreshData,
-    
-    // Development info
-    debugInfo: process.env.NODE_ENV === 'development' ? {
-      triggerCount: triggers?.length || 0,
-      processingStatus: processingState.isExtracting ? 'extracting' :
-                      processingState.isCrystallizing ? 'crystallizing' : 'idle',
-      userId: userId
-    } : undefined
+    lastUpdate: personaProfile?.last_updated || null
   };
 
   return (
@@ -209,7 +76,7 @@ export function usePersonaCrystallizationData() {
 
 /**
  * Persona Crystallization Status Widget
- * Shows processing status and basic stats
+ * Simple display of current stats from Convex
  */
 export function PersonaCrystallizationStatus({ className }: { className?: string }) {
   const data = usePersonaCrystallizationData();
@@ -226,13 +93,11 @@ export function PersonaCrystallizationStatus({ className }: { className?: string
     <div className={`text-sm text-muted-foreground ${className}`}>
       <div className="flex items-center gap-2">
         <div className={`w-2 h-2 rounded-full ${
-          data.isProcessing ? 'bg-yellow-500 animate-pulse' : 
           data.totalTraces > 0 ? 'bg-green-500' : 'bg-gray-400'
         }`} />
         <span>
           {data.totalTraces} trace{data.totalTraces !== 1 ? 's' : ''}, {data.totalInsights} insight{data.totalInsights !== 1 ? 's' : ''}
         </span>
-        {data.isProcessing && <span className="text-yellow-600">(processing...)</span>}
       </div>
       {data.profileCompleteness > 0 && (
         <div className="mt-1 text-xs">
