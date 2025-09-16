@@ -13,14 +13,14 @@ import { Id } from "./_generated/dataModel";
  */
 
 /**
- * Get current dam status for a conversation
+ * Get current dam status for a user
  * 
  * Returns the current token dam state including usage, limits, and processing status.
+ * Since there's only one dam per user, this returns the user's overall dam status.
  */
 export const getDamStatus = query({
   args: {
     userId: v.string(),
-    conversationId: v.id("conversations"),
   },
   returns: v.union(
     v.object({
@@ -40,6 +40,8 @@ export const getDamStatus = query({
       lastMessageTokens: v.optional(v.number()),
       lastUpdated: v.number(),
       createdAt: v.number(),
+      accumulatedConversations: v.number(), // Number of conversations contributing to dam
+      totalMessageCount: v.number(), // Total number of messages in dam
     }),
     v.object({
       exists: v.literal(false),
@@ -49,35 +51,21 @@ export const getDamStatus = query({
       percentageFull: v.literal(0),
       tokensRemaining: v.number(),
       processingPaused: v.literal(false),
+      accumulatedConversations: v.literal(0),
+      totalMessageCount: v.literal(0),
     })
   ),
   handler: async (ctx, args) => {
-    // Validate conversation exists and belongs to user
-    const conversation = await ctx.db.get(args.conversationId);
-    if (!conversation) {
-      throw new Error("Conversation not found");
-    }
-    if (conversation.userId !== args.userId) {
-      throw new Error("Conversation does not belong to user");
-    }
-
-    // Get dam state for this conversation
+    // Get user's single dam state
     const damState = await ctx.db
       .query("token_dam_state")
-      .withIndex("by_user_conversation", (q) => 
-        q.eq("userId", args.userId).eq("conversationId", args.conversationId)
-      )
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .first();
 
     if (!damState) {
-      // No dam state exists yet, return default values
-      const user = await ctx.db
-        .query("users")
-        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-        .first();
-      
-      const tokenLimit = user?.subscription ? 
-        (user.subscription.includedRequests || 100) * 1000 : 100000;
+      // No dam state exists yet, return default values with fixed token limit
+      // Align with backend: 500 tokens triggers processing, 2000 tokens for user limit
+      const tokenLimit = 2000;
 
       return {
         exists: false as const,
@@ -87,6 +75,8 @@ export const getDamStatus = query({
         percentageFull: 0 as const,
         tokensRemaining: tokenLimit,
         processingPaused: false as const,
+        accumulatedConversations: 0 as const,
+        totalMessageCount: 0 as const,
       };
     }
 
@@ -102,14 +92,16 @@ export const getDamStatus = query({
       lastMessageTokens: damState.lastMessageTokens,
       lastUpdated: damState.lastUpdated,
       createdAt: damState.createdAt,
+      accumulatedConversations: damState.accumulatedConversations.length,
+      totalMessageCount: damState.totalMessageCount,
     };
   },
 });
 
 /**
- * Get dam status for all conversations for a user
+ * Get dam overview showing all conversations contributing to the user's dam
  * 
- * Returns a summary of token dam states across all user conversations.
+ * Returns details about the single user dam and all conversations contributing to it.
  */
 export const getUserDamOverview = query({
   args: {
@@ -117,155 +109,115 @@ export const getUserDamOverview = query({
     limit: v.optional(v.number()), // Limit number of conversations returned
   },
   returns: v.object({
-    totalConversations: v.number(),
-    conversationsWithLimits: v.number(),
-    overallStatus: v.union(
-      v.literal("all_open"),
-      v.literal("some_approaching"),
-      v.literal("some_blocked"),
-      v.literal("many_blocked")
+    damExists: v.boolean(),
+    damStatus: v.union(
+      v.literal("open"),
+      v.literal("approaching"), 
+      v.literal("full"),
+      v.literal("blocked")
     ),
-    conversations: v.array(v.object({
+    currentTokens: v.number(),
+    tokenLimit: v.number(),
+    percentageFull: v.number(),
+    processingPaused: v.boolean(),
+    totalConversationsInDam: v.number(),
+    contributingConversations: v.array(v.object({
       conversationId: v.id("conversations"),
       conversationTitle: v.string(),
-      damStatus: v.union(
-        v.literal("open"),
-        v.literal("approaching"), 
-        v.literal("full"),
-        v.literal("blocked")
-      ),
-      currentTokens: v.number(),
-      tokenLimit: v.number(),
-      percentageFull: v.number(),
-      processingPaused: v.boolean(),
-      lastUpdated: v.number(),
+      tokensContributed: v.number(),
+      messageCount: v.number(),
+      lastUpdate: v.number(),
+      firstContribution: v.number(),
     })),
     summary: v.object({
       totalTokensUsed: v.number(),
       totalTokenLimit: v.number(),
-      averagePercentageFull: v.number(),
-      blockedCount: v.number(),
-      approachingCount: v.number(),
+      percentageFull: v.number(),
+      totalMessages: v.number(),
+      oldestContribution: v.optional(v.number()),
+      newestContribution: v.optional(v.number()),
     }),
   }),
   handler: async (ctx, args) => {
     const limit = args.limit || 50;
 
-    // Get all conversations for the user
-    const allConversations = await ctx.db
-      .query("conversations")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .order("desc")
-      .take(limit);
-
-    // Get all dam states for the user
-    const allDamStates = await ctx.db
+    // Get the user's single dam state
+    const damState = await ctx.db
       .query("token_dam_state")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .collect();
-
-    // Create a map for quick lookup
-    const damStateMap = new Map();
-    for (const damState of allDamStates) {
-      damStateMap.set(damState.conversationId, damState);
-    }
-
-    // Get user's default token limit
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .first();
-    
-    const defaultTokenLimit = user?.subscription ? 
-      (user.subscription.includedRequests || 100) * 1000 : 100000;
 
-    const conversations = [];
-    let totalTokensUsed = 0;
-    let totalTokenLimit = 0;
-    let blockedCount = 0;
-    let approachingCount = 0;
-
-    for (const conversation of allConversations) {
-      const damState = damStateMap.get(conversation._id);
-      
-      if (damState) {
-        conversations.push({
-          conversationId: conversation._id,
-          conversationTitle: conversation.title,
-          damStatus: damState.damStatus,
-          currentTokens: damState.currentTokens,
-          tokenLimit: damState.tokenLimit,
-          percentageFull: damState.percentageFull,
-          processingPaused: damState.processingPaused,
-          lastUpdated: damState.lastUpdated,
-        });
-
-        totalTokensUsed += damState.currentTokens;
-        totalTokenLimit += damState.tokenLimit;
-
-        if (damState.damStatus === "blocked") blockedCount++;
-        else if (damState.damStatus === "approaching" || damState.damStatus === "full") approachingCount++;
-      } else {
-        // Conversation has no dam state yet
-        conversations.push({
-          conversationId: conversation._id,
-          conversationTitle: conversation.title,
-          damStatus: "open" as const,
-          currentTokens: 0,
-          tokenLimit: defaultTokenLimit,
+    if (!damState) {
+      // No dam exists yet
+      const defaultTokenLimit = 2000;
+      return {
+        damExists: false,
+        damStatus: "open" as const,
+        currentTokens: 0,
+        tokenLimit: defaultTokenLimit,
+        percentageFull: 0,
+        processingPaused: false,
+        totalConversationsInDam: 0,
+        contributingConversations: [],
+        summary: {
+          totalTokensUsed: 0,
+          totalTokenLimit: defaultTokenLimit,
           percentageFull: 0,
-          processingPaused: false,
-          lastUpdated: conversation.updatedAt,
-        });
-
-        totalTokenLimit += defaultTokenLimit;
-      }
+          totalMessages: 0,
+        },
+      };
     }
 
-    // Determine overall status
-    let overallStatus: "all_open" | "some_approaching" | "some_blocked" | "many_blocked";
-    if (blockedCount > conversations.length * 0.3) {
-      overallStatus = "many_blocked";
-    } else if (blockedCount > 0) {
-      overallStatus = "some_blocked";
-    } else if (approachingCount > 0) {
-      overallStatus = "some_approaching";
-    } else {
-      overallStatus = "all_open";
-    }
+    // Get the conversations contributing to the dam (limited)
+    const contributingConversations = damState.accumulatedConversations
+      .sort((a, b) => b.lastUpdate - a.lastUpdate) // Sort by most recent first
+      .slice(0, limit); // Apply limit
 
-    const averagePercentageFull = conversations.length > 0 ? 
-      conversations.reduce((sum, conv) => sum + conv.percentageFull, 0) / conversations.length : 0;
+    // Calculate summary statistics
+    const oldestContribution = damState.accumulatedConversations.length > 0 
+      ? Math.min(...damState.accumulatedConversations.map(c => c.firstContribution))
+      : undefined;
+    
+    const newestContribution = damState.accumulatedConversations.length > 0
+      ? Math.max(...damState.accumulatedConversations.map(c => c.lastUpdate))
+      : undefined;
 
     return {
-      totalConversations: allConversations.length,
-      conversationsWithLimits: allDamStates.length,
-      overallStatus,
-      conversations,
+      damExists: true,
+      damStatus: damState.damStatus,
+      currentTokens: damState.currentTokens,
+      tokenLimit: damState.tokenLimit,
+      percentageFull: damState.percentageFull,
+      processingPaused: damState.processingPaused,
+      totalConversationsInDam: damState.accumulatedConversations.length,
+      contributingConversations,
       summary: {
-        totalTokensUsed,
-        totalTokenLimit,
-        averagePercentageFull,
-        blockedCount,
-        approachingCount,
+        totalTokensUsed: damState.currentTokens,
+        totalTokenLimit: damState.tokenLimit,
+        percentageFull: damState.percentageFull,
+        totalMessages: damState.totalMessageCount,
+        oldestContribution,
+        newestContribution,
       },
     };
   },
 });
 
 /**
- * Get processing history for a conversation
+ * Get processing history for user's dam
  * 
  * Returns the history of processing events and token usage for monitoring.
+ * Can optionally filter by specific conversation.
  */
 export const getProcessingHistory = query({
   args: {
     userId: v.string(),
-    conversationId: v.optional(v.id("conversations")), // If not provided, get all user history
+    conversationId: v.optional(v.id("conversations")), // If provided, filter by this conversation
     limit: v.optional(v.number()),
     eventType: v.optional(v.union(
       v.literal("message_processed"),
       v.literal("dam_updated"),
+      v.literal("dam_processed"),
       v.literal("processing_paused"),
       v.literal("processing_resumed"),
       v.literal("limit_exceeded"),
@@ -275,11 +227,12 @@ export const getProcessingHistory = query({
   returns: v.object({
     history: v.array(v.object({
       _id: v.id("token_dam_processing_history"),
-      conversationId: v.id("conversations"),
+      conversationId: v.optional(v.id("conversations")),
       conversationTitle: v.optional(v.string()),
       eventType: v.union(
         v.literal("message_processed"),
         v.literal("dam_updated"),
+        v.literal("dam_processed"),
         v.literal("processing_paused"),
         v.literal("processing_resumed"),
         v.literal("limit_exceeded"),
@@ -301,27 +254,25 @@ export const getProcessingHistory = query({
   handler: async (ctx, args) => {
     const limit = args.limit || 50;
 
-    // Build query based on filters
-    let query = ctx.db.query("token_dam_processing_history");
-    
-    if (args.conversationId) {
-      query = query.withIndex("by_conversation_timestamp", (q) => 
-        q.eq("conversationId", args.conversationId)
-      );
-    } else {
-      query = query.withIndex("by_user_timestamp", (q) => 
-        q.eq("userId", args.userId)
-      );
-    }
-
     // Get history events
-    let historyEvents = await query
+    let historyEvents = await ctx.db
+      .query("token_dam_processing_history")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .order("desc")
       .take(limit + 1); // Take one extra to check if there are more
 
+    // Filter by conversation if specified
+    if (args.conversationId) {
+      historyEvents = historyEvents.filter(event => 
+        event.conversationId === args.conversationId
+      );
+    }
+
     // Filter by event type if specified
     if (args.eventType) {
-      historyEvents = historyEvents.filter(event => event.eventType === args.eventType);
+      historyEvents = historyEvents.filter(event => 
+        event.eventType === args.eventType
+      );
     }
 
     const hasMore = historyEvents.length > limit;
@@ -329,8 +280,13 @@ export const getProcessingHistory = query({
       historyEvents = historyEvents.slice(0, limit);
     }
 
-    // Get conversation titles for the events
-    const conversationIds = [...new Set(historyEvents.map(event => event.conversationId))];
+
+    // Get conversation titles for the events (only for events that have conversationId)
+    const conversationIds = [...new Set(
+      historyEvents
+        .map(event => event.conversationId)
+        .filter(id => id !== undefined)
+    )];
     const conversations = await Promise.all(
       conversationIds.map(id => ctx.db.get(id))
     );
@@ -345,7 +301,7 @@ export const getProcessingHistory = query({
     const history = historyEvents.map(event => ({
       _id: event._id,
       conversationId: event.conversationId,
-      conversationTitle: conversationMap.get(event.conversationId),
+      conversationTitle: event.conversationId ? conversationMap.get(event.conversationId) : undefined,
       eventType: event.eventType,
       tokensBefore: event.tokensBefore,
       tokensAfter: event.tokensAfter,
@@ -425,15 +381,14 @@ export const getTokenUsageStats = query({
   handler: async (ctx, args) => {
     const periodType = args.periodType || "daily";
     
-    // Build query
-    let query = ctx.db
+    // Build query - get all stats for user, then filter by period type
+    const allStats = await ctx.db
       .query("token_usage_stats")
-      .withIndex("by_user_period", (q) => 
-        q.eq("userId", args.userId).eq("periodType", periodType)
-      );
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
 
-    // Apply date filters if provided
-    let stats = await query.collect();
+    // Filter by period type and apply date filters
+    let stats = allStats.filter(stat => stat.periodType === periodType);
     
     if (args.startDate || args.endDate) {
       stats = stats.filter(stat => {
@@ -491,11 +446,11 @@ export const getTokenUsageStats = query({
 });
 
 /**
- * Get conversations that are currently blocked or approaching limits
+ * Get dam status if it needs attention due to token limit issues
  * 
- * Returns conversations that need attention due to token limit issues.
+ * Returns the dam state if it needs attention, along with contributing conversations.
  */
-export const getConversationsNeedingAttention = query({
+export const getDamNeedingAttention = query({
   args: {
     userId: v.string(),
     statusFilter: v.optional(v.union(
@@ -504,99 +459,98 @@ export const getConversationsNeedingAttention = query({
       v.literal("all_limited")
     )),
   },
-  returns: v.array(v.object({
-    conversationId: v.id("conversations"),
-    conversationTitle: v.string(),
-    damStatus: v.union(
-      v.literal("approaching"), 
-      v.literal("full"),
-      v.literal("blocked")
-    ),
-    currentTokens: v.number(),
-    tokenLimit: v.number(),
-    percentageFull: v.number(),
-    processingPaused: v.boolean(),
-    nextProcessingAllowed: v.optional(v.number()),
-    lastUpdated: v.number(),
-    timeUntilResume: v.optional(v.number()),
-  })),
+  returns: v.union(
+    v.object({
+      needsAttention: v.literal(false),
+    }),
+    v.object({
+      needsAttention: v.literal(true),
+      damStatus: v.union(
+        v.literal("approaching"), 
+        v.literal("full"),
+        v.literal("blocked")
+      ),
+      currentTokens: v.number(),
+      tokenLimit: v.number(),
+      percentageFull: v.number(),
+      processingPaused: v.boolean(),
+      nextProcessingAllowed: v.optional(v.number()),
+      lastUpdated: v.number(),
+      timeUntilResume: v.optional(v.number()),
+      contributingConversations: v.array(v.object({
+        conversationId: v.id("conversations"),
+        conversationTitle: v.string(),
+        tokensContributed: v.number(),
+        messageCount: v.number(),
+        lastUpdate: v.number(),
+      })),
+    })
+  ),
   handler: async (ctx, args) => {
     const statusFilter = args.statusFilter || "approaching_or_blocked";
     const now = Date.now();
 
-    // Get dam states that need attention
-    let damStates = await ctx.db
+    // Get the user's single dam state
+    const damState = await ctx.db
       .query("token_dam_state")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .collect();
+      .first();
 
-    // Filter based on status
+    if (!damState) {
+      return { needsAttention: false as const };
+    }
+
+    // Check if dam needs attention based on status filter
+    let needsAttention = false;
     switch (statusFilter) {
       case "blocked":
-        damStates = damStates.filter(state => state.damStatus === "blocked");
+        needsAttention = damState.damStatus === "blocked";
         break;
       case "approaching_or_blocked":
-        damStates = damStates.filter(state => 
-          state.damStatus === "approaching" || state.damStatus === "full" || state.damStatus === "blocked"
-        );
+        needsAttention = damState.damStatus === "approaching" || 
+                         damState.damStatus === "full" || 
+                         damState.damStatus === "blocked";
         break;
       case "all_limited":
-        damStates = damStates.filter(state => state.damStatus !== "open");
+        needsAttention = damState.damStatus !== "open";
         break;
     }
 
-    // Get conversation titles
-    const conversationIds = damStates.map(state => state.conversationId);
-    const conversations = await Promise.all(
-      conversationIds.map(id => ctx.db.get(id))
-    );
-
-    const results = [];
-    for (let i = 0; i < damStates.length; i++) {
-      const damState = damStates[i];
-      const conversation = conversations[i];
-      
-      if (conversation) {
-        const timeUntilResume = damState.nextProcessingAllowed && damState.nextProcessingAllowed > now
-          ? damState.nextProcessingAllowed - now
-          : undefined;
-
-        results.push({
-          conversationId: damState.conversationId,
-          conversationTitle: conversation.title,
-          damStatus: damState.damStatus as "approaching" | "full" | "blocked",
-          currentTokens: damState.currentTokens,
-          tokenLimit: damState.tokenLimit,
-          percentageFull: damState.percentageFull,
-          processingPaused: damState.processingPaused,
-          nextProcessingAllowed: damState.nextProcessingAllowed,
-          lastUpdated: damState.lastUpdated,
-          timeUntilResume,
-        });
-      }
+    if (!needsAttention) {
+      return { needsAttention: false as const };
     }
 
-    // Sort by most critical first (highest percentage, then most recent)
-    results.sort((a, b) => {
-      if (a.percentageFull !== b.percentageFull) {
-        return b.percentageFull - a.percentageFull;
-      }
-      return b.lastUpdated - a.lastUpdated;
-    });
+    const timeUntilResume = damState.nextProcessingAllowed && damState.nextProcessingAllowed > now
+      ? damState.nextProcessingAllowed - now
+      : undefined;
 
-    return results;
+    // Sort contributing conversations by tokens contributed (highest first)
+    const contributingConversations = damState.accumulatedConversations
+      .sort((a, b) => b.tokensContributed - a.tokensContributed);
+
+    return {
+      needsAttention: true as const,
+      damStatus: damState.damStatus as "approaching" | "full" | "blocked",
+      currentTokens: damState.currentTokens,
+      tokenLimit: damState.tokenLimit,
+      percentageFull: damState.percentageFull,
+      processingPaused: damState.processingPaused,
+      nextProcessingAllowed: damState.nextProcessingAllowed,
+      lastUpdated: damState.lastUpdated,
+      timeUntilResume,
+      contributingConversations,
+    };
   },
 });
 
 /**
- * Check if processing is allowed for a conversation
+ * Check if processing is allowed for a user's dam
  * 
- * Quick check to determine if a conversation can process new messages.
+ * Quick check to determine if the user's dam can process new messages.
  */
 export const isProcessingAllowed = query({
   args: {
     userId: v.string(),
-    conversationId: v.id("conversations"),
   },
   returns: v.object({
     allowed: v.boolean(),
@@ -615,23 +569,16 @@ export const isProcessingAllowed = query({
   handler: async (ctx, args) => {
     const now = Date.now();
 
-    // Get dam state
+    // Get user's single dam state
     const damState = await ctx.db
       .query("token_dam_state")
-      .withIndex("by_user_conversation", (q) => 
-        q.eq("userId", args.userId).eq("conversationId", args.conversationId)
-      )
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .first();
 
     if (!damState) {
       // No dam state exists, processing is allowed
-      const user = await ctx.db
-        .query("users")
-        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-        .first();
-      
-      const tokenLimit = user?.subscription ? 
-        (user.subscription.includedRequests || 100) * 1000 : 100000;
+      // Fixed token limit aligned with backend dam pattern
+      const tokenLimit = 2000;
 
       return {
         allowed: true,
@@ -694,7 +641,6 @@ export const getDamStatesForProcessing = internalQuery({
   returns: v.array(v.object({
     _id: v.id("token_dam_state"),
     userId: v.string(),
-    conversationId: v.id("conversations"),
     damStatus: v.union(
       v.literal("open"),
       v.literal("approaching"), 
@@ -711,24 +657,50 @@ export const getDamStatesForProcessing = internalQuery({
     const limit = args.limit || 100;
     const now = Date.now();
 
-    let query = ctx.db.query("token_dam_state");
-
     // Apply filters
     switch (args.statusFilter) {
       case "blocked":
-        query = query.withIndex("by_status", (q) => q.eq("damStatus", "blocked"));
-        break;
+        const blockedStates = await ctx.db
+          .query("token_dam_state")
+          .withIndex("by_status", (q) => q.eq("damStatus", "blocked"))
+          .take(limit);
+        
+        return blockedStates.map(state => ({
+          _id: state._id,
+          userId: state.userId,
+          damStatus: state.damStatus,
+          currentTokens: state.currentTokens,
+          tokenLimit: state.tokenLimit,
+          processingPaused: state.processingPaused,
+          nextProcessingAllowed: state.nextProcessingAllowed,
+          lastUpdated: state.lastUpdated,
+        }));
+        
       case "paused":
-        query = query.withIndex("by_processing_paused", (q) => q.eq("processingPaused", true));
-        break;
+        const pausedStates = await ctx.db
+          .query("token_dam_state")
+          .withIndex("by_processing_paused", (q) => q.eq("processingPaused", true))
+          .take(limit);
+        
+        return pausedStates.map(state => ({
+          _id: state._id,
+          userId: state.userId,
+          damStatus: state.damStatus,
+          currentTokens: state.currentTokens,
+          tokenLimit: state.tokenLimit,
+          processingPaused: state.processingPaused,
+          nextProcessingAllowed: state.nextProcessingAllowed,
+          lastUpdated: state.lastUpdated,
+        }));
+        
       case "ready_to_resume":
         // Get paused states where cooldown has expired
-        const pausedStates = await ctx.db
+        const readyStates = await ctx.db
           .query("token_dam_state")
           .withIndex("by_processing_paused", (q) => q.eq("processingPaused", true))
           .collect();
         
-        return pausedStates
+        return readyStates
           .filter(state => 
             !state.nextProcessingAllowed || state.nextProcessingAllowed <= now
           )
@@ -736,7 +708,6 @@ export const getDamStatesForProcessing = internalQuery({
           .map(state => ({
             _id: state._id,
             userId: state.userId,
-            conversationId: state.conversationId,
             damStatus: state.damStatus,
             currentTokens: state.currentTokens,
             tokenLimit: state.tokenLimit,
@@ -744,20 +715,23 @@ export const getDamStatesForProcessing = internalQuery({
             nextProcessingAllowed: state.nextProcessingAllowed,
             lastUpdated: state.lastUpdated,
           }));
+          
+      default:
+        // Get all states
+        const allStates = await ctx.db
+          .query("token_dam_state")
+          .take(limit);
+        
+        return allStates.map(state => ({
+          _id: state._id,
+          userId: state.userId,
+          damStatus: state.damStatus,
+          currentTokens: state.currentTokens,
+          tokenLimit: state.tokenLimit,
+          processingPaused: state.processingPaused,
+          nextProcessingAllowed: state.nextProcessingAllowed,
+          lastUpdated: state.lastUpdated,
+        }));
     }
-
-    const states = await query.take(limit);
-
-    return states.map(state => ({
-      _id: state._id,
-      userId: state.userId,
-      conversationId: state.conversationId,
-      damStatus: state.damStatus,
-      currentTokens: state.currentTokens,
-      tokenLimit: state.tokenLimit,
-      processingPaused: state.processingPaused,
-      nextProcessingAllowed: state.nextProcessingAllowed,
-      lastUpdated: state.lastUpdated,
-    }));
   },
 });

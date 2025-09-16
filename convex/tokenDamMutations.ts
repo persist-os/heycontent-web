@@ -13,10 +13,10 @@ import { Id } from "./_generated/dataModel";
  */
 
 /**
- * Update or create token dam state for a conversation
+ * Update or create user's token dam state when tokens are consumed
  * 
- * This is the primary mutation for updating dam state when tokens are consumed.
- * It calculates current usage, determines dam status, and enforces limits.
+ * This is the primary mutation for updating the single user dam state.
+ * It accumulates tokens across all conversations and triggers processing when limits are reached.
  */
 export const updateDamState = mutation({
   args: {
@@ -38,6 +38,7 @@ export const updateDamState = mutation({
     percentageFull: v.number(),
     tokensRemaining: v.number(),
     processingPaused: v.boolean(),
+    shouldTriggerProcessing: v.boolean(), // Whether dam reached threshold
   }),
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -63,33 +64,72 @@ export const updateDamState = mutation({
         throw new Error("User subscription not found");
       }
       
-      // Calculate token limit based on subscription (example: 1000 tokens per included request)
-      tokenLimit = (user.subscription.includedRequests || 100) * 1000;
+      // Calculate reasonable token limit for dam pattern (reduced multiplier)
+      const subscriptionLimit = (user.subscription.includedRequests || 100) * 10;
+      tokenLimit = Math.min(subscriptionLimit, 5000); // Cap at 5000 tokens for effective dam operation
     }
 
-    // Find existing dam state for this conversation
+    // Find existing user dam state (single dam per user)
     const existingDamState = await ctx.db
       .query("token_dam_state")
-      .withIndex("by_user_conversation", (q) => 
-        q.eq("userId", args.userId).eq("conversationId", args.conversationId)
-      )
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .first();
 
     const previousTokens = existingDamState?.currentTokens || 0;
+    const previousMessageCount = existingDamState?.totalMessageCount || 
+      // If totalMessageCount doesn't exist, calculate from accumulated conversations
+      (existingDamState?.accumulatedConversations?.reduce((total, conv) => total + ((conv as any).messageCount || 0), 0) || 0);
     const newCurrentTokens = Math.max(0, previousTokens + args.tokensUsed);
+    const newTotalMessageCount = previousMessageCount + 1; // Each update adds one message
     const percentageFull = Math.min(100, (newCurrentTokens / tokenLimit) * 100);
     const tokensRemaining = Math.max(0, tokenLimit - newCurrentTokens);
 
+    // Update accumulated conversations
+    const accumulatedConversations = existingDamState?.accumulatedConversations || [];
+    const existingConvIndex = accumulatedConversations.findIndex(
+      conv => conv.conversationId === args.conversationId
+    );
+
+    if (existingConvIndex >= 0) {
+      // Update existing conversation contribution
+      accumulatedConversations[existingConvIndex] = {
+        ...accumulatedConversations[existingConvIndex],
+        tokensContributed: accumulatedConversations[existingConvIndex].tokensContributed + args.tokensUsed,
+        messageCount: (accumulatedConversations[existingConvIndex].messageCount || 0) + 1, // Increment message count (handle migration)
+        lastUpdate: now
+      };
+    } else {
+      // Add new conversation to accumulation
+      accumulatedConversations.push({
+        conversationId: args.conversationId,
+        conversationTitle: conversation.title, // ADD THIS
+        tokensContributed: args.tokensUsed,
+        messageCount: 1,
+        lastUpdate: now,
+        firstContribution: now 
+      });
+    }
+
     // Determine dam status based on percentage
     let damStatus: "open" | "approaching" | "full" | "blocked";
+    let shouldTriggerProcessing = false;
+
     if (percentageFull >= 100) {
       damStatus = "blocked";
+      shouldTriggerProcessing = true;
     } else if (percentageFull >= 95) {
       damStatus = "full";
+      shouldTriggerProcessing = true;
     } else if (percentageFull >= 80) {
       damStatus = "approaching";
     } else {
       damStatus = "open";
+    }
+
+    // Check if we've reached the accumulation threshold (align with backend PERSONA_TRACE_TOKEN_LIMIT)
+    const DAM_THRESHOLD = 500;
+    if (newCurrentTokens >= DAM_THRESHOLD && !shouldTriggerProcessing) {
+      shouldTriggerProcessing = true;
     }
 
     const processingPaused = damStatus === "blocked";
@@ -97,16 +137,17 @@ export const updateDamState = mutation({
 
     const damStateData = {
       userId: args.userId,
-      conversationId: args.conversationId,
       currentTokens: newCurrentTokens,
       tokenLimit,
       damStatus,
       percentageFull,
       tokensRemaining,
       lastMessageTokens: args.tokensUsed,
+      totalMessageCount: newTotalMessageCount,
       lastUpdated: now,
       processingPaused,
       nextProcessingAllowed,
+      accumulatedConversations,
     };
 
     let damStateId: Id<"token_dam_state">;
@@ -138,7 +179,7 @@ export const updateDamState = mutation({
       requestId: args.requestId,
     });
 
-    console.log(`[TokenDam] Updated state for conversation ${args.conversationId}: ${damStatus} (${percentageFull.toFixed(1)}% full)`);
+    console.log(`[TokenDam] Updated user dam for ${args.userId}: ${damStatus} (${percentageFull.toFixed(1)}% full, ${newCurrentTokens} tokens), shouldTrigger: ${shouldTriggerProcessing}`);
 
     return {
       damStatus,
@@ -147,136 +188,29 @@ export const updateDamState = mutation({
       percentageFull,
       tokensRemaining,
       processingPaused,
+      shouldTriggerProcessing,
     };
   },
 });
 
 /**
- * Trigger dam processing for a conversation
+ * Process and drain the user's token dam
  * 
- * Manually trigger processing for a conversation, checking if it's allowed
- * based on current dam state and limits.
+ * This function is called when the dam reaches its threshold.
+ * It processes the accumulated conversations and resets the dam.
  */
-export const triggerDamProcessing = mutation({
+export const processDam = mutation({
   args: {
     userId: v.string(),
-    conversationId: v.id("conversations"),
     requestId: v.optional(v.string()),
-    overrideLimits: v.optional(v.boolean()), // Admin override for limits
-  },
-  returns: v.object({
-    processingAllowed: v.boolean(),
-    damStatus: v.union(
-      v.literal("open"),
-      v.literal("approaching"), 
-      v.literal("full"),
-      v.literal("blocked")
-    ),
-    reasonBlocked: v.optional(v.string()),
-    nextProcessingAllowed: v.optional(v.number()),
-  }),
-  handler: async (ctx, args) => {
-    const now = Date.now();
-    
-    // Get current dam state
-    const damState = await ctx.db
-      .query("token_dam_state")
-      .withIndex("by_user_conversation", (q) => 
-        q.eq("userId", args.userId).eq("conversationId", args.conversationId)
-      )
-      .first();
-
-    if (!damState) {
-      // No dam state exists, processing is allowed
-      return {
-        processingAllowed: true,
-        damStatus: "open" as const,
-      };
-    }
-
-    // Check if processing is currently paused
-    let processingAllowed = !damState.processingPaused;
-    let reasonBlocked: string | undefined;
-
-    // Check if enough time has passed since last block
-    if (damState.nextProcessingAllowed && now < damState.nextProcessingAllowed) {
-      processingAllowed = false;
-      reasonBlocked = `Processing paused until ${new Date(damState.nextProcessingAllowed).toISOString()}`;
-    }
-
-    // Admin override
-    if (args.overrideLimits) {
-      processingAllowed = true;
-      reasonBlocked = undefined;
-    }
-
-    // If processing was resumed, update the dam state
-    if (processingAllowed && damState.processingPaused) {
-      await ctx.db.patch(damState._id, {
-        processingPaused: false,
-        nextProcessingAllowed: undefined,
-        lastUpdated: now,
-      });
-
-      // Record history
-      await ctx.db.insert("token_dam_processing_history", {
-        userId: args.userId,
-        conversationId: args.conversationId,
-        damStateId: damState._id,
-        eventType: "processing_resumed",
-        tokensBefore: damState.currentTokens,
-        tokensAfter: damState.currentTokens,
-        tokensDelta: 0,
-        processingAllowed: true,
-        timestamp: now,
-        requestId: args.requestId,
-      });
-
-      console.log(`[TokenDam] Processing resumed for conversation ${args.conversationId}`);
-    }
-
-    // Record manual trigger attempt
-    await ctx.db.insert("token_dam_processing_history", {
-      userId: args.userId,
-      conversationId: args.conversationId,
-      damStateId: damState._id,
-      eventType: "manual_trigger",
-      tokensBefore: damState.currentTokens,
-      tokensAfter: damState.currentTokens,
-      tokensDelta: 0,
-      processingAllowed,
-      reasonBlocked,
-      timestamp: now,
-      requestId: args.requestId,
-    });
-
-    return {
-      processingAllowed,
-      damStatus: damState.damStatus,
-      reasonBlocked,
-      nextProcessingAllowed: damState.nextProcessingAllowed,
-    };
-  },
-});
-
-/**
- * Reset dam state for a conversation
- * 
- * Resets token counting for a conversation, useful for new billing periods
- * or when subscription limits change.
- */
-export const resetDamState = mutation({
-  args: {
-    userId: v.string(),
-    conversationId: v.id("conversations"),
-    newTokenLimit: v.optional(v.number()),
-    reason: v.optional(v.string()),
   },
   returns: v.object({
     success: v.boolean(),
-    newState: v.object({
+    tokensProcessed: v.number(),
+    conversationsProcessed: v.number(),
+    damDrained: v.boolean(),
+    nextDamState: v.object({
       currentTokens: v.number(),
-      tokenLimit: v.number(),
       damStatus: v.union(
         v.literal("open"),
         v.literal("approaching"), 
@@ -288,79 +222,115 @@ export const resetDamState = mutation({
   handler: async (ctx, args) => {
     const now = Date.now();
     
-    // Get user's token limit if not provided
-    let tokenLimit = args.newTokenLimit;
-    if (!tokenLimit) {
-      const user = await ctx.db
-        .query("users")
-        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-        .first();
-      
-      if (!user?.subscription) {
-        throw new Error("User subscription not found");
-      }
-      
-      tokenLimit = (user.subscription.includedRequests || 100) * 1000;
-    }
-
-    // Find existing dam state
-    const existingDamState = await ctx.db
+    // Get current dam state
+    const damState = await ctx.db
       .query("token_dam_state")
-      .withIndex("by_user_conversation", (q) => 
-        q.eq("userId", args.userId).eq("conversationId", args.conversationId)
-      )
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .first();
 
-    const resetData = {
+    if (!damState) {
+      throw new Error("No dam state found for user");
+    }
+
+    const tokensProcessed = damState.currentTokens;
+    const conversationsProcessed = damState.accumulatedConversations.length;
+
+    console.log(`[TokenDam] Processing dam for user ${args.userId}: ${tokensProcessed} tokens, ${conversationsProcessed} conversations`);
+
+    // Record processing event
+    await ctx.db.insert("token_dam_processing_history", {
       userId: args.userId,
-      conversationId: args.conversationId,
+      damStateId: damState._id,
+      eventType: "dam_processed",
+      tokensBefore: tokensProcessed,
+      tokensAfter: 0, // Dam will be drained
+      tokensDelta: -tokensProcessed,
+      processingAllowed: true,
+      timestamp: now,
+      requestId: args.requestId,
+    });
+
+    // Drain the dam - reset to empty state
+    const drainedDamState = {
       currentTokens: 0,
-      tokenLimit,
       damStatus: "open" as const,
       percentageFull: 0,
-      tokensRemaining: tokenLimit,
-      lastMessageTokens: undefined,
+      tokensRemaining: damState.tokenLimit,
+      lastMessageTokens: 0,
+      lastConversationId: undefined,
+      totalMessageCount: 0, // Reset message count
       lastUpdated: now,
       processingPaused: false,
       nextProcessingAllowed: undefined,
+      accumulatedConversations: [], // Clear accumulated conversations
     };
 
-    let damStateId: Id<"token_dam_state">;
+    await ctx.db.patch(damState._id, drainedDamState);
 
-    if (existingDamState) {
-      await ctx.db.patch(existingDamState._id, resetData);
-      damStateId = existingDamState._id;
-    } else {
-      damStateId = await ctx.db.insert("token_dam_state", {
-        ...resetData,
-        createdAt: now,
-      });
-    }
-
-    // Record reset in history
-    await ctx.db.insert("token_dam_processing_history", {
-      userId: args.userId,
-      conversationId: args.conversationId,
-      damStateId,
-      eventType: "dam_updated",
-      tokensBefore: existingDamState?.currentTokens || 0,
-      tokensAfter: 0,
-      tokensDelta: -(existingDamState?.currentTokens || 0),
-      processingAllowed: true,
-      reasonBlocked: undefined,
-      timestamp: now,
-      metadata: { reason: args.reason || "Manual reset" },
-    });
-
-    console.log(`[TokenDam] Reset state for conversation ${args.conversationId}: ${args.reason || "Manual reset"}`);
+    console.log(`[TokenDam] Dam drained for user ${args.userId} - processed ${tokensProcessed} tokens`);
 
     return {
       success: true,
-      newState: {
+      tokensProcessed,
+      conversationsProcessed,
+      damDrained: true,
+      nextDamState: {
         currentTokens: 0,
-        tokenLimit,
         damStatus: "open" as const,
       },
+    };
+  },
+});
+
+/**
+ * Trigger dam processing for a conversation
+ * 
+ * Manually trigger processing for a conversation, checking if it's allowed
+ * based on current dam state and limits.
+ */
+/**
+ * Migration helper: Fix existing dam records that don't have totalMessageCount
+ */
+export const migrateDamMessageCount = mutation({
+  args: {
+    userId: v.string(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    updated: v.boolean(),
+    totalMessageCount: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const damState = await ctx.db
+      .query("token_dam_state")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .first();
+
+    if (!damState) {
+      return { success: true, updated: false, totalMessageCount: 0 };
+    }
+
+    // Check if totalMessageCount exists and is valid
+    if (damState.totalMessageCount != null && damState.totalMessageCount >= 0) {
+      return { success: true, updated: false, totalMessageCount: damState.totalMessageCount };
+    }
+
+    // Calculate totalMessageCount from accumulated conversations
+    const calculatedMessageCount = damState.accumulatedConversations.reduce(
+      (total, conv) => total + ((conv as any).messageCount || 0), 0
+    );
+
+    // Update the dam state with the calculated message count
+    await ctx.db.patch(damState._id, {
+      totalMessageCount: calculatedMessageCount,
+    });
+
+    console.log(`[TokenDam] Migrated message count for user ${args.userId}: ${calculatedMessageCount} messages`);
+
+    return { 
+      success: true, 
+      updated: true, 
+      totalMessageCount: calculatedMessageCount 
     };
   },
 });
@@ -388,10 +358,10 @@ export const pauseDamProcessing = mutation({
     const nextProcessingAllowed = now + pauseDuration;
 
     // Get or create dam state
-    let damState = await ctx.db
+    const damState = await ctx.db
       .query("token_dam_state")
-      .withIndex("by_user_conversation", (q) => 
-        q.eq("userId", args.userId).eq("conversationId", args.conversationId)
+      .withIndex("by_user", (q) => 
+        q.eq("userId", args.userId)
       )
       .first();
 
@@ -417,7 +387,6 @@ export const pauseDamProcessing = mutation({
 
       damStateId = await ctx.db.insert("token_dam_state", {
         userId: args.userId,
-        conversationId: args.conversationId,
         currentTokens: 0,
         tokenLimit,
         damStatus: "blocked",
@@ -427,13 +396,14 @@ export const pauseDamProcessing = mutation({
         createdAt: now,
         processingPaused: true,
         nextProcessingAllowed,
+        accumulatedConversations: [],
+        totalMessageCount: 0,
       });
     }
 
     // Record pause in history
     await ctx.db.insert("token_dam_processing_history", {
       userId: args.userId,
-      conversationId: args.conversationId,
       damStateId,
       eventType: "processing_paused",
       tokensBefore: damState?.currentTokens || 0,
@@ -475,8 +445,8 @@ export const resumeDamProcessing = mutation({
     // Get dam state
     const damState = await ctx.db
       .query("token_dam_state")
-      .withIndex("by_user_conversation", (q) => 
-        q.eq("userId", args.userId).eq("conversationId", args.conversationId)
+      .withIndex("by_user", (q) => 
+        q.eq("userId", args.userId)
       )
       .first();
 

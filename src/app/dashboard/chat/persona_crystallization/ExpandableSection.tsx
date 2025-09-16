@@ -46,6 +46,29 @@ export function ExpandableSection({
 }
 
 /**
+ * Header content only (for use inside other button wrappers)
+ */
+export function ExpandableSectionHeader({ 
+  isExpanded, 
+  title, 
+  count 
+}: { isExpanded: boolean; title: string; count: number }) {
+  return (
+    <div className="flex items-center gap-3">
+      {isExpanded ? (
+        <ChevronDown className="h-5 w-5 text-muted-foreground" />
+      ) : (
+        <ChevronRight className="h-5 w-5 text-muted-foreground" />
+      )}
+      <span className="font-semibold text-sm text-foreground">{title}</span>
+      <span className="text-xs text-muted-foreground bg-muted/50 px-2.5 py-1 rounded-full font-medium border border-border/20">
+        {count.toLocaleString()}
+      </span>
+    </div>
+  );
+}
+
+/**
  * Expandable content container with enhanced styling for larger displays
  */
 export function ExpandableContent({ 

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { usePersonaCrystallization } from '@/hooks/usePersonaCrystallization';
+import { useTokenDamCheck } from '@/hooks/useTokenDamCheck';
 
 interface PersonaTriggerPollingProps {
   userId?: string;
@@ -40,6 +41,9 @@ export function PersonaTriggerPolling({
   enabled = true, 
   pollingInterval = 30000 // 30 seconds default
 }: PersonaTriggerPollingProps) {
+  
+  // Check token dam status to prevent processing when limits are exceeded
+  const damCheck = useTokenDamCheck({ userId: userId || '' });
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const processingRef = useRef<Set<string>>(new Set()); // Track triggers being processed
   const crystallizationTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Track crystallization timeout
@@ -356,6 +360,21 @@ export function PersonaTriggerPolling({
       processingState: processingStateRef.current.currentOperation
     });
 
+    // Final check before expensive processing - ensure dam still allows processing
+    if (!damCheck.isAllowed) {
+      console.log('🚫 [PERSONA POLLING] Token dam blocking processing at execution time:', damCheck.reasonBlocked);
+      // Remove trigger from processing set and return
+      processingRef.current.delete(triggerKey);
+      updateProcessingState({
+        isExtracting: false,
+        isCrystallizing: false,
+        currentOperation: 'idle',
+        startTime: null,
+        triggerBeingProcessed: null
+      });
+      return;
+    }
+
       extractTracesFromConversation(trigger.conversation_id, conversationData)
         .then(async (extractionResult) => {
           console.log('✅ [PERSONA POLLING] Successfully extracted traces for trigger:', trigger._id);
@@ -464,7 +483,7 @@ export function PersonaTriggerPolling({
           const duration = processingStateRef.current.startTime ? Date.now() - processingStateRef.current.startTime : 0;
           console.log('🏁 [PERSONA POLLING] Completed processing for trigger:', trigger._id, { duration });
         });
-  }, [triggers, conversationData, userId, enabled, isExtracting, isCrystallizing, extractTracesFromConversation, crystallizeUserInsights, markTriggerProcessed, checkCircuitBreaker, shouldRetry, recordSuccess, recordFailure]);
+  }, [triggers, conversationData, userId, enabled, isExtracting, isCrystallizing, extractTracesFromConversation, crystallizeUserInsights, markTriggerProcessed, checkCircuitBreaker, shouldRetry, recordSuccess, recordFailure, damCheck.isAllowed, damCheck.reasonBlocked]);
 
   // Setup polling interval with dynamic intervals and smart polling
   useEffect(() => {
@@ -500,6 +519,12 @@ export function PersonaTriggerPolling({
         // Skip polling if backoff is active
         if (!shouldRetry()) {
           console.log('⏳ [PERSONA POLLING] Backoff active, skipping poll');
+          return;
+        }
+        
+        // Skip polling if token dam blocks processing
+        if (!damCheck.isAllowed) {
+          console.log('🚫 [PERSONA POLLING] Token dam blocking processing:', damCheck.reasonBlocked);
           return;
         }
         

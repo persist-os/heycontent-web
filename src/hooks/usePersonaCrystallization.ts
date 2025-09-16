@@ -8,6 +8,7 @@ import {
 } from '@/app/lib/persona-api';
 import { usePersonaStore } from '@/store/persona-store';
 import { personaErrorHandler, categorizeError, PersonaError } from '@/lib/persona-error-handler';
+import { useTokenDamCheck } from './useTokenDamCheck';
 
 export interface PersonaCrystallizationConfig {
   autoCrystallizationEnabled: boolean;
@@ -58,6 +59,9 @@ export interface UsePersonaCrystallizationReturn {
  */
 export const usePersonaCrystallization = (userId: string | undefined): UsePersonaCrystallizationReturn => {
   const convex = useConvex();
+  
+  // Check token dam status before expensive operations
+  const damCheck = useTokenDamCheck({ userId: userId || '' });
   const refreshPersonaData = usePersonaStore(state => state.refreshPersonaData);
   
   const [state, setState] = useState<PersonaCrystallizationState>({
@@ -312,6 +316,19 @@ export const usePersonaCrystallization = (userId: string | undefined): UsePerson
       throw new Error('User ID is required for trace extraction');
     }
 
+    // Check token dam before expensive operation
+    if (!damCheck.isAllowed) {
+      console.error(`❌ [HOOK:${hookId}] Token dam blocking trace extraction:`, damCheck.reasonBlocked);
+      const damError = personaErrorHandler.logError(
+        'validation',
+        `Trace extraction blocked by usage limits: ${damCheck.reasonBlocked}`,
+        { operation: 'extract_traces_dam_check', damStatus: damCheck.damStatus },
+        new Error(`Token dam blocked: ${damCheck.reasonBlocked}`)
+      );
+      setState(prev => ({ ...prev, extractionError: damError }));
+      throw new Error(`Operation blocked by usage limits: ${damCheck.reasonBlocked}. Please wait or upgrade your plan.`);
+    }
+
     console.log(`🔄 [HOOK:${hookId}] Setting extraction state to loading`);
     setState(prev => ({ 
       ...prev, 
@@ -501,6 +518,19 @@ export const usePersonaCrystallization = (userId: string | undefined): UsePerson
       );
       setState(prev => ({ ...prev, crystallizationError: validationError }));
       throw new Error('User ID is required for insight crystallization');
+    }
+
+    // Check token dam before expensive operation
+    if (!damCheck.isAllowed) {
+      console.error(`❌ [CRYSTALLIZATION:${crystallizationId}] STEP 0 FAILED: Token dam blocking crystallization:`, damCheck.reasonBlocked);
+      const damError = personaErrorHandler.logError(
+        'validation',
+        `Crystallization blocked by usage limits: ${damCheck.reasonBlocked}`,
+        { operation: 'crystallize_insights_dam_check', damStatus: damCheck.damStatus },
+        new Error(`Token dam blocked: ${damCheck.reasonBlocked}`)
+      );
+      setState(prev => ({ ...prev, crystallizationError: damError }));
+      throw new Error(`Operation blocked by usage limits: ${damCheck.reasonBlocked}. Please wait or upgrade your plan.`);
     }
 
     console.warn(`⚠️ [CRYSTALLIZATION:${crystallizationId}] STEP 1: Validating ${traceIds.length} trace IDs`, {

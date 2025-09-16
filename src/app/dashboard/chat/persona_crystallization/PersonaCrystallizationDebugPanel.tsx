@@ -78,9 +78,9 @@ export function PersonaCrystallizationDebugPanel() {
     >
       <motion.div
         animate={{
-          width: isExpanded ? "560px" : "48px", // Increased from 400px to 560px (40% larger)
+          width: isExpanded ? "600px" : "48px", // Reasonable size for minimal content
           height: isExpanded ? "auto" : "48px",
-          maxHeight: isExpanded ? "85vh" : "48px" // Increased from 75vh to 85vh
+          maxHeight: isExpanded ? "85vh" : "48px" // Back to reasonable height
         }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
         className="bg-background/95 backdrop-blur-sm border border-border/50 rounded-xl overflow-hidden shadow-xl"
@@ -172,10 +172,11 @@ export function PersonaCrystallizationDebugPanel() {
                       isExpanded={expandedSections.has('traces')}
                       onToggle={() => toggleSection('traces')}
                       onCopy={() => handleCopy(generateTracesMarkdown(), 'Traces')}
+                      showAdvanced={showAdvanced}
                     />
 
                     {/* Token Dam Status Section */}
-                    {data.damStatus && process.env.NODE_ENV === 'development' && (
+                    {data.damStatus && (
                       <DamStatusSection
                         isExpanded={expandedSections.has('dam')}
                         onToggle={() => toggleSection('dam')}

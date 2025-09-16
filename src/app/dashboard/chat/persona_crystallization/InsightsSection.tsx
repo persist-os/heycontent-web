@@ -22,41 +22,94 @@ export function InsightsSection({
 }: InsightsSectionProps) {
   const data = usePersonaCrystallizationData();
 
-  const renderInsight = (insight: PersonaInsight, index: number) => (
-    <div key={index} className="border-l-4 border-blue-500/40 pl-4 py-3 bg-background/30 rounded-r-lg">
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
-          {insight.insight_type}
+  const renderInsight = (insight: PersonaInsight, index: number) => {
+    // Safe fallbacks for new fields
+    const insightId = insight.insight_id || `insight_${insight.last_observed}`;
+    const supportingCount = insight.supporting_traces?.length || 0;
+    const contradictionCount = insight.contradiction_flags?.length || 0;
+    const evolutionEvents = insight.evolution_history?.length || 0;
+    const correlations = insight.cross_pattern_correlations?.length || 0;
+    
+    return (
+      <div key={index} className="space-y-3 pb-4">
+        {/* Main Crystallized Insight - Always First */}
+        <p className="text-sm text-foreground leading-relaxed font-medium">
+          {insight.crystallized_insight}
+        </p>
+
+        {/* Type and Confidence */}
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span className="font-medium">{insight.insight_type.replace(/_/g, ' ')}</span>
+          <span>{Math.round(insight.confidence * 100)}% crystallized</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded-full">
-            {Math.round(insight.confidence * 100)}%
-          </span>
-          {showAdvanced && (
-            <span className="text-xs text-muted-foreground">
-              {formatTimestamp(insight.last_observed, { relative: true })}
-            </span>
-          )}
+
+        {/* Core Evidence */}
+        <div className="flex gap-4 text-xs text-muted-foreground">
+          <span>{supportingCount} supporting</span>
+          <span>{Math.round(insight.temporal_stability * 100)}% stable</span>
+          {correlations > 0 && <span>{correlations} patterns</span>}
+          <span>{formatTimestamp(insight.last_observed, { relative: true })}</span>
         </div>
-      </div>
-      <p className="text-sm text-foreground leading-relaxed mb-2 font-medium">
-        {insight.crystallized_insight}
-      </p>
-      {showAdvanced && (
-        <div className="space-y-1 text-xs text-muted-foreground border-t border-border/20 pt-2">
-          {insight.contexts && insight.contexts.length > 0 && (
-            <div>
-              <span className="font-medium">Contexts:</span> {insight.contexts.slice(0, 3).join(', ')}
-              {insight.contexts.length > 3 && ` (+${insight.contexts.length - 3} more)`}
+
+        {/* Advanced Details */}
+        {showAdvanced && (
+          <div className="space-y-2 border-t border-border/20 pt-3">
+            {/* Evidence Foundation */}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Supporting</span>
+                <span>{supportingCount} traces</span>
+              </div>
+              {contradictionCount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Contradictions</span>
+                  <span className="text-orange-600">{contradictionCount}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Stability</span>
+                <span>{Math.round(insight.temporal_stability * 100)}%</span>
+              </div>
+              {correlations > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Patterns</span>
+                  <span>{correlations} linked</span>
+                </div>
+              )}
             </div>
-          )}
-          <div>
-            <span className="font-medium">Stability:</span> {Math.round(insight.temporal_stability * 100)}%
+
+            {/* Evolution History */}
+            {evolutionEvents > 0 && (
+              <div className="space-y-1">
+                <div className="text-xs text-muted-foreground font-medium">Recent Changes:</div>
+                {insight.evolution_history?.slice(0, 2).map((event, idx) => (
+                  <div key={idx} className="text-xs text-muted-foreground/80">
+                    {event.event_type.replace(/_/g, ' ')} ({event.confidence_change > 0 ? '+' : ''}{Math.round(event.confidence_change * 100)}%) - {formatTimestamp(event.timestamp, { relative: true })}
+                  </div>
+                ))}
+                {insight.evolution_history && insight.evolution_history.length > 2 && (
+                  <div className="text-xs text-muted-foreground/60">
+                    +{insight.evolution_history.length - 2} more changes
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Technical Details */}
+            <div className="text-xs text-muted-foreground/60 space-y-1">
+              <div>ID: {insightId.slice(-8)}</div>
+              {insight.creation_timestamp && (
+                <div>Created: {formatTimestamp(insight.creation_timestamp, { relative: true })}</div>
+              )}
+              {insight.metadata?.generation_method && (
+                <div>Method: {insight.metadata.generation_method}</div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
-    </div>
-  );
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="border border-border/30 rounded-lg overflow-hidden">

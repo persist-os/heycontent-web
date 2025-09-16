@@ -977,12 +977,11 @@ export default defineSchema({
   .index("by_processed", ["processed"])
   .index("by_user_unprocessed", ["user_id", "processed"]),
 
-  // Token Dam State - Tracks conversation token consumption and limits
+  // Token Dam State - Single dam per user that accumulates tokens across all conversations
   token_dam_state: defineTable({
-    userId: v.string(),
-    conversationId: v.id("conversations"),
+    userId: v.string(), // One dam per user
     // Current state
-    currentTokens: v.number(), // Total tokens used in conversation
+    currentTokens: v.number(), // Total tokens used across all user conversations
     tokenLimit: v.number(), // User's token limit based on subscription
     damStatus: v.union(
       v.literal("open"), // Normal flow
@@ -995,29 +994,37 @@ export default defineSchema({
     tokensRemaining: v.number(), // Calculated tokens left
     // Metadata
     lastMessageTokens: v.optional(v.number()), // Tokens from last message
+    totalMessageCount: v.number(), // Total number of messages accumulated in dam
     lastUpdated: v.number(),
     createdAt: v.number(),
     // Processing state
     processingPaused: v.boolean(), // Whether processing is paused due to limits
     nextProcessingAllowed: v.optional(v.number()), // When next processing is allowed
+    // Accumulated conversation data for processing
+    accumulatedConversations: v.array(v.object({
+      conversationId: v.id("conversations"),
+      conversationTitle: v.string(), // Store title for easier reference
+      tokensContributed: v.number(),
+      messageCount: v.number(), // Track actual number of messages
+      lastUpdate: v.number(),
+      firstContribution: v.number() // When this conversation first contributed
+    })),
   })
   .index("by_user", ["userId"])
-  .index("by_conversation", ["conversationId"])
-  .index("by_user_conversation", ["userId", "conversationId"])
   .index("by_status", ["damStatus"])
-  .index("by_user_status", ["userId", "damStatus"])
   .index("by_processing_paused", ["processingPaused"])
   .index("by_next_processing", ["nextProcessingAllowed"]),
 
   // Token Dam Processing History - Track processing events and decisions
   token_dam_processing_history: defineTable({
     userId: v.string(),
-    conversationId: v.id("conversations"),
+    conversationId: v.optional(v.id("conversations")), // Optional - some events affect entire dam
     damStateId: v.id("token_dam_state"),
     // Event details
     eventType: v.union(
       v.literal("message_processed"), // New message processed
       v.literal("dam_updated"), // Dam state changed
+      v.literal("dam_processed"), // Dam processed and drained
       v.literal("processing_paused"), // Processing paused due to limits
       v.literal("processing_resumed"), // Processing resumed
       v.literal("limit_exceeded"), // Token limit exceeded

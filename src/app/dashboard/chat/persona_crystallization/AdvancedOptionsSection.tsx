@@ -1,6 +1,6 @@
 import React from 'react';
 import { Settings2 } from 'lucide-react';
-import { ExpandableSection, ExpandableContent } from './ExpandableSection';
+import { ExpandableSectionHeader, ExpandableContent } from './ExpandableSection';
 import { usePersonaCrystallizationData } from './PersonaCrystallizationContext';
 import { formatTimeOnly } from './utils';
 
@@ -40,14 +40,11 @@ export function AdvancedOptionsSection({
         onClick={onToggle}
         className="w-full px-4 py-3 bg-muted/20 hover:bg-muted/30 transition-colors flex items-center justify-between text-left border-b border-border/10"
       >
-        <div className="flex items-center gap-3">
-          <ExpandableSection
-            isExpanded={isExpanded}
-            onToggle={() => {}} // Handled by parent button
-            title="Advanced Options"
-            count={data.debugInfo?.triggerCount || 0}
-          />
-        </div>
+        <ExpandableSectionHeader
+          isExpanded={isExpanded}
+          title="Advanced Options"
+          count={data.debugInfo?.triggerCount || 0}
+        />
         <Settings2 className="h-4 w-4 text-muted-foreground" />
       </button>
       
