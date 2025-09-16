@@ -1386,7 +1386,7 @@ app.post("/api/persona-crystallization/store-insights", async (c) => {
     
     return c.json({ 
       success: true, 
-      data: result 
+      data: result
     });
   } catch (error: any) {
     console.error("⚠️  [HTTP-CONVEX] Failed to store crystallized insights:", error);
@@ -1449,7 +1449,7 @@ app.get("/api/persona-crystallization/get-traces", async (c) => {
     if (traceIds && traceIds.length > 0) {
       console.log(`🔍 [HTTP-CONVEX] Fetching specific traces by IDs: ${traceIds.join(', ')}`);
       
-      const result = await ctx.runQuery(api.personaTraceMutations.getTracesByIds, {
+      const result = await ctx.runQuery(api.personaCrystallizationQueries.getTracesByIds, {
         userId,
         traceIds
       });
