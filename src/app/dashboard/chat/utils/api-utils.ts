@@ -1032,6 +1032,93 @@ function validateAndFilterContextGrading(
  * 2. Stage 1A: Vector search (ONLY if needed) + context grading
  * 3. Stage 2: Chat generation with or without context
  */
+export async function sendProjectDiscoveryMessage(
+  content: string, 
+  isFirstMessage: boolean, 
+  sessionId: string | null,
+  contentContext?: ContentContext | null,
+  projectName?: string
+): Promise<ChatResponseData> {
+  console.log('🔗 [API UTILS] sendProjectDiscoveryMessage called with:', {
+    content: content.substring(0, 50) + '...',
+    isFirstMessage,
+    sessionId,
+    hasContentContext: !!contentContext,
+    projectName
+  });
+
+  // Get API key - make sure we have one before proceeding
+  const apiKey = await getApiKey();
+  if (!apiKey) {
+    throw new AuthenticationError('We need to verify your account to continue. Please sign in again!');
+  }
+
+  // Get user ID directly from Firebase/cookies
+  const { getCurrentUserId } = await import('@/app/lib/api-helpers');
+  const userId = await getCurrentUserId();
+  
+  console.log('🔗 [DEBUG] Got user ID for project discovery:', userId);
+
+  // Prepare request body for project discovery endpoint
+  const requestBody = {
+    user_id: userId,
+    query: content,
+    is_first_message: isFirstMessage,
+    session_id: sessionId,
+    content_context: contentContext,
+    project_name: projectName || contentContext?.title || '',
+    project_description: contentContext?.analysis || null
+  };
+
+  console.log('🔗 [DEBUG] Project discovery request body:', {
+    user_id: userId,
+    query_length: content.length,
+    has_content_context: !!contentContext,
+    project_name: requestBody.project_name
+  });
+
+  try {
+    const response = await fetch('/api/chat/project-discovery', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (response.status === 401) {
+      throw new AuthenticationError('Session expired. Please sign in again!');
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    console.log('🔗 [DEBUG] Project discovery response:', {
+      status: data.status,
+      response_length: data.response?.length || 0,
+      has_session_id: !!data.session_id,
+      suggestions_count: data.suggestions?.length || 0
+    });
+
+    // Transform response to match expected ChatResponseData format
+    return {
+      chat_response: data.response,
+      session_id: data.session_id,
+      user_message: data.user_message,
+      suggestions: data.suggestions || [],
+      metadata: data.metadata || {}
+    };
+
+  } catch (error) {
+    console.error('🔗 [ERROR] Project discovery request failed:', error);
+    throw error;
+  }
+}
+
 export async function sendChatMessage(
   content: string, 
   isFirstMessage: boolean, 
