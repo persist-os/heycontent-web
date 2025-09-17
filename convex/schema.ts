@@ -884,11 +884,9 @@ export default defineSchema({
     reference_count: v.number(),            // How many crystals reference this shard
   })
       .index("by_user", ["userId"])
-      .index("by_dimension", ["dimension"])
-      .index("by_user_dimension", ["userId", "dimension"])
-      .index("by_confidence", ["confidence_level"])
-      .index("by_recency", ["recency_weight"])
-      .index("by_user_recency", ["userId", "recency_weight"]),
+      .index("by_dimension", ["userId", "dimension"])
+      .index("by_confidence", ["userId", "confidence_level"])
+      .index("by_recency", ["userId", "recency_weight"]),
 
 
 // === COMPREHENSIVE CRYSTALS TABLE ===
@@ -963,13 +961,12 @@ export default defineSchema({
     next_review_due: v.number(),            // When this crystal should be reviewed/updated
     review_priority: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
   })
+
       .index("by_user", ["userId"])
-      .index("by_dimension", ["dimension"])
-      .index("by_user_dimension", ["userId", "dimension"])
-      .index("by_confidence", ["confidence_score"])
-      .index("by_type", ["crystal_type"])
-      .index("by_user_type", ["userId", "crystal_type"])
-      .index("by_usage", ["usage_frequency"])
-      .index("by_review_due", ["next_review_due"]),
+      .index("by_dimension", ["userId", "dimension"])
+      .index("by_confidence", ["userId", "confidence_score"])
+      .index("by_type", ["userId","crystal_type"])
+      .index("by_usage", ["userId", "usage_frequency"])
+      .index("by_review_due", ["userId", "next_review_due"]),
 
 });
