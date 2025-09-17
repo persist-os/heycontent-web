@@ -842,4 +842,134 @@ export default defineSchema({
   .index("by_operation", ["operationId"])
   .index("by_note_user", ["noteId", "userId"])
   .index("by_user_client", ["userId", "clientId"]),
+
+  crystal_shards: defineTable({
+    // === CORE IDENTIFICATION ===
+    userId: v.string(),
+    shard_id: v.string(),                    // Unique identifier for referencing
+
+    // === SOURCE METADATA ===
+    source: v.string(),                      // "conversation_2024_01_15", "note_daily_review"
+    sourceIds: v.array(v.string()),         // Multiple sources that contributed to this shard
+    source_type: v.union(v.literal("conversation"), v.literal("note"), v.literal("document"), v.literal("behavior_observation")),
+    extraction_timestamp: v.number(),
+    extraction_method: v.union(v.literal("direct_quote"), v.literal("behavioral_inference"), v.literal("pattern_synthesis")),
+
+    // === CORE REVELATION ===
+    dimension: v.string(),                   // Identity dimension this touches
+    exact_quote: v.string(),                // Their precise words
+    what_it_reveals: v.string(),            // Qualitative interpretation
+    situation_context: v.string(),          // What was happening
+    why_significant: v.string(),            // Why this matters
+
+    // === QUALITY INDICATORS ===
+    confidence_level: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
+    linguistic_intensity: v.union(v.literal("weak"), v.literal("moderate"), v.literal("strong")), // "might" vs "always" vs "absolutely"
+    emotional_weight: v.union(v.literal("neutral"), v.literal("mild"), v.literal("strong")),      // How much they seem to care
+    specificity: v.union(v.literal("vague"), v.literal("specific"), v.literal("very_specific")),  // How detailed/concrete
+
+    // === PATTERN CONNECTIONS ===
+    connects_to: v.array(v.string()),       // Tags for connecting to other shards
+    contradicts: v.array(v.string()),       // Shard IDs that conflict
+    reinforces: v.array(v.string()),        // Shard IDs that support this
+
+    // === TEMPORAL DATA ===
+    temporal_context: v.string(),           // "during stressful periods", "when working on creative projects"
+    recency_weight: v.union(v.literal("recent"), v.literal("moderate"), v.literal("old")), // How recent/relevant
+
+    // === METADATA ===
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    last_referenced: v.number(),            // When this shard was last used in crystal formation
+    reference_count: v.number(),            // How many crystals reference this shard
+  })
+      .index("by_user", ["userId"])
+      .index("by_dimension", ["dimension"])
+      .index("by_user_dimension", ["userId", "dimension"])
+      .index("by_confidence", ["confidence_level"])
+      .index("by_recency", ["recency_weight"])
+      .index("by_user_recency", ["userId", "recency_weight"]),
+
+
+// === COMPREHENSIVE CRYSTALS TABLE ===
+
+    crystals: defineTable({
+    // === CORE IDENTIFICATION ===
+    userId: v.string(),
+    crystal_id: v.string(),                 // Unique identifier
+
+    // === CRYSTAL DEFINITION ===
+    name: v.string(),                       // "Morning Productivity Pattern", "Direct Communication Preference"
+    crystal_type: v.union(
+        v.literal("stable_trait"),            // Enduring personality characteristic
+        v.literal("behavioral_pattern"),      // How they consistently act
+        v.literal("preference_cluster"),      // Related preferences that group together
+        v.literal("value_system"),           // Core beliefs and values
+        v.literal("contextual_adaptation"),  // How they adapt to different situations
+        v.literal("growth_trajectory"),      // How they're evolving over time
+        v.literal("contradiction_resolution") // How they handle internal conflicts
+    ),
+
+    dimension: v.string(),                  // Primary identity dimension
+    secondary_dimensions: v.array(v.string()), // Other dimensions this crystal touches
+
+    // === CONSOLIDATED INSIGHT ===
+    description: v.string(),                // Comprehensive description of the pattern
+    core_insight: v.string(),              // The key understanding in one sentence
+    detailed_analysis: v.string(),         // Deep dive into what this means
+
+    // === SUPPORTING EVIDENCE ===
+    shardIds: v.array(v.id("crystal_shards")), // All supporting shards
+    supporting_quotes: v.array(v.string()), // Supporting evidence
+
+    // === CONFIDENCE & RELIABILITY ===
+    confidence_score: v.union(v.literal("developing"), v.literal("moderate"), v.literal("high"), v.literal("very_high")),
+    evidence_strength: v.union(v.literal("weak"), v.literal("moderate"), v.literal("strong"), v.literal("overwhelming")),
+    consistency_rating: v.union(v.literal("inconsistent"), v.literal("mostly_consistent"), v.literal("very_consistent")),
+    observation_count: v.number(),          // Number of times we've observed this pattern
+    time_span_days: v.number(),            // How long we've been observing this pattern
+
+    // === PATTERN METADATA ===
+    tags: v.array(v.string()),             // Semantic tags for retrieval
+    behavioral_implications: v.array(v.string()), // What this suggests they might do
+    interaction_guidance: v.array(v.string()),    // How AI should adapt based on this
+
+    // === CONTRADICTIONS & NUANCE ===
+    contradicting_shards: v.array(v.id("crystal_shards")), // Shards that contradict this pattern
+    contradiction_analysis: v.string(),     // How contradictions are resolved/understood
+
+    // === EVOLUTION TRACKING ===
+    evolution_history: v.array(v.object({
+      timestamp: v.number(),
+      change_type: v.union(v.literal("strengthened"), v.literal("weakened"), v.literal("refined"), v.literal("contradicted")),
+      description: v.string(),
+      triggering_shard_id: v.id("crystal_shards")
+    })),
+    stability_trend: v.union(v.literal("strengthening"), v.literal("stable"), v.literal("weakening"), v.literal("evolving")),
+    last_evolution: v.number(),             // When this crystal last changed significantly
+
+    // === CROSS-CRYSTAL RELATIONSHIPS ===
+    related_crystals: v.array(v.id("crystals")), // Other crystals this connects to
+    conflicting_crystals: v.array(v.id("crystals")), // Crystals that contradict this one
+
+    // === UTILIZATION METADATA ===
+    usage_count: v.number(),                // How many times this crystal has been used
+    usage_frequency: v.number(),            // How often this crystal is referenced
+    last_used: v.number(),                  // When this was last used for AI decisions
+
+    // === METADATA ===
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    next_review_due: v.number(),            // When this crystal should be reviewed/updated
+    review_priority: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
+  })
+      .index("by_user", ["userId"])
+      .index("by_dimension", ["dimension"])
+      .index("by_user_dimension", ["userId", "dimension"])
+      .index("by_confidence", ["confidence_score"])
+      .index("by_type", ["crystal_type"])
+      .index("by_user_type", ["userId", "crystal_type"])
+      .index("by_usage", ["usage_frequency"])
+      .index("by_review_due", ["next_review_due"]),
+
 });
