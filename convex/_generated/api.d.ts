@@ -25,6 +25,8 @@ import type * as contentSharingMutations from "../contentSharingMutations.js";
 import type * as contentSharingQueries from "../contentSharingQueries.js";
 import type * as conversationSummariesMutations from "../conversationSummariesMutations.js";
 import type * as conversationSummariesQueries from "../conversationSummariesQueries.js";
+import type * as crystalMutations from "../crystalMutations.js";
+import type * as crystalQueries from "../crystalQueries.js";
 import type * as embeddingSystem from "../embeddingSystem.js";
 import type * as feedback from "../feedback.js";
 import type * as fingerprintEvolutionMutations from "../fingerprintEvolutionMutations.js";
@@ -88,6 +90,8 @@ declare const fullApi: ApiFromModules<{
   contentSharingQueries: typeof contentSharingQueries;
   conversationSummariesMutations: typeof conversationSummariesMutations;
   conversationSummariesQueries: typeof conversationSummariesQueries;
+  crystalMutations: typeof crystalMutations;
+  crystalQueries: typeof crystalQueries;
   embeddingSystem: typeof embeddingSystem;
   feedback: typeof feedback;
   fingerprintEvolutionMutations: typeof fingerprintEvolutionMutations;

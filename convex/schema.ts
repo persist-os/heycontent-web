@@ -968,5 +968,4 @@ export default defineSchema({
       .index("by_type", ["userId","crystal_type"])
       .index("by_usage", ["userId", "usage_frequency"])
       .index("by_review_due", ["userId", "next_review_due"]),
-
 });
