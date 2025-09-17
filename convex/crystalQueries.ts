@@ -1,4 +1,4 @@
-import { internalQuery } from "./_generated/server";
+import { query } from "./_generated/server";
 import { v } from "convex/values";
 
 /**
@@ -72,7 +72,7 @@ const queryWithOptions = async (
  * });
  * ```
  */
-export const getCrystalData = internalQuery({
+export const getCrystalData = query({
     args: {
         userId: v.string(),
         table: v.union(v.literal("crystal_shards"), v.literal("crystals")),
@@ -116,7 +116,7 @@ export const getCrystalData = internalQuery({
  * // Returns: { shards: [...], crystals: [...] }
  * ```
  */
-export const getPersonaData = internalQuery({
+export const getPersonaData = query({
     args: {
         userId: v.string(),
         operation: v.union(
