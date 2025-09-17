@@ -99,16 +99,37 @@ export const storeCrystallizedInsights = internalMutation({
           const sourceIds: Id<"persona_traces">[] = [];
           for (const sourceId of insight.sources) {
             try {
-              // Find trace by user and look for matching content or ID
-              const traces = await ctx.db
-                .query("persona_traces")
-                .withIndex("by_user", (q) => q.eq("userId", insight.userId))
-                .collect();
-              
-              // Try to find matching trace (this is a simplified approach)
-              const matchingTrace = traces.find(t => t._id === sourceId as Id<"persona_traces">);
-              if (matchingTrace) {
-                sourceIds.push(matchingTrace._id);
+              // Try to validate if it's already a valid Convex ID
+              if (sourceId && typeof sourceId === 'string') {
+                // Attempt to get the trace directly if it's a valid Convex ID
+                try {
+                  const trace = await ctx.db.get(sourceId as Id<"persona_traces">);
+                  if (trace && trace.userId === insight.userId) {
+                    sourceIds.push(trace._id);
+                    continue;
+                  }
+                } catch {
+                  // Not a valid Convex ID, skip this attempt
+                }
+                
+                // Fallback: search for traces with matching content
+                // This is expensive but ensures we find referenced traces
+                const userTraces = await ctx.db
+                  .query("persona_traces")
+                  .withIndex("by_user", (q) => q.eq("userId", insight.userId))
+                  .collect();
+                
+                // Look for trace with matching ID in content metadata
+                const matchingTrace = userTraces.find(t => {
+                  if (t.content && typeof t.content === 'object' && t.content.trace_id === sourceId) {
+                    return true;
+                  }
+                  return false;
+                });
+                
+                if (matchingTrace) {
+                  sourceIds.push(matchingTrace._id);
+                }
               }
             } catch (error) {
               console.warn(`Failed to convert source ID ${sourceId}:`, error);

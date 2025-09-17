@@ -27,61 +27,6 @@ export const createConversation = mutation({
       // Note: Embeddings will be created automatically on next heartbeat
       console.log('📝 [CONVERSATION] Embedding will be created on next heartbeat sync');
 
-      // Check token dam status before creating expensive operations
-      if (args.messages.length >= 2) { // Only create triggers for conversations with at least 2 messages
-        try {
-          // First check if processing is allowed
-          const processingStatus = await ctx.runQuery(api.tokenDamQueries.isProcessingAllowed, {
-            userId: args.userId,
-          });
-
-          if (!processingStatus.allowed) {
-            console.warn('⚠️ [TOKEN DAM] Processing blocked for conversation creation:', processingStatus.reasonBlocked);
-            // Still create the conversation but skip expensive operations
-            return conversationId;
-          }
-
-          console.log('✅ [TOKEN DAM] Processing allowed - creating persona crystallization trigger');
-          
-          // Update dam state first and check if processing should be triggered
-          const damResult = await ctx.runMutation(api.tokenDamMutations.updateDamState, {
-            userId: args.userId,
-            conversationId,
-            tokensUsed: args.messages.reduce((total, msg) => total + Math.ceil(msg.content.length / 4), 0),
-          });
-
-          await ctx.runMutation(api.chatMutations.createPersonaCrystallizationTrigger, {
-            user_id: args.userId,
-            conversation_id: conversationId,
-            trigger_type: 'conversation_created',
-            metadata: {
-              timestamp: Date.now(),
-              source: 'conversation_creation',
-              messageCount: args.messages.length,
-              tokenDamStatus: damResult.damStatus,
-              shouldTriggerProcessing: damResult.shouldTriggerProcessing
-            }
-          });
-          console.log('✅ [CONVERSATION] Created persona crystallization trigger');
-
-          // Process dam if threshold reached
-          if (damResult.shouldTriggerProcessing) {
-            console.log('🚰 [TOKEN DAM] Threshold reached - processing dam');
-            try {
-              await ctx.runMutation(api.tokenDamMutations.processDam, {
-                userId: args.userId,
-              });
-              console.log('✅ [TOKEN DAM] Dam processed and drained');
-            } catch (error) {
-              console.error('❌ [TOKEN DAM] Failed to process dam:', error);
-            }
-          }
-        } catch (error) {
-          console.warn('⚠️ [CONVERSATION] Failed to create persona crystallization trigger:', error);
-        }
-      } else {
-        console.log('📝 [CONVERSATION] Skipping trigger creation - conversation too short');
-      }
 
       return conversationId;
     },
@@ -114,62 +59,6 @@ handler: async (ctx, args) => {
     // Note: Embeddings will be updated automatically on next heartbeat
     console.log('📝 [CONVERSATION] Embedding will be updated on next heartbeat sync');
 
-    // Check token dam before creating expensive persona crystallization triggers
-    if (args.message.role === 'user' && updatedMessages.length >= 3) {
-      try {
-        // Check if processing is allowed before expensive operations
-        const processingStatus = await ctx.runQuery(api.tokenDamQueries.isProcessingAllowed, {
-          userId: args.userId,
-        });
-
-        if (!processingStatus.allowed) {
-          console.warn('⚠️ [TOKEN DAM] Processing blocked for message addition:', processingStatus.reasonBlocked);
-          console.log('📝 [CONVERSATION] Message added but skipping expensive operations due to token limits');
-          return args.conversationId;
-        }
-
-        console.log('✅ [TOKEN DAM] Processing allowed - creating persona crystallization trigger');
-        
-        // Update dam state first and check if processing should be triggered
-        const damResult = await ctx.runMutation(api.tokenDamMutations.updateDamState, {
-          userId: args.userId,
-          conversationId: args.conversationId,
-          tokensUsed: Math.ceil(args.message.content.length / 4),
-        });
-
-        await ctx.runMutation(api.chatMutations.createPersonaCrystallizationTrigger, {
-          user_id: args.userId,
-          conversation_id: args.conversationId,
-          trigger_type: 'message_added',
-          metadata: {
-            timestamp: Date.now(),
-            source: 'message_addition',
-            messageRole: args.message.role,
-            totalMessages: updatedMessages.length,
-            tokenDamStatus: damResult.damStatus,
-            shouldTriggerProcessing: damResult.shouldTriggerProcessing
-          }
-        });
-        console.log('✅ [CONVERSATION] Created persona crystallization trigger for message addition');
-
-        // Process dam if threshold reached
-        if (damResult.shouldTriggerProcessing) {
-          console.log('🚰 [TOKEN DAM] Threshold reached - processing dam');
-          try {
-            await ctx.runMutation(api.tokenDamMutations.processDam, {
-              userId: args.userId,
-            });
-            console.log('✅ [TOKEN DAM] Dam processed and drained');
-          } catch (error) {
-            console.error('❌ [TOKEN DAM] Failed to process dam:', error);
-          }
-        }
-      } catch (error) {
-        console.warn('⚠️ [CONVERSATION] Failed to create persona crystallization trigger:', error);
-      }
-    } else {
-      console.log('📝 [CONVERSATION] Skipping trigger creation - not a user message or conversation too short');
-    }
 
     return args.conversationId;
 },
@@ -241,37 +130,8 @@ handler: async (ctx, args) => {
 },
 });
 
-// REMOVED: triggerFrontendPersonaCrystallization action
-// This old per-message trigger system has been replaced with efficient batch processing
-// The action previously created database triggers that the frontend would poll for
-
-/**
- * Create a persona crystallization trigger for frontend processing
- */
-export const createPersonaCrystallizationTrigger = mutation({
-  args: {
-    user_id: v.string(),
-    conversation_id: v.id("conversations"),
-    trigger_type: v.string(),
-    metadata: v.any()
-  },
-  returns: v.id("persona_crystallization_triggers"),
-  handler: async (ctx, args) => {
-    console.log('🎯 [CRYSTALLIZATION] Creating trigger for user:', args.user_id);
-    
-    const triggerId = await ctx.db.insert("persona_crystallization_triggers", {
-      user_id: args.user_id,
-      conversation_id: args.conversation_id,
-      trigger_type: args.trigger_type,
-      metadata: args.metadata,
-      processed: false,
-      created_at: Date.now()
-    });
-    
-    console.log('✅ [CRYSTALLIZATION] Created trigger:', triggerId);
-    return triggerId;
-  }
-});
+// REMOVED: All trigger generation code
+// Persona crystallization triggers are no longer generated from chat mutations
 
 /**
  * Enhanced chat action that searches for relevant content before responding
@@ -286,34 +146,7 @@ export const chatWithContext = action({
     console.log("🔍 [VECTOR SEARCH DEBUG] Starting chatWithContext");
     console.log("🔍 [VECTOR SEARCH DEBUG] Input query:", args.query);
     console.log("🔍 [VECTOR SEARCH DEBUG] User ID:", args.userId);
-    
-    // Check token dam status before expensive search operations
-    if (args.conversationId) {
-      try {
-        const processingStatus = await ctx.runQuery(api.tokenDamQueries.isProcessingAllowed, {
-          userId: args.userId,
-          conversationId: args.conversationId,
-        });
-
-        if (!processingStatus.allowed) {
-          console.warn('⚠️ [TOKEN DAM] Chat with context blocked:', processingStatus.reasonBlocked);
-          return {
-            context: "",
-            query: args.query,
-            relevantContent: [],
-            prompt: args.query,
-            error: `Processing paused: ${processingStatus.reasonBlocked}`,
-            tokenDamStatus: processingStatus.damStatus
-          };
-        }
-
-        console.log('✅ [TOKEN DAM] Chat with context allowed - proceeding with search');
-      } catch (damError) {
-        console.warn('⚠️ [TOKEN DAM] Failed to check dam status:', damError);
-        // Continue with degraded functionality
-      }
-    }
-    
+ 
     try {
       // Try to use REAL vector search first (with embeddings)
       console.log("🔍 [VECTOR SEARCH DEBUG] Attempting REAL vector search with embeddings...");
