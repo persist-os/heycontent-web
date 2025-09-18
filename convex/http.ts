@@ -157,10 +157,17 @@ app.post("/api/users/:id/create_conversation", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
   const { title, messages } = await c.req.json();
+  
+  // Add timestamps to messages if they don't have them
+  const messagesWithTimestamps = messages.map((message: any) => ({
+    ...message,
+    timestamp: message.timestamp || Date.now(),
+  }));
+  
   const result = await ctx.runMutation(api.chatMutations.createConversation, {
     userId,
     title,
-    messages,
+    messages: messagesWithTimestamps,
   });
   return c.json(result);
 });
@@ -170,10 +177,17 @@ app.post("/api/users/:id/add_message_to_conversation", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
   const { conversationId, message } = await c.req.json();
+  
+  // Add timestamp to message if it doesn't have one
+  const messageWithTimestamp = {
+    ...message,
+    timestamp: message.timestamp || Date.now(),
+  };
+  
   const result = await ctx.runMutation(api.chatMutations.addMessageToConversation, {
     userId,
     conversationId,
-    message,
+    message: messageWithTimestamp,
   });
   return c.json(result);
 });

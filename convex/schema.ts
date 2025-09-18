@@ -844,44 +844,44 @@ export default defineSchema({
   .index("by_user_client", ["userId", "clientId"]),
 
   crystal_shards: defineTable({
-    // === CORE IDENTIFICATION ===
-    userId: v.string(),
-    shard_id: v.string(),                    // Unique identifier for referencing
+    // === CORE IDENTIFICATION (REQUIRED) ===
+    userId: v.string(),                      // REQUIRED: User who owns this shard
+    shard_id: v.string(),                    // REQUIRED: Unique identifier for referencing
 
-    // === SOURCE METADATA ===
-    source: v.string(),                      // "conversation_2024_01_15", "note_daily_review"
-    sourceIds: v.array(v.string()),         // Multiple sources that contributed to this shard
-    source_type: v.union(v.literal("conversation"), v.literal("note"), v.literal("document"), v.literal("behavior_observation")),
-    extraction_timestamp: v.number(),
-    extraction_method: v.union(v.literal("direct_quote"), v.literal("behavioral_inference"), v.literal("pattern_synthesis")),
+    // === SOURCE METADATA (FLEXIBLE) ===
+    source: v.optional(v.string()),         // Optional: "conversation_2024_01_15", "note_daily_review"
+    sourceIds: v.optional(v.array(v.string())),  // Optional: Multiple sources that contributed to this shard
+    source_type: v.optional(v.union(v.literal("conversation"), v.literal("note"), v.literal("document"), v.literal("behavior_observation"))),
+    extraction_timestamp: v.optional(v.number()),
+    extraction_method: v.optional(v.union(v.literal("direct_quote"), v.literal("behavioral_inference"), v.literal("pattern_synthesis"))),
 
-    // === CORE REVELATION ===
-    dimension: v.string(),                   // Identity dimension this touches
-    exact_quote: v.string(),                // Their precise words
-    what_it_reveals: v.string(),            // Qualitative interpretation
-    situation_context: v.string(),          // What was happening
-    why_significant: v.string(),            // Why this matters
+    // === CORE REVELATION (MINIMAL REQUIREMENTS) ===
+    dimension: v.optional(v.string()),      // Optional: Identity dimension this touches
+    exact_quote: v.optional(v.string()),    // Optional: Their precise words (can be empty for behavioral observations)
+    what_it_reveals: v.optional(v.string()), // Optional: Qualitative interpretation
+    situation_context: v.optional(v.string()), // Optional: What was happening
+    why_significant: v.optional(v.string()),   // Optional: Why this matters
 
-    // === QUALITY INDICATORS ===
-    confidence_level: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
-    linguistic_intensity: v.union(v.literal("weak"), v.literal("moderate"), v.literal("strong")), // "might" vs "always" vs "absolutely"
-    emotional_weight: v.union(v.literal("neutral"), v.literal("mild"), v.literal("strong")),      // How much they seem to care
-    specificity: v.union(v.literal("vague"), v.literal("specific"), v.literal("very_specific")),  // How detailed/concrete
+    // === QUALITY INDICATORS (ALL OPTIONAL) ===
+    confidence_level: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
+    linguistic_intensity: v.optional(v.union(v.literal("weak"), v.literal("moderate"), v.literal("strong"))), // "might" vs "always" vs "absolutely"
+    emotional_weight: v.optional(v.union(v.literal("neutral"), v.literal("mild"), v.literal("strong"))),      // How much they seem to care
+    specificity: v.optional(v.union(v.literal("vague"), v.literal("specific"), v.literal("very_specific"))),  // How detailed/concrete
 
-    // === PATTERN CONNECTIONS ===
-    connects_to: v.array(v.string()),       // Tags for connecting to other shards
-    contradicts: v.array(v.string()),       // Shard IDs that conflict
-    reinforces: v.array(v.string()),        // Shard IDs that support this
+    // === PATTERN CONNECTIONS (ALL OPTIONAL) ===
+    connects_to: v.optional(v.array(v.string())),       // Optional: Tags for connecting to other shards
+    contradicts: v.optional(v.array(v.string())),       // Optional: Shard IDs that conflict
+    reinforces: v.optional(v.array(v.string())),        // Optional: Shard IDs that support this
 
-    // === TEMPORAL DATA ===
-    temporal_context: v.string(),           // "during stressful periods", "when working on creative projects"
-    recency_weight: v.union(v.literal("recent"), v.literal("moderate"), v.literal("old")), // How recent/relevant
+    // === TEMPORAL DATA (OPTIONAL) ===
+    temporal_context: v.optional(v.string()),           // Optional: "during stressful periods", "when working on creative projects"
+    recency_weight: v.optional(v.union(v.literal("recent"), v.literal("moderate"), v.literal("old"))), // Optional: How recent/relevant
 
-    // === METADATA ===
-    createdAt: v.number(),
-    updatedAt: v.number(),
-    last_referenced: v.number(),            // When this shard was last used in crystal formation
-    reference_count: v.number(),            // How many crystals reference this shard
+    // === METADATA (REQUIRED FOR TRACKING) ===
+    createdAt: v.number(),                   // REQUIRED: Creation timestamp
+    updatedAt: v.number(),                   // REQUIRED: Last update timestamp
+    last_referenced: v.optional(v.number()), // Optional: When this shard was last used in crystal formation
+    reference_count: v.optional(v.number()), // Optional: How many crystals reference this shard
   })
       .index("by_user", ["userId"])
       .index("by_dimension", ["userId", "dimension"])
