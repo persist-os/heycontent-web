@@ -846,8 +846,6 @@ export default defineSchema({
   crystal_shards: defineTable({
     // === CORE IDENTIFICATION (REQUIRED) ===
     userId: v.string(),                      // REQUIRED: User who owns this shard
-    shard_id: v.string(),                    // REQUIRED: Unique identifier for referencing
-
     // === SOURCE METADATA (FLEXIBLE) ===
     source: v.optional(v.string()),         // Optional: "conversation_2024_01_15", "note_daily_review"
     sourceIds: v.optional(v.array(v.string())),  // Optional: Multiple sources that contributed to this shard
