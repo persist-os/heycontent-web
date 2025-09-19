@@ -26,7 +26,7 @@ export const syncEmbeddingsOnHeartbeat = action({
 
     try {
       // 1. Get all existing embeddings for this user
-      const existingEmbeddings = await ctx.runQuery(api.vectorSearch.getUserEmbeddings, {
+      const existingEmbeddings = await ctx.runQuery(api.vectorSearchQueries.getUserEmbeddings, {
         userId,
         limit: 2000
       });
@@ -57,8 +57,7 @@ export const syncEmbeddingsOnHeartbeat = action({
               contentType: 'note',
               title: note.title || 'Untitled Note',
               content: noteContent,
-              triggerType: 'automatic_update',
-              platform: 'notes'
+              triggerType: 'automatic_update'
             });
             results.created++;
           } catch (error) {
@@ -93,8 +92,7 @@ export const syncEmbeddingsOnHeartbeat = action({
               contentType: 'conversation',
               title: conv.title || 'Conversation',
               content: searchableContent,
-              triggerType: 'automatic_update',
-              platform: 'conversations'
+              triggerType: 'automatic_update'
             });
             results.created++;
           } catch (error) {
@@ -103,19 +101,68 @@ export const syncEmbeddingsOnHeartbeat = action({
         }
       }
 
-
-
+      // Crystal Shards
+      let crystalShards = [];
+      try {
+        crystalShards = await ctx.runQuery(api.crystalQueries.getCrystalData, { 
+          userId,
+          table: 'crystal_shards',
+          limit: 1000
+        });
+      } catch (error) {
+        console.warn('⚠️ [EMBEDDING] Failed to fetch crystal shards:', error);
+        results.errors.push(`Failed to fetch crystal shards: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+      
+      for (const shard of crystalShards) {
+        const contentId = `crystal_shards:${shard._id}`;
+        if (!existingEmbeddingIds.has(contentId)) {
+          try {
+            // Create content from shard data
+            const shardContent = [
+              shard.exact_quote || '',
+              shard.what_it_reveals || '',
+              shard.situation_context || '',
+              shard.why_significant || ''
+            ].filter(text => text && text.trim()).join('\n');
+            
+            // Skip shards with empty content
+            if (!shardContent.trim()) {
+              console.warn('⚠️ [EMBEDDING] Skipping crystal shard with empty content:', shard._id);
+              results.errors.push(`Skipped crystal shard with empty content: ${shard._id}`);
+              continue;
+            }
+            
+            const title = shard.dimension ? 
+              `Crystal Shard: ${shard.dimension}` : 
+              `Crystal Shard: ${shard._id}`;
+            
+            await ctx.runAction(api.vectorSearch.autoCreateEmbedding, {
+              userId,
+              contentId,
+              contentType: 'crystal_shard',
+              title,
+              content: shardContent,
+              triggerType: 'automatic_update'
+            });
+            results.created++;
+          } catch (error) {
+            results.errors.push(`Failed to create crystal shard embedding: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          }
+        }
+      }
 
       // 3. Clean up orphaned embeddings (embeddings without corresponding content)
       const allContentIds = new Set([
         ...notes.map(n => `notes:${n._id}`),
-        ...conversations.map(c => `conversations:${c._id}`)
+        ...conversations.map(c => `conversations:${c._id}`),
+        ...crystalShards.map(s => `crystal_shards:${s._id}`)
       ]);
 
       for (const embedding of existingEmbeddings) {
         if (!allContentIds.has(embedding.contentId)) {
           try {
-            await ctx.runMutation(api.vectorSearch.deleteEmbedding, {
+            await ctx.runMutation(api.vectorSearchMutations.deleteEmbedding, {
               userId,
               contentId: embedding.contentId
             });

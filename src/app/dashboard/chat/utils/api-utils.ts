@@ -244,7 +244,7 @@ export async function generateEmbeddingsForPlatform(
               continue;
             }
 
-            await convex.action(api.vectorSearch.createEmbedding, {
+            await convex.action(api.vectorSearchEmbeddings.createEmbedding, {
               userId,
               contentId: conv._id,
               contentType: "conversation" as const,
@@ -286,7 +286,7 @@ export async function generateEmbeddingsForPlatform(
               continue;
             }
             
-            await convex.action(api.vectorSearch.createEmbedding, {
+            await convex.action(api.vectorSearchEmbeddings.createEmbedding, {
               userId,
               contentId: note._id,
               contentType: "note" as const,
@@ -334,7 +334,7 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
     // Use the new automatic embedding generation system
     console.log('🚀 [EMBEDDING SETUP] Using new automatic embedding system');
     
-    const embeddingResult = await convex.action(api.vectorSearch.autoGenerateEmbeddings, {
+    const embeddingResult = await convex.action(api.vectorSearchEmbeddings.autoGenerateEmbeddings, {
       userId,
       contentType: "all",
       updateType: "manual_update"
@@ -1657,29 +1657,6 @@ export async function sendChatMessage(
   return data;
 }
 
-/**
- * DEBUG: Test the enhanced search components individually
- */
-export async function debugEnhancedSearch(
-  userId: string,
-  testStep: 'platform' | 'embedding' | 'similarity' | 'full' = 'full'
-): Promise<any> {
-  try {
-    console.log('🐛 [DEBUG TEST] Testing enhanced search component:', testStep);
-    
-    const result = await convex.action(api.vectorSearch.debugHybridSearchWithQuotas, {
-      userId,
-      query: 'test query for debugging',
-      testStep
-    });
-    
-    console.log('🐛 [DEBUG TEST] Result:', result);
-    return result;
-  } catch (error) {
-    console.error('🐛 [DEBUG TEST] Error:', error);
-    throw error;
-  }
-}
 
 // Helper function to build context string from relevant items
 function buildContextString(relevantItems: Array<{
@@ -1733,7 +1710,7 @@ export async function checkUserEmbeddings(userId: string): Promise<{ hasEmbeddin
       setTimeout(() => reject(new Error('Embedding check timeout')), 5000)
     );
     
-    const queryPromise = convex.query(api.vectorSearch.hasUserEmbeddings, { userId });
+    const queryPromise = convex.query(api.vectorSearcQueries.hasUserEmbeddings, { userId });
     const result = await Promise.race([queryPromise, timeoutPromise]);
     
     return result as { hasEmbeddings: boolean; count: number };
@@ -1754,7 +1731,7 @@ export async function checkUserEmbeddings(userId: string): Promise<{ hasEmbeddin
 export async function deleteAllUserEmbeddings(userId: string): Promise<{ success: boolean; deletedCount: number; message: string }> {
   
   try {
-    const result = await convex.mutation(api.vectorSearch.deleteAllUserEmbeddings, { userId });
+    const result = await convex.mutation(api.vectorSearchMutations.deleteAllUserEmbeddings, { userId });
     return result;
   } catch (error: any) {
     console.error('❌ [EMBEDDING DELETE] Deletion failed:', error);

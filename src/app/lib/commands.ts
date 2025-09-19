@@ -567,7 +567,7 @@ async function vectorSearchContent(query: string, limit: number = 5): Promise<Se
     }
 
     // Fallback to old search method
-    const vectorResults = await convex.action(api.vectorSearch.searchRelevantContent, {
+    const vectorResults = await convex.action(api.vectorSearchHelpers.searchRelevantContent, {
       userId,
       query,
       limit,

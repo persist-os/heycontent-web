@@ -68,6 +68,10 @@ import type * as userActions from "../userActions.js";
 import type * as userMutations from "../userMutations.js";
 import type * as userQueries from "../userQueries.js";
 import type * as vectorSearch from "../vectorSearch.js";
+import type * as vectorSearchEmbeddings from "../vectorSearchEmbeddings.js";
+import type * as vectorSearchHelpers from "../vectorSearchHelpers.js";
+import type * as vectorSearchMutations from "../vectorSearchMutations.js";
+import type * as vectorSearchQueries from "../vectorSearchQueries.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -133,6 +137,10 @@ declare const fullApi: ApiFromModules<{
   userMutations: typeof userMutations;
   userQueries: typeof userQueries;
   vectorSearch: typeof vectorSearch;
+  vectorSearchEmbeddings: typeof vectorSearchEmbeddings;
+  vectorSearchHelpers: typeof vectorSearchHelpers;
+  vectorSearchMutations: typeof vectorSearchMutations;
+  vectorSearchQueries: typeof vectorSearchQueries;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,

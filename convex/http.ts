@@ -1686,6 +1686,18 @@ app.post("/api/crystal/persona", async (c) => {
   }
 });
 
+// Embedding system routes
+app.post("/api/vector-search/generate-embedding", async (c) => {
+  const ctx = c.env;
+  const requestBody = c.req.query("text");
+  try {
+    const result = await ctx.runMutation(api.vectorSearchEmbeddings.generateEmbedding, { text: requestBody });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 
 const router = new HttpRouterWithHono(app);
 export default router;

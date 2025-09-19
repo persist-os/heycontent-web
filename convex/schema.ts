@@ -302,7 +302,8 @@ export default defineSchema({
     contentId: v.string(), // ID of the original content (conversation, post, etc.)
     contentType: v.union(
       v.literal("conversation"),
-      v.literal("note")
+      v.literal("note"),
+      v.literal("crystal_shard")
     ),
     title: v.string(),
     content: v.string(),

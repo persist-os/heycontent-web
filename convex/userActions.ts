@@ -66,7 +66,7 @@ export const getEmbeddingSyncStatus = action({
 
     try {
       // Get embedding counts by platform
-      const embeddings = await ctx.runQuery(api.vectorSearch.getUserEmbeddings, {
+      const embeddings = await ctx.runQuery(api.vectorSearchQueries.getUserEmbeddings, {
         userId,
         limit: 2000
       });
@@ -166,7 +166,7 @@ export const getEmbeddingDebugInfo = action({
     const { userId } = args;
     try {
       // Get user's embeddings
-      const embeddings = await ctx.runQuery(api.vectorSearch.getUserEmbeddings, {
+      const embeddings = await ctx.runQuery(api.vectorSearchQueries.getUserEmbeddings, {
         userId,
         limit: 2000
       });

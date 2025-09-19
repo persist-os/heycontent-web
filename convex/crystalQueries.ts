@@ -1,5 +1,6 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
 
 /**
  * Builds and executes a query with all options in one go
@@ -29,13 +30,13 @@ const queryWithOptions = async (
     // Build query with index
     let query = options.useIndex
         ? ctx.db.query(table).withIndex(options.useIndex, (q: any) => {
-            q = q.eq("userId", userId);
+            let queryBuilder = q.eq("userId", userId);
             if (options.indexFields) {
                 Object.entries(options.indexFields).forEach(([field, value]) => {
-                    q = q.eq(field, value);
+                    queryBuilder = queryBuilder.eq(field, value);
                 });
             }
-            return q;
+            return queryBuilder;
         })
         : ctx.db.query(table).withIndex("by_user", (q: any) => q.eq("userId", userId));
 
@@ -50,7 +51,8 @@ const queryWithOptions = async (
     if (options.orderBy) query = query.order(options.orderBy);
     if (options.limit) query = query.take(options.limit);
 
-    return query.collect();
+    // Execute the query and collect all results
+    return await query.collect();
 };
 
 /**
@@ -82,6 +84,7 @@ export const getCrystalData = query({
         limit: v.optional(v.number()),
         orderBy: v.optional(v.union(v.literal("asc"), v.literal("desc"))),
     },
+    returns: v.array(v.any()),
 
     handler: async (ctx, { userId, table, ...options }) => {
         return queryWithOptions(ctx, table, userId, options);
@@ -128,6 +131,7 @@ export const getPersonaData = query({
         ),
         limit: v.optional(v.number())
     },
+    returns: v.any(),
 
     handler: async (ctx, { userId, operation, limit }) => {
         switch (operation) {

@@ -146,9 +146,9 @@ export const chatWithContext = action({
       // Try to use REAL vector search first (with embeddings)
       console.log("🔍 [VECTOR SEARCH DEBUG] Attempting REAL vector search with embeddings...");
       let relevantContent: any[] = [];
-      
+        
       try {
-        const vectorResults = await ctx.runAction(api.vectorSearch.searchRelevantContent, {
+        const vectorResults = await ctx.runAction(api.vectorSearchHelpers.searchRelevantContent, {
           userId: args.userId,
           query: args.query,
           limit: 5
@@ -167,7 +167,7 @@ export const chatWithContext = action({
           console.log("🎯 [VECTOR SEARCH] No results from embedding search, checking if embeddings exist...");
           
           // Check if user has any embeddings
-          const userEmbeddings = await ctx.runQuery(api.vectorSearch.getUserEmbeddings, { userId: args.userId, limit: 1 });
+          const userEmbeddings = await ctx.runQuery(api.vectorSearchQueries.getUserEmbeddings, { userId: args.userId, limit: 1 });
           if (!userEmbeddings || userEmbeddings.length === 0) {
             console.log("⚠️ [VECTOR SEARCH] No embeddings found for user. Falling back to text search.");
             console.log("💡 [VECTOR SEARCH] Hint: Run embedding generation first!");
