@@ -9,56 +9,6 @@ import { generateEmbedding } from "./vectorSearchEmbeddings";
 const GOOGLE_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent";
 
 /**
- * Enhance search query to improve matching
- */
-export function enhanceSearchQuery(query: string): string {
-  console.log('🔍 [QUERY ENHANCEMENT] Original query:', query);
-  
-  let enhancedQuery = query.toLowerCase();
-  
-  // Common abbreviations and expansions
-  const abbreviations: Record<string, string> = {
-    'gbm': 'general body meeting gbm',
-    'gm': 'general meeting gm',
-    'exec': 'executive board exec',
-    'e-board': 'executive board eboard e-board',
-    'eboard': 'executive board eboard e-board',
-    'mtg': 'meeting mtg',
-    'event': 'event gathering activity',
-    'club': 'club organization group',
-    'org': 'organization club org',
-    'social': 'social event gathering party',
-    'networking': 'networking professional career connect',
-    'partnership': 'partnership collaboration sponsor business',
-    'newsletter': 'newsletter email subscription marketing',
-    'collab': 'collaboration partnership email business',
-  };
-  
-  // Expand abbreviations
-  for (const [abbrev, expansion] of Object.entries(abbreviations)) {
-    if (enhancedQuery.includes(abbrev)) {
-      enhancedQuery = enhancedQuery.replace(new RegExp(`\\b${abbrev}\\b`, 'gi'), expansion);
-    }
-  }
-  
-  // Add context for better semantic understanding
-  if (enhancedQuery.includes('meeting') || enhancedQuery.includes('gbm') || enhancedQuery.includes('general body')) {
-    enhancedQuery += ' meeting event organization club announcement';
-  }
-  
-  if (enhancedQuery.includes('post') && enhancedQuery.includes('club')) {
-    enhancedQuery += ' social media announcement update';
-  }
-  
-  if (enhancedQuery.includes('partnership') || enhancedQuery.includes('collab') || enhancedQuery.includes('sponsor')) {
-    enhancedQuery += ' partnership collaboration business professional opportunity';
-  }
-  
-  console.log('🔍 [QUERY ENHANCEMENT] Enhanced query:', enhancedQuery);
-  return enhancedQuery;
-}
-
-/**
  * Calculate cosine similarity between two vectors
  */
 export function cosineSimilarity(a: number[], b: number[]): number {
@@ -88,7 +38,7 @@ export const searchRelevantContent = action({
     contentTypes: v.optional(v.array(v.union(
       v.literal("conversation"),
       v.literal("note"),
-      v.literal("crystal_shard"),
+      v.literal("crystal"),
     ))),
     minSimilarity: v.optional(v.number()),
   },
@@ -102,11 +52,8 @@ export const searchRelevantContent = action({
     console.log('🎯 [TRUE VECTOR SEARCH DEBUG] If you see this log, then REAL vector search is being used.');
     
     try {
-      // Enhance the query for better matching
-      const enhancedQuery = enhanceSearchQuery(args.query);
-      
       // Generate embedding for the enhanced query
-      const queryEmbedding = await generateEmbedding(enhancedQuery);
+      const queryEmbedding = await generateEmbedding(args.query);
       console.log('🎯 [TRUE VECTOR SEARCH DEBUG] Generated query embedding with dimension:', queryEmbedding.length);
 
       // Get all user embeddings

@@ -101,53 +101,54 @@ export const syncEmbeddingsOnHeartbeat = action({
         }
       }
 
-      // Crystal Shards
-      let crystalShards = [];
+      // Crystals
+      let crystals = [];
       try {
-        crystalShards = await ctx.runQuery(api.crystalQueries.getCrystalData, { 
+        crystals = await ctx.runQuery(api.crystalQueries.getCrystalData, { 
           userId,
-          table: 'crystal_shards',
+          table: 'crystals',
           limit: 1000
         });
       } catch (error) {
-        console.warn('⚠️ [EMBEDDING] Failed to fetch crystal shards:', error);
-        results.errors.push(`Failed to fetch crystal shards: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        console.warn('⚠️ [EMBEDDING] Failed to fetch crystals:', error);
+        results.errors.push(`Failed to fetch crystals: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
       
-      for (const shard of crystalShards) {
-        const contentId = `crystal_shards:${shard._id}`;
+      for (const crystal of crystals) {
+        const contentId = `crystal:${crystal._id}`;
         if (!existingEmbeddingIds.has(contentId)) {
           try {
-            // Create content from shard data
-            const shardContent = [
-              shard.exact_quote || '',
-              shard.what_it_reveals || '',
-              shard.situation_context || '',
-              shard.why_significant || ''
+            // Create content from crystal data
+            const crystalContent = [
+              crystal.core_insight || '',
+              crystal.detailed_analysis || '',
+              crystal.description || '',
+              crystal.contradiction_analysis || '',
+              ...(crystal.supporting_quotes || [])
             ].filter(text => text && text.trim()).join('\n');
             
-            // Skip shards with empty content
-            if (!shardContent.trim()) {
-              console.warn('⚠️ [EMBEDDING] Skipping crystal shard with empty content:', shard._id);
-              results.errors.push(`Skipped crystal shard with empty content: ${shard._id}`);
+            // Skip crystals with empty content
+            if (!crystalContent.trim()) {
+              console.warn('⚠️ [EMBEDDING] Skipping crystal with empty content:', crystal._id);
+              results.errors.push(`Skipped crystal with empty content: ${crystal._id}`);
               continue;
             }
             
-            const title = shard.dimension ? 
-              `Crystal Shard: ${shard.dimension}` : 
-              `Crystal Shard: ${shard._id}`;
+            const title = crystal.name || crystal.dimension || crystal.core_insight ? 
+              `Crystal: ${crystal.name || crystal.dimension || crystal.core_insight.substring(0, 50)}` : 
+              `Crystal: ${crystal._id}`;
             
             await ctx.runAction(api.vectorSearch.autoCreateEmbedding, {
               userId,
               contentId,
-              contentType: 'crystal_shard',
+              contentType: 'crystal',
               title,
-              content: shardContent,
+              content: crystalContent,
               triggerType: 'automatic_update'
             });
             results.created++;
           } catch (error) {
-            results.errors.push(`Failed to create crystal shard embedding: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            results.errors.push(`Failed to create crystal embedding: ${error instanceof Error ? error.message : 'Unknown error'}`);
           }
         }
       }
@@ -156,7 +157,7 @@ export const syncEmbeddingsOnHeartbeat = action({
       const allContentIds = new Set([
         ...notes.map(n => `notes:${n._id}`),
         ...conversations.map(c => `conversations:${c._id}`),
-        ...crystalShards.map(s => `crystal_shards:${s._id}`)
+        ...crystals.map(c => `crystal:${c._id}`)
       ]);
 
       for (const embedding of existingEmbeddings) {

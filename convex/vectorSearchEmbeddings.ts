@@ -20,7 +20,7 @@ function preprocessContentForEmbedding(content: string, contentType: string): st
   
   // Content type specific preprocessing
   switch (contentType) {
-    case 'crystal_shard':
+    case 'crystal':
       // For crystal shards, keep the exact quote
       if (processedContent.length > 3000) {
         processedContent = processedContent.substring(0, 3000) + '...';
@@ -238,7 +238,7 @@ export const createEmbedding = action({
     contentType: v.union(
       v.literal("conversation"),
       v.literal("note"),
-      v.literal("crystal_shard"),
+      v.literal("crystal"),
     ),
     title: v.string(),
     content: v.string(),
@@ -318,7 +318,7 @@ export const storeEmbedding = internalMutation({
     contentType: v.union(
       v.literal("conversation"),
       v.literal("note"),
-      v.literal("crystal_shard"),
+      v.literal("crystal"),
     ),
     title: v.string(),
     content: v.string(),

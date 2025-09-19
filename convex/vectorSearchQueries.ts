@@ -4,7 +4,6 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { api } from "./_generated/api";
 import { cosineSimilarity } from "./vectorSearchHelpers";
-import { enhanceSearchQuery } from "./vectorSearchHelpers";
 import { generateEmbedding } from "./vectorSearchEmbeddings";
 
 // Google Gemini API endpoint for embeddings
@@ -19,7 +18,7 @@ export const getAllUserEmbeddings = internalQuery({
     contentTypes: v.optional(v.array(v.union(
       v.literal("conversation"),
       v.literal("note"),
-      v.literal("crystal_shard"),
+      v.literal("crystal"),
     ))),
   },
   handler: async (ctx, args) => {
@@ -63,7 +62,7 @@ export const getContentTypeEmbeddingCount = query({
     contentType: v.union(
       v.literal("conversation"),
       v.literal("note"),
-      v.literal("crystal_shard"),
+      v.literal("crystal"),
     ),
   },
   handler: async (ctx, args) => {

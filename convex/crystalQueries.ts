@@ -27,9 +27,12 @@ const queryWithOptions = async (
         orderBy?: "asc" | "desc";
     } = {}
 ) => {
-    // Build query with index
-    let query = options.useIndex
-        ? ctx.db.query(table).withIndex(options.useIndex, (q: any) => {
+    // Build base query with index (using multiple variables for type integrity)
+    const baseQuery = ctx.db.query(table);
+    
+    let indexedQuery;
+    if (options.useIndex) {
+        indexedQuery = baseQuery.withIndex(options.useIndex, (q: any) => {
             let queryBuilder = q.eq("userId", userId);
             if (options.indexFields) {
                 Object.entries(options.indexFields).forEach(([field, value]) => {
@@ -37,22 +40,31 @@ const queryWithOptions = async (
                 });
             }
             return queryBuilder;
-        })
-        : ctx.db.query(table).withIndex("by_user", (q: any) => q.eq("userId", userId));
+        });
+    } else {
+        indexedQuery = baseQuery.withIndex("by_user", (q: any) => q.eq("userId", userId));
+    }
 
     // Apply filters
+    let filteredQuery = indexedQuery;
     if (options.filters) {
         Object.entries(options.filters).forEach(([field, value]) => {
-            query = query.filter((q: any) => q.eq(q.field(field), value));
+            filteredQuery = filteredQuery.filter((filterQuery: any) => filterQuery.eq(filterQuery.field(field), value));
         });
     }
 
-    // Apply ordering and limits
-    if (options.orderBy) query = query.order(options.orderBy);
-    if (options.limit) query = query.take(options.limit);
+    // Apply ordering
+    let orderedQuery = filteredQuery;
+    if (options.orderBy) {
+        orderedQuery = filteredQuery.order(options.orderBy);
+    }
 
-    // Execute the query and collect all results
-    return await query.collect();
+    // Execute the query with limits
+    if (options.limit) {
+        return await orderedQuery.take(options.limit);
+    } else {
+        return await orderedQuery.collect();
+    }
 };
 
 /**

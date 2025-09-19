@@ -3,7 +3,6 @@ import { action, mutation, query, internalMutation, internalQuery } from "./_gen
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { api } from "./_generated/api";
-import { enhanceSearchQuery } from "./vectorSearchHelpers";
 import { generateEmbedding } from "./vectorSearchEmbeddings";
 import { cosineSimilarity } from "./vectorSearchHelpers";
 
@@ -19,7 +18,7 @@ export const autoCreateEmbedding = action({
     contentType: v.union(
       v.literal("conversation"),
       v.literal("note"),
-      v.literal("crystal_shard")
+      v.literal("crystal")
     ),
     title: v.string(),
     content: v.string(),
@@ -134,7 +133,7 @@ export const autoCreateEmbeddingsBatch = action({
       contentType: v.union(
         v.literal("conversation"),
         v.literal("note"),
-        v.literal("crystal_shard")
+        v.literal("crystal")
       ),
       title: v.string(),
       content: v.string(),
@@ -202,7 +201,7 @@ export const recordEmbeddingUpdate = internalMutation({
     contentType: v.optional(v.union(
       v.literal("conversation"),
       v.literal("note"),
-      v.literal("crystal_shard")
+      v.literal("crystal")
     )),
     contentId: v.optional(v.string()),
     itemsProcessed: v.optional(v.number()),
@@ -266,7 +265,7 @@ export const getRecentEmbeddingUpdates = query({
     contentType: v.optional(v.union(
       v.literal("conversation"),
       v.literal("note"),
-      v.literal("crystal_shard")
+      v.literal("crystal")
     )),
     contentId: v.optional(v.string()),
     itemsProcessed: v.optional(v.number()),
@@ -303,7 +302,7 @@ export const updateLastEmbeddingUpdate = mutation({
     contentType: v.optional(v.union(
       v.literal("conversation"),
       v.literal("note"),
-      v.literal("crystal_shard"),
+      v.literal("crystal"),
     )),
     contentId: v.optional(v.string()),
     itemsProcessed: v.optional(v.number()),
@@ -383,7 +382,7 @@ export const hybridSearchContentWithQuotas = action({
     contentTypes: v.optional(v.array(v.union(
       v.literal("conversation"),
       v.literal("note"),
-      v.literal("crystal_shard"),
+      v.literal("crystal"),
     ))),
     minSimilarity: v.optional(v.number()),
   },
@@ -395,8 +394,7 @@ export const hybridSearchContentWithQuotas = action({
       // Generate embedding for the query (with error handling)
       let queryEmbedding;
       try {
-        const enhancedQuery = enhanceSearchQuery(args.query);
-        queryEmbedding = await generateEmbedding(enhancedQuery);
+        queryEmbedding = await generateEmbedding(args.query);
       } catch (error) {
         throw new Error(`Failed to generate embedding: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
@@ -444,13 +442,13 @@ export const hybridSearchContentWithQuotas = action({
       const contentByType = {
         conversation: filteredSimilarities.filter(item => item.contentType === 'conversation'),
         note: filteredSimilarities.filter(item => item.contentType === 'note'),
-        crystal_shard: filteredSimilarities.filter(item => item.contentType === 'crystal_shard'),
+        crystal: filteredSimilarities.filter(item => item.contentType === 'crystal'),
       };
       
       console.log('🔀 [HYBRID QUOTA SEARCH] Content distribution:', {
         conversations: contentByType.conversation.length,
         notes: contentByType.note.length,
-        crystal_shards: contentByType.crystal_shard.length,
+        crystals: contentByType.crystal.length,
       });
       
       // Step 7: Apply content type quotas
@@ -464,8 +462,8 @@ export const hybridSearchContentWithQuotas = action({
       }> = [];
       
       // Add crystal shards (max 5)
-      if (contentByType.crystal_shard.length > 0) {
-        const topCrystalShards = contentByType.crystal_shard.slice(0, 5);
+      if (contentByType.crystal.length > 0) {
+        const topCrystalShards = contentByType.crystal.slice(0, 5);
         selectedResults.push(...topCrystalShards);
         console.log('🔀 [HYBRID QUOTA SEARCH] Added', topCrystalShards.length, 'crystal shards (max 5)');
       }
@@ -499,14 +497,14 @@ export const hybridSearchContentWithQuotas = action({
         const quotaLimitedUnused = [];
         const quotaLimits = {
           conversation: 4,
-          crystal_shard: 5,
+          crystal: 5,
           note: 3,
         };
         
         // Count current content by type
         const currentCounts = {
           conversation: selectedResults.filter(item => item.contentType === 'conversation').length,
-          crystal_shard: selectedResults.filter(item => item.contentType === 'crystal_shard').length,
+          crystal: selectedResults.filter(item => item.contentType === 'crystal').length,
           note: selectedResults.filter(item => item.contentType === 'note').length,
         };
         
@@ -537,7 +535,7 @@ export const hybridSearchContentWithQuotas = action({
       console.log('🔀 [HYBRID QUOTA SEARCH] Final results:', {
         total: finalResults.length,
         conversations: finalResults.filter(item => item.contentType === 'conversation').length,
-        crystal_shards: finalResults.filter(item => item.contentType === 'crystal_shard').length,
+        crystals: finalResults.filter(item => item.contentType === 'crystal').length,
         notes: finalResults.filter(item => item.contentType === 'note').length,
       });
       

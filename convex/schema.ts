@@ -303,7 +303,7 @@ export default defineSchema({
     contentType: v.union(
       v.literal("conversation"),
       v.literal("note"),
-      v.literal("crystal_shard")
+      v.literal("crystal")
     ),
     title: v.string(),
     content: v.string(),
