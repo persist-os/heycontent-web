@@ -461,7 +461,7 @@ export const hybridSearchContentWithQuotas = action({
         score: number;
       }> = [];
       
-      // Add crystal shards (max 5)
+      // Add crystals (max 5)
       if (contentByType.crystal.length > 0) {
         const topCrystalShards = contentByType.crystal.slice(0, 5);
         selectedResults.push(...topCrystalShards);

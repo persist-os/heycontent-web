@@ -916,7 +916,7 @@ export default defineSchema({
     detailed_analysis: v.string(),         // Deep dive into what this means
 
     // === SUPPORTING EVIDENCE ===
-    shardIds: v.array(v.id("crystal_shards")), // All supporting shards
+    shardIds: v.array(v.string()), // All supporting shards (relaxed validation)
     supporting_quotes: v.array(v.string()), // Supporting evidence
 
     // === CONFIDENCE & RELIABILITY ===
@@ -932,7 +932,7 @@ export default defineSchema({
     interaction_guidance: v.array(v.string()),    // How AI should adapt based on this
 
     // === CONTRADICTIONS & NUANCE ===
-    contradicting_shards: v.array(v.id("crystal_shards")), // Shards that contradict this pattern
+    contradicting_shards: v.array(v.string()), // Shards that contradict this pattern (relaxed validation)
     contradiction_analysis: v.string(),     // How contradictions are resolved/understood
 
     // === EVOLUTION TRACKING ===
@@ -940,14 +940,14 @@ export default defineSchema({
       timestamp: v.number(),
       change_type: v.union(v.literal("strengthened"), v.literal("weakened"), v.literal("refined"), v.literal("contradicted")),
       description: v.string(),
-      triggering_shard_id: v.id("crystal_shards")
+      triggering_shard_id: v.string() // Relaxed validation for temp IDs
     })),
     stability_trend: v.union(v.literal("strengthening"), v.literal("stable"), v.literal("weakening"), v.literal("evolving")),
     last_evolution: v.number(),             // When this crystal last changed significantly
 
     // === CROSS-CRYSTAL RELATIONSHIPS ===
-    related_crystals: v.array(v.id("crystals")), // Other crystals this connects to
-    conflicting_crystals: v.array(v.id("crystals")), // Crystals that contradict this one
+    related_crystals: v.array(v.string()), // Other crystals this connects to (relaxed validation)
+    conflicting_crystals: v.array(v.string()), // Crystals that contradict this one (relaxed validation)
 
     // === UTILIZATION METADATA ===
     usage_count: v.number(),                // How many times this crystal has been used
@@ -966,5 +966,43 @@ export default defineSchema({
       .index("by_confidence", ["userId", "confidence_score"])
       .index("by_type", ["userId","crystal_type"])
       .index("by_usage", ["userId", "usage_frequency"])
-      .index("by_review_due", ["userId", "next_review_due"]),
+    .index("by_review_due", ["userId", "next_review_due"]),
+    
+    
+    crystal_formation_runs: defineTable({
+      userId: v.string(),
+      status: v.union(
+        v.literal("running"),
+        v.literal("completed"), 
+        v.literal("failed")
+      ),
+      
+      // Input data
+      input_shard_count: v.number(),
+      trigger_type: v.union(
+        v.literal("threshold_reached"),    // 15+ shards
+        v.literal("periodic_refresh"),     // Background job
+        v.literal("manual_trigger")        // User initiated
+      ),
+      
+        // Results
+        clusters_formed: v.optional(v.number()),
+        crystals_created: v.optional(v.number()),
+        crystals_failed: v.optional(v.number()),
+        
+        // Timing
+        started_at: v.number(),
+        completed_at: v.optional(v.number()),
+        duration_ms: v.optional(v.number()),
+        
+        // Error handling
+        error_message: v.optional(v.string()),
+        
+        // Metadata
+        formation_version: v.string(),      // Track algorithm versions
+      })
+      .index("by_user", ["userId"])
+      .index("by_status", ["status"])
+      .index("by_user_status", ["userId", "status"]),
 });
+

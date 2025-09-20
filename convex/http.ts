@@ -1673,6 +1673,19 @@ app.post("/api/crystal/mutate", async (c) => {
   }
 });
 
+// Batch mutation endpoint for efficient bulk operations
+app.post("/api/crystal/batch-mutate", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.crystalMutations.batchMutateCrystalData, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 // Persona data convenience endpoint
 app.post("/api/crystal/persona", async (c) => {
   const ctx = c.env;
@@ -1686,12 +1699,41 @@ app.post("/api/crystal/persona", async (c) => {
   }
 });
 
+// FORMATION ROUTES
+
+// Single query endpoint that mirrors queryFormation exactly
+app.post("/api/formation/query", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runQuery(api.formationQueries.queryFormation, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// Single mutation endpoint that mirrors mutateFormation exactly
+app.post("/api/formation/mutate", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.formationMutations.mutateFormation, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 // Embedding system routes
 app.post("/api/vector-search/generate-embedding", async (c) => {
   const ctx = c.env;
-  const requestBody = c.req.query("text");
+  const requestBody = await c.req.json();
+  const text = requestBody.text;
   try {
-    const result = await ctx.runMutation(api.vectorSearchEmbeddings.generateEmbedding, { text: requestBody });
+    const result = await ctx.runAction(api.vectorSearchEmbeddings.generateEmbedding, { text: text });
     return c.json({ success: true, data: result });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);

@@ -84,9 +84,9 @@ function preprocessContentForEmbedding(content: string, contentType: string): st
 }
 
 /**
- * Generate embeddings using Google's text-embedding-004 model
+ * Generate embeddings using Google's text-embedding-004 model (internal function)
  */
-export async function generateEmbedding(text: string): Promise<number[]> {
+async function generateEmbeddingInternal(text: string): Promise<number[]> {
   console.log('🔥 [GOOGLE API DEBUG] generateEmbedding called with text length:', text.length);
   
   // Additional safety check for text length
@@ -229,6 +229,28 @@ export async function generateEmbedding(text: string): Promise<number[]> {
 }
 
 /**
+ * Generate embedding for text (Convex action - can be called from backend via HTTP)
+ */
+export const generateEmbedding = action({
+  args: {
+    text: v.string(),
+  },
+  returns: v.array(v.float64()),
+  handler: async (ctx, args) => {
+    console.log('🚀 [GENERATE EMBEDDING ACTION] Called with text length:', args.text.length);
+    
+    try {
+      const embedding = await generateEmbeddingInternal(args.text);
+      console.log('✅ [GENERATE EMBEDDING ACTION] Successfully generated embedding with dimension:', embedding.length);
+      return embedding;
+    } catch (error: any) {
+      console.error('❌ [GENERATE EMBEDDING ACTION] Error:', error);
+      throw error;
+    }
+  },
+});
+
+/**
  * Generate and store embedding for content
  */
 export const createEmbedding = action({
@@ -270,7 +292,7 @@ export const createEmbedding = action({
       console.log('🚀 [EMBEDDING DEBUG] Final content byte size:', new TextEncoder().encode(processedContent).length, 'bytes');
       
       // Generate embedding
-      const embedding = await generateEmbedding(processedContent);
+      const embedding = await generateEmbeddingInternal(processedContent);
       console.log('✅ [EMBEDDING DEBUG] Embedding generated successfully, dimension:', embedding.length);
 
       console.log('🚀 [EMBEDDING DEBUG] Storing embedding in database...');

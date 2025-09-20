@@ -35,6 +35,8 @@ import type * as fingerprintMutations from "../fingerprintMutations.js";
 import type * as fingerprintQueries from "../fingerprintQueries.js";
 import type * as folderMutations from "../folderMutations.js";
 import type * as folderQueries from "../folderQueries.js";
+import type * as formationMutations from "../formationMutations.js";
+import type * as formationQueries from "../formationQueries.js";
 import type * as friendshipMutations from "../friendshipMutations.js";
 import type * as friendshipQueries from "../friendshipQueries.js";
 import type * as http from "../http.js";
@@ -104,6 +106,8 @@ declare const fullApi: ApiFromModules<{
   fingerprintQueries: typeof fingerprintQueries;
   folderMutations: typeof folderMutations;
   folderQueries: typeof folderQueries;
+  formationMutations: typeof formationMutations;
+  formationQueries: typeof formationQueries;
   friendshipMutations: typeof friendshipMutations;
   friendshipQueries: typeof friendshipQueries;
   http: typeof http;
