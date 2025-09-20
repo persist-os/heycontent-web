@@ -4,11 +4,12 @@ import React from 'react'
 import { ProjectViewScreen } from './components/ProjectViewScreen'
 
 interface ProjectPageProps {
-  params: {
+  params: Promise<{
     projectId: string
-  }
+  }>
 }
 
 export default function ProjectPage({ params }: ProjectPageProps) {
-  return <ProjectViewScreen projectId={params.projectId} />
+  const resolvedParams = React.use(params)
+  return <ProjectViewScreen projectId={resolvedParams.projectId} />
 }

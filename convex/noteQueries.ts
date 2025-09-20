@@ -135,3 +135,30 @@ export const getNote = query({
     }
   },
 });
+
+/**
+ * Get a note with permissions check (alias for getNote for backward compatibility)
+ * @param noteId - The ID of the note to retrieve
+ * @param userId - The ID of the user making the request (for auth)
+ */
+export const getNoteWithPermissions = query({
+  args: {
+    noteId: v.string(),
+    userId: v.string(),
+  },
+  handler: async (ctx, { noteId, userId }) => {
+    try {
+      const note = await ctx.db.get(noteId as Id<"notes">);
+      
+      // Verify ownership - for now, only owner can access
+      if (!note || note.userId !== userId) {
+        return null;
+      }
+      
+      return note;
+    } catch (error) {
+      console.error('Error fetching note with permissions:', error);
+      return null;
+    }
+  },
+});
