@@ -65,6 +65,8 @@ import type * as projectsQueries from "../projectsQueries.js";
 import type * as rateLimiting from "../rateLimiting.js";
 import type * as referrals from "../referrals.js";
 import type * as setAdminRole from "../setAdminRole.js";
+import type * as shardLifecycleMutations from "../shardLifecycleMutations.js";
+import type * as shardLifecycleQueries from "../shardLifecycleQueries.js";
 import type * as subscriptionActions from "../subscriptionActions.js";
 import type * as subscriptionQueries from "../subscriptionQueries.js";
 import type * as textOperations from "../textOperations.js";
@@ -143,6 +145,8 @@ declare const fullApi: ApiFromModules<{
   rateLimiting: typeof rateLimiting;
   referrals: typeof referrals;
   setAdminRole: typeof setAdminRole;
+  shardLifecycleMutations: typeof shardLifecycleMutations;
+  shardLifecycleQueries: typeof shardLifecycleQueries;
   subscriptionActions: typeof subscriptionActions;
   subscriptionQueries: typeof subscriptionQueries;
   textOperations: typeof textOperations;

@@ -910,11 +910,23 @@ export default defineSchema({
     updatedAt: v.number(),                   // REQUIRED: Last update timestamp
     last_referenced: v.optional(v.number()), // Optional: When this shard was last used in crystal formation
     reference_count: v.optional(v.number()), // Optional: How many crystals reference this shard
+    
+    // === SHARD LIFECYCLE TRACKING ===
+    shard_status: v.optional(v.union(
+        v.literal("unprocessed"),           // Never used for crystal generation
+        v.literal("used_for_crystal"),      // Consumed by a crystal
+        v.literal("archived")               // Marked as irrelevant/outdated
+    )),
+    used_in_crystal_id: v.optional(v.string()), // Crystal ID that consumed this shard
+    date_consumed: v.optional(v.number()),  // Timestamp when shard was consumed
   })
       .index("by_user", ["userId"])
       .index("by_dimension", ["userId", "dimension"])
       .index("by_confidence", ["userId", "confidence_level"])
-      .index("by_recency", ["userId", "recency_weight"]),
+      .index("by_recency", ["userId", "recency_weight"])
+      .index("by_status", ["userId", "shard_status"])
+      .index("by_crystal_usage", ["userId", "used_in_crystal_id"])
+      .index("by_unprocessed", ["userId", "shard_status", "createdAt"]),
 
 
 // === COMPREHENSIVE CRYSTALS TABLE ===

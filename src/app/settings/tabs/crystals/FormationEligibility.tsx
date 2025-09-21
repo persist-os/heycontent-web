@@ -13,7 +13,7 @@ export const FormationEligibility: React.FC<FormationEligibilityProps> = ({ form
       <div className="text-sm text-muted-foreground">
         <div className="font-medium mb-1">Formation Requirements:</div>
         <div className="space-y-1 text-xs">
-          <div>• Shards: {formationEligibility.shardCount}/3 {formationEligibility.shardCount >= 3 ? '✓' : '✗'}</div>
+          <div>• Shards: {formationEligibility.shardCount}/15 {formationEligibility.shardCount >= 15 ? '✓' : '✗'}</div>
           <div>• No running formation: {!formationEligibility.hasRunningFormation ? '✓' : '✗'}</div>
         </div>
       </div>
