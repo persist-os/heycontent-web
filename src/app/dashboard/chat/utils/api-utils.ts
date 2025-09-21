@@ -1710,7 +1710,7 @@ export async function checkUserEmbeddings(userId: string): Promise<{ hasEmbeddin
       setTimeout(() => reject(new Error('Embedding check timeout')), 5000)
     );
     
-    const queryPromise = convex.query(api.vectorSearcQueries.hasUserEmbeddings, { userId });
+    const queryPromise = convex.query(api.vectorSearchQueries.hasUserEmbeddings, { userId });
     const result = await Promise.race([queryPromise, timeoutPromise]);
     
     return result as { hasEmbeddings: boolean; count: number };
