@@ -28,7 +28,29 @@ export const mutateCrystalData = mutation({
 
         if (operation === "create") return await ctx.db.insert(table, data!);
         if (operation === "update") { 
-            await ctx.db.patch(id!, data!);
+            // Handle special operations for programmatic fields
+            const updateData: any = { ...data };
+            
+            // Handle INCREMENT operations for reference counting
+            if (table === "crystal_shards" && updateData.reference_count === "INCREMENT") {
+                const existingShard = await ctx.db.get(id!);
+                if (existingShard) {
+                    updateData.reference_count = ((existingShard as any).reference_count || 0) + 1;
+                } else {
+                    updateData.reference_count = 1;
+                }
+            }
+            
+            if (table === "crystals" && updateData.usage_count === "INCREMENT") {
+                const existingCrystal = await ctx.db.get(id!);
+                if (existingCrystal) {
+                    updateData.usage_count = ((existingCrystal as any).usage_count || 0) + 1;
+                } else {
+                    updateData.usage_count = 1;
+                }
+            }
+            
+            await ctx.db.patch(id!, updateData);
             return id!;
         }
         if (operation === "delete") { 

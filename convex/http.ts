@@ -1699,9 +1699,7 @@ app.post("/api/crystal/persona", async (c) => {
   }
 });
 
-// FORMATION ROUTES
-
-// Single query endpoint that mirrors queryFormation exactly
+// Formation query endpoint that mirrors queryFormation exactly
 app.post("/api/formation/query", async (c) => {
   const ctx = c.env;
   const requestBody = await c.req.json();
@@ -1714,7 +1712,7 @@ app.post("/api/formation/query", async (c) => {
   }
 });
 
-// Single mutation endpoint that mirrors mutateFormation exactly
+// Formation mutation endpoint that mirrors mutateFormation exactly  
 app.post("/api/formation/mutate", async (c) => {
   const ctx = c.env;
   const requestBody = await c.req.json();
@@ -1726,6 +1724,7 @@ app.post("/api/formation/mutate", async (c) => {
     return c.json({ success: false, error: error.message }, 500);
   }
 });
+
 
 // Embedding system routes
 app.post("/api/vector-search/generate-embedding", async (c) => {
@@ -1739,6 +1738,35 @@ app.post("/api/vector-search/generate-embedding", async (c) => {
     return c.json({ success: false, error: error.message }, 500);
   }
 });
+
+// Vector search crystals route
+app.post("/api/vector-search/crystals", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runAction(api.crystalQueries.vectorSearchCrystals, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Failed to perform vector search on crystals:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// Ensure crystal shard embedding route
+app.post("/api/crystal/ensure-embedding", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runAction(api.crystalQueries.ensureCrystalShardEmbedding, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Failed to ensure crystal shard embedding:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 
 
 const router = new HttpRouterWithHono(app);
