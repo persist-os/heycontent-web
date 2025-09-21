@@ -292,57 +292,25 @@ export const deleteUserAndData = mutation({
     await batchDelete("rate_limits", () =>
       ctx.db.query("rate_limits").withIndex("by_user_resource", (q) => q.eq("user_id", userId)).take(BATCH_SIZE)
     );
-    // gmailTokens
-    await batchDelete("gmailTokens", () =>
-      ctx.db.query("gmailTokens").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // gmailAccounts
-    await batchDelete("gmailAccounts", () =>
-      ctx.db.query("gmailAccounts").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // gmailThreads
-    await batchDelete("gmailThreads", () =>
-      ctx.db.query("gmailThreads").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // gmailMessages
-    await batchDelete("gmailMessages", () =>
-      ctx.db.query("gmailMessages").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // gmailHistory
-    await batchDelete("gmailHistory", () =>
-      ctx.db.query("gmailHistory").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // youtubeTokens
-    await batchDelete("youtubeTokens", () =>
-      ctx.db.query("youtubeTokens").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // youtubeChannels
-    await batchDelete("youtubeChannels", () =>
-      ctx.db.query("youtubeChannels").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // youtubeVideos
-    await batchDelete("youtubeVideos", () =>
-      ctx.db.query("youtubeVideos").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // instagramAccounts
-    await batchDelete("instagramAccounts", () =>
-      ctx.db.query("instagramAccounts").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // instagramPosts
-    await batchDelete("instagramPosts", () =>
-      ctx.db.query("instagramPosts").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // instagramTrackerAnalysis
-    await batchDelete("instagramTrackerAnalysis", () =>
-      ctx.db.query("instagramTrackerAnalysis").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // instagramBatchAnalysis
-    await batchDelete("instagramBatchAnalysis", () =>
-      ctx.db.query("instagramBatchAnalysis").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
     // usageEvents
     await batchDelete("usageEvents", () =>
       ctx.db.query("usageEvents").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // crystals
+    await batchDelete("crystals", () =>
+      ctx.db.query("crystals").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // crystal_shards
+    await batchDelete("crystal_shards", () =>
+      ctx.db.query("crystal_shards").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // crystal_formation_runs
+    await batchDelete("crystal_formation_runs", () =>
+      ctx.db.query("crystal_formation_runs").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // folders
+    await batchDelete("folders", () =>
+      ctx.db.query("folders").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
     return summary;
   },

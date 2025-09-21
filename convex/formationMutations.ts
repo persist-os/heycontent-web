@@ -83,6 +83,51 @@ function extractAndValidateRunId(runIdValue: any, operation: string): Id<"crysta
 const formationRunValidator = schema.tables.crystal_formation_runs.validator;
 export type FormationRun = Infer<typeof formationRunValidator>;
 
+// Flexible validator for all formation operations
+// Includes all possible fields, most are optional to handle both creation and updates
+const formationRunUpdateValidator = v.object({
+  // Required fields for creation (optional for updates)
+  userId: v.optional(v.string()),
+  status: v.optional(v.union(
+    v.literal("running"),
+    v.literal("completed"), 
+    v.literal("failed")
+  )),
+  input_shard_count: v.optional(v.number()),
+  trigger_type: v.optional(v.union(
+    v.literal("threshold_reached"),
+    v.literal("periodic_refresh"),
+    v.literal("manual_trigger")
+  )),
+  started_at: v.optional(v.number()),
+  formation_version: v.optional(v.string()),
+  
+  // Event tracking
+  event_type: v.optional(v.string()),
+  timestamp: v.optional(v.number()),
+  
+  // Results
+  clusters_formed: v.optional(v.number()),
+  crystals_created: v.optional(v.number()),
+  crystals_failed: v.optional(v.number()),
+  
+  // Additional tracking fields
+  crystal_count: v.optional(v.number()),
+  crystals_updated: v.optional(v.number()),
+  crystals_merged: v.optional(v.number()),
+  crystals_archived: v.optional(v.number()),
+  evolution_events: v.optional(v.number()),
+  vector_matches_found: v.optional(v.number()),
+  agent_recommendations_used: v.optional(v.number()),
+  
+  // Timing (completed_at and duration_ms are calculated in mutation)
+  completed_at: v.optional(v.number()),
+  duration_ms: v.optional(v.number()),
+  
+  // Error handling
+  error_message: v.optional(v.string()),
+});
+
 const formationMutationValidator = v.object({
   operation: v.union(
     v.literal("start"), 
@@ -95,7 +140,7 @@ const formationMutationValidator = v.object({
     v.literal("track_event")
   ),
   userId: v.string(),
-  data: v.optional(formationRunValidator),
+  data: v.optional(formationRunUpdateValidator), // Use update validator for all operations
   runId: v.optional(v.any()),
   olderThanDays: v.optional(v.number()),
   maxToDelete: v.optional(v.number()),
@@ -109,6 +154,18 @@ export const mutateFormation = mutation({
   
   handler: async (ctx, args) => {
     if (args.operation === "start") {
+      // Validate required fields for start operation
+      if (!args.data) {
+        throw new Error("data is required for start operation");
+      }
+      
+      const requiredFields = ['userId', 'status', 'input_shard_count', 'trigger_type', 'started_at', 'formation_version'];
+      for (const field of requiredFields) {
+        if (!(field in args.data) || args.data[field as keyof typeof args.data] === undefined) {
+          throw new Error(`Missing required field '${field}' for start operation`);
+        }
+      }
+      
       // First, clean up any stale formations for this user (older than 5 minutes for faster recovery)
       const timeoutMs = 5 * 60 * 1000; // 5 minutes (reduced from 30 minutes)
       const cutoffTime = Date.now() - timeoutMs;
@@ -159,7 +216,7 @@ export const mutateFormation = mutation({
       }
       
       console.log(`🚀 [FORMATION START] Starting new formation for user ${args.userId}`);
-      return ctx.db.insert("crystal_formation_runs", args.data!);
+      return ctx.db.insert("crystal_formation_runs", args.data as any);
     }
 
     if (args.operation === "complete") {
