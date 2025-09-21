@@ -1034,6 +1034,7 @@ export default defineSchema({
         evolution_events: v.optional(v.number()),        // Number of evolution events
         vector_matches_found: v.optional(v.number()),    // Vector search matches found
         agent_recommendations_used: v.optional(v.number()), // Agent recommendations used
+        raw_crystals_generated: v.optional(v.number()),  // Raw crystals generated during formation
         
         // Timing
         started_at: v.number(),

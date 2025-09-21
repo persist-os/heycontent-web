@@ -119,6 +119,7 @@ const formationRunUpdateValidator = v.object({
   evolution_events: v.optional(v.number()),
   vector_matches_found: v.optional(v.number()),
   agent_recommendations_used: v.optional(v.number()),
+  raw_crystals_generated: v.optional(v.number()),
   
   // Timing (completed_at and duration_ms are calculated in mutation)
   completed_at: v.optional(v.number()),

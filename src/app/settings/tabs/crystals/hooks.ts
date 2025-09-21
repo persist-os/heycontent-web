@@ -66,7 +66,7 @@ export const useFormationData = (userId: string | undefined) => {
     userId ? { 
       operation: "eligibility", 
       userId,
-      minShards: 3,
+      minShards: 25,
       minDaysSinceLastRun: 0.25
     } : "skip"
   ) as FormationEligibility | undefined;
