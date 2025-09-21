@@ -244,24 +244,29 @@ export const getBatchCrystalData = query({
     };
 
     // Batch fetch all crystals
-    const crystalPromises = args.crystalIds.map(async (crystalId) => {
+    const crystalPromises = args.crystalIds.map(async (contentId) => {
       try {
+        // Extract actual crystal ID from contentId format "crystal:actualId"
+        const actualCrystalId = contentId.startsWith('crystal:') 
+          ? contentId.substring(8) // Remove "crystal:" prefix
+          : contentId;
+          
         const crystal = await ctx.db
           .query("crystals")
           .withIndex("by_user", (q) => q.eq("userId", args.userId))
-          .filter((q) => q.eq(q.field("crystal_id"), crystalId))
+          .filter((q) => q.eq(q.field("crystal_id"), actualCrystalId))
           .first();
 
         if (crystal) {
-          results.crystals[crystalId] = crystal;
+          results.crystals[contentId] = crystal; // Use original contentId as key
           return crystal;
         } else {
-          results.notFound.push(crystalId);
+          results.notFound.push(contentId);
           return null;
         }
       } catch (error) {
-        console.error(`❌ [BATCH CRYSTAL DATA] Error fetching crystal ${crystalId}:`, error);
-        results.notFound.push(crystalId);
+        console.error(`❌ [BATCH CRYSTAL DATA] Error fetching crystal ${contentId}:`, error);
+        results.notFound.push(contentId);
         return null;
       }
     });
@@ -330,6 +335,12 @@ export const getFormationContext = query({
   }),
   handler: async (ctx, args) => {
     console.log(`🔮 [FORMATION CONTEXT] Preparing context for ${args.shardCount} shards across ${args.dimensions.length} dimensions`);
+    console.log(`🔍 [FORMATION CONTEXT] Requested dimensions:`, args.dimensions);
+    
+    // Handle edge case: if no dimensions provided, log warning but continue
+    if (args.dimensions.length === 0) {
+      console.log(`⚠️ [FORMATION CONTEXT] No dimensions provided - will return all crystals as fallback`);
+    }
     
     // Get all existing crystals for the user (more efficient than multiple queries)
     const allCrystals = await ctx.db
@@ -338,18 +349,84 @@ export const getFormationContext = query({
       .order("desc")
       .collect();
 
+    console.log(`📊 [FORMATION CONTEXT] Retrieved ${allCrystals.length} total crystals for user ${args.userId}`);
+    
+    // Debug: Log existing crystal dimensions
+    const existingDimensions = new Set<string>();
+    allCrystals.forEach(crystal => {
+      if (crystal.dimension) {
+        existingDimensions.add(crystal.dimension);
+      }
+      if (crystal.secondary_dimensions) {
+        crystal.secondary_dimensions.forEach(dim => existingDimensions.add(dim));
+      }
+    });
+    console.log(`📊 [FORMATION CONTEXT] Existing crystal dimensions:`, Array.from(existingDimensions));
+
+    // Helper function for robust dimension matching
+    const matchesDimension = (crystalDim: string, requestedDims: string[]): boolean => {
+      if (!crystalDim) return false;
+      
+      // Direct match (case-insensitive)
+      const normalizedCrystalDim = crystalDim.toLowerCase().trim();
+      return requestedDims.some(reqDim => 
+        reqDim.toLowerCase().trim() === normalizedCrystalDim
+      );
+    };
+
     // Filter crystals relevant to the dimensions being processed
-    const relevantCrystals = allCrystals.filter(crystal =>
-      args.dimensions.includes(crystal.dimension) ||
-      (crystal.secondary_dimensions && crystal.secondary_dimensions.some(dim => args.dimensions.includes(dim)))
-    );
+    const relevantCrystals = args.dimensions.length === 0 
+      ? allCrystals // If no dimensions specified, return all crystals as fallback
+      : allCrystals.filter(crystal => {
+          // Check primary dimension
+          if (matchesDimension(crystal.dimension, args.dimensions)) {
+            return true;
+          }
+          
+          // Check secondary dimensions
+          if (crystal.secondary_dimensions && crystal.secondary_dimensions.length > 0) {
+            return crystal.secondary_dimensions.some(dim => 
+              matchesDimension(dim, args.dimensions)
+            );
+          }
+          
+          return false;
+        });
+    
+    console.log(`✅ [FORMATION CONTEXT] Filtered to ${relevantCrystals.length} relevant crystals`);
+    
+    // Debug: Log which dimensions were matched
+    if (relevantCrystals.length > 0) {
+      const matchedDimensions = new Set<string>();
+      relevantCrystals.forEach(crystal => {
+        if (crystal.dimension && matchesDimension(crystal.dimension, args.dimensions)) {
+          matchedDimensions.add(crystal.dimension);
+        }
+        if (crystal.secondary_dimensions) {
+          crystal.secondary_dimensions.forEach(dim => {
+            if (matchesDimension(dim, args.dimensions)) {
+              matchedDimensions.add(dim);
+            }
+          });
+        }
+      });
+      console.log(`🎯 [FORMATION CONTEXT] Matched dimensions:`, Array.from(matchedDimensions));
+    } else {
+      console.log(`⚠️ [FORMATION CONTEXT] No crystals matched the requested dimensions`);
+    }
 
     // Calculate dimension statistics
     const dimensionStats: Record<string, any> = {};
-    args.dimensions.forEach(dimension => {
+    
+    // If no dimensions provided, generate stats for all existing dimensions
+    const dimensionsToAnalyze = args.dimensions.length > 0 
+      ? args.dimensions 
+      : Array.from(existingDimensions);
+    
+    dimensionsToAnalyze.forEach(dimension => {
       const dimensionCrystals = relevantCrystals.filter(c => 
-        c.dimension === dimension || 
-        (c.secondary_dimensions && c.secondary_dimensions.includes(dimension))
+        matchesDimension(c.dimension, [dimension]) || 
+        (c.secondary_dimensions && c.secondary_dimensions.some(dim => matchesDimension(dim, [dimension])))
       );
       
       const avgConfidence = dimensionCrystals.length > 0 
@@ -384,6 +461,7 @@ export const getFormationContext = query({
     };
 
     console.log(`✅ [FORMATION CONTEXT] Context prepared: ${relevantCrystals.length} relevant crystals, ${Object.keys(dimensionStats).length} dimensions analyzed`);
+    console.log(`📊 [FORMATION CONTEXT] Dimension stats keys:`, Object.keys(dimensionStats));
     
     return {
       existingCrystals: relevantCrystals,

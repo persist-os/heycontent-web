@@ -1753,19 +1753,7 @@ app.post("/api/vector-search/crystals", async (c) => {
   }
 });
 
-// Ensure crystal shard embedding route
-app.post("/api/crystal/ensure-embedding", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runAction(api.crystalQueries.ensureCrystalShardEmbedding, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    console.error("Failed to ensure crystal shard embedding:", error);
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
+
 
 // BATCH OPERATIONS AND OPTIMIZATION ENDPOINTS
 

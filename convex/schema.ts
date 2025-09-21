@@ -341,7 +341,8 @@ export default defineSchema({
     )),
     contentType: v.optional(v.union(
       v.literal("conversation"),
-      v.literal("note")
+      v.literal("note"),
+      v.literal("crystal")
     )),
     contentId: v.optional(v.string()),
     itemsProcessed: v.optional(v.number()),
@@ -947,9 +948,9 @@ export default defineSchema({
     supporting_quotes: v.optional(v.array(v.string())), // Optional: Supporting evidence
 
     // === CONFIDENCE & RELIABILITY (WITH DEFAULTS) ===
-    confidence_score: v.optional(v.union(v.literal("developing"), v.literal("moderate"), v.literal("high"), v.literal("very_high"))),
-    evidence_strength: v.optional(v.union(v.literal("weak"), v.literal("moderate"), v.literal("strong"), v.literal("overwhelming"))),
-    consistency_rating: v.optional(v.union(v.literal("inconsistent"), v.literal("mostly_consistent"), v.literal("very_consistent"))),
+    confidence_score: v.optional(v.string()), // Flexible string field for confidence scores
+    evidence_strength: v.optional(v.string()), // Flexible string field for evidence strength
+    consistency_rating: v.optional(v.string()), // Flexible string field for consistency rating
     observation_count: v.optional(v.number()), // Optional: Number of times we've observed this pattern
     time_span_days: v.optional(v.number()),    // Optional: How long we've been observing this pattern
 
@@ -969,7 +970,7 @@ export default defineSchema({
       description: v.string(),
       triggering_shard_id: v.string() // Relaxed validation for temp IDs
     }))),
-    stability_trend: v.optional(v.union(v.literal("strengthening"), v.literal("stable"), v.literal("weakening"), v.literal("evolving"))),
+    stability_trend: v.optional(v.string()), // Flexible string field for stability trend
     last_evolution: v.optional(v.number()), // Optional: When this crystal last changed significantly
 
     // === CROSS-CRYSTAL RELATIONSHIPS (OPTIONAL) ===
@@ -985,7 +986,11 @@ export default defineSchema({
     createdAt: v.number(),                  // REQUIRED: Creation timestamp
     updatedAt: v.number(),                  // REQUIRED: Last update timestamp
     next_review_due: v.optional(v.number()), // Optional: When this crystal should be reviewed/updated
-    review_priority: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
+    review_priority: v.optional(v.string()), // Flexible string field for review priority
+    
+    // === ARCHIVAL FIELDS (FOR CAPACITY MANAGEMENT) ===
+    archived: v.optional(v.boolean()),      // Optional: Whether this crystal has been archived
+    archived_at: v.optional(v.number()),    // Optional: When this crystal was archived
   })
 
       .index("by_user", ["userId"])

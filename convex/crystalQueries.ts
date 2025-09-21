@@ -187,12 +187,12 @@ export const getPersonaData = query({
 });
 
 /**
- * Vector search for crystal shards using the vector search system
+ * Vector search for crystals using the vector search system
  * 
- * This function performs semantic search on crystal shards by:
+ * This function performs semantic search on crystals by:
  * 1. Using the hybrid search system to find relevant crystal embeddings
- * 2. Retrieving the actual crystal shard data for the matched content IDs
- * 3. Returning structured crystal shard results
+ * 2. Retrieving the actual crystal data for the matched content IDs
+ * 3. Returning structured crystal results
  */
 export const vectorSearchCrystals = action({
     args: {
@@ -201,17 +201,7 @@ export const vectorSearchCrystals = action({
         limit: v.optional(v.number()),
         minSimilarity: v.optional(v.number()),
     },
-    returns: v.array(v.object({
-        _id: v.id("crystal_shards"),
-        _creationTime: v.number(),
-        userId: v.string(),
-        quote: v.string(),
-        source: v.string(),
-        confidence_level: v.union(v.literal("high"), v.literal("medium"), v.literal("low")),
-        tags: v.optional(v.array(v.string())),
-        crystal_id: v.optional(v.id("crystals")),
-        similarity_score: v.optional(v.number()),
-    })),
+    returns: v.array(v.any()),
     handler: async (ctx, { userId, query, limit, minSimilarity }) => {
         console.log('🔍 [CRYSTAL VECTOR SEARCH] Starting vector search for crystals');
         console.log('🔍 [CRYSTAL VECTOR SEARCH] Query:', query);
@@ -238,19 +228,19 @@ export const vectorSearchCrystals = action({
             const contentIds = searchResults.map(result => result.contentId);
             console.log('🔍 [CRYSTAL VECTOR SEARCH] Content IDs to fetch:', contentIds);
             
-            // Fetch the actual crystal shard data
-            const crystalShards = await ctx.runQuery(internal.crystalQueries.getCrystalShardsByIds, {
+            // Fetch the actual crystal data
+            const crystals = await ctx.runQuery(internal.crystalQueries.getCrystalsByIds, {
                 userId,
-                shardIds: contentIds,
+                crystalIds: contentIds,
             });
             
-            console.log('🔍 [CRYSTAL VECTOR SEARCH] Retrieved', crystalShards.length, 'crystal shards');
+            console.log('🔍 [CRYSTAL VECTOR SEARCH] Retrieved', crystals.length, 'crystals');
             
-            // Combine crystal shard data with similarity scores
-            const resultsWithScores = crystalShards.map(shard => {
-                const searchResult = searchResults.find(result => result.contentId === shard._id);
+            // Combine crystal data with similarity scores
+            const resultsWithScores = crystals.map(crystal => {
+                const searchResult = searchResults.find(result => result.contentId === crystal._originalContentId);
                 return {
-                    ...shard,
+                    ...crystal,
                     similarity_score: searchResult?.score || 0,
                 };
             });
@@ -270,6 +260,59 @@ export const vectorSearchCrystals = action({
             return [];
         }
     }
+});
+
+
+/**
+ * Internal function to get crystals by their IDs
+ * Used by vector search to retrieve actual crystal data after finding matches
+ */
+export const getCrystalsByIds = internalQuery({
+    args: {
+        userId: v.string(),
+        crystalIds: v.array(v.string()),
+    },
+    returns: v.array(v.any()),
+    handler: async (ctx, { userId, crystalIds }) => {
+        console.log(`🔍 [GET CRYSTALS BY IDS] Fetching ${crystalIds.length} crystals for user ${userId}`);
+        console.log(`🔍 [GET CRYSTALS BY IDS] Raw crystal IDs:`, crystalIds);
+        
+        const crystals = [];
+        
+        for (const contentId of crystalIds) {
+            try {
+                // Extract actual crystal ID from contentId format "crystal:actualId"
+                const actualCrystalId = contentId.startsWith('crystal:') 
+                    ? contentId.substring(8) // Remove "crystal:" prefix
+                    : contentId;
+                    
+                console.log(`🔍 [GET CRYSTALS BY IDS] Extracted crystal ID: ${actualCrystalId} from contentId: ${contentId}`);
+                
+                // Search for crystal by crystal_id field
+                const crystal = await ctx.db
+                    .query("crystals")
+                    .withIndex("by_user", (q) => q.eq("userId", userId))
+                    .filter((q) => q.eq(q.field("crystal_id"), actualCrystalId))
+                    .first();
+                
+                if (crystal) {
+                    crystals.push({
+                        ...crystal,
+                        // Add the original contentId for matching with search results
+                        _originalContentId: contentId
+                    });
+                    console.log(`✅ [GET CRYSTALS BY IDS] Found crystal: ${crystal.name}`);
+                } else {
+                    console.warn(`⚠️ [GET CRYSTALS BY IDS] Crystal not found for ID: ${actualCrystalId}`);
+                }
+            } catch (error) {
+                console.error(`❌ [GET CRYSTALS BY IDS] Error fetching crystal ${contentId}:`, error);
+            }
+        }
+        
+        console.log(`✅ [GET CRYSTALS BY IDS] Successfully fetched ${crystals.length} crystals`);
+        return crystals;
+    },
 });
 
 /**
@@ -325,82 +368,6 @@ export const getCrystalShardsByIds = internalQuery({
             console.error('❌ [GET SHARDS BY IDS] Error:', error);
             // Return empty array instead of throwing
             return [];
-        }
-    }
-});
-
-/**
- * Ensure a crystal shard has an embedding for vector search
- * This function should be called when a crystal shard is created or updated
- */
-export const ensureCrystalShardEmbedding = action({
-    args: {
-        userId: v.string(),
-        shardId: v.id("crystal_shards"),
-    },
-    returns: v.object({
-        success: v.boolean(),
-        message: v.string(),
-    }),
-    handler: async (ctx, { userId, shardId }) => {
-        console.log('🔧 [ENSURE EMBEDDING] Ensuring crystal shard has embedding');
-        console.log('🔧 [ENSURE EMBEDDING] User:', userId);
-        console.log('🔧 [ENSURE EMBEDDING] Shard ID:', shardId);
-        
-        try {
-            // Get the crystal shard
-            const shard = await ctx.runQuery(internal.crystalQueries.getCrystalShardsByIds, {
-                userId,
-                shardIds: [shardId],
-            });
-            
-            if (shard.length === 0) {
-                return {
-                    success: false,
-                    message: "Crystal shard not found or access denied"
-                };
-            }
-            
-            const crystalShard = shard[0];
-            
-            // Check if embedding already exists
-            const existingEmbedding = await ctx.runQuery(api.vectorSearchQueries.getEmbeddingByContentId, {
-                userId,
-                contentId: shardId,
-            });
-            
-            if (existingEmbedding) {
-                console.log('✅ [ENSURE EMBEDDING] Embedding already exists');
-                return {
-                    success: true,
-                    message: "Embedding already exists"
-                };
-            }
-            
-            // Create embedding for the crystal shard
-            const searchableContent = `${crystalShard.quote}\n\nSource: ${crystalShard.source}`;
-            
-            await ctx.runAction(api.vectorSearch.autoCreateEmbedding, {
-                userId,
-                contentId: shardId,
-                contentType: "crystal",
-                title: `Crystal Shard: ${crystalShard.quote.substring(0, 50)}...`,
-                content: searchableContent,
-                triggerType: "content_update",
-            });
-            
-            console.log('✅ [ENSURE EMBEDDING] Successfully created embedding for crystal shard');
-            return {
-                success: true,
-                message: "Embedding created successfully"
-            };
-            
-        } catch (error: any) {
-            console.error('❌ [ENSURE EMBEDDING] Error:', error);
-            return {
-                success: false,
-                message: `Failed to create embedding: ${error.message}`
-            };
         }
     }
 });
