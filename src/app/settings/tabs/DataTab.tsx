@@ -14,7 +14,6 @@ import { mapAuthErrorCodeToMessage } from '@/app/api/auth/firebase/helpers';
 import { Input } from '@/components/ui/input';
 import { onAuthStateChanged } from 'firebase/auth';
 import { AutomaticEmbeddingStatus } from './platform-connect/AutomaticEmbeddingStatus';
-import { CrystalStatus } from './platform-connect/CrystalStatus';
 
 const DataTab = () => {
   const router = useRouter();
@@ -367,18 +366,6 @@ const DataTab = () => {
         </div>
 
         {userId && <AutomaticEmbeddingStatus userId={userId} />}
-      </div>
-
-      <div className="h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
-
-      {/* Knowledge Crystals Section */}
-      <div className="space-y-6">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-light tracking-tight text-foreground">Knowledge Crystals</h2>
-          <p className="text-muted-foreground">Your crystallized knowledge and insights</p>
-        </div>
-
-        {userId && <CrystalStatus userId={userId} />}
       </div>
     </div>
   )

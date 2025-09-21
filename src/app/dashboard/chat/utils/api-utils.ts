@@ -431,7 +431,7 @@ async function searchRelevantContent(
         userId,
         query,
         limit: searchLimit,
-        contentTypes: ["conversation", "note"],
+        contentTypes: ["conversation", "note", "crystal"],
         minSimilarity: 0.35 // Only return results with >35% similarity
       });
 

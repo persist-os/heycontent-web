@@ -519,7 +519,7 @@ async function vectorSearchContent(query: string, limit: number = 5): Promise<Se
         userId,
         query,
         limit,
-        contentTypes: ["conversation", "note"],
+        contentTypes: ["conversation", "note", "crystal"],
         minSimilarity: 0.3 // Lower threshold for command palette search
       });
 
