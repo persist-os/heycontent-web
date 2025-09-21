@@ -578,20 +578,8 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
   const { initSession } = useConversation(chatState, authData.user)
 
 
-  // Embedding sync heartbeat for active chat users  
-  useEffect(() => {
-    if (!authData.userId) return
-
-    const heartbeatInterval = setInterval(async () => {
-      try {
-        await userHeartbeat({ userId: authData.userId! })
-      } catch (error) {
-        console.error('Chat heartbeat sync failed:', error)
-      }
-    }, 2 * 60 * 1000) // 2 minutes
-
-    return () => clearInterval(heartbeatInterval)
-  }, [authData.userId, userHeartbeat])
+  // Note: Embedding sync heartbeat is handled by useEmbeddingSync hook in ChatContainer
+  // Removed duplicate heartbeat to prevent infinite render loops
 
   // Handle content context display and consumption
   useEffect(() => {

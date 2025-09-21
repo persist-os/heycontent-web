@@ -450,6 +450,9 @@ export const hybridSearchContentWithQuotas = action({
       }
       
       // Get user embeddings using internal query (actions can't directly access ctx.db)
+      console.log('🔄 [HYBRID QUOTA SEARCH] Fetching user embeddings for userId:', args.userId);
+      console.log('🔄 [HYBRID QUOTA SEARCH] Requested content types:', args.contentTypes);
+      
       let userEmbeddings;
       try {
         // Use internal query to get embeddings
@@ -459,12 +462,22 @@ export const hybridSearchContentWithQuotas = action({
         });
         
         console.log('✅ [HYBRID QUOTA SEARCH] Retrieved', userEmbeddings.length, 'user embeddings');
+        
+        // Log breakdown by content type
+        const embeddingsByType = userEmbeddings.reduce((acc, embedding) => {
+          acc[embedding.contentType] = (acc[embedding.contentType] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+        
+        console.log('✅ [HYBRID QUOTA SEARCH] Embeddings by type:', embeddingsByType);
       } catch (error) {
         console.error('❌ [HYBRID QUOTA SEARCH] Failed to fetch user embeddings:', error);
         throw new Error(`Failed to fetch user embeddings: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
       
       // Calculate similarities using inline cosine similarity
+      console.log('🔢 [HYBRID QUOTA SEARCH] Starting similarity calculation for', userEmbeddings.length, 'embeddings');
+      
       const similarities = userEmbeddings.map((doc) => {
         try {
           // Inline cosine similarity calculation
@@ -501,9 +514,38 @@ export const hybridSearchContentWithQuotas = action({
         }
       });
 
+      // Log similarity calculation results
+      const preFilterCounts = similarities.reduce((acc, item) => {
+        acc[item.contentType] = (acc[item.contentType] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      console.log('🔢 [HYBRID QUOTA SEARCH] Pre-filter similarity results:', {
+        total: similarities.length,
+        byType: preFilterCounts,
+        crystalScores: similarities
+          .filter(s => s.contentType === 'crystal')
+          .map(s => ({ contentId: s.contentId, title: s.title, score: s.score }))
+      });
+
       // Apply similarity threshold and filtering
       const minThreshold = args.minSimilarity || 0.35;
+      console.log('🎯 [HYBRID QUOTA SEARCH] Applying similarity threshold:', minThreshold);
+      
       const filteredSimilarities = similarities.filter(item => item.score >= minThreshold);
+      
+      const postFilterCounts = filteredSimilarities.reduce((acc, item) => {
+        acc[item.contentType] = (acc[item.contentType] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      console.log('🎯 [HYBRID QUOTA SEARCH] Post-filter results:', {
+        total: filteredSimilarities.length,
+        byType: postFilterCounts,
+        crystalScores: filteredSimilarities
+          .filter(s => s.contentType === 'crystal')
+          .map(s => ({ contentId: s.contentId, title: s.title, score: s.score }))
+      });
       
       // Sort by similarity score (highest first)
       filteredSimilarities.sort((a, b) => b.score - a.score);
@@ -515,7 +557,7 @@ export const hybridSearchContentWithQuotas = action({
         crystal: filteredSimilarities.filter(item => item.contentType === 'crystal'),
       };
       
-      console.log('🔀 [HYBRID QUOTA SEARCH] Content distribution:', {
+      console.log('🔀 [HYBRID QUOTA SEARCH] Content distribution (final):', {
         conversations: contentByType.conversation.length,
         notes: contentByType.note.length,
         crystals: contentByType.crystal.length,
@@ -608,13 +650,18 @@ export const getUserEmbeddings = internalQuery({
     ))),
   },
   handler: async (ctx, args) => {
+    console.log('🔍 [GET USER EMBEDDINGS] Starting query for user:', args.userId);
+    console.log('🔍 [GET USER EMBEDDINGS] Content types filter:', args.contentTypes);
+    
     const query = ctx.db
       .query("contentEmbeddings")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId));
     
+    let results;
     // Apply content type filter if specified
     if (args.contentTypes && args.contentTypes.length > 0) {
-      return await query
+      console.log('🔍 [GET USER EMBEDDINGS] Applying content type filter for:', args.contentTypes);
+      results = await query
         .filter((q) => {
           let filter = q.eq(q.field("contentType"), args.contentTypes![0]);
           for (let i = 1; i < args.contentTypes!.length; i++) {
@@ -624,7 +671,24 @@ export const getUserEmbeddings = internalQuery({
         })
         .collect();
     } else {
-      return await query.collect();
+      console.log('🔍 [GET USER EMBEDDINGS] No content type filter, getting all embeddings');
+      results = await query.collect();
     }
+    
+    // Log detailed breakdown of what we found
+    const contentTypeCounts = results.reduce((acc, embedding) => {
+      acc[embedding.contentType] = (acc[embedding.contentType] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    console.log('🔍 [GET USER EMBEDDINGS] Found embeddings:', {
+      total: results.length,
+      byType: contentTypeCounts,
+      crystalIds: results
+        .filter(e => e.contentType === 'crystal')
+        .map(e => ({ contentId: e.contentId, title: e.title }))
+    });
+    
+    return results;
   },
 });

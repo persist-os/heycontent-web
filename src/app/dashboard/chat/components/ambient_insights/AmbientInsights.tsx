@@ -55,10 +55,24 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
   const [showSecondary, setShowSecondary] = useState(false);
 
   // Always call useQuery, passing skip if userId is not available
+  console.log('[CONVEX] AmbientInsights query called', {
+    timestamp: Date.now(),
+    userId
+  })
+  
   const convexInsights = useQuery(
     api.ambientInsights.getMostRecentByUserId,
     userId ? { userId } : "skip"
   );
+
+  console.log('[CONVEX] AmbientInsights query result changed', {
+    queryName: 'getMostRecentByUserId',
+    data: convexInsights,
+    timestamp: Date.now(),
+    userId,
+    hasData: !!convexInsights,
+    dataLength: Array.isArray(convexInsights?.data) ? convexInsights.data.length : 0
+  })
 
   // Only log once when insights actually change, not on every render
   useEffect(() => {

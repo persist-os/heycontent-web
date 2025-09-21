@@ -10,36 +10,79 @@ interface UseEmbeddingSyncProps {
 }
 
 export function useEmbeddingSync({ userId, setEmbeddingInfo }: UseEmbeddingSyncProps) {
+  console.log('[EMBEDDING] useEmbeddingSync called', {
+    timestamp: Date.now(),
+    userId
+  })
+
   const userHeartbeat = useAction(api.embeddingSystem.userHeartbeat)
 
   // Embedding sync heartbeat for active chat users  
   useEffect(() => {
+    console.log('[EMBEDDING] Heartbeat effect triggered', {
+      timestamp: Date.now(),
+      userId
+    })
     if (!userId) return
 
-    // Set up heartbeat every 2 minutes when actively chatting for responsive queue processing
+    console.log('[EMBEDDING] Setting up heartbeat interval', {
+      timestamp: Date.now(),
+      userId,
+      intervalMinutes: 3
+    })
+
+    // Set up heartbeat every 3 minutes when actively chatting (reduced frequency)
     const heartbeatInterval = setInterval(async () => {
       try {
-        console.log('💓 [CHAT HEARTBEAT] Triggering sync for active chat user')
+        console.log('[EMBEDDING] Sync triggered', {
+          userId,
+          timestamp: Date.now(),
+          action: 'heartbeat'
+        })
         await userHeartbeat({ userId })
       } catch (error) {
-        console.error('Chat heartbeat sync failed:', error)
+        console.error('[EMBEDDING] Chat heartbeat sync failed:', error)
       }
-    }, 2 * 60 * 1000) // 2 minutes - more frequent for active users
+    }, 3 * 60 * 1000) // 3 minutes - reduced frequency to prevent overload
 
-    return () => clearInterval(heartbeatInterval)
+    return () => {
+      console.log('[EMBEDDING] Cleaning up heartbeat interval', {
+        timestamp: Date.now(),
+        userId
+      })
+      clearInterval(heartbeatInterval)
+    }
   }, [userId, userHeartbeat])
 
   // Check for existing embeddings when user changes
   useEffect(() => {
+    console.log('[EMBEDDING] Embedding check effect triggered', {
+      timestamp: Date.now(),
+      userId
+    })
     const checkEmbeddings = async () => {
       if (userId) {
-        console.log('🔍 [CHAT CONTAINER] Checking user embeddings for:', userId)
+        console.log('[EMBEDDING] About to check user embeddings', {
+          timestamp: Date.now(),
+          userId
+        })
         try {
           const info = await checkUserEmbeddings(userId)
-          console.log('🔍 [CHAT CONTAINER] Embedding info received:', info)
+          console.log('[EMBEDDING] Embedding info received', {
+            timestamp: Date.now(),
+            userId,
+            info
+          })
+          console.log('[STATE] About to update embedding info', {
+            timestamp: Date.now(),
+            newInfo: info
+          })
           setEmbeddingInfo(info)
         } catch (error) {
-          console.error('🔍 [CHAT CONTAINER] Error checking embeddings:', error)
+          console.error('[EMBEDDING] Error checking embeddings:', error)
+          console.log('[STATE] About to set default embedding info due to error', {
+            timestamp: Date.now()
+          })
           // Set default values on error
           setEmbeddingInfo({ hasEmbeddings: false, count: 0 })
         }

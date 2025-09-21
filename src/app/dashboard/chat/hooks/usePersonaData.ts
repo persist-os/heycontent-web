@@ -10,10 +10,23 @@ import { Id } from '@/convex/_generated/dataModel';
  * @returns Object with persona data and loading state
  */
 export function usePersonaData(userId: string | undefined, enabled: boolean = true) {
+  console.log('[CONVEX] usePersonaData query called', {
+    timestamp: Date.now(),
+    userId,
+    enabled
+  })
+  
   const persona = useQuery(
     api.personas.getPersona,
     userId && enabled ? { userId } : "skip"
   );
+
+  console.log('[CONVEX] usePersonaData query result', {
+    timestamp: Date.now(),
+    userId,
+    hasPersona: !!persona,
+    personaData: persona
+  })
 
   // Transform the Convex persona data to match our PersonaData interface
   const transformedPersona: PersonaData | null = persona ? {

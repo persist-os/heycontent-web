@@ -316,6 +316,116 @@ export const getCrystalsByIds = internalQuery({
 });
 
 /**
+ * Get count of crystals and shards for a user
+ */
+export const getCrystalStats = query({
+    args: {
+        userId: v.string(),
+    },
+    returns: v.object({
+        crystalsCount: v.number(),
+        shardsCount: v.number(),
+        byDimension: v.record(v.string(), v.number()),
+        byConfidence: v.record(v.string(), v.number()),
+        recentActivity: v.object({
+            crystalsThisWeek: v.number(),
+            shardsThisWeek: v.number(),
+        }),
+    }),
+    handler: async (ctx, { userId }) => {
+        console.log(`📊 [CRYSTAL STATS] Getting stats for user ${userId}`);
+        
+        try {
+            // Get all crystals and shards for the user
+            const [crystals, shards] = await Promise.all([
+                ctx.db
+                    .query("crystals")
+                    .withIndex("by_user", (q) => q.eq("userId", userId))
+                    .collect(),
+                ctx.db
+                    .query("crystal_shards")
+                    .withIndex("by_user", (q) => q.eq("userId", userId))
+                    .collect()
+            ]);
+
+            // Calculate basic counts
+            const crystalsCount = crystals.length;
+            const shardsCount = shards.length;
+
+            // Group by dimension
+            const byDimension: Record<string, number> = {};
+            crystals.forEach(crystal => {
+                if (crystal.dimension) {
+                    byDimension[crystal.dimension] = (byDimension[crystal.dimension] || 0) + 1;
+                }
+            });
+
+            // Group by confidence level
+            const byConfidence: Record<string, number> = {};
+            crystals.forEach(crystal => {
+                if (crystal.confidence_score !== undefined) {
+                    // Handle string confidence scores from the schema
+                    let level = 'low';
+                    if (typeof crystal.confidence_score === 'string') {
+                        switch (crystal.confidence_score) {
+                            case 'very_high':
+                            case 'high':
+                                level = 'high';
+                                break;
+                            case 'moderate':
+                                level = 'medium';
+                                break;
+                            case 'developing':
+                            default:
+                                level = 'low';
+                                break;
+                        }
+                    } else if (typeof crystal.confidence_score === 'number') {
+                        // Handle numeric confidence scores (legacy or computed)
+                        level = crystal.confidence_score >= 0.8 ? 'high' : 
+                                crystal.confidence_score >= 0.5 ? 'medium' : 'low';
+                    }
+                    byConfidence[level] = (byConfidence[level] || 0) + 1;
+                }
+            });
+
+            // Calculate recent activity (last 7 days)
+            const oneWeekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+            const crystalsThisWeek = crystals.filter(c => c._creationTime > oneWeekAgo).length;
+            const shardsThisWeek = shards.filter(s => s._creationTime > oneWeekAgo).length;
+
+            const stats = {
+                crystalsCount,
+                shardsCount,
+                byDimension,
+                byConfidence,
+                recentActivity: {
+                    crystalsThisWeek,
+                    shardsThisWeek,
+                },
+            };
+
+            console.log(`✅ [CRYSTAL STATS] Generated stats:`, stats);
+            return stats;
+            
+        } catch (error: any) {
+            console.error(`❌ [CRYSTAL STATS] Error getting stats:`, error);
+            // Return empty stats instead of throwing
+            return {
+                crystalsCount: 0,
+                shardsCount: 0,
+                byDimension: {},
+                byConfidence: {},
+                recentActivity: {
+                    crystalsThisWeek: 0,
+                    shardsThisWeek: 0,
+                },
+            };
+        }
+    }
+});
+
+/**
  * Internal function to get crystal shards by their IDs
  * Used by vector search to retrieve actual shard data after finding matches
  */

@@ -64,32 +64,18 @@ export function AutomaticEmbeddingStatus({ userId }: AutomaticEmbeddingStatusPro
     }
   };
 
-  // Heartbeat mechanism for active users
+  // Initial sync call only - heartbeat is handled by chat components
   useEffect(() => {
     if (!userId) return;
-
-    // Initial sync call
+    
+    // Only do initial sync call, no interval to prevent conflicts with chat heartbeats
     userHeartbeat({ userId }).catch(console.error);
-
-    // Set up heartbeat every 1.5 minutes for more responsive queue processing
-    const heartbeatInterval = setInterval(async () => {
-      try {
-        console.log('💓 [HEARTBEAT] Triggering sync for active user');
-        await userHeartbeat({ userId });
-        // Refresh status after heartbeat
-        await fetchStatus();
-      } catch (error) {
-        console.error('Heartbeat sync failed:', error);
-      }
-    }, 90 * 1000); // 1.5 minutes - more frequent processing
-
-    return () => clearInterval(heartbeatInterval);
   }, [userId, userHeartbeat]);
 
   useEffect(() => {
     fetchStatus();
-    // Refresh status every 30 seconds
-    const interval = setInterval(fetchStatus, 30000);
+    // Refresh status every 60 seconds (reduced frequency to prevent render loops)
+    const interval = setInterval(fetchStatus, 60000);
     return () => clearInterval(interval);
   }, [userId]);
 

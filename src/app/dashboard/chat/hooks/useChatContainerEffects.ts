@@ -42,6 +42,15 @@ export function useChatContainerEffects({
   chatScrollPosition,
   saveScrollPosition
 }: UseChatContainerEffectsProps) {
+  console.log('[HOOK] useChatContainerEffects called', {
+    timestamp: Date.now(),
+    chatId,
+    userUid: authData?.user?.uid,
+    messagesCount: messages.length,
+    askQuery,
+    isLoading: authData?.isLoading
+  })
+
   const { firebaseUser, getToken } = useAuth()
   const convex = useConvex()
   const refreshPersonaData = usePersonaStore(state => state.refreshPersonaData)
@@ -51,15 +60,31 @@ export function useChatContainerEffects({
 
   // API key effect
   useEffect(() => {
+    console.log('[EFFECT] API key effect triggered', {
+      timestamp: Date.now(),
+      hasFirebaseUser: !!firebaseUser,
+      hasGetToken: !!getToken
+    })
     async function fetchApiKey() {
       if (firebaseUser && getToken) {
         try {
           const token = await getToken()
+          console.log('[STATE] About to update API key', {
+            timestamp: Date.now(),
+            hasToken: !!token
+          })
           setters.setApiKey(token)
         } catch (error) {
+          console.log('[STATE] About to clear API key due to error', {
+            timestamp: Date.now(),
+            error: error?.message
+          })
           setters.setApiKey(null)
         }
       } else {
+        console.log('[STATE] About to clear API key (no user/token)', {
+          timestamp: Date.now()
+        })
         setters.setApiKey(null)
       }
     }
@@ -68,25 +93,50 @@ export function useChatContainerEffects({
 
   // Initialize persona store when userId changes
   useEffect(() => {
+    console.log('[EFFECT] Persona store initialization effect triggered', {
+      timestamp: Date.now(),
+      userId: authData.userId,
+      hasConvex: !!convex
+    })
     if (authData.userId && convex) {
+      console.log('[STATE] About to initialize persona data', {
+        timestamp: Date.now(),
+        userId: authData.userId
+      })
       initializePersonaData(authData.userId, convex)
     }
   }, [authData.userId, convex, initializePersonaData])
 
   // Load conversation when user and chatId are available
   useEffect(() => {
+    console.log('[EFFECT] Conversation loading effect triggered', {
+      timestamp: Date.now(),
+      chatId,
+      hasUser: !!authData.user,
+      isLoading: authData.isLoading,
+      loadedConversation: refs.loadedConversationRef.current
+    })
     if (authData.user && !authData.isLoading) {
       if (chatId && refs.loadedConversationRef.current !== chatId) {
+        console.log('[STATE] About to load conversation', {
+          timestamp: Date.now(),
+          chatId,
+          previouslyLoaded: refs.loadedConversationRef.current
+        })
         refs.loadedConversationRef.current = chatId
         handleLoadConversation(chatId)
       } else if (!chatId && refs.loadedConversationRef.current !== null) {
+        console.log('[STATE] About to clear conversation state', {
+          timestamp: Date.now(),
+          previouslyLoaded: refs.loadedConversationRef.current
+        })
         chatState.setMessages([])
         chatState.setSessionId(null)
         chatState.setIsFirstMessage(true)
         refs.loadedConversationRef.current = null
       }
     }
-  }, [chatId, authData.user, authData.isLoading, handleLoadConversation, chatState, refs])
+  }, [chatId, authData.user, authData.isLoading]) // Removed unstable dependencies
 
   // Effect to detect persona completion and trigger persona refresh
   useEffect(() => {
@@ -121,12 +171,24 @@ export function useChatContainerEffects({
 
   // Handle initial ask query
   useEffect(() => {
+    console.log('[EFFECT] Ask query effect triggered', {
+      timestamp: Date.now(),
+      askQuery,
+      processedQuery: refs.askQueryProcessedRef.current,
+      isLoading: chatState.isLoading,
+      messagesLength: messages.length,
+      hasUser: !!authData.user
+    })
     if (askQuery && 
         askQuery !== refs.askQueryProcessedRef.current && 
         !chatState.isLoading && 
         messages.length === 0 &&
         authData.user) {
       
+      console.log('[STATE] About to process ask query', {
+        timestamp: Date.now(),
+        askQuery
+      })
       refs.askQueryProcessedRef.current = askQuery
       
       setTimeout(() => {
@@ -138,7 +200,7 @@ export function useChatContainerEffects({
         }
       }, 100)
     }
-  }, [askQuery, chatState.isLoading, handleSendMessageWithUpdateCheck, messages.length, authData.user, refs])
+  }, [askQuery, chatState.isLoading, messages.length, authData.user]) // Removed refs dependency
 
   // Clear conversation state on mount for clean start
   useEffect(() => {

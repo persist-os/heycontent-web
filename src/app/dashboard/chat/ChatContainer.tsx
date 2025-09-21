@@ -41,6 +41,16 @@ import { usePersonaStore } from '@/store/persona-store'
 import { useContentContextActions } from '@/store/content-context-store'
 
 const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery, noteId }) => {
+  // Strategic logging for infinite loop debugging
+  console.log('[RENDER] ChatContainer', {
+    timestamp: Date.now(),
+    chatId,
+    contentContext: !!contentContext,
+    askQuery,
+    noteId,
+    renderCount: React.useRef(0).current++
+  })
+
   const router = useRouter()
   const convex = useConvex()
   
@@ -53,7 +63,21 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   
   // Initialize core hooks
   const authData = useAuthData()
+  console.log('[RENDER] ChatContainer authData', {
+    timestamp: Date.now(),
+    userId: authData?.user?.uid,
+    isLoading: authData?.isLoading,
+    isAuthenticated: authData?.isAuthenticated
+  })
+
   const { state, setters } = useChatContainerState()
+  console.log('[RENDER] ChatContainer state', {
+    timestamp: Date.now(),
+    stateKeys: Object.keys(state),
+    inputValue: state.inputValue,
+    useContextSearch: state.useContextSearch
+  })
+
   const { clearContentContext } = useContentContextActions()
   
   const { isExpanded } = useSidebar()
@@ -75,15 +99,37 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   const chatState = useChatState()
   const { messages, setMessages, error, isLoading, includeAnalysisInQuery, setIncludeAnalysisInQuery } = chatState
   
+  console.log('[RENDER] ChatContainer chatState', {
+    timestamp: Date.now(),
+    messagesCount: messages.length,
+    sessionId: chatState.sessionId,
+    isLoading,
+    error: !!error
+  })
+  
 
   // Initialize embedding sync
+  console.log('[RENDER] ChatContainer before useEmbeddingSync', {
+    timestamp: Date.now(),
+    userId: authData.userId
+  })
   useEmbeddingSync({ 
     userId: authData.userId, 
     setEmbeddingInfo: setters.setEmbeddingInfo 
   })
   
   // Check if user has an existing persona
+  console.log('[RENDER] ChatContainer before usePersonaData', {
+    timestamp: Date.now(),
+    userId: authData.userId,
+    isAuthenticated: authData.isAuthenticated
+  })
   const { hasPersona, isLoading: isPersonaDataLoading } = usePersonaData(authData.userId, authData.isAuthenticated)
+  console.log('[RENDER] ChatContainer persona data', {
+    timestamp: Date.now(),
+    hasPersona,
+    isPersonaDataLoading
+  })
 
   // Initialize UI effects hook
   const {
@@ -98,6 +144,11 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     resetChat
   } = useUIEffects(messages, isExpanded)
 
+  console.log('[RENDER] ChatContainer before useChat', {
+    timestamp: Date.now(),
+    userId: authData.userId,
+    useContextSearch: state.useContextSearch
+  })
   const {
     referencedMessage,
     handleSendMessage,
@@ -129,16 +180,28 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     null, // ChatContainer doesn't use project context
     'chat' // Use regular chat mode
   )
+  console.log('[RENDER] ChatContainer useChat result', {
+    timestamp: Date.now(),
+    hasReferencedMessage: !!referencedMessage
+  })
 
   // Track onboarding state for persona tip - REMOVED (onboarding eliminated)
 
   // Initialize conversation hook with shared state
+  console.log('[RENDER] ChatContainer before useConversation', {
+    timestamp: Date.now(),
+    userUid: authData?.user?.uid
+  })
   const {
     loading: conversationLoading,
     setLoading: setConversationLoading,
     handleLoadConversation,
     initSession
   } = useConversation(chatState, authData.user)
+  console.log('[RENDER] ChatContainer conversation loading', {
+    timestamp: Date.now(),
+    conversationLoading
+  })
 
   // Notepad functionality
   const {
@@ -182,6 +245,12 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   const finalHandlers = handlers
 
   // Initialize effects
+  console.log('[RENDER] ChatContainer before useChatContainerEffects', {
+    timestamp: Date.now(),
+    chatId,
+    askQuery,
+    messagesCount: messages.length
+  })
   useChatContainerEffects({
     state,
     setters,
@@ -217,7 +286,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
       switchToTab('notes')
     }
     
-    // Load conversation if specified
+    // Load conversation if specified - but only once per noteId
     if (conversationIdParam && handleLoadConversation) {
       handleLoadConversation(conversationIdParam)
     }
@@ -226,7 +295,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     if (refs.notepadRef.current?.setNoteForEditing) {
       refs.notepadRef.current.setNoteForEditing(noteId)
     }
-  }, [noteId, notepadOpen, toggleNotepad, isMobile, activeTab, switchToTab, handleLoadConversation])
+  }, [noteId, notepadOpen, toggleNotepad, isMobile, activeTab, switchToTab]) // REMOVED handleLoadConversation dependency
   
   // REMOVED: Duplicate effect that caused cascading switches
 

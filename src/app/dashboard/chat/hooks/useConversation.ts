@@ -84,7 +84,7 @@ export const useConversation = (
     } finally {
       setLoading(false);
     }
-  }, [user, setMessages, setSessionId, setError, setIsFirstMessage, initSession]);
+  }, [user?.uid]); // Simplified dependencies - only depend on user.uid for stability
 
   return {
     loading,
