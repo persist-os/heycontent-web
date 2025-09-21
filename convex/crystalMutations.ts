@@ -18,7 +18,7 @@ export const mutateCrystalData = mutation({
     args: {
         table: v.union(v.literal("crystal_shards"), v.literal("crystals")),
         operation: v.union(v.literal("create"), v.literal("update"), v.literal("delete")),
-        data: v.optional(v.union(crystalShardValidator, crystalValidator)),
+        data: v.optional(v.any()),
         shardId: v.optional(v.id("crystal_shards")),
         crystalId: v.optional(v.id("crystals")),
     },
@@ -98,7 +98,7 @@ const crystalShardUpdateValidator = v.object({
     // Metadata (updatedAt should always be updated, createdAt never changes)
     updatedAt: v.optional(v.number()),
     last_referenced: v.optional(v.number()),
-    reference_count: v.optional(v.number()),
+    reference_count: v.optional(v.union(v.number(), v.literal("INCREMENT"))),
 });
 
 const crystalUpdateValidator = v.object({
@@ -160,7 +160,7 @@ const crystalUpdateValidator = v.object({
     conflicting_crystals: v.optional(v.array(v.id("crystals"))),
 
     // Utilization metadata (can be updated)
-    usage_count: v.optional(v.number()),
+    usage_count: v.optional(v.union(v.number(), v.literal("INCREMENT"))),
     usage_frequency: v.optional(v.number()),
     last_used: v.optional(v.number()),
 
@@ -230,7 +230,7 @@ export const batchMutateCrystalData = mutation({
         table: v.union(v.literal("crystal_shards"), v.literal("crystals")),
         operations: v.array(v.object({
             type: v.union(v.literal("create"), v.literal("update"), v.literal("delete")),
-            data: v.optional(v.any()), // We'll validate this in the handler based on operation type
+            data: v.optional(v.any()),
             id: v.optional(v.union(v.id("crystal_shards"), v.id("crystals"))),
         })),
     },

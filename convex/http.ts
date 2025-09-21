@@ -1767,6 +1767,131 @@ app.post("/api/crystal/ensure-embedding", async (c) => {
   }
 });
 
+// BATCH OPERATIONS AND OPTIMIZATION ENDPOINTS
+
+// Batch vector search operations
+app.post("/api/vector/batch-search", async (c) => {
+  const ctx = c.env;
+  const body = await c.req.json();
+  const { userId, queries } = body;
+  
+  console.log(`🔍 [HTTP] Batch vector search for user ${userId} with ${queries?.length || 0} queries`);
+  
+  try {
+    const result = await ctx.runAction(api.vectorSearchBatch.batchVectorSearch, {
+      userId,
+      queries: queries || []
+    });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("❌ [HTTP] Batch vector search error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// Batch embedding generation
+app.post("/api/vector/batch-embeddings", async (c) => {
+  const ctx = c.env;
+  const body = await c.req.json();
+  const { userId, items, maxConcurrency } = body;
+  
+  console.log(`🚀 [HTTP] Batch embeddings for user ${userId} with ${items?.length || 0} items`);
+  
+  try {
+    const result = await ctx.runAction(api.vectorSearchBatch.batchGenerateEmbeddings, {
+      userId,
+      items: items || [],
+      maxConcurrency: maxConcurrency || 5
+    });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("❌ [HTTP] Batch embeddings error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// Optimized crystal context
+app.post("/api/crystal/optimized-context", async (c) => {
+  const ctx = c.env;
+  const body = await c.req.json();
+  const { userId, contextQueries, includeRelated, cacheKey } = body;
+  
+  console.log(`🔍 [HTTP] Optimized crystal context for user ${userId}`);
+  
+  try {
+    const result = await ctx.runQuery(api.crystalContextOptimized.getBatchCrystalContext, {
+      userId,
+      contextQueries: contextQueries || [],
+      includeRelated: includeRelated || false,
+      cacheKey
+    });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("❌ [HTTP] Optimized crystal context error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// Formation context
+app.post("/api/crystal/formation-context", async (c) => {
+  const ctx = c.env;
+  const body = await c.req.json();
+  const { userId, shardCount, dimensions } = body;
+  
+  console.log(`🔮 [HTTP] Formation context for user ${userId} with ${shardCount} shards`);
+  
+  try {
+    const result = await ctx.runQuery(api.crystalContextOptimized.getFormationContext, {
+      userId,
+      shardCount: shardCount || 0,
+      dimensions: dimensions || []
+    });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("❌ [HTTP] Formation context error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// Cache management endpoints
+app.get("/api/cache/stats/:userId", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("userId");
+  
+  console.log(`📊 [HTTP] Cache stats for user ${userId}`);
+  
+  try {
+    const result = await ctx.runQuery(api.crystalCache.getCacheStats, { userId });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("❌ [HTTP] Cache stats error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// Paginated crystals
+app.post("/api/crystal/paginated", async (c) => {
+  const ctx = c.env;
+  const body = await c.req.json();
+  const { userId, paginationOpts, filters, sortBy, sortOrder } = body;
+  
+  console.log(`📄 [HTTP] Paginated crystals for user ${userId}`);
+  
+  try {
+    const result = await ctx.runQuery(api.paginatedQueries.getPaginatedCrystals, {
+      userId,
+      paginationOpts: paginationOpts || { numItems: 20, cursor: null },
+      filters,
+      sortBy,
+      sortOrder
+    });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("❌ [HTTP] Paginated crystals error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 
 
 const router = new HttpRouterWithHono(app);

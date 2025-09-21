@@ -1,4 +1,5 @@
 import { UnifiedContent } from '@/types/content';
+import { memoryMonitor, ResourceCleanup } from './async-resource-manager';
 
 // Memory management configuration
 export interface MemoryConfig {
@@ -54,6 +55,9 @@ export class MemoryManager<T extends UnifiedContent> {
   constructor(config: Partial<MemoryConfig> = {}) {
     this.config = { ...DEFAULT_MEMORY_CONFIG, ...config };
     this.startGarbageCollection();
+    
+    // Register cleanup callback
+    ResourceCleanup.registerCleanup(() => this.destroy());
   }
 
   // Add items to memory with sliding window management
@@ -214,6 +218,15 @@ export class MemoryManager<T extends UnifiedContent> {
   private estimateMemoryUsage(): number {
     if (!this.config.trackMemoryUsage) return 0;
     
+    // Use browser memory API if available
+    const browserMemory = memoryMonitor.getMemoryUsage();
+    if (browserMemory) {
+      // Return a portion of browser memory usage attributed to this manager
+      const memoryRatio = this.items.size / 1000; // Rough estimation
+      return Math.min(browserMemory.usedMB * memoryRatio, browserMemory.usedMB * 0.1);
+    }
+    
+    // Fallback to manual estimation
     let totalSize = 0;
     
     // Sample a few items to estimate average size

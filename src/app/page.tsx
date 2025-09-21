@@ -6,7 +6,6 @@ import React from 'react'
 import Head from 'next/head'
 import { HeroSection } from '../components/ui/hero-section'
 import { ValueCards } from '../components/ui/value-cards'
-import { AgentsShowcase } from '../components/ui/agents-showcase'
 import { WhyItWorks } from '../components/ui/why-it-works'
 import { Personas } from '../components/ui/personas'
 import { PrivacyTrust } from '../components/ui/privacy-trust'
@@ -57,9 +56,6 @@ export default function LandingPage() {
         </section>
         <section className="snap-start">
           <ValueCards />
-        </section>
-        <section className="snap-start">
-          <AgentsShowcase />
         </section>
         <section className="snap-start">
           <WhyItWorks />

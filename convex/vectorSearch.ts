@@ -386,59 +386,129 @@ export const hybridSearchContentWithQuotas = action({
     ))),
     minSimilarity: v.optional(v.number()),
   },
+  returns: v.array(v.object({
+    contentId: v.string(),
+    contentType: v.string(),
+    title: v.string(),
+    content: v.string(),
+    embedding: v.array(v.float64()),
+    score: v.number(),
+  })),
   handler: async (ctx, args) => {
     console.log('🔀 [HYBRID QUOTA SEARCH] Starting hybrid search with quotas');
     console.log('🔀 [HYBRID QUOTA SEARCH] Query:', args.query);
     
     try {
-      // Generate embedding for the query (with error handling)
-      let queryEmbedding;
+      // Validate query before processing
+      if (!args.query || typeof args.query !== 'string' || args.query.trim().length === 0) {
+        console.error('❌ [HYBRID QUOTA SEARCH] Query is empty or invalid');
+        return [];
+      }
+
+      // Generate embedding for the query using internal function
+      let queryEmbedding: number[];
       try {
-        queryEmbedding = await generateEmbedding(args.query);
+        const trimmedQuery = args.query.trim();
+        
+        // Use the internal embedding generation logic directly
+        const apiKey = process.env.GOOGLE_API_KEY;
+        if (!apiKey) {
+          throw new Error("GOOGLE_API_KEY environment variable is required");
+        }
+
+        const requestBody = {
+          model: "models/text-embedding-004",
+          content: {
+            parts: [{ text: trimmedQuery }],
+          },
+          taskType: "RETRIEVAL_QUERY",
+        };
+
+        const response = await fetch(`${GOOGLE_API_URL}?key=${apiKey}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Google API error: ${response.status} ${response.statusText}. ${errorText}`);
+        }
+
+        const data = await response.json();
+        if (!data.embedding || !data.embedding.values) {
+          throw new Error('Invalid embedding response structure');
+        }
+
+        queryEmbedding = data.embedding.values;
+        console.log('✅ [HYBRID QUOTA SEARCH] Generated query embedding with dimension:', queryEmbedding.length);
       } catch (error) {
+        console.error('❌ [HYBRID QUOTA SEARCH] Failed to generate embedding:', error);
         throw new Error(`Failed to generate embedding: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
       
-      // Get all user embeddings (with error handling)
+      // Get user embeddings using internal query (actions can't directly access ctx.db)
       let userEmbeddings;
       try {
-        userEmbeddings = await ctx.runQuery(internal.vectorSearchQueries.getAllUserEmbeddings, {
+        // Use internal query to get embeddings
+        userEmbeddings = await ctx.runQuery(internal.vectorSearch.getUserEmbeddings, {
           userId: args.userId,
-          contentTypes: args.contentTypes,
+          contentTypes: args.contentTypes
         });
+        
+        console.log('✅ [HYBRID QUOTA SEARCH] Retrieved', userEmbeddings.length, 'user embeddings');
       } catch (error) {
+        console.error('❌ [HYBRID QUOTA SEARCH] Failed to fetch user embeddings:', error);
         throw new Error(`Failed to fetch user embeddings: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
       
-      // Step 4: Calculate similarities (with error handling)
-      let similarities;
-      try {
-        similarities = userEmbeddings.map((doc, index) => {
-          try {
-            const score = cosineSimilarity(queryEmbedding, doc.embedding);
-            return {
-              ...doc,
-              score,
-            };
-          } catch (error) {
-            return {
-              ...doc,
-              score: 0, // Default to 0 if calculation fails
-            };
+      // Calculate similarities using inline cosine similarity
+      const similarities = userEmbeddings.map((doc) => {
+        try {
+          // Inline cosine similarity calculation
+          let dotProduct = 0;
+          let normA = 0;
+          let normB = 0;
+          
+          for (let i = 0; i < queryEmbedding.length; i++) {
+            dotProduct += queryEmbedding[i] * doc.embedding[i];
+            normA += queryEmbedding[i] * queryEmbedding[i];
+            normB += doc.embedding[i] * doc.embedding[i];
           }
-        });
-      } catch (error) {
-        throw new Error(`Failed to calculate similarities: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
+          
+          const score = dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+          
+          return {
+            contentId: doc.contentId,
+            contentType: doc.contentType,
+            title: doc.title,
+            content: doc.content,
+            embedding: doc.embedding,
+            score: isNaN(score) ? 0 : score,
+          };
+        } catch (error) {
+          console.warn('⚠️ [HYBRID QUOTA SEARCH] Failed to calculate similarity for doc:', doc.contentId);
+          return {
+            contentId: doc.contentId,
+            contentType: doc.contentType,
+            title: doc.title,
+            content: doc.content,
+            embedding: doc.embedding,
+            score: 0,
+          };
+        }
+      });
 
-      // Step 5: Apply similarity threshold and filtering
+      // Apply similarity threshold and filtering
       const minThreshold = args.minSimilarity || 0.35;
       const filteredSimilarities = similarities.filter(item => item.score >= minThreshold);
       
-      // Sort by similarity score
+      // Sort by similarity score (highest first)
       filteredSimilarities.sort((a, b) => b.score - a.score);
       
-      // Group by content type
+      // Group by content type for quota application
       const contentByType = {
         conversation: filteredSimilarities.filter(item => item.contentType === 'conversation'),
         note: filteredSimilarities.filter(item => item.contentType === 'note'),
@@ -451,7 +521,7 @@ export const hybridSearchContentWithQuotas = action({
         crystals: contentByType.crystal.length,
       });
       
-      // Step 7: Apply content type quotas
+      // Apply content type quotas
       const selectedResults: Array<{
         contentId: string;
         contentType: string;
@@ -462,44 +532,24 @@ export const hybridSearchContentWithQuotas = action({
       }> = [];
       
       // Add crystals (max 5)
-      if (contentByType.crystal.length > 0) {
-        const topCrystalShards = contentByType.crystal.slice(0, 5);
-        selectedResults.push(...topCrystalShards);
-        console.log('🔀 [HYBRID QUOTA SEARCH] Added', topCrystalShards.length, 'crystal shards (max 5)');
-      }
+      const topCrystals = contentByType.crystal.slice(0, 5);
+      selectedResults.push(...topCrystals);
       
       // Add conversations (max 4)
-      if (contentByType.conversation.length > 0) {
-        const topConversations = contentByType.conversation.slice(0, 4);
-        selectedResults.push(...topConversations);
-        console.log('🔀 [HYBRID QUOTA SEARCH] Added', topConversations.length, 'conversations (max 4)');
-      }
+      const topConversations = contentByType.conversation.slice(0, 4);
+      selectedResults.push(...topConversations);
       
       // Add notes (max 3)
-      if (contentByType.note.length > 0) {
-        const topNotes = contentByType.note.slice(0, 3);
-        selectedResults.push(...topNotes);
-        console.log('🔀 [HYBRID QUOTA SEARCH] Added', topNotes.length, 'notes (max 3)');
-      }
+      const topNotes = contentByType.note.slice(0, 3);
+      selectedResults.push(...topNotes);
       
-      // Fill remaining slots with best matches while respecting quotas
+      // Fill remaining slots while respecting quotas
       const targetTotal = args.limit || 10;
       const remainingSlots = targetTotal - selectedResults.length;
       
       if (remainingSlots > 0) {
-        console.log('🔀 [HYBRID QUOTA SEARCH] Filling', remainingSlots, 'remaining slots...');
-        
-        // Get unused content items, respecting quotas
         const usedIds = new Set(selectedResults.map(item => item.contentId));
         const unusedContent = filteredSimilarities.filter(item => !usedIds.has(item.contentId));
-        
-        // Apply quota limits to unused content
-        const quotaLimitedUnused = [];
-        const quotaLimits = {
-          conversation: 4,
-          crystal: 5,
-          note: 3,
-        };
         
         // Count current content by type
         const currentCounts = {
@@ -508,31 +558,26 @@ export const hybridSearchContentWithQuotas = action({
           note: selectedResults.filter(item => item.contentType === 'note').length,
         };
         
+        const quotaLimits = { conversation: 4, crystal: 5, note: 3 };
+        
         for (const item of unusedContent) {
-          if (quotaLimitedUnused.length >= remainingSlots) break;
+          if (selectedResults.length >= targetTotal) break;
           
-          const currentCount = currentCounts[item.contentType] || 0;
-          const quota = quotaLimits[item.contentType];
+          const currentCount = currentCounts[item.contentType as keyof typeof currentCounts] || 0;
+          const quota = quotaLimits[item.contentType as keyof typeof quotaLimits];
           
-          if (quota === undefined || currentCount < quota) {
-            quotaLimitedUnused.push(item);
-            currentCounts[item.contentType] = currentCount + 1;
+          if (quota && currentCount < quota) {
+            selectedResults.push(item);
+            currentCounts[item.contentType as keyof typeof currentCounts] = currentCount + 1;
           }
         }
-        
-        selectedResults.push(...quotaLimitedUnused);
-        console.log('🔀 [HYBRID QUOTA SEARCH] Added', quotaLimitedUnused.length, 'additional items to fill remaining slots');
       }
       
-      // Step 8: Final processing
-      console.log('🔀 [HYBRID QUOTA SEARCH] Step 8: Final processing...');
-      // Sort final results by score
+      // Final sort and limit
       selectedResults.sort((a, b) => b.score - a.score);
-      
-      // Take final limit
       const finalResults = selectedResults.slice(0, targetTotal);
       
-      console.log('🔀 [HYBRID QUOTA SEARCH] Final results:', {
+      console.log('✅ [HYBRID QUOTA SEARCH] Final results:', {
         total: finalResults.length,
         conversations: finalResults.filter(item => item.contentType === 'conversation').length,
         crystals: finalResults.filter(item => item.contentType === 'crystal').length,
@@ -544,8 +589,42 @@ export const hybridSearchContentWithQuotas = action({
     } catch (error) {
       console.error("❌ [HYBRID QUOTA SEARCH] Error:", error);
       console.error("❌ [HYBRID QUOTA SEARCH] Error stack:", error instanceof Error ? error.stack : 'No stack trace');
-      // Re-throw with more context
-      throw new Error(`Hybrid search with quotas failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Return empty results instead of throwing to prevent cascading failures
+      return [];
+    }
+  },
+});
+
+/**
+ * Internal query to get user embeddings (used by actions)
+ */
+export const getUserEmbeddings = internalQuery({
+  args: {
+    userId: v.string(),
+    contentTypes: v.optional(v.array(v.union(
+      v.literal("conversation"),
+      v.literal("note"),
+      v.literal("crystal"),
+    ))),
+  },
+  handler: async (ctx, args) => {
+    const query = ctx.db
+      .query("contentEmbeddings")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId));
+    
+    // Apply content type filter if specified
+    if (args.contentTypes && args.contentTypes.length > 0) {
+      return await query
+        .filter((q) => {
+          let filter = q.eq(q.field("contentType"), args.contentTypes![0]);
+          for (let i = 1; i < args.contentTypes!.length; i++) {
+            filter = q.or(filter, q.eq(q.field("contentType"), args.contentTypes![i]));
+          }
+          return filter;
+        })
+        .collect();
+    } else {
+      return await query.collect();
     }
   },
 });

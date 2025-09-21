@@ -844,6 +844,34 @@ export default defineSchema({
   .index("by_note_user", ["noteId", "userId"])
   .index("by_user_client", ["userId", "clientId"]),
 
+  // Crystal Cache - Intelligent caching for frequently accessed crystal data
+  crystalCache: defineTable({
+    userId: v.string(),
+    cacheKey: v.string(),
+    cacheType: v.union(
+      v.literal("crystal_context"),
+      v.literal("vector_search"),
+      v.literal("formation_context"),
+      v.literal("similarity_results")
+    ),
+    data: v.any(),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+    accessCount: v.number(),
+    lastAccessed: v.number(),
+    dataSize: v.number(),
+    metadata: v.optional(v.object({
+      queryParams: v.optional(v.string()),
+      resultCount: v.optional(v.number()),
+      processingTime: v.optional(v.number()),
+    })),
+  })
+  .index("by_user", ["userId"])
+  .index("by_user_key", ["userId", "cacheKey"])
+  .index("by_type", ["cacheType"])
+  .index("by_expiration", ["expiresAt"])
+  .index("by_access", ["lastAccessed"]),
+
   crystal_shards: defineTable({
     // === CORE IDENTIFICATION (REQUIRED) ===
     userId: v.string(),                      // REQUIRED: User who owns this shard
@@ -891,12 +919,12 @@ export default defineSchema({
 // === COMPREHENSIVE CRYSTALS TABLE ===
 
     crystals: defineTable({
-    // === CORE IDENTIFICATION ===
-    userId: v.string(),
-    crystal_id: v.string(),                 // Unique identifier
+    // === CORE IDENTIFICATION (REQUIRED) ===
+    userId: v.string(),                     // REQUIRED: User who owns this crystal
+    crystal_id: v.string(),                 // REQUIRED: Unique identifier
 
-    // === CRYSTAL DEFINITION ===
-    name: v.string(),                       // "Morning Productivity Pattern", "Direct Communication Preference"
+    // === CRYSTAL DEFINITION (CORE REQUIRED FIELDS) ===
+    name: v.string(),                       // REQUIRED: "Morning Productivity Pattern", "Direct Communication Preference"
     crystal_type: v.union(
         v.literal("stable_trait"),            // Enduring personality characteristic
         v.literal("behavioral_pattern"),      // How they consistently act
@@ -906,59 +934,58 @@ export default defineSchema({
         v.literal("growth_trajectory"),      // How they're evolving over time
         v.literal("contradiction_resolution") // How they handle internal conflicts
     ),
+    dimension: v.string(),                  // REQUIRED: Primary identity dimension
 
-    dimension: v.string(),                  // Primary identity dimension
-    secondary_dimensions: v.array(v.string()), // Other dimensions this crystal touches
+    // === FLEXIBLE CRYSTAL CONTENT ===
+    secondary_dimensions: v.optional(v.array(v.string())), // Optional: Other dimensions this crystal touches
+    description: v.optional(v.string()),    // Optional: Comprehensive description of the pattern
+    core_insight: v.optional(v.string()),   // Optional: The key understanding in one sentence
+    detailed_analysis: v.optional(v.string()), // Optional: Deep dive into what this means
 
-    // === CONSOLIDATED INSIGHT ===
-    description: v.string(),                // Comprehensive description of the pattern
-    core_insight: v.string(),              // The key understanding in one sentence
-    detailed_analysis: v.string(),         // Deep dive into what this means
+    // === SUPPORTING EVIDENCE (FLEXIBLE) ===
+    shardIds: v.optional(v.array(v.string())), // Optional: All supporting shards (relaxed validation)
+    supporting_quotes: v.optional(v.array(v.string())), // Optional: Supporting evidence
 
-    // === SUPPORTING EVIDENCE ===
-    shardIds: v.array(v.string()), // All supporting shards (relaxed validation)
-    supporting_quotes: v.array(v.string()), // Supporting evidence
+    // === CONFIDENCE & RELIABILITY (WITH DEFAULTS) ===
+    confidence_score: v.optional(v.union(v.literal("developing"), v.literal("moderate"), v.literal("high"), v.literal("very_high"))),
+    evidence_strength: v.optional(v.union(v.literal("weak"), v.literal("moderate"), v.literal("strong"), v.literal("overwhelming"))),
+    consistency_rating: v.optional(v.union(v.literal("inconsistent"), v.literal("mostly_consistent"), v.literal("very_consistent"))),
+    observation_count: v.optional(v.number()), // Optional: Number of times we've observed this pattern
+    time_span_days: v.optional(v.number()),    // Optional: How long we've been observing this pattern
 
-    // === CONFIDENCE & RELIABILITY ===
-    confidence_score: v.union(v.literal("developing"), v.literal("moderate"), v.literal("high"), v.literal("very_high")),
-    evidence_strength: v.union(v.literal("weak"), v.literal("moderate"), v.literal("strong"), v.literal("overwhelming")),
-    consistency_rating: v.union(v.literal("inconsistent"), v.literal("mostly_consistent"), v.literal("very_consistent")),
-    observation_count: v.number(),          // Number of times we've observed this pattern
-    time_span_days: v.number(),            // How long we've been observing this pattern
+    // === PATTERN METADATA (ALL OPTIONAL) ===
+    tags: v.optional(v.array(v.string())),  // Optional: Semantic tags for retrieval
+    behavioral_implications: v.optional(v.array(v.string())), // Optional: What this suggests they might do
+    interaction_guidance: v.optional(v.array(v.string())),    // Optional: How AI should adapt based on this
 
-    // === PATTERN METADATA ===
-    tags: v.array(v.string()),             // Semantic tags for retrieval
-    behavioral_implications: v.array(v.string()), // What this suggests they might do
-    interaction_guidance: v.array(v.string()),    // How AI should adapt based on this
+    // === CONTRADICTIONS & NUANCE (OPTIONAL) ===
+    contradicting_shards: v.optional(v.array(v.string())), // Optional: Shards that contradict this pattern
+    contradiction_analysis: v.optional(v.string()), // Optional: How contradictions are resolved/understood
 
-    // === CONTRADICTIONS & NUANCE ===
-    contradicting_shards: v.array(v.string()), // Shards that contradict this pattern (relaxed validation)
-    contradiction_analysis: v.string(),     // How contradictions are resolved/understood
-
-    // === EVOLUTION TRACKING ===
-    evolution_history: v.array(v.object({
+    // === EVOLUTION TRACKING (FLEXIBLE) ===
+    evolution_history: v.optional(v.array(v.object({
       timestamp: v.number(),
-      change_type: v.union(v.literal("strengthened"), v.literal("weakened"), v.literal("refined"), v.literal("contradicted")),
+      change_type: v.union(v.literal("strengthened"), v.literal("weakened"), v.literal("refined"), v.literal("contradicted"), v.literal("created")),
       description: v.string(),
       triggering_shard_id: v.string() // Relaxed validation for temp IDs
-    })),
-    stability_trend: v.union(v.literal("strengthening"), v.literal("stable"), v.literal("weakening"), v.literal("evolving")),
-    last_evolution: v.number(),             // When this crystal last changed significantly
+    }))),
+    stability_trend: v.optional(v.union(v.literal("strengthening"), v.literal("stable"), v.literal("weakening"), v.literal("evolving"))),
+    last_evolution: v.optional(v.number()), // Optional: When this crystal last changed significantly
 
-    // === CROSS-CRYSTAL RELATIONSHIPS ===
-    related_crystals: v.array(v.string()), // Other crystals this connects to (relaxed validation)
-    conflicting_crystals: v.array(v.string()), // Crystals that contradict this one (relaxed validation)
+    // === CROSS-CRYSTAL RELATIONSHIPS (OPTIONAL) ===
+    related_crystals: v.optional(v.array(v.string())), // Optional: Other crystals this connects to
+    conflicting_crystals: v.optional(v.array(v.string())), // Optional: Crystals that contradict this one
 
-    // === UTILIZATION METADATA ===
-    usage_count: v.number(),                // How many times this crystal has been used
-    usage_frequency: v.number(),            // How often this crystal is referenced
-    last_used: v.number(),                  // When this was last used for AI decisions
+    // === UTILIZATION METADATA (OPTIONAL) ===
+    usage_count: v.optional(v.number()),    // Optional: How many times this crystal has been used
+    usage_frequency: v.optional(v.number()), // Optional: How often this crystal is referenced
+    last_used: v.optional(v.number()),      // Optional: When this was last used for AI decisions
 
-    // === METADATA ===
-    createdAt: v.number(),
-    updatedAt: v.number(),
-    next_review_due: v.number(),            // When this crystal should be reviewed/updated
-    review_priority: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
+    // === METADATA (REQUIRED FOR TRACKING) ===
+    createdAt: v.number(),                  // REQUIRED: Creation timestamp
+    updatedAt: v.number(),                  // REQUIRED: Last update timestamp
+    next_review_due: v.optional(v.number()), // Optional: When this crystal should be reviewed/updated
+    review_priority: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
   })
 
       .index("by_user", ["userId"])
@@ -985,10 +1012,23 @@ export default defineSchema({
         v.literal("manual_trigger")        // User initiated
       ),
       
+        // Event tracking
+        event_type: v.optional(v.string()),             // Event type for tracking
+        timestamp: v.optional(v.number()),              // Event timestamp
+        
         // Results
         clusters_formed: v.optional(v.number()),
         crystals_created: v.optional(v.number()),
         crystals_failed: v.optional(v.number()),
+        
+        // Additional tracking fields for management system
+        crystal_count: v.optional(v.number()),           // Number of crystals being processed
+        crystals_updated: v.optional(v.number()),        // Crystals that were updated
+        crystals_merged: v.optional(v.number()),         // Crystals that were merged
+        crystals_archived: v.optional(v.number()),       // Crystals that were archived
+        evolution_events: v.optional(v.number()),        // Number of evolution events
+        vector_matches_found: v.optional(v.number()),    // Vector search matches found
+        agent_recommendations_used: v.optional(v.number()), // Agent recommendations used
         
         // Timing
         started_at: v.number(),
