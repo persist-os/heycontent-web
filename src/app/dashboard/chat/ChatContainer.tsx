@@ -1,7 +1,6 @@
 import React, { useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSidebar } from '@/app/context/sidebar-context'
-import { useTheme } from 'next-themes'
 import { useConvex } from 'convex/react'
 
 // Import types
@@ -14,43 +13,33 @@ import { BottomBarActions } from './components/main_chat/BottomBarActions'
 import ChatInputArea from './components/main_chat/ChatInputArea'
 import { MarkdownNotepad } from './components/notepad/MarkdownNotepad'
 import { PanelExpandButton } from './components/PanelExpandButton'
-import { ChatContainerLayout } from './components/ChatContainerLayout'
-import { ChatContent } from './components/ChatContent'
-import { EmptyState } from './components/EmptyState'
 import { ChatContainerModals } from './components/ChatContainerModals'
+import { SimplifiedChatContent } from './components/SimplifiedChatContent'
+import { ChatLayout, ChatPanel, ContentArea, InputArea } from './components/layout/ChatLayout'
 
 // Import custom hooks
 import { useChatState } from './hooks/useChatState'
 import { useChat } from './hooks/useChat'
 import { useConversation } from './hooks/useConversation'
 import { useUIEffects } from './hooks/useUIEffects'
-// import { useOnboardingState } from './hooks/useOnboardingState' // Removed - onboarding eliminated
 import { usePersonaData } from './hooks/usePersonaData'
 import { useNotepadUI } from './hooks/useNotepadUI'
 import { useNotes } from '@/app/context/notes-context'
 import { useSplitScreenLayout } from './hooks/useSplitScreenLayout'
 
-// Import refactored hooks
-import { useAuthData } from './hooks/useAuthData'
+// Import optimized hooks
+import { useOptimizedAuth } from './hooks/useOptimizedAuth'
+import { useChatHandlers } from './hooks/useChatHandlers'
 import { useChatContainerState } from './hooks/useChatContainerState'
 import { useEmbeddingSync } from './hooks/useEmbeddingSync'
-import { useChatContainerHandlers } from './hooks/useChatContainerHandlers'
 import { useChatContainerEffects } from './hooks/useChatContainerEffects'
 
+// Import utilities
+import { useThemeClasses } from '@/lib/theme-utils'
 import { usePersonaStore } from '@/store/persona-store'
 import { useContentContextActions } from '@/store/content-context-store'
 
 const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery, noteId }) => {
-  // Strategic logging for infinite loop debugging
-  console.log('[RENDER] ChatContainer', {
-    timestamp: Date.now(),
-    chatId,
-    contentContext: !!contentContext,
-    askQuery,
-    noteId,
-    renderCount: React.useRef(0).current++
-  })
-
   const router = useRouter()
   const convex = useConvex()
   
@@ -61,75 +50,25 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     notepadRef: useRef<MarkdownNotepadRef>(null)
   }
   
-  // Initialize core hooks
-  const authData = useAuthData()
-  console.log('[RENDER] ChatContainer authData', {
-    timestamp: Date.now(),
-    userId: authData?.user?.uid,
-    isLoading: authData?.isLoading,
-    isAuthenticated: authData?.isAuthenticated
-  })
-
+  // Initialize optimized hooks
+  const authData = useOptimizedAuth()
   const { state, setters } = useChatContainerState()
-  console.log('[RENDER] ChatContainer state', {
-    timestamp: Date.now(),
-    stateKeys: Object.keys(state),
-    inputValue: state.inputValue,
-    useContextSearch: state.useContextSearch
-  })
-
   const { clearContentContext } = useContentContextActions()
-  
   const { isExpanded } = useSidebar()
-  const { theme } = useTheme()
-  
-  // Theme-aware colors (memoized)
-  const themeColors = useMemo(() => {
-    const isDark = theme === 'dark'
-    return {
-      accentColor: isDark ? 'text-primary' : 'text-purple-600',
-      accentBg: isDark ? 'bg-primary' : 'bg-purple-600',
-      accentBgHover: isDark ? 'hover:bg-primary/90' : 'hover:bg-purple-700',
-      accentBgLight: isDark ? 'bg-primary/10' : 'bg-purple-600/10',
-      accentBorder: isDark ? 'border-primary' : 'border-purple-600'
-    }
-  }, [theme])
+  const themeClasses = useThemeClasses()
 
   // Initialize shared state and hooks
   const chatState = useChatState()
   const { messages, setMessages, error, isLoading, includeAnalysisInQuery, setIncludeAnalysisInQuery } = chatState
   
-  console.log('[RENDER] ChatContainer chatState', {
-    timestamp: Date.now(),
-    messagesCount: messages.length,
-    sessionId: chatState.sessionId,
-    isLoading,
-    error: !!error
-  })
-  
-
   // Initialize embedding sync
-  console.log('[RENDER] ChatContainer before useEmbeddingSync', {
-    timestamp: Date.now(),
-    userId: authData.userId
-  })
   useEmbeddingSync({ 
     userId: authData.userId, 
     setEmbeddingInfo: setters.setEmbeddingInfo 
   })
   
   // Check if user has an existing persona
-  console.log('[RENDER] ChatContainer before usePersonaData', {
-    timestamp: Date.now(),
-    userId: authData.userId,
-    isAuthenticated: authData.isAuthenticated
-  })
   const { hasPersona, isLoading: isPersonaDataLoading } = usePersonaData(authData.userId, authData.isAuthenticated)
-  console.log('[RENDER] ChatContainer persona data', {
-    timestamp: Date.now(),
-    hasPersona,
-    isPersonaDataLoading
-  })
 
   // Initialize UI effects hook
   const {
@@ -144,11 +83,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     resetChat
   } = useUIEffects(messages, isExpanded)
 
-  console.log('[RENDER] ChatContainer before useChat', {
-    timestamp: Date.now(),
-    userId: authData.userId,
-    useContextSearch: state.useContextSearch
-  })
   const {
     referencedMessage,
     handleSendMessage,
@@ -180,28 +114,14 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     null, // ChatContainer doesn't use project context
     'chat' // Use regular chat mode
   )
-  console.log('[RENDER] ChatContainer useChat result', {
-    timestamp: Date.now(),
-    hasReferencedMessage: !!referencedMessage
-  })
-
-  // Track onboarding state for persona tip - REMOVED (onboarding eliminated)
 
   // Initialize conversation hook with shared state
-  console.log('[RENDER] ChatContainer before useConversation', {
-    timestamp: Date.now(),
-    userUid: authData?.user?.uid
-  })
   const {
     loading: conversationLoading,
     setLoading: setConversationLoading,
     handleLoadConversation,
     initSession
   } = useConversation(chatState, authData.user)
-  console.log('[RENDER] ChatContainer conversation loading', {
-    timestamp: Date.now(),
-    conversationLoading
-  })
 
   // Notepad functionality
   const {
@@ -225,32 +145,25 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   // Split-screen layout management
   const splitScreen = useSplitScreenLayout()
 
-  // Initialize handlers
-  const handlers = useChatContainerHandlers({
-    state,
-    setters,
-    authData,
-    chatState,
-    refs,
+  // Initialize consolidated handlers
+  const chatHandlers = useChatHandlers({
     handleSendMessage,
     handleClearReference,
+    handleNewChat: () => {
+      clearContentContext()
+      resetChat()
+    },
+    setInputValue: setters.setInputValue,
     clearContentContext,
     resetChat,
+    insertTextToNotepad,
+    inputValue: state.inputValue,
     messages,
     hasPersona,
-    notepadOpen,
-    insertTextToNotepad
+    notepadOpen
   })
-  
-  const finalHandlers = handlers
 
   // Initialize effects
-  console.log('[RENDER] ChatContainer before useChatContainerEffects', {
-    timestamp: Date.now(),
-    chatId,
-    askQuery,
-    messagesCount: messages.length
-  })
   useChatContainerEffects({
     state,
     setters,
@@ -261,7 +174,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     askQuery,
     chatId,
     handleLoadConversation,
-    handleSendMessageWithUpdateCheck: finalHandlers.handleSendMessageWithUpdateCheck,
+    handleSendMessageWithUpdateCheck: chatHandlers.handleSendMessageWithUpdateCheck,
     chatContainerRef,
     isMobile,
     activeTab,
@@ -317,57 +230,29 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   if (isMobile) {
     return (
       <>
-        <ChatContainerLayout
-          isMobile={isMobile}
-          splitScreen={splitScreen}
-          getMainContentStyle={getMainContentStyle}
-        >
+        <ChatLayout isMobile={true}>
           {/* Main Content */}
-          {hasMessagesOrContext && (
-            <ChatContent
-              isMobile={isMobile}
-              activeTab={activeTab}
-              switchToTab={switchToTab}
-              hasUnreadNotepadChanges={hasUnreadNotepadChanges}
-              authData={authData}
-              themeColors={themeColors}
+          <ContentArea>
+            <SimplifiedChatContent
               messages={messages}
+              authData={authData}
+              hasPersona={hasPersona}
+              isMobile={true}
+              activeTab={activeTab}
+              hasUnreadNotepadChanges={hasUnreadNotepadChanges}
+              notepadOpen={notepadOpen}
+              error={error}
+              handlers={chatHandlers}
               chatContainerRef={chatContainerRef}
-              handleNewChat={finalHandlers.handleNewChat}
-              handleSendMessageWithUpdateCheck={finalHandlers.handleSendMessageWithUpdateCheck}
-              handleInputAppend={finalHandlers.handleInputAppend}
-              handleMessageReference={handleMessageReference}
-              notepadReferenceHandler={(messageId: string) => finalHandlers.handleReferenceClick(messageId)}
-              handleOptionClick={(option: string) => {
-                handleOptionClickFromChat({ text: option })
-              }}
-              handleFollowUpPopulate={finalHandlers.handleFollowUpPopulate}
-              handleSuggestionClick={finalHandlers.handleSuggestionClick}
-              handleQuoteToNotepadEnhanced={finalHandlers.handleQuoteToNotepadEnhanced}
-              handleContentClick={finalHandlers.handleContentClick}
               referencedMessage={referencedMessage}
               includeAnalysisInQuery={includeAnalysisInQuery}
               setIncludeAnalysisInQuery={setIncludeAnalysisInQuery}
-              notepadOpen={notepadOpen}
               updatePersonaRequested={state.updatePersonaRequested}
-              error={error}
               setError={chatState.setError}
-            />
-          )}
-
-          {/* Empty State */}
-          {!hasMessagesOrContext && (
-            <EmptyState
-              isMobile={isMobile}
-              activeTab={activeTab}
-              hasPersona={hasPersona}
-              authData={authData}
-              themeColors={themeColors}
-              handleNewChat={finalHandlers.handleNewChat}
-              handleSendMessageWithUpdateCheck={finalHandlers.handleSendMessageWithUpdateCheck}
               clearContentContext={clearContentContext}
+              switchToTab={switchToTab}
             />
-          )}
+          </ContentArea>
 
           {/* Mobile: Show notepad content when activeTab is 'notes' */}
           {activeTab === 'notes' && (
@@ -376,8 +261,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                 ref={refs.notepadRef}
                 isOpen={true}
                 onClose={() => switchToTab('chat')}
-                quotedContent={finalHandlers.quotedForNotepad}
-                onClearQuoted={finalHandlers.handleClearQuoted}
+                quotedContent=""
+                onClearQuoted={() => {}}
                 width={notepadWidth}
                 style={getNotepadStyle()}
                 availableNotes={availableNotes}
@@ -394,21 +279,19 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
 
           {/* Bottom Bar Actions - only show for users with personas */}
           {authData.user && messages.length === 0 && hasPersona && (
-            <div className="flex-shrink-0">
-              <BottomBarActions 
-                onActionClick={finalHandlers.handleActionClick} 
-                onInputPopulate={finalHandlers.handleInputAppend} 
-              />
-            </div>
+            <BottomBarActions 
+              onActionClick={chatHandlers.handleActionClick} 
+              onInputPopulate={chatHandlers.handleInputAppend} 
+            />
           )}
 
           {/* Input Bar */}
           {activeTab !== 'notes' && (
-            <div className="flex-shrink-0 border-t border-border bg-background">
+            <InputArea>
               <ChatInputArea
                 showAmbient={false}
-                handleActionClick={finalHandlers.handleActionClick}
-                handleSendMessage={finalHandlers.handleSendMessageWithUpdateCheck}
+                handleActionClick={chatHandlers.handleActionClick}
+                handleSendMessage={chatHandlers.handleSendMessageWithUpdateCheck}
                 inputRef={inputRef}
                 isLoading={isLoading}
                 referencedMessage={referencedMessage}
@@ -416,11 +299,11 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                 includeAnalysisInQuery={includeAnalysisInQuery}
                 inputValue={state.inputValue}
                 onInputChange={setters.setInputValue}
-                onInputPopulate={finalHandlers.handleInputAppend}
+                onInputPopulate={chatHandlers.handleInputAppend}
                 notepadOpen={true}
                 openNotepad={toggleNotepad}
-                quotedForNotepad={finalHandlers.quotedForNotepad}
-                onClearQuoted={finalHandlers.handleClearQuoted}
+                quotedForNotepad=""
+                onClearQuoted={() => {}}
                 isAuthenticated={authData.isAuthenticated}
                 isMobile={isMobile}
                 activeTab={activeTab}
@@ -430,19 +313,14 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                 includeNotepadInMessages={state.includeNotepadInMessages}
                 onToggleNotepadInMessages={setters.setIncludeNotepadInMessages}
               />
-            </div>
+            </InputArea>
           )}
-        </ChatContainerLayout>
+        </ChatLayout>
 
         {/* Modals */}
         <ChatContainerModals
-          showNotepadWarning={state.showNotepadWarning}
-          setShowNotepadWarning={setters.setShowNotepadWarning}
           overlayContent={state.overlayContent}
-          notepadRef={refs.notepadRef}
-          handleConfirmDiscardNotepad={finalHandlers.handleConfirmDiscardNotepad}
-          handleCancelDiscardNotepad={finalHandlers.handleCancelDiscardNotepad}
-          handleOverlayClose={finalHandlers.handleOverlayClose}
+          handleOverlayClose={() => setters.setOverlayContent(null)}
         />
       </>
     )
@@ -451,12 +329,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   // Desktop layout - proper split screen
   return (
     <>
-      <div className="flex h-screen bg-background">
+      <ChatLayout isMobile={false}>
         {/* Chat Panel */}
-        <div 
-          className="flex flex-col h-screen bg-background relative group"
-          style={splitScreen.getChatContainerStyle()}
-        >
+        <ChatPanel style={splitScreen.getChatContainerStyle()}>
           <PanelExpandButton
             panelType="chat"
             panelState={splitScreen.panelState}
@@ -465,68 +340,42 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
           />
 
           {/* Main Content */}
-          {hasMessagesOrContext && (
-            <ChatContent
+          <ContentArea>
+            <SimplifiedChatContent
+              messages={messages}
+              authData={authData}
+              hasPersona={hasPersona}
               isMobile={false}
               activeTab={activeTab}
-              switchToTab={switchToTab}
               hasUnreadNotepadChanges={hasUnreadNotepadChanges}
-              authData={authData}
-              themeColors={themeColors}
-              messages={messages}
+              notepadOpen={notepadOpen}
+              error={error}
+              handlers={chatHandlers}
               chatContainerRef={chatContainerRef}
-              handleNewChat={finalHandlers.handleNewChat}
-              handleSendMessageWithUpdateCheck={finalHandlers.handleSendMessageWithUpdateCheck}
-              handleInputAppend={finalHandlers.handleInputAppend}
-              handleMessageReference={handleMessageReference}
-              notepadReferenceHandler={(messageId: string) => finalHandlers.handleReferenceClick(messageId)}
-              handleOptionClick={(option: string) => {
-                handleOptionClickFromChat({ text: option })
-              }}
-              handleFollowUpPopulate={finalHandlers.handleFollowUpPopulate}
-              handleSuggestionClick={finalHandlers.handleSuggestionClick}
-              handleQuoteToNotepadEnhanced={finalHandlers.handleQuoteToNotepadEnhanced}
-              handleContentClick={finalHandlers.handleContentClick}
               referencedMessage={referencedMessage}
               includeAnalysisInQuery={includeAnalysisInQuery}
               setIncludeAnalysisInQuery={setIncludeAnalysisInQuery}
-              notepadOpen={notepadOpen}
               updatePersonaRequested={state.updatePersonaRequested}
-              error={error}
               setError={chatState.setError}
-            />
-          )}
-
-          {/* Empty State */}
-          {!hasMessagesOrContext && (
-            <EmptyState
-              isMobile={false}
-              activeTab={activeTab}
-              hasPersona={hasPersona}
-              authData={authData}
-              themeColors={themeColors}
-              handleNewChat={finalHandlers.handleNewChat}
-              handleSendMessageWithUpdateCheck={finalHandlers.handleSendMessageWithUpdateCheck}
               clearContentContext={clearContentContext}
+              switchToTab={switchToTab}
             />
-          )}
+          </ContentArea>
 
           {/* Bottom Bar Actions - only show for users with personas */}
           {authData.user && messages.length === 0 && hasPersona && (
-            <div className="flex-shrink-0">
-              <BottomBarActions 
-                onActionClick={finalHandlers.handleActionClick} 
-                onInputPopulate={finalHandlers.handleInputAppend} 
-              />
-            </div>
+            <BottomBarActions 
+              onActionClick={chatHandlers.handleActionClick} 
+              onInputPopulate={chatHandlers.handleInputAppend} 
+            />
           )}
 
           {/* Input Bar */}
-          <div className="flex-shrink-0 border-t border-border bg-background">
+          <InputArea>
             <ChatInputArea
               showAmbient={false}
-              handleActionClick={finalHandlers.handleActionClick}
-              handleSendMessage={finalHandlers.handleSendMessageWithUpdateCheck}
+              handleActionClick={chatHandlers.handleActionClick}
+              handleSendMessage={chatHandlers.handleSendMessageWithUpdateCheck}
               inputRef={inputRef}
               isLoading={isLoading}
               referencedMessage={referencedMessage}
@@ -534,7 +383,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
               includeAnalysisInQuery={includeAnalysisInQuery}
               inputValue={state.inputValue}
               onInputChange={setters.setInputValue}
-              onInputPopulate={finalHandlers.handleInputAppend}
+              onInputPopulate={chatHandlers.handleInputAppend}
               notepadOpen={true}
               openNotepad={toggleNotepad}
               quotedForNotepad=""
@@ -548,14 +397,11 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
               includeNotepadInMessages={state.includeNotepadInMessages}
               onToggleNotepadInMessages={setters.setIncludeNotepadInMessages}
             />
-          </div>
-        </div>
+          </InputArea>
+        </ChatPanel>
 
         {/* Notepad Panel */}
-        <div 
-          className="relative group h-screen bg-background"
-          style={splitScreen.getNotepadContainerStyle()}
-        >
+        <ChatPanel style={splitScreen.getNotepadContainerStyle()}>
           <PanelExpandButton
             panelType="notepad"
             panelState={splitScreen.panelState}
@@ -567,8 +413,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             ref={refs.notepadRef}
             isOpen={true}
             onClose={() => {}}
-            quotedContent={finalHandlers.quotedForNotepad}
-            onClearQuoted={finalHandlers.handleClearQuoted}
+            quotedContent=""
+            onClearQuoted={() => {}}
             width="100%"
             style={{}}
             availableNotes={availableNotes}
@@ -580,18 +426,13 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             sessionId={chatState.sessionId}
             panelState={splitScreen.panelState}
           />
-        </div>
-      </div>
+        </ChatPanel>
+      </ChatLayout>
 
       {/* Modals */}
       <ChatContainerModals
-        showNotepadWarning={state.showNotepadWarning}
-        setShowNotepadWarning={setters.setShowNotepadWarning}
         overlayContent={state.overlayContent}
-        notepadRef={refs.notepadRef}
-        handleConfirmDiscardNotepad={finalHandlers.handleConfirmDiscardNotepad}
-        handleCancelDiscardNotepad={finalHandlers.handleCancelDiscardNotepad}
-        handleOverlayClose={finalHandlers.handleOverlayClose}
+        handleOverlayClose={() => setters.setOverlayContent(null)}
       />
     </>
   )

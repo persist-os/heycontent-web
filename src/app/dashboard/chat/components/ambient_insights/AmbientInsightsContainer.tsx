@@ -31,7 +31,7 @@ export function AmbientInsightsContainer({ userId, handleSendMessage, onNewChat 
   // For simplicity, AmbientInsights manages its own loading and error states
   return (
     <div className="h-full flex flex-col">
-      {/* Header with optional New Chat button */}
+      {/* Header with optional New Chat button - positioned at top */}
       {onNewChat && (
         <div className="flex-shrink-0 pt-3 pb-2">
           <div className="max-w-4xl mx-auto px-4 sm:px-6">
@@ -50,9 +50,9 @@ export function AmbientInsightsContainer({ userId, handleSendMessage, onNewChat 
         </div>
       )}
 
-      {/* Insights Content - Fit within available space with proper padding */}
-      <div className="flex-1 flex flex-col min-h-0 pb-4">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-full">
+      {/* Insights Content - Takes remaining space and centers content */}
+      <div className="flex-1 flex items-center justify-center min-h-0">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 w-full">
           <AmbientInsights 
             key={refreshKey}
             userId={userId}

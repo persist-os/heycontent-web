@@ -31,11 +31,9 @@ interface AmbientInsightsProps {
 
 // Layout wrapper for consistent styling
 const InsightsContainer: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="h-full flex flex-col">
-    <div className="flex-1 flex flex-col justify-center px-6">
-      <div className="w-full max-w-6xl mx-auto">
-        {children}
-      </div>
+  <div className="h-full flex items-center justify-center">
+    <div className="w-full max-w-6xl mx-auto px-6">
+      {children}
     </div>
   </div>
 );

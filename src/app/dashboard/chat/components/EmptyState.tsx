@@ -29,7 +29,7 @@ export function EmptyState({
 
   // Always show ambient insights - onboarding has been eliminated
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col justify-center min-h-0">
       <AmbientInsightsContainer 
         userId={authData.userId}
         handleSendMessage={(msg, context) => {
