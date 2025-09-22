@@ -23,3 +23,6 @@ export { ShardsView } from './ShardsView';
 // Navigation and layout
 export { InsightsNavigation } from './InsightsNavigation';
 export { InsightsSkeleton } from './InsightsSkeleton';
+
+// Explanation component
+export { CrystalSystemExplanation } from './CrystalSystemExplanation';

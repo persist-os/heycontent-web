@@ -22,7 +22,6 @@ import { useChatState } from './hooks/useChatState'
 import { useChat } from './hooks/useChat'
 import { useConversation } from './hooks/useConversation'
 import { useUIEffects } from './hooks/useUIEffects'
-import { usePersonaData } from './hooks/usePersonaData'
 import { useNotepadUI } from './hooks/useNotepadUI'
 import { useNotes } from '@/app/context/notes-context'
 import { useSplitScreenLayout } from './hooks/useSplitScreenLayout'
@@ -36,7 +35,6 @@ import { useChatContainerEffects } from './hooks/useChatContainerEffects'
 
 // Import utilities
 import { useThemeClasses } from '@/lib/theme-utils'
-import { usePersonaStore } from '@/store/persona-store'
 import { useContentContextActions } from '@/store/content-context-store'
 
 const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQuery, noteId }) => {
@@ -67,8 +65,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     setEmbeddingInfo: setters.setEmbeddingInfo 
   })
   
-  // Check if user has an existing persona
-  const { hasPersona, isLoading: isPersonaDataLoading } = usePersonaData(authData.userId, authData.isAuthenticated)
 
   // Initialize UI effects hook
   const {
@@ -145,6 +141,22 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
   // Split-screen layout management
   const splitScreen = useSplitScreenLayout()
 
+  // Quote to notepad state and handlers
+  const [quotedForNotepad, setQuotedForNotepad] = React.useState('')
+  
+  // Create proper quote handler that actually inserts content
+  const handleQuoteToNotepad = React.useCallback((text: string) => {
+    setQuotedForNotepad(text)
+    if (isMobile) {
+      switchToTab('notes')
+    } else {
+      // Ensure notepad is open on desktop
+      if (!notepadOpen) {
+        toggleNotepad()
+      }
+    }
+  }, [isMobile, switchToTab, notepadOpen, toggleNotepad])
+
   // Initialize consolidated handlers
   const chatHandlers = useChatHandlers({
     handleSendMessage,
@@ -159,7 +171,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     insertTextToNotepad,
     inputValue: state.inputValue,
     messages,
-    hasPersona,
     notepadOpen
   })
 
@@ -236,7 +247,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             <SimplifiedChatContent
               messages={messages}
               authData={authData}
-              hasPersona={hasPersona}
               isMobile={true}
               activeTab={activeTab}
               hasUnreadNotepadChanges={hasUnreadNotepadChanges}
@@ -247,9 +257,9 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
               referencedMessage={referencedMessage}
               includeAnalysisInQuery={includeAnalysisInQuery}
               setIncludeAnalysisInQuery={setIncludeAnalysisInQuery}
-              updatePersonaRequested={state.updatePersonaRequested}
               setError={chatState.setError}
               clearContentContext={clearContentContext}
+              onQuoteToNotepad={handleQuoteToNotepad}
               switchToTab={switchToTab}
             />
           </ContentArea>
@@ -261,8 +271,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                 ref={refs.notepadRef}
                 isOpen={true}
                 onClose={() => switchToTab('chat')}
-                quotedContent=""
-                onClearQuoted={() => {}}
+                quotedContent={quotedForNotepad}
+                onClearQuoted={() => setQuotedForNotepad('')}
                 width={notepadWidth}
                 style={getNotepadStyle()}
                 availableNotes={availableNotes}
@@ -277,8 +287,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             </div>
           )}
 
-          {/* Bottom Bar Actions - only show for users with personas */}
-          {authData.user && messages.length === 0 && hasPersona && (
+          {/* Bottom Bar Actions */}
+          {authData.user && messages.length === 0 && (
             <BottomBarActions 
               onActionClick={chatHandlers.handleActionClick} 
               onInputPopulate={chatHandlers.handleInputAppend} 
@@ -344,7 +354,6 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             <SimplifiedChatContent
               messages={messages}
               authData={authData}
-              hasPersona={hasPersona}
               isMobile={false}
               activeTab={activeTab}
               hasUnreadNotepadChanges={hasUnreadNotepadChanges}
@@ -355,15 +364,15 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
               referencedMessage={referencedMessage}
               includeAnalysisInQuery={includeAnalysisInQuery}
               setIncludeAnalysisInQuery={setIncludeAnalysisInQuery}
-              updatePersonaRequested={state.updatePersonaRequested}
               setError={chatState.setError}
               clearContentContext={clearContentContext}
+              onQuoteToNotepad={handleQuoteToNotepad}
               switchToTab={switchToTab}
             />
           </ContentArea>
 
-          {/* Bottom Bar Actions - only show for users with personas */}
-          {authData.user && messages.length === 0 && hasPersona && (
+          {/* Bottom Bar Actions */}
+          {authData.user && messages.length === 0 && (
             <BottomBarActions 
               onActionClick={chatHandlers.handleActionClick} 
               onInputPopulate={chatHandlers.handleInputAppend} 
@@ -413,8 +422,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             ref={refs.notepadRef}
             isOpen={true}
             onClose={() => {}}
-            quotedContent=""
-            onClearQuoted={() => {}}
+            quotedContent={quotedForNotepad}
+            onClearQuoted={() => setQuotedForNotepad('')}
             width="100%"
             style={{}}
             availableNotes={availableNotes}

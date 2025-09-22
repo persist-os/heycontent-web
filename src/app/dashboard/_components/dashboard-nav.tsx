@@ -288,6 +288,17 @@ export const DashboardNav = memo(function DashboardNav() {
                 </div>
               </div>
               <div className="flex items-center gap-2 ml-auto">
+                <button
+                  onClick={() => handleNavigate('/settings')}
+                  className={cn(
+                    "p-1.5 hover:bg-muted/30 rounded-lg transition-colors",
+                    pathname === '/settings' && "bg-muted/40"
+                  )}
+                  title="Settings"
+                  aria-label="Settings"
+                >
+                  <Settings className="w-4 h-4 text-muted-foreground/60" />
+                </button>
                 <div className="px-2 py-1 bg-muted/20 rounded-lg">
                   <span className="text-xs font-mono text-muted-foreground/60">⌘K</span>
                 </div>
@@ -424,19 +435,9 @@ export const DashboardNav = memo(function DashboardNav() {
               </div>
             )}
 
-            {/* Settings and Theme */}
+            {/* Theme */}
             <div className="p-6 border-t border-border/20">
-              <div className="flex items-center justify-between">
-                <button
-                  onClick={() => handleNavigate('/settings')}
-                  className={cn(
-                    "flex items-center gap-3 p-3 rounded-xl transition-all hover:bg-muted/30",
-                    pathname === '/settings' && "bg-muted/40"
-                  )}
-                >
-                  <Settings className="w-6 h-6 text-muted-foreground" />
-                  <span className="text-sm font-light text-foreground">Settings</span>
-                </button>
+              <div className="flex items-center justify-end">
                 <ThemeToggle />
               </div>
             </div>

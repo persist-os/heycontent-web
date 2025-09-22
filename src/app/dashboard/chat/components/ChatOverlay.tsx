@@ -165,7 +165,7 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
           {/* Main content */}
           <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
             {/* Sidebar metadata */}
-            <div className="hidden md:block w-64 flex-shrink-0 border-r bg-muted/40 p-6 overflow-y-auto">
+            <div className="hidden md:block w-64 flex-shrink-0 border-r bg-muted/40 p-6 overflow-y-auto scrollbar-hide">
               {note && (
                 <div>
                   <div className="mb-6">

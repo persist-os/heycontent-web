@@ -81,7 +81,7 @@ export function MobileNotepadLayout({
       />
 
       {/* Editor Area */}
-      <div className="flex-1 overflow-auto relative">
+      <div className="flex-1 overflow-auto relative scrollbar-hide">
         {/* Calculate padding to match header - mobile uses px-4 */}
         <div className="px-4 h-full">
           <LexicalNotepadEditor

@@ -3,7 +3,6 @@ import type { ChatContainerState, EmbeddingInfo, ContextConsumption, OverlayCont
 
 export function useChatContainerState() {
   // UI state - grouped related state together
-  const [updatePersonaRequested, setUpdatePersonaRequested] = useState(false)
   const [inputValue, setInputValue] = useState('')
   const [embeddingInfo, setEmbeddingInfo] = useState<EmbeddingInfo>({ 
     hasEmbeddings: false, 
@@ -33,7 +32,6 @@ export function useChatContainerState() {
   const [apiKey, setApiKey] = useState<string | null>(null)
 
   const state: ChatContainerState = {
-    updatePersonaRequested,
     inputValue,
     embeddingInfo,
     contextConsumption,
@@ -46,7 +44,6 @@ export function useChatContainerState() {
   }
 
   const setters = {
-    setUpdatePersonaRequested,
     setInputValue,
     setEmbeddingInfo,
     setContextConsumption,

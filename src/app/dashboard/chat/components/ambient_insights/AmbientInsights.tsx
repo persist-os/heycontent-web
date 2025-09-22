@@ -6,6 +6,7 @@ import { getApiKey } from '@/app/lib/api-helpers';
 import { Button } from '@/components/ui/button';
 import { InsightCard } from '@/components/ui/insight-card';
 import { LoadingGrid } from '@/components/ui/loading-grid';
+import { CenterContainer, ContentWrapper } from '@/components/ui/layout';
 import { RefreshCw, Users, BarChart3, TrendingUp, Lightbulb, Target, Calendar, Zap } from 'lucide-react';
 
 // Type for the Convex response
@@ -31,11 +32,11 @@ interface AmbientInsightsProps {
 
 // Layout wrapper for consistent styling
 const InsightsContainer: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="h-full flex items-center justify-center">
-    <div className="w-full max-w-6xl mx-auto px-6">
+  <CenterContainer variant="full">
+    <ContentWrapper maxWidth="xl" className="px-6">
       {children}
-    </div>
-  </div>
+    </ContentWrapper>
+  </CenterContainer>
 );
 
 // Constants

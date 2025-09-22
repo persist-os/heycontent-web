@@ -748,7 +748,7 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
       
       {/* Chat Messages Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden">
+        <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide">
           <div className="p-3 sm:p-4 pb-4">
             <div className="max-w-4xl sm:max-w-6xl mx-auto space-y-3">
               {/* Context box */}

@@ -1,14 +1,13 @@
 import React from 'react'
 import { ChatContent } from './ChatContent'
 import { EmptyState } from './EmptyState'
-import type { Message } from '../types'
+import type { Message } from '@/app/types/chat'
 import type { OptimizedAuthData } from '../hooks/useOptimizedAuth'
 
 interface SimplifiedChatContentProps {
   // Core data
   messages: Message[]
   authData: OptimizedAuthData
-  hasPersona: boolean
   
   // UI state
   isMobile: boolean
@@ -38,6 +37,9 @@ interface SimplifiedChatContentProps {
   setError?: (error: string | null) => void
   clearContentContext: () => void
   
+  // Quote functionality
+  onQuoteToNotepad?: (text: string) => void
+  
   // Optional mobile props
   switchToTab?: (tab: string) => void
 }
@@ -49,7 +51,6 @@ interface SimplifiedChatContentProps {
 export function SimplifiedChatContent({
   messages,
   authData,
-  hasPersona,
   isMobile,
   activeTab,
   hasUnreadNotepadChanges,
@@ -63,6 +64,7 @@ export function SimplifiedChatContent({
   updatePersonaRequested,
   setError,
   clearContentContext,
+  onQuoteToNotepad,
   switchToTab
 }: SimplifiedChatContentProps) {
   
@@ -72,7 +74,7 @@ export function SimplifiedChatContent({
     return (
       <ChatContent
         isMobile={isMobile}
-        activeTab={activeTab}
+        activeTab={activeTab as 'chat' | 'notes'}
         switchToTab={switchToTab}
         hasUnreadNotepadChanges={hasUnreadNotepadChanges}
         authData={authData}
@@ -87,7 +89,7 @@ export function SimplifiedChatContent({
         handleOptionClick={handlers.handleActionClick}
         handleFollowUpPopulate={handlers.handleFollowUpPopulate}
         handleSuggestionClick={handlers.handleSuggestionClick}
-        handleQuoteToNotepadEnhanced={handlers.handleContentClick}
+        handleQuoteToNotepadEnhanced={onQuoteToNotepad || handlers.handleContentClick}
         handleContentClick={handlers.handleContentClick}
         referencedMessage={referencedMessage}
         includeAnalysisInQuery={includeAnalysisInQuery}
@@ -104,7 +106,6 @@ export function SimplifiedChatContent({
     <EmptyState
       isMobile={isMobile}
       activeTab={activeTab}
-      hasPersona={hasPersona}
       authData={authData}
       themeColors={{}} // Will be removed when EmptyState uses theme utils
       handleNewChat={handlers.handleNewChat}

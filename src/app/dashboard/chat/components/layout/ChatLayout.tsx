@@ -1,5 +1,6 @@
 import React from 'react'
 import { useThemeClasses } from '@/lib/theme-utils'
+import { FullHeightContainer, FlexContainer } from '@/components/ui/layout'
 
 interface ChatLayoutProps {
   isMobile: boolean
@@ -10,21 +11,20 @@ interface ChatLayoutProps {
 /**
  * Unified chat layout component that handles both mobile and desktop layouts
  * Replaces repetitive layout logic in ChatContainer
+ * Uses h-screen to constrain to viewport height specifically for chat
  */
 export function ChatLayout({ isMobile, children, className = '' }: ChatLayoutProps) {
   const themeClasses = useThemeClasses()
   
-  if (isMobile) {
-    return (
-      <div className={`flex flex-col h-screen ${themeClasses.layout.panel} ${className}`}>
-        {children}
-      </div>
-    )
-  }
-  
   return (
-    <div className={`flex h-screen ${themeClasses.layout.panel} ${className}`}>
-      {children}
+    <div className={`h-screen flex flex-col overflow-hidden ${themeClasses.layout.panel} ${className}`}>
+      <FlexContainer 
+        direction={isMobile ? 'col' : 'row'} 
+        gap="none"
+        className="h-full"
+      >
+        {children}
+      </FlexContainer>
     </div>
   )
 }
@@ -42,12 +42,12 @@ export function ChatPanel({ children, className = '', style }: ChatPanelProps) {
   const themeClasses = useThemeClasses()
   
   return (
-    <div 
-      className={`flex flex-col h-screen ${themeClasses.layout.panel} relative group ${className}`}
+    <FullHeightContainer 
+      className={`${themeClasses.layout.panel} relative group ${className}`}
       style={style}
     >
       {children}
-    </div>
+    </FullHeightContainer>
   )
 }
 
@@ -62,9 +62,13 @@ interface ContentAreaProps {
  */
 export function ContentArea({ children, isFlexGrow = true, className = '' }: ContentAreaProps) {
   return (
-    <div className={`${isFlexGrow ? 'flex-1' : 'flex-shrink-0'} h-full flex flex-col ${className}`}>
+    <FlexContainer 
+      direction="col" 
+      gap="none" 
+      className={`${isFlexGrow ? 'flex-1' : 'flex-shrink-0'} overflow-hidden ${className}`}
+    >
       {children}
-    </div>
+    </FlexContainer>
   )
 }
 

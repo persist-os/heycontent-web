@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { RefreshCw, Zap, Users, Settings, PlayCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { fetchWithAuth } from '@/app/lib/api-helpers';
+import { useAdminAuth } from '@/app/lib/admin-auth';
 import { FormationStatus, FormationEligibility } from './types';
 
 interface FormationActionsProps {
@@ -17,6 +18,7 @@ export const FormationActions: React.FC<FormationActionsProps> = ({
   formationEligibility 
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
+  const { isAdmin } = useAdminAuth();
 
   const handleManualCrystalGeneration = async () => {
     if (!userId || isGenerating) return;
@@ -189,107 +191,114 @@ export const FormationActions: React.FC<FormationActionsProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Primary Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <Button
-          onClick={handleManualCrystalGeneration}
-          disabled={isGenerating || formationStatus?.isRunning}
-          variant="outline"
-          size="sm"
-          className="gap-2 justify-start"
-        >
-          {isGenerating || formationStatus?.isRunning ? (
-            <>
-              <RefreshCw className="h-4 w-4 animate-spin" />
-              {formationStatus?.isRunning ? 'Running...' : 'Generating...'}
-            </>
-          ) : (
-            <>
-              <Zap className="h-4 w-4" />
-              Manual Generation
-            </>
-          )}
-        </Button>
-        
-        <Button
-          onClick={handleBackgroundFormationCycle}
-          disabled={isGenerating || formationStatus?.isRunning}
-          variant="outline"
-          size="sm"
-          className="gap-2 justify-start"
-        >
-          {isGenerating ? (
-            <>
-              <RefreshCw className="h-4 w-4 animate-spin" />
-              Running...
-            </>
-          ) : (
-            <>
-              <PlayCircle className="h-4 w-4" />
-              Background Cycle
-            </>
-          )}
-        </Button>
-      </div>
       
-      {/* Advanced Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <Button
-          onClick={handleActiveUserFormations}
-          disabled={isGenerating || formationStatus?.isRunning}
-          variant="ghost"
-          size="sm"
-          className="gap-2 justify-start text-muted-foreground hover:text-foreground"
-        >
-          {isGenerating ? (
-            <>
-              <RefreshCw className="h-4 w-4 animate-spin" />
-              Checking...
-            </>
-          ) : (
-            <>
-              <Users className="h-4 w-4" />
-              Active Users Check
-            </>
-          )}
-        </Button>
-        
-        <Button
-          onClick={handleFormationMaintenance}
-          disabled={isGenerating || formationStatus?.isRunning}
-          variant="ghost"
-          size="sm"
-          className="gap-2 justify-start text-muted-foreground hover:text-foreground"
-        >
-          {isGenerating ? (
-            <>
-              <RefreshCw className="h-4 w-4 animate-spin" />
-              Maintaining...
-            </>
-          ) : (
-            <>
-              <Settings className="h-4 w-4" />
-              System Maintenance
-            </>
-          )}
-        </Button>
-      </div>
+      {/* Primary Actions - Admin Only */}
+      {isAdmin && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <Button
+            onClick={handleManualCrystalGeneration}
+            disabled={isGenerating || formationStatus?.isRunning}
+            variant="outline"
+            size="sm"
+            className="gap-2 justify-start"
+          >
+            {isGenerating || formationStatus?.isRunning ? (
+              <>
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                {formationStatus?.isRunning ? 'Running...' : 'Generating...'}
+              </>
+            ) : (
+              <>
+                <Zap className="h-4 w-4" />
+                Manual Generation
+              </>
+            )}
+          </Button>
+          
+          <Button
+            onClick={handleBackgroundFormationCycle}
+            disabled={isGenerating || formationStatus?.isRunning}
+            variant="outline"
+            size="sm"
+            className="gap-2 justify-start"
+          >
+            {isGenerating ? (
+              <>
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                Running...
+              </>
+            ) : (
+              <>
+                <PlayCircle className="h-4 w-4" />
+                Background Cycle
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+      
+      {/* Advanced Actions - Admin Only */}
+      {isAdmin && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <Button
+            onClick={handleActiveUserFormations}
+            disabled={isGenerating || formationStatus?.isRunning}
+            variant="ghost"
+            size="sm"
+            className="gap-2 justify-start text-muted-foreground hover:text-foreground"
+          >
+            {isGenerating ? (
+              <>
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                Checking...
+              </>
+            ) : (
+              <>
+                <Users className="h-4 w-4" />
+                Active Users Check
+              </>
+            )}
+          </Button>
+          
+          <Button
+            onClick={handleFormationMaintenance}
+            disabled={isGenerating || formationStatus?.isRunning}
+            variant="ghost"
+            size="sm"
+            className="gap-2 justify-start text-muted-foreground hover:text-foreground"
+          >
+            {isGenerating ? (
+              <>
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                Maintaining...
+              </>
+            ) : (
+              <>
+                <Settings className="h-4 w-4" />
+                System Maintenance
+              </>
+            )}
+          </Button>
+        </div>
+      )}
 
-      {/* Helper Text */}
-      <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3">
-        <p className="font-medium mb-1">Crystal Formation Options:</p>
-        <ul className="space-y-1">
-          <li>• <strong>Manual:</strong> Generate crystals for your account (3+ shards required)</li>
-          <li>• <strong>Background:</strong> Run system-wide formation cycle for all eligible users</li>
-          <li>• <strong>Active Users:</strong> Check formations for recently active users only</li>
-          <li>• <strong>Maintenance:</strong> Run cleanup and optimization tasks</li>
-        </ul>
-        {formationStatus?.isRunning && (
-          <div className="mt-2 p-2 bg-muted/20 rounded border border-border/30">
-            <strong>Note:</strong> Formation is currently running. Actions are disabled until completion.
-          </div>
-        )}
-      </div>
+      {/* Helper Text - Admin Only */}
+      {isAdmin && (
+        <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3">
+          <p className="font-medium mb-1">Crystal Formation Options:</p>
+          <ul className="space-y-1">
+            <li>• <strong>Manual:</strong> Generate crystals for your account (3+ shards required)</li>
+            <li>• <strong>Background:</strong> Run system-wide formation cycle for all eligible users</li>
+            <li>• <strong>Active Users:</strong> Check formations for recently active users only</li>
+            <li>• <strong>Maintenance:</strong> Run cleanup and optimization tasks</li>
+          </ul>
+          {formationStatus?.isRunning && (
+            <div className="mt-2 p-2 bg-muted/20 rounded border border-border/30">
+              <strong>Note:</strong> Formation is currently running. Actions are disabled until completion.
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

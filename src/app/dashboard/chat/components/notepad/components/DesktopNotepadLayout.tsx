@@ -89,7 +89,7 @@ export function DesktopNotepadLayout({
       />
 
       {/* Editor Area */}
-      <div className="flex-1 overflow-auto relative">
+      <div className="flex-1 overflow-auto relative scrollbar-hide">
         {/* Calculate padding to match header - desktop uses px-6 base, pl-20 pr-6 for full-screen */}
         <div className={`h-full ${panelState === 'notepad-full' ? 'pl-20 pr-6' : 'px-6'}`}>
           <LexicalNotepadEditor

@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { AmbientInsights } from './AmbientInsights';
 import { Button } from '@/components/ui/button';
+import { FlexContainer, CenterContainer, ContentWrapper, FullHeightContainer } from '@/components/ui/layout';
 import { Plus } from 'lucide-react';
 
 export function AmbientInsightsContainer({ userId, handleSendMessage, onNewChat }: { userId: string | undefined; handleSendMessage?: (msg: string, context?: any) => void; onNewChat?: () => void }) {
@@ -28,14 +29,14 @@ export function AmbientInsightsContainer({ userId, handleSendMessage, onNewChat 
   }, [handleSendMessage]);
 
 
-  // For simplicity, AmbientInsights manages its own loading and error states
+  // Standardized layout using design system components
   return (
-    <div className="h-full flex flex-col">
-      {/* Header with optional New Chat button - positioned at top */}
+    <FullHeightContainer>
+      {/* Header with optional New Chat button */}
       {onNewChat && (
         <div className="flex-shrink-0 pt-3 pb-2">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6">
-            <div className="flex justify-end items-center gap-2 pr-6 pt-6">
+          <ContentWrapper>
+            <FlexContainer direction="row" justify="end" className="pr-6 pt-6">
               <Button 
                 variant="ghost" 
                 size="sm" 
@@ -45,22 +46,20 @@ export function AmbientInsightsContainer({ userId, handleSendMessage, onNewChat 
                 <Plus className="h-3.5 w-3.5" />
                 <span className="text-xs">New</span>
               </Button>
-            </div>
-          </div>
+            </FlexContainer>
+          </ContentWrapper>
         </div>
       )}
 
-      {/* Insights Content - Takes remaining space and centers content */}
-      <div className="flex-1 flex items-center justify-center min-h-0">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 w-full">
-          <AmbientInsights 
-            key={refreshKey}
-            userId={userId}
-            onInsightClick={handleInsightClick}
-            error={null}
-          />
-        </div>
-      </div>
-    </div>
+      {/* Insights Content - Centered using standardized components */}
+      <CenterContainer variant="content" className="flex-1">
+        <AmbientInsights 
+          key={refreshKey}
+          userId={userId}
+          onInsightClick={handleInsightClick}
+          error={null}
+        />
+      </CenterContainer>
+    </FullHeightContainer>
   );
 }

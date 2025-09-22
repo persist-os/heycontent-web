@@ -25,7 +25,6 @@ export interface OverlayContent {
 
 export interface ChatContainerState {
   // UI State
-  updatePersonaRequested: boolean
   inputValue: string
   embeddingInfo: EmbeddingInfo
   contextConsumption: ContextConsumption

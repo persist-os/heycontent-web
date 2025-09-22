@@ -8,6 +8,7 @@ import {
   CrystalsView,
   ShardsView,
   InsightsSkeleton,
+  CrystalSystemExplanation,
   ViewType
 } from './crystals';
 
@@ -23,6 +24,8 @@ export const InsightsTab = () => {
 
   return (
     <div className="space-y-8">
+      <CrystalSystemExplanation />
+      
       <InsightsNavigation 
         activeView={activeView} 
         onViewChange={setActiveView} 

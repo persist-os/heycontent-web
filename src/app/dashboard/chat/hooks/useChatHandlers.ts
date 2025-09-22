@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import type { Message } from '../types'
+import type { Message } from '@/app/types/chat'
 
 interface UseChatHandlersProps {
   // Core handlers from existing hooks
@@ -9,7 +9,7 @@ interface UseChatHandlersProps {
   handleNewChat: () => void
   
   // State setters
-  setInputValue: (value: string) => void
+  setInputValue: React.Dispatch<React.SetStateAction<string>>
   
   // Actions
   clearContentContext: () => void
@@ -19,7 +19,6 @@ interface UseChatHandlersProps {
   // State
   inputValue: string
   messages: Message[]
-  hasPersona: boolean
   notepadOpen: boolean
 }
 
@@ -37,7 +36,6 @@ export function useChatHandlers({
   insertTextToNotepad,
   inputValue,
   messages,
-  hasPersona,
   notepadOpen
 }: UseChatHandlersProps) {
   

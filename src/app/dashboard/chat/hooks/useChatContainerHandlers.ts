@@ -1,9 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useConvex } from 'convex/react'
-import { usePersonaStore } from '@/store/persona-store'
-import { useWelcomeMessage } from './useWelcomeMessage'
-import { useChatHandlers } from './useChatHandlers'
 import type { ChatContainerHandlers, ChatContainerState, ChatContainerRefs } from '../types/chat-container.types'
 import type { ChatStateReturnType } from './useChatState'
 import type { MarkdownNotepadRef } from '../components/notepad/types'
@@ -19,7 +16,6 @@ interface UseChatContainerHandlersProps {
   clearContentContext: () => void
   resetChat: () => void
   messages: any[]
-  hasPersona: boolean
   notepadOpen: boolean
   insertTextToNotepad: (text: string) => void
 }
@@ -35,30 +31,31 @@ export function useChatContainerHandlers({
   clearContentContext,
   resetChat,
   messages,
-  hasPersona,
   notepadOpen,
   insertTextToNotepad
 }: UseChatContainerHandlersProps): ChatContainerHandlers {
   const router = useRouter()
   const convex = useConvex()
-  const refreshPersonaData = usePersonaStore(state => state.refreshPersonaData)
 
-  // Initialize welcome message hook for onboarding users without personas
-  const { handleSuggestionClick: handleWelcomeSuggestionClick } = useWelcomeMessage(
-    messages, 
-    chatState.isLoading, 
-    authData.user, 
-    chatState.setMessages, 
-    hasPersona, 
-    false
-  )
-
-  const { 
-    quotedForNotepad, 
-    handleClearQuoted, 
-    handleQuoteToNotepad,
-    createReferenceClickHandler 
-  } = useChatHandlers(handleSendMessage, handleClearReference, messages)
+  // Quote handling state
+  const quotedForNotepad = ''
+  
+  // Quote handlers
+  const handleClearQuoted = useCallback(() => {
+    // Implementation for clearing quotes
+  }, [])
+  
+  const handleQuoteToNotepad = useCallback((text: string) => {
+    // Implementation for quoting to notepad
+  }, [])
+  
+  const createReferenceClickHandler = useCallback((notepadOpen: boolean, handler: (id: string) => void) => {
+    return (messageId: string) => {
+      if (notepadOpen) {
+        handler(messageId)
+      }
+    }
+  }, [])
 
   // Enhanced quote to notepad handler with mobile support
   const handleQuoteToNotepadEnhanced = useCallback((text: string) => {
@@ -70,17 +67,10 @@ export function useChatContainerHandlers({
   const handleSendMessageWithUpdateCheck = useCallback((message: string) => {
     const lowerMessage = message.toLowerCase().trim()
     
-    if (lowerMessage === 'hey content update persona') {
-      setters.setUpdatePersonaRequested(true)
-    }
-    
-    if (lowerMessage === 'hey content write my persona' && authData.userId && convex) {
-      refreshPersonaData(authData.userId, convex)
-    }
     
     // Pass the includeNotepadInMessages state to handleSendMessage
     handleSendMessage(message, state.includeNotepadInMessages)
-  }, [handleSendMessage, authData.userId, convex, refreshPersonaData, state.includeNotepadInMessages, setters])
+  }, [handleSendMessage, state.includeNotepadInMessages])
 
   const handleNewChat = useCallback(() => {
     // If notepad is open and has unsaved content, show warning modal
@@ -94,7 +84,6 @@ export function useChatContainerHandlers({
     resetChat()
     chatState.setMessages([])
     handleClearReference?.()
-    setters.setUpdatePersonaRequested(false)
     
     // Reset content context consumption state
     setters.setContextConsumption({ hasConsumed: false, isDisplayed: false })
@@ -110,11 +99,6 @@ export function useChatContainerHandlers({
     // Clear the loaded conversation ref
     refs.loadedConversationRef.current = null
     
-    // Force refresh persona data
-    if (authData.userId && convex) {
-      refreshPersonaData(authData.userId, convex)
-    }
-    
     // Navigate to clean chat URL
     router.push('/dashboard/chat')
 
@@ -122,7 +106,7 @@ export function useChatContainerHandlers({
     refs.askQueryProcessedRef.current = null
     setters.setInputValue('')
   }, [resetChat, chatState, handleClearReference, setters, clearContentContext, 
-      authData.userId, convex, refreshPersonaData, router, notepadOpen, refs])
+      router, notepadOpen, refs])
 
   // Handler for confirming discard in modal
   const handleConfirmDiscardNotepad = useCallback(() => {
@@ -134,20 +118,16 @@ export function useChatContainerHandlers({
     resetChat()
     chatState.setMessages([])
     handleClearReference?.()
-    setters.setUpdatePersonaRequested(false)
     setters.setContextConsumption({ hasConsumed: false, isDisplayed: false })
     window.localStorage.removeItem('chatSessionId')
     chatState.setSessionId(null)
     chatState.setIsFirstMessage(true)
     clearContentContext()
     refs.loadedConversationRef.current = null
-    if (authData.userId && convex) {
-      refreshPersonaData(authData.userId, convex)
-    }
     router.push('/dashboard/chat')
     refs.askQueryProcessedRef.current = null
     setters.setInputValue('')
-  }, [setters, refs, resetChat, chatState, handleClearReference, clearContentContext, authData.userId, convex, refreshPersonaData, router])
+  }, [setters, refs, resetChat, chatState, handleClearReference, clearContentContext, router])
 
   // Handler for canceling discard in modal
   const handleCancelDiscardNotepad = useCallback(() => {
@@ -159,17 +139,12 @@ export function useChatContainerHandlers({
     handleSendMessage(action)
   }, [handleSendMessage])
 
-  // Handle suggestion clicks - use welcome flow for users without personas
+  // Handle suggestion clicks
   const handleSuggestionClick = useCallback((suggestion: any, onSendMessage: (msg: string) => void) => {
-    // If user doesn't have a persona, use the welcome message handler (onboarding flow)
-    if (!hasPersona) {
-      handleWelcomeSuggestionClick(suggestion, onSendMessage)
-    } else {
-      // For users with personas, directly send the message
-      const message = typeof suggestion === 'string' ? suggestion : suggestion.description
-      onSendMessage(message)
-    }
-  }, [hasPersona, handleWelcomeSuggestionClick])
+    // Always directly send the message
+    const message = typeof suggestion === 'string' ? suggestion : suggestion.description
+    onSendMessage(message)
+  }, [])  
 
   const handleInsightClick = useCallback((action: string, insight: any) => {
     handleSendMessageWithUpdateCheck(action)

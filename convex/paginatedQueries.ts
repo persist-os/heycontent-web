@@ -2,6 +2,20 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
+import schema from "./schema";
+
+// Enhanced validators that include Convex system fields
+const crystalWithSystemFields = v.object({
+  _id: v.id("crystals"),
+  _creationTime: v.number(),
+  ...schema.tables.crystals.validator.fields
+});
+
+const crystalShardWithSystemFields = v.object({
+  _id: v.id("crystal_shards"),
+  _creationTime: v.number(),
+  ...schema.tables.crystal_shards.validator.fields
+});
 
 /**
  * Paginated Query System for Large Datasets
@@ -35,23 +49,8 @@ export const getPaginatedCrystals = query({
     )),
     sortOrder: v.optional(v.union(v.literal("asc"), v.literal("desc"))),
   },
-  returns: v.object({
-    page: v.array(v.object({
-      _id: v.id("crystals"),
-      _creationTime: v.number(),
-      userId: v.string(),
-      name: v.string(),
-      crystal_type: v.string(),
-      dimension: v.string(),
-      core_insight: v.string(),
-      confidence_score: v.number(),
-      evidence_strength: v.string(),
-      observation_count: v.number(),
-      crystal_id: v.string(),
-      tags: v.optional(v.array(v.string())),
-      last_used: v.optional(v.number()),
-      usage_count: v.optional(v.number()),
-    })),
+    returns: v.object({
+    page: v.array(crystalWithSystemFields),
     isDone: v.boolean(),
     continueCursor: v.union(v.string(), v.null()),
     totalCount: v.optional(v.number()),
@@ -151,19 +150,7 @@ export const getPaginatedShards = query({
     sortOrder: v.optional(v.union(v.literal("asc"), v.literal("desc"))),
   },
   returns: v.object({
-    page: v.array(v.object({
-      _id: v.id("crystal_shards"),
-      _creationTime: v.number(),
-      userId: v.string(),
-      exact_quote: v.string(),
-      what_it_reveals: v.string(),
-      dimension: v.string(),
-      confidence_level: v.optional(v.string()),
-      emotional_weight: v.optional(v.string()),
-      source: v.optional(v.string()),
-      usage_count: v.optional(v.number()),
-      last_used_in_crystal: v.optional(v.number()),
-    })),
+    page: v.array(crystalShardWithSystemFields),
     isDone: v.boolean(),
     continueCursor: v.union(v.string(), v.null()),
     pageInfo: v.object({

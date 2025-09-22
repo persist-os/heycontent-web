@@ -101,7 +101,7 @@ export function ChatContent({
         // Mobile: Show chat content only when activeTab is 'chat'
         // Desktop: Always show chat content
         (!isMobile || activeTab === 'chat') && (
-          <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden">
+          <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide">
             <div className="p-4 sm:p-6">
               <div className="max-w-4xl mx-auto space-y-6">
                 {/* Clean header - no controls crowding */}

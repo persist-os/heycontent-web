@@ -1,10 +1,10 @@
 import React from 'react'
 import { AmbientInsightsContainer } from './ambient_insights/AmbientInsightsContainer'
+import { FullHeightContainer } from '@/components/ui/layout'
 
 interface EmptyStateProps {
   isMobile: boolean
   activeTab: string
-  hasPersona: boolean
   authData: any
   themeColors: any
   handleNewChat: () => void
@@ -15,7 +15,6 @@ interface EmptyStateProps {
 export function EmptyState({
   isMobile,
   activeTab,
-  hasPersona,
   authData,
   themeColors,
   handleNewChat,
@@ -29,7 +28,7 @@ export function EmptyState({
 
   // Always show ambient insights - onboarding has been eliminated
   return (
-    <div className="flex-1 flex flex-col justify-center min-h-0">
+    <FullHeightContainer className="flex-1">
       <AmbientInsightsContainer 
         userId={authData.userId}
         handleSendMessage={(msg, context) => {
@@ -40,6 +39,6 @@ export function EmptyState({
           }, 0)
         }}
       />
-    </div>
+    </FullHeightContainer>
   )
 }
