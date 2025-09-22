@@ -228,6 +228,8 @@ export function useChatContainerHandlers({
     handleInputAppend,
     handleContentClick,
     handleOverlayClose,
-    handleQuoteToNotepadEnhanced
+    handleQuoteToNotepadEnhanced,
+    quotedForNotepad,
+    handleClearQuoted
   }
 }

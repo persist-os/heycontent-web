@@ -376,8 +376,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                 ref={refs.notepadRef}
                 isOpen={true}
                 onClose={() => switchToTab('chat')}
-                quotedContent=""
-                onClearQuoted={() => {}}
+                quotedContent={finalHandlers.quotedForNotepad}
+                onClearQuoted={finalHandlers.handleClearQuoted}
                 width={notepadWidth}
                 style={getNotepadStyle()}
                 availableNotes={availableNotes}
@@ -419,8 +419,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                 onInputPopulate={finalHandlers.handleInputAppend}
                 notepadOpen={true}
                 openNotepad={toggleNotepad}
-                quotedForNotepad=""
-                onClearQuoted={() => {}}
+                quotedForNotepad={finalHandlers.quotedForNotepad}
+                onClearQuoted={finalHandlers.handleClearQuoted}
                 isAuthenticated={authData.isAuthenticated}
                 isMobile={isMobile}
                 activeTab={activeTab}
@@ -567,8 +567,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
             ref={refs.notepadRef}
             isOpen={true}
             onClose={() => {}}
-            quotedContent=""
-            onClearQuoted={() => {}}
+            quotedContent={finalHandlers.quotedForNotepad}
+            onClearQuoted={finalHandlers.handleClearQuoted}
             width="100%"
             style={{}}
             availableNotes={availableNotes}
