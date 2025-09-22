@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
 import { getFirebaseAuth } from '@/app/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { CrystalStats, FormationStatus, FormationEligibility } from './types';
+import { toast } from 'sonner';
 
 export const useAuth = () => {
   const [userId, setUserId] = useState<string | undefined>();
@@ -173,12 +175,20 @@ export const usePaginatedCrystals = (userId: string | undefined, pageSize: numbe
     setPaginationError(null);
   };
 
+  const softRefresh = () => {
+    // Keep existing data but force a fresh query from the beginning
+    setCursor(null);
+    setPaginationError(null);
+    // Don't clear allCrystals immediately - let the new data replace it
+  };
+
   return {
     crystals: allCrystals,
     hasMore: paginationError ? false : (paginatedResult ? !paginatedResult.isDone : false),
     isLoadingMore,
     loadMore,
     reset,
+    softRefresh,
     pageInfo: paginatedResult?.pageInfo,
     isUsingFallback: !!paginationError
   };
@@ -224,6 +234,12 @@ export const usePaginatedShards = (userId: string | undefined, pageSize: number 
     setAllShards([]);
   };
 
+  const softRefresh = () => {
+    // Keep existing data but force a fresh query from the beginning
+    setCursor(null);
+    // Don't clear allShards immediately - let the new data replace it
+  };
+
   return {
     shards: allShards,
     hasMore: paginatedResult ? !paginatedResult.isDone : false,
@@ -232,5 +248,159 @@ export const usePaginatedShards = (userId: string | undefined, pageSize: number 
     reset,
     pageInfo: paginatedResult?.pageInfo,
     aggregates: paginatedResult?.aggregates
+  };
+};
+
+/**
+ * Hook for crystal CRUD operations using existing batchMutateCrystalData
+ * Simplified to avoid UI freezing issues
+ */
+export const useCrystalMutations = () => {
+  const batchMutate = useMutation(api.crystalMutations.batchMutateCrystalData);
+  const [isWorking, setIsWorking] = useState(false);
+
+  const updateCrystal = async (crystalId: string, updateData: any) => {
+    if (isWorking) return false; // Prevent multiple concurrent operations
+    
+    setIsWorking(true);
+    try {
+      const result = await batchMutate({
+        table: "crystals",
+        operations: [{
+          type: "update",
+          id: crystalId as Id<"crystals">,
+          data: {
+            ...updateData,
+            updatedAt: Date.now()
+          }
+        }]
+      });
+
+      if (result.success) {
+        toast.success('Crystal updated successfully');
+        return true;
+      } else {
+        toast.error('Failed to update crystal');
+        return false;
+      }
+    } catch (error) {
+      console.error('Error updating crystal:', error);
+      toast.error('Failed to update crystal');
+      return false;
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
+  const deleteCrystal = async (crystalId: string) => {
+    if (isWorking) return false; // Prevent multiple concurrent operations
+    
+    setIsWorking(true);
+    try {
+      const result = await batchMutate({
+        table: "crystals",
+        operations: [{
+          type: "delete",
+          id: crystalId as Id<"crystals">
+        }]
+      });
+
+      if (result.success) {
+        toast.success('Crystal deleted successfully');
+        return true;
+      } else {
+        toast.error('Failed to delete crystal');
+        return false;
+      }
+    } catch (error) {
+      console.error('Error deleting crystal:', error);
+      toast.error('Failed to delete crystal');
+      return false;
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
+  return {
+    updateCrystal,
+    deleteCrystal,
+    isLoading: isWorking
+  };
+};
+
+/**
+ * Hook for crystal shard CRUD operations using existing batchMutateCrystalData
+ * Simplified to avoid UI freezing issues
+ */
+export const useShardMutations = () => {
+  const batchMutate = useMutation(api.crystalMutations.batchMutateCrystalData);
+  const [isWorking, setIsWorking] = useState(false);
+
+  const updateShard = async (shardId: string, updateData: any) => {
+    if (isWorking) return false; // Prevent multiple concurrent operations
+    
+    setIsWorking(true);
+    try {
+      const result = await batchMutate({
+        table: "crystal_shards",
+        operations: [{
+          type: "update",
+          id: shardId as Id<"crystal_shards">,
+          data: {
+            ...updateData,
+            updatedAt: Date.now()
+          }
+        }]
+      });
+
+      if (result.success) {
+        toast.success('Shard updated successfully');
+        return true;
+      } else {
+        toast.error('Failed to update shard');
+        return false;
+      }
+    } catch (error) {
+      console.error('Error updating shard:', error);
+      toast.error('Failed to update shard');
+      return false;
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
+  const deleteShard = async (shardId: string) => {
+    if (isWorking) return false; // Prevent multiple concurrent operations
+    
+    setIsWorking(true);
+    try {
+      const result = await batchMutate({
+        table: "crystal_shards",
+        operations: [{
+          type: "delete",
+          id: shardId as Id<"crystal_shards">
+        }]
+      });
+
+      if (result.success) {
+        toast.success('Shard deleted successfully');
+        return true;
+      } else {
+        toast.error('Failed to delete shard');
+        return false;
+      }
+    } catch (error) {
+      console.error('Error deleting shard:', error);
+      toast.error('Failed to delete shard');
+      return false;
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
+  return {
+    updateShard,
+    deleteShard,
+    isLoading: isWorking
   };
 };

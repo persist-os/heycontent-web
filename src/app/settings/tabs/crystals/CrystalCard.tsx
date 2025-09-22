@@ -1,12 +1,55 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { CrystalData } from './types';
+import { EditCrystalModal } from './EditCrystalModal';
+import { useCrystalMutations } from './hooks';
 
 interface CrystalCardProps {
   crystal: CrystalData;
   isCompact?: boolean;
+  showActions?: boolean;
 }
 
-export const CrystalCard: React.FC<CrystalCardProps> = ({ crystal, isCompact = false }) => {
+export const CrystalCard: React.FC<CrystalCardProps> = ({ 
+  crystal, 
+  isCompact = false, 
+  showActions = true
+}) => {
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const { deleteCrystal, isLoading } = useCrystalMutations();
+
+  const handleDelete = async () => {
+    const success = await deleteCrystal(crystal._id);
+    if (success) {
+      // Small delay to prevent immediate re-renders causing UI freeze
+      setTimeout(() => {
+        setShowDeleteDialog(false);
+      }, 100);
+    }
+  };
+
+  const handleEditSuccess = () => {
+    // Convex will automatically invalidate and refresh the query
+  };
   if (isCompact) {
     return (
       <div className="space-y-2 py-3 border-l-2 border-blue-400/30 pl-4">
@@ -46,6 +89,29 @@ export const CrystalCard: React.FC<CrystalCardProps> = ({ crystal, isCompact = f
             }`}>
               {crystal.confidence_score}
             </span>
+            
+            {showActions && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setShowEditModal(true)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => setShowDeleteDialog(true)}
+                    className="text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
         <p className="text-muted-foreground leading-relaxed">{crystal.description}</p>
@@ -91,6 +157,36 @@ export const CrystalCard: React.FC<CrystalCardProps> = ({ crystal, isCompact = f
         </span>
         <span>{crystal.crystal_type?.replace('_', ' ')}</span>
       </div>
+
+      {/* Edit Modal */}
+      <EditCrystalModal
+        crystal={crystal}
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSuccess={handleEditSuccess}
+      />
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Crystal</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{crystal.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isLoading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isLoading ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

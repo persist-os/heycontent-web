@@ -1,11 +1,49 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { ShardData } from './types';
+import { EditShardModal } from './EditShardModal';
+import { useShardMutations } from './hooks';
 
 interface ShardCardProps {
   shard: ShardData;
+  showActions?: boolean;
 }
 
-export const ShardCard: React.FC<ShardCardProps> = ({ shard }) => {
+export const ShardCard: React.FC<ShardCardProps> = ({ shard, showActions = true }) => {
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const { deleteShard, isLoading } = useShardMutations();
+
+  const handleDelete = async () => {
+    const success = await deleteShard(shard._id);
+    if (success) {
+      // Small delay to prevent immediate re-renders causing UI freeze
+      setTimeout(() => {
+        setShowDeleteDialog(false);
+      }, 100);
+    }
+  };
+
+  const handleEditSuccess = () => {
+    // Convex will automatically invalidate and refresh the query
+  };
   return (
     <div className="border border-border/50 rounded-xl p-4 space-y-3">
       {shard.exact_quote && (
@@ -43,10 +81,65 @@ export const ShardCard: React.FC<ShardCardProps> = ({ shard }) => {
             {shard.confidence_level}
           </span>
         </div>
-        <span className="text-xs text-muted-foreground">
-          {shard.source_type}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">
+            {shard.source_type}
+          </span>
+          
+          {showActions && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setShowEditModal(true)}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setShowDeleteDialog(true)}
+                  className="text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </div>
+
+      {/* Edit Modal */}
+      <EditShardModal
+        shard={shard}
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSuccess={handleEditSuccess}
+      />
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Shard</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this shard? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isLoading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isLoading ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -57,7 +57,10 @@ export const ShardsView: React.FC<ShardsViewProps> = ({ recentShards }) => {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {displayShards.map((shard: any) => (
-              <ShardCard key={shard._id} shard={shard} />
+              <ShardCard 
+                key={shard._id} 
+                shard={shard} 
+              />
             ))}
           </div>
           
