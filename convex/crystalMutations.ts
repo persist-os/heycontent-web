@@ -26,7 +26,18 @@ export const mutateCrystalData = mutation({
     handler: async (ctx, { table, operation, data, shardId, crystalId }) => {
         const id = table === "crystal_shards" ? shardId : crystalId;
 
-        if (operation === "create") return await ctx.db.insert(table, data!);
+        if (operation === "create") {
+            // Ensure new shards get proper initial status
+            if (table === "crystal_shards" && data) {
+                const shardData = { ...data };
+                // Set explicit unprocessed status for new shards if not already set
+                if (!shardData.shard_status) {
+                    shardData.shard_status = "unprocessed";
+                }
+                return await ctx.db.insert(table, shardData);
+            }
+            return await ctx.db.insert(table, data!);
+        }
         if (operation === "update") { 
             // Handle special operations for programmatic fields
             const updateData: any = { ...data };
@@ -267,8 +278,18 @@ export const batchMutateCrystalData = mutation({
                         if (!op.data) {
                             throw new Error("Data is required for create operations");
                         }
-                        // For create operations, Convex will validate against the full schema automatically
-                        resultId = await ctx.db.insert(table, op.data);
+                        // Ensure new shards get proper initial status
+                        if (table === "crystal_shards") {
+                            const shardData = { ...op.data };
+                            // Set explicit unprocessed status for new shards if not already set
+                            if (!shardData.shard_status) {
+                                shardData.shard_status = "unprocessed";
+                            }
+                            resultId = await ctx.db.insert(table, shardData);
+                        } else {
+                            // For create operations, Convex will validate against the full schema automatically
+                            resultId = await ctx.db.insert(table, op.data);
+                        }
                         break;
 
                     case "update":

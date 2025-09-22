@@ -1944,5 +1944,17 @@ app.post("/api/shard-lifecycle/batch-update-status", async (c) => {
   }
 });
 
+app.post("/api/shard-lifecycle/initialize-legacy", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.shardLifecycleMutations.initializeLegacyShardStatus, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 const router = new HttpRouterWithHono(app);
 export default router;

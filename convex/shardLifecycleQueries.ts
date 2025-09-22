@@ -23,10 +23,17 @@ export const getUnprocessedShards = query({
             .withIndex("by_user", (q) => q.eq("userId", userId))
             .collect();
 
-        // Filter for unprocessed shards (null/undefined status OR explicitly "unprocessed")
-        let results = allShards.filter(shard => 
-            !shard.shard_status || shard.shard_status === "unprocessed"
-        );
+        // Filter for unprocessed shards
+        // Handle transition: null/undefined status (legacy) OR explicitly "unprocessed" (new)
+        // but exclude any that are explicitly marked as used or archived
+        let results = allShards.filter(shard => {
+            // Explicitly exclude used or archived shards
+            if (shard.shard_status === "used_for_crystal" || shard.shard_status === "archived") {
+                return false;
+            }
+            // Include shards that are explicitly unprocessed OR have no status (legacy)
+            return shard.shard_status === "unprocessed" || !shard.shard_status;
+        });
 
         // Filter by confidence level if specified
         if (minConfidence) {
@@ -104,7 +111,13 @@ export const getShardConsumptionStats = query({
                     stats.archived++;
                     break;
                 default:
-                    stats.unknownStatus++;
+                    // Handle legacy shards with no status - treat as unprocessed for now
+                    // but count separately for visibility
+                    if (!shard.shard_status) {
+                        stats.unprocessed++;
+                    } else {
+                        stats.unknownStatus++;
+                    }
             }
         }
 
@@ -226,11 +239,10 @@ export const getCrystalToShardMapping = query({
     },
     returns: v.record(v.string(), v.array(v.id("crystal_shards"))),
     handler: async (ctx, { userId, crystalIds }) => {
-        let query = ctx.db
+        const shards = await ctx.db
             .query("crystal_shards")
-            .withIndex("by_user", (q) => q.eq("userId", userId));
-
-        const shards = await query.collect();
+            .withIndex("by_user", (q) => q.eq("userId", userId))
+            .collect();
         const mapping: Record<string, any[]> = {};
 
         for (const shard of shards) {
