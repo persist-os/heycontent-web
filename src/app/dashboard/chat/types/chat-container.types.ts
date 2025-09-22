@@ -19,7 +19,7 @@ export interface ContextConsumption {
 }
 
 export interface OverlayContent {
-  contentType: 'youtube' | 'instagram' | 'gmail' | 'insight' | 'note'
+  contentType: 'insight' | 'note'
   contentId: string
 }
 

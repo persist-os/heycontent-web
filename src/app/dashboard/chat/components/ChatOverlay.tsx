@@ -8,7 +8,7 @@ import { NoteContentRenderer } from '@/app/dashboard/notes/components/NoteConten
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 
 interface ChatOverlayProps {
-  contentType: 'note' | 'smart_note';
+  contentType: 'note' | 'smart_note' | 'insight';
   contentId: string;
   onClose: () => void;
   insightData?: any;
