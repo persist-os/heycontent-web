@@ -9,7 +9,7 @@
 
 import { useCallback, useMemo, useRef } from 'react'
 import { useAuth } from '@/app/context/auth-context'
-import { useContentResolver } from '@/lib/content-resolver'
+import { useContentResolver } from '../../../lib/content-resolver'
 import { ContentProcessor, ContentClickHandler } from '../../../lib/contentProcessor'
 import type { ContentRendererProps } from '../../../types/components/contentRenderer'
 

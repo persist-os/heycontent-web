@@ -2,15 +2,13 @@
  * Message Transmission Service (Simplified)
  *
  * Streamlined service for thinking lab message exchange.
- * Single API call with backend handling all intelligence.
+ * Calls the Next.js API route which forwards to backend.
  */
 
 import { fetchWithApiKey, getCurrentUserId } from '@/app/lib/api-helpers';
 import { AuthenticationError } from '@/app/lib/errors';
 import {
-  LabResponseData,
-  WorkspaceContext,
-  NotepadContext
+  LabResponseData
 } from '@/app/dashboard/thinking_lab/types';
 
 // Import centralized types
@@ -18,147 +16,17 @@ import type {
   MessageTransmissionRequest
 } from '@/app/dashboard/thinking_lab/types';
 
-// Endpoint configuration
-const ENDPOINTS = {
-  message: '/api/lab/message'
-} as const;
-
-type TransmissionType = keyof typeof ENDPOINTS;
-
-// Public API parameter interfaces are now centralized in types/api/labApi.ts
-
-// Internal transmission types (use centralized types)
-interface MessageTransmission extends MessageTransmissionRequest {
-  type: 'message';
-}
-
-type AnyTransmission = MessageTransmission;
-
-/**
- * Recursively convert camelCase keys to snake_case
- */
-function toSnakeCase(obj: any): any {
-  if (obj === null || obj === undefined || typeof obj !== 'object') {
-    return obj;
-  }
-  
-  if (Array.isArray(obj)) {
-    return obj.map(toSnakeCase);
-  }
-  
-  const result: any = {};
-  for (const [key, value] of Object.entries(obj)) {
-    const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-    result[snakeKey] = toSnakeCase(value);
-  }
-  return result;
-}
-
-/**
- * Transform WorkspaceContext to consistent backend format
- */
-function transformContext(context: WorkspaceContext): Record<string, any> {
-  // Convert all keys to snake_case for consistent backend API
-  return toSnakeCase({
-    resourceId: context.resourceId,
-    contentId: context.contentId,
-    title: context.title,
-    analysis: context.analysis,
-    publishedAt: context.publishedAt,
-    metrics: context.metrics,
-    content: context.content,
-    convexData: context.convexData,
-    deepInsight: context.deepInsight,
-    fullInsight: context.fullInsight,
-    actionStep: context.actionStep,
-    additionalContext: context.additionalContext
-  });
-}
-
-/**
- * Build payload based on transmission type
- */
-function buildPayload(params: AnyTransmission, userId: string): Record<string, any> {
-  // Validate sessionIdentifier for non-first messages
-  if (!params.isFirstMessage && !params.sessionIdentifier) {
-    throw new Error('sessionIdentifier is required for continuing conversations');
-  }
-
-  const basePayload = {
-    user_id: userId,
-    query: params.content,
-    is_first_message: params.isFirstMessage,
-    session_identifier: params.isFirstMessage ? null : params.sessionIdentifier,
-    notepad_context: params.notepadContext,
-    workspace_context: params.workspaceContext ? transformContext(params.workspaceContext) : null
-  };
-
-  switch (params.type) {
-    case 'message':
-      return {
-        ...basePayload,
-        ...params.additionalData
-      };
-  }
-}
-
-/**
- * Transform API response to consistent format
- * HACK: Handle inconsistent backend responses from /message (uses 'response') and /project-discovery (uses 'response_content')
- * TODO: File ticket to unify backend API response format
- */
-function transformResponse(data: any): LabResponseData {
-  return {
-    response_content: data.response || data.response_content,
-    session_identifier: data.session_identifier || data.session_id,
-    user_input: data.user_message || data.user_input,
-    suggestions: data.suggestions || [],
-    metadata: data.metadata || {}
-  };
-}
-
-/**
- * Core transmission engine with built-in validation
- */
-async function transmit(params: AnyTransmission): Promise<LabResponseData> {
-  // Built-in user validation
-  const userId = getCurrentUserId();
-  if (!userId) {
-    throw new AuthenticationError('User identification required. Please sign in again!');
-  }
-
-  // Build payload and transmit
-  const payload = buildPayload(params, userId);
-  const response = await fetchWithApiKey(ENDPOINTS[params.type], {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  });
-
-  const data = await response.json();
-  return transformResponse(data);
-}
-
-/**
- * Transmit a standard thinking lab message
- */
-export async function transmitMessage(params: MessageTransmissionRequest): Promise<LabResponseData> {
-  return transmit({
-    type: 'message',
-    ...params
-  });
-}
-
 
 // =============================================================================
 // ENHANCED MESSAGE TRANSMISSION WITH CONTEXT INTELLIGENCE
 // =============================================================================
 
 /**
- * Simplified message transmission - single backend call
- * Backend handles all intelligence (intent analysis, vector search, context grading)
+ * Main message transmission using the Next.js API route
+ * This calls /api/chat/message which forwards to the backend.
  */
 export async function transmitMessageWithContext(params: MessageTransmissionRequest): Promise<LabResponseData> {
-  const { content, useContextSearch = false, onStatusUpdate } = params;
+  const { content, useContextSearch = true, onStatusUpdate } = params;
   
   // Get user ID
   const userId = getCurrentUserId();
@@ -166,23 +34,85 @@ export async function transmitMessageWithContext(params: MessageTransmissionRequ
     throw new AuthenticationError('User identification required. Please sign in again!');
   }
 
-  // Simple status update
-  onStatusUpdate?.('Thinking...');
+  try {
+    // Status updates
+    onStatusUpdate?.('Processing your request...');
+    onStatusUpdate?.('Searching for relevant context...');
 
-  // Single API call to backend - let backend handle all intelligence
-  const payload = buildPayload({
-    type: 'message',
-    ...params
-  }, userId);
+    // Call the Next.js API route
+    const response = await fetchWithApiKey('/api/chat/message', {
+      method: 'POST',
+      body: JSON.stringify({
+        user_id: userId,
+        query: content,
+        content_types: ["note", "crystal", "conversation"],
+        include_context: useContextSearch,
+        max_results: 10,
+        similarity_threshold: 0.7,
+        generate_embeddings: false,
+        store_conversation: true
+      })
+    });
 
-  // Add context search preference
-  payload.use_context_search = useContextSearch;
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
 
-  const response = await fetchWithApiKey(ENDPOINTS.message, {
-    method: 'POST',
-    body: JSON.stringify(payload)
+    const data = await response.json();
+    onStatusUpdate?.('Generating response...');
+    
+    // Transform backend response to expected format
+    if (data.success && data.data) {
+      return {
+        response_content: generateResponseFromContext(data.data),
+        session_identifier: `session-${Date.now()}`,
+        user_input: data.data.query,
+        suggestions: [],
+        metadata: data.data.processing_metadata || {}
+      };
+    }
+    
+    // Handle error case
+    return {
+      response_content: data.error || 'No response received',
+      session_identifier: `session-${Date.now()}`,
+      user_input: content,
+      suggestions: [],
+      metadata: { error: data.error }
+    };
+
+  } catch (error) {
+    if (error instanceof AuthenticationError) {
+      throw error;
+    }
+    throw new Error(error instanceof Error ? error.message : 'Failed to send message');
+  }
+}
+
+/**
+ * Generate a helpful response from context data
+ */
+function generateResponseFromContext(responseData: any): string {
+  const context = responseData.context || {};
+  const relevantContent = context.relevant_content || [];
+  const hasContext = context.has_context || false;
+  
+  if (!hasContext || relevantContent.length === 0) {
+    return "I've processed your request, but I didn't find any directly relevant context from your existing content. Feel free to ask questions about your notes, crystals, or conversations!";
+  }
+  
+  let response = "Based on your existing content, here's what I found:\n\n";
+  
+  relevantContent.slice(0, 3).forEach((item: any, index: number) => {
+    response += `**${item.title || 'Untitled'}**\n`;
+    response += `${item.content?.substring(0, 200)}${item.content?.length > 200 ? '...' : ''}\n\n`;
   });
-
-  const data = await response.json();
-  return transformResponse(data);
+  
+  if (relevantContent.length > 3) {
+    response += `Found ${relevantContent.length - 3} more relevant items in your content.\n\n`;
+  }
+  
+  response += "Would you like me to explore any of these connections further?";
+  
+  return response;
 }

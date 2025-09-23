@@ -68,7 +68,8 @@ export const useDialogueStore = create<DialogueStore>()(
                     id: `msg-${Date.now() + 1}`,
                     content: response.response_content || 'No response received',
                     role: 'assistant',
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
+                    suggestions: response.suggestions || []
                 }
 
                 set(state => ({

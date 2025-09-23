@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     console.log(`[${requestId}] Forwarding request to backend`);
 
     // Forward request to backend with minimal processing
-    const response = await fetch(`${BACKEND_URL}/api/v1/chat`, {
+    const response = await fetch(`${BACKEND_URL}/api/v1/chat/message`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

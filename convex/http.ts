@@ -1726,7 +1726,126 @@ app.post("/api/formation/mutate", async (c) => {
 });
 
 
-// Embedding system routes
+// === OPTIMIZED VECTOR SEARCH HTTP ROUTES ===
+// Following convex-http-integration.mdc and performance optimization patterns
+
+// Input validation schemas for performance and security
+import { z } from 'zod';
+
+const vectorSearchQuerySchema = z.object({
+  userId: z.string().min(1),
+  operation: z.string().min(1),
+  table: z.string().optional(),
+  
+  // Search parameters
+  query: z.string().optional(),
+  contentTypes: z.array(z.string()).optional(),
+  limit: z.number().int().positive().max(50).optional(),
+  threshold: z.number().min(0).max(1).optional(),
+  
+  // Query optimization
+  useIndex: z.string().optional(),
+  indexFields: z.record(z.any()).optional(),
+  filters: z.record(z.any()).optional(),
+  orderBy: z.enum(["asc", "desc"]).optional(),
+  
+  // Batch operations
+  queries: z.array(z.any()).optional(),
+  maxConcurrent: z.number().int().positive().max(10).optional(),
+  includeGrading: z.boolean().optional(),
+});
+
+const vectorSearchMutationSchema = z.object({
+  operation: z.string().min(1),
+  userId: z.string().min(1),
+  table: z.string().optional(),
+  
+  // Direct operation parameters
+  text: z.string().optional(),
+  contentId: z.string().optional(),
+  contentType: z.string().optional(),
+  embedding: z.array(z.number()).optional(),
+  title: z.string().optional(),
+  content: z.string().optional(),
+  metadata: z.any().optional(),
+  
+  // Batch parameters
+  items: z.array(z.any()).optional(),
+  contentIds: z.array(z.string()).optional(),
+  maxConcurrent: z.number().int().positive().max(10).optional(),
+});
+
+// POST /api/vectorSearch/query - Optimized generic query endpoint
+app.post("/api/vectorSearch/query", async (c) => {
+  try {
+    const requestBody = await c.req.json();
+    const validation = vectorSearchQuerySchema.safeParse(requestBody);
+    
+    if (!validation.success) {
+      return c.json({
+        error: "Invalid vector search query parameters",
+        details: validation.error.flatten()
+      }, 400);
+    }
+
+    // Ensure required fields are present
+    const { userId, operation, ...rest } = validation.data;
+    if (!userId || !operation) {
+      return c.json({ error: "userId and operation are required" }, 400);
+    }
+    
+    const result = await c.env.runQuery(api.vectorSearchQueries.getVectorSearchData, {
+      userId,
+      operation,
+      ...rest
+    });
+    return c.json(result);
+  } catch (error) {
+    console.error('Vector search query error:', error);
+    return c.json({ 
+      success: false, 
+      error: 'Vector search query failed',
+      data: null 
+    }, 500);
+  }
+});
+
+// POST /api/vectorSearch/mutate - Optimized batch mutation endpoint
+app.post("/api/vectorSearch/mutate", async (c) => {
+  try {
+    const requestBody = await c.req.json();
+    const validation = vectorSearchMutationSchema.safeParse(requestBody);
+    
+    if (!validation.success) {
+      return c.json({
+        error: "Invalid vector search mutation parameters",
+        details: validation.error.flatten()
+      }, 400);
+    }
+
+    // Ensure required fields are present
+    const { userId, operation, ...rest } = validation.data;
+    if (!userId || !operation) {
+      return c.json({ error: "userId and operation are required" }, 400);
+    }
+    
+    const result = await c.env.runMutation(api.vectorSearchMutations.batchMutateVectorSearchData, {
+      userId,
+      operation,
+      ...rest
+    });
+    return c.json(result);
+  } catch (error) {
+    console.error('Vector search mutation error:', error);
+    return c.json({ 
+      success: false, 
+      error: 'Vector search mutation failed',
+      data: null 
+    }, 500);
+  }
+});
+
+// Legacy embedding generation route (for backward compatibility)
 app.post("/api/vector-search/generate-embedding", async (c) => {
   const ctx = c.env;
   const requestBody = await c.req.json();

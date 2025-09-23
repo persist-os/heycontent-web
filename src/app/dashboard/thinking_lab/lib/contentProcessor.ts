@@ -146,7 +146,7 @@ export class ContentProcessor {
   }
 
   /**
-   * Find content by ID with fallback strategies
+   * Find content by ID with enhanced fallback strategies
    */
   private findContentById(contentId: string): LinkableContent | null {
     console.log('🔗 Looking for content:', {
@@ -154,34 +154,30 @@ export class ContentProcessor {
       availableContentCount: this.allContent.length
     })
     
-    // Try multiple ways to find the content
+    // Try exact match first
     let linkedContent = this.allContent.find(item => item.id === contentId)
     
-    // If not found by exact ID, try removing prefixes
+    // Try with and without prefixes for: notes, chat, projects, crystals
     if (!linkedContent) {
-      const cleanContentId = contentId.replace(/^(conversations?|notes?|crystals?|projects?):/, '')
+      const cleanContentId = contentId.replace(/^(chat|conversations?|notes?|crystals?|projects?):/, '')
       linkedContent = this.allContent.find(item => 
         item.id === cleanContentId || 
-        item.id === contentId
+        item.id === contentId ||
+        item.id === `note:${cleanContentId}` ||
+        item.id === `crystal:${cleanContentId}` ||
+        item.id === `chat:${cleanContentId}` ||
+        item.id === `conversation:${cleanContentId}` ||
+        item.id === `project:${cleanContentId}`
       )
     }
     
-    // Special handling for insights with complex ID format
-    if (!linkedContent && (contentId.startsWith('insights:') || contentId.startsWith('insight:'))) {
-      const insightParts = contentId.split(':')
-      if (insightParts.length >= 4) {
-        const platform = insightParts[1]
-        const analysisId = insightParts[2]
-        const index = insightParts[3]
-        
-        // Try to find by platform and analysis ID
-        linkedContent = this.allContent.find(item => 
-          item.type === 'note' && 
-          (item.id === contentId || 
-           item.id === `${platform}:${analysisId}:${index}` ||
-           item.id === `insight:${platform}:${analysisId}:${index}`)
-        )
-      }
+    // Handle Convex IDs (which start with special characters)
+    if (!linkedContent && contentId.match(/^[a-z0-9]{32}$/)) {
+      linkedContent = this.allContent.find(item => 
+        item.id === contentId ||
+        item.id.endsWith(contentId) ||
+        item.id.includes(contentId)
+      )
     }
     
     return linkedContent
@@ -273,7 +269,7 @@ export class ContentClickHandler {
   }
 
   /**
-   * Navigate to content based on type
+   * Navigate to content based on type: notes, chat, projects, crystals
    */
   private navigateToContent(contentType: ContentType, contentId: string): void {
     const chatIdParam = this.currentChatId ? `&chatId=${this.currentChatId}` : ''
@@ -292,8 +288,9 @@ export class ContentClickHandler {
         window.open(`/dashboard/projects?projectId=${projectId}&fromChat=true${chatIdParam}`, '_blank')
         break
       case 'conversation':
-        console.log('Conversation clicked:', contentId)
-        // You can implement conversation display logic here
+      case 'chat':
+        const conversationId = contentId.replace(/^(chat|conversation):/, '')
+        window.open(`/dashboard/thinking_lab?conversationId=${conversationId}&fromChat=true${chatIdParam}`, '_blank')
         break
       default:
         console.log('Unknown content type clicked:', contentType, contentId)
