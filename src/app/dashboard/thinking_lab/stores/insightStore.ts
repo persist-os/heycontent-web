@@ -8,41 +8,12 @@
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 
-// TODO: Import your existing API functions
-// import { searchContent, getContextByType } from '../api/search' // TODO: What are your actual API functions?
+// Import API services
+import { searchRelevantContent, generateEmbeddingsForPlatform, checkEmbeddingStatus } from '../modules/api/searchService'
+import { getCurrentUserId } from '@/app/lib/api-helpers'
 
-type ContextType = 'projects' | 'notes' | 'conversations' | 'crystals'
-
-interface ContextItem {
-    id: string
-    type: ContextType
-    title: string
-    content: string
-    relevance?: number
-    // TODO: Add any other context item properties you have
-}
-
-interface InsightState {
-    searchEnabled: boolean
-    searchQuery: string
-    searchResults: ContextItem[]
-    isSearching: boolean
-    activeContexts: ContextItem[]
-    availableTypes: ContextType[]
-    error?: string
-}
-
-interface InsightActions {
-    toggleSearch: () => void
-    updateSearchQuery: (query: string) => void
-    performSearch: (query: string) => Promise<void>
-    addContext: (context: ContextItem) => void
-    removeContext: (contextId: string) => void
-    injectContent: (content: ContextItem) => void
-    clearSearch: () => void
-    setError: (error: string | undefined) => void
-    loadContextByType: (type: ContextType) => Promise<void>
-}
+// Import centralized types
+import type { ContextItem, ContextType, InsightState, InsightActions } from '../types'
 
 type InsightStore = InsightState & InsightActions
 
@@ -56,6 +27,9 @@ export const useInsightStore = create<InsightStore>()(
         activeContexts: [],
         availableTypes: ['projects', 'notes', 'conversations', 'crystals'],
         error: undefined,
+        currentStatus: undefined,
+        embeddingStatus: { hasEmbeddings: false, count: 0 },
+        isGeneratingEmbeddings: false,
 
         // Actions
         toggleSearch: () => {
@@ -90,48 +64,69 @@ export const useInsightStore = create<InsightStore>()(
                 return
             }
 
-            set({ isSearching: true, error: undefined })
+            set({ isSearching: true, error: undefined, currentStatus: 'Searching your content...' })
 
             try {
-                // TODO: Replace with your actual search API
-                // const results = await searchContent(query, get().availableTypes)
+                // Get user ID for search
+                const userId = getCurrentUserId()
+                if (!userId) {
+                    set({
+                        isSearching: false,
+                        error: 'User authentication required for search',
+                        currentStatus: undefined
+                    })
+                    return
+                }
 
-                // TODO: Mock search results - replace with actual API
-                const mockResults: ContextItem[] = [
-                    {
-                        id: 'project-1',
-                        type: 'projects',
-                        title: `Project: ${query}`,
-                        content: `This is a project related to ${query}`,
-                        relevance: 0.9
+                // Perform vector search
+                const response = await searchRelevantContent(
+                    query, 
+                    userId, 
+                    (status: string) => {
+                        set({ currentStatus: status })
                     },
-                    {
-                        id: 'note-1',
-                        type: 'notes',
-                        title: `Note about ${query}`,
-                        content: `This note contains information about ${query}`,
-                        relevance: 0.8
-                    },
-                    {
-                        id: 'conversation-1',
-                        type: 'conversations',
-                        title: `Conversation mentioning ${query}`,
-                        content: `Previous conversation where we discussed ${query}`,
-                        relevance: 0.7
-                    }
-                ]
+                    10 // Search limit
+                )
 
-                set({
-                    searchResults: mockResults,
-                    isSearching: false
-                })
+                if (response && response.relevantContent.length > 0) {
+                    // Convert search results to ContextItem format
+                    const contextItems: ContextItem[] = response.relevantContent.map((item, index) => ({
+                        id: `${item.contentType}-${index}`,
+                        type: item.contentType as ContextType,
+                        title: item.title,
+                        content: item.summary || '',
+                        relevance: item.score
+                    }))
+
+                    set({
+                        searchResults: contextItems,
+                        isSearching: false,
+                        currentStatus: `Found ${contextItems.length} relevant items`
+                    })
+
+                    // Clear status after delay
+                    setTimeout(() => {
+                        set({ currentStatus: undefined })
+                    }, 3000)
+                } else {
+                    set({
+                        searchResults: [],
+                        isSearching: false,
+                        currentStatus: 'No relevant content found'
+                    })
+
+                    // Clear status after delay
+                    setTimeout(() => {
+                        set({ currentStatus: undefined })
+                    }, 3000)
+                }
 
             } catch (error) {
                 console.error('Search failed:', error)
                 set({
                     isSearching: false,
                     error: error instanceof Error ? error.message : 'Search failed',
-                    searchResults: []
+                    currentStatus: undefined
                 })
             }
         },
@@ -208,6 +203,62 @@ export const useInsightStore = create<InsightStore>()(
                     error: error instanceof Error ? error.message : `Failed to load ${type}`
                 })
             }
+        },
+
+        generateEmbeddings: async (platform: 'conversations' | 'notes') => {
+            set({ isGeneratingEmbeddings: true, error: undefined, currentStatus: `Generating embeddings for ${platform}...` })
+
+            try {
+                const userId = getCurrentUserId()
+                if (!userId) {
+                    set({
+                        isGeneratingEmbeddings: false,
+                        error: 'User authentication required for embedding generation',
+                        currentStatus: undefined
+                    })
+                    return
+                }
+
+                const result = await generateEmbeddingsForPlatform(userId, platform)
+                
+                set({
+                    isGeneratingEmbeddings: false,
+                    currentStatus: `Generated embeddings for ${result[platform].succeeded} ${platform}`
+                })
+
+                // Update embedding status
+                get().checkEmbeddingStatus()
+
+                // Clear status after delay
+                setTimeout(() => {
+                    set({ currentStatus: undefined })
+                }, 3000)
+
+            } catch (error) {
+                console.error('Failed to generate embeddings:', error)
+                set({
+                    isGeneratingEmbeddings: false,
+                    error: error instanceof Error ? error.message : 'Failed to generate embeddings',
+                    currentStatus: undefined
+                })
+            }
+        },
+
+        checkEmbeddingStatus: async () => {
+            try {
+                const userId = getCurrentUserId()
+                if (!userId) return
+
+                const status = await checkEmbeddingStatus(userId)
+                set({ embeddingStatus: status })
+
+            } catch (error) {
+                console.error('Failed to check embedding status:', error)
+            }
+        },
+
+        setStatus: (status: string | undefined) => {
+            set({ currentStatus: status })
         }
     }))
 )

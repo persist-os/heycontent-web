@@ -1,5 +1,5 @@
 import React from 'react'
-import { MobileTabBar } from './notepad/MobileTabBar'
+import { MobileTabBar } from '@/app/dashboard/thinking_lab/components/notepad/MobileTabBar'
 import ChatContextBox from './main_chat/ChatContextBox'
 import ChatMessagesList from './main_chat/ChatMessagesList'
 import { PersonaTip } from './PersonaTip'

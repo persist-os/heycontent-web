@@ -90,7 +90,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
         if (result.success) {
           // Free subscription created successfully - redirect to dashboard
           setStep('chat');
-          router.push("/dashboard/chat?welcome=true");
+          router.push("/dashboard?welcome=true");
         } else {
           console.error('Failed to create free subscription:', result.error);
         }
@@ -100,7 +100,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
     } else {
       // Paid plan selected - redirect to dashboard
       setStep('chat');
-      router.push("/dashboard/chat?welcome=true");
+      router.push("/dashboard?welcome=true");
     }
   };
 

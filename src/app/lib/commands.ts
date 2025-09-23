@@ -169,7 +169,7 @@ const navigationCommands: NavigationCommand[] = [
     label: 'Chat With Content',
     description: 'Open AI chat interface',
     icon: MessageSquare,
-    href: '/dashboard/chat',
+    href: '/dashboard',
     shortcut: ['g', 'c'],
     tags: ['chat', 'ai', 'conversation'],
   },
@@ -247,7 +247,7 @@ const actionCommands: ActionCommand[] = [
     shortcut: ['c'],
     tags: ['new', 'chat', 'ai'],
     action: () => {
-      window.location.href = '/dashboard/chat';
+      window.location.href = '/dashboard';
     },
   },
   {

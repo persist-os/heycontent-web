@@ -1,4 +1,4 @@
-import type { MarkdownNotepadRef } from '../components/notepad/types'
+import type { MarkdownNotepadRef } from '@/app/dashboard/thinking_lab/components/notepad/types'
 import type { ChatStateReturnType } from '../hooks/useChatState'
 import type { Message } from '@/app/types/chat'
 

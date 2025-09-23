@@ -13,6 +13,7 @@ export const useUIEffects = (
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
   const [ambientError, setAmbientError] = useState<string | null>(null)
+  const [isScrollingSuppressed, setIsScrollingSuppressed] = useState(false)
 
   const scrollToBottom = useCallback(() => {
     if (chatContainerRef.current && !isScrollingSuppressed) {
@@ -118,6 +119,8 @@ export const useUIEffects = (
     lastRefresh,
     setLastRefresh,
     ambientError,
+    isScrollingSuppressed,
+    setIsScrollingSuppressed,
     scrollToBottom,
     scrollToMessage,
     handleInsightClick,

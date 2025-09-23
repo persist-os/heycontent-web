@@ -177,7 +177,7 @@ export function useChatContainer({
     refs.loadedConversationRef.current = null
     
     // Navigate to clean chat URL
-    router.push('/dashboard/chat')
+    router.push('/dashboard')
 
     // Reset refs
     refs.askQueryProcessedRef.current = null
@@ -201,7 +201,7 @@ export function useChatContainer({
     chatState.setIsFirstMessage(true)
     clearContentContext()
     refs.loadedConversationRef.current = null
-    router.push('/dashboard/chat')
+    router.push('/dashboard')
     refs.askQueryProcessedRef.current = null
     setInputValue('')
   }, [resetChat, chatState, handleClearReference, clearContentContext, router])

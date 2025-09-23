@@ -64,7 +64,7 @@ export interface AmbientInsight {
 }
 
 export interface ContentContext {
-  platform: 'instagram' | 'youtube' | 'gmail' | 'ai-insights' | 'project';
+  platform: 'note' | 'crystal' | 'project' | 'conversation';
   contentId: string;
   analysis?: string | null;
   title?: string;
@@ -75,7 +75,7 @@ export interface ContentContext {
   convexData?: any; // Add this for the new Zustand store format with full Convex documents
   actionStep?: string;  // Add this for AI Insights action steps
   source?: string;      // Add this to track the source of the context
-  originalPlatform?: 'youtube' | 'instagram' | 'gmail' | 'project'; // Add this for AI insights
+  originalPlatform?: 'note' | 'crystal' | 'project' | 'conversation'; // Add this for AI insights
   additionalContext?: string; // Add this for additional context in AI insights
   fullInsight?: {       // Add this for full AI insight context
     title: string;

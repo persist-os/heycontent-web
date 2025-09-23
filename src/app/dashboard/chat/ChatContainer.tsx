@@ -7,7 +7,7 @@ import { ChatScreenProps } from './types'
 // Import components
 import { BottomBarActions } from './components/main_chat/BottomBarActions'
 import ChatInputArea from './components/main_chat/ChatInputArea'
-import { MarkdownNotepad } from './components/notepad/MarkdownNotepad'
+import { MarkdownNotepad } from '@/app/dashboard/thinking_lab/components/notepad/MarkdownNotepad'
 import { PanelExpandButton } from './components/PanelExpandButton'
 import { ChatContainerModals } from './components/ChatContainerModals'
 import { ChatContent } from './components/ChatContent'

@@ -5,7 +5,8 @@ import type { InteractiveOption } from './interactive-response'
 import { MessageSquare, Quote, Search, CheckCircle, Database } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { ExpandableInsights } from './expandable-insights'
-import { MarkdownRenderer, ChatContentRenderer } from './markdown-renderer'
+import { MarkdownRenderer } from '../thinking_lab/components/dialogue/messages/MarkdownRenderer'
+import { ContentRenderer as ChatContentRenderer } from '../thinking_lab/components/dialogue/messages/ContentRenderer'
 import { PersonaCardRenderer } from './components/PersonaCardRenderer'
 import { HorizontalProgressiveThinking } from './components/main_chat/HorizontalProgressiveThinking'
 import { CopyButton } from '@/components/ui/copy-button'
@@ -54,6 +55,15 @@ export function MessageBubble({
   const { theme } = useTheme()
   // Create unique selection ID for this message
   const selectionId = useMemo(() => `selection-${message.id}`, [message.id])
+  
+  // Simple selection management - can be enhanced later
+  const activeSelections = useRef<Set<string>>(new Set())
+  const addActiveSelection = useCallback((id: string) => {
+    activeSelections.current.add(id)
+  }, [])
+  const removeActiveSelection = useCallback((id: string) => {
+    activeSelections.current.delete(id)
+  }, [])
   
   // Utility function to validate if a range is still valid
   const isRangeValid = useCallback((range: Range | null): range is Range => {

@@ -69,7 +69,7 @@ export async function POST(request: Request) {
         (apiKeyData?.data && typeof apiKeyData.data.key === 'string' ? apiKeyData.data.key : undefined);
       const response = NextResponse.json({
         success: true,
-        redirect: '/dashboard/chat',
+        redirect: '/dashboard',
         apiKey,
         apiKeyData
       });

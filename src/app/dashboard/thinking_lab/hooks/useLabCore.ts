@@ -1,8 +1,8 @@
 /**
  * Core Lab Hooks
  *
- * Individual context access hooks with error handling.
- * Provides clean, type-safe access to each lab context.
+ * Type-safe access hooks for thinking lab contexts.
+ * Provides clean access to dialogue, reflection, insight, and layout features.
  */
 
 import { useContext } from 'react'
@@ -10,12 +10,14 @@ import {
     DialogueContext,
     ReflectionContext,
     InsightContext,
-    LabLayoutContext,
-    type DialogueContextValue,
-    type ReflectionContextValue,
-    type InsightContextValue,
-    type LabLayoutContextValue
+    LabLayoutContext
 } from '../contexts/LabContexts'
+import type {
+    DialogueContextValue,
+    ReflectionContextValue,
+    InsightContextValue,
+    LabLayoutContextValue
+} from '../types'
 
 // =============================================================================
 // INDIVIDUAL CONTEXT HOOKS

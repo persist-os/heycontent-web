@@ -8,35 +8,12 @@
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 
-// TODO: Import your existing API functions
-// import { sendChatMessage, loadConversation } from '../api/chat' // TODO: What are your actual API functions?
+// Import API services
+import { transmitMessageWithContext } from '../modules/api/messageService'
+import { useLayoutStore } from './layoutStore' // For getting context preferences
 
-interface Message {
-    id: string
-    content: string
-    role: 'user' | 'assistant'
-    timestamp: number
-    // TODO: Add any other message properties you have
-}
-
-interface DialogueState {
-    messages: Message[]
-    isLoading: boolean
-    sessionId: string
-    conversationId?: string
-    error?: string
-}
-
-interface DialogueActions {
-    sendMessage: (content: string) => Promise<void>
-    addMessage: (message: Message) => void
-    setLoading: (loading: boolean) => void
-    startNewConversation: () => void
-    loadConversation: (conversationId: string) => Promise<void>
-    quoteMessage: (messageId: string) => void
-    clearMessages: () => void
-    setError: (error: string | undefined) => void
-}
+// Import centralized types
+import type { Message, DialogueState, DialogueActions, MessageTransmissionRequest } from '../types'
 
 type DialogueStore = DialogueState & DialogueActions
 
@@ -48,10 +25,12 @@ export const useDialogueStore = create<DialogueStore>()(
         sessionId: `session-${Date.now()}`,
         conversationId: undefined,
         error: undefined,
+        currentStatus: undefined,
+        useContextSearch: true, // Default to enabled
 
         // Actions
         sendMessage: async (content: string) => {
-            const { messages, sessionId, conversationId } = get()
+            const { messages, sessionId, conversationId, useContextSearch } = get()
 
             // Add user message immediately
             const userMessage: Message = {
@@ -64,36 +43,47 @@ export const useDialogueStore = create<DialogueStore>()(
             set({
                 messages: [...messages, userMessage],
                 isLoading: true,
-                error: undefined
+                error: undefined,
+                currentStatus: 'Sending your message...'
             })
 
             try {
-                // TODO: Replace with your actual API call
-                // const response = await sendChatMessage({
-                //   message: content,
-                //   sessionId,
-                //   conversationId
-                // })
+                // Prepare request parameters
+                const requestParams: MessageTransmissionRequest = {
+                    content,
+                    isFirstMessage: messages.length === 0,
+                    sessionIdentifier: sessionId,
+                    workspaceContext: conversationId ? { contentId: conversationId } : null,
+                    useContextSearch,
+                    onStatusUpdate: (status: string) => {
+                        set({ currentStatus: status })
+                    }
+                }
 
-                // TODO: Mock response - replace with actual API response handling
+                // Call the enhanced message service
+                const response = await transmitMessageWithContext(requestParams)
+
+                // Create assistant message from response
                 const assistantMessage: Message = {
                     id: `msg-${Date.now() + 1}`,
-                    content: `Mock response to: ${content}`,
+                    content: response.response_content || 'No response received',
                     role: 'assistant',
                     timestamp: Date.now()
                 }
 
                 set(state => ({
                     messages: [...state.messages, assistantMessage],
-                    isLoading: false
+                    isLoading: false,
+                    currentStatus: undefined,
+                    sessionId: response.session_identifier || state.sessionId,
+                    conversationId: response.session_identifier || state.conversationId
                 }))
-
-                // TODO: Handle any additional response data (updated session ID, etc.)
 
             } catch (error) {
                 console.error('Failed to send message:', error)
                 set({
                     isLoading: false,
+                    currentStatus: undefined,
                     error: error instanceof Error ? error.message : 'Failed to send message'
                 })
             }
@@ -114,7 +104,8 @@ export const useDialogueStore = create<DialogueStore>()(
                 messages: [],
                 sessionId: `session-${Date.now()}`,
                 conversationId: undefined,
-                error: undefined
+                error: undefined,
+                currentStatus: undefined
             })
         },
 
@@ -178,6 +169,14 @@ export const useDialogueStore = create<DialogueStore>()(
 
         setError: (error: string | undefined) => {
             set({ error })
+        },
+
+        setStatus: (status: string | undefined) => {
+            set({ currentStatus: status })
+        },
+
+        toggleContextSearch: () => {
+            set(state => ({ useContextSearch: !state.useContextSearch }))
         }
     }))
 )

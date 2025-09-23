@@ -6,34 +6,12 @@
 
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
+import React from 'react'
+import type { LabTab, LabLayoutState, LabLayoutActions } from '../types'
 
-type LabTab = 'dialogue' | 'reflection' | 'insight'
+type LayoutStore = LabLayoutState & LabLayoutActions
 
-interface PanelSizes {
-    dialogue: number
-    reflection: number
-}
-
-interface LayoutState {
-    isMobile: boolean
-    activeTab: LabTab
-    panelSizes: PanelSizes
-    isReflectionCollapsed: boolean
-    isInsightCollapsed: boolean
-}
-
-interface LayoutActions {
-    setMobile: (isMobile: boolean) => void
-    setActiveTab: (tab: LabTab) => void
-    updatePanelSizes: (sizes: Partial<PanelSizes>) => void
-    toggleReflectionCollapse: () => void
-    toggleInsightCollapse: () => void
-    resetLayout: () => void
-}
-
-type LayoutStore = LayoutState & LayoutActions
-
-const defaultPanelSizes: PanelSizes = {
+const defaultPanelSizes: Record<string, number> = {
     dialogue: 60,
     reflection: 40
 }
@@ -62,7 +40,7 @@ export const useLayoutStore = create<LayoutStore>()(
             set({ activeTab: tab })
         },
 
-        updatePanelSizes: (sizes: Partial<PanelSizes>) => {
+        updatePanelSizes: (sizes: Record<string, number>) => {
             set(state => ({
                 panelSizes: { ...state.panelSizes, ...sizes }
             }))
@@ -82,7 +60,7 @@ export const useLayoutStore = create<LayoutStore>()(
 
         resetLayout: () => {
             set({
-                panelSizes: defaultPanelSizes,
+                panelSizes: defaultPanelSizes as Record<string, number>,
                 isReflectionCollapsed: false,
                 isInsightCollapsed: false,
                 activeTab: 'dialogue'

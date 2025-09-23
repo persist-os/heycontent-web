@@ -34,12 +34,12 @@ const navItems = [
     category: 'create',
   },
   {
-    id: 'chat',
-    label: 'Chat with Content',
-    description: 'Converse with your creative universe',
-    icon: MessageSquare,
-    href: '/dashboard/chat',
-    dataAttr: 'data-chat-link',
+    id: 'thinking-lab',
+    label: 'Thinking Lab',
+    description: 'Integrated dialogue, reflection, and insights',
+    icon: Sparkles,
+    href: '/dashboard/thinking_lab',
+    dataAttr: 'data-thinking-lab-link',
     category: 'explore',
   },
 ]
@@ -242,6 +242,9 @@ export const DashboardNav = memo(function DashboardNav() {
       case 'living-projects':
         // This tab is active for living projects and project discovery routes
         return pathname.startsWith('/dashboard/living-projects') || pathname.startsWith('/dashboard/project-discovery');
+      case 'thinking-lab':
+        // This tab is active for thinking lab routes
+        return pathname.startsWith('/dashboard/thinking_lab');
       case 'chat':
       case 'notes':
       case 'admin':
