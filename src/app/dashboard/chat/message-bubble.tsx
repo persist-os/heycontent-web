@@ -11,7 +11,6 @@ import { HorizontalProgressiveThinking } from './components/main_chat/Horizontal
 import { CopyButton } from '@/components/ui/copy-button'
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { AnimatePresence } from 'framer-motion'
-import { useGlobalSelectionState } from './hooks/useGlobalSelectionState'
 import { useTextSelection } from '@/hooks/useTextSelection'
 import { useQuoteActions } from '@/hooks/useQuoteActions'
 import { TextSelectionWrapper } from '@/components/ui/TextSelectionErrorBoundary'
@@ -53,8 +52,6 @@ export function MessageBubble({
 }: MessageBubbleProps) {
   const isUser = message.role === 'user'
   const { theme } = useTheme()
-  const { addActiveSelection, removeActiveSelection } = useGlobalSelectionState()
-  
   // Create unique selection ID for this message
   const selectionId = useMemo(() => `selection-${message.id}`, [message.id])
   

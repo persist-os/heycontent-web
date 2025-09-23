@@ -16,7 +16,7 @@ export const PersonaCardRenderer: React.FC<PersonaCardRendererProps> = ({ messag
   const [retryCount, setRetryCount] = useState(0);
   const [shouldShow, setShouldShow] = useState(false);
   const [showSettingsButton, setShowSettingsButton] = useState(false);
-  const router = useRouter();
+  const router = useRouter()
   
   // Always fetch persona if this is an assistant message
   const isAssistantMessage = message.role === 'assistant';

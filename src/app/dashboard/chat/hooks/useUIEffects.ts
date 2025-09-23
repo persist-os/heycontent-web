@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Message } from '@/app/types/chat'
 import { AmbientInsight, SuggestedAction } from '../types'
 import { getApiKey } from '@/app/lib/api-helpers'
-import { useGlobalSelectionState } from './useGlobalSelectionState'
 
 export const useUIEffects = (
   messages: Message[],
@@ -14,9 +13,6 @@ export const useUIEffects = (
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
   const [ambientError, setAmbientError] = useState<string | null>(null)
-  
-  // Get selection state to prevent scroll conflicts
-  const { isScrollingSuppressed } = useGlobalSelectionState()
 
   const scrollToBottom = useCallback(() => {
     if (chatContainerRef.current && !isScrollingSuppressed) {

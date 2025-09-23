@@ -334,7 +334,7 @@ export async function generateEmbeddingsForUser(userId: string): Promise<any> {
     // Use the new automatic embedding generation system
     console.log('🚀 [EMBEDDING SETUP] Using new automatic embedding system');
     
-    const embeddingResult = await convex.action(api.vectorSearchEmbeddings.autoGenerateEmbeddings, {
+    const embeddingResult = await convex.action(api.vectorSearch.autoGenerateEmbeddings, { 
       userId,
       contentType: "all",
       updateType: "manual_update"

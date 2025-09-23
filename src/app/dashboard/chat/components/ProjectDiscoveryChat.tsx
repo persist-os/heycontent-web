@@ -10,9 +10,7 @@ import { api } from '@/convex/_generated/api'
 import { useChatState } from '../hooks/useChatState'
 import { useChat } from '../hooks/useChat'
 import { useConversation } from '../hooks/useConversation'
-import { useWelcomeMessage } from '../hooks/useWelcomeMessage'
 import { getProjectDiscoveryWelcomeMessage, projectDiscoverySuggestions } from '../data/project-discovery-welcome'
-import { usePersonaData } from '../hooks/usePersonaData'
 import { getApiKey } from '@/app/lib/api-helpers'
 import ChatMessagesList from './main_chat/ChatMessagesList'
 import { ChatInput } from '../chat-input'
@@ -22,7 +20,6 @@ import { useContentContext, useContentContextActions } from '@/store/content-con
 import { useProjectContext } from '../hooks/useProjectContext'
 import AmbientFingerprintCanvas from './AmbientFingerprintCanvas'
 import { ConvexHttpClient } from 'convex/browser'
-import { useGlobalSelectionState } from '../hooks/useGlobalSelectionState'
 
 interface ProjectDiscoveryChatProps {
   projectId?: string
@@ -393,9 +390,6 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
   // Get content context from Zustand store
   const { context: currentContext, hasContext } = useContentContext()
   const { clearContentContext, setContentContext } = useContentContextActions()
-  
-  // Get global selection state to prevent scroll interference
-  const { isScrollingSuppressed } = useGlobalSelectionState()
 
   // Initialize shared state and hooks
   const chatState = useChatState()
@@ -560,9 +554,6 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
     }
   }, [projectId, messages.length, isLoading, setMessages])
 
-  // Get persona data
-  const { hasPersona } = usePersonaData(authData.userId, authData.isAuthenticated)
-
   // Initialize chat hook with shared state and userId
   const {
     referencedMessage,
@@ -625,16 +616,6 @@ const ProjectDiscoveryChat: React.FC<ProjectDiscoveryChatProps> = ({
       }, 100)
     }
   }, [askQuery, isLoading, handleSendMessage, messages.length, authData.user])
-
-  // Initialize welcome message hook for onboarding users without personas
-  const { handleSuggestionClick: handleWelcomeSuggestionClick } = useWelcomeMessage(
-    messages, 
-    isLoading, 
-    authData.user, 
-    setMessages, 
-    hasPersona, 
-    false
-  )
 
   // Handlers
   const handleRemoveContext = useCallback(() => {
