@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import toast from 'react-hot-toast';
 
-// Types for different header configurations
+// Types for different header compositions
 export interface HeaderAction {
   id: string;
   icon: React.ComponentType<{ size?: number | string; className?: string }>;
@@ -48,7 +48,7 @@ export interface CentralizedHeaderProps {
   centerActions?: HeaderAction[];
   rightActions?: HeaderAction[];
   
-  // Special configurations
+  // Special compositions
   showThemeToggle?: boolean;
   showSelfTab?: boolean;
   showHelp?: boolean;
