@@ -9,12 +9,12 @@
 import type { Note, NoteUpdate } from '../../../notes/types'
 import type { Id } from "@/convex/_generated/dataModel"
 
-// Core note interface for reflection - compatible with existing Note interface
+// Core note interface for reflection - compatible with Convex schema
 export interface ReflectionNote {
     _id: string
     _creationTime: number
     title: string
-    content: string
+    content: string // Default to empty string if undefined from Convex
     createdAt: number
     updatedAt: number
     type: string

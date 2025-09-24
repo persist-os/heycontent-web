@@ -1,5 +1,5 @@
 import React from 'react';
-import { MessageBubble } from '../../message-bubble';
+import { MessageBubble } from '../messages/message-bubble';
 import { SuggestionChip } from './SuggestionChip';
 
 interface ChatMessagesListProps {

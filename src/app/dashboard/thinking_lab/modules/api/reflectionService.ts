@@ -1,11 +1,13 @@
 /**
  * Reflection Service
  * 
- * API service for handling all note/reflection backend operations.
- * Centralizes Convex calls and provides clean async functions.
+ * ✅ CONNECTED: Service layer for reflection/note operations following established patterns
+ * 
+ * This service handles validation, error formatting, and data coordination.
+ * Actual Convex calls happen in hooks - this service provides clean async interfaces
+ * that components can use alongside the Convex hooks.
  */
 
-import { fetchWithApiKey } from '@/app/lib/api-helpers'
 import type {
     ReflectionNote,
     CreateReflectionNoteParams,
@@ -14,161 +16,236 @@ import type {
     LoadReflectionNotesResult
 } from '../../types/api/reflectionApi'
 
-// Note: These functions are designed to be called from React components
-// that can use useQuery/useMutation. The actual Convex calls happen there.
+// ✅ VALIDATION AND COORDINATION FUNCTIONS
+// These work alongside Convex hooks for complete note operations
 
 /**
- * Load user notes with pagination
+ * Validate and prepare parameters for loading user notes
+ * Used alongside useQuery hook for getUserNotes
  */
-export async function loadUserNotes(params: LoadReflectionNotesParams): Promise<LoadReflectionNotesResult> {
+export function prepareLoadNotesParams(params: LoadReflectionNotesParams) {
     try {
-        // This function coordinates the loading logic
-        // The actual useQuery call happens in the component
-        
-        console.log('loadUserNotes called with params:', params)
-        
-        // For now, return mock data
-        // In real implementation, this would coordinate with the component's useQuery
-        return {
-            notes: [],
-            hasMore: false,
-            cursor: undefined
+        if (!params.userId) {
+            throw new Error('User authentication required')
         }
+
+        // Validate and sanitize parameters
+        const sanitizedParams = {
+            userId: params.userId,
+            numItems: Math.min(Math.max(1, params.numItems || 20), 50), // Enforce 1-50 range
+            cursor: params.cursor,
+            sortField: params.sortField || '_creationTime',
+            sortOrder: (params.sortOrder === 'asc' ? 'asc' : 'desc') as 'asc' | 'desc',
+            includeShared: params.includeShared !== false // Default true
+        }
+
+        console.log('prepareLoadNotesParams:', sanitizedParams)
+        return sanitizedParams
     } catch (error) {
-        console.error('Failed to load notes:', error)
-        throw new Error('Unable to load your notes. Please try again.')
+        console.error('Failed to prepare load params:', error)
+        throw new Error('Unable to prepare note loading. Please check your parameters.')
     }
 }
 
 /**
- * Load a specific note by ID
+ * Validate parameters for loading a specific note
+ * Used alongside useQuery hook for getNote
  */
-export async function loadNote(noteId: string, userId: string): Promise<ReflectionNote | null> {
+export function prepareLoadNoteParams(noteId: string, userId: string) {
+    try {
+        if (!userId) {
+            throw new Error('User authentication required')
+        }
+        
+        if (!noteId) {
+            throw new Error('Note ID is required')
+        }
+
+        console.log('prepareLoadNoteParams:', { noteId, userId })
+        
+        return { noteId, userId }
+    } catch (error) {
+        console.error('Failed to prepare load note params:', error)
+        throw new Error('Unable to load this note. Please check your parameters.')
+    }
+}
+
+/**
+ * Validate and prepare parameters for creating a new note
+ * Used alongside useMutation hook for createNote
+ */
+export function prepareCreateNoteParams(params: CreateReflectionNoteParams, userId: string) {
     try {
         if (!userId) {
             throw new Error('User authentication required')
         }
 
-        console.log('loadNote called for:', noteId, 'by user:', userId)
-        
-        // The actual query happens in the component
-        // This function handles validation and error formatting
-        return null
-    } catch (error) {
-        console.error('Failed to load note:', error)
-        throw new Error('Unable to load this note. Please check your connection and try again.')
-    }
-}
-
-/**
- * Create a new note
- */
-export async function createNote(params: CreateReflectionNoteParams, userId: string): Promise<ReflectionNote> {
-    try {
-        if (!userId) {
-            throw new Error('User authentication required')
+        // Validate content
+        const validation = validateNoteContent(params.content)
+        if (!validation.isValid) {
+            throw new Error(validation.error || 'Invalid note content')
         }
 
         // Generate title from content if not provided
         const title = params.title || generateTitleFromContent(params.content)
         
-        console.log('createNote called with params:', { ...params, title, userId })
-        
-        // The actual mutation happens in the component
-        // This function handles validation and data preparation
-        
-        // Return mock for now
-        return {
-            _id: `note-${Date.now()}`,
-            _creationTime: Date.now(),
+        // Prepare Convex-compatible parameters
+        const convexParams = {
+            userId,
             title,
             content: params.content,
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-            type: params.type || 'reflection_journal',
-            important: false,
-            tags: params.tags || [],
-            userId
+            type: (params.type || 'reflection_journal') as any, // Will match Convex schema
+            tags: params.tags || []
         }
+        
+        console.log('prepareCreateNoteParams:', convexParams)
+        return convexParams
     } catch (error) {
-        console.error('Failed to create note:', error)
-        throw new Error('Unable to save your note. Please try again.')
+        console.error('Failed to prepare create note params:', error)
+        throw new Error('Unable to prepare note creation. Please check your inputs.')
     }
 }
 
 /**
- * Update an existing note
+ * Validate and prepare parameters for updating a note
+ * Used alongside useMutation hook for updateNote
  */
-export async function updateNote(params: UpdateReflectionNoteParams, userId: string): Promise<ReflectionNote> {
+export function prepareUpdateNoteParams(params: UpdateReflectionNoteParams, userId: string) {
     try {
         if (!userId) {
             throw new Error('User authentication required')
         }
+        
+        if (!params.noteId) {
+            throw new Error('Note ID is required')
+        }
 
-        console.log('updateNote called with params:', params)
+        // Validate content if provided
+        if (params.content !== undefined) {
+            const validation = validateNoteContent(params.content)
+            if (!validation.isValid) {
+                throw new Error(validation.error || 'Invalid note content')
+            }
+        }
+
+        // Build update object with only defined fields
+        const updates: any = {}
+        if (params.content !== undefined) updates.content = params.content
+        if (params.title !== undefined) updates.title = params.title
+        if (params.important !== undefined) updates.important = params.important
+        if (params.tags !== undefined) updates.tags = params.tags
+
+        const convexParams = {
+            noteId: params.noteId as any, // Will be converted to proper ID type
+            userId,
+            updates
+        }
         
-        // The actual mutation happens in the component
-        // This function handles validation and data preparation
+        console.log('prepareUpdateNoteParams:', convexParams)
+        return convexParams
+    } catch (error) {
+        console.error('Failed to prepare update note params:', error)
+        throw new Error('Unable to prepare note update. Please check your inputs.')
+    }
+}
+
+/**
+ * Validate parameters for deleting a note
+ * Used alongside useMutation hook for deleteNote
+ */
+export function prepareDeleteNoteParams(noteId: string, userId: string) {
+    try {
+        if (!userId) {
+            throw new Error('User authentication required')
+        }
         
-        // Return mock for now
+        if (!noteId) {
+            throw new Error('Note ID is required')
+        }
+
+        console.log('prepareDeleteNoteParams:', { noteId, userId })
+        
         return {
-            _id: params.noteId,
-            _creationTime: Date.now() - 1000000, // Mock previous creation time
-            title: params.title || 'Updated Note',
-            content: params.content || '',
-            createdAt: Date.now() - 1000000,
-            updatedAt: Date.now(),
-            type: 'reflection_journal',
-            important: params.important || false,
-            tags: params.tags || [],
+            noteId: noteId as any, // Will be converted to proper ID type
             userId
         }
     } catch (error) {
-        console.error('Failed to update note:', error)
-        throw new Error('Unable to save your changes. Please try again.')
+        console.error('Failed to prepare delete note params:', error)
+        throw new Error('Unable to prepare note deletion.')
     }
 }
 
 /**
- * Delete a note
+ * Prepare parameters for toggling note importance
+ * Used alongside useMutation hook for updateNote (with importance toggle)
  */
-export async function deleteNote(noteId: string, userId: string): Promise<boolean> {
+export function prepareToggleImportanceParams(noteId: string, currentImportance: boolean, userId: string) {
     try {
         if (!userId) {
             throw new Error('User authentication required')
         }
+        
+        if (!noteId) {
+            throw new Error('Note ID is required')
+        }
 
-        console.log('deleteNote called for:', noteId)
+        const convexParams = {
+            noteId: noteId as any,
+            userId,
+            updates: {
+                important: !currentImportance
+            }
+        }
         
-        // The actual mutation happens in the component
-        // This function handles validation
-        
-        return true // Mock success
+        console.log('prepareToggleImportanceParams:', convexParams)
+        return convexParams
     } catch (error) {
-        console.error('Failed to delete note:', error)
-        throw new Error('Unable to delete this note. Please try again.')
+        console.error('Failed to prepare importance toggle params:', error)
+        throw new Error('Unable to update note importance.')
+    }
+}
+
+// ✅ RESULT TRANSFORMATION FUNCTIONS
+// Convert between Convex types and reflection types
+
+/**
+ * Transform Convex note result to ReflectionNote
+ */
+export function transformConvexNoteToReflection(convexNote: any): ReflectionNote {
+    return {
+        _id: String(convexNote._id),
+        _creationTime: convexNote._creationTime,
+        title: convexNote.title || '',
+        content: convexNote.content || '', // Handle optional content from Convex
+        createdAt: convexNote.createdAt || convexNote._creationTime,
+        updatedAt: convexNote.updatedAt || convexNote._creationTime,
+        type: convexNote.type || 'reflection_journal',
+        important: convexNote.important || false,
+        tags: convexNote.tags || [],
+        userId: convexNote.userId
     }
 }
 
 /**
- * Toggle note importance
+ * Transform Convex notes query result to LoadReflectionNotesResult
  */
-export async function toggleNoteImportance(noteId: string, userId: string): Promise<boolean> {
-    try {
-        if (!userId) {
-            throw new Error('User authentication required')
+export function transformConvexNotesResult(convexResult: any): LoadReflectionNotesResult {
+    if (!convexResult) {
+        return {
+            notes: [],
+            hasMore: false,
+            cursor: undefined
         }
+    }
 
-        console.log('toggleNoteImportance called for:', noteId)
-        
-        // The actual mutation happens in the component
-        
-        return true // Mock new importance state
-    } catch (error) {
-        console.error('Failed to toggle note importance:', error)
-        throw new Error('Unable to update this note. Please try again.')
+    return {
+        notes: convexResult.page.map(transformConvexNoteToReflection),
+        hasMore: !convexResult.isDone,
+        cursor: convexResult.continueCursor || convexResult.nextCursor
     }
 }
+
+// ✅ UTILITY FUNCTIONS
 
 /**
  * Generate a title from note content

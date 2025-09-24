@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { ChatInput } from '../../chat-input';
+import { ChatInput } from './chat-input';
 import { AmbientInsights } from '@/app/dashboard/ambient_insights/AmbientInsights';
-import { BottomBarActions } from './BottomBarActions';
+import { BottomBarActions } from '../components/BottomBarActions';
 import { Message } from '@/app/types/chat';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 

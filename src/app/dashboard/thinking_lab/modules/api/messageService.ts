@@ -64,11 +64,11 @@ export async function transmitMessageWithContext(params: MessageTransmissionRequ
     // Transform backend response to expected format
     if (data.success && data.data) {
       return {
-        response_content: generateResponseFromContext(data.data),
-        session_identifier: `session-${Date.now()}`,
-        user_input: data.data.query,
-        suggestions: [],
-        metadata: data.data.processing_metadata || {}
+        response_content: data.data.response || generateResponseFromContext(data.data),
+        session_identifier: data.data.session_id || `session-${Date.now()}`,
+        user_input: content, // Use the original user input
+        suggestions: data.data.suggestions || [],
+        metadata: data.data.metadata || {}
       };
     }
     

@@ -12,15 +12,15 @@ import { useAuth } from '@/app/context/auth-context'
 import { useContentResolver } from '../../../lib/content-resolver'
 import { ContentProcessor, ContentClickHandler } from '../../../lib/contentProcessor'
 import type { ContentRendererProps } from '../../../types/components/contentRenderer'
+import { getCurrentUserId } from '@/app/lib/api-helpers'
 
 export function ContentRenderer({ 
-  content, 
-  className = '', 
+  content,
+  className = '',
   onContentClick,
-  resolvedContent 
+  resolvedContent
 }: ContentRendererProps) {
-  const { firebaseUser } = useAuth()
-  const userId = firebaseUser?.uid
+  const userId = getCurrentUserId()
   
   // Get current chat ID from URL
   const currentChatId = typeof window !== 'undefined' 

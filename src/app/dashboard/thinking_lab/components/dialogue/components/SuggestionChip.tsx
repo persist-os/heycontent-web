@@ -1,6 +1,6 @@
 import React from 'react';
 import { Brain, MessageSquare, Target, Zap } from 'lucide-react';
-import { SuggestedAction } from '../../types';
+import { SuggestedAction } from '../../../types/modules/dialogueModules';
 import { InputButton } from '@/components/ui/input-button';
 
 interface SuggestionChipProps {

@@ -51,8 +51,6 @@ import type * as noteSharing from "../noteSharing.js";
 import type * as notes from "../notes.js";
 import type * as operationalTransform from "../operationalTransform.js";
 import type * as paginatedQueries from "../paginatedQueries.js";
-import type * as personaQueries from "../personaQueries.js";
-import type * as personas from "../personas.js";
 import type * as platformRouter from "../platformRouter.js";
 import type * as presence from "../presence.js";
 import type * as priceConfig from "../priceConfig.js";
@@ -131,8 +129,6 @@ declare const fullApi: ApiFromModules<{
   notes: typeof notes;
   operationalTransform: typeof operationalTransform;
   paginatedQueries: typeof paginatedQueries;
-  personaQueries: typeof personaQueries;
-  personas: typeof personas;
   platformRouter: typeof platformRouter;
   presence: typeof presence;
   priceConfig: typeof priceConfig;

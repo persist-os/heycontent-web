@@ -1,8 +1,14 @@
 /**
- * Lab Compositions - Simplified Version
+ * Lab Compositions
  *
- * Uses the original ResponsiveLayout that works correctly.
- * Looks and works exactly like the chat interface.
+ * Complete composition of the thinking lab.
+ * 
+ * Includes:
+ * - Chat messages list
+ * - Input area
+ * - Notepad
+ * - Ambient insights
+ * - Bottom actions
  */
 
 import React from 'react'
@@ -10,17 +16,15 @@ import { Sparkles } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ThinkingLabProvider } from '../contexts/LabProviders'
 import { useDialogue } from '../hooks/useLabCore'
-// Keep ChatContainer layout but use thinking lab content
 import { ChatLayout, ChatPanel, ContentArea, InputArea } from '../../chat/components/layout/ChatLayout'
 import { PanelExpandButton } from '../../chat/components/PanelExpandButton'
-
 import { MarkdownNotepad } from '../components/notepad/MarkdownNotepad'
-import ChatInputArea from '../../chat/components/main_chat/ChatInputArea'
-import { BottomBarActions } from '../../chat/components/main_chat/BottomBarActions'
-import { AmbientInsights } from '../../chat/components/ambient_insights/AmbientInsights'
-import ChatMessagesList from '../../chat/components/main_chat/ChatMessagesList'
-import { useSplitScreenLayout } from '../../chat/hooks/useSplitScreenLayout'
-import { useOptimizedAuth } from '../../chat/hooks/useOptimizedAuth'
+import ChatInputArea from '../components/dialogue/input/ChatInputArea'
+import { BottomBarActions } from '../components/dialogue/components/BottomBarActions'
+import { AmbientInsights } from '@/app/dashboard/ambient_insights/AmbientInsights'
+import ChatMessagesList from '../components/dialogue/components/ChatMessagesList'
+import { useSplitScreenLayout } from '../components/notepad/hooks/useSplitScreenLayout'
+import { useOptimizedAuth } from '../components/notepad/hooks/useOptimizedAuth'
 
 // =============================================================================
 // THINKING INDICATOR COMPONENT (using existing chat style)
@@ -232,12 +236,8 @@ function LabContent({ className, noteId }: { className?: string, noteId?: string
                         onRestore={splitScreen.restoreSplitView}
                     />
                     <ContentArea>
-                        {/* Header with New Conversation button and thinking indicator */}
-                        <div className="flex justify-between items-center pb-6 pr-6 pt-6">
-                            <ThinkingIndicator
-                                isVisible={state.isLoading}
-                                message="Thinking..."
-                            />
+                        {/* New Conversation button - positioned at top right */}
+                        <div className="absolute top-6 right-6 z-10">
                             <button
                                 onClick={() => {
                                     actions.startNewConversation()

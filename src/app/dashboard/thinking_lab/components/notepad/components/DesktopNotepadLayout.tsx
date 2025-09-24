@@ -7,7 +7,7 @@ import type { Note, NoteUpdate } from '../../../../notes/types'
 import type { Id } from "@/convex/_generated/dataModel"
 import type { AIHandlers, NoteHandlers } from '../types'
 import type { LexicalNotepadEditorRef } from '@/components/ui/lexical-editor/LexicalNotepadEditor'
-import type { PanelState } from '../../../../chat/hooks/useSplitScreenLayout'
+import type { PanelState } from '../hooks/useSplitScreenLayout'
 
 interface DesktopNotepadLayoutProps {
   note: Note

@@ -3,7 +3,7 @@
 import React from 'react'
 import { Maximize2, Minimize2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { PanelState } from '../hooks/useSplitScreenLayout'
+import type { PanelState } from '../../thinking_lab/components/notepad/hooks/useSplitScreenLayout'
 
 interface PanelExpandButtonProps {
   panelType: 'chat' | 'notepad'

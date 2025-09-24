@@ -7,7 +7,7 @@ import { SimpleTypeSelector } from './SimpleTypeSelector'
 import { ActionButtons } from './ActionButtons'
 import type { Note, NoteUpdate } from '../../../../notes/types'
 import type { Id } from "@/convex/_generated/dataModel"
-import type { PanelState } from '../../../../chat/hooks/useSplitScreenLayout'
+import type { PanelState } from '../hooks/useSplitScreenLayout'
 
 interface NotepadHeaderProps {
   note: Note

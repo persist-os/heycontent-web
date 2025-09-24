@@ -1,7 +1,7 @@
 import type { Note, NoteUpdate, NoteType } from '../../../notes/types'
 import type { Id } from "@/convex/_generated/dataModel"
 import type { LexicalNotepadEditorRef } from '@/components/ui/lexical-editor/LexicalNotepadEditor'
-import type { PanelState } from '../../../chat/hooks/useSplitScreenLayout'
+import type { PanelState } from './hooks/useSplitScreenLayout'
 
 export interface MarkdownNotepadProps {
   isOpen: boolean

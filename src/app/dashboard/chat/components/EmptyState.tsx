@@ -1,5 +1,5 @@
 import React from 'react'
-import { AmbientInsightsContainer } from './ambient_insights/AmbientInsightsContainer'
+import { AmbientInsightsContainer } from '@/app/dashboard/ambient_insights/AmbientInsightsContainer'
 import { FullHeightContainer } from '@/components/ui/layout'
 
 interface EmptyStateProps {

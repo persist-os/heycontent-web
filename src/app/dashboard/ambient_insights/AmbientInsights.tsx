@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AmbientInsight } from '../../types';
+import { AmbientInsight } from '../chat/types';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { getApiKey } from '@/app/lib/api-helpers';

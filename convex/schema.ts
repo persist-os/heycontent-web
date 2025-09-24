@@ -109,33 +109,6 @@ export default defineSchema({
   .index("by_userId", ["userId"]),
 
 
-  // Personas
-  personas: defineTable({
-    current_name: v.string(),
-    current_description: v.string(),
-    experience_level: v.string(),
-    content_formats: v.array(v.string()),
-    content_tone: v.string(),
-    content_voice: v.string(),
-    content_pillars: v.array(v.string()),
-    unique_value: v.string(),
-    future_name: v.string(),
-    future_description: v.string(),
-    goals: v.array(v.string()),
-    desired_impact: v.string(),
-    primary_topics: v.array(v.string()),
-    secondary_topics: v.array(v.string()),
-    tone_descriptors: v.array(v.string()),
-    style_descriptors: v.array(v.string()),
-    audience_type: v.string(),
-    engagement_style: v.array(v.string()),
-    userId: v.string(),
-    isActive: v.boolean(),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_userId", ["userId"])
-  .index("by_active", ["isActive"]),
 
   // Chat conversations
   conversations: defineTable({

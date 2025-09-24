@@ -1,103 +1,97 @@
 /**
  * Reflection Store
  *
- * Zustand store for managing notepad/reflection state and actions.
- * This replaces/wraps your existing notepad store.
- *
- * ✅ CONNECTED: Real Convex integration following best practices
- * - Proper user isolation with userId as first index field
- * - Optimistic updates for better UX
- * - Strategic denormalization for performance
- * - Error handling with fallback states
+ * ✅ CONNECTED: Zustand store for reflection UI state and coordination
+ * 
+ * This store manages UI state and coordinates with useReflectionNotes hook.
+ * Follows established patterns:
+ * - Store manages UI state (open/closed, content, saving states)
+ * - Hook manages Convex operations
+ * - Store provides selectors for optimized re-renders
+ * - Clean separation of concerns
  */
 
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
+import type { ReflectionNote } from '../types/api/reflectionApi'
 
-// Store handles UI state only - user ID comes from components via auth context
+// Store handles UI state and coordination with hook layer
 
 interface ReflectionState {
+    // ✅ NOTEPAD UI STATE
     isOpen: boolean
     noteId?: string
     content: string
+    title?: string
     isDirty: boolean
-    isSaving: boolean
     lastSaved?: number
     error?: string
-    // AI refinement states
+    
+    // ✅ AI REFINEMENT STATE
     refinementPreview?: string
     isRefining: boolean
-    // Convex integration states
-    isLoadingNotes: boolean
-    notesList: Array<{
-        _id: string
-        _creationTime: number
-        title: string
-        type: string
-        important: boolean
-        tags: string[]
-    }>
-    hasMoreNotes: boolean
-    notesCursor?: string
+    
+    // ✅ HOOK COORDINATION STATE
+    // These help coordinate between the store and hook
+    selectedNotesList: ReflectionNote[]
+    notesListCursor?: string
+    notesListError?: string
 }
 
 interface ReflectionActions {
-    // ✅ PURE UI STATE ACTIONS ONLY
-    openNotepad: (noteId?: string) => void
+    // ✅ NOTEPAD UI ACTIONS
+    openNotepad: (noteId?: string, content?: string, title?: string) => void
     closeNotepad: () => void
     updateContent: (content: string) => void
+    updateTitle: (title: string) => void
     insertQuote: (text: string, source: string) => void
     setDirty: (dirty: boolean) => void
-    setSaving: (saving: boolean) => void
     setError: (error: string | undefined) => void
+    markAsSaved: () => void
+    resetNoteState: () => void
     
     // ✅ AI REFINEMENT ACTIONS
     setRefinementPreview: (preview: string | undefined) => void
     setIsRefining: (refining: boolean) => void
     
-    // ✅ SYNC STATE MANAGEMENT FOR HOOK COORDINATION
-    setIsOpen: (isOpen: boolean) => void
-    setNoteId: (noteId: string | undefined) => void
-    setContent: (content: string) => void
-    setLastSaved: (timestamp: number) => void
-    setLoadingNotes: (loading: boolean) => void
-    setNotesList: (notes: any[]) => void
-    setHasMoreNotes: (hasMore: boolean) => void
-    setNotesCursor: (cursor: string | undefined) => void
-    
-    // ✅ COMPUTED/DERIVED ACTIONS
-    markAsSaved: () => void
-    resetNoteState: () => void
+    // ✅ HOOK COORDINATION ACTIONS
+    // These sync data between hook and store
+    syncNotesFromHook: (notes: ReflectionNote[]) => void
+    syncNotesListCursor: (cursor: string | undefined) => void
+    syncNotesListError: (error: string | undefined) => void
+    syncNoteFromHook: (note: ReflectionNote | null) => void
 }
 
 type ReflectionStore = ReflectionState & ReflectionActions
 
 export const useReflectionStore = create<ReflectionStore>()(
     subscribeWithSelector((set, get) => ({
-        // Initial state
+        // ✅ INITIAL STATE
         isOpen: false,
         noteId: undefined,
         content: '',
+        title: undefined,
         isDirty: false,
-        isSaving: false,
         lastSaved: undefined,
         error: undefined,
+        
         // AI refinement states
         refinementPreview: undefined,
         isRefining: false,
-        // Convex integration states
-        isLoadingNotes: false,
-        notesList: [],
-        hasMoreNotes: false,
-        notesCursor: undefined,
+        
+        // Hook coordination states
+        selectedNotesList: [],
+        notesListCursor: undefined,
+        notesListError: undefined,
 
-        // ✅ PURE UI STATE ACTIONS
-        openNotepad: (noteId?: string) => {
+        // ✅ NOTEPAD UI ACTIONS
+        openNotepad: (noteId?: string, content?: string, title?: string) => {
             set({ 
                 isOpen: true, 
                 error: undefined,
                 noteId,
-                content: '', // Will be populated by hook
+                content: content || '',
+                title: title || undefined,
                 isDirty: false
             })
         },
@@ -107,6 +101,7 @@ export const useReflectionStore = create<ReflectionStore>()(
                 isOpen: false,
                 noteId: undefined,
                 content: '',
+                title: undefined,
                 isDirty: false,
                 error: undefined
             })
@@ -120,10 +115,16 @@ export const useReflectionStore = create<ReflectionStore>()(
             })
         },
 
+        updateTitle: (title: string) => {
+            set({
+                title,
+                isDirty: true,
+                error: undefined
+            })
+        },
+
         insertQuote: (text: string, source: string) => {
             const { content } = get()
-
-            // TODO: Customize quote formatting as needed
             const quote = `\n\n> ${text}\n> — *${source}*\n\n`
             const newContent = content + quote
 
@@ -137,12 +138,26 @@ export const useReflectionStore = create<ReflectionStore>()(
             set({ isDirty: dirty })
         },
 
-        setSaving: (saving: boolean) => {
-            set({ isSaving: saving })
-        },
-
         setError: (error: string | undefined) => {
             set({ error })
+        },
+
+        markAsSaved: () => {
+            set({ 
+                isDirty: false, 
+                lastSaved: Date.now() 
+            })
+        },
+
+        resetNoteState: () => {
+            set({
+                noteId: undefined,
+                content: '',
+                title: undefined,
+                isDirty: false,
+                lastSaved: undefined,
+                error: undefined
+            })
         },
 
         // ✅ AI REFINEMENT ACTIONS
@@ -154,115 +169,89 @@ export const useReflectionStore = create<ReflectionStore>()(
             set({ isRefining: refining })
         },
 
-        // ✅ SYNC STATE MANAGEMENT FOR HOOK COORDINATION
-        setIsOpen: (isOpen: boolean) => {
-            set({ isOpen })
-        },
-
-        setNoteId: (noteId: string | undefined) => {
-            set({ noteId })
-        },
-
-        setContent: (content: string) => {
-            set({ content, isDirty: false }) // Content set by hook is considered saved
-        },
-
-        setLastSaved: (timestamp: number) => {
-            set({ lastSaved: timestamp })
-        },
-
-        setLoadingNotes: (loading: boolean) => {
-            set({ isLoadingNotes: loading })
-        },
-
-        setNotesList: (notes: any[]) => {
+        // ✅ HOOK COORDINATION ACTIONS
+        syncNotesFromHook: (notes: ReflectionNote[]) => {
             set({
-                notesList: notes,
-                isLoadingNotes: false,
-                hasMoreNotes: notes.length >= 20 // Assuming page size of 20
+                selectedNotesList: notes,
+                notesListError: undefined
             })
         },
 
-        setHasMoreNotes: (hasMore: boolean) => {
-            set({ hasMoreNotes: hasMore })
+        syncNotesListCursor: (cursor: string | undefined) => {
+            set({ notesListCursor: cursor })
         },
 
-        setNotesCursor: (cursor: string | undefined) => {
-            set({ notesCursor: cursor })
+        syncNotesListError: (error: string | undefined) => {
+            set({ notesListError: error })
         },
 
-        // ✅ COMPUTED/DERIVED ACTIONS
-        markAsSaved: () => {
-            set({ 
-                isDirty: false, 
-                isSaving: false, 
-                lastSaved: Date.now() 
-            })
-        },
-
-        resetNoteState: () => {
-            set({
-                noteId: undefined,
-                content: '',
-                isDirty: false,
-                isSaving: false,
-                lastSaved: undefined,
-                error: undefined
-            })
+        syncNoteFromHook: (note: ReflectionNote | null) => {
+            if (note && get().noteId === note._id) {
+                // Only sync if this is the currently selected note
+                set({
+                    content: note.content,
+                    title: note.title,
+                    isDirty: false, // Content from hook is considered saved
+                    error: undefined
+                })
+            }
         }
     }))
 )
 
-// ✅ AUTO-SAVE FUNCTIONALITY
-// Note: Auto-save logic will be handled by the hook layer, not the store
-// The store provides isDirty state that hooks can subscribe to
-
 // ============================================================================
-// SELECTORS
+// ✅ SELECTORS
 // ============================================================================
 
-// Content-specific selector
+// Content and basic state selectors
 export const useReflectionContent = () => useReflectionStore(state => state.content)
+export const useReflectionTitle = () => useReflectionStore(state => state.title)
 
-// Basic state selector
 export const useReflectionState = () => useReflectionStore(state => ({
     isOpen: state.isOpen,
+    noteId: state.noteId,
+    content: state.content,
+    title: state.title,
     isDirty: state.isDirty,
-    isSaving: state.isSaving,
-    error: state.error,
     lastSaved: state.lastSaved,
+    error: state.error
+}))
+
+// AI refinement selectors
+export const useReflectionRefinement = () => useReflectionStore(state => ({
     refinementPreview: state.refinementPreview,
     isRefining: state.isRefining
 }))
 
-// ✅ UI ACTION SELECTORS (Sync actions only)
+// ✅ UI ACTION SELECTORS
 export const useReflectionActions = () => useReflectionStore(state => ({
     openNotepad: state.openNotepad,
     closeNotepad: state.closeNotepad,
     updateContent: state.updateContent,
+    updateTitle: state.updateTitle,
     insertQuote: state.insertQuote,
     setDirty: state.setDirty,
-    setSaving: state.setSaving,
     setError: state.setError,
     markAsSaved: state.markAsSaved,
     resetNoteState: state.resetNoteState
 }))
 
-// Convex integration selectors
-export const useReflectionNotes = () => useReflectionStore(state => ({
-    notesList: state.notesList,
-    isLoadingNotes: state.isLoadingNotes,
-    hasMoreNotes: state.hasMoreNotes,
-    notesCursor: state.notesCursor
+// AI refinement actions
+export const useReflectionRefinementActions = () => useReflectionStore(state => ({
+    setRefinementPreview: state.setRefinementPreview,
+    setIsRefining: state.setIsRefining
 }))
 
-// ✅ DATA COORDINATION SELECTORS (For hook integration)
-export const useReflectionNotesActions = () => useReflectionStore(state => ({
-    setLoadingNotes: state.setLoadingNotes,
-    setNotesList: state.setNotesList,
-    setHasMoreNotes: state.setHasMoreNotes,
-    setNotesCursor: state.setNotesCursor,
-    setContent: state.setContent,
-    setNoteId: state.setNoteId,
-    setLastSaved: state.setLastSaved
+// ✅ HOOK COORDINATION SELECTORS
+export const useReflectionNotesData = () => useReflectionStore(state => ({
+    selectedNotesList: state.selectedNotesList,
+    notesListCursor: state.notesListCursor,
+    notesListError: state.notesListError
+}))
+
+export const useReflectionHookActions = () => useReflectionStore(state => ({
+    syncNotesFromHook: state.syncNotesFromHook,
+    syncNotesListCursor: state.syncNotesListCursor,
+    syncNotesListError: state.syncNotesListError,
+    syncNoteFromHook: state.syncNoteFromHook
 }))

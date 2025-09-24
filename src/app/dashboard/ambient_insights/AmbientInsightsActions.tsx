@@ -1,4 +1,4 @@
-import { AmbientInsight } from '../../types';
+import { AmbientInsight } from '../chat/types';
 
 export class AmbientInsightsActions {
   static handleClickAction(action: string, insight: AmbientInsight, onSendMessage: (message: string) => void) {
