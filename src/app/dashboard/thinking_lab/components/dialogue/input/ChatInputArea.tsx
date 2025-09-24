@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ChatInput } from '../../chat-input';
-import { AmbientInsights } from '../ambient_insights/AmbientInsights';
+import { AmbientInsights } from '@/app/dashboard/ambient_insights/AmbientInsights';
 import { BottomBarActions } from './BottomBarActions';
 import { Message } from '@/app/types/chat';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
