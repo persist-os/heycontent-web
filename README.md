@@ -129,6 +129,10 @@ The application interacts with:
 - `npm run start` - Start production server
 - `node .next/standalone/server.js` - Start standalone server
 
+## Changelog
+
+- Removed deprecated `src/app/dashboard/chat/components/ProjectDiscoveryChat.tsx` in favor of the new modular `project-discovery` architecture.
+
 ## Design System & Theming
 
 HeyContent follows a strict theming approach using semantic CSS variables:

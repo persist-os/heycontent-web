@@ -12,7 +12,7 @@ Living Projects treats each project as a unique entity with its own personality,
 
 #### 🎯 **Project Discovery & Fingerprinting**
 
-- **ProjectDiscoveryChat** *(in chat/components)*: Interactive conversation system that discovers project characteristics
+- **ProjectDiscovery (modular)** *(in project-discovery/components)*: Orchestrated, modular conversation system that discovers project characteristics
 - **AmbientFingerprintCanvas** *(in chat/components)*: Visual constellation mapping of discovered fingerprint fields
 - **useProjectContext** *(in chat/hooks)*: Hook for managing project data and content integration
 

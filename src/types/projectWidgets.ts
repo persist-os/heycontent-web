@@ -43,6 +43,10 @@ export interface WidgetConfig {
   orbital_angle: number;
   orbital_distance: number;
   
+  // Manual constellation offsets (relative to project rect, 0-1)
+  offset_x?: number;
+  offset_y?: number;
+  
   // Metadata
   created_at: number;
   updated_at: number;

@@ -29,12 +29,12 @@ export const BottomBarActions: React.FC<BottomBarActionsProps> = ({ onActionClic
                 <button
                   key={action.id}
                   onClick={() => onActionClick(action.action)}
-                  className="group flex-shrink-0 px-3 py-1.5 rounded-full bg-primary/5 hover:bg-primary/10 
+                  className="group flex-shrink-0 flex items-center justify-center px-3 py-1.5 rounded-full bg-primary/5 hover:bg-primary/10 
                     border border-primary/20 hover:border-primary/30 transition-all duration-300 
                     hover:scale-[1.02] hover:shadow-sm"
                 >
                   <span className="text-xs font-medium text-primary group-hover:text-primary 
-                    transition-colors duration-300 whitespace-nowrap">
+                    transition-colors duration-300 whitespace-nowrap text-center">
                     {action.text}
                   </span>
                 </button>

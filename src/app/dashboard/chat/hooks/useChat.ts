@@ -5,7 +5,6 @@ import { ChatStateReturnType } from './useChatState'
 import { getHelpMessage } from '../data/help-message'
 import { useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
-import { useContentContext } from '@/store/content-context-store'
 import { useRouter } from 'next/navigation'
 import { AuthenticationError } from '@/app/lib/errors'
 
@@ -15,7 +14,9 @@ export const useChat = (
   chatState: ChatStateReturnType,
   userId?: string,
   useContextSearch: boolean = false,
-  getNotepadContent?: () => { content: string; title?: string } | null
+  getNotepadContent?: () => { content: string; title?: string } | null,
+  contentContext?: any | null,
+  mode: 'chat' | 'project-discovery' = 'chat'
 ) => {
   const {
     sessionId,
@@ -31,8 +32,7 @@ export const useChat = (
     includeAnalysisInQuery,
   } = chatState
 
-  // Get content context from Zustand store
-  const { context: contentContext } = useContentContext()
+  // Use the provided contentContext parameter
 
   const [referencedMessage, setReferencedMessage] = useState<Message | null>(null)
   const [searchStatus, setSearchStatus] = useState<string>('')
@@ -240,16 +240,28 @@ export const useChat = (
         hasNotepadContext: !!notepadContext
       })
       
-      const data = await sendChatMessage(
-        userQuery, 
-        isFirstMessage, 
-        backendSessionId, 
-        contentContext, 
-        false,
-        handleStatusUpdate, // Pass status update callback
-        useContextSearch, // Pass context search toggle
-        notepadContext // Pass notepad context
-      );
+      // Choose API endpoint based on mode
+      const data = mode === 'project-discovery' 
+        ? await sendChatMessage(
+            userQuery, 
+            isFirstMessage, 
+            backendSessionId, 
+            contentContext, 
+            false,
+            handleStatusUpdate, // Pass status update callback
+            useContextSearch, // Pass context search toggle
+            notepadContext // Pass notepad context
+          )
+        : await sendChatMessage(
+            userQuery, 
+            isFirstMessage, 
+            backendSessionId, 
+            contentContext, 
+            false,
+            handleStatusUpdate, // Pass status update callback
+            useContextSearch, // Pass context search toggle
+            notepadContext // Pass notepad context
+          );
 
       // Add final completion status update
       handleStatusUpdate('Analysis complete - response ready');
@@ -440,7 +452,9 @@ export const useChat = (
     addMessageToConversationMutation,
     useContextSearch,
     contentContext,
-    router
+    router,
+    getNotepadContent,
+    mode
   ]);
 
   const handleMessageReference = useCallback((message: Message) => {

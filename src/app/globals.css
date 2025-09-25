@@ -23,7 +23,7 @@
     --muted: 0 0% 96.1%;
     --muted-foreground: 0 0% 45.1%;
 
-    --accent: 262 83% 58%; /* #8B5CF6 as accent for light mode - purple from landing page */
+    --accent: 221 83% 53%; /* #3B82F6 as accent for light mode - blue to match primary */
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
@@ -72,7 +72,7 @@
     --muted: 0 0% 16%; /* Between background and secondary */
     --muted-foreground: 0 0% 63.9%;
 
-    --accent: 262 83% 58%; /* #8B5CF6 as accent for dark mode - purple from landing page */
+    --accent: 217 91% 60%; /* #60A5FA as accent for dark mode - blue to match primary */
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62.8% 30.6%;

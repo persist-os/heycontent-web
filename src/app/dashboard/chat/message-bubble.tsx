@@ -371,19 +371,6 @@ export function MessageBubble({
        (message.content.includes('persona') && message.content.includes('guide your content creation'))
      )));
 
-  // Debug logging for persona detection
-  if (message.role === 'assistant' && userId) {
-    console.log('🔍 MessageBubble persona check:', {
-      messageId: message.id,
-      messageContent: message.content?.substring(0, 100) + '...',
-      hasMetadata: !!message.metadata,
-      metadata: message.metadata,
-      mightHavePersona,
-      is_persona_complete: message.metadata?.is_persona_complete,
-      persona_created: message.metadata?.persona_created
-    });
-  }
-
   // Get the text content to copy
   const getTextToCopy = () => {
     if (isUser) {

@@ -68,10 +68,39 @@ export const updateNote = mutation({
   },
   handler: async (ctx, { noteId, userId, updates }) => {
     const note = await ctx.db.get(noteId);
-    if (!note || note.userId !== userId) {
+    if (!note) {
+      throw new Error("Note not found");
+    }
+
+    // Check if user owns the note
+    if (note.userId === userId) {
+      // Owner can update directly (no collision detection needed for single owner)
+      await ctx.db.patch(noteId, {
+        ...updates,
+        updatedAt: Date.now(),
+      });
+      return ctx.db.get(noteId);
+    }
+
+    // Check if user has edit permission through sharing
+    const shareRecord = await ctx.db
+      .query("shared_notes")
+      .withIndex("by_note_user", (q) => 
+        q.eq("noteId", noteId).eq("sharedWithUserId", userId)
+      )
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .unique();
+
+    if (!shareRecord) {
       throw new Error("Note not found or unauthorized");
     }
+
+    // Check if user has edit permission for content changes
+    if (updates.content !== undefined && shareRecord.permission !== "edit") {
+      throw new Error("You don't have permission to edit this note's content");
+    }
     
+    // Update shared note directly (future: add collision detection)
     await ctx.db.patch(noteId, {
       ...updates,
       updatedAt: Date.now(),

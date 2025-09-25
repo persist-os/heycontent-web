@@ -1,7 +1,82 @@
-import { v } from "convex/values";
+import { v, Infer } from "convex/values";
 import { mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { generateProjectPosition, calculateProjectSpaceRadius } from "./positioningUtils";
+import { generateNextGridPosition } from "./gridPositioningUtils";
+
+// Shared validators
+const CreateProjectArgsValidator = v.object({
+  userId: v.string(),
+  name: v.string(),
+  description: v.optional(v.string()),
+});
+
+const UpdateProjectArgsValidator = v.object({
+  projectId: v.id("projects"),
+  userId: v.optional(v.string()),
+  name: v.optional(v.string()),
+  description: v.optional(v.string()),
+});
+
+const UpdateProjectGridPositionArgsValidator = v.object({
+  projectId: v.id("projects"),
+  grid_x: v.number(),
+  grid_y: v.number(),
+});
+
+const DeleteProjectArgsValidator = v.object({
+  projectId: v.id("projects"),
+  userId: v.optional(v.string()),
+});
+
+const AddItemToProjectArgsValidator = v.object({
+  projectId: v.id("projects"),
+  userId: v.optional(v.string()),
+  itemType: v.union(
+    v.literal("note"),
+    v.literal("conversation"),
+    v.literal("instagramPost"),
+    v.literal("youtubeVideo"),
+    v.literal("gmail"),
+    v.literal("analysis")
+  ),
+  itemId: v.string(),
+});
+
+const RemoveItemFromProjectArgsValidator = v.object({
+  projectId: v.id("projects"),
+  userId: v.optional(v.string()),
+  itemType: v.union(
+    v.literal("note"),
+    v.literal("conversation"),
+    v.literal("instagramPost"),
+    v.literal("youtubeVideo"),
+    v.literal("gmail"),
+    v.literal("analysis")
+  ),
+  itemId: v.string(),
+});
+
+const MigrateAnalysisItemsArgsValidator = v.object({
+  projectId: v.id("projects"),
+  userId: v.optional(v.string()),
+});
+
+const UpdateProjectFingerprintIdArgsValidator = v.object({
+  projectId: v.id("projects"),
+  fingerprintId: v.union(v.id("project_fingerprints"), v.null()),
+  userId: v.optional(v.string()),
+});
+
+// Infer TypeScript types
+export type CreateProjectArgs = Infer<typeof CreateProjectArgsValidator>;
+export type UpdateProjectArgs = Infer<typeof UpdateProjectArgsValidator>;
+export type UpdateProjectGridPositionArgs = Infer<typeof UpdateProjectGridPositionArgsValidator>;
+export type DeleteProjectArgs = Infer<typeof DeleteProjectArgsValidator>;
+export type AddItemToProjectArgs = Infer<typeof AddItemToProjectArgsValidator>;
+export type RemoveItemFromProjectArgs = Infer<typeof RemoveItemFromProjectArgsValidator>;
+export type MigrateAnalysisItemsArgs = Infer<typeof MigrateAnalysisItemsArgsValidator>;
+export type UpdateProjectFingerprintIdArgs = Infer<typeof UpdateProjectFingerprintIdArgsValidator>;
 
 // Helper to extract raw Convex document ID from a unified content ID
 function extractRawId(unifiedId: string): string {
@@ -49,11 +124,7 @@ async function validateProjectOwnership(ctx: any, projectId: Id<"projects">, use
 
 // Create a new project with static positioning
 export const createProject = mutation({
-  args: {
-    userId: v.string(),
-    name: v.string(),
-    description: v.optional(v.string()),
-  },
+  args: CreateProjectArgsValidator,
   returns: v.id("projects"),
   handler: async (ctx, args) => {
     // Validate inputs
@@ -86,8 +157,20 @@ export const createProject = mutation({
         .withIndex("by_user", (q) => q.eq("userId", args.userId))
         .collect();
 
-      // Generate non-overlapping position
-      const position = await generateProjectPosition(ctx, args.userId, existingProjects);
+      // Generate non-overlapping position using new grid system
+      const gridPosition = generateNextGridPosition(existingProjects);
+      
+      // Calculate pixel position from grid coordinates
+      const GRID_CELL_WIDTH = 1200;
+      const GRID_CELL_HEIGHT = 800;
+      const GRID_SPACING = 50;
+      const CANVAS_WIDTH = 2400;
+      const CANVAS_HEIGHT = 1600;
+      const GRID_ORIGIN_X = CANVAS_WIDTH / 2;
+      const GRID_ORIGIN_Y = CANVAS_HEIGHT / 2;
+      
+      const position_x = GRID_ORIGIN_X + gridPosition.grid_x * (GRID_CELL_WIDTH + GRID_SPACING);
+      const position_y = GRID_ORIGIN_Y + gridPosition.grid_y * (GRID_CELL_HEIGHT + GRID_SPACING);
       
       // Calculate initial space radius (will be updated when widgets are added)
       const spaceRadius = calculateProjectSpaceRadius(0);
@@ -98,16 +181,18 @@ export const createProject = mutation({
         description: sanitizedDescription,
         noteIds: [],
         conversationIds: [],
-        instagramPostIds: [],
-        youtubeVideoIds: [],
-        gmailIds: [],
         analysisIds: [],
         createdAt: now,
         updatedAt: now,
-        // Static positioning fields
-        position_x: position.x,
-        position_y: position.y,
+        // Legacy positioning fields (for backward compatibility)
+        position_x: position_x,
+        position_y: position_y,
         space_radius: spaceRadius,
+        // New grid positioning fields
+        grid_x: gridPosition.grid_x,
+        grid_y: gridPosition.grid_y,
+        grid_width: GRID_CELL_WIDTH,
+        grid_height: GRID_CELL_HEIGHT,
       });
 
       return projectId;
@@ -120,12 +205,7 @@ export const createProject = mutation({
 
 // Update a project
 export const updateProject = mutation({
-  args: {
-    projectId: v.id("projects"),
-    userId: v.optional(v.string()), // For ownership validation
-    name: v.optional(v.string()),
-    description: v.optional(v.string()),
-  },
+  args: UpdateProjectArgsValidator,
   returns: v.id("projects"),
   handler: async (ctx, args) => {
     const project = await validateProjectOwnership(ctx, args.projectId, args.userId);
@@ -165,12 +245,42 @@ export const updateProject = mutation({
   },
 });
 
+// Update project grid position (snaps to grid and updates legacy pixel fields)
+export const updateProjectGridPosition = mutation({
+  args: UpdateProjectGridPositionArgsValidator,
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const project = await ctx.db.get(args.projectId);
+    if (!project) throw new Error("Project not found");
+
+    // Grid constants mirrored from creation logic
+    const GRID_CELL_WIDTH = 1200;
+    const GRID_CELL_HEIGHT = 800;
+    const GRID_SPACING = 50;
+    const CANVAS_WIDTH = 2400;
+    const CANVAS_HEIGHT = 1600;
+    const GRID_ORIGIN_X = CANVAS_WIDTH / 2;
+    const GRID_ORIGIN_Y = CANVAS_HEIGHT / 2;
+
+    const position_x = GRID_ORIGIN_X + args.grid_x * (GRID_CELL_WIDTH + GRID_SPACING);
+    const position_y = GRID_ORIGIN_Y + args.grid_y * (GRID_CELL_HEIGHT + GRID_SPACING);
+
+    await ctx.db.patch(args.projectId, {
+      grid_x: args.grid_x,
+      grid_y: args.grid_y,
+      grid_width: GRID_CELL_WIDTH,
+      grid_height: GRID_CELL_HEIGHT,
+      position_x,
+      position_y,
+      updatedAt: Date.now(),
+    });
+    return null;
+  },
+});
+
 // Delete a project and all associated data
 export const deleteProject = mutation({
-  args: {
-    projectId: v.id("projects"),
-    userId: v.optional(v.string()), // For ownership validation
-  },
+  args: DeleteProjectArgsValidator,
   returns: v.boolean(),
   handler: async (ctx, args) => {
     await validateProjectOwnership(ctx, args.projectId, args.userId);
@@ -206,7 +316,7 @@ export const deleteProject = mutation({
       }
       
       // Delete all found fingerprints
-      for (const fingerprintId of fingerprintsToDelete) {
+      for (const fingerprintId of Array.from(fingerprintsToDelete)) {
         try {
           await ctx.db.delete(fingerprintId as any);
           console.log("Deleted fingerprint:", fingerprintId);
@@ -219,7 +329,7 @@ export const deleteProject = mutation({
       try {
         const widgets = await ctx.db
           .query("project_widgets")
-          .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+          .withIndex("by_project", (q) => q.eq("project_id", args.projectId))
           .collect();
 
         for (const widget of widgets) {
@@ -244,19 +354,7 @@ export const deleteProject = mutation({
 
 // Add an item to a project
 export const addItemToProject = mutation({
-  args: {
-    projectId: v.id("projects"),
-    userId: v.optional(v.string()), // For ownership validation
-    itemType: v.union(
-      v.literal("note"),
-      v.literal("conversation"),
-      v.literal("instagramPost"),
-      v.literal("youtubeVideo"),
-      v.literal("gmail"),
-      v.literal("analysis")
-    ),
-    itemId: v.string(),
-  },
+  args: AddItemToProjectArgsValidator,
   returns: v.id("projects"),
   handler: async (ctx, args) => {
     console.log("addItemToProject called with args:", args);
@@ -274,42 +372,7 @@ export const addItemToProject = mutation({
       
       console.log("Processing itemType:", args.itemType);
       
-      // Check if this is an analysis item that was incorrectly stored as an Instagram post
-      if (args.itemType === "instagramPost" && rawId.includes(':')) {
-        const parts = rawId.split(':');
-        if (parts.length === 3) {
-          const [platform, analysisId, indexStr] = parts;
-          const index = parseInt(indexStr, 10);
-          
-          // If this looks like an analysis item (has platform:analysisId:index format)
-          if (!isNaN(index) && ['instagram', 'youtube', 'gmail'].includes(platform)) {
-            console.log("Detected analysis item incorrectly stored as Instagram post:", rawId);
-            
-            // Move it to the analysis array instead
-            const analysisIds = project.analysisIds || [];
-            if (!analysisIds.includes(rawId)) {
-              updates.analysisIds = [...analysisIds, rawId];
-            }
-            
-            // Remove it from Instagram posts if it exists there
-            const instagramPostIds = project.instagramPostIds || [];
-            const filteredInstagramIds = instagramPostIds.filter(id => id !== rawId);
-            if (filteredInstagramIds.length !== instagramPostIds.length) {
-              updates.instagramPostIds = filteredInstagramIds;
-            }
-            
-            console.log("Moved analysis item to correct array");
-            
-            // Only update if there are actual changes
-            if (Object.keys(updates).length > 1) { // More than just updatedAt
-              await ctx.db.patch(args.projectId, updates);
-              console.log("Successfully patched project");
-            }
-            
-            return args.projectId;
-          }
-        }
-      }
+      // Instagram, YouTube, and Gmail items are not supported in the current schema
       
       // Regular logic for other item types
       switch (args.itemType) {
@@ -329,26 +392,10 @@ export const addItemToProject = mutation({
           }
           break;
         }
-        case "instagramPost": {
-          const instagramPostIds = project.instagramPostIds || [];
-          if (!instagramPostIds.includes(rawId)) {
-            updates.instagramPostIds = [...instagramPostIds, rawId];
-          }
-          break;
-        }
-        case "youtubeVideo": {
-          const youtubeVideoIds = project.youtubeVideoIds || [];
-          if (!youtubeVideoIds.includes(rawId)) {
-            updates.youtubeVideoIds = [...youtubeVideoIds, rawId];
-          }
-          break;
-        }
+        case "instagramPost":
+        case "youtubeVideo":
         case "gmail": {
-          const gmailIds = project.gmailIds || [];
-          if (!gmailIds.includes(rawId)) {
-            updates.gmailIds = [...gmailIds, rawId];
-          }
-          break;
+          throw new Error(`Item type ${args.itemType} is not supported in the current schema`);
         }
         case "analysis": {
           console.log("Processing analysis case");
@@ -387,10 +434,7 @@ export const addItemToProject = mutation({
 
 // Migration function to fix analysis items stored in wrong arrays
 export const migrateAnalysisItems = mutation({
-  args: {
-    projectId: v.id("projects"),
-    userId: v.optional(v.string()),
-  },
+  args: MigrateAnalysisItemsArgsValidator,
   returns: v.boolean(),
   handler: async (ctx, args) => {
     console.log("migrateAnalysisItems called for project:", args.projectId);
@@ -405,108 +449,9 @@ export const migrateAnalysisItems = mutation({
       
       let hasChanges = false;
       
-      // Check Instagram posts for analysis items
-      const instagramPostIds = project.instagramPostIds || [];
-      const analysisIds = project.analysisIds || [];
-      const newAnalysisIds = [...analysisIds];
-      const newInstagramPostIds = [];
-      
-      for (const id of instagramPostIds) {
-        if (id.includes(':')) {
-          const parts = id.split(':');
-          if (parts.length === 3) {
-            const [platform, analysisId, indexStr] = parts;
-            const index = parseInt(indexStr, 10);
-            
-            // If this looks like an analysis item
-            if (!isNaN(index) && ['instagram', 'youtube', 'gmail'].includes(platform)) {
-              console.log("Found analysis item in Instagram posts:", id);
-              if (!newAnalysisIds.includes(id)) {
-                newAnalysisIds.push(id);
-                hasChanges = true;
-              }
-            } else {
-              newInstagramPostIds.push(id);
-            }
-          } else {
-            newInstagramPostIds.push(id);
-          }
-        } else {
-          newInstagramPostIds.push(id);
-        }
-      }
-      
-      // Check YouTube videos for analysis items
-      const youtubeVideoIds = project.youtubeVideoIds || [];
-      const newYoutubeVideoIds = [];
-      
-      for (const id of youtubeVideoIds) {
-        if (id.includes(':')) {
-          const parts = id.split(':');
-          if (parts.length === 3) {
-            const [platform, analysisId, indexStr] = parts;
-            const index = parseInt(indexStr, 10);
-            
-            // If this looks like an analysis item
-            if (!isNaN(index) && ['instagram', 'youtube', 'gmail'].includes(platform)) {
-              console.log("Found analysis item in YouTube videos:", id);
-              if (!newAnalysisIds.includes(id)) {
-                newAnalysisIds.push(id);
-                hasChanges = true;
-              }
-            } else {
-              newYoutubeVideoIds.push(id);
-            }
-          } else {
-            newYoutubeVideoIds.push(id);
-          }
-        } else {
-          newYoutubeVideoIds.push(id);
-        }
-      }
-      
-      // Check Gmail items for analysis items
-      const gmailIds = project.gmailIds || [];
-      const newGmailIds = [];
-      
-      for (const id of gmailIds) {
-        if (id.includes(':')) {
-          const parts = id.split(':');
-          if (parts.length === 3) {
-            const [platform, analysisId, indexStr] = parts;
-            const index = parseInt(indexStr, 10);
-            
-            // If this looks like an analysis item
-            if (!isNaN(index) && ['instagram', 'youtube', 'gmail'].includes(platform)) {
-              console.log("Found analysis item in Gmail items:", id);
-              if (!newAnalysisIds.includes(id)) {
-                newAnalysisIds.push(id);
-                hasChanges = true;
-              }
-            } else {
-              newGmailIds.push(id);
-            }
-          } else {
-            newGmailIds.push(id);
-          }
-        } else {
-          newGmailIds.push(id);
-        }
-      }
-      
-      if (hasChanges) {
-        updates.instagramPostIds = newInstagramPostIds;
-        updates.youtubeVideoIds = newYoutubeVideoIds;
-        updates.gmailIds = newGmailIds;
-        updates.analysisIds = newAnalysisIds;
-        
-        await ctx.db.patch(args.projectId, updates);
-        console.log("Successfully migrated analysis items");
-        return true;
-      } else {
-        console.log("No analysis items found to migrate");
-        return false;
-      }
+      // Instagram, YouTube, and Gmail items are not supported in the current schema
+      console.log("No analysis items found to migrate - schema does not support Instagram/YouTube/Gmail items");
+      return false;
       
     } catch (error) {
       console.error("Failed to migrate analysis items:", error);
@@ -517,19 +462,7 @@ export const migrateAnalysisItems = mutation({
 
 // Remove an item from a project
 export const removeItemFromProject = mutation({
-  args: {
-    projectId: v.id("projects"),
-    userId: v.optional(v.string()), // For ownership validation
-    itemType: v.union(
-      v.literal("note"),
-      v.literal("conversation"),
-      v.literal("instagramPost"),
-      v.literal("youtubeVideo"),
-      v.literal("gmail"),
-      v.literal("analysis")
-    ),
-    itemId: v.string(),
-  },
+  args: RemoveItemFromProjectArgsValidator,
   returns: v.id("projects"),
   handler: async (ctx, args) => {
     console.log("removeItemFromProject called with args:", args);
@@ -560,20 +493,10 @@ export const removeItemFromProject = mutation({
           updates.conversationIds = conversationIds.filter(id => id !== args.itemId);
           break;
         }
-        case "instagramPost": {
-          const instagramPostIds = project.instagramPostIds || [];
-          updates.instagramPostIds = instagramPostIds.filter(id => id !== args.itemId);
-          break;
-        }
-        case "youtubeVideo": {
-          const youtubeVideoIds = project.youtubeVideoIds || [];
-          updates.youtubeVideoIds = youtubeVideoIds.filter(id => id !== args.itemId);
-          break;
-        }
+        case "instagramPost":
+        case "youtubeVideo":
         case "gmail": {
-          const gmailIds = project.gmailIds || [];
-          updates.gmailIds = gmailIds.filter(id => id !== args.itemId);
-          break;
+          throw new Error(`Item type ${args.itemType} is not supported in the current schema`);
         }
         case "analysis": {
           console.log("Processing analysis removal case");
@@ -609,11 +532,7 @@ export const removeItemFromProject = mutation({
 
 // Update project fingerprint ID
 export const updateProjectFingerprintId = mutation({
-  args: {
-    projectId: v.id("projects"),
-    fingerprintId: v.union(v.id("project_fingerprints"), v.null()),
-    userId: v.optional(v.string()), // For ownership validation
-  },
+  args: UpdateProjectFingerprintIdArgsValidator,
   returns: v.id("projects"),
   handler: async (ctx, args) => {
     // Validate project ownership

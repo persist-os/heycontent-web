@@ -47,23 +47,25 @@ export function SharedDropdown({
     if (disabled) return
     
     if (!isOpen && buttonRef.current) {
-      // Calculate position when opening with better viewport handling
+      // Anti-corporate design: More thoughtful positioning with gentle spacing
       const rect = buttonRef.current.getBoundingClientRect()
       const viewportWidth = window.innerWidth
       const viewportHeight = window.innerHeight
-      const dropdownWidth = isMobile ? 288 : 320 // w-72 = 288px, w-80 = 320px
+      
+      // Progressive dropdown sizing based on screen real estate
+      const dropdownWidth = viewportWidth < 640 ? 288 : viewportWidth < 1024 ? 320 : 352 // w-72/w-80/w-88
       
       let left = rect.left + window.scrollX
-      let top = rect.bottom + window.scrollY + 4
+      let top = rect.bottom + window.scrollY + 6 // Slightly more breathing room
       
-      // Prevent horizontal overflow
+      // Elegant overflow prevention with generous margins
       if (left + dropdownWidth > viewportWidth) {
-        left = Math.max(8, viewportWidth - dropdownWidth - 8) // 8px margin from edge
+        left = Math.max(12, viewportWidth - dropdownWidth - 12) // 12px margin from edge
       }
       
-      // Prevent vertical overflow
-      if (top + 320 > viewportHeight + window.scrollY) { // assume max height of 320px
-        top = rect.top + window.scrollY - 320 - 4 // Show above instead
+      // Graceful vertical positioning
+      if (top + 350 > viewportHeight + window.scrollY) { // More generous height estimate
+        top = rect.top + window.scrollY - 350 - 6 // Show above with matching spacing
       }
       
       setDropdownPosition({ top, left })
@@ -101,7 +103,16 @@ export function SharedDropdown({
     }
   }, [isOpen])
 
-  const dropdownWidth = isMobile ? 'w-72' : 'w-80'
+  // Anti-corporate: Progressive sizing that adapts to screen real estate
+  const dropdownWidth = (() => {
+    if (typeof window !== 'undefined') {
+      const vw = window.innerWidth
+      if (vw < 640) return 'w-72'
+      if (vw < 1024) return 'w-80'
+      return 'w-88'
+    }
+    return isMobile ? 'w-72' : 'w-80'
+  })()
 
   return (
     <>
@@ -110,20 +121,25 @@ export function SharedDropdown({
           ref={buttonRef}
           onClick={handleToggle}
           disabled={disabled}
-          className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-transparent hover:bg-muted/40 rounded-md transition-all duration-300 hover:scale-[1.02] disabled:pointer-events-none disabled:opacity-50 ${triggerClassName}`}
+          className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-transparent hover:bg-muted/40 rounded-md transition-all duration-300 hover:scale-[1.02] disabled:pointer-events-none disabled:opacity-50 h-8 max-h-8 w-full max-w-full overflow-hidden ${triggerClassName}`}
         >
           {selectedOption?.color && (
-            <div className={`w-2.5 h-2.5 rounded-full ${selectedOption.color} transition-all duration-300`} />
+            <div className={`w-2.5 h-2.5 rounded-full ${selectedOption.color} transition-all duration-300 flex-shrink-0`} />
           )}
           {selectedOption?.icon && (
             <div className="flex-shrink-0">
               {selectedOption.icon}
             </div>
           )}
-          <span className="tracking-wide truncate">
-            {selectedOption?.label || placeholder}
-          </span>
-          <ChevronDown className={`w-3 h-3 transition-all duration-300 ${isOpen ? 'rotate-180 text-foreground' : 'text-muted-foreground/60'}`} />
+          
+          {/* Text with controlled overflow */}
+          <div className="flex-1 min-w-0 text-left overflow-hidden">
+            <span className="tracking-wide truncate block leading-tight">
+              {selectedOption?.label || placeholder}
+            </span>
+          </div>
+          
+          <ChevronDown className={`w-3 h-3 transition-all duration-300 flex-shrink-0 ${isOpen ? 'rotate-180 text-foreground' : 'text-muted-foreground/60'}`} />
         </button>
       </div>
       

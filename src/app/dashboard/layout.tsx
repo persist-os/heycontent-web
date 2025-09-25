@@ -8,11 +8,12 @@ import { useSidebar } from '@/app/context/sidebar-context';
 import { useSubscriptionCheck } from '@/app/hooks/useSubscriptionCheck';
 import { getApiKey } from '@/app/lib/api-helpers';
 import { useApiKeyMonitor } from '@/app/hooks/useApiKeyMonitor';
-import { RefreshState } from '@/components/ui/refresh-state';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import UpgradeModal from '@/app/settings/tabs/subscription/upgrade-modal';
 import { useContentContextActions } from '@/store/content-context-store';
+import { UsernameRequiredModal } from '@/components/auth/UsernameRequiredModal';
+import { useUsernameRequired } from '@/hooks/useUsernameRequired';
 
 // Pages that don't require a subscription
 const PUBLIC_PATHS = [
@@ -55,6 +56,10 @@ export default function DashboardLayout({
   // State for subscription enforcement modal
   const [showSubscriptionRequired, setShowSubscriptionRequired] = useState(false);
 
+  // Check if username is required
+  const { needsUsername, isLoading: isUsernameLoading } = useUsernameRequired();
+  const [showUsernameModal, setShowUsernameModal] = useState(false);
+
   // Monitor API key validity (only when authenticated)
   useApiKeyMonitor(); // 🔒 ENABLED: Provides immediate logout when logged in elsewhere
   
@@ -65,7 +70,6 @@ export default function DashboardLayout({
     
     // If user changed (including logout), clear context
     if (previousUserId !== null && previousUserId !== currentUserId) {
-      console.log('🧹 User changed, clearing content context', { previousUserId, currentUserId });
       clearContentContext();
     }
     
@@ -82,6 +86,15 @@ export default function DashboardLayout({
     }
   }, [firebaseUser, authLoading]);
 
+  // Show username modal if user needs to set username
+  useEffect(() => {
+    if (!isUsernameLoading && needsUsername && firebaseUser) {
+      setShowUsernameModal(true);
+    } else {
+      setShowUsernameModal(false);
+    }
+  }, [needsUsername, isUsernameLoading, firebaseUser]);
+
   // Handle subscription checks and redirects
   useEffect(() => {
     // Skip if still loading or on a public path
@@ -89,21 +102,12 @@ export default function DashboardLayout({
     
     // Don't show modal if subscription status is still being determined (null means not yet checked)
     if (isSubscribed === null) {
-      console.log('🔍 [DASHBOARD] Subscription status not yet determined, waiting...');
       return;
     }
     
     // Check if user has a valid subscription
     // Users must have isSubscribed=true to access the platform
-    console.log('🔍 [DASHBOARD] Subscription check:', {
-      isSubscribed,
-      isSubscriptionLoading,
-      subscriptionError,
-      firebaseUser: firebaseUser?.uid
-    });
-    
     if (!isSubscribed) {
-      console.log('🔒 [DASHBOARD] User not subscribed, showing subscription modal');
       if (!showSubscriptionRequired) {
         setShowSubscriptionRequired(true);
       }
@@ -125,7 +129,6 @@ export default function DashboardLayout({
         if (resp.status === 402) {
           // Check if it's a subscription required error
           if (resp.headers.get('X-Subscription-Required') === 'true') {
-            console.log('🔒 [DASHBOARD] Backend returned subscription required, showing modal');
             if (!showSubscriptionRequired) {
               setShowSubscriptionRequired(true);
             }
@@ -150,7 +153,6 @@ export default function DashboardLayout({
         if (res.status === 402) {
           // Check if it's a subscription required error
           if (res.headers.get('X-Subscription-Required') === 'true') {
-            console.log('🔒 [DASHBOARD] Global fetch interceptor caught subscription required, showing modal');
             if (!showSubscriptionRequired) {
               setShowSubscriptionRequired(true);
             }
@@ -254,6 +256,15 @@ export default function DashboardLayout({
           }
         }}
         context="subscription_required"
+      />
+
+      <UsernameRequiredModal
+        isOpen={showUsernameModal}
+        onUsernameSet={() => {
+          setShowUsernameModal(false);
+          // Optionally refresh the page or trigger a re-fetch of user data
+          window.location.reload();
+        }}
       />
     </div>
   );

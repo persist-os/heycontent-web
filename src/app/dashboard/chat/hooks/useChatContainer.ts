@@ -5,7 +5,7 @@ import { useChatState } from './useChatState'
 import { useChat } from './useChat'
 import { useConversation } from './useConversation'
 import { useUIEffects } from './useUIEffects'
-import { useOnboardingState } from './useOnboardingState'
+// import { useOnboardingState } from './useOnboardingState' // Removed - onboarding eliminated
 import { usePersonaData } from './usePersonaData'
 import { useAuth } from '@/app/context/auth-context'
 import { useAmbientInsightsActions } from '../components/ambient_insights/AmbientInsightsActions'
@@ -59,13 +59,13 @@ export function useChatContainer(chatId: string | undefined, contentContext: any
   const uiEffects = useUIEffects(messages, isExpanded)
 
   // Initialize chat hook with shared state and userId
-  const chatHook = useChat(chatState, userId, useContextSearch)
+  const chatHook = useChat(chatState, userId, useContextSearch, undefined, null, 'chat')
 
   // Initialize ambient insights actions
   const ambientInsightsActions = useAmbientInsightsActions(chatHook.handleSendMessage)
 
-  // Track onboarding state for persona tip
-  const onboardingState = useOnboardingState(messages, chatState.sessionId)
+  // Track onboarding state for persona tip - REMOVED (onboarding eliminated)
+  // const onboardingState = useOnboardingState(messages, chatState.sessionId)
 
   // Initialize conversation hook with shared state
   const conversationHook = useConversation(chatState, user)
@@ -187,7 +187,6 @@ export function useChatContainer(chatId: string | undefined, contentContext: any
     uiEffects,
     chatHook,
     ambientInsightsActions,
-    onboardingState,
     conversationHook,
     
     // Computed

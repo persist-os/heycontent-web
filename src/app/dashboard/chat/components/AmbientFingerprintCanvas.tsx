@@ -157,6 +157,7 @@ const AmbientFingerprintCanvas: React.FC<AmbientFingerprintCanvasProps> = ({
   const [floatingInsights, setFloatingInsights] = useState<FloatingInsight[]>([])
   const [currentPhase, setCurrentPhase] = useState(1)
   const [isExpanded, setIsExpanded] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(false)
   const [hoveredField, setHoveredField] = useState<string | null>(null)
   const [isCompleting, setIsCompleting] = useState(false)
   const [completionTriggered, setCompletionTriggered] = useState(false)
@@ -254,44 +255,81 @@ const AmbientFingerprintCanvas: React.FC<AmbientFingerprintCanvasProps> = ({
     <>
 
       <div className={`fixed transition-all duration-500 ease-out z-20 ${
-        isExpanded 
-          ? 'bottom-4 right-4 w-[32rem] h-[85vh] bg-background/95 backdrop-blur-lg border border-border/30 rounded-lg shadow-lg' 
-          : 'bottom-4 right-4 w-80 h-64 bg-card/90 backdrop-blur-sm border border-border/20 rounded-lg shadow-sm hover:shadow-md'
+        isCollapsed 
+          ? 'bottom-4 right-4 w-12 h-12 bg-card/90 backdrop-blur-sm border border-border/20 rounded-full shadow-sm hover:shadow-md'
+          : isExpanded 
+            ? 'bottom-4 right-4 w-[25.6rem] h-[68vh] bg-background/95 backdrop-blur-lg border border-border/30 rounded-lg shadow-lg' 
+            : 'bottom-4 right-4 w-64 h-52 bg-card/90 backdrop-blur-sm border border-border/20 rounded-lg shadow-sm hover:shadow-md'
       }`}>
       
       {/* Header - Typography-focused, minimal */}
-      <div className={`flex items-baseline justify-between ${isExpanded ? 'p-6 pb-4' : 'p-3 pb-2'}`}>
-        <div className="flex items-baseline gap-3">
-          <h3 className={`font-light tracking-tight text-foreground ${isExpanded ? 'text-2xl' : 'text-sm'}`}>
-            {isExpanded ? 'Project' : 'Fingerprint'}
-          </h3>
-          {isExpanded && (
-            <span className="text-base text-muted-foreground font-light">constellation</span>
-          )}
-          {!isExpanded && (
-            <div className="text-xs text-muted-foreground font-medium">
-              {discoveredFields.size > 0 ? 'Active' : 'Ready'}
-            </div>
-          )}
+      {!isCollapsed && (
+        <div className={`flex items-baseline justify-between ${isExpanded ? 'p-6 pb-4' : 'p-3 pb-2'}`}>
+          <div className="flex items-baseline gap-3">
+            <h3 className={`font-light tracking-tight text-foreground ${isExpanded ? 'text-2xl' : 'text-sm'}`}>
+              {isExpanded ? 'Project' : 'Fingerprint'}
+            </h3>
+            {isExpanded && (
+              <span className="text-base text-muted-foreground font-light">constellation</span>
+            )}
+            {!isExpanded && (
+              <div className="text-xs text-muted-foreground font-medium">
+                {discoveredFields.size > 0 ? 'Active' : 'Ready'}
+              </div>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setIsCollapsed(true)}
+              className="text-muted-foreground hover:text-foreground transition-colors duration-300"
+              title="Collapse"
+            >
+              <ChevronDown className="w-4 h-4" />
+            </button>
+            {!isExpanded && (
+              <button
+                onClick={() => setIsExpanded(true)}
+                className="text-muted-foreground hover:text-foreground transition-colors duration-300"
+                title="Expand"
+              >
+                <ChevronUp className="w-4 h-4" />
+              </button>
+            )}
+            {isExpanded && (
+              <button
+                onClick={() => setIsExpanded(false)}
+                className="text-muted-foreground hover:text-foreground transition-colors duration-300"
+                title="Minimize"
+              >
+                <ChevronDown className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
-        
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="text-muted-foreground hover:text-foreground transition-colors duration-300"
-        >
-          {isExpanded ? (
-            <ChevronDown className="w-4 h-4" />
-          ) : (
-            <ChevronUp className="w-4 h-4" />
-          )}
-        </button>
-      </div>
+      )}
       
-      {/* Subtle divider */}
-      <div className="h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
+      {/* Collapsed state - just a small circular button */}
+      {isCollapsed && (
+        <div className="flex items-center justify-center h-full">
+          <button
+            onClick={() => setIsCollapsed(false)}
+            className="text-muted-foreground hover:text-foreground transition-colors duration-300"
+            title="Show Fingerprint"
+          >
+            <Map className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+      
+      {/* Content - only show when not collapsed */}
+      {!isCollapsed && (
+        <>
+          {/* Subtle divider */}
+          <div className="h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
 
-      {/* Constellation SVG */}
-      <div className={`relative ${isExpanded ? 'flex-1' : 'h-32'}`}>
+          {/* Constellation SVG */}
+          <div className={`relative ${isExpanded ? 'flex-1' : 'h-32'}`}>
         <svg 
           className="w-full h-full opacity-80 dark:opacity-90"
           viewBox="0 0 100 100"
@@ -525,35 +563,37 @@ const AmbientFingerprintCanvas: React.FC<AmbientFingerprintCanvasProps> = ({
         )}
       </div>
 
-      {/* Footer - Clean typography, minimal */}
-      <div className="h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
-      
-      <div className={`${isExpanded ? 'p-6 pt-4' : 'p-3 pt-2'}`}>
-        {currentPhaseData && discoveredFields.size > 0 && (
-          <div className="flex items-baseline justify-between">
-            <div className="flex items-baseline gap-3">
-              <div className="w-1 h-1 bg-blue-400/60 rounded-full mt-2 animate-pulse" />
-              <p className={`text-muted-foreground font-light leading-relaxed ${isExpanded ? 'text-sm' : 'text-xs'}`}>
-                {isExpanded ? currentPhaseData.message : `Phase ${currentPhase}`}
-              </p>
-            </div>
+          {/* Footer - Clean typography, minimal */}
+          <div className="h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
+          
+          <div className={`${isExpanded ? 'p-6 pt-4' : 'p-3 pt-2'}`}>
+            {currentPhaseData && discoveredFields.size > 0 && (
+              <div className="flex items-baseline justify-between">
+                <div className="flex items-baseline gap-3">
+                  <div className="w-1 h-1 bg-blue-400/60 rounded-full mt-2 animate-pulse" />
+                  <p className={`text-muted-foreground font-light leading-relaxed ${isExpanded ? 'text-sm' : 'text-xs'}`}>
+                    {isExpanded ? currentPhaseData.message : `Phase ${currentPhase}`}
+                  </p>
+                </div>
+                
+                {isExpanded && (
+                  <div className="text-xs text-muted-foreground/70 font-light">
+                    {discoveredFields.size}<span className="text-muted-foreground/50">/{FINGERPRINT_STARS.length}</span>
+                  </div>
+                )}
+              </div>
+            )}
             
-            {isExpanded && (
-              <div className="text-xs text-muted-foreground/70 font-light">
-                {discoveredFields.size}<span className="text-muted-foreground/50">/{FINGERPRINT_STARS.length}</span>
+            {discoveredFields.size === 0 && (
+              <div className="text-center py-3">
+                <p className="text-xs text-muted-foreground/70 font-light leading-relaxed">
+                  Begin chatting to discover<br />your project constellation
+                </p>
               </div>
             )}
           </div>
-        )}
-        
-        {discoveredFields.size === 0 && (
-          <div className="text-center py-3">
-            <p className="text-xs text-muted-foreground/70 font-light leading-relaxed">
-              Begin chatting to discover<br />your project constellation
-            </p>
-          </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
     
     </>

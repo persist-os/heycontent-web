@@ -10,6 +10,7 @@ interface TodoCardProps {
   onDelete?: (noteId: string) => void;
   onToggleImportant?: (noteId: string) => void;
   onUpdate?: (noteId: string, updates: any) => void;
+  onShare?: (noteId: string) => void;
 }
 
 interface TodoItem {
@@ -23,7 +24,8 @@ export function TodoCard({
   onEdit, 
   onDelete, 
   onToggleImportant, 
-  onUpdate 
+  onUpdate,
+  onShare 
 }: TodoCardProps) {
   // Parse todos from note content
   const parseTodos = (content: string): TodoItem[] => {
@@ -90,6 +92,7 @@ export function TodoCard({
       onEdit={onEdit}
       onDelete={onDelete}
       onToggleImportant={onToggleImportant}
+      onShare={onShare}
     >
       <div className="space-y-4">
         {/* Header with progress */}

@@ -22,12 +22,14 @@ type NoteType = typeof NOTE_TYPES[number];
 
 /**
  * Get paginated notes for a user with optional filtering and sorting
+ * Includes both owned notes and notes shared with the user
  * @param userId - The ID of the user to get notes for
  * @param cursor - Optional cursor for pagination
  * @param numItems - Number of items to fetch (default: 20, max: 50)
  * @param sortField - Field to sort by (default: '_creationTime')
  * @param sortOrder - Sort order ('asc' or 'desc', default: 'desc')
  * @param filters - Optional filters to apply
+ * @param includeShared - Whether to include shared notes (default: true)
  */
 export const getUserNotes = query({
   args: {
@@ -36,6 +38,7 @@ export const getUserNotes = query({
     numItems: v.optional(v.number()),
     sortField: v.optional(v.string()),
     sortOrder: v.optional(v.union(v.literal('asc'), v.literal('desc'))),
+    includeShared: v.optional(v.boolean()),
     filters: v.optional(v.object({
       type: v.optional(v.union(
         v.literal('idea_bank'),
@@ -58,59 +61,98 @@ export const getUserNotes = query({
       numItems = DEFAULT_PAGE_SIZE,
       sortField = '_creationTime',
       sortOrder = 'desc',
+      includeShared = true,
       filters = {}
     } = args;
 
     // Validate and sanitize input
     const limit = Math.min(Math.max(1, numItems), 50); // Enforce reasonable limits
     
-    // Start building the query with user index
-    let query = ctx.db
+    // Get owned notes
+    let ownedQuery = ctx.db
       .query("notes")
       .withIndex("by_user", (q) => q.eq("userId", userId));
 
-    // Apply type filter if provided
+    // Apply filters to owned notes
     if (filters.type) {
-      const type = filters.type;
-      query = query.filter((q) => q.eq(q.field('type'), type));
+      ownedQuery = ownedQuery.filter((q) => q.eq(q.field('type'), filters.type));
     }
     
-    // Apply importance filter if provided
     if (filters.important !== undefined) {
-      query = query.filter((q) => q.eq(q.field('important'), filters.important));
+      ownedQuery = ownedQuery.filter((q) => q.eq(q.field('important'), filters.important));
     }
     
-    // Apply tags filter if provided
     if (filters.tags?.length) {
-      // For tags, we need to check if any of the tags are in the note's tags array
       const tags = filters.tags;
-      query = query.filter((q) => 
+      ownedQuery = ownedQuery.filter((q) => 
         q.or(
           ...tags.map(tag => 
-            q.eq(q.field('tags'), [tag]) // Wrap tag in array to match the array type
+            q.eq(q.field('tags'), [tag])
           )
         )
       );
     }
 
-    // Apply sorting and pagination
-    const sortDirection = sortOrder === 'asc' ? 'asc' : 'desc';
-    const results = await query
-      .order(sortDirection)
-      .paginate({
-        numItems: limit,
-        cursor: cursor ? JSON.parse(cursor) : undefined,
+    // Get owned notes
+    const ownedNotes = await ownedQuery.collect();
+
+    // Get shared notes if requested
+    let sharedNotes: any[] = [];
+    if (includeShared) {
+      const shares = await ctx.db
+        .query("shared_notes")
+        .withIndex("by_shared_user", (q) => q.eq("sharedWithUserId", userId))
+        .filter((q) => q.eq(q.field("isActive"), true))
+        .collect();
+
+      // Get the actual notes for each share
+      const sharedNotePromises = shares.map(async (share) => {
+        const note = await ctx.db.get(share.noteId);
+        if (!note) return null;
+
+        // Apply filters to shared notes
+        if (filters.type && note.type !== filters.type) return null;
+        if (filters.important !== undefined && note.important !== filters.important) return null;
+        if (filters.tags?.length) {
+          const hasMatchingTag = filters.tags.some(tag => note.tags.includes(tag));
+          if (!hasMatchingTag) return null;
+        }
+
+        return note;
       });
 
+      const resolvedSharedNotes = await Promise.all(sharedNotePromises);
+      sharedNotes = resolvedSharedNotes.filter(note => note !== null);
+    }
+
+    // Combine and sort all notes
+    const allNotes = [...ownedNotes, ...sharedNotes];
+    
+    // Sort by the specified field
+    const sortDirection = sortOrder === 'asc' ? 1 : -1;
+    allNotes.sort((a, b) => {
+      const aValue = a._creationTime;
+      const bValue = b._creationTime;
+      return (aValue - bValue) * sortDirection;
+    });
+
+    // Manual pagination since we're combining results
+    const startIndex = cursor ? parseInt(cursor) : 0;
+    const endIndex = startIndex + limit;
+    const paginatedNotes = allNotes.slice(startIndex, endIndex);
+    const hasMore = endIndex < allNotes.length;
+
     return {
-      ...results,
-      nextCursor: results.continueCursor ? JSON.stringify(results.continueCursor) : null,
+      page: paginatedNotes,
+      isDone: !hasMore,
+      continueCursor: hasMore ? endIndex.toString() : null,
+      nextCursor: hasMore ? endIndex.toString() : null,
     };
   },
 });
 
 /**
- * Get a single note by ID with proper authorization
+ * Get a single note by ID with proper authorization (including shared notes)
  * @param noteId - The ID of the note to retrieve
  * @param userId - The ID of the user making the request (for auth)
  */
@@ -123,14 +165,97 @@ export const getNote = query({
     try {
       const note = await ctx.db.get(noteId as Id<"notes">);
       
-      // Verify ownership
-      if (!note || note.userId !== userId) {
+      if (!note) {
         return null;
       }
+
+      // Check if user owns the note
+      if (note.userId === userId) {
+        return note;
+      }
+
+      // Check if note is shared with user
+      const shareRecord = await ctx.db
+        .query("shared_notes")
+        .withIndex("by_note_user", (q) => 
+          q.eq("noteId", noteId as Id<"notes">).eq("sharedWithUserId", userId)
+        )
+        .filter((q) => q.eq(q.field("isActive"), true))
+        .unique();
+
+      if (shareRecord) {
+        return note;
+      }
       
-      return note;
+      return null;
     } catch (error) {
       console.error('Error fetching note:', error);
+      return null;
+    }
+  },
+});
+
+/**
+ * Get a single note by ID with permission information
+ * @param noteId - The ID of the note to retrieve
+ * @param userId - The ID of the user making the request (for auth)
+ */
+export const getNoteWithPermissions = query({
+  args: {
+    noteId: v.string(),
+    userId: v.string(),
+  },
+  returns: v.union(
+    v.null(),
+    v.object({
+      note: v.any(), // The note object
+      permission: v.union(
+        v.literal("owner"),
+        v.literal("read"),
+        v.literal("edit")
+      ),
+      isReadOnly: v.boolean(),
+    })
+  ),
+  handler: async (ctx, { noteId, userId }) => {
+    try {
+      const note = await ctx.db.get(noteId as Id<"notes">);
+      
+      if (!note) {
+        return null;
+      }
+
+      // Check if user owns the note
+      if (note.userId === userId) {
+        return {
+          note,
+          permission: "owner" as const,
+          isReadOnly: false,
+        };
+      }
+
+      // Check if note is shared with user
+      const shareRecord = await ctx.db
+        .query("shared_notes")
+        .withIndex("by_note_user", (q) => 
+          q.eq("noteId", noteId as Id<"notes">).eq("sharedWithUserId", userId)
+        )
+        .filter((q) => q.eq(q.field("isActive"), true))
+        .unique();
+
+      if (shareRecord) {
+        const isReadOnly = shareRecord.permission !== "edit";
+        
+        return {
+          note,
+          permission: shareRecord.permission,
+          isReadOnly,
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error fetching note with permissions:', error);
       return null;
     }
   },

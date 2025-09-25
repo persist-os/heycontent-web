@@ -11,16 +11,21 @@ import { CreateWidgetModal } from './CreateWidgetModal'
 import { ProjectSpaceBoundary } from './ProjectSpaceBoundary'
 import { ProjectOptionsModal } from './ProjectOptionsModal'
 import { MultiLevelWidget } from './MultiLevelWidget'
+import { WidgetStar } from './WidgetStar'
 import { WidgetCard } from './WidgetCard'
 import { WidgetDetailsPanel } from './WidgetDetailsPanel'
 import { ConnectionLines } from './ConnectionLines'
+import { WidgetConnections } from './WidgetConnections'
 import { ConstellationControls } from './ConstellationControls'
 import { ConstellationMinimap } from './ConstellationMinimap'
 import { LoadingState } from './LoadingState'
-import { useStaticConstellationLayout } from '../hooks/useStaticConstellationLayout'
-import { useMultiLevelPanZoom, ViewMode } from '../hooks/useMultiLevelPanZoom'
-import { useWidgetOrbitalLayout } from '../hooks/useWidgetOrbitalLayout'
+import { ProjectDetailCanvas } from './ProjectDetailCanvas'
+import { useGridProjectLayout } from '../hooks/useGridProjectLayout'
+import { useMultiLevelPanZoom } from '../hooks/useMultiLevelPanZoom'
+import { useSharedPanZoom, ViewMode } from '../hooks/useSharedPanZoom'
+import { useWidgetGridLayout } from '../hooks/useWidgetGridLayout'
 import { useProjectStates } from '../hooks/useProjectStates'
+import { useCanvasTransitions } from '../hooks/useCanvasTransitions'
 import { WidgetConfig } from '@/types/projectWidgets'
 import { getApiKey } from '@/app/lib/api-helpers'
 
@@ -31,10 +36,15 @@ interface Project {
   fingerprintId?: string
   createdAt: number
   updatedAt: number
-  // Static positioning fields
+  // Static positioning fields (legacy)
   position_x: number
   position_y: number
   space_radius: number
+  // New grid positioning fields
+  grid_x?: number
+  grid_y?: number
+  grid_width?: number
+  grid_height?: number
 }
 
 interface UnifiedConstellationViewProps {
@@ -60,14 +70,19 @@ export function UnifiedConstellationView({ initialProjectId }: UnifiedConstellat
     height: typeof window !== 'undefined' ? window.innerHeight : 800
   })
 
+  // Click-to-move state (declared early for use in useMultiLevelPanZoom)
+  const [placingWidget, setPlacingWidget] = useState<{widgetId: string, widget: WidgetConfig} | null>(null)
+  const [hoverPosition, setHoverPosition] = useState<{x: number, y: number} | null>(null)
+  const [hoveredWidgetId, setHoveredWidgetId] = useState<string | null>(null)
+
   // Fetch user's projects
   const projects = useQuery(
     api.projectsQueries.getProjectsForUser,
     firebaseUser?.uid ? { userId: firebaseUser.uid } : 'skip'
   ) as Project[] | undefined
 
-  // Generate constellation layout using static positions
-  const layout = useStaticConstellationLayout(projects || [])
+  // Generate constellation layout using grid positions
+  const layout = useGridProjectLayout(projects || [])
   
   // Get project states for visual styling
   const projectStates = useProjectStates(projects || [])
@@ -79,12 +94,17 @@ export function UnifiedConstellationView({ initialProjectId }: UnifiedConstellat
     viewMode,
     focusedProjectId,
     shouldShowProjectDetail,
+    lastMousePosition,
     ZOOM_THRESHOLD_PROJECT_DOTS,
     ZOOM_THRESHOLD_PROJECT_CARDS,
     ZOOM_THRESHOLD_WIDGET_VISIBILITY,
     ZOOM_THRESHOLD_WIDGET_DETAIL,
     ZOOM_THRESHOLD_PROJECT_FOCUS,
+    ZOOM_THRESHOLD_HYSTERESIS,
     handleWheel,
+    handleTouchStart,
+    handleTouchMove,
+    handleTouchEnd,
     handleMouseDown,
     zoomIn,
     zoomOut,
@@ -97,12 +117,43 @@ export function UnifiedConstellationView({ initialProjectId }: UnifiedConstellat
     canvasHeight: layout.canvasHeight,
     viewportWidth: viewportSize.width,
     viewportHeight: viewportSize.height,
+    interactionsDisabled: placingWidget !== null, // Disable canvas interactions while placing
     onProjectFocus: (projectId) => {
       setHighlightedProject(projectId)
     },
     onReset: () => {
-      // Navigate back to main constellation view
+      // Clear project selection and remove project ID from URL
+      setHighlightedProject(null)
+      // Navigate back to main constellation view without project ID
       router.push('/dashboard/living-projects')
+    }
+  })
+
+  // Canvas transitions for smooth mode switching
+  const {
+    transitionState,
+    currentTransition,
+    isTransitioning,
+    shouldTriggerZoomOutToOverview,
+    transitionToOverview,
+    transitionToProjectDetail,
+    focusOnProject: transitionFocusOnProject,
+    resetView: transitionResetView,
+    cancelTransition
+  } = useCanvasTransitions({
+    zoomOutToOverviewThreshold: ZOOM_THRESHOLD_HYSTERESIS,
+    onModeChange: (mode) => {
+      // Handle mode changes from transitions
+      if (mode === 'overview' && viewMode !== 'overview') {
+        // Clear focused project when transitioning to overview
+        setHighlightedProject(null)
+      }
+    },
+    onTransitionStart: (type) => {
+      console.log(`Transition started: ${type}`)
+    },
+    onTransitionComplete: (type) => {
+      console.log(`Transition completed: ${type}`)
     }
   })
 
@@ -178,19 +229,54 @@ export function UnifiedConstellationView({ initialProjectId }: UnifiedConstellat
 
   // Get widget layout for focused project or initial project
   const currentProject = projects?.find(p => p._id === currentProjectId)
-  const widgetLayout = useWidgetOrbitalLayout(
+  const currentProjectPosition = layout.positions.find(p => p.id === currentProjectId)
+  const widgetLayout = useWidgetGridLayout(
     currentProject?.position_x || 0,
     currentProject?.position_y || 0,
-    widgets || []
+    widgets || [],
+    currentProjectPosition?.grid_width || 1200,
+    currentProjectPosition?.grid_height || 800,
+    'constellation'
   )
 
   // Determine widget zoom level based on scale
   const getWidgetZoomLevel = useCallback((scale: number): 'hidden' | 'dot' | 'summary' | 'full' => {
     if (scale < ZOOM_THRESHOLD_WIDGET_VISIBILITY) return 'hidden'
-    if (scale < 0.6) return 'dot'
-    if (scale < ZOOM_THRESHOLD_WIDGET_DETAIL) return 'summary'
+    if (scale < ZOOM_THRESHOLD_WIDGET_DETAIL) return 'dot'
     return 'full'
   }, [ZOOM_THRESHOLD_WIDGET_VISIBILITY, ZOOM_THRESHOLD_WIDGET_DETAIL])
+
+  // Auto-focus logic: when crossing into project-detail mode, select the closest project
+  useEffect(() => {
+    if (viewMode === 'project-detail' && !focusedProjectId && lastMousePosition && projects) {
+      // Find the closest project to the cursor position
+      let closestProject: Project | null = null
+      let closestDistance = Infinity
+
+      projects.forEach(project => {
+        const distance = Math.sqrt(
+          Math.pow(project.position_x - lastMousePosition.x, 2) +
+          Math.pow(project.position_y - lastMousePosition.y, 2)
+        )
+        if (distance < closestDistance) {
+          closestDistance = distance
+          closestProject = project
+        }
+      })
+
+      if (closestProject) {
+        focusOnProject(closestProject._id, closestProject.position_x, closestProject.position_y, closestProject.space_radius)
+      }
+    }
+  }, [viewMode, focusedProjectId, lastMousePosition, projects, focusOnProject])
+
+  // Hysteresis logic: clear selection when dropping below threshold
+  useEffect(() => {
+    if (transform.scale < ZOOM_THRESHOLD_HYSTERESIS && focusedProjectId) {
+      // Clear selection but stay in overview mode
+      setHighlightedProject(null)
+    }
+  }, [transform.scale, ZOOM_THRESHOLD_HYSTERESIS, focusedProjectId])
 
   // Handle creating a new project
   const handleCreateProject = useCallback((name: string, description?: string) => {
@@ -229,6 +315,30 @@ export function UnifiedConstellationView({ initialProjectId }: UnifiedConstellat
   // Get mutations
   const deleteProjectMutation = useMutation(api.projectsMutations.deleteProject)
   const createWidgetMutation = useMutation(api.projectWidgetsMutations.createWidget)
+  const updateWidgetPositionMutation = useMutation(api.projectWidgetsMutations.updateWidgetPosition)
+  const updateProjectGridPosition = useMutation(api.projectsMutations.updateProjectGridPosition)
+  const swapWidgetPositionsMutation = useMutation(api.projectWidgetsMutations.swapWidgetPositions)
+
+  // Interaction tool: 'select' | 'move'
+  const [interactionTool, setInteractionTool] = useState<'select' | 'move'>('select')
+
+  // Hotkeys: V for select, M for move, ESC to cancel placing
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === 'v') {
+        setInteractionTool('select')
+        setPlacingWidget(null)
+      }
+      if (e.key.toLowerCase() === 'm') setInteractionTool('move')
+      if (e.key === 'Escape') {
+        setPlacingWidget(null)
+        setHoverPosition(null)
+        setHoveredWidgetId(null)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   // Handle project deletion
   const handleDeleteProject = useCallback(async () => {
@@ -299,6 +409,31 @@ export function UnifiedConstellationView({ initialProjectId }: UnifiedConstellat
   const handleWidgetHover = useCallback((widgetId: string | null) => {
     setHighlightedWidget(widgetId)
   }, [])
+
+  // Handle widget move in project-detail mode
+  const handleWidgetMove = useCallback(async (widgetId: string, offsetX: number, offsetY: number) => {
+    try {
+      await updateWidgetPositionMutation({
+        widgetId,
+        offset_x: offsetX,
+        offset_y: offsetY
+      })
+    } catch (error) {
+      console.error('Failed to move widget:', error)
+    }
+  }, [updateWidgetPositionMutation])
+
+  // Handle widget swap in project-detail mode
+  const handleWidgetSwap = useCallback(async (widgetIdA: string, widgetIdB: string) => {
+    try {
+      await swapWidgetPositionsMutation({
+        widgetIdA,
+        widgetIdB
+      })
+    } catch (error) {
+      console.error('Failed to swap widgets:', error)
+    }
+  }, [swapWidgetPositionsMutation])
 
   // Create project lookup for performance
   const projectMap = useMemo(() => {
@@ -426,33 +561,38 @@ export function UnifiedConstellationView({ initialProjectId }: UnifiedConstellat
 
   return (
     <div className="relative w-screen h-screen bg-gradient-to-br from-background via-background to-muted/20 overflow-hidden">
-      {/* Constellation Canvas */}
-      <div
-        ref={containerRef}
-        className="absolute inset-0 cursor-grab active:cursor-grabbing select-none"
-        onWheel={handleWheel}
-        onMouseDown={handleMouseDown}
-        onContextMenu={(e) => {
-          // Only prevent default if clicking on the background, not on project areas
-          if (e.target === e.currentTarget) {
-            e.preventDefault()
-          }
-        }}
-        style={{
-          willChange: 'transform'
-        }}
-      >
-        {/* Canvas Container */}
+      {/* Dual Canvas System */}
+      {viewMode === 'overview' ? (
+        /* Overview Canvas - Full constellation view */
         <div
-          className="relative transition-transform duration-100 ease-out"
+          ref={containerRef}
+          className="absolute inset-0 cursor-grab active:cursor-grabbing select-none"
+          onWheel={handleWheel}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onMouseDown={handleMouseDown}
+          onContextMenu={(e) => {
+            // Only prevent default if clicking on the background, not on project areas
+            if (e.target === e.currentTarget) {
+              e.preventDefault()
+            }
+          }}
           style={{
-            transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale(${transform.scale})`,
-            transformOrigin: '0 0',
-            width: layout.canvasWidth,
-            height: layout.canvasHeight,
             willChange: 'transform'
           }}
         >
+          {/* Canvas Container */}
+          <div
+            className="relative transition-transform duration-100 ease-out"
+            style={{
+              transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale(${transform.scale})`,
+              transformOrigin: '0 0',
+              width: layout.canvasWidth,
+              height: layout.canvasHeight,
+              willChange: 'transform'
+            }}
+          >
           {/* Connection Lines */}
           <ConnectionLines
             connections={layout.connections}
@@ -481,9 +621,10 @@ export function UnifiedConstellationView({ initialProjectId }: UnifiedConstellat
             return (
               <ProjectSpaceBoundary
                 key={`boundary-${position.id}`}
-                x={project.position_x}
-                y={project.position_y}
-                radius={project.space_radius}
+                x={position.x}
+                y={position.y}
+                width={position.grid_width}
+                height={position.grid_height}
                 scale={transform.scale}
                 isHighlighted={highlightedProject === position.id}
                 isFocused={isFocused && isInFocus}
@@ -497,15 +638,88 @@ export function UnifiedConstellationView({ initialProjectId }: UnifiedConstellat
                 onRightClick={handleProjectRightClick}
                 ZOOM_THRESHOLD_PROJECT_DOTS={ZOOM_THRESHOLD_PROJECT_DOTS}
                 ZOOM_THRESHOLD_PROJECT_CARDS={ZOOM_THRESHOLD_PROJECT_CARDS}
+              // Drag project in overview when Move tool is active
+              {...(viewMode === 'overview' && interactionTool === 'move' ? {
+                onMouseDown: (e: any) => {
+                  e.preventDefault()
+                  const startX = e.clientX
+                  const startY = e.clientY
+                  const startPos = { x: position.x, y: position.y, gx: position.grid_x, gy: position.grid_y }
+                  const move = (ev: MouseEvent) => {
+                    const dx = ev.clientX - startX
+                    const dy = ev.clientY - startY
+                    // visual feedback by translating container transform is complex; skip live ghost for now
+                  }
+                  const up = async (ev: MouseEvent) => {
+                    document.removeEventListener('mousemove', move)
+                    document.removeEventListener('mouseup', up)
+                    // Compute new grid cell based on pixel delta
+                    const dx = ev.clientX - startX
+                    const dy = ev.clientY - startY
+                    const cellW = position.grid_width + 50
+                    const cellH = position.grid_height + 50
+                    const gx = startPos.gx + Math.round(dx / cellW)
+                    const gy = startPos.gy + Math.round(dy / cellH)
+                    try {
+                      await updateProjectGridPosition({ projectId: project._id as any, grid_x: gx, grid_y: gy })
+                    } catch (err) {
+                      console.error('Failed to move project', err)
+                    }
+                  }
+                  document.addEventListener('mousemove', move)
+                  document.addEventListener('mouseup', up)
+                }
+              } : {})}
               />
             )
           })}
 
-          {/* Widgets (only for focused project) */}
-          {currentProjectId && currentProject && widgetZoomLevel !== 'hidden' && (
-            <>
-              {/* Widget Generation Loading State */}
-              {isGeneratingWidgets && (
+          {/* Widget generation states are now handled by ProjectDetailCanvas */}
+
+
+            {/* Canvas bounds indicator (subtle) */}
+            <div 
+              className="absolute inset-0 border border-border/10 rounded-lg pointer-events-none"
+              style={{
+                width: layout.canvasWidth,
+                height: layout.canvasHeight
+              }}
+            />
+          </div>
+        </div>
+      ) : (
+        /* Project Detail Canvas - Focused project view */
+        currentProject && currentProjectPosition ? (
+          <div className="absolute inset-0">
+            <ProjectDetailCanvas
+              projectId={currentProject._id}
+              projectX={currentProject.position_x}
+              projectY={currentProject.position_y}
+              projectWidth={currentProjectPosition.grid_width}
+              projectHeight={currentProjectPosition.grid_height}
+              widgets={widgets}
+              transform={transform}
+              viewportWidth={viewportSize.width}
+              viewportHeight={viewportSize.height}
+              onWidgetClick={(widget) => {
+                setSelectedWidget(widget)
+                setIsDetailsOpen(true)
+              }}
+              onWidgetHover={handleWidgetHover}
+              onWidgetMove={handleWidgetMove}
+              onWidgetSwap={handleWidgetSwap}
+              interactionTool={interactionTool}
+              className="absolute inset-0"
+            />
+            
+            {/* Widget Generation Loading State */}
+            {isGeneratingWidgets && (
+              <svg
+                className="absolute inset-0 pointer-events-none z-20"
+                width={layout.canvasWidth}
+                height={layout.canvasHeight}
+                style={{ overflow: 'visible' }}
+              >
                 <g>
                   <rect
                     x={currentProject.position_x - 150}
@@ -562,10 +776,17 @@ export function UnifiedConstellationView({ initialProjectId }: UnifiedConstellat
                     Generating...
                   </text>
                 </g>
-              )}
+              </svg>
+            )}
 
-              {/* Widget Generation Error State */}
-              {widgetGenerationError && (
+            {/* Widget Generation Error State */}
+            {widgetGenerationError && (
+              <svg
+                className="absolute inset-0 pointer-events-none z-20"
+                width={layout.canvasWidth}
+                height={layout.canvasHeight}
+                style={{ overflow: 'visible' }}
+              >
                 <g>
                   <rect
                     x={currentProject.position_x - 180}
@@ -585,133 +806,63 @@ export function UnifiedConstellationView({ initialProjectId }: UnifiedConstellat
                     textAnchor="middle"
                     className="fill-foreground text-sm font-medium"
                   >
-                    Widgets are taking their time
+                    Oops! We hit a snag
                   </text>
                   <text
                     x={currentProject.position_x}
                     y={currentProject.position_y - 5}
                     textAnchor="middle"
                     className="fill-muted-foreground text-xs"
-                    style={{ fontSize: '10px' }}
                   >
-                    {widgetGenerationError}
-                  </text>
-                  <rect
-                    x={currentProject.position_x - 40}
-                    y={currentProject.position_y + 15}
-                    width={80}
-                    height={24}
-                    fill="hsl(var(--primary))"
-                    rx={12}
-                    className="cursor-pointer"
-                    onClick={() => setWidgetGenerationError(null)}
-                  />
-                  <text
-                    x={currentProject.position_x}
-                    y={currentProject.position_y + 30}
-                    textAnchor="middle"
-                    className="fill-primary-foreground text-xs font-medium"
-                  >
-                    Got it, thanks
+                    Please try again or adjust your project settings
                   </text>
                 </g>
-              )}
-
-              {/* Actual Widgets */}
-              {!isGeneratingWidgets && !widgetGenerationError && (
-                <>
-                  {widgetLayout.positions.map(widgetPosition => {
-                    const widget = widgets?.find(w => w.widget_id === widgetPosition.id)
-                    if (!widget) return null
-
-                    return (
-                      <WidgetCard
-                        key={widgetPosition.id}
-                        widget={widget}
-                        x={widgetPosition.x}
-                        y={widgetPosition.y}
-                        scale={transform.scale}
-                        onClick={() => {
-                          setSelectedWidget(widget)
-                          setIsDetailsOpen(true)
-                        }}
-                        onHover={(isHovered) => handleWidgetHover(isHovered ? widgetPosition.id : null)}
-                      />
-                    )
-                  })}
-
-                  {/* Project-to-Widget Connections */}
-                  {currentProject && (
-                    <g>
-                      {widgetLayout.positions.map(widgetPosition => (
-                        <line
-                          key={`connection-${widgetPosition.id}`}
-                          x1={currentProject.position_x}
-                          y1={currentProject.position_y}
-                          x2={widgetPosition.x}
-                          y2={widgetPosition.y}
-                          stroke="hsl(var(--border))"
-                          strokeWidth={1 / transform.scale}
-                          strokeDasharray="4,4"
-                          opacity={0.4}
-                        />
-                      ))}
-                    </g>
-                  )}
-                </>
-              )}
-            </>
-          )}
-
-
-          {/* Canvas bounds indicator (subtle) */}
-          <div 
-            className="absolute inset-0 border border-border/10 rounded-lg pointer-events-none"
-            style={{
-              width: layout.canvasWidth,
-              height: layout.canvasHeight
-            }}
-          />
-        </div>
-      </div>
+              </svg>
+            )}
+          </div>
+        ) : null
+      )}
 
       {/* Header - Centered */}
       <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-10">
         <div className="bg-background/80 backdrop-blur-sm border border-border/50 rounded-lg px-6 py-4 shadow-lg">
+          {viewMode === 'project-detail' ? (
+            // Show only project title when in project-detail mode
+            <h1 className="text-2xl font-light text-foreground text-center">
+              {currentProject?.name || 'Project Space'}
+            </h1>
+          ) : (
+            // Show full constellation info in overview mode
+            <>
           <div className="flex items-baseline gap-4 justify-center">
             <h1 className="text-2xl font-light text-foreground">
-              {viewMode === 'project-detail' ? 'Project Space' : 'Constellation'}
+                  Constellation
             </h1>
             <div className="text-sm text-muted-foreground/70 font-mono">
               {projects.length} project{projects.length !== 1 ? 's' : ''}
             </div>
           </div>
           <p className="text-sm text-muted-foreground/60 mt-1 text-center">
-            {viewMode === 'project-detail' 
-              ? 'Explore widgets and details within this project space'
-              : 'Your universe of projects, connected and evolving'
-            }
+                Your universe of projects, connected and evolving
           </p>
+            </>
+          )}
         </div>
       </div>
 
 
       {/* Action Buttons - Top Right */}
       <div className="absolute top-6 right-6 z-10 flex gap-2">
-        {viewMode === 'project-detail' && currentProject && (
-          <Button
-            onClick={() => setShowCreateWidgetModal(true)}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg"
-          >
-            + New Widget
-          </Button>
-        )}
+        {/* Remove New Widget button entirely */}
+        {/* Hide New Project button when in project-detail mode */}
+        {viewMode !== 'project-detail' && (
         <Button
           onClick={() => setShowCreateModal(true)}
           className="bg-foreground text-background hover:bg-foreground/90 shadow-lg"
         >
           + New Project
         </Button>
+        )}
       </div>
 
       {/* Navigation Controls */}
@@ -723,7 +874,8 @@ export function UnifiedConstellationView({ initialProjectId }: UnifiedConstellat
         className="absolute bottom-6 left-20 z-10"
       />
 
-      {/* Minimap */}
+      {/* Minimap - Hide when in project-detail mode */}
+      {viewMode !== 'project-detail' && (
       <ConstellationMinimap
         positions={layout.positions}
         canvasWidth={layout.canvasWidth}
@@ -734,10 +886,18 @@ export function UnifiedConstellationView({ initialProjectId }: UnifiedConstellat
         onViewportClick={handleMinimapClick}
         className="absolute bottom-6 right-6 z-10"
       />
+      )}
 
       {/* Stats Overlay - Bottom Center */}
       <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 z-10 pointer-events-none">
         <div className="bg-background/60 backdrop-blur-sm border border-border/30 rounded-lg px-4 py-2 shadow-sm">
+          {viewMode === 'project-detail' ? (
+            // Show only widget count when in project-detail mode
+            <div className="text-xs text-muted-foreground/70">
+              {widgets?.length || 0} widgets
+            </div>
+          ) : (
+            // Show full stats in overview mode
             <div className="flex items-center gap-4 text-xs text-muted-foreground/70">
               <span>
                 Active: {Array.from(projectStates.values()).filter(s => s.isActive).length}
@@ -754,15 +914,44 @@ export function UnifiedConstellationView({ initialProjectId }: UnifiedConstellat
               <span>
                 {Math.round(transform.scale * 100)}% zoom
               </span>
-                        {viewMode === 'project-detail' && (
-                          <>
-                            <span>•</span>
-                            <span>
-                              {widgets?.length || 0} widgets
-                            </span>
-                          </>
-                        )}
             </div>
+          )}
+        </div>
+      </div>
+
+      {/* Tool Bar - Bottom Center (buttons are interactive) */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 pointer-events-auto">
+        <div className="bg-background/80 backdrop-blur-sm border border-border/50 rounded-lg px-2 py-1 shadow-lg flex gap-2">
+          {viewMode === 'project-detail' ? (
+            /* Project Detail Mode Tools */
+            placingWidget ? (
+              <Button 
+                size="sm" 
+                variant="destructive" 
+                onClick={() => {
+                  setPlacingWidget(null)
+                  setHoverPosition(null)
+                  setHoveredWidgetId(null)
+                }}
+              >
+                Cancel (ESC)
+              </Button>
+            ) : (
+              <>
+                <Button size="sm" variant={interactionTool === 'select' ? 'default' : 'secondary'} onClick={() => setInteractionTool('select')}>
+                  Select (V)
+                </Button>
+                <Button size="sm" variant={interactionTool === 'move' ? 'default' : 'secondary'} onClick={() => setInteractionTool('move')}>
+                  Move (M)
+                </Button>
+              </>
+            )
+          ) : (
+            /* Overview Mode - No tools needed */
+            <div className="text-xs text-muted-foreground/70 px-2 py-1">
+              Drag to explore • Scroll to zoom • Click projects to focus
+            </div>
+          )}
         </div>
       </div>
 

@@ -17,10 +17,7 @@ import {
   MessageCircle,
   FileText,
   Lightbulb,
-  Instagram,
-  Youtube,
   RefreshCw,
-  Mail,
   Sparkles,
   Target,
   Settings
@@ -48,26 +45,6 @@ const getCreativeAccomplishment = (path: string, usage: number): { icon: React.C
       icon: Lightbulb,
       title: `Generated ${usage} fresh content ideas`,
       description: 'Created new concepts for your content strategy'
-    },
-    '/api/v1/instagram/analyze': {
-      icon: Instagram,
-      title: `Analyzed ${usage} Instagram posts`,
-      description: 'Gained insights into your social media performance'
-    },
-    '/api/v1/youtube/analyze': {
-      icon: Youtube,
-      title: `Analyzed ${usage} YouTube videos`,
-      description: 'Discovered trends in your video content'
-    },
-    '/api/v1/youtube/refresh': {
-      icon: RefreshCw,
-      title: `Refreshed YouTube data ${usage} times`,
-      description: 'Kept your video insights up to date'
-    },
-    '/api/v1/gmail/analyze-inbox': {
-      icon: Mail,
-      title: `Analyzed ${usage} email insights`,
-      description: 'Found opportunities in your communications'
     },
     '/api/v1/ambient_insights/generate': {
       icon: Sparkles,

@@ -1,6 +1,76 @@
-import { v } from "convex/values";
+import { v, Infer } from "convex/values";
 import { query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+
+// Shared validators
+const ProjectValidator = v.object({
+  _id: v.id("projects"),
+  _creationTime: v.number(),
+  userId: v.string(),
+  name: v.string(),
+  description: v.optional(v.string()),
+  fingerprintId: v.optional(v.id("project_fingerprints")),
+  noteIds: v.optional(v.array(v.string())),
+  conversationIds: v.optional(v.array(v.string())),
+  analysisIds: v.optional(v.array(v.string())),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+  // Static positioning fields (legacy)
+  position_x: v.number(),
+  position_y: v.number(),
+  space_radius: v.number(),
+  // New grid positioning fields
+  grid_x: v.optional(v.number()),
+  grid_y: v.optional(v.number()),
+  grid_width: v.optional(v.number()),
+  grid_height: v.optional(v.number()),
+});
+
+const ProjectDetailsValidator = v.object({
+  _id: v.id("projects"),
+  _creationTime: v.number(),
+  userId: v.string(),
+  name: v.string(),
+  description: v.optional(v.string()),
+  fingerprintId: v.optional(v.id("project_fingerprints")),
+  noteIds: v.optional(v.array(v.string())),
+  conversationIds: v.optional(v.array(v.string())),
+  analysisIds: v.optional(v.array(v.string())),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+  // Static positioning fields (legacy)
+  position_x: v.number(),
+  position_y: v.number(),
+  space_radius: v.number(),
+  // New grid positioning fields
+  grid_x: v.optional(v.number()),
+  grid_y: v.optional(v.number()),
+  grid_width: v.optional(v.number()),
+  grid_height: v.optional(v.number()),
+  attachedItems: v.object({
+    notes: v.array(v.any()),
+    conversations: v.array(v.any()),
+    instagramPosts: v.array(v.any()),
+    youtubeVideos: v.array(v.any()),
+    gmailItems: v.array(v.any()),
+    analysisItems: v.array(v.any()),
+  }),
+});
+
+const ProjectStatsValidator = v.object({
+  totalItems: v.number(),
+  noteCount: v.number(),
+  conversationCount: v.number(),
+  instagramPostCount: v.number(),
+  youtubeVideoCount: v.number(),
+  gmailCount: v.number(),
+  analysisCount: v.number(),
+});
+
+// Infer TypeScript types
+export type Project = Infer<typeof ProjectValidator>;
+export type ProjectDetails = Infer<typeof ProjectDetailsValidator>;
+export type ProjectStats = Infer<typeof ProjectStatsValidator>;
 
 // Helper to extract raw Convex document ID from a unified content ID
 function extractRawId(unifiedId: string): string {
@@ -31,23 +101,7 @@ export const getProjectById = query({
     projectId: v.id("projects"),
     userId: v.optional(v.string()),
   },
-  returns: v.union(
-    v.null(),
-    v.object({
-      _id: v.id("projects"),
-      _creationTime: v.number(),
-      userId: v.string(),
-      name: v.string(),
-      description: v.optional(v.string()),
-      fingerprintId: v.optional(v.id("project_fingerprints")),
-      createdAt: v.number(),
-      updatedAt: v.number(),
-      // Static positioning fields
-      position_x: v.number(),
-      position_y: v.number(),
-      space_radius: v.number(),
-    })
-  ),
+  returns: v.union(v.null(), ProjectValidator),
   handler: async (ctx, args) => {
     try {
       const project = await ctx.db.get(args.projectId);
@@ -89,26 +143,7 @@ export const getProjectsForUser = query({
   args: {
     userId: v.string(),
   },
-  returns: v.array(v.object({
-    _id: v.id("projects"),
-    _creationTime: v.number(),
-    userId: v.string(),
-    name: v.string(),
-    description: v.optional(v.string()),
-    fingerprintId: v.optional(v.id("project_fingerprints")),
-    noteIds: v.optional(v.array(v.string())),
-    conversationIds: v.optional(v.array(v.string())),
-    instagramPostIds: v.optional(v.array(v.string())),
-    youtubeVideoIds: v.optional(v.array(v.string())),
-    gmailIds: v.optional(v.array(v.string())),
-    analysisIds: v.optional(v.array(v.string())),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-    // Static positioning fields
-    position_x: v.number(),
-    position_y: v.number(),
-    space_radius: v.number(),
-  })),
+  returns: v.array(ProjectValidator),
   handler: async (ctx, args) => {
     // Validate user ID
     if (!args.userId || args.userId.trim() === '') {
@@ -127,9 +162,6 @@ export const getProjectsForUser = query({
         // Ensure all arrays are defined for consistent frontend handling
         noteIds: project.noteIds || [],
         conversationIds: project.conversationIds || [],
-        instagramPostIds: project.instagramPostIds || [],
-        youtubeVideoIds: project.youtubeVideoIds || [],
-        gmailIds: project.gmailIds || [],
         analysisIds: project.analysisIds || [],
       }));
     } catch (error) {
@@ -145,37 +177,7 @@ export const getProjectDetails = query({
     projectId: v.id("projects"),
     userId: v.optional(v.string()), // For ownership validation
   },
-  returns: v.union(
-    v.null(),
-    v.object({
-      _id: v.id("projects"),
-      _creationTime: v.number(),
-      userId: v.string(),
-      name: v.string(),
-      description: v.optional(v.string()),
-      fingerprintId: v.optional(v.id("project_fingerprints")),
-      noteIds: v.optional(v.array(v.string())),
-      conversationIds: v.optional(v.array(v.string())),
-      instagramPostIds: v.optional(v.array(v.string())),
-      youtubeVideoIds: v.optional(v.array(v.string())),
-      gmailIds: v.optional(v.array(v.string())),
-      analysisIds: v.optional(v.array(v.string())),
-      createdAt: v.number(),
-      updatedAt: v.number(),
-      // Static positioning fields
-      position_x: v.number(),
-      position_y: v.number(),
-      space_radius: v.number(),
-      attachedItems: v.object({
-        notes: v.array(v.any()),
-        conversations: v.array(v.any()),
-        instagramPosts: v.array(v.any()),
-        youtubeVideos: v.array(v.any()),
-        gmailItems: v.array(v.any()),
-        analysisItems: v.array(v.any()),
-      }),
-    })
-  ),
+  returns: v.union(v.null(), ProjectDetailsValidator),
   handler: async (ctx, args) => {
     try {
       const project = await ctx.db.get(args.projectId);
@@ -192,9 +194,6 @@ export const getProjectDetails = query({
         projectId: project._id,
         noteIds: project.noteIds,
         conversationIds: project.conversationIds,
-        instagramPostIds: project.instagramPostIds,
-        youtubeVideoIds: project.youtubeVideoIds,
-        gmailIds: project.gmailIds,
         analysisIds: project.analysisIds,
       });
 
@@ -218,156 +217,19 @@ export const getProjectDetails = query({
         conversations.push(...conversationResults.filter(Boolean));
       }
 
-      // Batch fetch Instagram posts using external IDs
+      // Instagram, YouTube, and Gmail items are not supported in the current schema
       const instagramPosts = [];
-      if (project.instagramPostIds && project.instagramPostIds.length > 0) {
-        console.log("Fetching Instagram posts with IDs:", project.instagramPostIds);
-        const instagramPromises = project.instagramPostIds.map(async (postId) => {
-          console.log("Looking for Instagram post with ID:", postId);
-          
-          // Try to find the post by postId field using the index
-          const posts = await ctx.db
-            .query("instagramPosts")
-            .withIndex("by_postId", (q) => q.eq("postId", postId))
-            .filter((q) => q.eq(q.field("userId"), project.userId))
-            .collect();
-          
-          console.log("Instagram query result:", { postId, found: posts.length > 0 });
-          return posts.length > 0 ? posts[0] : null;
-        });
-        const instagramResults = await Promise.all(instagramPromises);
-        instagramPosts.push(...instagramResults.filter(Boolean));
-        console.log("Final Instagram posts found:", instagramPosts.length);
-      }
-
-      // Batch fetch YouTube videos using external IDs
       const youtubeVideos = [];
-      if (project.youtubeVideoIds && project.youtubeVideoIds.length > 0) {
-        console.log("Fetching YouTube videos with IDs:", project.youtubeVideoIds);
-        const youtubePromises = project.youtubeVideoIds.map(async (videoId) => {
-          console.log("Looking for YouTube video with ID:", videoId);
-          
-          // Try to find the video by videoId field using the index
-          const videos = await ctx.db
-            .query("youtubeVideos")
-            .withIndex("by_videoId", (q) => q.eq("videoId", videoId))
-            .filter((q) => q.eq(q.field("userId"), project.userId))
-            .collect();
-          
-          console.log("YouTube query result:", { videoId, found: videos.length > 0 });
-          return videos.length > 0 ? videos[0] : null;
-        });
-        const youtubeResults = await Promise.all(youtubePromises);
-        youtubeVideos.push(...youtubeResults.filter(Boolean));
-        console.log("Final YouTube videos found:", youtubeVideos.length);
-      }
-
-      // Batch fetch Gmail items using external IDs
       const gmailItems = [];
-      if (project.gmailIds && project.gmailIds.length > 0) {
-        console.log("Fetching Gmail items with IDs:", project.gmailIds);
-        const gmailPromises = project.gmailIds.map(async (gmailId) => {
-          console.log("Looking for Gmail thread with ID:", gmailId);
-          
-          // Try to find the thread by threadId field using the index
-          const threads = await ctx.db
-            .query("gmailThreads")
-            .withIndex("by_threadId", (q) => q.eq("threadId", gmailId))
-            .filter((q) => q.eq(q.field("userId"), project.userId))
-            .collect();
-          
-          console.log("Gmail query result:", { gmailId, found: threads.length > 0 });
-          if (threads.length > 0 && typeof threads[0] === 'object') {
-            return { ...threads[0], gmailType: "thread" as const };
-          }
-          return null;
-        });
-        const gmailResults = await Promise.all(gmailPromises);
-        gmailItems.push(...gmailResults.filter(Boolean));
-        console.log("Final Gmail items found:", gmailItems.length);
-      }
 
-      // Batch fetch analysis items (handle both unified and raw IDs)
+      // Analysis items are not supported in the current schema
       const analysisItems = [];
-      if (project.analysisIds && project.analysisIds.length > 0) {
-        console.log("Fetching analysis items with IDs:", project.analysisIds);
-        const analysisPromises = project.analysisIds.map(async (analysisId) => {
-          console.log("Processing analysis ID:", analysisId);
-          
-          // Analysis IDs are in format: platform:analysisId:index
-          // For example: "instagram:abc123:0" or "youtube:def456:1"
-          const parts = analysisId.split(':');
-          if (parts.length !== 3) {
-            console.log("Invalid analysis ID format:", analysisId);
-            return null;
-          }
-          
-          const [platform, analysisDocId, indexStr] = parts;
-          const index = parseInt(indexStr, 10);
-          
-          if (isNaN(index)) {
-            console.log("Invalid analysis index:", indexStr);
-            return null;
-          }
-          
-          console.log("Parsed analysis ID:", { platform, analysisDocId, index });
-          
-          // Try to get the analysis document based on platform
-          let analysis = null;
-          let analysisType = null;
-          
-          if (platform === 'instagram') {
-            analysis = await ctx.db.get(analysisDocId as Id<"instagramBatchAnalysis">);
-            analysisType = "instagram";
-          } else if (platform === 'youtube') {
-            analysis = await ctx.db.get(analysisDocId as Id<"youtubeBatchAnalysis">);
-            analysisType = "youtube";
-          } else if (platform === 'gmail') {
-            analysis = await ctx.db.get(analysisDocId as Id<"gmailBatchAnalysis">);
-            analysisType = "gmail";
-          }
-          
-          if (!analysis || analysis.userId !== project.userId) {
-            console.log("Analysis not found or access denied:", { analysisDocId, platform, found: !!analysis });
-            return null;
-          }
-          
-          // Extract the specific insight at the given index
-          const insights = analysis.insights?.insights;
-          if (!insights || !Array.isArray(insights) || !insights[index]) {
-            console.log("Insight not found at index:", { index, insightsLength: insights?.length });
-            return null;
-          }
-          
-          const insight = insights[index];
-          console.log("Found analysis insight:", { platform, analysisType, insightTitle: insight.title });
-          
-          return {
-            _id: analysisId, // Use the full analysis ID as the document ID
-            _creationTime: analysis.createdAt || Date.now(),
-            userId: project.userId,
-            platform: platform,
-            analysisType: analysisType,
-            insight: insight,
-            analysis: analysis,
-            title: insight.title || `${platform} Analysis`,
-            createdAt: analysis.createdAt || Date.now(),
-            updatedAt: analysis.updatedAt || Date.now(),
-          };
-        });
-        const analysisResults = await Promise.all(analysisPromises);
-        analysisItems.push(...analysisResults.filter(Boolean));
-        console.log("Final analysis items found:", analysisItems.length);
-      }
 
       return {
         ...project,
         // Ensure all arrays are defined
         noteIds: project.noteIds || [],
         conversationIds: project.conversationIds || [],
-        instagramPostIds: project.instagramPostIds || [],
-        youtubeVideoIds: project.youtubeVideoIds || [],
-        gmailIds: project.gmailIds || [],
         analysisIds: project.analysisIds || [],
         attachedItems: {
           notes,
@@ -394,22 +256,7 @@ export const getProjectsContainingNote = query({
     userId: v.string(),
     noteId: v.string(),
   },
-  returns: v.array(v.object({
-    _id: v.id("projects"),
-    _creationTime: v.number(),
-    userId: v.string(),
-    name: v.string(),
-    description: v.optional(v.string()),
-    fingerprintId: v.optional(v.id("project_fingerprints")),
-    noteIds: v.optional(v.array(v.string())),
-    conversationIds: v.optional(v.array(v.string())),
-    instagramPostIds: v.optional(v.array(v.string())),
-    youtubeVideoIds: v.optional(v.array(v.string())),
-    gmailIds: v.optional(v.array(v.string())),
-    analysisIds: v.optional(v.array(v.string())),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })),
+  returns: v.array(ProjectValidator),
   handler: async (ctx, args) => {
     // Validate inputs
     if (!args.userId || args.userId.trim() === '') {
@@ -436,9 +283,6 @@ export const getProjectsContainingNote = query({
         // Ensure all arrays are defined
         noteIds: project.noteIds || [],
         conversationIds: project.conversationIds || [],
-        instagramPostIds: project.instagramPostIds || [],
-        youtubeVideoIds: project.youtubeVideoIds || [],
-        gmailIds: project.gmailIds || [],
         analysisIds: project.analysisIds || [],
       }));
     } catch (error) {
@@ -462,22 +306,7 @@ export const getProjectsContainingItem = query({
       v.literal("analysis")
     ),
   },
-  returns: v.array(v.object({
-    _id: v.id("projects"),
-    _creationTime: v.number(),
-    userId: v.string(),
-    name: v.string(),
-    description: v.optional(v.string()),
-    fingerprintId: v.optional(v.id("project_fingerprints")),
-    noteIds: v.optional(v.array(v.string())),
-    conversationIds: v.optional(v.array(v.string())),
-    instagramPostIds: v.optional(v.array(v.string())),
-    youtubeVideoIds: v.optional(v.array(v.string())),
-    gmailIds: v.optional(v.array(v.string())),
-    analysisIds: v.optional(v.array(v.string())),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })),
+  returns: v.array(ProjectValidator),
   handler: async (ctx, args) => {
     // Validate inputs
     if (!args.userId || args.userId.trim() === '') {
@@ -504,15 +333,11 @@ export const getProjectsContainingItem = query({
           case "conversation":
             itemIds = project.conversationIds || [];
             break;
-          case "instagramPost":
-            itemIds = project.instagramPostIds || [];
-            break;
-          case "youtubeVideo":
-            itemIds = project.youtubeVideoIds || [];
-            break;
-          case "gmail":
-            itemIds = project.gmailIds || [];
-            break;
+        case "instagramPost":
+        case "youtubeVideo":
+        case "gmail":
+          // These item types are not supported in the current schema
+          return [];
           case "analysis":
             itemIds = project.analysisIds || [];
             break;
@@ -528,9 +353,6 @@ export const getProjectsContainingItem = query({
         // Ensure all arrays are defined
         noteIds: project.noteIds || [],
         conversationIds: project.conversationIds || [],
-        instagramPostIds: project.instagramPostIds || [],
-        youtubeVideoIds: project.youtubeVideoIds || [],
-        gmailIds: project.gmailIds || [],
         analysisIds: project.analysisIds || [],
       }));
     } catch (error) {
@@ -546,18 +368,7 @@ export const getProjectStats = query({
     projectId: v.id("projects"),
     userId: v.optional(v.string()), // For ownership validation
   },
-  returns: v.union(
-    v.null(),
-    v.object({
-      totalItems: v.number(),
-      noteCount: v.number(),
-      conversationCount: v.number(),
-      instagramPostCount: v.number(),
-      youtubeVideoCount: v.number(),
-      gmailCount: v.number(),
-      analysisCount: v.number(),
-    })
-  ),
+  returns: v.union(v.null(), ProjectStatsValidator),
   handler: async (ctx, args) => {
     try {
       const project = await ctx.db.get(args.projectId);
@@ -572,9 +383,9 @@ export const getProjectStats = query({
 
       const noteCount = (project.noteIds || []).length;
       const conversationCount = (project.conversationIds || []).length;
-      const instagramPostCount = (project.instagramPostIds || []).length;
-      const youtubeVideoCount = (project.youtubeVideoIds || []).length;
-      const gmailCount = (project.gmailIds || []).length;
+      const instagramPostCount = 0; // Not supported in current schema
+      const youtubeVideoCount = 0; // Not supported in current schema
+      const gmailCount = 0; // Not supported in current schema
       const analysisCount = (project.analysisIds || []).length;
 
       return {

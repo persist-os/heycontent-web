@@ -1,6 +1,132 @@
-import { v } from "convex/values";
+import { v, Infer } from "convex/values";
 import { mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+
+// Shared validators
+const WidgetValidator = v.object({
+  _id: v.id("project_widgets"),
+  _creationTime: v.number(),
+  widget_id: v.string(),
+  project_id: v.id("projects"),
+  user_id: v.string(),
+  fingerprint_id: v.id("project_fingerprints"),
+  widget_type: v.string(),
+  title: v.string(),
+  description: v.string(),
+  category: v.string(),
+  priority: v.number(),
+  size: v.string(),
+  theme: v.string(),
+  position: v.number(),
+  layout_type: v.string(),
+  config: v.any(),
+  data_sources: v.array(v.string()),
+  update_frequency: v.string(),
+  interactive: v.boolean(),
+  editable: v.boolean(),
+  shareable: v.boolean(),
+  orbital_angle: v.number(),
+  orbital_distance: v.number(),
+  created_at: v.number(),
+  updated_at: v.number(),
+  generated_at: v.number(),
+  version: v.string(),
+  confidence: v.number(),
+  status: v.string(),
+  // New fields for manual positioning within project space
+  offset_x: v.optional(v.number()),
+  offset_y: v.optional(v.number()),
+});
+
+const CreateWidgetArgsValidator = v.object({
+  projectId: v.id("projects"),
+  userId: v.string(),
+  fingerprintId: v.id("project_fingerprints"),
+  widgetType: v.string(),
+  title: v.string(),
+  description: v.string(),
+  category: v.string(),
+  priority: v.number(),
+  size: v.string(),
+  theme: v.string(),
+  position: v.number(),
+  layoutType: v.string(),
+  config: v.optional(v.any()),
+  dataSources: v.optional(v.array(v.string())),
+  updateFrequency: v.optional(v.string()),
+  interactive: v.optional(v.boolean()),
+  editable: v.optional(v.boolean()),
+  shareable: v.optional(v.boolean()),
+});
+
+const WidgetDataValidator = v.object({
+  widget_id: v.string(),
+  widget_type: v.string(),
+  title: v.string(),
+  description: v.string(),
+  category: v.string(),
+  priority: v.number(),
+  size: v.string(),
+  theme: v.string(),
+  position: v.number(),
+  layout_type: v.string(),
+  config: v.any(),
+  data_sources: v.array(v.string()),
+  update_frequency: v.string(),
+  interactive: v.boolean(),
+  editable: v.boolean(),
+  shareable: v.boolean(),
+});
+
+const CreateWidgetsFromAgentArgsValidator = v.object({
+  projectId: v.id("projects"),
+  userId: v.string(),
+  fingerprintId: v.id("project_fingerprints"),
+  widgets: v.array(WidgetDataValidator),
+  version: v.string(),
+  confidence: v.number(),
+});
+
+const UpdateWidgetArgsValidator = v.object({
+  widgetId: v.string(),
+  userId: v.string(),
+  updates: v.object({
+    title: v.optional(v.string()),
+    description: v.optional(v.string()),
+    category: v.optional(v.string()),
+    priority: v.optional(v.number()),
+    size: v.optional(v.string()),
+    theme: v.optional(v.string()),
+    position: v.optional(v.number()),
+    layout_type: v.optional(v.string()),
+    config: v.optional(v.any()),
+    data_sources: v.optional(v.array(v.string())),
+    update_frequency: v.optional(v.string()),
+    interactive: v.optional(v.boolean()),
+    editable: v.optional(v.boolean()),
+    shareable: v.optional(v.boolean()),
+  }),
+});
+
+const UpdateWidgetPositionArgsValidator = v.object({
+  widgetId: v.string(),
+  offset_x: v.number(),
+  offset_y: v.number(),
+});
+
+const SwapWidgetPositionsArgsValidator = v.object({
+  widgetIdA: v.string(),
+  widgetIdB: v.string(),
+});
+
+// Infer TypeScript types
+export type Widget = Infer<typeof WidgetValidator>;
+export type CreateWidgetArgs = Infer<typeof CreateWidgetArgsValidator>;
+export type WidgetData = Infer<typeof WidgetDataValidator>;
+export type CreateWidgetsFromAgentArgs = Infer<typeof CreateWidgetsFromAgentArgsValidator>;
+export type UpdateWidgetArgs = Infer<typeof UpdateWidgetArgsValidator>;
+export type UpdateWidgetPositionArgs = Infer<typeof UpdateWidgetPositionArgsValidator>;
+export type SwapWidgetPositionsArgs = Infer<typeof SwapWidgetPositionsArgsValidator>;
 
 // Helper to generate unique widget IDs
 function generateWidgetId(): string {
@@ -60,26 +186,7 @@ function calculateOrbitalPosition(
  * Create a new individual widget
  */
 export const createWidget = mutation({
-  args: {
-    projectId: v.id("projects"),
-    userId: v.string(),
-    fingerprintId: v.id("project_fingerprints"),
-    widgetType: v.string(),
-    title: v.string(),
-    description: v.string(),
-    category: v.string(),
-    priority: v.number(), // 1-10
-    size: v.string(), // small, medium, large, xlarge
-    theme: v.string(),
-    position: v.number(), // Position in dashboard
-    layoutType: v.string(),
-    config: v.optional(v.any()),
-    dataSources: v.optional(v.array(v.string())),
-    updateFrequency: v.optional(v.string()),
-    interactive: v.optional(v.boolean()),
-    editable: v.optional(v.boolean()),
-    shareable: v.optional(v.boolean()),
-  },
+  args: CreateWidgetArgsValidator,
   returns: v.id("project_widgets"),
   handler: async (ctx, args) => {
     // Validate project exists and user owns it
@@ -163,31 +270,7 @@ export const createWidget = mutation({
  * Create multiple widgets from AI agent generation
  */
 export const createWidgetsFromAgent = mutation({
-  args: {
-    projectId: v.id("projects"),
-    userId: v.string(),
-    fingerprintId: v.id("project_fingerprints"),
-    widgets: v.array(v.object({
-      widget_id: v.string(),
-      widget_type: v.string(),
-      title: v.string(),
-      description: v.string(),
-      category: v.string(),
-      priority: v.number(),
-      size: v.string(),
-      theme: v.string(),
-      position: v.number(),
-      layout_type: v.string(),
-      config: v.any(),
-      data_sources: v.array(v.string()),
-      update_frequency: v.string(),
-      interactive: v.boolean(),
-      editable: v.boolean(),
-      shareable: v.boolean(),
-    })),
-    version: v.string(),
-    confidence: v.number(),
-  },
+  args: CreateWidgetsFromAgentArgsValidator,
   returns: v.array(v.id("project_widgets")),
   handler: async (ctx, args) => {
     // Validate project exists and user owns it
@@ -255,7 +338,7 @@ export const createWidgetsFromAgent = mutation({
       existingWidgets.push({
         orbital_angle: orbitalPosition.orbital_angle,
         orbital_distance: orbitalPosition.orbital_distance,
-      });
+      } as any); // Type assertion to avoid full widget object requirement
     }
 
     // Update project space radius
@@ -277,26 +360,7 @@ export const createWidgetsFromAgent = mutation({
  * Update an existing widget
  */
 export const updateWidget = mutation({
-  args: {
-    widgetId: v.string(),
-    userId: v.string(),
-    updates: v.object({
-      title: v.optional(v.string()),
-      description: v.optional(v.string()),
-      category: v.optional(v.string()),
-      priority: v.optional(v.number()),
-      size: v.optional(v.string()),
-      theme: v.optional(v.string()),
-      position: v.optional(v.number()),
-      layout_type: v.optional(v.string()),
-      config: v.optional(v.any()),
-      data_sources: v.optional(v.array(v.string())),
-      update_frequency: v.optional(v.string()),
-      interactive: v.optional(v.boolean()),
-      editable: v.optional(v.boolean()),
-      shareable: v.optional(v.boolean()),
-    }),
-  },
+  args: UpdateWidgetArgsValidator,
   returns: v.boolean(),
   handler: async (ctx, args) => {
     // Find the widget
@@ -452,6 +516,87 @@ export const deleteProjectWidgets = mutation({
     });
 
     return true;
+  },
+});
+
+/**
+ * Update a widget's relative position within its project rectangle
+ */
+export const updateWidgetPosition = mutation({
+  args: UpdateWidgetPositionArgsValidator,
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Find the widget by its unique widget_id
+    const widget = await ctx.db
+      .query("project_widgets")
+      .filter((q) => q.eq(q.field("widget_id"), args.widgetId))
+      .first();
+    if (!widget) {
+      throw new Error("Widget not found");
+    }
+
+    // Clamp to [0,1]
+    const ox = Math.max(0, Math.min(1, args.offset_x));
+    const oy = Math.max(0, Math.min(1, args.offset_y));
+
+    await ctx.db.patch(widget._id, {
+      offset_x: ox,
+      offset_y: oy,
+      updated_at: Date.now(),
+    });
+    return null;
+  },
+});
+
+/**
+ * Atomically swap positions of two widgets within the same project
+ */
+export const swapWidgetPositions = mutation({
+  args: SwapWidgetPositionsArgsValidator,
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Find both widgets
+    const widgets = await ctx.db
+      .query("project_widgets")
+      .filter((q) => q.or(
+        q.eq(q.field("widget_id"), args.widgetIdA),
+        q.eq(q.field("widget_id"), args.widgetIdB)
+      ))
+      .collect();
+
+    if (widgets.length !== 2) {
+      throw new Error("Both widgets must exist and be found");
+    }
+
+    const widgetA = widgets.find(w => w.widget_id === args.widgetIdA);
+    const widgetB = widgets.find(w => w.widget_id === args.widgetIdB);
+
+    if (!widgetA || !widgetB) {
+      throw new Error("Could not find both widgets");
+    }
+
+    // Validate they're in the same project
+    if (widgetA.project_id !== widgetB.project_id) {
+      throw new Error("Widgets must be in the same project to swap positions");
+    }
+
+    // Swap their offset positions
+    const tempOffsetX = widgetA.offset_x;
+    const tempOffsetY = widgetA.offset_y;
+
+    await ctx.db.patch(widgetA._id, {
+      offset_x: widgetB.offset_x,
+      offset_y: widgetB.offset_y,
+      updated_at: Date.now(),
+    });
+
+    await ctx.db.patch(widgetB._id, {
+      offset_x: tempOffsetX,
+      offset_y: tempOffsetY,
+      updated_at: Date.now(),
+    });
+
+    return null;
   },
 });
 

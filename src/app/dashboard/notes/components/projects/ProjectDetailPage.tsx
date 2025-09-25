@@ -50,25 +50,7 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
       items.push(...project.conversationIds.map(id => `conversations:${id}`));
     }
     
-    // Add Instagram posts
-    if (project.instagramPostIds) {
-      items.push(...project.instagramPostIds.map(id => `instagram:${id}`));
-    }
     
-    // Add YouTube videos
-    if (project.youtubeVideoIds) {
-      items.push(...project.youtubeVideoIds.map(id => `youtube:${id}`));
-    }
-    
-    // Add Gmail items
-    if (project.gmailIds) {
-      items.push(...project.gmailIds.map(id => `gmail:${id}`));
-    }
-    
-    // Add analysis items
-    if (project.analysisIds) {
-      items.push(...project.analysisIds.map(id => `insights:${id}`));
-    }
     
     return new Set(items);
   }, [project]);
@@ -81,18 +63,13 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
       // Parse the standardized content ID
       const [platform, ...rest] = contentId.split(':');
       
-      // For analysis items, we need the full ID after "insights:"
-      // For other items, we need the full ID after the platform (including any additional parts)
-      const actualId = platform === 'insights' ? rest.join(':') : rest.join(':');
+      // Get the full ID after the platform prefix
+      const actualId = rest.join(':');
       
       // Map platform to item type
       const itemTypeMap: Record<string, any> = {
         'notes': 'note',
-        'conversations': 'conversation',
-        'instagram': 'instagramPost',
-        'youtube': 'youtubeVideo',
-        'gmail': 'gmail',
-        'insights': 'analysis'
+        'conversations': 'conversation'
       };
 
       const itemType = itemTypeMap[platform];
@@ -276,9 +253,7 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
 
   const itemCount = 
     (project.attachedItems?.notes?.length || 0) + 
-    (project.attachedItems?.conversations?.length || 0) + 
-    (project.attachedItems?.instagramPosts?.length || 0) + 
-    (project.attachedItems?.youtubeVideos?.length || 0);
+    (project.attachedItems?.conversations?.length || 0);
 
   return (
     <div className="flex flex-col h-full">

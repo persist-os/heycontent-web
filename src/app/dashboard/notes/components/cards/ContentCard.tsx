@@ -11,6 +11,7 @@ interface ContentCardProps {
   onEdit?: (note: Note) => void;
   onDelete?: (noteId: string) => void;
   onToggleImportant?: (noteId: string) => void;
+  onShare?: (noteId: string) => void;
 }
 
 export function ContentCard({ 
@@ -18,7 +19,8 @@ export function ContentCard({
   availableNotes = [],
   onEdit, 
   onDelete, 
-  onToggleImportant 
+  onToggleImportant,
+  onShare 
 }: ContentCardProps) {
   // Extract hashtags and mentions from content
   const extractHashtags = (content: string): string[] => {
@@ -93,6 +95,7 @@ export function ContentCard({
       onEdit={onEdit}
       onDelete={onDelete}
       onToggleImportant={onToggleImportant}
+      onShare={onShare}
     >
       {/* Content with improved typography hierarchy */}
       <div className="space-y-4">

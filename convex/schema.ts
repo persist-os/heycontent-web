@@ -76,8 +76,6 @@ export default defineSchema({
       expMonth: v.number(),
       expYear: v.number()
     })),
-    // Gmail quota optimization
-    lastGmailFetch: v.optional(v.number()),
     // Email preferences
     emailUnsubscribed: v.optional(v.boolean()),
     // Referral statistics
@@ -86,6 +84,8 @@ export default defineSchema({
       firstReferralDate: v.optional(v.number()),
       lastReferralDate: v.optional(v.number())
     })),
+    // TEMPORARY: Fields to be removed by migration
+    lastGmailFetch: v.optional(v.number()),
   })
   .index("by_userId", ["userId"])
   .index("by_email", ["email"])
@@ -108,27 +108,6 @@ export default defineSchema({
   })
   .index("by_userId", ["userId"]),
 
-  // Content Hub Insights
-  contentHubInsights: defineTable({
-    userId: v.string(),
-    insight: v.object({
-      remix_insight: v.string(),
-      youtube_hook: v.string(),
-      youtube_format: v.string(),
-      youtube_cta: v.string(),
-      instagram_hook: v.string(),
-      instagram_format: v.string(),
-      instagram_cta: v.string(),
-      gmail_hook: v.string(),
-      gmail_format: v.string(),
-      gmail_cta: v.string(),
-      smartnote_summary: v.string(),
-      conversation_starter: v.string(),
-    }),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_userId", ["userId"]),
 
   // Personas
   personas: defineTable({
@@ -207,6 +186,7 @@ export default defineSchema({
       height: v.optional(v.number())
     }))),
     sourceConversationId: v.optional(v.string()),
+    folderId: v.optional(v.id("folders")), // Reference to parent folder
     createdAt: v.number(),
     updatedAt: v.number(),
     titleGenerated: v.optional(v.boolean()),
@@ -214,7 +194,41 @@ export default defineSchema({
   })
   .index("by_user", ["userId"])
   .index("by_creation", ["createdAt"])
-  .index("by_type", ["type"]),
+  .index("by_type", ["type"])
+  .index("by_folder", ["folderId"]),
+
+  // Folders
+  folders: defineTable({
+    userId: v.string(),
+    name: v.string(),
+    description: v.optional(v.string()),
+    parentFolderId: v.optional(v.id("folders")), // For nested folders
+    color: v.optional(v.string()), // Optional color for visual organization
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_user", ["userId"])
+  .index("by_parent", ["parentFolderId"])
+  .index("by_user_parent", ["userId", "parentFolderId"])
+  .index("by_creation", ["createdAt"]),
+
+  // Shared Notes - for collaborative note access
+  shared_notes: defineTable({
+    noteId: v.id("notes"),
+    ownerId: v.string(), // Original note owner
+    sharedWithUserId: v.string(), // User who has access
+    permission: v.union(
+      v.literal("read"),
+      v.literal("edit")
+    ),
+    sharedAt: v.number(),
+    sharedBy: v.string(), // Who shared it (could be owner or another editor)
+    isActive: v.boolean(), // for soft deletion
+  })
+  .index("by_note", ["noteId"])
+  .index("by_shared_user", ["sharedWithUserId"])
+  .index("by_owner", ["ownerId"])
+  .index("by_note_user", ["noteId", "sharedWithUserId"]),
 
   // Projects
   projects: defineTable({
@@ -223,18 +237,21 @@ export default defineSchema({
     description: v.optional(v.string()),
     noteIds: v.optional(v.array(v.string())),
     conversationIds: v.optional(v.array(v.string())),
-    instagramPostIds: v.optional(v.array(v.string())),
-    youtubeVideoIds: v.optional(v.array(v.string())),
-    gmailIds: v.optional(v.array(v.string())),
     analysisIds: v.optional(v.array(v.string())),
     fingerprintId: v.optional(v.id("project_fingerprints")), // Links to project fingerprint
     createdAt: v.number(),
     updatedAt: v.number(),
     
-    // Static positioning fields
+    // Static positioning fields (legacy - kept for backward compatibility)
     position_x: v.number(),           // Required - no optional
     position_y: v.number(),           // Required - no optional  
     space_radius: v.number(),         // Calculated based on widget count
+    
+    // New grid positioning fields
+    grid_x: v.optional(v.number()),   // Grid column index
+    grid_y: v.optional(v.number()),   // Grid row index
+    grid_width: v.optional(v.number()), // Fixed at 400
+    grid_height: v.optional(v.number()), // Fixed at 400
   })
   .index("by_user", ["userId"])
   .index("by_fingerprint", ["fingerprintId"])
@@ -263,507 +280,6 @@ export default defineSchema({
   })
   .index("by_user_resource", ["user_id", "resource"]),
 
-  // Gmail Tokens (from third schema)
-  gmailTokens: defineTable({
-    userId: v.string(),
-    accessToken: v.string(),
-    refreshToken: v.string(),
-    expiryDate: v.number(),
-    scope: v.string(),
-    lastRefreshed: v.number(),
-    tokenType: v.string(),
-  }).index("by_userId", ["userId"]),
-
-  // Gmail Account Info
-  gmailAccounts: defineTable({
-    userId: v.string(),
-    email: v.string(),
-    historyId: v.optional(v.string()),
-    messagesTotal: v.optional(v.number()),
-    threadsTotal: v.optional(v.number()),
-    labelsTotal: v.optional(v.union(v.number(), v.null())),
-    data: v.optional(v.any()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_userId", ["userId"])
-  .index("by_email", ["email"]),
-
-  // Gmail Threads
-  gmailThreads: defineTable({
-    userId: v.string(),
-    email: v.string(),
-    threadId: v.string(),
-    from: v.optional(v.string()),
-    subject: v.optional(v.string()),
-    snippet: v.optional(v.string()),
-    message_count: v.optional(v.number()),
-    messages: v.optional(v.array(v.object({
-      id: v.string(),
-      from: v.optional(v.string()),
-      subject: v.optional(v.string()),
-      snippet: v.optional(v.string()),
-      label_ids: v.optional(v.array(v.string())),
-    }))),
-    data: v.optional(v.any()),
-    analysis: v.optional(v.any()),
-    category: v.optional(v.union(
-      v.literal("partnership"),
-      v.literal("media"),
-      v.literal("business"),
-      v.literal("community"),
-      v.literal("none")
-    )),
-    spamStatus: v.optional(v.union(
-      v.literal('unreviewed'),
-      v.literal('flagged'),
-      v.literal('confirmed_spam'),
-      v.literal('not_spam')
-    )),
-    spamScore: v.optional(v.number()),
-    reviewedByUser: v.optional(v.boolean()),
-    reviewedAt: v.optional(v.number()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_userId", ["userId"])
-  .index("by_email", ["email"])
-  .index("by_threadId", ["threadId"])
-  .index("by_user_email", ["userId", "email"])
-  .index("by_category", ["category"])
-  .index("by_user_category", ["userId", "category"]),
-
-  // Gmail Messages
-  gmailMessages: defineTable({
-    userId: v.string(),
-    email: v.string(),
-    messageId: v.string(),
-    threadId: v.string(),
-    from: v.optional(v.string()),
-    subject: v.optional(v.string()),
-    snippet: v.optional(v.string()),
-    labelIds: v.optional(v.array(v.string())),
-    internalDate: v.optional(v.string()),
-    sizeEstimate: v.optional(v.number()),
-    historyId: v.optional(v.string()),
-    data: v.optional(v.any()),
-    category: v.optional(v.union(
-      v.literal("partnership"),
-      v.literal("media"),
-      v.literal("business"),
-      v.literal("community"),
-      v.literal("none")
-    )),
-    spamStatus: v.optional(v.union(
-      v.literal('unreviewed'),
-      v.literal('flagged'),
-      v.literal('confirmed_spam'),
-      v.literal('not_spam')
-    )),
-    spamScore: v.optional(v.number()),
-    reviewedByUser: v.optional(v.boolean()),
-    reviewedAt: v.optional(v.number()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_userId", ["userId"])
-  .index("by_email", ["email"])
-  .index("by_messageId", ["messageId"])
-  .index("by_threadId", ["threadId"])
-  .index("by_user_email", ["userId", "email"])
-  .index("by_category", ["category"])
-  .index("by_user_category", ["userId", "category"]),
-
-  // Gmail History
-  gmailHistory: defineTable({
-    userId: v.string(),
-    email: v.string(),
-    historyId: v.string(),
-    timestamp: v.optional(v.number()),
-    data: v.optional(v.any()),
-    createdAt: v.number(),
-  })
-  .index("by_userId", ["userId"])
-  .index("by_email", ["email"])
-  .index("by_historyId", ["historyId"])
-  .index("by_timestamp", ["timestamp"]),
-
-  // YouTube Tokens
-  youtubeTokens: defineTable({
-    userId: v.string(),
-    accessToken: v.string(),
-    refreshToken: v.string(),
-    expiryDate: v.number(),
-    scope: v.string(),
-    lastRefreshed: v.number(),
-  }).index("by_userId", ["userId"]),
-
-  // YouTube Channels
-  youtubeChannels: defineTable({
-    userId: v.string(),
-    analysis: v.optional(v.any()),
-    createdAt: v.float64(),
-    updatedAt: v.float64(),
-    id: v.string(),
-    snippet: v.optional(
-      v.object({
-        customUrl: v.optional(v.string()),
-        description: v.optional(v.string()),
-        localized: v.optional(
-          v.object({
-            description: v.optional(v.string()),
-            title: v.optional(v.string()),
-          })
-        ),
-        publishedAt: v.optional(v.string()),
-        thumbnails: v.optional(
-          v.object({
-            default: v.optional(
-              v.object({
-                height: v.optional(v.float64()),
-                url: v.optional(v.string()),
-                width: v.optional(v.float64()),
-              })
-            ),
-            high: v.optional(
-              v.object({
-                height: v.optional(v.float64()),
-                url: v.optional(v.string()),
-                width: v.optional(v.float64()),
-              })
-            ),
-            medium: v.optional(
-              v.object({
-                height: v.optional(v.float64()),
-                url: v.optional(v.string()),
-                width: v.optional(v.float64()),
-              })
-            ),
-          })
-        ),
-        title: v.optional(v.string()),
-      })
-    ),
-    statistics: v.optional(
-      v.object({
-        hiddenSubscriberCount: v.optional(v.boolean()),
-        subscriberCount: v.optional(v.string()),
-        videoCount: v.optional(v.string()),
-        viewCount: v.optional(v.string()),
-      })
-    ),
-    diffs: v.optional(v.array(v.object({
-      changedAt: v.number(),
-      changedFields: v.array(v.string()),
-      current: v.any(),
-      changeType: v.optional(v.string()),
-    })))
-  })
-  .index("by_userId", ["userId"])
-  .index("by_channelId", ["id"])
-  .index("by_publishedAt", ["snippet.publishedAt"]),
-
-  // YouTube Videos
-  youtubeVideos: defineTable({
-    userId: v.string(),
-    videoId: v.string(),
-    channelId: v.optional(v.string()),
-    id: v.optional(v.string()),
-    url: v.optional(v.string()),
-    analysis: v.optional(v.any()),
-    analysisMarkdown: v.optional(v.string()),
-    analytics: v.optional(v.any()),
-    public_stats: v.optional(v.any()),
-    snippet: v.optional(v.object({
-      title: v.optional(v.string()),
-      description: v.optional(v.string()),
-      published_at: v.optional(v.string()),
-      channel: v.optional(v.object({
-        id: v.optional(v.union(v.string(), v.null())),
-        title: v.optional(v.union(v.string(), v.null())),
-      })),
-      thumbnails: v.optional(v.object({
-        default: v.optional(v.union(v.string(), v.null())),
-        medium: v.optional(v.union(v.string(), v.null())),
-        high: v.optional(v.union(v.string(), v.null())),
-        standard: v.optional(v.union(v.string(), v.null())),
-        maxres: v.optional(v.union(v.string(), v.null())),
-      })),
-      tags: v.optional(v.array(v.string())),
-    })),
-    content_details: v.optional(v.object({
-      duration: v.optional(v.string()),
-      dimension: v.optional(v.string()),
-      definition: v.optional(v.string()),
-      has_captions: v.optional(v.boolean()),
-      is_live: v.optional(v.boolean()),
-    })),
-    statistics: v.optional(v.object({
-      views: v.optional(v.float64()),
-      likes: v.optional(v.float64()),
-      dislikes: v.optional(v.float64()),
-      comments: v.optional(v.float64()),
-    })),
-    status: v.optional(v.object({
-      privacyStatus: v.optional(v.string()),
-      uploadStatus: v.optional(v.string()),
-      embeddable: v.optional(v.boolean()),
-      license: v.optional(v.string()),
-      madeForKids: v.optional(v.boolean()),
-      selfDeclaredMadeForKids: v.optional(v.boolean()),
-      publicStatsViewable: v.optional(v.boolean()),
-    })),
-    captions: v.optional(v.object({
-      status: v.optional(v.string()),
-      message: v.optional(v.string()),
-      video_url: v.optional(v.string()),
-      caption_track: v.optional(v.object({
-        id: v.optional(v.string()),
-        format: v.optional(v.string()),
-        language: v.optional(v.string()),
-        name: v.optional(v.string()),
-        text: v.optional(v.string()),
-      })),
-      data: v.optional(v.any()),
-    })),
-    comments: v.optional(v.object({
-      status: v.optional(v.string()),
-      video_url: v.optional(v.string()),
-      message: v.optional(v.string()),
-      total_comments: v.optional(v.float64()),
-      top_level_comments: v.optional(v.float64()),
-      comments: v.optional(v.array(v.object({
-        id: v.optional(v.string()),
-        text: v.optional(v.string()),
-        published_at: v.optional(v.string()),
-        likes: v.optional(v.float64()),
-        replies: v.optional(v.float64()),
-        is_reply: v.optional(v.boolean()),
-        author: v.optional(v.object({
-          channel_id: v.optional(v.string()),
-          display_name: v.optional(v.string()),
-          profile_image: v.optional(v.string()),
-        })),
-      }))),
-    })),
-    createdAt: v.optional(v.float64()),
-    updatedAt: v.optional(v.float64()),
-    diffs: v.optional(v.array(v.object({
-      changedAt: v.number(),
-      changedFields: v.array(v.string()),
-      current: v.any(),
-      changeType: v.optional(v.string()),
-    })))
-  })
-  .index("by_userId", ["userId"])
-  .index("by_videoId", ["videoId"])
-  .index("by_channelId", ["snippet.channel.id"])
-  .index("by_publishedAt", ["snippet.published_at"])
-  .index("by_views", ["statistics.views"])
-  .index("by_likes", ["statistics.likes"]),
-
-  // Instagram Accounts (consolidated with tokens and insights)
-  instagramAccounts: defineTable({
-    age_breakdown: v.optional(
-      v.array(
-        v.object({ metric: v.string(), values: v.any() })
-      )
-    ),
-    city_breakdown: v.optional(
-      v.array(
-        v.object({ metric: v.string(), values: v.any() })
-      )
-    ),
-    contact_button_type_breakdown: v.optional(
-      v.array(
-        v.object({ metric: v.string(), values: v.any() })
-      )
-    ),
-    country_breakdown: v.optional(
-      v.array(
-        v.object({ metric: v.string(), values: v.any() })
-      )
-    ),
-    createdAt: v.optional(v.number()),
-    diffs: v.optional(
-      v.array(
-        v.object({
-          changeType: v.optional(v.string()),
-          changedAt: v.optional(v.number()),
-          changedFields: v.optional(v.array(v.string())),
-          current: v.optional(v.any()),
-        })
-      )
-    ),
-    follow_type_breakdown: v.optional(
-      v.array(
-        v.object({ metric: v.string(), values: v.any() })
-      )
-    ),
-    gender_breakdown: v.optional(
-      v.array(
-        v.object({ metric: v.string(), values: v.any() })
-      )
-    ),
-    insights: v.optional(v.any()),
-    instagramAccountId: v.optional(v.string()),
-    media_product_type_breakdown: v.optional(
-      v.array(
-        v.object({ metric: v.string(), values: v.any() })
-      )
-    ),
-    pagination: v.optional(
-      v.object({
-        hasMorePosts: v.optional(v.boolean()),
-        lastFetchedAt: v.optional(v.number()),
-        nextUrl: v.optional(v.union(v.string(), v.null())),
-        totalPostsFetched: v.optional(v.number()),
-      })
-    ),
-    profileData: v.optional(v.object({
-      account_type: v.optional(v.any()),
-      biography: v.optional(v.string()),
-      followers_count: v.optional(v.any()),
-      follows_count: v.optional(v.any()),
-      id: v.optional(v.string()),
-      media_count: v.optional(v.any()),
-      name: v.optional(v.string()),
-      profile_picture_url: v.optional(v.any()),
-      username: v.optional(v.string()),
-      website: v.optional(v.string()),
-    })),
-    token: v.optional(
-      v.object({
-        accessToken: v.optional(v.string()),
-        expiryDate: v.optional(v.number()),
-        lastRefreshed: v.optional(v.number()),
-        scope: v.optional(v.string()),
-      })
-    ),
-    updatedAt: v.optional(v.number()),
-    userId: v.optional(v.string()),
-    username: v.optional(v.string()),
-  })
-    .index("by_instagramAccountId", ["instagramAccountId"])
-    .index("by_userId", ["userId"])
-    .index("by_username", ["username"]),
-  // Unified Instagram Posts Table - Handles all media types (IMAGE, VIDEO, CAROUSEL_ALBUM, REELS)
-  instagramPosts: defineTable({
-    userId: v.optional(v.string()),
-    instagramAccountId: v.optional(v.string()),
-    postId: v.optional(v.string()),
-    mediaType: v.optional(v.union(
-      v.literal("IMAGE"),
-      v.literal("VIDEO"), 
-      v.literal("CAROUSEL_ALBUM"),
-      v.literal("REELS")
-    )),
-    data: v.optional(v.object({
-      // Core fields (common to all types)
-      id: v.optional(v.string()),
-      caption: v.optional(v.string()),
-      media_url: v.optional(v.string()),
-      permalink: v.optional(v.string()),
-      timestamp: v.optional(v.number()),
-      username: v.optional(v.string()),
-      like_count: v.optional(v.number()),
-      comments_count: v.optional(v.number()),
-      
-      // Type-specific fields (made optional since different media types have different fields)
-      thumbnail_url: v.optional(v.union(v.string(), v.null())), // For videos/reels only
-      children: v.optional(v.union(v.array(v.object({
-        id: v.optional(v.string()),
-        media_url: v.optional(v.string()),
-        media_type: v.optional(v.string()),
-        thumbnail_url: v.optional(v.union(v.string(), v.null()))
-      })), v.null())), // For carousels only
-      
-      // Embedded insights (flattened for easy access)
-      insights: v.optional(v.object({
-        impressions: v.optional(v.number()),
-        reach: v.optional(v.number()),
-        likes: v.optional(v.number()),
-        comments: v.optional(v.number()),
-        saved: v.optional(v.number()),
-        shares: v.optional(v.number()),
-        total_interactions: v.optional(v.number()),
-        profile_visits: v.optional(v.number()),
-        profile_activity: v.optional(v.number()),
-        views: v.optional(v.number()),
-        follows: v.optional(v.number()),
-        // Reels-specific insights
-        ig_reels_avg_watch_time: v.optional(v.number()),
-        ig_reels_video_view_total_time: v.optional(v.number()),
-        period: v.optional(v.string()),
-        timestamp: v.optional(v.number())
-      })),
-      
-      // Embedded comments (for recent/important ones)
-      comments: v.optional(v.array(v.object({
-        id: v.optional(v.string()),
-        text: v.optional(v.string()),
-        timestamp: v.optional(v.number()),
-        username: v.optional(v.string()),
-        like_count: v.optional(v.union(v.number(), v.null())),
-        replies: v.optional(v.array(v.object({
-          id: v.optional(v.string()),
-          text: v.optional(v.string()),
-          timestamp: v.optional(v.number()),
-          username: v.optional(v.string()),
-          like_count: v.optional(v.union(v.number(), v.null()))
-        })))
-      })))
-    })),
-    
-    // Analysis fields
-    analysis: v.optional(v.any()),
-    analysisMarkdown: v.optional(v.string()),
-    
-    createdAt: v.optional(v.number()),
-    updatedAt: v.optional(v.number()),
-    diffs: v.optional(v.array(v.object({
-      changedAt: v.optional(v.number()),
-      changedFields: v.optional(v.array(v.string())),
-      current: v.optional(v.any()),
-      changeType: v.optional(v.string()),
-    })))
-  })
-  .index("by_userId", ["userId"])
-  .index("by_instagramAccountId", ["instagramAccountId"])
-  .index("by_postId", ["postId"])
-  .index("by_mediaType", ["mediaType"])
-  .index("by_timestamp", ["data.timestamp"])
-  .index("by_user_account", ["userId", "instagramAccountId"]),
-
-  // Instagram Analysis Tables (keeping these for backward compatibility and specific analysis tracking)
-  instagramTrackerAnalysis: defineTable({
-    userId: v.string(),
-    instagramAccountId: v.string(),
-    analysis: v.any(),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-    diffs: v.optional(v.array(v.object({
-      changedAt: v.number(),
-      changedFields: v.array(v.string()),
-      current: v.any(),
-      changeType: v.optional(v.string()),
-    })))
-  })
-  .index("by_userId", ["userId"])
-  .index("by_account", ["instagramAccountId"]),
-
-  instagramBatchAnalysis: defineTable({
-    insights: v.optional(v.any()),
-    status: v.optional(v.any()),
-    createdAt: v.number(),
-    instagramAccountId: v.string(),
-    updatedAt: v.number(),
-    userId: v.string(),
-    analysisType: v.literal("batch"),
-  })
-    .index("by_account", ["instagramAccountId"])
-    .index("by_userId", ["userId"])
-    .index("by_user_account", ["userId", "instagramAccountId"]),
 
   // Usage Events
   usageEvents: defineTable({
@@ -785,31 +301,7 @@ export default defineSchema({
   .index("by_endpoint", ["endpoint"])
   .index("by_status", ["status"]),
 
-  // YouTube Batch Analysis
-  youtubeBatchAnalysis: defineTable({
-    insights: v.optional(v.any()),
-    status: v.optional(v.any()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-    userId: v.string(),
-    channelId: v.string(),
-    analysisType: v.literal("batch"),
-  })
-    .index("by_userId", ["userId"])
-    .index("by_user_channel", ["userId", "channelId"]),
 
-  // Gmail Batch Analysis
-  gmailBatchAnalysis: defineTable({
-    insights: v.optional(v.any()),
-    status: v.optional(v.any()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-    userId: v.string(),
-    gmailAccountId: v.string(),
-    analysisType: v.literal("batch"),
-  })
-    .index("by_userId", ["userId"])
-    .index("by_user_account", ["userId", "gmailAccountId"]),
 
   // Vector embeddings for search
   contentEmbeddings: defineTable({
@@ -817,11 +309,7 @@ export default defineSchema({
     contentId: v.string(), // ID of the original content (conversation, post, etc.)
     contentType: v.union(
       v.literal("conversation"),
-      v.literal("instagram_post"),
-      v.literal("youtube_video"),
-      v.literal("gmail_thread"),
-      v.literal("note"),
-      v.literal("insight")
+      v.literal("note")
     ),
     title: v.string(),
     content: v.string(),
@@ -838,142 +326,9 @@ export default defineSchema({
     filterFields: ["userId", "contentType"],
   }),
 
-  // Instagram Webhook Events
-  instagramWebhookEvents: defineTable({
-    userId: v.string(),
-    instagramAccountId: v.string(),
-    eventType: v.string(),
-    eventData: v.any(),
-    timestamp: v.number(),
-    processed: v.boolean(),
-    processedAt: v.optional(v.number()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_userId", ["userId"])
-  .index("by_processed", ["processed"])
-  .index("by_eventType", ["eventType"])
-  .index("by_user_account", ["userId", "instagramAccountId"]),
 
-  // Instagram Webhook Subscriptions
-  instagramWebhookSubscriptions: defineTable({
-    userId: v.string(),
-    instagramAccountId: v.string(),
-    subscribedFields: v.array(v.string()),
-    subscriptionStatus: v.string(),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_userId", ["userId"])
-  .index("by_user_account", ["userId", "instagramAccountId"]),
 
-  // Instagram Story Insights
-  instagramStoryInsights: defineTable({
-    userId: v.string(),
-    instagramAccountId: v.string(),
-    mediaId: v.string(),
-    insights: v.object({
-      impressions: v.optional(v.number()),
-      reach: v.optional(v.number()),
-      replies: v.optional(v.number()),
-      taps_forward: v.optional(v.number()),
-      taps_back: v.optional(v.number()),
-      exits: v.optional(v.number()),
-      profile_visits: v.optional(v.number()),
-      website_clicks: v.optional(v.number()),
-      follows: v.optional(v.number()),
-      shares: v.optional(v.number()),
-      saves: v.optional(v.number()),
-    }),
-    storyData: v.optional(v.object({
-      story_url: v.optional(v.string()),
-      story_type: v.optional(v.string()),
-      timestamp: v.optional(v.number()),
-      expires_at: v.optional(v.number()),
-    })),
-    webhookTimestamp: v.number(),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_userId", ["userId"])
-  .index("by_mediaId", ["mediaId"])
-  .index("by_user_account", ["userId", "instagramAccountId"])
-  .index("by_timestamp", ["webhookTimestamp"]),
 
-  // Instagram Posts Queue - Staging table for lazy loading
-  instagramPostsQueue: defineTable({
-    userId: v.optional(v.string()),
-    instagramAccountId: v.optional(v.string()),
-    postId: v.optional(v.string()),
-    mediaType: v.optional(v.union(
-      v.literal("IMAGE"),
-      v.literal("VIDEO"), 
-      v.literal("CAROUSEL_ALBUM"),
-      v.literal("REELS")
-    )),
-    data: v.optional(v.object({
-      // Core fields (common to all types)
-      id: v.optional(v.string()),
-      caption: v.optional(v.string()),
-      media_url: v.optional(v.string()),
-      permalink: v.optional(v.string()),
-      timestamp: v.optional(v.number()),
-      username: v.optional(v.string()),
-      like_count: v.optional(v.number()),
-      comments_count: v.optional(v.number()),
-      // Type-specific fields (made optional since different media types have different fields)
-      thumbnail_url: v.optional(v.union(v.string(), v.null())), // For videos/reels only
-      children: v.optional(v.union(v.array(v.object({
-        id: v.optional(v.string()),
-        media_url: v.optional(v.string()),
-        media_type: v.optional(v.string()),
-        thumbnail_url: v.optional(v.union(v.string(), v.null()))
-      })), v.null())), // For carousels only
-      // Embedded insights (flattened for easy access)
-      insights: v.optional(v.object({
-        impressions: v.optional(v.number()),
-        reach: v.optional(v.number()),
-        likes: v.optional(v.number()),
-        comments: v.optional(v.number()),
-        saved: v.optional(v.number()),
-        shares: v.optional(v.number()),
-        total_interactions: v.optional(v.number()),
-        profile_visits: v.optional(v.number()),
-        profile_activity: v.optional(v.number()),
-        views: v.optional(v.number()),
-        follows: v.optional(v.number()),
-        // Reels-specific insights
-        ig_reels_avg_watch_time: v.optional(v.number()),
-        ig_reels_video_view_total_time: v.optional(v.number()),
-        period: v.optional(v.string()),
-        timestamp: v.optional(v.number())
-      })),
-      // Embedded comments (for recent/important ones)
-      comments: v.optional(v.array(v.object({
-        id: v.optional(v.string()),
-        text: v.optional(v.string()),
-        timestamp: v.optional(v.number()),
-        username: v.optional(v.string()),
-        like_count: v.optional(v.union(v.number(), v.null())),
-        replies: v.optional(v.array(v.object({
-          id: v.optional(v.string()),
-          text: v.optional(v.string()),
-          timestamp: v.optional(v.number()),
-          username: v.optional(v.string()),
-          like_count: v.optional(v.union(v.number(), v.null()))
-        })))
-      })))
-    })),
-    // Analysis fields
-    analysis: v.optional(v.any()),
-    analysisMarkdown: v.optional(v.string()),
-    createdAt: v.optional(v.number()),
-    updatedAt: v.optional(v.number()),
-  })
-  .index("by_userId", ["userId"])
-  .index("by_instagramAccountId", ["instagramAccountId"])
-  .index("by_postId", ["postId"])
-  .index("by_user_account", ["userId", "instagramAccountId"]),
 
   // Embedding update tracking
   embeddingUpdates: defineTable({
@@ -986,21 +341,13 @@ export default defineSchema({
       v.literal("content_update")
     ),
     platform: v.optional(v.union(
-      v.literal("instagram"),
-      v.literal("youtube"),
-      v.literal("gmail"),
       v.literal("conversations"),
       v.literal("notes"),
-      v.literal("insights"),
       v.literal("all")
     )),
     contentType: v.optional(v.union(
       v.literal("conversation"),
-      v.literal("instagram_post"),
-      v.literal("youtube_video"),
-      v.literal("gmail_thread"),
-      v.literal("note"),
-      v.literal("insight")
+      v.literal("note")
     )),
     contentId: v.optional(v.string()),
     itemsProcessed: v.optional(v.number()),
@@ -1017,12 +364,8 @@ export default defineSchema({
     userId: v.string(),
     contentId: v.string(), // Standardized format: platform:actualId
     platform: v.union(
-      v.literal("youtube"),
-      v.literal("instagram"),
-      v.literal("gmail"),
       v.literal("notes"),
-      v.literal("conversations"),
-      v.literal("insights")
+      v.literal("conversations")
     ),
     changeType: v.union(
       v.literal("created"),
@@ -1244,6 +587,8 @@ export default defineSchema({
   .index("by_evolution", ["last_evolution"]),
 
   // Fingerprint Evolution History - Separate table for AI access and querying
+  // Tracks incremental evolution of project fingerprints through conversation
+  // Supports real-time progress tracking and readiness status management
   fingerprint_evolution_history: defineTable({
     fingerprintId: v.id("project_fingerprints"),
     userId: v.string(),
@@ -1253,10 +598,36 @@ export default defineSchema({
     timestamp: v.number(),
     evolution_trigger: v.string(), // "morning_update", "evening_update", "data_change", "user_edit", "milestone_reached"
 
+    // Version tracking for evolution history
+    version: v.number(), // Sequential version number for this fingerprint evolution (starts at 1)
+
+    // Readiness status indicators - tracks current state of evolution process
+    readiness_status: v.union(
+      v.literal("gathering_data"), // Still collecting information from conversations
+      v.literal("analyzing"), // Processing and analyzing collected data
+      v.literal("ready_for_review"), // Ready for user review and feedback
+      v.literal("user_reviewing"), // User is currently reviewing evolution
+      v.literal("ready_to_generate"), // Ready to generate final fingerprint
+      v.literal("generating"), // Currently generating fingerprint
+      v.literal("completed"), // Fingerprint generation completed successfully
+      v.literal("paused"), // Evolution paused by user or system
+      v.literal("error") // Error state requiring attention
+    ),
+
     // What changed (flattened for AI searchability)
-    changes_made: v.record(v.string(), v.any()), // Key-value pairs of what changed
-    reasoning: v.string(), // AI reasoning for the evolution
-    confidence_score: v.number(), // 0-1 confidence in the evolution
+    changes_made: v.record(v.string(), v.any()), // Key-value pairs of what changed in this evolution
+    reasoning: v.string(), // AI reasoning for the evolution decision
+    confidence_score: v.number(), // 0-1 confidence in the evolution (0=low, 1=high)
+
+    // Evolution state management - real-time progress tracking
+    evolution_state: v.object({
+      current_phase: v.string(), // Current phase of evolution process (e.g., "data_collection", "pattern_analysis")
+      completion_percentage: v.number(), // 0-100 completion percentage for current phase
+      next_actions: v.array(v.string()), // Suggested next actions for progression
+      blockers: v.array(v.string()), // Current blockers preventing progress
+      dependencies: v.array(v.string()), // Required dependencies to complete evolution
+      estimated_completion_time: v.optional(v.number()), // Estimated time to completion in milliseconds
+    }),
 
     // User response to evolution
     user_response: v.optional(v.string()), // "accepted", "modified", "rejected"
@@ -1273,12 +644,17 @@ export default defineSchema({
     processing_time_ms: v.optional(v.number()),
     ai_model_version: v.optional(v.string()),
   })
-  .index("by_fingerprint", ["fingerprintId"])
-  .index("by_user", ["userId"])
-  .index("by_project", ["projectId"])
-  .index("by_trigger", ["evolution_trigger"])
-  .index("by_timestamp", ["timestamp"])
-  .index("by_user_timestamp", ["userId", "timestamp"]),
+  .index("by_fingerprint", ["fingerprintId"]) // Query evolution history for specific fingerprint
+  .index("by_user", ["userId"]) // Query evolution history for specific user
+  .index("by_project", ["projectId"]) // Query evolution history for specific project
+  .index("by_trigger", ["evolution_trigger"]) // Query by evolution trigger type
+  .index("by_timestamp", ["timestamp"]) // Query by evolution timestamp
+  .index("by_user_timestamp", ["userId", "timestamp"]) // Query user evolution history by time
+  .index("by_version", ["version"]) // Query by evolution version number
+  .index("by_readiness", ["readiness_status"]) // Query by readiness status
+  .index("by_fingerprint_version", ["fingerprintId", "version"]) // Query specific version of fingerprint evolution
+  .index("by_user_readiness", ["userId", "readiness_status"]) // Query user evolution by readiness status
+  .index("by_project_readiness", ["projectId", "readiness_status"]), // Query project evolution by readiness status
 
   // Project Widgets - Individual widgets with flattened structure
   project_widgets: defineTable({
@@ -1314,6 +690,10 @@ export default defineSchema({
     // Orbital Positioning (for constellation system)
     orbital_angle: v.number(),      // 0 to 2π radians
     orbital_distance: v.number(),   // Distance from project center
+    
+    // Manual constellation offsets (relative to project rect, 0-1)
+    offset_x: v.optional(v.number()),
+    offset_y: v.optional(v.number()),
     
     // Metadata
     created_at: v.number(),
@@ -1369,4 +749,129 @@ export default defineSchema({
   .index("by_segment", ["segmentId"])
   .index("by_created", ["createdAt"])
   .index("by_user_project", ["userId", "projectId"]),
+
+  // Friendships - User friendship management
+  friendships: defineTable({
+    userId1: v.string(),
+    userId2: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("accepted"),
+      v.literal("blocked")
+    ),
+    requestedBy: v.string(),
+    requestMessage: v.optional(v.string()),
+    requestedAt: v.number(),
+    acceptedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_userId1", ["userId1"])
+  .index("by_userId2", ["userId2"])
+  .index("by_status", ["status"])
+  .index("by_requestedBy", ["requestedBy"])
+  .index("by_user_pair", ["userId1", "userId2"])
+  .index("by_user1_status", ["userId1", "status"])
+  .index("by_user2_status", ["userId2", "status"]),
+
+  // Shared Content - Content sharing between users
+  shared_content: defineTable({
+    contentType: v.union(
+      v.literal("note"),
+      v.literal("project")
+    ),
+    contentId: v.string(),
+    ownerId: v.string(),
+    sharedWithUserId: v.string(),
+    permission: v.union(
+      v.literal("read"),
+      v.literal("edit")
+    ),
+    sharedBy: v.string(),
+    sharedAt: v.number(),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_contentId", ["contentId"])
+  .index("by_ownerId", ["ownerId"])
+  .index("by_sharedWithUserId", ["sharedWithUserId"])
+  .index("by_contentType", ["contentType"])
+  .index("by_content_user", ["contentId", "sharedWithUserId"])
+  .index("by_owner_type", ["ownerId", "contentType"])
+  .index("by_shared_user_type", ["sharedWithUserId", "contentType"])
+  .index("by_active", ["isActive"]),
+
+  // User Preferences - User privacy and notification settings
+  user_preferences: defineTable({
+    userId: v.string(),
+    showPersonaToFriends: v.boolean(),
+    allowFriendRequests: v.boolean(),
+    friendRequestNotifications: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_userId", ["userId"]),
+
+  // Operational Transform - Text Operations for real-time collaboration
+  text_operations: defineTable({
+    noteId: v.id("notes"),
+    userId: v.string(),
+    operationId: v.string(), // Unique ID for this operation (UUID)
+    sequenceNumber: v.number(), // Global sequence number for ordering
+    vectorClock: v.record(v.string(), v.number()), // Vector clock for conflict resolution
+    operation: v.object({
+      type: v.union(
+        v.literal("insert"),
+        v.literal("delete"),
+        v.literal("retain")
+      ),
+      position: v.number(), // Character position in document
+      content: v.optional(v.string()), // Text content for insert operations
+      length: v.optional(v.number()), // Length for delete/retain operations
+      attributes: v.optional(v.record(v.string(), v.any())), // For formatting attributes
+    }),
+    transformedFrom: v.optional(v.array(v.string())), // IDs of operations this was transformed from
+    isCommitted: v.boolean(), // Whether this operation is committed to the document
+    timestamp: v.number(),
+    createdAt: v.number(),
+  })
+  .index("by_note", ["noteId"])
+  .index("by_note_sequence", ["noteId", "sequenceNumber"])
+  .index("by_note_user", ["noteId", "userId"])
+  .index("by_operation_id", ["operationId"])
+  .index("by_committed", ["isCommitted"])
+  .index("by_timestamp", ["timestamp"]),
+
+  // Note Snapshots - Periodic full-text snapshots for faster loading
+  note_snapshots: defineTable({
+    noteId: v.id("notes"),
+    content: v.string(), // Full document content at this point
+    sequenceNumber: v.number(), // Last operation sequence number included
+    operationCount: v.number(), // Number of operations applied to reach this state
+    checksum: v.string(), // MD5 hash of content for integrity verification
+    createdAt: v.number(),
+    createdBy: v.string(), // User who triggered the snapshot
+    snapshotReason: v.union(
+      v.literal("periodic"), // Regular interval snapshot
+      v.literal("operation_threshold"), // Too many operations since last snapshot
+      v.literal("manual"), // User-triggered
+      v.literal("conflict_resolution") // Created during conflict resolution
+    ),
+  })
+  .index("by_note", ["noteId"])
+  .index("by_note_sequence", ["noteId", "sequenceNumber"])
+  .index("by_created", ["createdAt"]),
+
+  // Operation Acknowledgments - Track which operations have been acknowledged by which users
+  operation_acknowledgments: defineTable({
+    operationId: v.string(),
+    noteId: v.id("notes"),
+    userId: v.string(),
+    acknowledgedAt: v.number(),
+    clientId: v.string(), // Client session ID for tracking multiple sessions
+  })
+  .index("by_operation", ["operationId"])
+  .index("by_note_user", ["noteId", "userId"])
+  .index("by_user_client", ["userId", "clientId"]),
 });

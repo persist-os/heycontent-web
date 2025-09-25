@@ -12,7 +12,6 @@ import { useSidebar } from '@/app/context/sidebar-context'
 import { getApiKey } from '@/app/lib/api-helpers'
 import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDialog'
 import { useAdminAuth } from '@/app/lib/admin-auth'
-import { usePlatformConnections } from '@/app/hooks/usePlatformConnections'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -42,26 +41,6 @@ const navItems = [
     href: '/dashboard/chat',
     dataAttr: 'data-chat-link',
     category: 'explore',
-  },
-  {
-    id: 'content-hub',
-    label: 'Content Hub',
-    description: 'Curated insights from your platforms',
-    icon: BarChart3,
-    href: '/dashboard/content-hub',
-    dataAttr: 'data-content-hub-link',
-    requiresConnection: 'instagram_or_youtube',
-    category: 'analyze',
-  },
-  {
-    id: 'partnerships',
-    label: 'Partnership Hub',
-    description: 'Meaningful collaborations await',
-    icon: Handshake,
-    href: '/dashboard/partnerships',
-    dataAttr: 'data-partnerships-link',
-    requiresConnection: 'gmail',
-    category: 'connect',
   },
 ]
 
@@ -103,21 +82,10 @@ export const DashboardNav = memo(function DashboardNav() {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   
-  // Get platform connections for conditional navigation
-  const platformConnections = usePlatformConnections();
 
-  // Build nav items based on user permissions and platform connections
+  // Build nav items based on user permissions
   const dynamicNavItems = [
-    ...navItems.filter(item => {
-      // Filter out items based on connection requirements
-      if (item.requiresConnection === 'gmail') {
-        return platformConnections.gmail;
-      }
-      if (item.requiresConnection === 'instagram_or_youtube') {
-        return platformConnections.instagram || platformConnections.youtube;
-      }
-      return true; // Show items without connection requirements
-    }),
+    ...navItems,
     // Only show admin to users with admin access
     ...(canAccessAdmin ? [{
       id: 'admin',
@@ -274,12 +242,6 @@ export const DashboardNav = memo(function DashboardNav() {
       case 'living-projects':
         // This tab is active for living projects and project discovery routes
         return pathname.startsWith('/dashboard/living-projects') || pathname.startsWith('/dashboard/project-discovery');
-      case 'content-hub':
-        // This tab is active for multiple, non-nested routes
-        return pathname.startsWith('/dashboard/content') || pathname.startsWith('/dashboard/ai-insights');
-      case 'partnerships':
-        // This tab is active for all its sub-routes
-        return pathname.startsWith('/dashboard/partnerships');
       case 'chat':
       case 'notes':
       case 'admin':
@@ -313,8 +275,8 @@ export const DashboardNav = memo(function DashboardNav() {
           <div className="p-6 border-b border-border/20">
             <div className="flex items-center gap-4 mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-primary/70" />
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                  <Sparkles className="w-6 h-6 text-primary/70" />
                 </div>
                 <div>
                   <h2 className="text-xl font-light tracking-tight text-foreground">
@@ -380,13 +342,13 @@ export const DashboardNav = memo(function DashboardNav() {
                       {...{[item.dataAttr]: true}}
                     >
                       <div className={cn(
-                        "w-12 h-12 rounded-2xl flex items-center justify-center transition-all",
+                        "w-14 h-14 rounded-2xl flex items-center justify-center transition-all",
                         isItemActive(item)
                           ? "bg-primary/20"
                           : "bg-muted/20 group-hover:bg-muted/40"
                       )}>
                         <item.icon className={cn(
-                          "w-5 h-5 transition-colors",
+                          "w-7 h-7 transition-colors",
                           isItemActive(item)
                             ? "text-primary"
                             : "text-muted-foreground group-hover:text-foreground"
@@ -437,8 +399,8 @@ export const DashboardNav = memo(function DashboardNav() {
                         className="flex items-center gap-3 flex-1 min-w-0"
                         title={chat.topic}
                       >
-                        <div className="w-8 h-8 rounded-xl bg-muted/20 flex items-center justify-center flex-shrink-0">
-                          <MessageSquare className="w-4 h-4 text-muted-foreground/60" />
+                        <div className="w-12 h-12 rounded-xl bg-muted/20 flex items-center justify-center flex-shrink-0">
+                          <MessageSquare className="w-6 h-6 text-muted-foreground/60" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-foreground truncate">
@@ -472,7 +434,7 @@ export const DashboardNav = memo(function DashboardNav() {
                     pathname === '/settings' && "bg-muted/40"
                   )}
                 >
-                  <Settings className="w-4 h-4 text-muted-foreground" />
+                  <Settings className="w-6 h-6 text-muted-foreground" />
                   <span className="text-sm font-light text-foreground">Settings</span>
                 </button>
                 <ThemeToggle />

@@ -6,7 +6,8 @@ import { ProjectState, getProjectStateStyles } from '../hooks/useProjectStates'
 interface ProjectSpaceBoundaryProps {
   x: number
   y: number
-  radius: number
+  width: number
+  height: number
   scale: number
   isHighlighted: boolean
   isFocused: boolean
@@ -18,6 +19,7 @@ interface ProjectSpaceBoundaryProps {
   onHover?: (isHovered: boolean) => void
   onRightClick?: (projectId: string, projectName: string, event: React.MouseEvent) => void
   onWheel?: (e: React.WheelEvent) => void
+  onMouseDown?: (e: React.MouseEvent) => void
   // Progressive disclosure thresholds
   ZOOM_THRESHOLD_PROJECT_DOTS: number
   ZOOM_THRESHOLD_PROJECT_CARDS: number
@@ -26,7 +28,8 @@ interface ProjectSpaceBoundaryProps {
 export function ProjectSpaceBoundary({
   x,
   y,
-  radius,
+  width,
+  height,
   scale,
   isHighlighted,
   isFocused,
@@ -38,41 +41,65 @@ export function ProjectSpaceBoundary({
   onHover,
   onRightClick,
   onWheel,
+  onMouseDown,
   ZOOM_THRESHOLD_PROJECT_DOTS,
   ZOOM_THRESHOLD_PROJECT_CARDS
 }: ProjectSpaceBoundaryProps) {
-  const diameter = radius * 2
+  const halfWidth = width / 2
+  const halfHeight = height / 2
 
   // Progressive disclosure: determine what to show based on zoom level
   const showAsDot = scale < ZOOM_THRESHOLD_PROJECT_DOTS
   const showAsCard = scale >= ZOOM_THRESHOLD_PROJECT_DOTS && scale < ZOOM_THRESHOLD_PROJECT_CARDS
   const showAsFull = scale >= ZOOM_THRESHOLD_PROJECT_CARDS
   
-  // Show project space boundary on hover in overview, always in project-detail
-  const showBoundary = (isHighlighted || isFocused) || viewMode === 'project-detail'
+  // Show project space boundary at 30% zoom or higher, on hover, or always in project-detail
+  const showBoundary = scale >= 0.3 || (isHighlighted || isFocused) || viewMode === 'project-detail'
 
   // Get project state styles
   const stateStyles = getProjectStateStyles(projectState)
 
   // Different boundary styles based on state and view mode
   const getBoundaryStyles = () => {
-    if (viewMode === 'project-detail' && isFocused) {
+    if (viewMode === 'project-detail') {
+      // In project-detail mode, show as visual reference only
+      if (isFocused) {
+        return {
+          stroke: stateStyles.boundaryColor,
+          strokeWidth: 2.5,
+          strokeDasharray: 'none',
+          fill: `${stateStyles.boundaryColor} / 0.08`,
+          opacity: stateStyles.boundaryOpacity * 0.9
+        }
+      } else {
+        return {
+          stroke: stateStyles.boundaryColor,
+          strokeWidth: 1,
+          strokeDasharray: '4,4',
+          fill: `${stateStyles.boundaryColor} / 0.02`,
+          opacity: stateStyles.boundaryOpacity * 0.5
+        }
+      }
+    }
+
+    // Overview mode - interactive boundaries
+    if (isHighlighted) {
       return {
         stroke: stateStyles.boundaryColor,
-        strokeWidth: 3,
-        strokeDasharray: 'none',
-        fill: `${stateStyles.boundaryColor} / 0.1`,
+        strokeWidth: 2.5,
+        strokeDasharray: '8,4',
+        fill: `${stateStyles.boundaryColor} / 0.08`,
         opacity: stateStyles.boundaryOpacity
       }
     }
 
-    if (isHighlighted) {
+    if (isFocused) {
       return {
         stroke: stateStyles.boundaryColor,
         strokeWidth: 2,
-        strokeDasharray: '8,4',
+        strokeDasharray: '6,6',
         fill: `${stateStyles.boundaryColor} / 0.05`,
-        opacity: stateStyles.boundaryOpacity
+        opacity: stateStyles.boundaryOpacity * 0.9
       }
     }
 
@@ -81,7 +108,7 @@ export function ProjectSpaceBoundary({
       strokeWidth: 1.5,
       strokeDasharray: '6,6',
       fill: `${stateStyles.boundaryColor} / 0.03`,
-      opacity: stateStyles.boundaryOpacity * 0.8
+      opacity: stateStyles.boundaryOpacity * 0.7
     }
   }
 
@@ -94,11 +121,11 @@ export function ProjectSpaceBoundary({
         <div
           className="absolute pointer-events-auto z-10"
           style={{
-            left: x - radius,
-            top: y - radius,
-            width: radius * 2,
-            height: radius * 2,
-            borderRadius: '50%',
+            left: x - halfWidth,
+            top: y - halfHeight,
+            width: width,
+            height: height,
+            borderRadius: '8px',
             background: 'transparent',
             cursor: 'pointer',
             zIndex: 10
@@ -106,6 +133,7 @@ export function ProjectSpaceBoundary({
           onWheel={onWheel}
           onWheelCapture={onWheel}
           onClick={onClick}
+          onMouseDown={onMouseDown}
           onContextMenu={(e) => {
             e.preventDefault()
             e.stopPropagation()
@@ -126,16 +154,25 @@ export function ProjectSpaceBoundary({
           overflow: 'visible'
         }}
       >
-      {/* Always show project title */}
+      {/* Project title - responsive to mode and state */}
       <text
         x={x}
         y={y + 4}
         textAnchor="middle"
-        className="font-medium fill-foreground pointer-events-none"
+        className={`font-medium pointer-events-none ${
+          viewMode === 'project-detail' 
+            ? isFocused 
+              ? 'fill-primary' 
+              : 'fill-muted-foreground/70'
+            : isHighlighted 
+              ? 'fill-primary' 
+              : 'fill-foreground'
+        }`}
         style={{
           fontSize: `${Math.max(12, Math.min(18, 16 / Math.sqrt(scale)))}px`,
           transformOrigin: `${x}px ${y + 4}px`,
-          transform: `scale(${1 / scale})`
+          transform: `scale(${1 / scale})`,
+          fontWeight: viewMode === 'project-detail' && isFocused ? '600' : '500'
         }}
       >
         {projectName}
@@ -143,10 +180,13 @@ export function ProjectSpaceBoundary({
 
       {/* Show project space boundary only on hover; disable pointer events in project-detail */}
       {showBoundary && (
-        <circle
-          cx={x}
-          cy={y}
-          r={radius}
+        <rect
+          x={x - halfWidth}
+          y={y - halfHeight}
+          width={width}
+          height={height}
+          rx="8"
+          ry="8"
           {...boundaryStyles}
           className={
             viewMode === 'project-detail'
@@ -167,33 +207,69 @@ export function ProjectSpaceBoundary({
       {/* Focus indicator for project-detail mode */}
       {viewMode === 'project-detail' && isFocused && (
         <>
-          {/* Animated pulse ring */}
-          <circle
-            cx={x}
-            cy={y}
-            r={radius}
+          {/* Outer glow effect */}
+          <rect
+            x={x - halfWidth - 4}
+            y={y - halfHeight - 4}
+            width={width + 8}
+            height={height + 8}
+            rx="12"
+            ry="12"
             stroke="hsl(var(--primary))"
             strokeWidth={1}
             fill="transparent"
-            opacity={0.3}
+            opacity={0.2}
+            className="animate-pulse"
+          />
+          
+          {/* Animated pulse rectangle */}
+          <rect
+            x={x - halfWidth}
+            y={y - halfHeight}
+            width={width}
+            height={height}
+            rx="8"
+            ry="8"
+            stroke="hsl(var(--primary))"
+            strokeWidth={2}
+            fill="transparent"
+            opacity={0.4}
             className="animate-ping"
           />
           
-          {/* Project space label */}
+          {/* Project space label with enhanced styling */}
           <text
             x={x}
-            y={y + radius + 20}
+            y={y + halfHeight + 24}
             textAnchor="middle"
-            className="text-xs font-medium fill-muted-foreground"
+            className="text-xs font-semibold fill-primary"
             style={{
-              fontSize: `${12 / scale}px`,
-              transformOrigin: `${x}px ${y + radius + 20}px`,
-              transform: `scale(${1 / scale})`
+              fontSize: `${Math.max(10, 12 / scale)}px`,
+              transformOrigin: `${x}px ${y + halfHeight + 24}px`,
+              transform: `scale(${1 / scale})`,
+              textShadow: '0 1px 2px rgba(0, 0, 0, 0.1)'
             }}
           >
-            Project Space
+            Active Project Space
           </text>
         </>
+      )}
+
+      {/* Subtle indicator for non-focused projects in project-detail mode */}
+      {viewMode === 'project-detail' && !isFocused && showBoundary && (
+        <text
+          x={x}
+          y={y + halfHeight + 16}
+          textAnchor="middle"
+          className="text-xs fill-muted-foreground/50"
+          style={{
+            fontSize: `${Math.max(8, 10 / scale)}px`,
+            transformOrigin: `${x}px ${y + halfHeight + 16}px`,
+            transform: `scale(${1 / scale})`
+          }}
+        >
+          {projectName}
+        </text>
       )}
       </svg>
     </>

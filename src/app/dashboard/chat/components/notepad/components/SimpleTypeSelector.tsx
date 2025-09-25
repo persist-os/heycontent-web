@@ -12,7 +12,7 @@ import {
   FolderOpen
 } from 'lucide-react'
 import { SharedDropdown } from './SharedDropdown'
-import { NoteType } from '../../../../notes/types'
+import { NoteType } from '../../../../notes/types/index'
 import type { Id } from "@/convex/_generated/dataModel"
 
 interface SimpleTypeSelectorProps {
@@ -20,6 +20,7 @@ interface SimpleTypeSelectorProps {
   currentType: NoteType
   onTypeChange: (newType: NoteType) => void
   isMobile?: boolean
+  isReadOnly?: boolean
 }
 
 const TYPE_CONFIG: Record<NoteType, { 
@@ -75,6 +76,12 @@ const TYPE_CONFIG: Record<NoteType, {
     description: 'Plans & goals', 
     color: 'bg-purple-500/80',
     icon: <FolderOpen className="w-3.5 h-3.5" />
+  },
+  idea: { 
+    label: 'Idea', 
+    description: 'Quick thoughts', 
+    color: 'bg-yellow-500/80',
+    icon: <Lightbulb className="w-3.5 h-3.5" />
   }
 }
 
@@ -82,7 +89,8 @@ export function SimpleTypeSelector({
   noteId, 
   currentType, 
   onTypeChange,
-  isMobile = false 
+  isMobile = false,
+  isReadOnly = false
 }: SimpleTypeSelectorProps) {
   
   const options = Object.entries(TYPE_CONFIG).map(([type, config]) => ({
@@ -100,8 +108,9 @@ export function SimpleTypeSelector({
       onSelect={(value) => onTypeChange(value as NoteType)}
       placeholder="Select type"
       isMobile={isMobile}
-      width={isMobile ? "w-24" : "w-28"}
-      triggerClassName="min-w-0"
+      width={isMobile ? "w-24 max-w-24" : "w-28 max-w-28 lg:w-32 lg:max-w-32"}
+      triggerClassName="min-w-0 flex-shrink-0 h-8"
+      disabled={isReadOnly}
     />
   )
 }

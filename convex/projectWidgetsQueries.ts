@@ -1,6 +1,45 @@
-import { v } from "convex/values";
+import { v, Infer } from "convex/values";
 import { query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+
+// Shared validators
+const WidgetValidator = v.object({
+  _id: v.id("project_widgets"),
+  _creationTime: v.number(),
+  widget_id: v.string(),
+  project_id: v.id("projects"),
+  user_id: v.string(),
+  fingerprint_id: v.id("project_fingerprints"),
+  widget_type: v.string(),
+  title: v.string(),
+  description: v.string(),
+  category: v.string(),
+  priority: v.number(),
+  size: v.string(),
+  theme: v.string(),
+  position: v.number(),
+  layout_type: v.string(),
+  config: v.any(),
+  data_sources: v.array(v.string()),
+  update_frequency: v.string(),
+  interactive: v.boolean(),
+  editable: v.boolean(),
+  shareable: v.boolean(),
+  orbital_angle: v.number(),
+  orbital_distance: v.number(),
+  created_at: v.number(),
+  updated_at: v.number(),
+  generated_at: v.number(),
+  version: v.string(),
+  confidence: v.number(),
+  status: v.string(),
+  // New fields for manual positioning within project space
+  offset_x: v.optional(v.number()),
+  offset_y: v.optional(v.number()),
+});
+
+// Infer TypeScript types
+export type Widget = Infer<typeof WidgetValidator>;
 
 /**
  * Get all widgets for a specific project
@@ -10,39 +49,7 @@ export const getWidgetsByProject = query({
     projectId: v.id("projects"),
     userId: v.optional(v.string()),
   },
-  returns: v.array(
-    v.object({
-      _id: v.id("project_widgets"),
-      _creationTime: v.number(),
-      widget_id: v.string(),
-      project_id: v.id("projects"),
-      user_id: v.string(),
-      fingerprint_id: v.id("project_fingerprints"),
-      widget_type: v.string(),
-      title: v.string(),
-      description: v.string(),
-      category: v.string(),
-      priority: v.number(),
-      size: v.string(),
-      theme: v.string(),
-      position: v.number(),
-      layout_type: v.string(),
-      config: v.any(),
-      data_sources: v.array(v.string()),
-      update_frequency: v.string(),
-      interactive: v.boolean(),
-      editable: v.boolean(),
-      shareable: v.boolean(),
-      orbital_angle: v.number(),
-      orbital_distance: v.number(),
-      created_at: v.number(),
-      updated_at: v.number(),
-      generated_at: v.number(),
-      version: v.string(),
-      confidence: v.number(),
-      status: v.string(),
-    })
-  ),
+  returns: v.array(WidgetValidator),
   handler: async (ctx, args) => {
     // Optional: Validate user access to project
     if (args.userId) {
@@ -68,39 +75,7 @@ export const getWidgetsByUser = query({
   args: {
     userId: v.string(),
   },
-  returns: v.array(
-    v.object({
-      _id: v.id("project_widgets"),
-      _creationTime: v.number(),
-      widget_id: v.string(),
-      project_id: v.id("projects"),
-      user_id: v.string(),
-      fingerprint_id: v.id("project_fingerprints"),
-      widget_type: v.string(),
-      title: v.string(),
-      description: v.string(),
-      category: v.string(),
-      priority: v.number(),
-      size: v.string(),
-      theme: v.string(),
-      position: v.number(),
-      layout_type: v.string(),
-      config: v.any(),
-      data_sources: v.array(v.string()),
-      update_frequency: v.string(),
-      interactive: v.boolean(),
-      editable: v.boolean(),
-      shareable: v.boolean(),
-      orbital_angle: v.number(),
-      orbital_distance: v.number(),
-      created_at: v.number(),
-      updated_at: v.number(),
-      generated_at: v.number(),
-      version: v.string(),
-      confidence: v.number(),
-      status: v.string(),
-    })
-  ),
+  returns: v.array(WidgetValidator),
   handler: async (ctx, args) => {
     const widgets = await ctx.db
       .query("project_widgets")
@@ -119,40 +94,7 @@ export const getWidgetById = query({
     widgetId: v.string(),
     userId: v.optional(v.string()),
   },
-  returns: v.union(
-    v.null(),
-    v.object({
-      _id: v.id("project_widgets"),
-      _creationTime: v.number(),
-      widget_id: v.string(),
-      project_id: v.id("projects"),
-      user_id: v.string(),
-      fingerprint_id: v.id("project_fingerprints"),
-      widget_type: v.string(),
-      title: v.string(),
-      description: v.string(),
-      category: v.string(),
-      priority: v.number(),
-      size: v.string(),
-      theme: v.string(),
-      position: v.number(),
-      layout_type: v.string(),
-      config: v.any(),
-      data_sources: v.array(v.string()),
-      update_frequency: v.string(),
-      interactive: v.boolean(),
-      editable: v.boolean(),
-      shareable: v.boolean(),
-      orbital_angle: v.number(),
-      orbital_distance: v.number(),
-      created_at: v.number(),
-      updated_at: v.number(),
-      generated_at: v.number(),
-      version: v.string(),
-      confidence: v.number(),
-      status: v.string(),
-    })
-  ),
+  returns: v.union(v.null(), WidgetValidator),
   handler: async (ctx, args) => {
     const widget = await ctx.db
       .query("project_widgets")
@@ -181,39 +123,7 @@ export const getWidgetsByCategory = query({
     category: v.string(),
     userId: v.optional(v.string()),
   },
-  returns: v.array(
-    v.object({
-      _id: v.id("project_widgets"),
-      _creationTime: v.number(),
-      widget_id: v.string(),
-      project_id: v.id("projects"),
-      user_id: v.string(),
-      fingerprint_id: v.id("project_fingerprints"),
-      widget_type: v.string(),
-      title: v.string(),
-      description: v.string(),
-      category: v.string(),
-      priority: v.number(),
-      size: v.string(),
-      theme: v.string(),
-      position: v.number(),
-      layout_type: v.string(),
-      config: v.any(),
-      data_sources: v.array(v.string()),
-      update_frequency: v.string(),
-      interactive: v.boolean(),
-      editable: v.boolean(),
-      shareable: v.boolean(),
-      orbital_angle: v.number(),
-      orbital_distance: v.number(),
-      created_at: v.number(),
-      updated_at: v.number(),
-      generated_at: v.number(),
-      version: v.string(),
-      confidence: v.number(),
-      status: v.string(),
-    })
-  ),
+  returns: v.array(WidgetValidator),
   handler: async (ctx, args) => {
     // Optional: Validate user access to project
     if (args.userId) {
@@ -242,39 +152,7 @@ export const getWidgetsByType = query({
     widgetType: v.string(),
     userId: v.optional(v.string()),
   },
-  returns: v.array(
-    v.object({
-      _id: v.id("project_widgets"),
-      _creationTime: v.number(),
-      widget_id: v.string(),
-      project_id: v.id("projects"),
-      user_id: v.string(),
-      fingerprint_id: v.id("project_fingerprints"),
-      widget_type: v.string(),
-      title: v.string(),
-      description: v.string(),
-      category: v.string(),
-      priority: v.number(),
-      size: v.string(),
-      theme: v.string(),
-      position: v.number(),
-      layout_type: v.string(),
-      config: v.any(),
-      data_sources: v.array(v.string()),
-      update_frequency: v.string(),
-      interactive: v.boolean(),
-      editable: v.boolean(),
-      shareable: v.boolean(),
-      orbital_angle: v.number(),
-      orbital_distance: v.number(),
-      created_at: v.number(),
-      updated_at: v.number(),
-      generated_at: v.number(),
-      version: v.string(),
-      confidence: v.number(),
-      status: v.string(),
-    })
-  ),
+  returns: v.array(WidgetValidator),
   handler: async (ctx, args) => {
     // Optional: Validate user access to project
     if (args.userId) {
@@ -297,57 +175,30 @@ export const getWidgetsByType = query({
 /**
  * Get widgets with their parent project information
  */
+// Project validator for widgets with projects
+const ProjectValidator = v.object({
+  _id: v.id("projects"),
+  _creationTime: v.number(),
+  userId: v.string(),
+  name: v.string(),
+  description: v.optional(v.string()),
+  position_x: v.number(),
+  position_y: v.number(),
+  space_radius: v.number(),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+});
+
+const WidgetWithProjectValidator = v.object({
+  widget: WidgetValidator,
+  project: ProjectValidator,
+});
+
 export const getWidgetsWithProjects = query({
   args: {
     userId: v.string(),
   },
-  returns: v.array(
-    v.object({
-      widget: v.object({
-        _id: v.id("project_widgets"),
-        _creationTime: v.number(),
-        widget_id: v.string(),
-        project_id: v.id("projects"),
-        user_id: v.string(),
-        fingerprint_id: v.id("project_fingerprints"),
-        widget_type: v.string(),
-        title: v.string(),
-        description: v.string(),
-        category: v.string(),
-        priority: v.number(),
-        size: v.string(),
-        theme: v.string(),
-        position: v.number(),
-        layout_type: v.string(),
-        config: v.any(),
-        data_sources: v.array(v.string()),
-        update_frequency: v.string(),
-        interactive: v.boolean(),
-        editable: v.boolean(),
-        shareable: v.boolean(),
-        orbital_angle: v.number(),
-        orbital_distance: v.number(),
-        created_at: v.number(),
-        updated_at: v.number(),
-        generated_at: v.number(),
-        version: v.string(),
-        confidence: v.number(),
-        status: v.string(),
-      }),
-      project: v.object({
-        _id: v.id("projects"),
-        _creationTime: v.number(),
-        userId: v.string(),
-        name: v.string(),
-        description: v.optional(v.string()),
-        position_x: v.number(),
-        position_y: v.number(),
-        space_radius: v.number(),
-        createdAt: v.number(),
-        updatedAt: v.number(),
-      }),
-    })
-  ),
+  returns: v.array(WidgetWithProjectValidator),
   handler: async (ctx, args) => {
     const widgets = await ctx.db
       .query("project_widgets")
@@ -406,7 +257,7 @@ export const getProjectCategories = query({
       .collect();
 
     // Extract unique categories
-    const categories = [...new Set(widgets.map(widget => widget.category))];
+    const categories = Array.from(new Set(widgets.map(widget => widget.category)));
     return categories.sort();
   },
 });

@@ -36,7 +36,7 @@ export function TypeSelector({ noteId, userId, currentType, typeGenerated, onTyp
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Convex mutation
-  const updateNoteMutation = useMutation(api.notes.updateNote);
+  const updateNoteMutation = useMutation(api.noteMutations.updateNote);
 
 
 
