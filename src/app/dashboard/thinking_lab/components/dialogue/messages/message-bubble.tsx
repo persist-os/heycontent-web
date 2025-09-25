@@ -1,13 +1,12 @@
 'use client'
 
 import type { Message } from '@/app/types/chat'
-import { MessageSquare, Quote } from 'lucide-react'
-import { useTheme } from 'next-themes'
+import { Quote } from 'lucide-react'
 import { MarkdownRenderer } from './MarkdownRenderer'
 import { HorizontalProgressiveThinking } from '../components/HorizontalProgressiveThinking'
 import { CopyButton } from '@/components/ui/copy-button'
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import {ContentRenderer} from './ContentRenderer'
+import React, { useState, useEffect } from 'react'
+import { ContentRenderer } from './ContentRenderer'
 
 interface MessageBubbleProps {
   message: Message
@@ -47,425 +46,112 @@ export function MessageBubble({
   const isUser = message.role === 'user'
   const [selectedText, setSelectedText] = useState('')
   const [showQuoteButton, setShowQuoteButton] = useState(false)
-  const [selectionRect, setSelectionRect] = useState<{
-    top: number;
-    left: number;
-    width: number;
-    height: number;
-    viewportTop: number;
-    viewportLeft: number;
-  } | null>(null)
-  const [highlightRects, setHighlightRects] = useState<DOMRect[]>([])
-  const { theme } = useTheme()
- 
-  // Create unique selection ID for this message
-  const selectionId = useMemo(() => `selection-${message.id}`, [message.id])
-  
-  // Cache for position calculations to avoid excessive DOM queries
-  const lastValidRect = useRef<DOMRect | null>(null)
-  const lastValidRects = useRef<DOMRect[]>([])
-  
-  // Utility function to validate if a range is still valid
-  const isRangeValid = useCallback((range: Range | null): range is Range => {
-    if (!range) return false
-    
-    try {
-      // Check if nodes are still connected to DOM
-      if (!range.startContainer.isConnected || !range.endContainer.isConnected) {
-        return false
-      }
-      
-      // Check if range has valid bounds
-      const rects = range.getClientRects()
-      return rects.length > 0
-    } catch {
-      return false
-    }
-  }, [])
-  
-  const isDark = theme === 'dark'
-  
 
-  // Debounced position update function
-  const debouncedUpdatePositions = useCallback((
-    updateFn: () => void,
-    timerRef: { current: NodeJS.Timeout | null }
-  ) => {
-    if (timerRef.current) clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => {
-      updateFn()
-    }, 16) // ~60fps update rate
+  // Minimal selection detection - don't interfere with native behavior
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      const selection = window.getSelection()
+      const text = selection?.toString().trim() || ''
+      
+      if (text) {
+        setSelectedText(text)
+        setShowQuoteButton(true)
+      } else {
+        setSelectedText('')
+        setShowQuoteButton(false)
+      }
+    }
+
+    document.addEventListener('selectionchange', handleSelectionChange)
+    return () => document.removeEventListener('selectionchange', handleSelectionChange)
   }, [])
 
-  // Optimized text selection with debounced scroll handling
-  useEffect(() => {
-    const messageElement = document.getElementById(`message-${message.id}`)
-    if (!messageElement) return
-
-    let persistentRange: Range | null = null
-    const positionUpdateTimer = { current: null as NodeJS.Timeout | null }
-
-    const updateHighlightPositions = () => {
-      if (!showQuoteButton) return
-      
-      // Validate the range before proceeding
-      if (!isRangeValid(persistentRange)) {
-        clearSelection()
-        return
-      }
-
-      try {
-        const rects = Array.from(persistentRange.getClientRects())
-        if (rects.length === 0) {
-          // Try to use cached rects if available and still reasonable
-          if (lastValidRects.current.length > 0 && lastValidRect.current) {
-            // Only use cache if it's recent (avoid stale positions)
-            setHighlightRects(lastValidRects.current)
-            setSelectionRect({
-              top: lastValidRect.current.top,
-              left: lastValidRect.current.left,
-              width: lastValidRect.current.width,
-              height: lastValidRect.current.height,
-              viewportTop: lastValidRect.current.top,
-              viewportLeft: lastValidRect.current.left
-            })
-          } else {
-            // No valid cache, clear selection
-            clearSelection()
-          }
-          return
-        }
-        
-        const mainRect = rects[0]
-        if (mainRect.width <= 0 || mainRect.height <= 0) {
-          // Invalid dimensions, try cache or clear
-          if (lastValidRect.current && lastValidRect.current.width > 0) {
-            return // Keep using cache
-          }
-          clearSelection()
-          return
-        }
-
-        // Cache valid rects for fallback
-        lastValidRect.current = mainRect
-        lastValidRects.current = rects
-
-        setSelectionRect({
-          top: mainRect.top,
-          left: mainRect.left,
-          width: mainRect.width,
-          height: mainRect.height,
-          viewportTop: mainRect.top,
-          viewportLeft: mainRect.left
-        })
-        setHighlightRects(rects)
-      } catch (error) {
-        // Any error in position calculation should clear selection
-        console.warn('Text selection position update failed:', error)
-        clearSelection()
-      }
-    }
-
-    const clearSelection = () => {
-      setShowQuoteButton(false)
-      setHighlightRects([])
-      setSelectedText('')
-      setSelectionRect(null)
-      persistentRange = null
-      
-      // Clear cached positions
-      lastValidRect.current = null
-      lastValidRects.current = []
-      
-      if (positionUpdateTimer.current) {
-        clearTimeout(positionUpdateTimer.current)
-        positionUpdateTimer.current = null
-      }
-    }
-
-    const handleMouseUp = () => {
-      setTimeout(() => {
-        try {
-          const selection = window.getSelection()
-          const text = selection?.toString().trim()
-          
-          // Enhanced validation
-          if (!text || text.length === 0 || text.length > 10000) return
-          if (!selection || selection.rangeCount === 0) return
-          
-          const range = selection.getRangeAt(0)
-          
-          // Comprehensive validation of the selection
-          if (!range || range.collapsed) return
-          
-          // Validate selection is within this message and makes sense
-          const isInMessage = messageElement.contains(range.startContainer) && 
-                             messageElement.contains(range.endContainer)
-          
-          if (!isInMessage) return
-          
-          // Check that the range is valid before proceeding
-          if (!isRangeValid(range)) return
-
-          // Clear any existing selection
-          clearSelection()
-
-          // Store the selection with validation
-          try {
-            persistentRange = range.cloneRange()
-            setSelectedText(text)
-            setShowQuoteButton(true)
-            updateHighlightPositions()
-
-            // Clear browser selection after brief delay
-            setTimeout(() => {
-              const currentSelection = window.getSelection()
-              if (currentSelection && currentSelection.rangeCount > 0) {
-                currentSelection.removeAllRanges()
-              }
-            }, 100)
-          } catch (error) {
-            console.warn('Failed to create text selection:', error)
-            clearSelection()
-          }
-        } catch (error) {
-          console.warn('Mouse selection handler error:', error)
-        }
-      }, 50) // Reduced timing to minimize conflicts
-    }
-
-    // Passive scroll handler with debouncing
-    const handleScroll = () => {
-      if (persistentRange && showQuoteButton) {
-        debouncedUpdatePositions(updateHighlightPositions, positionUpdateTimer)
-      }
-    }
-
-    // Enhanced click outside detection with better target validation
-    const handleClickOutside = (event: MouseEvent) => {
-      if (!showQuoteButton) return
-      
-      const target = event.target as Node
-      if (!target || !messageElement.contains(target)) {
-        // Check if click is on quote button or any related UI
-        const element = target as Element
-        if (element?.closest && (
-          element.closest('[data-quote-button]') ||
-          element.closest('.quote-overlay') ||
-          element.closest('[data-selection-ui]')
-        )) {
-          return
-        }
-        clearSelection()
-      }
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && showQuoteButton) {
-        clearSelection()
-      }
-    }
-
-    // Add event listeners with passive scroll for better performance
-    messageElement.addEventListener('mouseup', handleMouseUp)
-    window.addEventListener('scroll', handleScroll, { passive: true, capture: true })
-    window.addEventListener('resize', handleScroll, { passive: true })
-    document.addEventListener('click', handleClickOutside, true)
-    document.addEventListener('keydown', handleKeyDown)
-    
-    return () => {
-      messageElement.removeEventListener('mouseup', handleMouseUp)
-      window.removeEventListener('scroll', handleScroll, true)
-      window.removeEventListener('resize', handleScroll, true)
-      document.removeEventListener('click', handleClickOutside, true)
-      document.removeEventListener('keydown', handleKeyDown)
-      if (positionUpdateTimer.current) clearTimeout(positionUpdateTimer.current)
-    }
-  }, [message.id, showQuoteButton, selectionId, debouncedUpdatePositions, isRangeValid])
-
-  // Cleanup effect when component unmounts or message changes
-  useEffect(() => {
-    return () => {
-    }
-  }, [selectionId])
-
-  // Handle quote button click
+  // Handle quote - don't clear native selection
   const handleQuoteText = () => {
-    if (!selectedText) return;
-
-    // Get the rendered message text (as plain text, for comparison)
-    const messageElement = document.getElementById(`message-${message.id}`);
-    let renderedText = '';
-    if (messageElement) {
-      renderedText = messageElement.innerText.trim();
+    if (selectedText && onQuoteToNotepad) {
+      onQuoteToNotepad(selectedText)
+      setSelectedText('')
+      setShowQuoteButton(false)
+      // Don't clear selection - let user copy normally
     }
-    const selected = selectedText.trim();
-    // If the selection matches the entire message, use the markdown source
-    let quoteToInsert: string;
-    if (renderedText && selected === renderedText) {
-      quoteToInsert = message.content;
-    } else {
-      // Otherwise, insert as markdown blockquote (preserve line breaks)
-      quoteToInsert = selected
-        .split('\n')
-        .map(line => line ? `> ${line}` : '>')
-        .join('\n');
-    }
-    if (notepadOpen && onQuoteToNotepad) {
-      onQuoteToNotepad(quoteToInsert);
-    } else if (onInputPopulate) {
-      onInputPopulate(quoteToInsert);
-    }
-    // Clear the selection after using it
-    setSelectedText('');
-    setSelectionRect(null);
-    setHighlightRects([]);
-    setShowQuoteButton(false);
-  };
-
-  // Get the text content to copy
-  const getTextToCopy = () => {
-    if (isUser) {
-      return message.content;
-    } else {
-      return message.chat_response || message.content;
-    }
-  };
+  }
 
   return (
     <div className={`w-full ${className}`}>
-      {/* Persistent Highlight Overlays - only show if this message has active selection */}
-      {showQuoteButton && highlightRects.map((rect, index) => (
-        <div
-          key={`${message.id}-highlight-${index}`}
-          data-selection-ui
-          className={`fixed pointer-events-none z-30 ${isDark ? 'bg-primary/20' : 'bg-primary/20'} transition-opacity duration-200 quote-overlay`}
-          style={{
-            left: rect.left,
-            top: rect.top,
-            width: rect.width,
-            height: rect.height,
-          }}
-        />
-      ))}
-
-      {/* Floating Quote Button - clean and simple */}
-      {showQuoteButton && selectionRect && (onInputPopulate || (notepadOpen && onQuoteToNotepad)) && (
-        <div
-          data-selection-ui
-          className="fixed z-50 pointer-events-none"
-          style={{
-            left: selectionRect.viewportLeft + (selectionRect.width / 2) - 20,
-            top: selectionRect.viewportTop - 45,
-          }}
+      {/* Quote button - simple and centered */}
+      {showQuoteButton && selectedText && notepadOpen && onQuoteToNotepad && (
+        <div 
+          className="fixed z-50 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-primary text-primary-foreground p-2 rounded-lg shadow-lg"
         >
           <button
             onClick={handleQuoteText}
-            data-quote-button
-            className={`pointer-events-auto bg-primary text-primary-foreground p-2 rounded-lg shadow-lg hover:bg-primary/90 hover:text-primary-foreground transition-all duration-200 transform hover:scale-105`}
-            title={`Quote "${selectedText.length > 20 ? selectedText.substring(0, 20) + '...' : selectedText}"`}
+            className="hover:bg-primary/90 transition-all duration-200 transform hover:scale-105"
+            title={`Quote "${selectedText.slice(0, 30)}..."`}
           >
             <Quote className="w-4 h-4" />
           </button>
         </div>
       )}
 
-      {/* Chat Bubble Container */}
+      {/* Message container - keeping original styling */}
       <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-1`}>
-        <div
-          className={`max-w-full sm:max-w-[95%] w-full`}
-        >
+        <div className={`max-w-full sm:max-w-[95%] w-full`}>
           <div
             id={`message-${message.id}`}
             className={`
-              ${isUser ? 'rounded-2xl px-5 sm:px-7 py-2 sm:py-3 bg-primary text-primary-foreground dark:text-black [&_*]:!text-primary-foreground dark:[&_*]:!text-black mr-1 sm:mr-2' : 'px-0 py-1 text-foreground'}
-              relative
-              group
-              w-full
-              min-w-0
+              ${isUser 
+                ? 'rounded-2xl px-5 sm:px-7 py-2 sm:py-3 bg-primary text-primary-foreground dark:text-black [&_*]:!text-primary-foreground dark:[&_*]:!text-black mr-1 sm:mr-2' 
+                : 'px-0 py-1 text-foreground'
+              }
+              relative group w-full min-w-0
             `}
+            style={{ userSelect: 'text' }}
           >
-            {/* Referenced message preview */}
-            {message.referencedMessage && (
-              <button 
-                onClick={() => onScrollToMessage?.(message.referencedMessage!.id)}
-                className="text-[10px] sm:text-xs text-muted-foreground bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 p-1.5 rounded mb-2 break-words text-left transition-colors w-full cursor-pointer min-w-0"
-              >
-                <div className="font-medium mb-0.5">Replying to:</div>
-                <div className="truncate opacity-80 break-words">{message.referencedMessage.content}</div>
-              </button>
-            )}
+            {/* Thinking indicator for typing messages */}
+            {message.status === 'typing' ? (
+              <HorizontalProgressiveThinking 
+                searchStatus={message.searchStatus}
+                statusHistory={message.statusHistory}
+              />
+            ) : (
+              <>
+                {/* Message content */}
+                <div className={`${isUser ? 'text-primary-foreground dark:text-black' : 'text-foreground'}`} style={{ userSelect: 'text' }}>
+                  <MarkdownRenderer content={message.content} />
+                </div>
 
-            {/* Main message content */}
-            <div className="prose prose-sm dark:prose-invert prose-p:my-2 prose-headings:my-3 max-w-none break-words word-break-break-word hyphens-auto w-full">
-              {isUser ? (
-                <>
-                  {/* Use ChatContentRenderer for user messages with linked content */}
-                  <ContentRenderer
-                    content={message.content} 
+                {/* Content renderer for linked content - only if content has @ links */}
+                {message.content.includes('@[') && (
+                  <ContentRenderer 
+                    content={message.content}
                     onContentClick={onContentClick}
                   />
-                </>
-              ) : (
-                <>
-                  {/* Progressive Thinking Steps - integrated into message content */}
-                  {!isUser && (
-                    message.status === 'typing' || 
-                    message.vectorSearchMetadata?.foundRelevantContent ||
-                    (message.statusHistory && message.statusHistory.length > 0) ||
-                    message.vectorSearchMetadata
-                  ) && (
-                    <HorizontalProgressiveThinking 
-                      searchStatus={message.searchStatus || ''}
-                      statusHistory={message.statusHistory || []}
-                      isCompleted={message.status !== 'typing'}
-                      vectorSearchMetadata={message.vectorSearchMetadata}
-                      onComplete={() => {
-                        // This will be called when thinking is complete
-                        // The parent component will handle the transition
-                      }}
-                    />
-                  )}
-                  
-                  {/* Use MarkdownRenderer for assistant messages and user messages without linked content */}
-                  <MarkdownRenderer content={message.chat_response || message.content} />
-                </>
-              )}
-            </div>
+                )}
 
-            {/* Message Actions */}
-            <div className="absolute -bottom-2.5 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-              {onReference && showReferenceButton && (
-                <button
-                  onClick={() => onReference(message)}
-                  data-reference-button
-                  className="p-1 rounded-full bg-background/70 backdrop-blur-sm border text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all"
-                  title="Reply"
-                >
-                  <MessageSquare className="w-3 h-3" />
-                </button>
-              )}
-              {/* New: Quote All (markdown) button */}
-              {(onInputPopulate || (notepadOpen && onQuoteToNotepad)) && (
-                <button
-                  onClick={() => {
-                    if (notepadOpen && onQuoteToNotepad) {
-                      onQuoteToNotepad(message.content);
-                    } else if (onInputPopulate) {
-                      onInputPopulate(message.content);
-                    }
-                  }}
-                  className="p-1 rounded-full bg-background/70 backdrop-blur-sm border text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all"
-                  title="Quote entire message (markdown)"
-                >
-                  <Quote className="w-3 h-3" />
-                </button>
-              )}
-              <CopyButton text={getTextToCopy()} />
-            </div>
+                {/* Action buttons - fixed bottom right */}
+                <div className="absolute bottom-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" style={{ userSelect: 'none' }}>
+                  <CopyButton 
+                    text={message.content}
+                    className="w-6 h-6 p-1 hover:bg-background/80 rounded"
+                    size="sm"
+                  />
+                  
+                  {/* Quote full message button */}
+                  {notepadOpen && onQuoteToNotepad && (
+                    <button
+                      onClick={() => onQuoteToNotepad(message.content)}
+                      className="w-6 h-6 p-1 hover:bg-background/80 rounded opacity-70 hover:opacity-100 flex items-center justify-center"
+                      title="Send full message to notepad"
+                    >
+                      <Quote className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }

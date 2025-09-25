@@ -121,7 +121,6 @@ export function ChatInput({
   const accentBgHover = isDark ? 'hover:bg-accent/90' : 'hover:bg-purple-700'
   const accentBgLight = isDark ? 'bg-accent/10' : 'bg-purple-600/10'
   const accentBorder = isDark ? 'border-accent' : 'border-purple-600'
-  const accentFocusBorder = isDark ? 'focus-within:border-accent' : 'focus-within:border-purple-600'
 
   // Use external input value if provided, otherwise use internal state
   const currentInput = inputValue !== undefined ? inputValue : input
@@ -447,7 +446,7 @@ export function ChatInput({
         <div className="flex gap-2 items-end w-full relative">
           <div className={`
             flex-1 relative rounded-xl transition-all duration-200
-            focus-within:bg-background
+            focus-within:bg-background focus:outline-none focus:ring-0
           `}>
             {/* Top section - Text input area */}
             <div className={`flex items-center rounded-t-xl bg-muted/50
@@ -458,7 +457,7 @@ export function ChatInput({
                 value={currentInput}
                 onChange={handleTextareaChange}
                 placeholder={contextPlaceholder}
-                className="text-base leading-relaxed flex-1 bg-transparent border-0 outline-0 resize-none placeholder:text-muted-foreground chat-font 
+                className="text-base leading-relaxed flex-1 bg-transparent border-0 outline-0 focus:outline-none focus:ring-0 resize-none placeholder:text-muted-foreground chat-font 
                 [&::-webkit-scrollbar]:w-2 
                 [&::-webkit-scrollbar]:h-2
                 [&::-webkit-scrollbar-track]:bg-transparent
@@ -466,7 +465,6 @@ export function ChatInput({
                 [&::-webkit-scrollbar-thumb]:rounded-full 
                 [&::-webkit-scrollbar-thumb]:border-transparent
                 [&::-webkit-scrollbar-thumb]:bg-clip-padding
-                hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/50
                 [&::-webkit-scrollbar-corner]:bg-transparent
                 [scrollbar-width:thin]
                 [scrollbar-color:hsl(var(--border))_transparent]"
@@ -498,21 +496,6 @@ export function ChatInput({
                     {characterCount.toLocaleString()}/{maxLength.toLocaleString()}
                   </div>
                 )}
-                
-                {/* Notepad button */}
-                {openNotepad && (
-                  <button
-                    type="button"
-                    onClick={openNotepad}
-                    aria-label="Open markdown notepad"
-                    title="Open markdown notepad"
-                    data-notepad-button
-                    className="w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-200 text-muted-foreground hover:text-foreground hover:bg-muted"
-                  >
-                    <FileText className="w-3.5 h-3.5" />
-                  </button>
-                )}
-
                 {/* Send button */}
                 <button
                   type="submit"

@@ -1,5 +1,5 @@
 import React from 'react';
-import { MessageBubble } from '../messages/message-bubble';
+import { MessageBubble } from '@/app/dashboard/thinking_lab/components/dialogue/messages/message-bubble';
 import { SuggestionChip } from './SuggestionChip';
 
 interface ChatMessagesListProps {

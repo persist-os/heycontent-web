@@ -1,328 +1,302 @@
 /**
- * Lab Compositions
+ * Lab Compositions - Clean Resizable Layout
  *
- * Complete composition of the thinking lab.
- * 
- * Includes:
- * - Chat messages list
- * - Input area
- * - Notepad
- * - Ambient insights
- * - Bottom actions
+ * Simple resizable split pane with snap functionality.
+ * - Drag the divider to resize
+ * - Click buttons to snap to presets
+ * - Quote functionality between chat and notepad
  */
 
 import React from 'react'
-import { Sparkles } from 'lucide-react'
-import { AnimatePresence, motion } from 'framer-motion'
-import { ThinkingLabProvider } from '../contexts/LabProviders'
-import { useDialogue } from '../hooks/useLabCore'
-import { ChatLayout, ChatPanel, ContentArea, InputArea } from '../../chat/components/layout/ChatLayout'
-import { PanelExpandButton } from '../../chat/components/PanelExpandButton'
+import { Maximize2, Minimize2, SplitSquareHorizontal } from 'lucide-react'
+import { useDialogueStore } from '../stores/dialogueStore'
 import { MarkdownNotepad } from '../components/notepad/MarkdownNotepad'
 import ChatInputArea from '../components/dialogue/input/ChatInputArea'
 import { BottomBarActions } from '../components/dialogue/components/BottomBarActions'
 import { AmbientInsights } from '@/app/dashboard/ambient_insights/AmbientInsights'
 import ChatMessagesList from '../components/dialogue/components/ChatMessagesList'
-import { useSplitScreenLayout } from '../components/notepad/hooks/useSplitScreenLayout'
 import { useOptimizedAuth } from '../components/notepad/hooks/useOptimizedAuth'
+import { useResizablePanes } from '../hooks/useResizablePanes'
 
 // =============================================================================
-// THINKING INDICATOR COMPONENT (using existing chat style)
+// PANEL COMPONENTS
 // =============================================================================
 
-interface ThinkingIndicatorProps {
-  isVisible: boolean;
-  message?: string;
-  className?: string;
-  onClick?: () => void;
-  isExpanded?: boolean;
-}
+const ChatPanel = React.memo<{
+  onInputPopulate: (text: string) => void
+  onQuoteToNotepad: (text: string) => void
+}>(({ onInputPopulate, onQuoteToNotepad }) => {
+  const { messages, sendMessage, startNewConversation } = useDialogueStore()
+  const authData = useOptimizedAuth()
 
-const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({
-  isVisible,
-  message = "Thinking...",
-  className = "",
-  onClick,
-  isExpanded = false
-}) => {
-  return (
-    <AnimatePresence>
-      {isVisible && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.3 }}
-          className={`mb-3 ${className}`}
-        >
-          <button
-            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            onClick={onClick}
-          >
-            <Sparkles className="w-4 h-4 text-primary" />
-            <span>{message}</span>
-          </button>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-};
-
-// =============================================================================
-// CONNECTED COMPONENTS
-// =============================================================================
-
-function ConnectedAmbientInsights({ userId }: { userId: string | undefined }) {
-    const { actions } = useDialogue()
-    
-    return (
-        <AmbientInsights
-            userId={userId}
-            onInsightClick={(action, insight) => {
-                // Send a comprehensive message that includes the full insight context
-                const fullMessage = `${insight.title}
-
-${insight.description}
-
-${action}`;
-                actions.sendMessage(fullMessage)
-            }}
-        />
-    )
-}
-
-function ConnectedBottomActions({ onInputPopulate }: { onInputPopulate: (text: string) => void }) {
-    const { actions } = useDialogue()
-
-    return (
-        <BottomBarActions
-            onActionClick={(action) => actions.sendMessage(action)}
-            onInputPopulate={onInputPopulate}
-        />
-    )
-}
-
-function ConnectedChatMessages({
-    userId,
-    onInputPopulate
-}: {
-    userId: string | undefined,
-    onInputPopulate: (text: string) => void
-}) {
-    const { state, actions } = useDialogue()
-
-    return (
-        <ChatMessagesList
-            messages={state.messages}
-            referencedMessage={null}
-            handleMessageReference={() => {}}
-            handleReferenceClick={() => {}}
-            handleOptionClick={(option) => actions.sendMessage(option)}
-            handleFollowUpClick={(choice) => actions.sendMessage(choice)}
-            userId={userId}
-            handleSuggestionClick={(suggestion, onSendMessage) => {
-                // Handle both string suggestions and structured objects
-                if (typeof suggestion === 'string') {
-                    onSendMessage(suggestion)
-                } else if (suggestion.action || suggestion.text || suggestion.description) {
-                    onSendMessage(suggestion.action || suggestion.text || suggestion.description)
-                }
-            }}
-            handleSendMessage={actions.sendMessage}
-            onInputPopulate={onInputPopulate}
-            notepadOpen={true}
-            onQuoteToNotepad={() => {}}
-            onContentClick={() => {}}
-        />
-    )
-}
-
-function ConnectedDialogueInput() {
-    const { state, actions } = useDialogue()
-    const inputRef = React.useRef<HTMLTextAreaElement>(null)
-    const [inputValue, setInputValue] = React.useState("")
-    const [useContextSearch, setUseContextSearch] = React.useState(true)
-    const [includeNotepadInMessages, setIncludeNotepadInMessages] = React.useState(false)
-
-    // Function to populate input field - similar to handleInputAppend in other components
-    const handleInputPopulate = React.useCallback((text: string) => {
-        const cleanText = text
-            .replace(/^[\s]*[-*•]\s*/, '') // Remove leading bullet points
-            .replace(/^[\s]*\*\s*/, '') // Remove leading asterisks
-            .trim()
-        setInputValue(currentValue => {
-            return currentValue.trim() ? `${currentValue} ${cleanText}` : cleanText
-        })
-    }, [])
-
-    return {
-        inputComponent: (
-            <ChatInputArea
-                showAmbient={false}
-                handleActionClick={actions.sendMessage}
-                handleSendMessage={actions.sendMessage}
-                inputRef={inputRef}
-                isLoading={state.isLoading}
-                referencedMessage={null}
-                handleClearReference={() => {}}
-                includeAnalysisInQuery={true}
-                inputValue={inputValue}
-                onInputChange={setInputValue}
-                onInputPopulate={handleInputPopulate}
-                notepadOpen={true}
-                openNotepad={() => {}}
-                quotedForNotepad=""
-                onClearQuoted={() => {}}
-                isAuthenticated={true}
-                isMobile={false}
-                activeTab="chat"
-                embeddingInfo={{ hasEmbeddings: false, count: 0 }}
-                useContextSearch={useContextSearch}
-                onToggleContextSearch={setUseContextSearch}
-                includeNotepadInMessages={includeNotepadInMessages}
-                onToggleNotepadInMessages={setIncludeNotepadInMessages}
-            />
-        ),
-        handleInputPopulate
+  const handleSuggestionClick = React.useCallback((suggestion: any, onSendMessage: (text: string) => void) => {
+    if (typeof suggestion === 'string') {
+      onSendMessage(suggestion)
+    } else if (suggestion.action || suggestion.text || suggestion.description) {
+      onSendMessage(suggestion.action || suggestion.text || suggestion.description)
     }
+  }, [])
+
+  const handleActionClick = React.useCallback((action: string) => {
+    sendMessage(action)
+  }, [sendMessage])
+
+  return (
+    <div className="flex flex-col h-full bg-background overflow-hidden">
+      {messages.length > 0 ? (
+        <>
+          {/* Header with New Conversation Button - fixed at top */}
+          <div className="flex justify-center p-2.5 border-b border-border flex-shrink-0">
+            <button
+              onClick={startNewConversation}
+              className="text-sm font-light text-muted-foreground hover:text-foreground transition-colors duration-300 border-b border-transparent hover:border-current pb-1"
+            >
+              New conversation
+            </button>
+          </div>
+
+          {/* Messages Area - takes remaining space */}
+          <div className="flex-1 overflow-hidden">
+            <div className="h-full overflow-y-auto scrollbar-hide">
+              <div className="p-4 sm:p-6">
+                <div className="max-w-4xl mx-auto space-y-6">
+                  <ChatMessagesList
+                    messages={messages}
+                    referencedMessage={null}
+                    handleMessageReference={() => {}}
+                    handleReferenceClick={() => {}}
+                    handleOptionClick={sendMessage}
+                    handleFollowUpClick={sendMessage}
+                    userId={authData.user?.uid}
+                    handleSuggestionClick={handleSuggestionClick}
+                    handleSendMessage={sendMessage}
+                    onInputPopulate={onInputPopulate}
+                    notepadOpen={true}
+                    onQuoteToNotepad={onQuoteToNotepad}
+                    onContentClick={() => {}}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      ) : (
+        /* Empty state - no header needed */
+        <div className="h-full flex flex-col">
+          <div className="flex-1 px-6 py-4">
+            <AmbientInsights
+              userId={authData.user?.uid}
+              onInsightClick={(action: string, insight: any) => {
+                const fullMessage = `${insight.title}\n\n${insight.description}\n\n${action}`
+                sendMessage(fullMessage)
+              }}
+            />
+          </div>
+          <div className="px-6 py-3 border-t border-border">
+            <BottomBarActions
+              onActionClick={handleActionClick}
+              onInputPopulate={onInputPopulate}
+              isFullScreen={false}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+})
+
+ChatPanel.displayName = 'ChatPanel'
+
+const NotepadPanel = React.memo<{
+  noteId?: string
+  quotedContent: string
+  onClearQuoted: () => void
+}>(({ noteId, quotedContent, onClearQuoted }) => {
+  const { sessionId } = useDialogueStore()
+
+  return (
+    <div className="h-full bg-background">
+      <MarkdownNotepad
+        isOpen={true}
+        onClose={() => {}}
+        quotedContent={quotedContent}
+        onClearQuoted={onClearQuoted}
+        width="100%"
+        style={{}}
+        availableNotes={[]}
+        isMobile={false}
+        noteId={noteId}
+        fromChat={true}
+        canNavigateBack={true}
+        onBack={() => {}}
+        sessionId={sessionId || "session-1"}
+        panelState="split"
+      />
+    </div>
+  )
+})
+
+NotepadPanel.displayName = 'NotepadPanel'
+
+// =============================================================================
+// INPUT SECTION
+// =============================================================================
+
+function useInputSection(clearQuotedContent: () => void) {
+  const { isLoading, sendMessage } = useDialogueStore()
+  const inputRef = React.useRef<HTMLTextAreaElement>(null)
+  const [inputValue, setInputValue] = React.useState("")
+  const [useContextSearch, setUseContextSearch] = React.useState(true)
+  const [includeNotepadInMessages, setIncludeNotepadInMessages] = React.useState(false)
+
+  const handleInputPopulate = React.useCallback((text: string) => {
+    const cleanText = text
+      .replace(/^[\s]*[-*•]\s*/, '') // Remove leading bullet points
+      .replace(/^[\s]*\*\s*/, '') // Remove leading asterisks
+      .trim()
+    setInputValue(currentValue => {
+      return currentValue.trim() ? `${currentValue} ${cleanText}` : cleanText
+    })
+  }, [])
+
+  const inputComponent = React.useMemo(() => (
+    <ChatInputArea
+      showAmbient={false}
+      handleActionClick={sendMessage}
+      handleSendMessage={sendMessage}
+      inputRef={inputRef}
+      isLoading={isLoading}
+      referencedMessage={null}
+      handleClearReference={() => {}}
+      includeAnalysisInQuery={true}
+      inputValue={inputValue}
+      onInputChange={setInputValue}
+      onInputPopulate={handleInputPopulate}
+      notepadOpen={true}
+      openNotepad={() => {}}
+      quotedForNotepad=""
+      onClearQuoted={clearQuotedContent}
+      isAuthenticated={true}
+      isMobile={false}
+      activeTab="chat"
+      embeddingInfo={{ hasEmbeddings: false, count: 0 }}
+      useContextSearch={useContextSearch}
+      onToggleContextSearch={setUseContextSearch}
+      includeNotepadInMessages={includeNotepadInMessages}
+      onToggleNotepadInMessages={setIncludeNotepadInMessages}
+    />
+  ), [
+    sendMessage,
+    isLoading,
+    inputValue,
+    setInputValue,
+    handleInputPopulate,
+    useContextSearch,
+    setUseContextSearch,
+    includeNotepadInMessages,
+    setIncludeNotepadInMessages,
+    clearQuotedContent
+  ])
+
+  return { inputComponent, handleInputPopulate }
 }
 
 // =============================================================================
-// MAIN LAB COMPOSITION
+// MAIN LAYOUT
 // =============================================================================
 
 interface LabCompositionProps {
-    className?: string
-    chatId?: string
-    noteId?: string
-    askQuery?: string
-    contentContext?: any
+  className?: string
+  chatId?: string
+  noteId?: string
+  askQuery?: string
+  contentContext?: any
 }
 
 export function FullThinkingLab({
-    className,
-    chatId,
-    noteId,
-    askQuery,
-    contentContext
+  className,
+  chatId,
+  noteId,
+  askQuery,
+  contentContext
 }: LabCompositionProps) {
-    return (
-        <ThinkingLabProvider
-            chatId={chatId}
-            noteId={noteId}
-            askQuery={askQuery}
-            contentContext={contentContext}
+  const { quotedContent, setQuotedContent, clearQuotedContent } = useDialogueStore()
+  const { inputComponent, handleInputPopulate } = useInputSection(clearQuotedContent)
+  const resizable = useResizablePanes(0.5)
+  
+  // Determine if we're in full-screen mode
+  const isChatFullScreen = resizable.state.splitRatio === 1.0
+  const isNotepadFullScreen = resizable.state.splitRatio === 0.0
+
+  return (
+    <div className={`h-screen flex flex-col bg-background overflow-hidden ${className}`}>
+      {/* Control Bar */}
+      <div className="flex items-center justify-center gap-4 p-3 border-b border-border bg-background/95 backdrop-blur-sm">
+        <button
+          onClick={resizable.actions.snapToLeft}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background hover:bg-muted transition-colors text-sm"
+          title="Chat Full Screen (100% width)"
         >
-            <LabContent className={className} noteId={noteId} />
-        </ThinkingLabProvider>
-    )
+          <Maximize2 className="w-4 h-4" />
+          Chat
+        </button>
+
+        <button
+          onClick={resizable.actions.snapToSplit}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background hover:bg-muted transition-colors text-sm"
+          title="Split View (50/50)"
+        >
+          <SplitSquareHorizontal className="w-4 h-4" />
+          Split
+        </button>
+
+        <button
+          onClick={resizable.actions.snapToRight}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background hover:bg-muted transition-colors text-sm"
+          title="Notepad Full Screen (100% width)"
+        >
+          <Maximize2 className="w-4 h-4" />
+          Notepad
+        </button>
+      </div>
+
+      {/* Resizable Split Panes */}
+      <div ref={resizable.containerRef} className="flex flex-1 overflow-hidden">
+        {/* Chat Panel */}
+        <div style={resizable.styles.leftPanelStyle} className="flex flex-col h-full overflow-hidden">
+          <div className="flex-1 overflow-hidden">
+            <ChatPanel 
+              onInputPopulate={handleInputPopulate}
+              onQuoteToNotepad={setQuotedContent}
+            />
+          </div>
+          
+          {/* Chat Input */}
+          <div className="border-t border-border flex-shrink-0">
+            {inputComponent}
+          </div>
+        </div>
+
+        {/* Invisible Draggable Divider - hover to resize */}
+        <div
+          className="w-2 hover:w-3 cursor-col-resize flex-shrink-0 transition-all duration-200 hover:bg-border/20"
+          style={resizable.styles.dividerStyle}
+          onMouseDown={resizable.actions.startDrag}
+          title="Drag to resize panels"
+        />
+
+        {/* Notepad Panel */}
+        <div style={resizable.styles.rightPanelStyle} className="overflow-hidden">
+          <NotepadPanel
+            noteId={noteId}
+            quotedContent={quotedContent}
+            onClearQuoted={clearQuotedContent}
+          />
+        </div>
+      </div>
+    </div>
+  )
 }
 
-function LabContent({ className, noteId }: { className?: string, noteId?: string }) {
-    const splitScreen = useSplitScreenLayout()
-    const authData = useOptimizedAuth()
-    const { state, actions } = useDialogue()
-
-    // Get the input populate function from ConnectedDialogueInput - call once at the top level
-    const { inputComponent, handleInputPopulate } = ConnectedDialogueInput()
-
-    return (
-            <ChatLayout isMobile={false} className={className}>
-                <ChatPanel style={splitScreen.getChatContainerStyle()}>
-                    <PanelExpandButton
-                        panelType="chat"
-                        panelState={splitScreen.panelState}
-                        onExpand={splitScreen.setChatFullScreen}
-                        onRestore={splitScreen.restoreSplitView}
-                    />
-                    <ContentArea>
-                        {/* New Conversation button - positioned at top right */}
-                        <div className="absolute top-6 right-6 z-10">
-                            <button
-                                onClick={() => {
-                                    actions.startNewConversation()
-                                }}
-                                className="text-sm font-light text-muted-foreground hover:text-foreground transition-colors duration-300 border-b border-transparent hover:border-current pb-1"
-                            >
-                                New conversation
-                            </button>
-                        </div>
-
-                        {/* Conditional content based on messages */}
-                        {state.messages.length > 0 ? (
-                            /* Messages view */
-                            <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide">
-                                <div className="p-4 sm:p-6">
-                                    <div className="max-w-4xl mx-auto space-y-6">
-                                        <ConnectedChatMessages
-                                            userId={authData.user?.uid}
-                                            onInputPopulate={handleInputPopulate}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        ) : (
-                            /* Welcome view with ambient insights */
-                            <>
-                                <div className="flex-1 px-6 py-4">
-                                    <ConnectedAmbientInsights userId={authData.user?.uid} />
-
-                                    {/* Thinking indicator for ambient insights view */}
-                                    <div className="flex justify-center mt-8">
-                                        <ThinkingIndicator
-                                            isVisible={state.isLoading}
-                                            message="Thinking..."
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Bottom actions when no messages */}
-                                <div className="px-6 py-3 border-t border-border">
-                                    <ConnectedBottomActions onInputPopulate={handleInputPopulate} />
-                                </div>
-                            </>
-                        )}
-
-                    </ContentArea>
-
-                    {/* Input area at bottom */}
-                    <InputArea>
-                        {inputComponent}
-                    </InputArea>
-                </ChatPanel>
-                
-                {/* Second panel for notepad */}
-                <ChatPanel style={splitScreen.getNotepadContainerStyle()}>
-                    <PanelExpandButton
-                        panelType="notepad"
-                        panelState={splitScreen.panelState}
-                        onExpand={splitScreen.setNotepadFullScreen}
-                        onRestore={splitScreen.restoreSplitView}
-                    />
-                    <MarkdownNotepad
-                        isOpen={true}
-                        onClose={() => {}}
-                        quotedContent=""
-                        onClearQuoted={() => {}}
-                        width="100%"
-                        style={{}}
-                        availableNotes={[]}
-                        isMobile={false}
-                        noteId={noteId}
-                        fromChat={true}
-                        canNavigateBack={true}
-                        onBack={() => {}}
-                        sessionId={state.sessionId || "session-1"}
-                        panelState={splitScreen.panelState}
-                    />
-                </ChatPanel>
-            </ChatLayout>
-    )
-}
-
-// =============================================================================
-// EXPORT
-// =============================================================================
-
-export { FullThinkingLab as default }
+export default FullThinkingLab
 export type { LabCompositionProps }

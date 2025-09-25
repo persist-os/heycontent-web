@@ -12,8 +12,9 @@ import { subscribeWithSelector } from 'zustand/middleware'
 import { transmitMessageWithContext } from '../modules/api/messageService'
 import { useLayoutStore } from './layoutStore' // For getting context preferences
 
-// Import centralized types
-import type { Message, DialogueState, DialogueActions, MessageTransmissionRequest } from '../types'
+// Import proper chat types for compatibility
+import type { Message } from '@/app/types/chat'
+import type { DialogueState, DialogueActions, MessageTransmissionRequest } from '../types'
 
 type DialogueStore = DialogueState & DialogueActions
 
@@ -27,6 +28,7 @@ export const useDialogueStore = create<DialogueStore>()(
         error: undefined,
         currentStatus: undefined,
         useContextSearch: true, // Default to enabled
+        quotedContent: "", // Content to be quoted to notepad
 
         // Actions
         sendMessage: async (content: string) => {
@@ -37,14 +39,27 @@ export const useDialogueStore = create<DialogueStore>()(
                 id: `msg-${Date.now()}`,
                 content,
                 role: 'user',
-                timestamp: Date.now()
+                timestamp: Date.now().toString(),
+                chat_response: content,
+                status: 'sent'
+            }
+
+            // Create typing message for thinking indicator
+            const typingMessage: Message = {
+                id: `typing-${Date.now()}`,
+                content: '',
+                role: 'assistant',
+                timestamp: Date.now().toString(),
+                chat_response: '',
+                status: 'typing',
+                statusHistory: []
             }
 
             set({
-                messages: [...messages, userMessage],
+                messages: [...messages, userMessage, typingMessage],
                 isLoading: true,
                 error: undefined,
-                currentStatus: 'Sending your message...'
+                currentStatus: 'Thinking...'
             })
 
             try {
@@ -57,6 +72,18 @@ export const useDialogueStore = create<DialogueStore>()(
                     useContextSearch,
                     onStatusUpdate: (status: string) => {
                         set({ currentStatus: status })
+                        // Update the typing message with status updates
+                        set(state => ({
+                            messages: state.messages.map(msg => 
+                                msg.status === 'typing' 
+                                    ? { 
+                                        ...msg, 
+                                        statusHistory: [...(msg.statusHistory || []), status],
+                                        searchStatus: status
+                                    }
+                                    : msg
+                            )
+                        }))
                     }
                 }
 
@@ -68,12 +95,18 @@ export const useDialogueStore = create<DialogueStore>()(
                     id: `msg-${Date.now() + 1}`,
                     content: response.response_content || 'No response received',
                     role: 'assistant',
-                    timestamp: Date.now(),
-                    suggestions: response.suggestions || []
+                    timestamp: Date.now().toString(),
+                    chat_response: response.response_content || 'No response received',
+                    status: 'delivered',
+                    suggestions: response.suggestions || [],
+                    metadata: response.suggestions ? { suggestions: response.suggestions } : undefined
                 }
 
+                // Replace typing message with real response
                 set(state => ({
-                    messages: [...state.messages, assistantMessage],
+                    messages: state.messages.map(msg => 
+                        msg.status === 'typing' ? assistantMessage : msg
+                    ),
                     isLoading: false,
                     currentStatus: undefined,
                     sessionId: response.session_identifier || state.sessionId,
@@ -82,11 +115,24 @@ export const useDialogueStore = create<DialogueStore>()(
 
             } catch (error) {
                 console.error('Failed to send message:', error)
-                set({
+                // Replace typing message with error message
+                const errorMessage: Message = {
+                    id: `error-${Date.now()}`,
+                    content: 'Sorry, I encountered an error. Please try again.',
+                    role: 'assistant',
+                    timestamp: Date.now().toString(),
+                    chat_response: 'Error occurred',
+                    status: 'failed'
+                }
+
+                set(state => ({
+                    messages: state.messages.map(msg => 
+                        msg.status === 'typing' ? errorMessage : msg
+                    ),
                     isLoading: false,
                     currentStatus: undefined,
                     error: error instanceof Error ? error.message : 'Failed to send message'
-                })
+                }))
             }
         },
 
@@ -114,22 +160,21 @@ export const useDialogueStore = create<DialogueStore>()(
             set({ isLoading: true, error: undefined })
 
             try {
-                // TODO: Replace with your actual API call
-                // const conversation = await loadConversation(conversationId)
-
-                // TODO: Mock conversation loading - replace with actual API
+                // Mock conversation loading
                 const mockMessages: Message[] = [
                     {
                         id: 'msg-1',
                         content: 'Hello! This is a loaded conversation.',
                         role: 'user',
-                        timestamp: Date.now() - 10000
+                        timestamp: (Date.now() - 10000).toString(),
+                        chat_response: 'Hello! This is a loaded conversation.'
                     },
                     {
                         id: 'msg-2',
                         content: 'Welcome back to this conversation!',
                         role: 'assistant',
-                        timestamp: Date.now() - 5000
+                        timestamp: (Date.now() - 5000).toString(),
+                        chat_response: 'Welcome back to this conversation!'
                     }
                 ]
 
@@ -153,14 +198,8 @@ export const useDialogueStore = create<DialogueStore>()(
             const message = messages.find(m => m.id === messageId)
 
             if (message) {
-                // TODO: Integrate with reflection store to insert quote
-                // You might want to dispatch an action to the reflection store here
                 console.log('Quoting message:', message.content)
-
-                // TODO: How do you want to handle quote integration?
-                // Option 1: Direct integration with reflection store
-                // Option 2: Event system
-                // Option 3: Callback system
+                // Quote integration handled by parent components
             }
         },
 
@@ -178,16 +217,26 @@ export const useDialogueStore = create<DialogueStore>()(
 
         toggleContextSearch: () => {
             set(state => ({ useContextSearch: !state.useContextSearch }))
+        },
+
+        // Quote functionality
+        setQuotedContent: (content: string) => {
+            set({ quotedContent: content })
+        },
+
+        clearQuotedContent: () => {
+            set({ quotedContent: "" })
         }
     }))
 )
 
-// TODO: Add any additional selectors you need
+// Additional selectors for convenience
 export const useDialogueMessages = () => useDialogueStore(state => state.messages)
 export const useDialogueLoading = () => useDialogueStore(state => state.isLoading)
 export const useDialogueActions = () => useDialogueStore(state => ({
     sendMessage: state.sendMessage,
     startNewConversation: state.startNewConversation,
     loadConversation: state.loadConversation,
-    quoteMessage: state.quoteMessage
+    setQuotedContent: state.setQuotedContent,
+    clearQuotedContent: state.clearQuotedContent
 }))

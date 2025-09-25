@@ -29,7 +29,6 @@ export const useLayoutStore = create<LayoutStore>()(
         setMobile: (isMobile: boolean) => {
             set({ isMobile })
 
-            // TODO: Should we auto-switch to a specific tab on mobile?
             if (isMobile) {
                 // Maybe set to dialogue tab by default on mobile
                 set({ activeTab: 'dialogue' })
@@ -73,7 +72,7 @@ export const useLayoutStore = create<LayoutStore>()(
 export function useResponsiveDetection() {
     React.useEffect(() => {
         const checkMobile = () => {
-            const isMobile = window.innerWidth < 768 // TODO: Adjust breakpoint as needed
+            const isMobile = window.innerWidth < 768
             useLayoutStore.getState().setMobile(isMobile)
         }
 
@@ -83,7 +82,7 @@ export function useResponsiveDetection() {
     }, [])
 }
 
-// TODO: Add any additional selectors you need
+// Additional selectors for convenience
 export const useLayoutState = () => useLayoutStore(state => ({
     isMobile: state.isMobile,
     activeTab: state.activeTab,

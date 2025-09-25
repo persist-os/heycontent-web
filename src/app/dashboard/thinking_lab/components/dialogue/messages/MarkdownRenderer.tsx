@@ -52,11 +52,12 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
               return <div className="h-6 w-full" />; // Empty line with proper height
             }
             
-            return (
-              <p className="mb-3 last:mb-0 text-base leading-relaxed w-full break-words word-break-break-word hyphens-auto overflow-wrap-anywhere">
-                {children}
-              </p>
-            );
+            
+              return (
+                <p className="mb-3 last:mb-0 text-base leading-relaxed break-words">
+                  {children}
+                </p>
+              );
           },
           
           // Bold text
@@ -96,7 +97,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           
           // List items with proper sizing and word wrapping
           li: ({ children }) => (
-            <li className="text-base leading-relaxed text-gray-800 dark:text-gray-200 w-full break-words word-break-break-word hyphens-auto whitespace-normal overflow-wrap-anywhere">
+            <li className="text-base leading-relaxed text-gray-800 dark:text-gray-200 break-words">
               {children}
             </li>
           ),
@@ -129,13 +130,13 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           
           // Headings with better spacing and proper wrapping
           h1: ({ children }) => (
-            <h1 className="text-lg font-bold mb-3 mt-6 first:mt-0 text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700 pb-1 w-full break-words hyphens-auto whitespace-normal">{children}</h1>
+            <h1 className="text-lg font-bold mb-3 mt-6 first:mt-0 text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700 pb-1 break-words">{children}</h1>
           ),
           h2: ({ children }) => (
-            <h2 className="text-base font-bold mb-3 mt-5 first:mt-0 text-gray-900 dark:text-gray-100 w-full break-words hyphens-auto whitespace-normal">{children}</h2>
+            <h2 className="text-base font-bold mb-3 mt-5 first:mt-0 text-gray-900 dark:text-gray-100 break-words">{children}</h2>
           ),
           h3: ({ children }) => (
-            <h3 className="text-sm font-semibold mb-2 mt-4 first:mt-0 text-gray-900 dark:text-gray-100 w-full break-words hyphens-auto whitespace-normal">{children}</h3>
+            <h3 className="text-sm font-semibold mb-2 mt-4 first:mt-0 text-gray-900 dark:text-gray-100 break-words">{children}</h3>
           ),
           
           // Links with embed support
@@ -147,7 +148,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           
           // Blockquotes with proper wrapping
           blockquote: ({ children }) => (
-            <blockquote className="border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic text-gray-600 dark:text-gray-400 mb-3 text-base w-full break-words hyphens-auto whitespace-normal">
+            <blockquote className="border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic text-gray-600 dark:text-gray-400 mb-3 text-base break-words">
               {children}
             </blockquote>
           ),

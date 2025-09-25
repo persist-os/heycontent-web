@@ -13,5 +13,4 @@ export * from './dialogueModules'
 // Component types
 export * from '../components'
 
-// TODO: Add insight module types when implemented  
-// export * from './insightModules'
+// Insight module types can be added here when needed

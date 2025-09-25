@@ -47,8 +47,8 @@ export default ThinkingLab
 
 // Named exports for building blocks
 export { FullThinkingLab } from './compositions/LabCompositions'
-export { ThinkingLabProvider } from './contexts/LabProviders'
-export { useDialogue, useReflection, useInsight, useLabLayout } from './hooks/useLabCore'
+export { useDialogueStore } from './stores/dialogueStore'
+export { useLayoutStore } from './stores/layoutStore'
 
 // Type exports
 export type { ThinkingLabProps, LabCompositionProps }

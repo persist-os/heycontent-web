@@ -39,8 +39,6 @@ export function useNotepadState({
   // Internal state for note management (controlled by handlers, not props)
   const [isNewNote, setIsNewNote] = useState(!noteId)
   const [currentNoteId, setCurrentNoteId] = useState<string | Id<"notes"> | null>(noteId || null)
-  
-  // REMOVED: Problematic state sync effect that caused cascading switches
 
   // Refs
   const sidebarRef = useRef<HTMLDivElement>(null)

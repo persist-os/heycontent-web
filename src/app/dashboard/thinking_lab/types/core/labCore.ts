@@ -76,19 +76,21 @@ export interface DialogueState {
     error?: string
     currentStatus?: string
     useContextSearch: boolean
+    quotedContent: string
 }
 
 export interface DialogueActions {
     sendMessage: (content: string) => Promise<void>
     startNewConversation: () => void
     loadConversation: (conversationId: string) => Promise<void>
-    quoteMessage: (messageId: string) => void
     clearMessages: () => void
     setError: (error: string | undefined) => void
     toggleContextSearch: () => void
     addMessage: (message: any) => void
     setLoading: (loading: boolean) => void
     setStatus: (status: string | undefined) => void
+    setQuotedContent: (content: string) => void
+    clearQuotedContent: () => void
 }
 
 export interface DialogueContextValue {
@@ -187,23 +189,7 @@ export interface InsightContextValue {
 
 
 // Provider prop interfaces
-export interface DialogueProviderProps {
-    children: React.ReactNode
-    chatId?: string
-    askQuery?: string
-}
-
-export interface ReflectionProviderProps {
-    children: React.ReactNode
-    noteId?: string
-    autoOpen?: boolean
-}
-
-export interface InsightProviderProps {
-    children: React.ReactNode
-    contentContext?: any
-    searchTypes?: ('projects' | 'notes' | 'conversations' | 'crystals')[]
-}
+// Removed provider interfaces - using stores directly now
 
 export interface LabLayoutProviderProps {
     children: React.ReactNode
