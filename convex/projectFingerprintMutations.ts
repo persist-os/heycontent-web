@@ -1,332 +1,408 @@
-import { mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
 /**
- * Create a new project fingerprint from AI-generated data
+ * Optimized Project Fingerprint Mutations
+ * Following Convex best practices for performance and scalability
  */
-export const createFingerprint = mutation({
+
+// ============================================================================
+// CORE FINGERPRINT OPERATIONS
+// ============================================================================
+
+/**
+ * Create initial fingerprint for project discovery
+ * Used by: Backend when starting discovery process
+ */
+export const create = mutation({
   args: {
-    // Core Identity
     projectId: v.id("projects"),
     userId: v.string(),
     name: v.string(),
     description: v.optional(v.string()),
-
-    // AI-Discovered Project Nature
-    domain: v.string(),
-    complexity_level: v.number(),
-    collaboration_style: v.string(),
-    time_horizon: v.string(),
-
-    // AI-Generated Project Archetype
-    primary_pattern: v.string(),
-    working_style: v.array(v.string()),
-    decision_making: v.string(),
-    energy_patterns: v.string(),
-
-    // Intentions
-    core_intention: v.string(),
-    success_vision: v.string(),
-    value_creation: v.string(),
-    personal_growth: v.array(v.string()),
-
-    // Dynamic Timeline
-    natural_rhythm: v.string(),
-    key_phases: v.array(v.object({
-      name: v.string(),
-      essence: v.string(),
-      estimated_duration: v.string(),
-      readiness_indicators: v.array(v.string()),
-    })),
-    flexibility_preference: v.string(),
-
-    // Output Desires
-    tangible_deliverables: v.array(v.string()),
-    intangible_benefits: v.array(v.string()),
-    measurement_approach: v.string(),
-    sharing_intention: v.string(),
-
-    // Interface Preferences
-    cognitive_load_preference: v.string(),
-    information_density: v.string(),
-    motivation_style: v.array(v.string()),
-    feedback_frequency: v.string(),
-
-    // Evolution Intelligence
-    learning_sensitivity: v.number(),
-    change_triggers: v.array(v.object({
-      condition_type: v.string(),
-      threshold: v.number(),
-      response_style: v.string(),
-    })),
-    stability_zones: v.array(v.string()),
-    growth_edges: v.array(v.string()),
-
-    // AI Agent Coordination
-    morning_persona: v.object({
-      energy_match: v.string(),
-      focus_style: v.string(),
-      preparation_depth: v.string(),
-    }),
-    evening_persona: v.object({
-      reflection_approach: v.string(),
-      consolidation_style: v.string(),
-      transition_support: v.string(),
-    }),
-    event_triggers: v.array(v.object({
-      trigger_pattern: v.string(),
-      response_personality: v.string(),
-      coordination_rules: v.array(v.string()),
-    })),
-
-    // AI Prompt Generation
-    base_personality: v.string(),
-    project_voice: v.string(),
-    question_generation_style: v.string(),
-    suggestion_approach: v.string(),
-    clarification_method: v.string(),
-
-    // Dynamic Intelligence Fields
-    dynamic_dimensions: v.array(v.object({
-      dimension_name: v.string(),
-      dimension_type: v.string(),
-      measurement_approach: v.string(),
-      evolution_sensitivity: v.number(),
-      ui_representation: v.string(),
-    })),
-
-    // Contextual Awareness
-    user_constraints: v.array(v.string()),
-    external_dependencies: v.array(v.string()),
-    support_systems: v.array(v.string()),
-    potential_obstacles: v.array(v.string()),
-
-    // Metadata
-    intelligence_version: v.optional(v.string()),
-    status: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, { projectId, userId, name, description }) => {
+    // Check if fingerprint already exists
+    const existing = await ctx.db
+      .query("project_fingerprints")
+      .withIndex("by_project", (q) => q.eq("projectId", projectId))
+      .first();
+
+    if (existing) {
+      throw new Error("Fingerprint already exists for this project");
+    }
+
     const now = Date.now();
     
-    // Create the fingerprint
-    const fingerprintId = await ctx.db.insert("project_fingerprints", {
-      // Core Identity
-      projectId: args.projectId,
-      userId: args.userId,
-      name: args.name,
-      description: args.description,
-
-      // AI-Discovered Project Nature
-      domain: args.domain,
-      complexity_level: args.complexity_level,
-      collaboration_style: args.collaboration_style,
-      time_horizon: args.time_horizon,
-
-      // AI-Generated Project Archetype
-      primary_pattern: args.primary_pattern,
-      working_style: args.working_style,
-      decision_making: args.decision_making,
-      energy_patterns: args.energy_patterns,
-
-      // Intentions
-      core_intention: args.core_intention,
-      success_vision: args.success_vision,
-      value_creation: args.value_creation,
-      personal_growth: args.personal_growth,
-
-      // Dynamic Timeline
-      natural_rhythm: args.natural_rhythm,
-      key_phases: args.key_phases,
-      flexibility_preference: args.flexibility_preference,
-
-      // Output Desires
-      tangible_deliverables: args.tangible_deliverables,
-      intangible_benefits: args.intangible_benefits,
-      measurement_approach: args.measurement_approach,
-      sharing_intention: args.sharing_intention,
-
-      // Interface Preferences
-      cognitive_load_preference: args.cognitive_load_preference,
-      information_density: args.information_density,
-      motivation_style: args.motivation_style,
-      feedback_frequency: args.feedback_frequency,
-
-      // Evolution Intelligence
-      learning_sensitivity: args.learning_sensitivity,
-      change_triggers: args.change_triggers,
-      stability_zones: args.stability_zones,
-      growth_edges: args.growth_edges,
-
-      // AI Agent Coordination
-      morning_persona: args.morning_persona,
-      evening_persona: args.evening_persona,
-      event_triggers: args.event_triggers,
-
-      // AI Prompt Generation
-      base_personality: args.base_personality,
-      project_voice: args.project_voice,
-      question_generation_style: args.question_generation_style,
-      suggestion_approach: args.suggestion_approach,
-      clarification_method: args.clarification_method,
-
-      // Dynamic Intelligence Fields
-      dynamic_dimensions: args.dynamic_dimensions,
-
-      // Contextual Awareness
-      user_constraints: args.user_constraints,
-      external_dependencies: args.external_dependencies,
-      support_systems: args.support_systems,
-      potential_obstacles: args.potential_obstacles,
-
+    return await ctx.db.insert("project_fingerprints", {
+      projectId,
+      userId,
+      name,
+      description,
+      
+      // Initialize core fields as empty - will be filled during discovery
+      domain: "",
+      complexity_level: 0,
+      collaboration_style: "",
+      time_horizon: "",
+      primary_pattern: "",
+      working_style: [],
+      decision_making: "",
+      energy_patterns: "",
+      
+      // Initialize intentions
+      core_intention: "",
+      success_vision: "",
+      value_creation: "",
+      personal_growth: [],
+      
+      // Initialize timeline
+      natural_rhythm: "",
+      key_phases: [],
+      flexibility_preference: "",
+      
+      // Initialize outputs
+      tangible_deliverables: [],
+      intangible_benefits: [],
+      measurement_approach: "",
+      sharing_intention: "",
+      
+      // Initialize interface preferences
+      cognitive_load_preference: "",
+      information_density: "",
+      motivation_style: [],
+      feedback_frequency: "",
+      
+      // Initialize evolution settings
+      learning_sensitivity: 5, // Default middle value
+      change_triggers: [],
+      stability_zones: [],
+      growth_edges: [],
+      
+      // Initialize AI coordination
+      morning_persona: {
+        energy_match: "",
+        focus_style: "",
+        preparation_depth: "",
+      },
+      evening_persona: {
+        reflection_approach: "",
+        consolidation_style: "",
+        transition_support: "",
+      },
+      event_triggers: [],
+      
+      // Initialize AI prompt generation
+      base_personality: "",
+      project_voice: "",
+      question_generation_style: "",
+      suggestion_approach: "",
+      clarification_method: "",
+      
+      // Initialize dynamic dimensions
+      dynamic_dimensions: [],
+      
+      // Initialize contextual awareness
+      user_constraints: [],
+      external_dependencies: [],
+      support_systems: [],
+      potential_obstacles: [],
+      
       // Metadata
       created_at: now,
       last_evolution: now,
-      intelligence_version: args.intelligence_version || "1.0.0",
-      status: args.status || "active",
+      intelligence_version: "1.0",
+      status: "discovering",
     });
-
-    // Update the project to link it to the fingerprint
-    await ctx.db.patch(args.projectId, {
-      fingerprintId: fingerprintId,
-      updatedAt: now,
-    });
-
-    return fingerprintId;
   },
 });
 
 /**
- * Update an existing project fingerprint
+ * Update fingerprint fields during discovery process
+ * Used by: Backend AI agent after each conversation turn
  */
-export const updateFingerprint = mutation({
+export const updateDiscoveryProgress = mutation({
   args: {
-    fingerprintId: v.id("project_fingerprints"),
-    userId: v.string(),
-    updates: v.object({
-      // Allow updating most fields
-      name: v.optional(v.string()),
-      description: v.optional(v.string()),
-      domain: v.optional(v.string()),
-      complexity_level: v.optional(v.number()),
-      collaboration_style: v.optional(v.string()),
-      time_horizon: v.optional(v.string()),
-      primary_pattern: v.optional(v.string()),
-      working_style: v.optional(v.array(v.string())),
-      decision_making: v.optional(v.string()),
-      energy_patterns: v.optional(v.string()),
-      core_intention: v.optional(v.string()),
-      success_vision: v.optional(v.string()),
-      value_creation: v.optional(v.string()),
-      personal_growth: v.optional(v.array(v.string())),
-      natural_rhythm: v.optional(v.string()),
-      key_phases: v.optional(v.array(v.object({
-        name: v.string(),
-        essence: v.string(),
-        estimated_duration: v.string(),
-        readiness_indicators: v.array(v.string()),
-      }))),
-      flexibility_preference: v.optional(v.string()),
-      tangible_deliverables: v.optional(v.array(v.string())),
-      intangible_benefits: v.optional(v.array(v.string())),
-      measurement_approach: v.optional(v.string()),
-      sharing_intention: v.optional(v.string()),
-      cognitive_load_preference: v.optional(v.string()),
-      information_density: v.optional(v.string()),
-      motivation_style: v.optional(v.array(v.string())),
-      feedback_frequency: v.optional(v.string()),
-      learning_sensitivity: v.optional(v.number()),
-      change_triggers: v.optional(v.array(v.object({
-        condition_type: v.string(),
-        threshold: v.number(),
-        response_style: v.string(),
-      }))),
-      stability_zones: v.optional(v.array(v.string())),
-      growth_edges: v.optional(v.array(v.string())),
-      morning_persona: v.optional(v.object({
-        energy_match: v.string(),
-        focus_style: v.string(),
-        preparation_depth: v.string(),
-      })),
-      evening_persona: v.optional(v.object({
-        reflection_approach: v.string(),
-        consolidation_style: v.string(),
-        transition_support: v.string(),
-      })),
-      event_triggers: v.optional(v.array(v.object({
-        trigger_pattern: v.string(),
-        response_personality: v.string(),
-        coordination_rules: v.array(v.string()),
-      }))),
-      base_personality: v.optional(v.string()),
-      project_voice: v.optional(v.string()),
-      question_generation_style: v.optional(v.string()),
-      suggestion_approach: v.optional(v.string()),
-      clarification_method: v.optional(v.string()),
-      dynamic_dimensions: v.optional(v.array(v.object({
-        dimension_name: v.string(),
-        dimension_type: v.string(),
-        measurement_approach: v.string(),
-        evolution_sensitivity: v.number(),
-        ui_representation: v.string(),
-      }))),
-      user_constraints: v.optional(v.array(v.string())),
-      external_dependencies: v.optional(v.array(v.string())),
-      support_systems: v.optional(v.array(v.string())),
-      potential_obstacles: v.optional(v.array(v.string())),
-      intelligence_version: v.optional(v.string()),
-      status: v.optional(v.string()),
-    }),
+    projectId: v.id("projects"),
+    fieldsUpdate: v.record(v.string(), v.any()),
+    trigger: v.string(), // "conversation", "ai_insight", "user_edit"
+    confidence_scores: v.optional(v.record(v.string(), v.number())),
+    conversationMessageId: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
-    // Verify the fingerprint belongs to the user
-    const fingerprint = await ctx.db.get(args.fingerprintId);
+  handler: async (ctx, { 
+    projectId, 
+    fieldsUpdate, 
+    trigger, 
+    confidence_scores,
+    conversationMessageId 
+  }) => {
+    // Get existing fingerprint
+    const fingerprint = await ctx.db
+      .query("project_fingerprints")
+      .withIndex("by_project", (q) => q.eq("projectId", projectId))
+      .first();
+
     if (!fingerprint) {
-      throw new Error("Fingerprint not found");
+      throw new Error("Fingerprint not found for project");
     }
+
+    const now = Date.now();
     
-    if (fingerprint.userId !== args.userId) {
-      throw new Error("Unauthorized: Fingerprint does not belong to user");
+    // Update fingerprint with new fields
+    const updatedFingerprint = {
+      ...fingerprint,
+      ...fieldsUpdate,
+      last_evolution: now,
+    };
+
+    // Determine if discovery is complete based on key fields
+    // Updated to match the expanded core fields from queries
+    const coreFields = [
+      'domain', 'complexity_level', 'collaboration_style', 'time_horizon',
+      'primary_pattern', 'working_style', 'decision_making', 'energy_patterns',
+      'core_intention', 'success_vision', 'value_creation', 'personal_growth',
+      'natural_rhythm', 'flexibility_preference', 'cognitive_load_preference',
+      'information_density', 'feedback_frequency', 'learning_sensitivity',
+      'base_personality', 'project_voice'
+    ];
+    
+    const completedFields = coreFields.filter(field => {
+      const value = updatedFingerprint[field as keyof typeof updatedFingerprint];
+      return value !== null && value !== undefined && value !== '';
+    });
+    
+    // Update status if discovery is substantially complete (75% threshold)
+    const completionThreshold = Math.ceil(coreFields.length * 0.75); // 15 out of 20 fields
+    if (completedFields.length >= completionThreshold && fingerprint.status === "discovering") {
+      updatedFingerprint.status = "active";
     }
 
     // Update the fingerprint
-    await ctx.db.patch(args.fingerprintId, {
-      ...args.updates,
-      last_evolution: Date.now(),
+    await ctx.db.patch(fingerprint._id, updatedFingerprint);
+
+    // Record evolution history
+    await ctx.db.insert("fingerprint_evolution_history", {
+      fingerprintId: fingerprint._id,
+      userId: fingerprint.userId,
+      projectId: fingerprint.projectId,
+      timestamp: now,
+      evolution_trigger: trigger,
+      changes_made: fieldsUpdate,
+      reasoning: `Discovery update via ${trigger}`,
+      confidence_score: confidence_scores ? 
+        Object.values(confidence_scores).reduce((a, b) => a + b, 0) / Object.values(confidence_scores).length : 
+        0.8, // Default confidence
+      trigger_context: {
+        conversation_message_id: conversationMessageId,
+        fields_updated: Object.keys(fieldsUpdate),
+        completed_fields_count: completedFields.length,
+        total_core_fields: coreFields.length,
+      },
+      learning_captured: `Updated ${Object.keys(fieldsUpdate).length} fields during discovery`,
     });
 
-    return { success: true };
+    return {
+      success: true,
+      fingerprintId: fingerprint._id,
+      status: updatedFingerprint.status,
+      completion_percentage: Math.round((completedFields.length / coreFields.length) * 100),
+      fields_updated: Object.keys(fieldsUpdate),
+    };
   },
 });
 
 /**
- * Delete a project fingerprint
+ * Mark fingerprint discovery as complete
+ * Used by: Backend AI agent when discovery is finished
+ */
+export const completeDiscovery = mutation({
+  args: {
+    projectId: v.id("projects"),
+    finalFields: v.optional(v.record(v.string(), v.any())),
+  },
+  handler: async (ctx, { projectId, finalFields }) => {
+    const fingerprint = await ctx.db
+      .query("project_fingerprints")
+      .withIndex("by_project", (q) => q.eq("projectId", projectId))
+      .first();
+
+    if (!fingerprint) {
+      throw new Error("Fingerprint not found for project");
+    }
+
+    const now = Date.now();
+    
+    // Apply any final field updates
+    const updates: any = {
+      status: "active",
+      last_evolution: now,
+    };
+    
+    if (finalFields) {
+      Object.assign(updates, finalFields);
+    }
+
+    await ctx.db.patch(fingerprint._id, updates);
+
+    // Record completion in evolution history
+    await ctx.db.insert("fingerprint_evolution_history", {
+      fingerprintId: fingerprint._id,
+      userId: fingerprint.userId,
+      projectId: fingerprint.projectId,
+      timestamp: now,
+      evolution_trigger: "discovery_completion",
+      changes_made: { status: "active", ...finalFields },
+      reasoning: "Discovery process completed by AI agent",
+      confidence_score: 0.95,
+      learning_captured: "Discovery phase successfully completed",
+    });
+
+    return {
+      success: true,
+      fingerprintId: fingerprint._id,
+      status: "active",
+    };
+  },
+});
+
+// ============================================================================
+// FINGERPRINT MANAGEMENT
+// ============================================================================
+
+/**
+ * Update fingerprint status
+ * Used by: Status changes, archiving, etc.
+ */
+export const updateStatus = mutation({
+  args: {
+    fingerprintId: v.id("project_fingerprints"),
+    status: v.string(),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, { fingerprintId, status, reason }) => {
+    const fingerprint = await ctx.db.get(fingerprintId);
+    
+    if (!fingerprint) {
+      throw new Error("Fingerprint not found");
+    }
+
+    const now = Date.now();
+    
+    await ctx.db.patch(fingerprintId, {
+      status,
+      last_evolution: now,
+    });
+
+    // Record status change in evolution history
+    await ctx.db.insert("fingerprint_evolution_history", {
+      fingerprintId,
+      userId: fingerprint.userId,
+      projectId: fingerprint.projectId,
+      timestamp: now,
+      evolution_trigger: "status_change",
+      changes_made: { status },
+      reasoning: reason || `Status changed to ${status}`,
+      confidence_score: 1.0,
+      learning_captured: `Status updated to ${status}`,
+    });
+
+    return { success: true, status };
+  },
+});
+
+/**
+ * Delete fingerprint and evolution history
+ * Used by: Project deletion, user cleanup
  */
 export const deleteFingerprint = mutation({
   args: {
     fingerprintId: v.id("project_fingerprints"),
-    userId: v.string(),
+    userId: v.string(), // Security: ensure user owns the fingerprint
   },
-  handler: async (ctx, args) => {
-    // Verify the fingerprint belongs to the user
-    const fingerprint = await ctx.db.get(args.fingerprintId);
+  handler: async (ctx, { fingerprintId, userId }) => {
+    const fingerprint = await ctx.db.get(fingerprintId);
+    
     if (!fingerprint) {
       throw new Error("Fingerprint not found");
     }
     
-    if (fingerprint.userId !== args.userId) {
-      throw new Error("Unauthorized: Fingerprint does not belong to user");
+    if (fingerprint.userId !== userId) {
+      throw new Error("Access denied: You don't own this fingerprint");
     }
 
-    // Remove the fingerprint reference from the project
-    await ctx.db.patch(fingerprint.projectId, {
-      fingerprintId: undefined,
-      updatedAt: Date.now(),
-    });
+    // Delete evolution history first
+    const evolutions = await ctx.db
+      .query("fingerprint_evolution_history")
+      .withIndex("by_fingerprint", (q) => q.eq("fingerprintId", fingerprintId))
+      .collect();
+
+    for (const evolution of evolutions) {
+      await ctx.db.delete(evolution._id);
+    }
 
     // Delete the fingerprint
-    await ctx.db.delete(args.fingerprintId);
+    await ctx.db.delete(fingerprintId);
 
     return { success: true };
+  },
+});
+
+// ============================================================================
+// BATCH OPERATIONS
+// ============================================================================
+
+/**
+ * Batch update multiple fields efficiently
+ * Used by: Large updates from AI processing
+ */
+export const batchUpdateFields = mutation({
+  args: {
+    fingerprintId: v.id("project_fingerprints"),
+    fieldUpdates: v.array(v.object({
+      field: v.string(),
+      value: v.any(),
+      confidence: v.optional(v.number()),
+    })),
+    trigger: v.string(),
+  },
+  handler: async (ctx, { fingerprintId, fieldUpdates, trigger }) => {
+    const fingerprint = await ctx.db.get(fingerprintId);
+    
+    if (!fingerprint) {
+      throw new Error("Fingerprint not found");
+    }
+
+    const now = Date.now();
+    
+    // Build update object
+    const updates: any = { last_evolution: now };
+    const changes: any = {};
+    
+    for (const update of fieldUpdates) {
+      updates[update.field] = update.value;
+      changes[update.field] = update.value;
+    }
+
+    await ctx.db.patch(fingerprintId, updates);
+
+    // Record batch update in evolution history
+    await ctx.db.insert("fingerprint_evolution_history", {
+      fingerprintId,
+      userId: fingerprint.userId,
+      projectId: fingerprint.projectId,
+      timestamp: now,
+      evolution_trigger: trigger,
+      changes_made: changes,
+      reasoning: `Batch update of ${fieldUpdates.length} fields`,
+      confidence_score: fieldUpdates.reduce((sum, update) => sum + (update.confidence || 0.8), 0) / fieldUpdates.length,
+      learning_captured: `Batch updated: ${fieldUpdates.map(u => u.field).join(', ')}`,
+    });
+
+    return {
+      success: true,
+      fields_updated: fieldUpdates.length,
+      updates: Object.keys(changes),
+    };
   },
 });

@@ -478,6 +478,7 @@ const WidgetDetailsPanel = ({
             <h2 className="text-lg font-semibold text-foreground">{widget.title}</h2>
           </div>
           <button
+            title="Close"
             onClick={onClose}
             className="p-2 hover:bg-muted/50 rounded-md transition-colors"
           >

@@ -1,14 +1,10 @@
 'use client'
 
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
 import { UnifiedContentSelector } from '@/components/ui/UnifiedContentSelector';
-import { useAuth } from '@/app/context/auth-context'
 import { useTheme } from 'next-themes';
-import { Brain, Send, Loader2, MessageSquare, FileText, Search } from 'lucide-react'
+import { Send, Loader2, MessageSquare, FileText, Search } from 'lucide-react'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
-import { cn } from '@/lib/utils'
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import type { Message } from '@/app/types/chat';
@@ -31,8 +27,7 @@ interface ChatInputProps {
   quotedForNotepad?: string
   onClearQuoted?: () => void
   disabled?: boolean
-  currentTab?: string // Add currentTab prop for tab-specific @ linking
-  // Mobile props
+  currentTab?: string
   isMobile?: boolean
   activeTab?: 'chat' | 'notes'
 }
@@ -249,12 +244,6 @@ export function ChatInput({
       left: Math.max(margin, Math.min(cursorLeft, window.innerWidth - 600 - margin)) // Ensure it doesn't go off-screen horizontally
     }
   }, [])
-
-  // Function to convert numeric indices to content IDs
-  const convertNumericIndicesToContentIds = (text: string): string => {
-    // No conversion needed - we use direct content IDs now
-    return text
-  }
 
   // Function to convert truncated titles back to content IDs
   const convertTitlesToContentIds = useCallback((text: string): string => {

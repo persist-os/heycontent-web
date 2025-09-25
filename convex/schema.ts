@@ -214,6 +214,8 @@ export default defineSchema({
     fingerprintId: v.optional(v.id("project_fingerprints")), // Links to project fingerprint
     createdAt: v.number(),
     updatedAt: v.number(),
+    crystalIds: v.optional(v.array(v.string())),
+    shardIds: v.optional(v.array(v.string())),
     // TEMPORARY: Fields to be removed by migration
     gmailIds: v.optional(v.array(v.string())),
     instagramPostIds: v.optional(v.array(v.string())),

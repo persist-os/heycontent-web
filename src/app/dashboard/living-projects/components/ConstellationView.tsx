@@ -41,7 +41,7 @@ export function ConstellationView() {
 
   // Fetch user's projects
   const projects = useQuery(
-    api.projectsQueries.getProjectsForUser,
+    api.projectsQueries.getByUser,
     firebaseUser?.uid ? { userId: firebaseUser.uid } : 'skip'
   ) as Project[] | undefined
 

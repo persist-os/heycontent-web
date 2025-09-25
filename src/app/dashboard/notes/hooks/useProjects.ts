@@ -13,7 +13,7 @@ export function useProjects(userId: string | undefined) {
 
   // Queries
   const projects = useQuery(
-    api.projectsQueries.getProjectsForUser,
+    api.projectsQueries.getByUser,
     userId ? { userId } : "skip"
   );
 

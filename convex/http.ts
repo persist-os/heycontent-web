@@ -1140,111 +1140,6 @@ app.get("/api/projects/:projectId/conversation-summaries", async (c) => {
   }
 });
 
-// PROJECT FINGERPRINT ROUTES
-
-// Create project fingerprint
-app.post("/api/project-fingerprint/createFingerprint", async (c) => {
-  const ctx = c.env;
-  const fingerprintData = await c.req.json();
-  
-  try {
-    const fingerprintId = await ctx.runMutation(api.projectFingerprintMutations.createFingerprint, fingerprintData);
-    return c.json(fingerprintId);
-  } catch (error: any) {
-    console.error("Failed to create project fingerprint:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to create project fingerprint",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// Get project fingerprint by ID
-app.post("/api/project-fingerprint/getFingerprint", async (c) => {
-  const ctx = c.env;
-  const { fingerprintId, userId } = await c.req.json();
-  
-  try {
-    const fingerprint = await ctx.runQuery(api.projectFingerprintQueries.getFingerprint, { 
-      fingerprintId, 
-      userId 
-    });
-    return c.json(fingerprint);
-  } catch (error: any) {
-    console.error("Failed to get project fingerprint:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to get project fingerprint",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// Get project fingerprint by project ID
-app.post("/api/project-fingerprint/getFingerprintByProject", async (c) => {
-  const ctx = c.env;
-  const { projectId, userId } = await c.req.json();
-  
-  try {
-    const fingerprint = await ctx.runQuery(api.projectFingerprintQueries.getFingerprintByProject, { 
-      projectId, 
-      userId 
-    });
-    return c.json(fingerprint);
-  } catch (error: any) {
-    console.error("Failed to get project fingerprint by project:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to get project fingerprint by project",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// Update project fingerprint
-app.post("/api/project-fingerprint/updateFingerprint", async (c) => {
-  const ctx = c.env;
-  const { fingerprintId, userId, updates } = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.projectFingerprintMutations.updateFingerprint, {
-      fingerprintId,
-      userId,
-      updates
-    });
-    return c.json(result);
-  } catch (error: any) {
-    console.error("Failed to update project fingerprint:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to update project fingerprint",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// Delete project fingerprint
-app.post("/api/project-fingerprint/deleteFingerprint", async (c) => {
-  const ctx = c.env;
-  const { fingerprintId, userId } = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.projectFingerprintMutations.deleteFingerprint, {
-      fingerprintId,
-      userId
-    });
-    return c.json(result);
-  } catch (error: any) {
-    console.error("Failed to delete project fingerprint:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to delete project fingerprint",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
 // PROJECT ROUTES
 
 // Update project
@@ -1268,30 +1163,179 @@ app.post("/api/projects/updateProject", async (c) => {
   }
 });
 
-// Update project fingerprint ID
-app.post("/api/projects/updateProjectFingerprintId", async (c) => {
+// PROJECT ROUTES - Core Operations (Insert at line 1166 in http.ts)
+
+// Create project
+app.post("/api/projects/create", async (c) => {
   const ctx = c.env;
-  const { projectId, userId, fingerprintId } = await c.req.json();
+  const { userId, name, description } = await c.req.json();
   
   try {
-    const result = await ctx.runMutation(api.projectsMutations.updateProjectFingerprintId, {
-      projectId,
+    const projectId = await ctx.runMutation(api.projectsMutations.createProject, {
       userId,
-      fingerprintId
+      name,
+      description
     });
-    return c.json({
-      success: true,
-      data: result
-    });
+    return c.json({ success: true, projectId });
   } catch (error: any) {
-    console.error("Failed to update project fingerprint ID:", error);
+    console.error("Failed to create project:", error);
     return c.json({ 
       success: false, 
-      error: "Failed to update project fingerprint ID",
+      error: "Failed to create project",
       message: error.message || "Internal Server Error"
     }, 500);
   }
 });
+
+// Get project by ID
+app.post("/api/projects/getById", async (c) => {
+  const ctx = c.env;
+  const { projectId } = await c.req.json();
+  
+  try {
+    const project = await ctx.runQuery(api.projectsQueries.getById, { projectId });
+    return c.json({ success: true, data: project });
+  } catch (error: any) {
+    console.error("Failed to get project:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get project",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get projects by user
+app.post("/api/projects/getByUser", async (c) => {
+  const ctx = c.env;
+  const { userId, limit } = await c.req.json();
+  
+  try {
+    const projects = await ctx.runQuery(api.projectsQueries.getByUser, { 
+      userId,
+      limit
+    });
+    return c.json({ success: true, data: projects });
+  } catch (error: any) {
+    console.error("Failed to get user projects:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get user projects",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Check if project exists
+app.post("/api/projects/exists", async (c) => {
+  const ctx = c.env;
+  const { projectId, userId } = await c.req.json();
+  
+  try {
+    const result = await ctx.runQuery(api.projectsQueries.exists, { 
+      projectId,
+      userId
+    });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Failed to check project existence:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to check project existence",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get recent projects
+app.post("/api/projects/getRecent", async (c) => {
+  const ctx = c.env;
+  const { userId, limit } = await c.req.json();
+  
+  try {
+    const projects = await ctx.runQuery(api.projectsQueries.getRecent, { 
+      userId,
+      limit
+    });
+    return c.json({ success: true, data: projects });
+  } catch (error: any) {
+    console.error("Failed to get recent projects:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get recent projects",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Add content to project
+app.post("/api/projects/addContent", async (c) => {
+  const ctx = c.env;
+  const { projectId, userId, contentType, contentId } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.projectsMutations.addContent, {
+      projectId,
+      userId,
+      contentType,
+      contentId
+    });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Failed to add content to project:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to add content to project",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Link fingerprint to project
+app.post("/api/projects/linkFingerprint", async (c) => {
+  const ctx = c.env;
+  const { projectId, userId, fingerprintId } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.projectsMutations.linkFingerprint, {
+      projectId,
+      userId,
+      fingerprintId
+    });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Failed to link fingerprint:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to link fingerprint",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Delete project
+app.post("/api/projects/delete", async (c) => {
+  const ctx = c.env;
+  const { projectId, userId } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.projectsMutations.deleteProject, {
+      projectId,
+      userId
+    });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Failed to delete project:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to delete project",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+
+
 
 // PROJECT WIDGETS ROUTES
 
@@ -1616,37 +1660,6 @@ app.post("/api/project-widgets/deleteProjectWidgets", async (c) => {
   }
 });
 
-// Get projects for user route
-app.get("/api/projects/getProjectsForUser", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.query("userId");
-  
-  try {
-    if (!userId) {
-      return c.json({
-        success: false,
-        error: "Missing required parameter: userId"
-      }, 400);
-    }
-
-    const projects = await ctx.runQuery(api.projectsQueries.getProjectsForUser, {
-      userId
-    });
-
-    return c.json({
-      success: true,
-      data: projects
-    });
-  } catch (error: any) {
-    console.error("Error getting projects for user:", error);
-    return c.json({
-      success: false, 
-      error: "Failed to get projects for user",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
 // Single query endpoint that mirrors getCrystalData exactly
 app.post("/api/crystal/query", async (c) => {
   const ctx = c.env;
@@ -1712,7 +1725,7 @@ app.post("/api/formation/query", async (c) => {
   }
 });
 
-// Formation mutation endpoint that mirrors mutateFormation exactly  
+// Formation mutation endpoint that mirrors mutateFormation exactly 
 app.post("/api/formation/mutate", async (c) => {
   const ctx = c.env;
   const requestBody = await c.req.json();
@@ -2072,6 +2085,271 @@ app.post("/api/shard-lifecycle/initialize-legacy", async (c) => {
     return c.json({ success: true, data: result });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// ============================================================================
+// PROJECT FINGERPRINT ROUTES - Optimized for Discovery Flow
+// ============================================================================
+
+// Create fingerprint when starting discovery process
+app.post("/api/project-fingerprint/create", async (c) => {
+  const ctx = c.env;
+  const { projectId, userId, name, description } = await c.req.json();
+  
+  try {
+    const fingerprintId = await ctx.runMutation(api.projectFingerprintMutations.create, {
+      projectId,
+      userId,
+      name,
+      description
+    });
+    return c.json({ success: true, fingerprintId });
+  } catch (error: any) {
+    console.error("Failed to create project fingerprint:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to create project fingerprint",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get fingerprint by project ID - Primary access pattern
+app.post("/api/project-fingerprint/getByProject", async (c) => {
+  const ctx = c.env;
+  const { projectId } = await c.req.json();
+  
+  try {
+    const fingerprint = await ctx.runQuery(api.projectFingerprintQueries.getByProject, { 
+      projectId 
+    });
+    return c.json({ success: true, data: fingerprint });
+  } catch (error: any) {
+    console.error("Failed to get project fingerprint:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get project fingerprint",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get full context for AI agents
+app.post("/api/project-fingerprint/getFullContext", async (c) => {
+  const ctx = c.env;
+  const { projectId } = await c.req.json();
+  
+  try {
+    const fingerprint = await ctx.runQuery(api.projectFingerprintQueries.getFullContext, { 
+      projectId 
+    });
+    return c.json({ success: true, data: fingerprint });
+  } catch (error: any) {
+    console.error("Failed to get fingerprint full context:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get fingerprint full context",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Update discovery progress after each AI conversation turn
+app.post("/api/project-fingerprint/updateProgress", async (c) => {
+  const ctx = c.env;
+  const { 
+    projectId, 
+    fieldsUpdate, 
+    trigger, 
+    confidence_scores, 
+    conversationMessageId 
+  } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.projectFingerprintMutations.updateDiscoveryProgress, {
+      projectId,
+      fieldsUpdate,
+      trigger,
+      confidence_scores,
+      conversationMessageId
+    });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Failed to update discovery progress:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to update discovery progress",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Mark discovery as complete
+app.post("/api/project-fingerprint/complete", async (c) => {
+  const ctx = c.env;
+  const { projectId, finalFields } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.projectFingerprintMutations.completeDiscovery, {
+      projectId,
+      finalFields
+    });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Failed to complete discovery:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to complete discovery",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Quick existence check
+app.post("/api/project-fingerprint/exists", async (c) => {
+  const ctx = c.env;
+  const { projectId } = await c.req.json();
+  
+  try {
+    const exists = await ctx.runQuery(api.projectFingerprintQueries.exists, { 
+      projectId 
+    });
+    return c.json({ success: true, exists });
+  } catch (error: any) {
+    console.error("Failed to check fingerprint existence:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to check fingerprint existence",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get completion status for UI progress indicators
+app.post("/api/project-fingerprint/getCompletionStatus", async (c) => {
+  const ctx = c.env;
+  const { projectId } = await c.req.json();
+  
+  try {
+    const status = await ctx.runQuery(api.projectFingerprintQueries.getCompletionStatus, { 
+      projectId 
+    });
+    return c.json({ success: true, data: status });
+  } catch (error: any) {
+    console.error("Failed to get completion status:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get completion status",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Update fingerprint status (active, archived, etc.)
+app.post("/api/project-fingerprint/updateStatus", async (c) => {
+  const ctx = c.env;
+  const { fingerprintId, status, reason } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.projectFingerprintMutations.updateStatus, {
+      fingerprintId,
+      status,
+      reason
+    });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Failed to update fingerprint status:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to update fingerprint status",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Delete fingerprint and evolution history
+app.post("/api/project-fingerprint/delete", async (c) => {
+  const ctx = c.env;
+  const { fingerprintId, userId } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.projectFingerprintMutations.deleteFingerprint, {
+      fingerprintId,
+      userId
+    });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Failed to delete fingerprint:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to delete fingerprint",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get evolution history for debugging/analysis
+app.post("/api/project-fingerprint/getEvolutionHistory", async (c) => {
+  const ctx = c.env;
+  const { fingerprintId, limit } = await c.req.json();
+  
+  try {
+    const history = await ctx.runQuery(api.projectFingerprintQueries.getEvolutionHistory, { 
+      fingerprintId,
+      limit
+    });
+    return c.json({ success: true, data: history });
+  } catch (error: any) {
+    console.error("Failed to get evolution history:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get evolution history",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get user's fingerprints for dashboard
+app.post("/api/project-fingerprint/getByUser", async (c) => {
+  const ctx = c.env;
+  const { userId, limit } = await c.req.json();
+  
+  try {
+    const fingerprints = await ctx.runQuery(api.projectFingerprintQueries.getByUser, { 
+      userId,
+      limit
+    });
+    return c.json({ success: true, data: fingerprints });
+  } catch (error: any) {
+    console.error("Failed to get user fingerprints:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get user fingerprints",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Batch update multiple fields efficiently
+app.post("/api/project-fingerprint/batchUpdate", async (c) => {
+  const ctx = c.env;
+  const { fingerprintId, fieldUpdates, trigger } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.projectFingerprintMutations.batchUpdateFields, {
+      fingerprintId,
+      fieldUpdates,
+      trigger
+    });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Failed to batch update fields:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to batch update fields",
+      message: error.message || "Internal Server Error"
+    }, 500);
   }
 });
 

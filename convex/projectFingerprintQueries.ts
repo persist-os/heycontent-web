@@ -1,256 +1,294 @@
-import { query } from "./_generated/server";
 import { v } from "convex/values";
+import { query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
 /**
- * Get a fingerprint by its ID
+ * Optimized Project Fingerprint Queries
+ * Following Convex best practices for performance and scalability
  */
-export const getFingerprint = query({
-  args: {
-    fingerprintId: v.id("project_fingerprints"),
-    userId: v.string(),
+
+// ============================================================================
+// PRIMARY QUERIES - Most commonly used
+// ============================================================================
+
+/**
+ * Get fingerprint by project ID - Primary access pattern
+ * Used by: Frontend components, backend agents
+ */
+export const getByProject = query({
+  args: { 
+    projectId: v.id("projects") 
   },
-  handler: async (ctx, args) => {
-    const fingerprint = await ctx.db.get(args.fingerprintId);
-    
+  handler: async (ctx, { projectId }) => {
+    const fingerprint = await ctx.db
+      .query("project_fingerprints")
+      .withIndex("by_project", (q) => q.eq("projectId", projectId))
+      .first();
+
+    if (!fingerprint) return null;
+
+    // Return complete fingerprint data structure for frontend and AI agents
+    return {
+      _id: fingerprint._id,
+      projectId: fingerprint.projectId,
+      userId: fingerprint.userId,
+      name: fingerprint.name,
+      description: fingerprint.description,
+      
+      // AI-Discovered Project Nature
+      domain: fingerprint.domain,
+      complexity_level: fingerprint.complexity_level,
+      collaboration_style: fingerprint.collaboration_style,
+      time_horizon: fingerprint.time_horizon,
+      
+      // AI-Generated Project Archetype
+      primary_pattern: fingerprint.primary_pattern,
+      working_style: fingerprint.working_style,
+      decision_making: fingerprint.decision_making,
+      energy_patterns: fingerprint.energy_patterns,
+      
+      // Intentions (User + AI refined)
+      core_intention: fingerprint.core_intention,
+      success_vision: fingerprint.success_vision,
+      value_creation: fingerprint.value_creation,
+      personal_growth: fingerprint.personal_growth,
+      
+      // Dynamic Timeline
+      natural_rhythm: fingerprint.natural_rhythm,
+      key_phases: fingerprint.key_phases,
+      flexibility_preference: fingerprint.flexibility_preference,
+      
+      // Output Desires
+      tangible_deliverables: fingerprint.tangible_deliverables,
+      intangible_benefits: fingerprint.intangible_benefits,
+      measurement_approach: fingerprint.measurement_approach,
+      sharing_intention: fingerprint.sharing_intention,
+      
+      // Interface Preferences
+      cognitive_load_preference: fingerprint.cognitive_load_preference,
+      information_density: fingerprint.information_density,
+      motivation_style: fingerprint.motivation_style,
+      feedback_frequency: fingerprint.feedback_frequency,
+      
+      // Evolution Intelligence
+      learning_sensitivity: fingerprint.learning_sensitivity,
+      change_triggers: fingerprint.change_triggers,
+      stability_zones: fingerprint.stability_zones,
+      growth_edges: fingerprint.growth_edges,
+      
+      // AI Agent Coordination
+      morning_persona: fingerprint.morning_persona,
+      evening_persona: fingerprint.evening_persona,
+      event_triggers: fingerprint.event_triggers,
+      
+      // AI Prompt Generation
+      base_personality: fingerprint.base_personality,
+      project_voice: fingerprint.project_voice,
+      question_generation_style: fingerprint.question_generation_style,
+      suggestion_approach: fingerprint.suggestion_approach,
+      clarification_method: fingerprint.clarification_method,
+      
+      // Dynamic Intelligence Fields
+      dynamic_dimensions: fingerprint.dynamic_dimensions,
+      
+      // Contextual Awareness
+      user_constraints: fingerprint.user_constraints,
+      external_dependencies: fingerprint.external_dependencies,
+      support_systems: fingerprint.support_systems,
+      potential_obstacles: fingerprint.potential_obstacles,
+      
+      // Status and metadata
+      status: fingerprint.status,
+      created_at: fingerprint.created_at,
+      last_evolution: fingerprint.last_evolution,
+      intelligence_version: fingerprint.intelligence_version,
+    };
+  },
+});
+
+/**
+ * Get fingerprint completion status for discovery UI
+ * Used by: AmbientFingerprintCanvas, progress indicators
+ */
+export const getCompletionStatus = query({
+  args: { 
+    projectId: v.id("projects") 
+  },
+  handler: async (ctx, { projectId }) => {
+    const fingerprint = await ctx.db
+      .query("project_fingerprints")
+      .withIndex("by_project", (q) => q.eq("projectId", projectId))
+      .first();
+
     if (!fingerprint) {
-      return null;
+      return {
+        exists: false,
+        completion_percentage: 0,
+        discovered_fields: [],
+        status: "not_started",
+      };
     }
 
-    // Verify the fingerprint belongs to the user
-    if (fingerprint.userId !== args.userId) {
-      console.error("Fingerprint userId mismatch:", { 
-        fingerprintUserId: fingerprint.userId, 
-        requestedUserId: args.userId,
-        fingerprintId: args.fingerprintId 
-      });
-      throw new Error("Unauthorized: Fingerprint does not belong to user");
-    }
+    // Calculate discovered fields (non-empty/non-null fields)
+    // Updated to include all major fingerprint dimensions
+    const coreFields = [
+      'domain', 'complexity_level', 'collaboration_style', 'time_horizon',
+      'primary_pattern', 'working_style', 'decision_making', 'energy_patterns',
+      'core_intention', 'success_vision', 'value_creation', 'personal_growth',
+      'natural_rhythm', 'flexibility_preference', 'cognitive_load_preference',
+      'information_density', 'feedback_frequency', 'learning_sensitivity',
+      'base_personality', 'project_voice'
+    ];
 
-    return fingerprint;
+    const discoveredFields = coreFields.filter(field => {
+      const value = fingerprint[field as keyof typeof fingerprint];
+      return value !== null && value !== undefined && value !== '';
+    });
+
+    const completion_percentage = Math.round((discoveredFields.length / coreFields.length) * 100);
+
+    return {
+      exists: true,
+      completion_percentage,
+      discovered_fields: discoveredFields,
+      status: fingerprint.status,
+      last_evolution: fingerprint.last_evolution,
+      total_fields: coreFields.length,
+    };
   },
 });
 
 /**
- * Get a fingerprint by project ID
+ * Get full fingerprint for AI agent context
+ * Used by: Backend AI agents that need complete context
  */
-export const getFingerprintByProject = query({
-  args: {
-    projectId: v.id("projects"),
-    userId: v.string(),
+export const getFullContext = query({
+  args: { 
+    projectId: v.id("projects") 
   },
-  handler: async (ctx, args) => {
-    // First get the project to verify ownership
-    const project = await ctx.db.get(args.projectId);
-    if (!project) {
-      throw new Error("Project not found");
-    }
-    
-    if (project.userId !== args.userId) {
-      throw new Error("Unauthorized: Project does not belong to user");
-    }
+  handler: async (ctx, { projectId }) => {
+    return await ctx.db
+      .query("project_fingerprints")
+      .withIndex("by_project", (q) => q.eq("projectId", projectId))
+      .first();
+  },
+});
 
-    // If project has a fingerprint, get it
-    if (project.fingerprintId) {
-      const fingerprint = await ctx.db.get(project.fingerprintId);
-      return fingerprint;
-    }
+// ============================================================================
+// EVOLUTION TRACKING QUERIES
+// ============================================================================
 
-    return null;
+/**
+ * Get recent evolution history for a fingerprint
+ * Used by: Evolution tracking, debugging, user history
+ */
+export const getEvolutionHistory = query({
+  args: { 
+    fingerprintId: v.id("project_fingerprints"),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { fingerprintId, limit = 10 }) => {
+    return await ctx.db
+      .query("fingerprint_evolution_history")
+      .withIndex("by_fingerprint", (q) => q.eq("fingerprintId", fingerprintId))
+      .order("desc")
+      .take(limit);
   },
 });
 
 /**
- * List all fingerprints for a user
+ * Get latest evolution for a project
+ * Used by: Understanding most recent changes
  */
-export const listUserFingerprints = query({
-  args: {
+export const getLatestEvolution = query({
+  args: { 
+    projectId: v.id("projects") 
+  },
+  handler: async (ctx, { projectId }) => {
+    return await ctx.db
+      .query("fingerprint_evolution_history")
+      .withIndex("by_project", (q) => q.eq("projectId", projectId))
+      .order("desc")
+      .first();
+  },
+});
+
+// ============================================================================
+// USER-SPECIFIC QUERIES
+// ============================================================================
+
+/**
+ * Get all fingerprints for a user
+ * Used by: User dashboard, fingerprint management
+ */
+export const getByUser = query({
+  args: { 
     userId: v.string(),
     limit: v.optional(v.number()),
   },
-  handler: async (ctx, args) => {
-    const limit = args.limit || 50;
-    
-    const fingerprints = await ctx.db
+  handler: async (ctx, { userId, limit = 50 }) => {
+    return await ctx.db
       .query("project_fingerprints")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .order("desc")
       .take(limit);
-
-    return fingerprints;
   },
 });
 
 /**
- * List fingerprints by domain
+ * Get user's active fingerprints (non-archived)
+ * Used by: Active project views
  */
-export const listFingerprintsByDomain = query({
-  args: {
-    userId: v.string(),
-    domain: v.string(),
-    limit: v.optional(v.number()),
+export const getActiveByUser = query({
+  args: { 
+    userId: v.string() 
   },
-  handler: async (ctx, args) => {
-    const limit = args.limit || 20;
-    
+  handler: async (ctx, { userId }) => {
     const fingerprints = await ctx.db
       .query("project_fingerprints")
-      .withIndex("by_domain", (q) => q.eq("domain", args.domain))
-      .filter((q) => q.eq(q.field("userId"), args.userId))
-      .order("desc")
-      .take(limit);
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
 
-    return fingerprints;
+    return fingerprints.filter(fp => fp.status !== "archived");
   },
 });
 
+// ============================================================================
+// ADMINISTRATIVE QUERIES
+// ============================================================================
+
 /**
- * List fingerprints by status
+ * Get fingerprints by status for admin monitoring
+ * Used by: Admin dashboard, system monitoring
  */
-export const listFingerprintsByStatus = query({
-  args: {
-    userId: v.string(),
+export const getByStatus = query({
+  args: { 
     status: v.string(),
     limit: v.optional(v.number()),
   },
-  handler: async (ctx, args) => {
-    const limit = args.limit || 20;
-    
-    const fingerprints = await ctx.db
+  handler: async (ctx, { status, limit = 100 }) => {
+    return await ctx.db
       .query("project_fingerprints")
-      .withIndex("by_status", (q) => q.eq("status", args.status))
-      .filter((q) => q.eq(q.field("userId"), args.userId))
+      .withIndex("by_status", (q) => q.eq("status", status))
       .order("desc")
       .take(limit);
-
-    return fingerprints;
   },
 });
 
 /**
- * Search fingerprints by name or description
+ * Check if fingerprint exists for project
+ * Used by: Backend validation, quick existence checks
  */
-export const searchFingerprints = query({
-  args: {
-    userId: v.string(),
-    searchTerm: v.string(),
-    limit: v.optional(v.number()),
+export const exists = query({
+  args: { 
+    projectId: v.id("projects") 
   },
-  handler: async (ctx, args) => {
-    const limit = args.limit || 20;
-    
-    // Get all user fingerprints and filter by search term
-    const allFingerprints = await ctx.db
+  handler: async (ctx, { projectId }) => {
+    const fingerprint = await ctx.db
       .query("project_fingerprints")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .collect();
+      .withIndex("by_project", (q) => q.eq("projectId", projectId))
+      .first();
 
-    // Filter by search term (case-insensitive)
-    const searchLower = args.searchTerm.toLowerCase();
-    const filtered = allFingerprints.filter(fingerprint => 
-      fingerprint.name.toLowerCase().includes(searchLower) ||
-      (fingerprint.description && fingerprint.description.toLowerCase().includes(searchLower)) ||
-      fingerprint.domain.toLowerCase().includes(searchLower) ||
-      fingerprint.primary_pattern.toLowerCase().includes(searchLower)
-    );
-
-    // Sort by creation date and limit
-    return filtered
-      .sort((a, b) => b.created_at - a.created_at)
-      .slice(0, limit);
-  },
-});
-
-/**
- * Get fingerprint statistics for a user
- */
-export const getFingerprintStats = query({
-  args: {
-    userId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const fingerprints = await ctx.db
-      .query("project_fingerprints")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .collect();
-
-    // Calculate statistics
-    const stats = {
-      total: fingerprints.length,
-      byDomain: {} as Record<string, number>,
-      byStatus: {} as Record<string, number>,
-      byComplexity: {
-        low: 0,    // 1-3
-        medium: 0, // 4-7
-        high: 0,   // 8-10
-      },
-      averageComplexity: 0,
-      mostRecent: null as any,
-      oldest: null as any,
-    };
-
-    let totalComplexity = 0;
-
-    fingerprints.forEach(fingerprint => {
-      // Domain distribution
-      stats.byDomain[fingerprint.domain] = (stats.byDomain[fingerprint.domain] || 0) + 1;
-      
-      // Status distribution
-      stats.byStatus[fingerprint.status] = (stats.byStatus[fingerprint.status] || 0) + 1;
-      
-      // Complexity distribution
-      if (fingerprint.complexity_level <= 3) {
-        stats.byComplexity.low++;
-      } else if (fingerprint.complexity_level <= 7) {
-        stats.byComplexity.medium++;
-      } else {
-        stats.byComplexity.high++;
-      }
-      
-      totalComplexity += fingerprint.complexity_level;
-      
-      // Most recent and oldest
-      if (!stats.mostRecent || fingerprint.created_at > stats.mostRecent.created_at) {
-        stats.mostRecent = fingerprint;
-      }
-      if (!stats.oldest || fingerprint.created_at < stats.oldest.created_at) {
-        stats.oldest = fingerprint;
-      }
-    });
-
-    // Calculate average complexity
-    if (fingerprints.length > 0) {
-      stats.averageComplexity = totalComplexity / fingerprints.length;
-    }
-
-    return stats;
-  },
-});
-
-/**
- * Get fingerprints that need evolution (haven't been updated recently)
- */
-export const getFingerprintsNeedingEvolution = query({
-  args: {
-    userId: v.string(),
-    daysSinceLastEvolution: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const daysSince = args.daysSinceLastEvolution || 7;
-    const cutoffTime = Date.now() - (daysSince * 24 * 60 * 60 * 1000);
-    
-    const fingerprints = await ctx.db
-      .query("project_fingerprints")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .filter((q) => 
-        q.and(
-          q.eq(q.field("userId"), args.userId),
-          q.lt(q.field("last_evolution"), cutoffTime),
-          q.eq(q.field("status"), "active")
-        )
-      )
-      .collect();
-
-    return fingerprints;
+    return !!fingerprint;
   },
 });
