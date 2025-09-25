@@ -1,22 +1,27 @@
-'use client'
+import { useState, useCallback, useEffect, useRef } from 'react'
 
-import { useState, useCallback, useRef, useEffect } from 'react'
-
-export interface ResizablePanesState {
-  splitRatio: number // 0 = all left, 1 = all right
-  isDragging: boolean
-  isSnapping: boolean
+interface UseResizablePanesResult {
+  state: {
+    splitRatio: number
+    isDragging: boolean 
+    isSnapping: boolean
+  }
+  actions: {
+    snapToLeft: () => void
+    snapToSplit: () => void
+    snapToRight: () => void
+    startDrag: (e: React.MouseEvent) => void
+    setSplitRatio: (ratio: number) => void
+  }
+  styles: {
+    leftPanelStyle: React.CSSProperties
+    rightPanelStyle: React.CSSProperties
+    dividerStyle: React.CSSProperties
+  }
+  containerRef: React.RefObject<HTMLDivElement>
 }
 
-export interface ResizablePanesActions {
-  snapToLeft: () => void
-  snapToSplit: () => void  
-  snapToRight: () => void
-  startDrag: (e: React.MouseEvent) => void
-  setSplitRatio: (ratio: number) => void
-}
-
-export function useResizablePanes(initialRatio = 0.5) {
+export function useResizablePanes(initialRatio = 0.5): UseResizablePanesResult {
   const [splitRatio, setSplitRatio] = useState(initialRatio)
   const [isDragging, setIsDragging] = useState(false)
   const [isSnapping, setIsSnapping] = useState(false)
@@ -97,12 +102,10 @@ export function useResizablePanes(initialRatio = 0.5) {
     transition: isSnapping ? 'width 300ms cubic-bezier(0.4, 0, 0.2, 1)' : 'none'
   }
 
-
-  // Invisible divider style - cursor only
+  // Subtle divider - visible but not prominent
   const dividerStyle = {
-    cursor: isDragging ? 'col-resize' : 'col-resize',
-    opacity: 0,
-    transition: 'opacity 0.2s ease'
+    cursor: 'col-resize',
+    backgroundColor: isDragging ? 'hsl(var(--border))' : 'transparent'
   }
 
   return {

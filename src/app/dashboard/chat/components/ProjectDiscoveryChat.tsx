@@ -20,6 +20,7 @@ import { useContentContext, useContentContextActions } from '@/store/content-con
 import { useProjectContext } from '../hooks/useProjectContext'
 import AmbientFingerprintCanvas from './AmbientFingerprintCanvas'
 import { ConvexHttpClient } from 'convex/browser'
+import { getCurrentUserId } from '@/app/lib/api-helpers'
 
 interface ProjectDiscoveryChatProps {
   projectId?: string
