@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { Project, ProjectUpdate, ItemType } from '../types/project';
+import { Project, ProjectUpdate, ContentType } from '../types/project';
 import { Id } from '@/convex/_generated/dataModel';
 import toast from 'react-hot-toast';
 
@@ -11,19 +11,19 @@ export function useProjects(userId: string | undefined) {
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Queries
+  // Queries - Using the correct query names from projectsQueries.ts
   const projects = useQuery(
     api.projectsQueries.getByUser,
     userId ? { userId } : "skip"
   );
 
-  // Mutations
+  // Mutations - Using the correct mutation names from projectsMutations.ts
   const createProjectMutation = useMutation(api.projectsMutations.createProject);
   const updateProjectMutation = useMutation(api.projectsMutations.updateProject);
   const deleteProjectMutation = useMutation(api.projectsMutations.deleteProject);
-  const addItemMutation = useMutation(api.projectsMutations.addItemToProject);
-  const removeItemMutation = useMutation(api.projectsMutations.removeItemFromProject);
-  const migrateAnalysisItemsMutation = useMutation(api.projectsMutations.migrateAnalysisItems);
+  const addContentMutation = useMutation(api.projectsMutations.addContent);
+  const removeContentMutation = useMutation(api.projectsMutations.removeContent);
+  const addMultipleContentMutation = useMutation(api.projectsMutations.addMultipleContent);
 
   // Create project
   const createProject = useCallback(async (name: string, description?: string) => {
@@ -56,12 +56,17 @@ export function useProjects(userId: string | undefined) {
     projectId: Id<"projects">, 
     updates: ProjectUpdate
   ) => {
+    if (!userId) {
+      toast.error('User not authenticated');
+      return false;
+    }
+
     setIsUpdating(true);
     try {
       await updateProjectMutation({
         projectId,
         userId,
-        ...updates,
+        updates,
       });
       
       toast.success('Project updated successfully');
@@ -73,10 +78,15 @@ export function useProjects(userId: string | undefined) {
     } finally {
       setIsUpdating(false);
     }
-  }, [updateProjectMutation]);
+  }, [updateProjectMutation, userId]);
 
   // Delete project
   const deleteProject = useCallback(async (projectId: Id<"projects">) => {
+    if (!userId) {
+      toast.error('User not authenticated');
+      return false;
+    }
+
     try {
       await deleteProjectMutation({ projectId, userId });
       toast.success('Project deleted successfully');
@@ -86,29 +96,35 @@ export function useProjects(userId: string | undefined) {
       toast.error('Failed to delete project');
       return false;
     }
-  }, [deleteProjectMutation]);
+  }, [deleteProjectMutation, userId]);
 
-  // Add item to project
-  const addItemToProject = useCallback(async (
+  // Add content to project (notes, conversations, crystals, shards, analysis)
+  const addContentToProject = useCallback(async (
     projectId: Id<"projects">,
-    itemType: ItemType,
-    itemId: string
+    contentType: ContentType,
+    contentId: string
   ) => {
+    if (!userId) {
+      toast.error('User not authenticated');
+      return false;
+    }
+
     try {
-      const result = await addItemMutation({
+      const result = await addContentMutation({
         projectId,
         userId,
-        itemType,
-        itemId,
+        contentType,
+        contentId,
       });
       
-      const displayName = itemType === 'instagramPost' ? 'Instagram post' : 
-                         itemType === 'youtubeVideo' ? 'YouTube video' : 
-                         itemType === 'analysis' ? 'Analysis report' :
-                         itemType;
+      const displayName = contentType === 'note' ? 'Note' : 
+                         contentType === 'conversation' ? 'Conversation' : 
+                         contentType === 'crystal' ? 'Crystal' :
+                         contentType === 'shard' ? 'Shard' :
+                         contentType === 'analysis' ? 'Analysis' :
+                         contentType;
       
-      // Check if the operation was successful
-      if (result) {
+      if (result?.success) {
         toast.success(`${displayName} added to project`);
         return true;
       } else {
@@ -116,67 +132,94 @@ export function useProjects(userId: string | undefined) {
         return false;
       }
     } catch (error) {
-      console.error('Failed to add item to project:', error);
-      const displayName = itemType === 'instagramPost' ? 'Instagram post' : 
-                         itemType === 'youtubeVideo' ? 'YouTube video' : 
-                         itemType === 'analysis' ? 'Analysis report' :
-                         itemType;
+      console.error('Failed to add content to project:', error);
+      const displayName = contentType === 'note' ? 'Note' : 
+                         contentType === 'conversation' ? 'Conversation' : 
+                         contentType === 'crystal' ? 'Crystal' :
+                         contentType === 'shard' ? 'Shard' :
+                         contentType === 'analysis' ? 'Analysis' :
+                         contentType;
       toast.error(`Failed to add ${displayName} to project`);
       return false;
     }
-  }, [addItemMutation]);
+  }, [addContentMutation, userId]);
 
-  // Remove item from project
-  const removeItemFromProject = useCallback(async (
+  // Remove content from project
+  const removeContentFromProject = useCallback(async (
     projectId: Id<"projects">,
-    itemType: ItemType,
-    itemId: string
+    contentType: ContentType,
+    contentId: string
   ) => {
+    if (!userId) {
+      toast.error('User not authenticated');
+      return false;
+    }
+
     try {
-      await removeItemMutation({
+      const result = await removeContentMutation({
         projectId,
         userId,
-        itemType,
-        itemId,
+        contentType,
+        contentId,
       });
       
-      const displayName = itemType === 'instagramPost' ? 'Instagram post' : 
-                         itemType === 'youtubeVideo' ? 'YouTube video' : 
-                         itemType === 'analysis' ? 'Analysis report' :
-                         itemType;
-      toast.success(`${displayName} removed from project`);
-      return true;
+      const displayName = contentType === 'note' ? 'Note' : 
+                         contentType === 'conversation' ? 'Conversation' : 
+                         contentType === 'crystal' ? 'Crystal' :
+                         contentType === 'shard' ? 'Shard' :
+                         contentType === 'analysis' ? 'Analysis' :
+                         contentType;
+      
+      if (result?.success) {
+        toast.success(`${displayName} removed from project`);
+        return true;
+      } else {
+        toast.error(`Failed to remove ${displayName} from project`);
+        return false;
+      }
     } catch (error) {
-      console.error('Failed to remove item from project:', error);
-      const displayName = itemType === 'instagramPost' ? 'Instagram post' : 
-                         itemType === 'youtubeVideo' ? 'YouTube video' : 
-                         itemType === 'analysis' ? 'Analysis report' :
-                         itemType;
+      console.error('Failed to remove content from project:', error);
+      const displayName = contentType === 'note' ? 'Note' : 
+                         contentType === 'conversation' ? 'Conversation' : 
+                         contentType === 'crystal' ? 'Crystal' :
+                         contentType === 'shard' ? 'Shard' :
+                         contentType === 'analysis' ? 'Analysis' :
+                         contentType;
       toast.error(`Failed to remove ${displayName} from project`);
       return false;
     }
-  }, [removeItemMutation]);
+  }, [removeContentMutation, userId]);
 
-  // Migrate analysis items
-  const migrateAnalysisItems = useCallback(async (projectId: Id<"projects">) => {
-    try {
-      const result = await migrateAnalysisItemsMutation({
-        projectId,
-        userId,
-      });
-      
-      if (result) {
-        toast.success('Analysis items migrated successfully');
-      } else {
-        toast.info('No analysis items found to migrate');
-      }
-      return result;
-    } catch (error) {
-      console.error('Failed to migrate analysis items:', error);
-      toast.error('Failed to migrate analysis items');
+  // Add multiple content items to project (bulk operation)
+  const addMultipleContentToProject = useCallback(async (
+    projectId: Id<"projects">,
+    content: Array<{ type: ContentType; id: string }>
+  ) => {
+    if (!userId) {
+      toast.error('User not authenticated');
       return false;
     }
-  }, [migrateAnalysisItemsMutation, userId]);
+
+    try {
+      const result = await addMultipleContentMutation({
+        projectId,
+        userId,
+        content,
+      });
+      
+      if (result?.success) {
+        toast.success(`${result.addedCount} items added to project`);
+        return true;
+      } else {
+        toast.error('Failed to add items to project');
+        return false;
+      }
+    } catch (error) {
+      console.error('Failed to add multiple content to project:', error);
+      toast.error('Failed to add items to project');
+      return false;
+    }
+  }, [addMultipleContentMutation, userId]);
 
   return {
     projects: projects || [],
@@ -186,8 +229,8 @@ export function useProjects(userId: string | undefined) {
     createProject,
     updateProject,
     deleteProject,
-    addItemToProject,
-    removeItemFromProject,
-    migrateAnalysisItems,
+    addContentToProject,
+    removeContentFromProject,
+    addMultipleContentToProject,
   };
 } 

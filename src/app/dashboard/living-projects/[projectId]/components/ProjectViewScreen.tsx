@@ -716,7 +716,7 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
 
   // Fetch project data
   const project = useQuery(
-    api.projectsQueries.getProjectDetails,
+    api.projectsQueries.getById,
     projectId && firebaseUser?.uid ? { 
       projectId: projectId as any, 
       userId: firebaseUser.uid 
@@ -961,7 +961,7 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   }
 
   const handleEditFingerprint = () => {
-    router.push(`/dashboard/project-discovery?projectId=${projectId}`)
+    router.push(`/dashboard/living-projects/project-discovery?projectId=${projectId}`)
   }
 
   const handleRegenerateWidgets = async () => {

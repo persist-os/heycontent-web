@@ -17,14 +17,68 @@ import { Id } from "./_generated/dataModel";
  */
 export const getById = query({
   args: { 
-    projectId: v.id("projects") 
+    projectId: v.id("projects"),
+    userId: v.string()
   },
-  handler: async (ctx, { projectId }) => {
+  handler: async (ctx, { projectId, userId }) => {
     const project = await ctx.db.get(projectId);
     
     if (!project) return null;
+    
+    // Validate user ownership
+    if (project.userId !== userId) {
+      return null;
+    }
 
     // Return optimized data structure
+    return {
+      _id: project._id,
+      userId: project.userId,
+      name: project.name,
+      description: project.description,
+      
+      // Content arrays with counts for performance
+      noteIds: project.noteIds || [],
+      noteCount: (project.noteIds || []).length,
+      conversationIds: project.conversationIds || [],
+      conversationCount: (project.conversationIds || []).length,
+      crystalIds: project.crystalIds || [],
+      crystalCount: (project.crystalIds || []).length,
+      shardIds: project.shardIds || [],
+      shardCount: (project.shardIds || []).length,
+      
+      // Analytics
+      analysisIds: project.analysisIds || [],
+      
+      // Intelligence
+      fingerprintId: project.fingerprintId,
+      
+      // Metadata
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+    };
+  },
+});
+
+/**
+ * Get project details with user authorization
+ * Used by: ProjectViewScreen, project pages
+ * Legacy alias for getById with user validation
+ */
+export const getProjectDetails = query({
+  args: { 
+    projectId: v.id("projects"),
+    userId: v.string()
+  },
+  handler: async (ctx, { projectId, userId }) => {
+    const project = await ctx.db.get(projectId);
+    
+    if (!project) return null;
+    
+    // Validate user ownership
+    if (project.userId !== userId) return null;
+
+    // Return same structure as getById
     return {
       _id: project._id,
       userId: project.userId,
@@ -147,7 +201,7 @@ export const getWithContentType = query({
     } else {
       const fieldMap = {
         notes: "noteIds",
-        conversations: "conversationIds", 
+        conversations: "conversationIds",
         crystals: "crystalIds",
         shards: "shardIds",
       };

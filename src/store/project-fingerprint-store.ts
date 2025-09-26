@@ -88,7 +88,7 @@ export const useProjectFingerprintStore = create<ProjectFingerprintStoreState>()
         try {
 
           // Get the project to see if it has a fingerprint
-          const project = await convex.query(api.projectsQueries.getProjectById, { projectId: projectId as Id<"projects"> });
+          const project = await convex.query(api.projectsQueries.getById, { projectId: projectId as Id<"projects">, userId });
           let fingerprint = null;
           let fingerprintHistory = [];
 
@@ -140,7 +140,7 @@ export const useProjectFingerprintStore = create<ProjectFingerprintStoreState>()
         try {
 
           // Get the project to see if it has a fingerprint
-          const project = await convex.query(api.projectsQueries.getProjectById, { projectId: projectId as Id<"projects"> });
+          const project = await convex.query(api.projectsQueries.getById, { projectId: projectId as Id<"projects">, userId });
           let fingerprint = null;
           let fingerprintHistory = [];
 

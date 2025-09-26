@@ -241,7 +241,7 @@ export const DashboardNav = memo(function DashboardNav() {
     switch (item.id) {
       case 'living-projects':
         // This tab is active for living projects and project discovery routes
-        return pathname.startsWith('/dashboard/living-projects') || pathname.startsWith('/dashboard/project-discovery');
+        return pathname.startsWith('/dashboard/living-projects');
       case 'thinking-lab':
         // This tab is active for thinking lab routes
         return pathname.startsWith('/dashboard/thinking_lab');
