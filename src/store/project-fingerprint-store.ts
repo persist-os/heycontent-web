@@ -4,7 +4,6 @@ import { subscribeWithSelector, persist } from 'zustand/middleware';
 import { ConvexReactClient, useMutation, useConvex } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Doc, Id } from '@/convex/_generated/dataModel';
-import { ProjectFingerprint, FingerprintEvolutionHistory } from '@/app/dashboard/chat/types';
 
 export interface ProjectFingerprintStoreState {
   // Data
@@ -362,7 +361,8 @@ export const useProjectFingerprintManager = (projectId?: string, userId?: string
   const createFingerprintMutation = useMutation(api.fingerprintMutations.createFingerprint);
   const updateFingerprintMutation = useMutation(api.fingerprintMutations.updateFingerprint);
   const deleteFingerprintMutation = useMutation(api.fingerprintMutations.deleteFingerprint);
-  const updateProjectFingerprintMutation = useMutation(api.projectsMutations.updateProjectFingerprintId);
+  const linkProjectFingerprintMutation = useMutation(api.projectsMutations.linkFingerprint);
+  const unlinkProjectFingerprintMutation = useMutation(api.projectsMutations.unlinkFingerprint);
 
   // Get data from store (no additional queries)
   const currentFingerprint = useProjectFingerprintStore(state => state.currentFingerprint);
@@ -428,8 +428,9 @@ export const useProjectFingerprintManager = (projectId?: string, userId?: string
 
       if (result) {
         // Update the project to link to this fingerprint
-        await updateProjectFingerprintMutation({
+        await linkProjectFingerprintMutation({
           projectId: projectId as Id<"projects">,
+          userId: userId,
           fingerprintId: result
         });
 
@@ -478,9 +479,9 @@ export const useProjectFingerprintManager = (projectId?: string, userId?: string
       removeFingerprintFromStore(currentFingerprint._id);
 
       // Update project to remove fingerprint link
-      await updateProjectFingerprintMutation({
+      await unlinkProjectFingerprintMutation({
         projectId: projectId as Id<"projects">,
-        fingerprintId: null
+        userId: userId
       });
 
       // Delete the fingerprint

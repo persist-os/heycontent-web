@@ -953,7 +953,7 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   }, [project, currentFingerprint, isGeneratingWidgets, widgetGenerationAttempted, firebaseUser, projectId])
 
   const handleStartChat = () => {
-    router.push(`/dashboard/chat?projectId=${projectId}`)
+    router.push(`/dashboard/thinking_lab?projectId=${projectId}`)
   }
 
   const handleCreateNote = () => {

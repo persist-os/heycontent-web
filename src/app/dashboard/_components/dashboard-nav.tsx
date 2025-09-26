@@ -409,7 +409,7 @@ export const DashboardNav = memo(function DashboardNav() {
                       className="group flex items-center gap-3 p-3 rounded-xl hover:bg-muted/20 transition-all"
                     >
                       <button
-                        onClick={() => handleNavigate(`/dashboard/chat?id=${chat.id}`)}
+                        onClick={() => handleNavigate(`/dashboard/thinking_lab?chatId=${chat.id}`)}
                         className="flex items-center gap-3 flex-1 min-w-0"
                         title={chat.topic}
                       >

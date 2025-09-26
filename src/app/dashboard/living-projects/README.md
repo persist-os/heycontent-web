@@ -125,7 +125,7 @@ const handleProjectClick = (project: Project) => {
     router.push(`/dashboard/living-projects/${project._id}`)
   } else {
     // Start discovery chat
-    router.push(`/dashboard/chat?projectId=${project._id}`)
+    router.push(`/dashboard/thinking_lab?projectId=${project._id}`)
   }
 }
 ```
@@ -339,7 +339,7 @@ npm test -- --testPathPattern=layout
 ## 🔗 System Dependencies
 
 ### Required Systems
-- **Chat System** (`/dashboard/chat/`): Required for project discovery and fingerprinting
+- **Chat System** (`/dashboard/thinking_lab/`): Required for project discovery and fingerprinting
 - **Convex Backend**: Real-time data persistence and synchronization
 - **Authentication**: Firebase user management and permissions
 

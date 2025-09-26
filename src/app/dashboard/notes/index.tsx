@@ -25,9 +25,9 @@ export default function SmartNotes() {
 
   // Content overlay states
 
-  // Handle note editing - redirect to chat with noteId
+  // Handle note editing - redirect to thinking lab with noteId
   const handleEditNote = (note: Note) => {
-    router.push(`/dashboard/chat?noteId=${note._id}`);
+    router.push(`/dashboard/thinking_lab?noteId=${note._id}`);
   };
 
   // Handle note deletion

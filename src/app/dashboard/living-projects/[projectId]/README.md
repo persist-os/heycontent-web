@@ -291,7 +291,7 @@ if (!project || !currentFingerprint) {
 
 ```tsx
 const handleStartChat = () => {
-  router.push(`/dashboard/chat?projectId=${projectId}`)
+  router.push(`/dashboard/thinking_lab?projectId=${projectId}`)
 }
 
 const handleCreateNote = () => {
@@ -311,7 +311,7 @@ const handleBackToProjects = () => {
 }
 
 const handleBackToChat = () => {
-  router.push(`/dashboard/chat?projectId=${projectId}`)
+  router.push(`/dashboard/thinking_lab?projectId=${projectId}`)
 }
 ```
 

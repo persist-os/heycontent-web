@@ -637,7 +637,7 @@ function getColorForContentType(contentType: string) {
 
 function getPathForContentType(contentType: string, contentId: string) {
   switch (contentType) {
-    case 'conversation': return `/dashboard/chat/${contentId}`;
+    case 'conversation': return `/dashboard/thinking_lab?chatId=${contentId}`;
     case 'note': return `/dashboard/notes/${contentId}`;
     default: return '/dashboard';
   }
