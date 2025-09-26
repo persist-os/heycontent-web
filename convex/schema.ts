@@ -455,99 +455,72 @@ export default defineSchema({
     description: v.optional(v.string()),
 
     // AI-Discovered Project Nature (flattened for AI searchability)
-    domain: v.string(), // "academic", "creative", "business", "skill_development"
-    complexity_level: v.number(), // 1-10 scale
-    collaboration_style: v.string(), // "solo", "small_team", "large_group", "community"
-    time_horizon: v.string(), // "sprint", "project", "journey", "lifestyle"
+    domain: v.optional(v.any()), // "academic", "creative", "business", "skill_development"
+    complexity_level: v.optional(v.any()), // 1-10 scale
+    collaboration_style: v.optional(v.any()), // "solo", "small_team", "large_group", "community"
+    time_horizon: v.optional(v.any()), // "sprint", "project", "journey", "lifestyle"
 
     // AI-Generated Project Archetype (flattened)
-    primary_pattern: v.string(), // "iterative_creator", "systematic_builder", "exploratory_learner"
-    working_style: v.array(v.string()), // Array of working style preferences
-    decision_making: v.string(), // How user approaches choices
-    energy_patterns: v.string(), // When/how user works best
+    primary_pattern: v.optional(v.any()), // "iterative_creator", "systematic_builder", "exploratory_learner"
+    working_style: v.optional(v.any()), // Array of working style preferences
+    decision_making: v.optional(v.any()), // How user approaches choices
+    energy_patterns: v.optional(v.any()), // When/how user works best
 
     // Intentions (User + AI refined)
-    core_intention: v.string(), // The deep "why"
-    success_vision: v.string(), // What success looks/feels like
-    value_creation: v.string(), // What this creates for user/world
-    personal_growth: v.array(v.string()), // How user wants to evolve through this
+    core_intention: v.optional(v.any()), // The deep "why"
+    success_vision: v.optional(v.any()), // What success looks/feels like
+    value_creation: v.optional(v.any()), // What this creates for user/world
+    personal_growth: v.optional(v.any()), // How user wants to evolve through this
 
     // Dynamic Timeline (AI suggests, user refines)
-    natural_rhythm: v.string(), // "daily", "weekly", "monthly", "seasonal", "milestone_driven"
-    key_phases: v.array(v.object({
-      name: v.string(),
-      essence: v.string(), // What this phase is really about
-      estimated_duration: v.string(),
-      readiness_indicators: v.array(v.string()), // When to move to next phase
-    })),
-    flexibility_preference: v.string(), // "structured", "adaptive", "emergent"
+    natural_rhythm: v.optional(v.any()), // "daily", "weekly", "monthly", "seasonal", "milestone_driven"
+    key_phases: v.optional(v.any()),
+    flexibility_preference: v.optional(v.any()), // "structured", "adaptive", "emergent"
 
     // Output Desires (AI helps articulate)
-    tangible_deliverables: v.array(v.string()),
-    intangible_benefits: v.array(v.string()),
-    measurement_approach: v.string(), // How user wants to track progress
-    sharing_intention: v.string(), // "private", "selective", "public", "community"
+    tangible_deliverables: v.optional(v.any()),
+    intangible_benefits: v.optional(v.any()),
+    measurement_approach: v.optional(v.any()), // How user wants to track progress
+    sharing_intention: v.optional(v.any()), // "private", "selective", "public", "community"
 
     // Interface Preferences (AI learns from behavior)
-    cognitive_load_preference: v.string(), // "minimal", "rich", "customizable"
-    information_density: v.string(), // "focused", "contextual", "comprehensive"
-    motivation_style: v.array(v.string()), // What keeps user engaged
-    feedback_frequency: v.string(), // How often user wants check-ins
+    cognitive_load_preference: v.optional(v.any()), // "minimal", "rich", "customizable"
+    information_density: v.optional(v.any()), // "focused", "contextual", "comprehensive"
+    motivation_style: v.optional(v.any()), // What keeps user engaged
+    feedback_frequency: v.optional(v.any()), // How often user wants check-ins
 
     // Evolution Intelligence
-    learning_sensitivity: v.number(), // How quickly to adapt (1-10)
-    change_triggers: v.array(v.object({
-      condition_type: v.string(),
-      threshold: v.number(),
-      response_style: v.string(),
-    })),
-    stability_zones: v.array(v.string()), // What should rarely change
-    growth_edges: v.array(v.string()), // What should evolve actively
+    learning_sensitivity: v.optional(v.any()), // How quickly to adapt (1-10)
+    change_triggers: v.optional(v.any()),
+    stability_zones: v.optional(v.any()), // What should rarely change
+    growth_edges: v.optional(v.any()), // What should evolve actively
 
     // AI Agent Coordination
-    morning_persona: v.object({
-      energy_match: v.string(), // Matches user's morning energy
-      focus_style: v.string(), // How to help user start days
-      preparation_depth: v.string(),
-    }),
-    evening_persona: v.object({
-      reflection_approach: v.string(), // How user processes
-      consolidation_style: v.string(),
-      transition_support: v.string(), // Help with day-to-night shift
-    }),
-    event_triggers: v.array(v.object({
-      trigger_pattern: v.string(),
-      response_personality: v.string(),
-      coordination_rules: v.array(v.string()),
-    })),
+    morning_persona: v.optional(v.any()),
+    evening_persona: v.optional(v.any()),
+    event_triggers: v.optional(v.any()),
 
     // AI Prompt Generation
-    base_personality: v.string(), // Derived from user persona
-    project_voice: v.string(), // How AI should talk about THIS project
-    question_generation_style: v.string(),
-    suggestion_approach: v.string(),
-    clarification_method: v.string(),
+    base_personality: v.optional(v.any()), // Derived from user persona
+    project_voice: v.optional(v.any()), // How AI should talk about THIS project
+    question_generation_style: v.optional(v.any()),
+    suggestion_approach: v.optional(v.any()),
+    clarification_method: v.optional(v.any()),
 
     // Dynamic Intelligence Fields (AI-generated based on project)
-    dynamic_dimensions: v.array(v.object({
-      dimension_name: v.string(), // e.g., "Research Depth", "Creative Flow", "Market Validation"
-      dimension_type: v.string(), // "progress_tracker", "quality_metric", "decision_point", "resource_monitor"
-      measurement_approach: v.string(),
-      evolution_sensitivity: v.number(),
-      ui_representation: v.string(), // How to show this in UI
-    })),
+    dynamic_dimensions: v.optional(v.any()),
 
     // Contextual Awareness
-    user_constraints: v.array(v.string()), // Time, resources, skills
-    external_dependencies: v.array(v.string()),
-    support_systems: v.array(v.string()),
-    potential_obstacles: v.array(v.string()),
+    user_constraints: v.optional(v.any()), // Time, resources, skills
+    external_dependencies: v.optional(v.any()),
+    support_systems: v.optional(v.any()),
+    potential_obstacles: v.optional(v.any()),
 
     // Metadata
     created_at: v.number(),
-    last_evolution: v.number(),
-    intelligence_version: v.string(),
-    status: v.string(), // "discovering", "active", "evolving", "completing", "archived"
+    last_evolution: v.optional(v.number()),
+    intelligence_version: v.optional(v.string()),
+    status: v.optional(v.string()), // "discovering", "active", "evolving", "completing", "archived"
   })
   .index("by_project", ["projectId"])
   .index("by_user", ["userId"])
