@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { UnifiedContentSelector } from '@/components/ui/UnifiedContentSelector';
 import { useAuth } from '@/app/context/auth-context'
 import { useTheme } from 'next-themes';
-import { Brain, Send, Loader2, MessageSquare, FileText, Search } from 'lucide-react'
+import { Brain, Send, Loader2, MessageSquare, FileText, Search, Paperclip } from 'lucide-react'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { cn } from '@/lib/utils'
 import { useQuery } from 'convex/react'
@@ -499,6 +499,20 @@ export function ChatInput({
                   </div>
                 )}
                 
+                {/* File upload button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    // TODO: Implement file upload functionality
+                    console.log('File upload clicked')
+                  }}
+                  aria-label="Upload file"
+                  title="Upload file"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-200 text-muted-foreground hover:text-foreground hover:bg-muted"
+                >
+                  <Paperclip className="w-3.5 h-3.5" />
+                </button>
+
                 {/* Notepad button */}
                 {openNotepad && (
                   <button
