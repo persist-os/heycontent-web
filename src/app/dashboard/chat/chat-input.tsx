@@ -33,6 +33,7 @@ interface ChatInputProps {
   onClearQuoted?: () => void
   disabled?: boolean
   currentTab?: string // Add currentTab prop for tab-specific @ linking
+  sessionId?: string | null // Add sessionId prop for file uploads
   // Mobile props
   isMobile?: boolean
   activeTab?: 'chat' | 'notes'
@@ -71,6 +72,7 @@ export function ChatInput({
   onClearQuoted,
   disabled = false,
   currentTab = 'all',
+  sessionId = null,
   isMobile = false,
   activeTab = 'chat'
 }: ChatInputProps) {
@@ -213,7 +215,7 @@ export function ChatInput({
     
     try {
       // Upload file to backend
-      const uploadResponse = await uploadFile(selectedFile, userId)
+      const uploadResponse = await uploadFile(selectedFile, userId, sessionId)
       
           // Store file metadata for sending with message
           const fileAttachment = {

@@ -497,6 +497,7 @@ export const useChat = (
     handleClearReference,
     handleOptionClick,
     handleFollowUpClick,
-    handleReferenceClick
+    handleReferenceClick,
+    sessionId
   }
 } 

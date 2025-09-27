@@ -23,6 +23,7 @@ interface ChatInputAreaProps {
   onClearQuoted: () => void;
   isAuthenticated?: boolean;
   currentTab?: string; // Add currentTab prop for tab-specific @ linking
+  sessionId?: string | null; // Add sessionId prop for file uploads
   // Mobile props
   isMobile?: boolean;
   activeTab?: 'chat' | 'notes';
@@ -56,6 +57,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   onClearQuoted,
   isAuthenticated = true,
   currentTab = 'all',
+  sessionId = null,
   isMobile = false,
   activeTab = 'chat',
   includeNotepadInMessages,
@@ -165,6 +167,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
             quotedForNotepad={quotedForNotepad}
             onClearQuoted={onClearQuoted}
             currentTab={currentTab}
+            sessionId={sessionId}
             isMobile={isMobile}
             activeTab={activeTab}
           />

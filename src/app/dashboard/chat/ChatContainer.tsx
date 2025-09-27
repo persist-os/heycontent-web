@@ -105,7 +105,8 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
     handleClearReference,
     handleOptionClick: handleOptionClickFromChat,
     handleFollowUpClick,
-    handleReferenceClick: handleReferenceClickProp
+    handleReferenceClick: handleReferenceClickProp,
+    sessionId
   } = useChat(
     chatState, 
     authData.userId, 
@@ -355,6 +356,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
                 isAuthenticated={authData.isAuthenticated}
                 isMobile={isMobile}
                 activeTab={activeTab}
+                sessionId={sessionId}
                 embeddingInfo={state.embeddingInfo}
                 useContextSearch={state.useContextSearch}
                 onToggleContextSearch={setters.setUseContextSearch}
@@ -473,6 +475,7 @@ const ChatContainer: React.FC<ChatScreenProps> = ({ chatId, contentContext, askQ
               isAuthenticated={authData.isAuthenticated}
               isMobile={false}
               activeTab={activeTab}
+              sessionId={sessionId}
               embeddingInfo={state.embeddingInfo}
               useContextSearch={state.useContextSearch}
               onToggleContextSearch={setters.setUseContextSearch}
