@@ -17,7 +17,7 @@ interface UseChatContainerEffectsProps {
   askQuery?: string
   chatId?: string
   handleLoadConversation: (id: string) => void
-  handleSendMessageWithUpdateCheck: (message: string) => void
+  handleSendMessageWithUpdateCheck: (message: string, fileAttachments?: any[]) => void
   chatContainerRef: React.RefObject<HTMLDivElement>
   isMobile: boolean
   activeTab: string

@@ -14,7 +14,7 @@ interface UseChatContainerHandlersProps {
   authData: any
   chatState: ChatStateReturnType
   refs: ChatContainerRefs
-  handleSendMessage: (message: string, includeNotepad?: boolean) => void
+  handleSendMessage: (message: string, fileAttachments?: any[], includeNotepad?: boolean) => void
   handleClearReference: () => void
   clearContentContext: () => void
   resetChat: () => void
@@ -67,7 +67,13 @@ export function useChatContainerHandlers({
   }, [handleQuoteToNotepad, insertTextToNotepad])
 
   // Memoized handlers to prevent unnecessary re-renders
-  const handleSendMessageWithUpdateCheck = useCallback((message: string) => {
+  const handleSendMessageWithUpdateCheck = useCallback((message: string, fileAttachments?: any[]) => {
+    console.log('🔗 [CHAT CONTAINER HANDLERS] handleSendMessageWithUpdateCheck called with:', {
+      message: message.substring(0, 50) + '...',
+      fileAttachments: fileAttachments,
+      fileAttachmentsCount: fileAttachments?.length || 0
+    });
+    
     const lowerMessage = message.toLowerCase().trim()
     
     if (lowerMessage === 'hey content update persona') {
@@ -79,7 +85,7 @@ export function useChatContainerHandlers({
     }
     
     // Pass the includeNotepadInMessages state to handleSendMessage
-    handleSendMessage(message, state.includeNotepadInMessages)
+    handleSendMessage(message, fileAttachments, state.includeNotepadInMessages)
   }, [handleSendMessage, authData.userId, convex, refreshPersonaData, state.includeNotepadInMessages, setters])
 
   const handleNewChat = useCallback(() => {

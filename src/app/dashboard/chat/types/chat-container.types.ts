@@ -48,7 +48,7 @@ export interface ChatContainerRefs {
 }
 
 export interface ChatContainerHandlers {
-  handleSendMessageWithUpdateCheck: (message: string) => void
+  handleSendMessageWithUpdateCheck: (message: string, fileAttachments?: any[]) => void
   handleNewChat: () => void
   handleConfirmDiscardNotepad: () => void
   handleCancelDiscardNotepad: () => void

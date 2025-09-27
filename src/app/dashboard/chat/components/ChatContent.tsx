@@ -26,7 +26,7 @@ interface ChatContentProps {
   // Handlers
   handleNewChat: () => void
   handleRemoveContext?: () => void
-  handleSendMessageWithUpdateCheck: (message: string) => void
+  handleSendMessageWithUpdateCheck: (message: string, fileAttachments?: any[]) => void
   handleInputAppend: (text: string) => void
   handleMessageReference: (message: Message) => void
   notepadReferenceHandler: (messageId: string) => void

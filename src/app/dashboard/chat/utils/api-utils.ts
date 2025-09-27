@@ -1127,7 +1127,8 @@ export async function sendChatMessage(
   hasContextInjection?: boolean,
   onStatusUpdate?: (status: string) => void,
   useContextSearch: boolean = false,
-  notepadContext?: { content: string; title?: string } | null
+  notepadContext?: { content: string; title?: string } | null,
+  fileAttachments?: any[]
 ): Promise<ChatResponseData> {
   console.log('🐛 [API UTILS] sendChatMessage called with:', {
     content: content.substring(0, 50) + '...',
@@ -1136,6 +1137,8 @@ export async function sendChatMessage(
     hasContextInjection,
     contentContext: !!contentContext,
     notepadContext: !!notepadContext,
+    fileAttachments: fileAttachments,
+    fileAttachmentsCount: fileAttachments?.length || 0,
     notepadContextDetails: notepadContext ? {
       hasContent: !!notepadContext.content,
       contentLength: notepadContext.content?.length || 0,
@@ -1303,12 +1306,19 @@ export async function sendChatMessage(
     is_first_message: isFirstMessageBool,
     use_vector_search: useContextSearch, // ✅ User toggle controls vector search directly
     notepad_context: notepadContext,
+    file_attachments: fileAttachments,
     intent_analysis: intentAnalysis ? {
       needs_context: needsContext,
       confidence_score: intentAnalysis.confidence_score,
       reasoning: intentAnalysis.reasoning
     } : null
   };
+  
+  console.log('🐛 [DEBUG] Request body file_attachments:', {
+    fileAttachments: fileAttachments,
+    fileAttachmentsCount: fileAttachments?.length || 0,
+    fileAttachmentsContent: fileAttachments
+  });
 
   // Add context injection flag to help backend understand the message type
   if (hasContextInjection || gradedContext || vectorSearchResults) {

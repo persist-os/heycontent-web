@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { Note } from '../types';
 import { X, Plus, Hash } from 'lucide-react';
 import { getRecentTags, type NoteTagData } from '../utils/tag-utils';
@@ -124,18 +124,17 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onTagsChange, onEditin
         {/* Left: full timestamp */}
         <div className="flex items-center text-xs text-muted-foreground/70">
           <time className="font-medium tracking-wide">
-            {note.updatedAt
-              ? new Date(note.updatedAt).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric'
-                }) + ' at ' + new Date(note.updatedAt).toLocaleTimeString('en-US', {
-                  hour: 'numeric',
-                  minute: '2-digit',
-                  hour12: true
-                })
-              : 'Now'
-            }
+            {useMemo(() => {
+              if (!note.updatedAt) return 'Now';
+              return new Date(note.updatedAt).toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+              });
+            }, [note.updatedAt])}
           </time>
         </div>
 

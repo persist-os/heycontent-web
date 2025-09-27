@@ -47,12 +47,15 @@ export const useChat = (
 
   const router = useRouter();
 
-  const handleSendMessage = useCallback(async (content: string, includeNotepad?: boolean) => {
+  const handleSendMessage = useCallback(async (content: string, fileAttachments?: any[], includeNotepad?: boolean) => {
     console.log('🔗 [USE CHAT] handleSendMessage called with:', {
       content: content.substring(0, 100) + '...',
       hasContentLinks: content.includes('@['),
       includeNotepad,
-      hasNotepadGetter: !!getNotepadContent
+      hasNotepadGetter: !!getNotepadContent,
+      fileAttachments: fileAttachments,
+      fileAttachmentsCount: fileAttachments?.length || 0,
+      fileAttachmentsDetails: fileAttachments
     })
     
     if (!content || typeof content !== 'string' || !content.trim()) return;
@@ -257,7 +260,8 @@ export const useChat = (
             false,
             handleStatusUpdate, // Pass status update callback
             useContextSearch, // Pass context search toggle
-            notepadContext // Pass notepad context
+            notepadContext, // Pass notepad context
+            fileAttachments // Pass file attachments
           );
 
       // Add final completion status update

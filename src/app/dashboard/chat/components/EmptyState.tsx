@@ -8,7 +8,7 @@ interface EmptyStateProps {
   authData: any
   themeColors: any
   handleNewChat: () => void
-  handleSendMessageWithUpdateCheck: (message: string) => void
+  handleSendMessageWithUpdateCheck: (message: string, fileAttachments?: any[]) => void
   clearContentContext: () => void
 }
 

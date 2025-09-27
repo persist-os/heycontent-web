@@ -8,7 +8,7 @@ interface ChatInputAreaProps {
   showAmbient: boolean;
   currentContext?: any;
   handleActionClick: (action: string) => void;
-  handleSendMessage: (message: string) => void;
+  handleSendMessage: (message: string, fileAttachments?: any[]) => void;
   inputRef: React.RefObject<HTMLTextAreaElement>;
   isLoading: boolean;
   referencedMessage: Message | null;
@@ -61,6 +61,17 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   includeNotepadInMessages,
   onToggleNotepadInMessages
 }) => {
+  
+  // Wrap handleSendMessage to add debug logging
+  const wrappedHandleSendMessage = (message: string, fileAttachments?: any[]) => {
+    console.log('🔗 [CHAT INPUT AREA] wrappedHandleSendMessage called with:', {
+      message: message.substring(0, 50) + '...',
+      fileAttachments: fileAttachments,
+      fileAttachmentsCount: fileAttachments?.length || 0
+    });
+    handleSendMessage(message, fileAttachments);
+  };
+
   // Only show ambient content when there are no messages
   const showAmbientContent = showAmbient && !currentContext;
   
@@ -130,7 +141,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
           
           <ChatInput
             inputRef={inputRef}
-            onSend={handleSendMessage}
+            onSend={wrappedHandleSendMessage}
             isLoading={isLoading || !isAuthenticated}
             disabled={!isAuthenticated}
             referencedMessage={referencedMessage}
