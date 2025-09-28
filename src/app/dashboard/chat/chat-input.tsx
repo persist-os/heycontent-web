@@ -348,38 +348,17 @@ export function ChatInput({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log('🔔 [CHAT INPUT] handleSubmit called:', {
-      hasContent: !!currentInput.trim(),
-      isLoading,
-      inputLength: currentInput.length,
-      maxLength,
-      attachedFilesCount: attachedFiles.length
-    })
     
     if ((currentInput.trim() || attachedFiles.length > 0) && !isLoading && currentInput.length <= maxLength) {
       let fileAttachments: any[] = []
       
       // Upload all attached files if any
       if (attachedFiles.length > 0 && userId) {
-        console.log('🔗 [CHAT INPUT] Starting file upload process:', {
-          attachedFilesCount: attachedFiles.length,
-          userId,
-          sessionId
-        })
         try {
           const uploadPromises = attachedFiles
             .filter(f => !f.uploadError) // Only upload files without errors
             .map(async (attachedFile) => {
-              console.log('🔗 [CHAT INPUT] Uploading file:', {
-                fileName: attachedFile.file.name,
-                fileSize: attachedFile.file.size,
-                fileType: attachedFile.file.type
-              })
               const uploadResponse = await uploadFile(attachedFile.file, userId, sessionId)
-              console.log('🔗 [CHAT INPUT] File upload successful:', {
-                fileId: uploadResponse.file_metadata.file_id,
-                originalFilename: uploadResponse.file_metadata.original_filename
-              })
               return {
                 file_id: uploadResponse.file_metadata.file_id,
                 original_filename: uploadResponse.file_metadata.original_filename,
@@ -391,28 +370,14 @@ export function ChatInput({
             })
           
           fileAttachments = await Promise.all(uploadPromises)
-          console.log('🔗 [CHAT INPUT] All files uploaded successfully:', {
-            fileAttachmentsCount: fileAttachments.length,
-            fileAttachments: fileAttachments
-          })
         } catch (error) {
-          console.error('🔗 [CHAT INPUT] Error uploading files:', error)
+          console.error('Error uploading files:', error)
           // Continue with message even if file upload fails
         }
-      } else {
-        console.log('🔗 [CHAT INPUT] No files to upload:', {
-          attachedFilesCount: attachedFiles.length,
-          hasUserId: !!userId
-        })
       }
       
       // Convert truncated titles back to content IDs before sending
       const processedMessage = convertTitlesToContentIds(currentInput.trim())
-      console.log('🔔 [CHAT INPUT] Sending message:', {
-        originalMessage: currentInput.trim(),
-        processedMessage,
-        fileAttachments
-      })
       
       onSend(processedMessage, fileAttachments)
       setCurrentInput('')
@@ -445,25 +410,11 @@ export function ChatInput({
         
         // Upload all attached files if any
         if (attachedFiles.length > 0 && userId) {
-          console.log('🔗 [CHAT INPUT] Starting file upload process (Enter key):', {
-            attachedFilesCount: attachedFiles.length,
-            userId,
-            sessionId
-          })
           try {
             const uploadPromises = attachedFiles
               .filter(f => !f.uploadError) // Only upload files without errors
               .map(async (attachedFile) => {
-                console.log('🔗 [CHAT INPUT] Uploading file (Enter key):', {
-                  fileName: attachedFile.file.name,
-                  fileSize: attachedFile.file.size,
-                  fileType: attachedFile.file.type
-                })
                 const uploadResponse = await uploadFile(attachedFile.file, userId, sessionId)
-                console.log('🔗 [CHAT INPUT] File upload successful (Enter key):', {
-                  fileId: uploadResponse.file_metadata.file_id,
-                  originalFilename: uploadResponse.file_metadata.original_filename
-                })
                 return {
                   file_id: uploadResponse.file_metadata.file_id,
                   original_filename: uploadResponse.file_metadata.original_filename,
@@ -475,19 +426,10 @@ export function ChatInput({
               })
             
             fileAttachments = await Promise.all(uploadPromises)
-            console.log('🔗 [CHAT INPUT] All files uploaded successfully (Enter key):', {
-              fileAttachmentsCount: fileAttachments.length,
-              fileAttachments: fileAttachments
-            })
           } catch (error) {
-            console.error('🔗 [CHAT INPUT] Error uploading files (Enter key):', error)
+            console.error('Error uploading files:', error)
             // Continue with message even if file upload fails
           }
-        } else {
-          console.log('🔗 [CHAT INPUT] No files to upload (Enter key):', {
-            attachedFilesCount: attachedFiles.length,
-            hasUserId: !!userId
-          })
         }
         
         // Convert truncated titles back to content IDs before sending
