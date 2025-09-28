@@ -88,10 +88,13 @@ export function ChatInput({
   const [contentSelectorPosition, setContentSelectorPosition] = useState({ top: 100, left: 100 })
   const [contentSearchTerm, setContentSearchTerm] = useState('')
   
-  // File upload state
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [isUploading, setIsUploading] = useState(false)
-  const [uploadError, setUploadError] = useState<string | null>(null)
+  // File upload state - changed to support multiple files
+  const [attachedFiles, setAttachedFiles] = useState<Array<{
+    file: File;
+    id: string;
+    isUploading?: boolean;
+    uploadError?: string;
+  }>>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   // Get current user ID from API key
@@ -172,90 +175,61 @@ export function ChatInput({
     setContentSearchTerm('')
   }, [textareaRef, allLinkableContent])
 
-  // File upload handlers
+  // File upload handlers - modified to add files to current message
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      // Validate file size (max 10MB)
-      const maxSize = 10 * 1024 * 1024 // 10MB
-      if (file.size > maxSize) {
-        setUploadError('File size must be less than 10MB')
-        return
-      }
-      
-      // Validate file type (allow common document and image types)
-      const allowedTypes = [
-        'text/plain',
-        'text/csv',
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'image/jpeg',
-        'image/png',
-        'image/gif',
-        'image/webp',
-        'text/markdown'
-      ]
-      
-      if (!allowedTypes.includes(file.type)) {
-        setUploadError('File type not supported. Please upload a document or image.')
-        return
-      }
-      
-      setSelectedFile(file)
-      setUploadError(null)
-    }
-  }, [])
-
-  const handleFileUpload = useCallback(async () => {
-    if (!selectedFile || !userId) return
-    
-    setIsUploading(true)
-    setUploadError(null)
-    
-    try {
-      // Upload file to backend
-      const uploadResponse = await uploadFile(selectedFile, userId, sessionId)
-      
-          // Store file metadata for sending with message
-          const fileAttachment = {
-            file_id: uploadResponse.file_metadata.file_id,
-            original_filename: uploadResponse.file_metadata.original_filename,
-            content_type: uploadResponse.file_metadata.content_type,
-            file_size: uploadResponse.file_metadata.file_size,
-            gcs_url: uploadResponse.file_metadata.gcs_url,
-            uploaded_at: uploadResponse.file_metadata.uploaded_at
+    const files = event.target.files
+    if (files && files.length > 0) {
+      const newFiles = Array.from(files).map(file => {
+        // Validate file size (max 10MB)
+        const maxSize = 10 * 1024 * 1024 // 10MB
+        if (file.size > maxSize) {
+          return {
+            file,
+            id: Math.random().toString(36).substr(2, 9),
+            uploadError: 'File size must be less than 10MB'
           }
+        }
+        
+        // Validate file type (allow common document and image types)
+        const allowedTypes = [
+          'text/plain',
+          'text/csv',
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'image/jpeg',
+          'image/png',
+          'image/gif',
+          'image/webp',
+          'text/markdown'
+        ]
+        
+        if (!allowedTypes.includes(file.type)) {
+          return {
+            file,
+            id: Math.random().toString(36).substr(2, 9),
+            uploadError: 'File type not supported. Please upload a document or image.'
+          }
+        }
+        
+        return {
+          file,
+          id: Math.random().toString(36).substr(2, 9)
+        }
+      })
       
-      // Create a message with the file attachment
-      const fileMessage = `📎 **File uploaded:** ${selectedFile.name}`
-      
-      // Send the message with file attachment metadata
-      console.log('🔗 [CHAT INPUT] Calling onSend with file attachment:', {
-        message: fileMessage,
-        fileAttachment: fileAttachment,
-        fileAttachmentArray: [fileAttachment]
-      });
-      onSend(fileMessage, [fileAttachment])
-      
-      // Clear the selected file
-      setSelectedFile(null)
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
-      }
-    } catch (error) {
-      setUploadError(error instanceof Error ? error.message : 'Upload failed')
-    } finally {
-      setIsUploading(false)
+      setAttachedFiles(prev => [...prev, ...newFiles])
     }
-  }, [selectedFile, userId, onSend])
-
-  const handleRemoveFile = useCallback(() => {
-    setSelectedFile(null)
-    setUploadError(null)
+    
+    // Clear the input so the same file can be selected again
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
+  }, [])
+
+  // Remove individual attached file
+  const handleRemoveAttachedFile = useCallback((fileId: string) => {
+    setAttachedFiles(prev => prev.filter(f => f.id !== fileId))
   }, [])
 
   const handleFileButtonClick = useCallback(() => {
@@ -375,24 +349,77 @@ export function ChatInput({
     return convertedText
   }, [allLinkableContent])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     console.log('🔔 [CHAT INPUT] handleSubmit called:', {
       hasContent: !!currentInput.trim(),
       isLoading,
       inputLength: currentInput.length,
-      maxLength
+      maxLength,
+      attachedFilesCount: attachedFiles.length
     })
     
-    if (currentInput.trim() && !isLoading && currentInput.length <= maxLength) {
+    if ((currentInput.trim() || attachedFiles.length > 0) && !isLoading && currentInput.length <= maxLength) {
+      let fileAttachments: any[] = []
+      
+      // Upload all attached files if any
+      if (attachedFiles.length > 0 && userId) {
+        console.log('🔗 [CHAT INPUT] Starting file upload process:', {
+          attachedFilesCount: attachedFiles.length,
+          userId,
+          sessionId
+        })
+        try {
+          const uploadPromises = attachedFiles
+            .filter(f => !f.uploadError) // Only upload files without errors
+            .map(async (attachedFile) => {
+              console.log('🔗 [CHAT INPUT] Uploading file:', {
+                fileName: attachedFile.file.name,
+                fileSize: attachedFile.file.size,
+                fileType: attachedFile.file.type
+              })
+              const uploadResponse = await uploadFile(attachedFile.file, userId, sessionId)
+              console.log('🔗 [CHAT INPUT] File upload successful:', {
+                fileId: uploadResponse.file_metadata.file_id,
+                originalFilename: uploadResponse.file_metadata.original_filename
+              })
+              return {
+                file_id: uploadResponse.file_metadata.file_id,
+                original_filename: uploadResponse.file_metadata.original_filename,
+                content_type: uploadResponse.file_metadata.content_type,
+                file_size: uploadResponse.file_metadata.file_size,
+                gcs_url: uploadResponse.file_metadata.gcs_url,
+                uploaded_at: uploadResponse.file_metadata.uploaded_at
+              }
+            })
+          
+          fileAttachments = await Promise.all(uploadPromises)
+          console.log('🔗 [CHAT INPUT] All files uploaded successfully:', {
+            fileAttachmentsCount: fileAttachments.length,
+            fileAttachments: fileAttachments
+          })
+        } catch (error) {
+          console.error('🔗 [CHAT INPUT] Error uploading files:', error)
+          // Continue with message even if file upload fails
+        }
+      } else {
+        console.log('🔗 [CHAT INPUT] No files to upload:', {
+          attachedFilesCount: attachedFiles.length,
+          hasUserId: !!userId
+        })
+      }
+      
       // Convert truncated titles back to content IDs before sending
       const processedMessage = convertTitlesToContentIds(currentInput.trim())
       console.log('🔔 [CHAT INPUT] Sending message:', {
         originalMessage: currentInput.trim(),
-        processedMessage
+        processedMessage,
+        fileAttachments
       })
-      onSend(processedMessage)
+      
+      onSend(processedMessage, fileAttachments)
       setCurrentInput('')
+      setAttachedFiles([]) // Clear attached files after sending
     }
   }
 
@@ -407,7 +434,7 @@ export function ChatInput({
     }
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter') {
       if (e.shiftKey) {
         // Allow new line with Shift+Enter
@@ -415,12 +442,62 @@ export function ChatInput({
       } else {
         // Send message with Enter
         e.preventDefault()
-        if (!currentInput.trim() || isLoading || characterCount >= maxLength) return
+        if ((!currentInput.trim() && attachedFiles.length === 0) || isLoading || characterCount >= maxLength) return
+        
+        let fileAttachments: any[] = []
+        
+        // Upload all attached files if any
+        if (attachedFiles.length > 0 && userId) {
+          console.log('🔗 [CHAT INPUT] Starting file upload process (Enter key):', {
+            attachedFilesCount: attachedFiles.length,
+            userId,
+            sessionId
+          })
+          try {
+            const uploadPromises = attachedFiles
+              .filter(f => !f.uploadError) // Only upload files without errors
+              .map(async (attachedFile) => {
+                console.log('🔗 [CHAT INPUT] Uploading file (Enter key):', {
+                  fileName: attachedFile.file.name,
+                  fileSize: attachedFile.file.size,
+                  fileType: attachedFile.file.type
+                })
+                const uploadResponse = await uploadFile(attachedFile.file, userId, sessionId)
+                console.log('🔗 [CHAT INPUT] File upload successful (Enter key):', {
+                  fileId: uploadResponse.file_metadata.file_id,
+                  originalFilename: uploadResponse.file_metadata.original_filename
+                })
+                return {
+                  file_id: uploadResponse.file_metadata.file_id,
+                  original_filename: uploadResponse.file_metadata.original_filename,
+                  content_type: uploadResponse.file_metadata.content_type,
+                  file_size: uploadResponse.file_metadata.file_size,
+                  gcs_url: uploadResponse.file_metadata.gcs_url,
+                  uploaded_at: uploadResponse.file_metadata.uploaded_at
+                }
+              })
+            
+            fileAttachments = await Promise.all(uploadPromises)
+            console.log('🔗 [CHAT INPUT] All files uploaded successfully (Enter key):', {
+              fileAttachmentsCount: fileAttachments.length,
+              fileAttachments: fileAttachments
+            })
+          } catch (error) {
+            console.error('🔗 [CHAT INPUT] Error uploading files (Enter key):', error)
+            // Continue with message even if file upload fails
+          }
+        } else {
+          console.log('🔗 [CHAT INPUT] No files to upload (Enter key):', {
+            attachedFilesCount: attachedFiles.length,
+            hasUserId: !!userId
+          })
+        }
         
         // Convert truncated titles back to content IDs before sending
         const processedMessage = convertTitlesToContentIds(currentInput.trim())
-        onSend(processedMessage)
+        onSend(processedMessage, fileAttachments)
         setCurrentInput('')
+        setAttachedFiles([]) // Clear attached files after sending
       }
     }
 
@@ -543,6 +620,47 @@ export function ChatInput({
           </div>
         )}
 
+        {/* Attached files display - above text input */}
+        {attachedFiles.length > 0 && (
+          <div className="mb-3 p-3 bg-muted/30 rounded-lg border border-border/30">
+            <div className="flex items-center gap-2 mb-2">
+              <Paperclip className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">
+                Attached files ({attachedFiles.length})
+              </span>
+            </div>
+            <div className="space-y-2">
+              {attachedFiles.map((attachedFile) => (
+                <div key={attachedFile.id} className="flex items-center gap-3 p-2 bg-background/50 rounded-md border border-border/20">
+                  <div className="flex-shrink-0">
+                    <FileText className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-foreground truncate">
+                      {attachedFile.file.name}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {(attachedFile.file.size / 1024 / 1024).toFixed(2)} MB
+                    </div>
+                    {attachedFile.uploadError && (
+                      <div className="text-xs text-destructive mt-1">
+                        {attachedFile.uploadError}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleRemoveAttachedFile(attachedFile.id)}
+                    className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+                    title="Remove file"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="flex gap-2 items-end w-full relative">
           <div className={`
             flex-1 relative rounded-xl transition-all duration-200
@@ -613,6 +731,7 @@ export function ChatInput({
                 <input
                   ref={fileInputRef}
                   type="file"
+                  multiple
                   accept=".txt,.csv,.pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.webp,.md"
                   onChange={handleFileSelect}
                   className="hidden"
@@ -657,55 +776,6 @@ export function ChatInput({
           Press Enter to send, Shift+Enter for new line, @ to link content
         </div>
         
-        {/* File upload preview */}
-        {selectedFile && (
-          <div className="mt-2 p-3 bg-muted/50 rounded-lg border border-border/50">
-            <div className="flex items-center gap-3">
-              <div className="flex-shrink-0">
-                <FileText className="w-5 h-5 text-muted-foreground" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-foreground truncate">
-                  {selectedFile.name}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleFileUpload}
-                  disabled={isUploading}
-                  className="px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-                >
-                  {isUploading ? (
-                    <>
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-3 h-3" />
-                      Upload
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={handleRemoveFile}
-                  disabled={isUploading}
-                  className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-            {uploadError && (
-              <div className="mt-2 text-xs text-destructive">
-                {uploadError}
-              </div>
-            )}
-          </div>
-        )}
         
         {/* Temporary shadow text display - only in development */}
         {/* Shadow text debug UI removed for production cleanup */}
