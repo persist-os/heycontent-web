@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { File, FileText, Image, FileSpreadsheet, FileVideo, FileAudio, Archive, Paperclip } from 'lucide-react'
+import { FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface FileAttachmentBubbleProps {
@@ -16,15 +16,6 @@ interface FileAttachmentBubbleProps {
   className?: string;
 }
 
-const getFileIcon = (fileType: string) => {
-  if (fileType.startsWith('image/')) return Image
-  if (fileType.includes('pdf') || fileType.includes('document')) return FileText
-  if (fileType.includes('spreadsheet') || fileType.includes('csv')) return FileSpreadsheet
-  if (fileType.includes('video')) return FileVideo
-  if (fileType.includes('audio')) return FileAudio
-  if (fileType.includes('zip') || fileType.includes('archive')) return Archive
-  return File
-}
 
 const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 Bytes'
@@ -44,32 +35,19 @@ export function FileAttachmentBubble({
 
   return (
     <div className={cn(
-      "flex items-center gap-2 p-2 rounded-lg border bg-muted/30 text-muted-foreground",
-      "text-xs max-w-fit",
+      "max-w-full sm:max-w-[95%] w-full rounded-2xl px-5 sm:px-7 py-2 sm:py-3 bg-primary text-primary-foreground dark:text-black [&_*]:!text-primary-foreground dark:[&_*]:!text-black",
       className
     )}>
-      <Paperclip className="w-3 h-3 flex-shrink-0" />
-      <span className="font-medium">
-        {fileAttachments.length} file{fileAttachments.length > 1 ? 's' : ''} attached:
-      </span>
-      <div className="flex items-center gap-1 flex-wrap">
-        {fileAttachments.map((file, index) => {
-          const FileIcon = getFileIcon(file.content_type)
-          return (
-            <div
-              key={`${file.file_id}-${index}`}
-              className="flex items-center gap-1 bg-background/50 px-2 py-1 rounded border text-xs"
-            >
-              <FileIcon className="w-3 h-3" />
-              <span className="truncate max-w-[120px]" title={file.original_filename}>
-                {file.original_filename}
-              </span>
-              <span className="text-muted-foreground/70">
-                ({formatFileSize(file.file_size)})
-              </span>
-            </div>
-          )
-        })}
+      <div className="space-y-2">
+        {fileAttachments.map((file, index) => (
+          <div key={`${file.file_id}-${index}`} className="text-sm flex items-center gap-2">
+            <FileText className="w-4 h-4 flex-shrink-0" />
+            <span className="font-medium">{file.original_filename}</span>
+            <span className="text-primary-foreground/70 dark:text-black/70 ml-auto">
+              ({formatFileSize(file.file_size)})
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   )
