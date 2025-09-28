@@ -190,25 +190,22 @@ export function ChatInput({
           }
         }
         
-        // Validate file type (allow common document and image types)
+        // Validate file type (allow only document types)
         const allowedTypes = [
           'text/plain',
           'text/csv',
           'application/pdf',
           'application/msword',
           'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          'image/jpeg',
-          'image/png',
-          'image/gif',
-          'image/webp',
-          'text/markdown'
+          'application/rtf',
+          'application/json'
         ]
         
         if (!allowedTypes.includes(file.type)) {
           return {
             file,
             id: Math.random().toString(36).substr(2, 9),
-            uploadError: 'File type not supported. Please upload a document or image.'
+            uploadError: 'File type not supported. Please upload PDF, DOC, DOCX, TXT, CSV, RTF, or JSON files only.'
           }
         }
         
@@ -732,7 +729,7 @@ export function ChatInput({
                   ref={fileInputRef}
                   type="file"
                   multiple
-                  accept=".txt,.csv,.pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.webp,.md"
+                  accept=".pdf,.doc,.docx,.txt,.csv,.rtf,.json"
                   onChange={handleFileSelect}
                   className="hidden"
                 />
