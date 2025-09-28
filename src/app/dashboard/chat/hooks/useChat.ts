@@ -124,7 +124,8 @@ export const useChat = (
         content: referencedMessage.content
       } : undefined,
       chat_response: content,
-      sessionId: sessionId // Include current sessionId
+      sessionId: sessionId, // Include current sessionId
+      fileAttachments: fileAttachments // Include file attachments
     }
 
     try {

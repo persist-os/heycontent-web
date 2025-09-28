@@ -8,6 +8,7 @@ import { ExpandableInsights } from './expandable-insights'
 import { MarkdownRenderer, ChatContentRenderer } from './markdown-renderer'
 import { PersonaCardRenderer } from './components/PersonaCardRenderer'
 import { HorizontalProgressiveThinking } from './components/main_chat/HorizontalProgressiveThinking'
+import { FileAttachmentBubble } from './components/FileAttachmentBubble'
 import { CopyButton } from '@/components/ui/copy-button'
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { AnimatePresence } from 'framer-motion'
@@ -418,6 +419,18 @@ export function MessageBubble({
         </div>
       )}
 
+      {/* File Attachment Bubble - Above the main message */}
+      {message.fileAttachments && message.fileAttachments.length > 0 && (
+        <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-2`}>
+          <div className={`max-w-full sm:max-w-[95%] w-full`}>
+            <FileAttachmentBubble 
+              fileAttachments={message.fileAttachments}
+              className={isUser ? 'ml-auto' : 'mr-auto'}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Chat Bubble Container */}
       <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-1`}>
         <div
@@ -443,6 +456,7 @@ export function MessageBubble({
                 <div className="truncate opacity-80 break-words">{message.referencedMessage.content}</div>
               </button>
             )}
+
 
             {/* Main message content */}
             <div className="prose prose-sm dark:prose-invert prose-p:my-2 prose-headings:my-3 max-w-none break-words word-break-break-word hyphens-auto w-full">

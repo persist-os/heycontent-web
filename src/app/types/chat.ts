@@ -13,6 +13,15 @@ export interface InteractiveResponse {
   contextualSuggestions?: string[];
 }
 
+export interface FileAttachment {
+  file_id: string;
+  original_filename: string;
+  content_type: string;
+  file_size: number;
+  gcs_url: string;
+  uploaded_at: string;
+}
+
 export interface Message {
   id: string;
   content: string;
@@ -28,6 +37,7 @@ export interface Message {
   sessionId?: string;
   searchStatus?: string;
   statusHistory?: string[]; // Array of all status updates for progressive thinking
+  fileAttachments?: FileAttachment[]; // File attachments for this message
   metadata?: {
     suggestions?: any[];
     [key: string]: any;
