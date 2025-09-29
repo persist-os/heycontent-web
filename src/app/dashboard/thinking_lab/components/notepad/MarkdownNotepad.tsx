@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useImperativeHandle, forwardRef } from 'react'
 import { useAuth } from '@/app/context/auth-context'
+import { useQuery } from 'convex/react'
+import { api } from '@/convex/_generated/api'
 import { MobileNotepadLayout } from './components/MobileNotepadLayout'
 import { DesktopNotepadLayout } from './components/DesktopNotepadLayout'
 import { useNotepadState } from './hooks/useNotepadState'
@@ -33,6 +35,32 @@ export const MarkdownNotepad = forwardRef<MarkdownNotepadRef, MarkdownNotepadPro
   const { firebaseUser } = useAuth()
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
+
+  // Fetch user notes for the note selector
+  const userNotesQuery = useQuery(
+    api.noteQueries.getUserNotes, 
+    firebaseUser?.uid ? {
+      userId: firebaseUser.uid,
+      numItems: 20,
+      sortField: '_creationTime',
+      sortOrder: 'desc',
+      includeShared: true
+    } : "skip"
+  )
+
+  // Transform notes for the selector (only include essential fields)
+  const fetchedAvailableNotes = React.useMemo(() => {
+    if (!userNotesQuery?.page) return []
+    
+    return userNotesQuery.page.map(note => ({
+      _id: note._id,
+      title: note.title || 'Untitled',
+      type: note.type || 'idea_bank'
+    }))
+  }, [userNotesQuery?.page])
+
+  // Use fetched notes if available, fallback to prop
+  const finalAvailableNotes = fetchedAvailableNotes.length > 0 ? fetchedAvailableNotes : availableNotes
 
   // Use our custom hooks for state and logic
   const { state, refs, setters, contextData, note, notePermission, isReadOnly } = useNotepadState({
@@ -116,7 +144,7 @@ export const MarkdownNotepad = forwardRef<MarkdownNotepadRef, MarkdownNotepadPro
           note={note}
           content={state.content}
           currentNoteId={state.currentNoteId}
-          availableNotes={availableNotes}
+          availableNotes={finalAvailableNotes}
           noteTagData={contextData.noteTagData}
           shouldShowSmartButton={contextData.shouldShowSmartButton}
           isGeneratingMetadata={contextData.isGeneratingMetadata}
@@ -153,7 +181,7 @@ export const MarkdownNotepad = forwardRef<MarkdownNotepadRef, MarkdownNotepadPro
         note={note}
         content={state.content}
         currentNoteId={state.currentNoteId}
-        availableNotes={availableNotes}
+        availableNotes={finalAvailableNotes}
         noteTagData={contextData.noteTagData}
         shouldShowSmartButton={contextData.shouldShowSmartButton}
         isGeneratingMetadata={contextData.isGeneratingMetadata}

@@ -17,37 +17,74 @@ export const handleUserLogin = action({
     
     console.log('🔐 [USER LOGIN] Handling login for user:', userId);
 
-    // Always return success immediately - don't let embedding sync block login
+    // Always return success immediately - don't let background tasks block login
     const loginResult = {
       success: true,
       syncTriggered: false,
+      migrationTriggered: false,
       message: 'Login successful'
     };
 
-    // Trigger embedding sync in the background (fire and forget)
+    // Trigger background tasks (embedding sync + crystal migration)
     try {
-      console.log('🔄 [USER LOGIN] Triggering background embedding sync for user:', userId);
+      console.log('🔄 [USER LOGIN] Triggering background tasks for user:', userId);
       
       // Use setTimeout to make this truly asynchronous
       setTimeout(async () => {
         try {
-          await ctx.runAction(api.embeddingSystem.syncEmbeddingsOnHeartbeat, {
-            userId
-          });
-          console.log('✅ [USER LOGIN] Background embedding sync completed successfully for user:', userId);
-        } catch (syncError) {
-          console.error('⚠️ [USER LOGIN] Background embedding sync failed for user:', userId, syncError);
+          console.log('🚀 [USER LOGIN] Starting background task execution for user:', userId);
+          
+          // 1. Check and trigger crystal migration first (if needed)
+          console.log('🔮 [USER LOGIN] About to check crystal migration status for user:', userId);
+          
+          try {
+            const migrationResult = await ctx.runAction(api.crystalMigration.triggerCrystalMigration, {
+              userId
+            });
+            
+            console.log('🔮 [USER LOGIN] Migration result received:', migrationResult);
+            
+            if (migrationResult.success && !migrationResult.skipped) {
+              console.log(`✅ [USER LOGIN] Crystal migration completed for user ${userId}:`, {
+                shardsCreated: migrationResult.crystalSystemResults?.shardsCreated || 0,
+                crystalsCreated: migrationResult.crystalSystemResults?.crystalsCreated || 0
+              });
+            } else if (migrationResult.skipped) {
+              console.log(`⏭️ [USER LOGIN] Crystal migration skipped for user ${userId}: ${migrationResult.reason}`);
+            } else {
+              console.error(`❌ [USER LOGIN] Crystal migration failed for user ${userId}:`, migrationResult.error);
+            }
+          } catch (migrationError) {
+            console.error(`💥 [USER LOGIN] Crystal migration threw error for user ${userId}:`, migrationError);
+          }
+
+          // 2. Then trigger embedding sync
+          console.log('📡 [USER LOGIN] Starting embedding sync for user:', userId);
+          try {
+            await ctx.runAction(api.embeddingSystem.syncEmbeddingsOnHeartbeat, {
+              userId
+            });
+            console.log('✅ [USER LOGIN] Background embedding sync completed successfully for user:', userId);
+          } catch (embeddingError) {
+            console.error(`💥 [USER LOGIN] Embedding sync threw error for user ${userId}:`, embeddingError);
+          }
+          
+          console.log('🏁 [USER LOGIN] Background task execution completed for user:', userId);
+          
+        } catch (error) {
+          console.error('⚠️ [USER LOGIN] Background tasks failed for user:', userId, error);
           // Don't throw - this is background work and shouldn't affect the user
         }
       }, 100); // Small delay to ensure login completes first
 
       loginResult.syncTriggered = true;
-      loginResult.message = 'Login successful, embeddings syncing in background';
+      loginResult.migrationTriggered = true;
+      loginResult.message = 'Login successful, background processing initiated';
       
     } catch (error) {
-      console.error('⚠️ [USER LOGIN] Failed to trigger background embedding sync for user:', userId, error);
+      console.error('⚠️ [USER LOGIN] Failed to trigger background tasks for user:', userId, error);
       // Don't fail the login - just log the error and continue
-      loginResult.message = 'Login successful (embedding sync will retry later)';
+      loginResult.message = 'Login successful (background processing will retry later)';
     }
 
     return loginResult;

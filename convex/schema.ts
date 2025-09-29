@@ -1022,5 +1022,23 @@ export default defineSchema({
       .index("by_user", ["userId"])
       .index("by_status", ["status"])
       .index("by_user_status", ["userId", "status"]),
+
+  // Migration Tracking - Clean separation for one-time migrations
+  migration_tracking: defineTable({
+    userId: v.string(),
+    migrationType: v.string(), // "crystal_initial_generation", future migration types
+    completed: v.boolean(),
+    completedAt: v.optional(v.number()),
+    attempts: v.optional(v.number()),
+    lastAttemptAt: v.optional(v.number()),
+    contentProcessed: v.optional(v.object({
+      conversations: v.number(),
+      notes: v.number(),
+      totalItems: v.number()
+    }))
+  })
+  .index("by_user_type", ["userId", "migrationType"])
+  .index("by_type", ["migrationType"])
+  .index("by_completion", ["completed"]),
 });
 

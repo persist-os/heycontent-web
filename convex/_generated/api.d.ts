@@ -28,6 +28,7 @@ import type * as conversationSummariesQueries from "../conversationSummariesQuer
 import type * as crons from "../crons.js";
 import type * as crystalCache from "../crystalCache.js";
 import type * as crystalContextOptimized from "../crystalContextOptimized.js";
+import type * as crystalMigration from "../crystalMigration.js";
 import type * as crystalMutations from "../crystalMutations.js";
 import type * as crystalQueries from "../crystalQueries.js";
 import type * as embeddingSystem from "../embeddingSystem.js";
@@ -102,6 +103,7 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   crystalCache: typeof crystalCache;
   crystalContextOptimized: typeof crystalContextOptimized;
+  crystalMigration: typeof crystalMigration;
   crystalMutations: typeof crystalMutations;
   crystalQueries: typeof crystalQueries;
   embeddingSystem: typeof embeddingSystem;

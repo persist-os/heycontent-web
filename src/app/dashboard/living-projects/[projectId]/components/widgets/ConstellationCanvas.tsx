@@ -1,6 +1,6 @@
 /**
  * CONSTELLATION CANVAS COMPONENT
- * 
+ *
  * Main constellation visualization component with all interaction logic
  * extracted from the main ProjectViewScreen for better separation of concerns.
  */
