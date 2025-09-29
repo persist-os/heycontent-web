@@ -1,6 +1,19 @@
 'use client'
 
+/**
+ * AmbientFingerprintCanvas
+ *
+ * Extended purpose:
+ * - Acts as the discovery canvas for ambient fingerprint generation during chat.
+ * - Also serves as an "escape hatch" entry point: when a `projectId` is available,
+ *   a footer control lets users skip the chat flow and jump straight to the
+ *   edit-fingerprint screen to generate their fingerprint directly.
+ * - This button must not alter chat/discovery state or block any widget generation;
+ *   it simply navigates to the editor route.
+ */
+
 import React, { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Id } from '@/convex/_generated/dataModel'
 import { useFingerprintDiscovery } from './AmbientFingerprintCanvas/hooks/useFingerprintDiscovery'
 import { ChevronUp, ChevronDown } from 'lucide-react'
@@ -20,6 +33,7 @@ const AmbientFingerprintCanvas: React.FC<AmbientFingerprintCanvasProps> = ({
 }) => {
   // REVOLUTIONARY REACTIVE APPROACH - Zero state management!
   const discovery = useFingerprintDiscovery(projectId, onAllStarsDiscovered)
+  const router = useRouter()
   
   // Only UI state we need
   const [isExpanded, setIsExpanded] = useState(false)
@@ -277,6 +291,20 @@ const AmbientFingerprintCanvas: React.FC<AmbientFingerprintCanvasProps> = ({
             </p>
           </div>
         )}
+
+        <div className={`mt-3 ${isExpanded ? 'flex justify-end' : 'flex justify-end'}`}>
+          <button
+            type="button"
+            disabled={!projectId}
+            onClick={() => {
+              if (!projectId) return
+              router.push(`/dashboard/living-projects/${projectId}/edit-fingerprint`)
+            }}
+            className={`${isExpanded ? 'text-xs' : 'text-[11px]'} px-3 py-1.5 border border-border/40 rounded-md text-foreground hover:bg-muted/20 transition-colors disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-transparent`}
+          >
+            Skip chat and generate fingerprint
+          </button>
+        </div>
       </div>
     </div>
   )

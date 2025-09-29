@@ -6,8 +6,41 @@ export async function POST(request: NextRequest) {
   console.log('[crystal-formation-api] Manual crystal formation request received');
   
   try {
-    // Get the request body
-    const body = await request.json();
+    // Local helper: normalize Authorization and identity once per request
+    const normalizeAuthAndIdentity = async () => {
+      const authHeader = request.headers.get('Authorization') || '';
+      const bearerPrefix = 'Bearer ';
+      const apiKey = authHeader.startsWith(bearerPrefix)
+        ? authHeader.slice(bearerPrefix.length).trim()
+        : '';
+
+      let parsedBody: any = undefined;
+      try {
+        parsedBody = await request.clone().json();
+      } catch {
+        parsedBody = undefined;
+      }
+
+      const user_id = typeof parsedBody?.user_id === 'string' && parsedBody.user_id.trim().length > 0
+        ? parsedBody.user_id.trim()
+        : '';
+
+      return { apiKey, user_id, parsedBody } as const;
+    };
+
+    const { apiKey, user_id, parsedBody } = await normalizeAuthAndIdentity();
+
+    if (!apiKey) {
+      console.warn('[crystal-formation-api] Authentication failed');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!user_id) {
+      console.warn('[crystal-formation-api] Missing or invalid user_id');
+      return NextResponse.json({ error: 'Bad Request', detail: 'user_id is required and must be a non-empty string' }, { status: 400 });
+    }
+
+    const body = parsedBody ?? await request.json();
     
     console.log('[crystal-formation-api] Received request:', {
       force: body.force,
@@ -20,7 +53,7 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': request.headers.get('Authorization') || '',
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify(body),
     });

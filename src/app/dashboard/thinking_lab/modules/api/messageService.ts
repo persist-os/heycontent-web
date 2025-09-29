@@ -5,7 +5,7 @@
  * Calls the Next.js API route which forwards to backend.
  */
 
-import { fetchWithApiKey, getCurrentUserId } from '@/app/lib/api-helpers';
+import { fetchWithApiKey, getCurrentUserId, waitForAuthReady } from '@/app/lib/api-helpers';
 import { AuthenticationError } from '@/app/lib/errors';
 import {
   LabResponseData
@@ -28,10 +28,25 @@ import type {
 export async function transmitMessageWithContext(params: MessageTransmissionRequest): Promise<LabResponseData> {
   const { content, useContextSearch = true, onStatusUpdate } = params;
   
-  // Get user ID
-  const userId = getCurrentUserId();
+  // Auth readiness and userId resolution with retry
+  onStatusUpdate?.('Preparing secure session...');
+  let userId: string | null = null;
+  const ready = await waitForAuthReady(5, 150);
+  if (ready) {
+    try {
+      userId = await getCurrentUserId();
+    } catch (_) {
+      // Will retry below
+    }
+  }
   if (!userId) {
-    throw new AuthenticationError('User identification required. Please sign in again!');
+    // Retry flow specific to auth timing issues
+    onStatusUpdate?.('Waiting for authentication…');
+    const readyAgain = await waitForAuthReady(3, 250);
+    if (!readyAgain) {
+      throw new AuthenticationError('Authentication state not ready. Please wait a moment and try again.');
+    }
+    userId = await getCurrentUserId();
   }
 
   try {

@@ -4,7 +4,8 @@ import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { UnifiedContentSelector } from '@/components/ui/UnifiedContentSelector';
 import { useTheme } from 'next-themes';
 import { Send, Loader2, MessageSquare, FileText, Search } from 'lucide-react'
-import { getCurrentUserId } from '@/app/lib/api-helpers'
+import { getCurrentUserId, getCurrentUserIdSync, waitForAuthReady } from '@/app/lib/api-helpers'
+import { AuthenticationError } from '@/app/lib/errors'
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import type { Message } from '@/app/types/chat';
@@ -80,8 +81,40 @@ export function ChatInput({
   const [contentSelectorPosition, setContentSelectorPosition] = useState({ top: 100, left: 100 })
   const [contentSearchTerm, setContentSearchTerm] = useState('')
   
-  // Get current user ID from API key
-  const userId = getCurrentUserId()
+  // Auth/user state with readiness guard
+  const [userId, setUserId] = useState<string | null>(getCurrentUserIdSync())
+  const [authStatus, setAuthStatus] = useState<'idle' | 'waiting' | 'ready' | 'unavailable'>('idle')
+
+  useEffect(() => {
+    let mounted = true
+    async function ensureAuth() {
+      setAuthStatus('waiting')
+      const ready = await waitForAuthReady(5, 150)
+      if (!mounted) return
+      if (!ready) {
+        setAuthStatus('unavailable')
+        setUserId(null)
+        return
+      }
+      try {
+        const uid = await getCurrentUserId()
+        if (!mounted) return
+        setUserId(uid)
+        setAuthStatus('ready')
+      } catch (e) {
+        if (!mounted) return
+        setAuthStatus('ready')
+        setUserId(null)
+      }
+    }
+    // Only fetch if we don't have a synchronous cookie userId
+    if (!userId) {
+      ensureAuth()
+    } else {
+      setAuthStatus('ready')
+    }
+    return () => { mounted = false }
+  }, [])
   
   // Fetch unified content using platformRouter (same as UnifiedContentSelector)
   const allUnifiedContent = useQuery(
@@ -107,7 +140,7 @@ export function ChatInput({
     }));
   }, [allUnifiedContent]);
 
-  const isContentLoading = !userId || allUnifiedContent === undefined;
+  const isContentLoading = authStatus === 'waiting' || (!userId || allUnifiedContent === undefined);
   
   // Theme-aware accent colors
   const isDark = theme === 'dark'
@@ -356,6 +389,12 @@ export function ChatInput({
 
   return (
     <div className="shrink-0 bg-background relative">
+      {authStatus === 'waiting' && (
+        <div className="px-3 py-2 text-xs text-muted-foreground">Initializing authentication…</div>
+      )}
+      {authStatus === 'unavailable' && (
+        <div className="px-3 py-2 text-xs text-warning">Authentication state not ready. Please wait and try again.</div>
+      )}
       <form onSubmit={handleSubmit} className="p-2 sm:p-3">
         {/* Context indicator */}
         {hasContext && (
