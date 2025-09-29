@@ -11,50 +11,62 @@ import {
   CrystalSystemExplanation,
   ViewType
 } from './crystals';
-import { useMutation } from 'convex/react';
-import { api } from '../../../../convex/_generated/api';
 import { toast } from 'sonner';
+import { getApiKey } from '@/app/lib/api-helpers';
 
 export const InsightsTab = () => {
   const [activeView, setActiveView] = useState<ViewType>('overview');
   const [isMigrating, setIsMigrating] = useState(false);
+  const [isFormingCrystals, setIsFormingCrystals] = useState(false);
   const userId = useAuth();
   const { crystalStats, recentCrystals, recentShards } = useCrystalData(userId);
   const { formationStatus, formationEligibility } = useFormationData(userId);
   
-  // Migration trigger function
-  const triggerMigration = useMutation(api.crystalMigration.triggerCrystalMigration);
-
   const handleManualMigration = async () => {
     if (!userId || isMigrating) return;
 
     setIsMigrating(true);
     try {
-      console.log('🔮 [MANUAL MIGRATION] Triggering crystal migration for user:', userId);
+      console.log('🔮 [MANUAL MIGRATION] Starting simplified migration for user:', userId);
       
-      const result = await triggerMigration({ userId });
+      // Get API key for authentication
+      const apiKey = await getApiKey();
+      if (!apiKey) {
+        throw new Error('Authentication required. Please log in again.');
+      }
+      
+      // Call the simplified backend migration endpoint
+      const response = await fetch('/api/migration/run', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({}),
+      });
+
+      console.log('🔮 [MANUAL MIGRATION] API response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
       
       console.log('🔮 [MANUAL MIGRATION] Migration result:', result);
       
-      if (result.success && !result.skipped) {
+      if (result.success) {
         toast.success(
-          `Migration completed! Created ${result.crystalSystemResults?.shardsCreated || 0} shards and ${result.crystalSystemResults?.crystalsCreated || 0} crystals`,
+          `Migration completed! Processed ${result.items_added} items, created ${result.shards_created} shards and ${result.crystals_created} crystals`,
           { duration: 5000 }
-        );
-      } else if (result.skipped) {
-        toast.info(
-          `Migration skipped: ${result.reason}`,
-          { duration: 3000 }
         );
       } else {
         toast.error(
-          `Migration failed: ${result.error || 'Unknown error'}`,
+          `Migration failed: ${result.error || result.message || 'Unknown error'}`,
           { duration: 5000 }
         );
       }
-      
-      // Refresh the page to show new data
-      window.location.reload();
       
     } catch (error) {
       console.error('🔮 [MANUAL MIGRATION] Error:', error);
@@ -67,6 +79,72 @@ export const InsightsTab = () => {
     }
   };
 
+  const handleManualCrystalFormation = async () => {
+    if (!userId || isFormingCrystals) return;
+
+    setIsFormingCrystals(true);
+    try {
+      console.log('💎 [MANUAL FORMATION] Starting manual crystal formation for user:', userId);
+      
+      // Get API key for authentication
+      const apiKey = await getApiKey();
+      if (!apiKey) {
+        throw new Error('Authentication required. Please log in again.');
+      }
+      
+      // Call the crystal formation API route
+      const response = await fetch('/api/crystal-formation/manual', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          force: false // Respect normal eligibility rules
+          // Note: user_id is extracted from the Authorization header by the backend
+        }),
+      });
+
+      console.log('💎 [MANUAL FORMATION] API response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      
+      console.log('💎 [MANUAL FORMATION] Formation result:', result);
+      
+      if (result.success && result.triggered) {
+        toast.success(
+          result.message || 'Crystal formation completed successfully!',
+          { duration: 5000 }
+        );
+        // No page refresh - let Convex queries update the UI reactively
+      } else if (result.success && !result.triggered) {
+        toast.info(
+          result.message || 'Crystal formation not triggered - check eligibility requirements',
+          { duration: 4000 }
+        );
+      } else {
+        toast.error(
+          result.message || result.error || 'Crystal formation failed',
+          { duration: 5000 }
+        );
+      }
+      
+    } catch (error) {
+      console.error('💎 [MANUAL FORMATION] Error:', error);
+      toast.error(
+        `Crystal formation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        { duration: 5000 }
+      );
+    } finally {
+      setIsFormingCrystals(false);
+    }
+  };
+
   if (!userId) {
     return <InsightsSkeleton />;
   }
@@ -75,38 +153,57 @@ export const InsightsTab = () => {
     <div className="space-y-8">
       <CrystalSystemExplanation />
       
-      {/* Migration Control Section */}
-      <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg p-6 border border-purple-200 dark:border-purple-800">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-          Crystal Migration
+      {/* Crystal Actions */}
+      <div className="border rounded-lg p-4 space-y-4">
+        <h3 className="font-medium text-gray-900 dark:text-gray-100">
+          Crystal Actions
         </h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Generate crystals and shards from your recent content (last 14 days). This is automatically done on login, but you can trigger it manually here.
-        </p>
-        <button
-          onClick={handleManualMigration}
-          disabled={isMigrating}
-          className={`
-            px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200
-            ${isMigrating 
-              ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed' 
-              : 'bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600 text-white hover:shadow-lg'
-            }
-          `}
-        >
-          {isMigrating ? (
-            <span className="flex items-center gap-2">
-              <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" strokeDasharray="32" strokeDashoffset="32">
-                  <animate attributeName="stroke-dashoffset" values="32;0" dur="1s" repeatCount="indefinite"/>
-                </circle>
-              </svg>
-              Processing Migration...
-            </span>
-          ) : (
-            '🔮 Trigger Crystal Migration'
-          )}
-        </button>
+        
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+              Process recent content into crystals and shards
+            </p>
+            <button
+              onClick={handleManualMigration}
+              disabled={isMigrating}
+              className={`px-3 py-2 text-sm rounded border ${
+                isMigrating
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white hover:bg-gray-50 text-gray-700 border-gray-300'
+              }`}
+            >
+              {isMigrating ? 'Processing...' : 'Run Migration'}
+            </button>
+          </div>
+
+          <div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+              Create new crystals from existing shards
+            </p>
+            <button
+              onClick={handleManualCrystalFormation}
+              disabled={isFormingCrystals}
+              className={`px-3 py-2 text-sm rounded border ${
+                isFormingCrystals
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white hover:bg-gray-50 text-gray-700 border-gray-300'
+              }`}
+            >
+              {isFormingCrystals ? 'Forming...' : 'Form Crystals'}
+            </button>
+          </div>
+        </div>
+        
+        {/* Debug Info */}
+        <details className="text-xs text-gray-500">
+          <summary className="cursor-pointer">Debug Info</summary>
+          <div className="mt-2 space-y-1 bg-gray-50 dark:bg-gray-800 p-2 rounded text-xs">
+            <div>Shards: {formationEligibility?.shardCount || 0}</div>
+            <div>Crystals: {crystalStats?.crystalsCount || 0}</div>
+            <div>Eligible: {formationEligibility?.eligible ? 'Yes' : 'No'}</div>
+          </div>
+        </details>
       </div>
       
       <InsightsNavigation 

@@ -28,19 +28,14 @@ export async function POST(request: NextRequest) {
       return { apiKey, user_id, parsedBody } as const;
     };
 
-    const { apiKey, user_id, parsedBody } = await normalizeAuthAndIdentity();
+    const { apiKey } = await normalizeAuthAndIdentity();
 
     if (!apiKey) {
       console.warn('[crystal-formation-api] Authentication failed');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!user_id) {
-      console.warn('[crystal-formation-api] Missing or invalid user_id');
-      return NextResponse.json({ error: 'Bad Request', detail: 'user_id is required and must be a non-empty string' }, { status: 400 });
-    }
-
-    const body = parsedBody ?? await request.json();
+    const body = await request.json();
     
     console.log('[crystal-formation-api] Received request:', {
       force: body.force,
