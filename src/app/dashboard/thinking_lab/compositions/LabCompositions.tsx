@@ -8,7 +8,7 @@
  */
 
 import React from 'react'
-import { Maximize2, Minimize2, SplitSquareHorizontal } from 'lucide-react'
+import { Columns2 } from 'lucide-react'
 import { useDialogueStore } from '../stores/dialogueStore'
 import { MarkdownNotepad } from '../components/notepad/MarkdownNotepad'
 import ChatInputArea from '../components/dialogue/input/ChatInputArea'
@@ -111,7 +111,8 @@ const NotepadPanel = React.memo<{
   noteId?: string
   quotedContent: string
   onClearQuoted: () => void
-}>(({ noteId, quotedContent, onClearQuoted }) => {
+  isFullScreen: boolean
+}>(({ noteId, quotedContent, onClearQuoted, isFullScreen }) => {
   const { sessionId } = useDialogueStore()
 
   return (
@@ -130,7 +131,7 @@ const NotepadPanel = React.memo<{
         canNavigateBack={true}
         onBack={() => {}}
         sessionId={sessionId || "session-1"}
-        panelState="split"
+        panelState={isFullScreen ? "notepad-full" : "split"}
       />
     </div>
   )
@@ -223,43 +224,26 @@ export function FullThinkingLab({
   const { quotedContent, setQuotedContent, clearQuotedContent } = useDialogueStore()
   const { inputComponent, handleInputPopulate } = useInputSection(clearQuotedContent)
   const resizable = useResizablePanes(0.5)
-  
-  // Determine if we're in full-screen mode
+
+  // Auto-snap to full screen when dragged close to edges
+  React.useEffect(() => {
+    if (!resizable.state.isDragging) {
+      const { splitRatio } = resizable.state
+      if (splitRatio > 0.95) {
+        resizable.actions.snapToLeft()
+      } else if (splitRatio < 0.05) {
+        resizable.actions.snapToRight()
+      }
+    }
+  }, [resizable.state.isDragging, resizable.state.splitRatio, resizable.actions])
+
+  // Check if we're in full screen mode
   const isChatFullScreen = resizable.state.splitRatio === 1.0
   const isNotepadFullScreen = resizable.state.splitRatio === 0.0
+  const isFullScreen = isChatFullScreen || isNotepadFullScreen
 
   return (
-    <div className={`h-screen flex flex-col bg-background overflow-hidden ${className}`}>
-      {/* Control Bar */}
-      <div className="flex items-center justify-center gap-4 p-3 border-b border-border bg-background/95 backdrop-blur-sm">
-        <button
-          onClick={resizable.actions.snapToLeft}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background hover:bg-muted transition-colors text-sm"
-          title="Chat Full Screen (100% width)"
-        >
-          <Maximize2 className="w-4 h-4" />
-          Chat
-        </button>
-
-        <button
-          onClick={resizable.actions.snapToSplit}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background hover:bg-muted transition-colors text-sm"
-          title="Split View (50/50)"
-        >
-          <SplitSquareHorizontal className="w-4 h-4" />
-          Split
-        </button>
-
-        <button
-          onClick={resizable.actions.snapToRight}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background hover:bg-muted transition-colors text-sm"
-          title="Notepad Full Screen (100% width)"
-        >
-          <Maximize2 className="w-4 h-4" />
-          Notepad
-        </button>
-      </div>
-
+    <div className={`h-screen flex flex-col bg-background overflow-hidden ${className} relative`}>
       {/* Resizable Split Panes */}
       <div ref={resizable.containerRef} className="flex flex-1 overflow-hidden">
         {/* Chat Panel */}
@@ -279,7 +263,7 @@ export function FullThinkingLab({
 
         {/* Invisible Draggable Divider - hover to resize */}
         <div
-          className="w-2 hover:w-3 cursor-col-resize flex-shrink-0 transition-all duration-200 hover:bg-border/20"
+          className="w-2 cursor-col-resize flex-shrink-0 hover:bg-border/20 transition-colors duration-200"
           style={resizable.styles.dividerStyle}
           onMouseDown={resizable.actions.startDrag}
           title="Drag to resize panels"
@@ -291,6 +275,7 @@ export function FullThinkingLab({
             noteId={noteId}
             quotedContent={quotedContent}
             onClearQuoted={clearQuotedContent}
+            isFullScreen={isNotepadFullScreen}
           />
         </div>
       </div>
