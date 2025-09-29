@@ -10,6 +10,7 @@ export interface CrystalData {
   observation_count: number;
   time_span_days: number;
   crystal_type?: string;
+  shardIds?: string[];
 }
 
 export interface ShardData {
@@ -19,7 +20,11 @@ export interface ShardData {
   why_significant?: string;
   dimension: string;
   confidence_level: string;
-  source_type: string;
+  source_type?: string;
+  _creationTime?: number;
+  userId?: string;
+  tags?: string[];
+  crystal_id?: string;
 }
 
 export interface CrystalStats {

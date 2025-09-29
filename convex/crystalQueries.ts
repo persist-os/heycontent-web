@@ -481,3 +481,51 @@ export const getCrystalShardsByIds = internalQuery({
         }
     }
 });
+
+/**
+ * Public query to get crystal shards by their IDs
+ * Used by frontend components to display shard content for crystals
+ */
+export const getShardsByIds = query({
+    args: {
+        userId: v.string(),
+        shardIds: v.array(v.string())
+    },
+    returns: v.array(v.any()),
+    handler: async (ctx, { userId, shardIds }) => {
+        console.log('🔍 [GET SHARDS BY IDS PUBLIC] Fetching crystal shards by IDs');
+        console.log('🔍 [GET SHARDS BY IDS PUBLIC] User:', userId);
+        console.log('🔍 [GET SHARDS BY IDS PUBLIC] Shard IDs:', shardIds);
+        
+        try {
+            const shards = [];
+            
+            for (const shardId of shardIds) {
+                try {
+                    // Convert string ID to proper Convex ID and fetch the shard
+                    const shard = await ctx.db.get(shardId as Id<"crystal_shards">);
+                    
+                    // Verify the shard belongs to the user and exists
+                    if (shard && shard.userId === userId) {
+                        shards.push(shard);
+                    } else if (shard) {
+                        console.warn('🔍 [GET SHARDS BY IDS PUBLIC] Shard belongs to different user:', shardId);
+                    } else {
+                        console.warn('🔍 [GET SHARDS BY IDS PUBLIC] Shard not found:', shardId);
+                    }
+                } catch (error) {
+                    console.warn('🔍 [GET SHARDS BY IDS PUBLIC] Error fetching shard:', shardId, error);
+                    // Continue with other shards
+                }
+            }
+            
+            console.log('✅ [GET SHARDS BY IDS PUBLIC] Successfully retrieved', shards.length, 'shards');
+            return shards;
+            
+        } catch (error: any) {
+            console.error('❌ [GET SHARDS BY IDS PUBLIC] Error:', error);
+            // Return empty array instead of throwing
+            return [];
+        }
+    }
+});

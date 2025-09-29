@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { CrystalData } from './types';
 import { EditCrystalModal } from './EditCrystalModal';
-import { useCrystalMutations } from './hooks';
+import { useCrystalMutations, useShardsByIds, useAuth } from './hooks';
 
 interface CrystalCardProps {
   crystal: CrystalData;
@@ -35,7 +35,10 @@ export const CrystalCard: React.FC<CrystalCardProps> = ({
 }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showAllShards, setShowAllShards] = useState(false);
   const { deleteCrystal, isLoading } = useCrystalMutations();
+  const userId = useAuth();
+  const { shards, isLoading: shardsLoading, hasShards } = useShardsByIds(userId, crystal.shardIds);
 
   const handleDelete = async () => {
     const success = await deleteCrystal(crystal._id);
@@ -68,6 +71,11 @@ export const CrystalCard: React.FC<CrystalCardProps> = ({
           }`}>
             {crystal.confidence_score} confidence
           </span>
+          {crystal.shardIds && crystal.shardIds.length > 0 && (
+            <span className="px-2 py-1 bg-muted/30 rounded">
+              {shardsLoading ? 'Loading...' : `${shards.length}/${crystal.shardIds.length} shard${crystal.shardIds.length !== 1 ? 's' : ''}`}
+            </span>
+          )}
         </div>
       </div>
     );
@@ -148,6 +156,84 @@ export const CrystalCard: React.FC<CrystalCardProps> = ({
               </blockquote>
             ))}
           </div>
+        </div>
+      )}
+
+      {crystal.shardIds && crystal.shardIds.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h5 className="text-sm font-medium text-foreground">Connected Shards</h5>
+            <div className="flex items-center gap-2">
+              {shardsLoading && (
+                <span className="text-xs text-muted-foreground">Loading...</span>
+              )}
+              <span className="text-xs text-muted-foreground">
+                {crystal.shardIds.length} shard{crystal.shardIds.length !== 1 ? 's' : ''}
+              </span>
+              {shards.length > 3 && (
+                <button
+                  onClick={() => setShowAllShards(!showAllShards)}
+                  className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                >
+                  {showAllShards ? 'Show less' : `Show all ${shards.length}`}
+                </button>
+              )}
+            </div>
+          </div>
+          
+          {hasShards && (
+            <div className="space-y-2">
+              {(showAllShards ? shards : shards.slice(0, 3)).map((shard: any) => (
+                <div key={shard._id} className="border border-border/30 rounded-lg p-3 space-y-2 bg-muted/20">
+                  {shard.exact_quote && (
+                    <blockquote className="text-xs text-foreground italic border-l-2 border-blue-400/40 pl-2">
+                      "{shard.exact_quote}"
+                    </blockquote>
+                  )}
+                  
+                  <div className="space-y-1">
+                    {shard.what_it_reveals && (
+                      <div>
+                        <span className="text-xs font-medium text-foreground">Reveals: </span>
+                        <span className="text-xs text-muted-foreground">{shard.what_it_reveals}</span>
+                      </div>
+                    )}
+                    
+                    {shard.why_significant && (
+                      <div>
+                        <span className="text-xs font-medium text-foreground">Significance: </span>
+                        <span className="text-xs text-muted-foreground">{shard.why_significant}</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="text-xs px-1.5 py-0.5 bg-muted/50 rounded text-muted-foreground">
+                      {shard.dimension}
+                    </span>
+                    <span className={`text-xs px-1.5 py-0.5 rounded ${
+                      shard.confidence_level === 'high' ? 'bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300' :
+                      shard.confidence_level === 'medium' ? 'bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300' :
+                      'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                    }`}>
+                      {shard.confidence_level}
+                    </span>
+                    {shard.source_type && (
+                      <span className="text-xs text-muted-foreground">
+                        {shard.source_type}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {!shardsLoading && !hasShards && crystal.shardIds.length > 0 && (
+            <div className="text-xs text-muted-foreground italic">
+              Shard content not available
+            </div>
+          )}
         </div>
       )}
 

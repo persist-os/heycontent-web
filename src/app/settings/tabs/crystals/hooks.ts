@@ -404,3 +404,23 @@ export const useShardMutations = () => {
     isLoading: isWorking
   };
 };
+
+/**
+ * Hook to fetch shard content by their IDs
+ * Used to display actual shard content in crystal cards
+ */
+export const useShardsByIds = (userId: string | undefined, shardIds: string[] | undefined) => {
+  const shards = useQuery(
+    api.crystalQueries.getShardsByIds,
+    userId && shardIds && shardIds.length > 0 ? {
+      userId,
+      shardIds
+    } : "skip"
+  );
+
+  return {
+    shards: shards || [],
+    isLoading: shards === undefined,
+    hasShards: shards && shards.length > 0
+  };
+};
