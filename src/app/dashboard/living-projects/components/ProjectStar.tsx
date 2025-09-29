@@ -6,6 +6,8 @@ import { useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { useAuth } from '@/app/context/auth-context'
 import { DeleteProjectModal } from '../[projectId]/components/DeleteProjectModal'
+import { formatDistanceToNow } from '../[projectId]/components/utils/dateFormatting'
+import { getProjectStatus, getCardDimensions } from '../[projectId]/components/utils/widgetStyling'
 
 interface Project {
   _id: string
@@ -27,22 +29,6 @@ interface ProjectStarProps {
   onClick: () => void
   onHover?: (projectId: string | null) => void
   onDelete?: () => void
-}
-
-// Simple date formatting utility
-const formatDistanceToNow = (date: Date) => {
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMinutes = Math.floor(diffMs / (1000 * 60))
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-  
-  if (diffMinutes < 1) return 'now'
-  if (diffMinutes < 60) return `${diffMinutes}m`
-  if (diffHours < 24) return `${diffHours}h`
-  if (diffDays < 7) return `${diffDays}d`
-  
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 export function ProjectStar({
@@ -84,47 +70,9 @@ export function ProjectStar({
     }
   }, [showMenu])
 
-  // Calculate card dimensions based on size
-  const cardSizes = {
-    small: { width: 192, height: 128 }, // w-48 h-32
-    medium: { width: 256, height: 160 }, // w-64 h-40  
-    large: { width: 320, height: 192 } // w-80 h-48
-  }
-  
-  const { width, height } = cardSizes[size]
-
-  // Determine status and styling
-  const getProjectStatus = () => {
-    if (!hasFingerprint) {
-      return {
-        label: 'discovering',
-        borderColor: 'border-amber-400/40',
-        glowColor: 'ring-amber-400/30',
-        activeGlow: 'ring-amber-500/60',
-        bgGradient: 'bg-gradient-to-br from-amber-50/10 via-transparent to-amber-100/5 dark:from-amber-950/10 dark:to-amber-900/5'
-      }
-    }
-    
-    if (isRecent) {
-      return {
-        label: 'active',
-        borderColor: 'border-blue-400/40',
-        glowColor: 'ring-blue-400/30',
-        activeGlow: 'ring-blue-500/60',
-        bgGradient: 'bg-gradient-to-br from-blue-50/10 via-transparent to-blue-100/5 dark:from-blue-950/10 dark:to-blue-900/5'
-      }
-    }
-    
-    return {
-      label: 'living',
-      borderColor: 'border-muted-foreground/30',
-      glowColor: 'ring-muted-foreground/20',
-      activeGlow: 'ring-muted-foreground/40',
-      bgGradient: 'bg-gradient-to-br from-muted/10 via-transparent to-muted/5'
-    }
-  }
-
-  const status = getProjectStatus()
+  // Calculate card dimensions and status using shared utilities
+  const { width, height } = getCardDimensions(size)
+  const status = getProjectStatus(project)
 
   const handleDelete = async () => {
     if (!firebaseUser?.uid) return
@@ -216,6 +164,7 @@ export function ProjectStar({
                 {scale > 0.8 && (
                   <div className="relative" ref={menuRef}>
                     <button
+                      title="More options"
                       onClick={handleMenuClick}
                       className="p-1 hover:bg-muted/50 rounded-md transition-colors opacity-0 group-hover:opacity-100"
                       disabled={isDeleting}
@@ -276,7 +225,7 @@ export function ProjectStar({
                     {hasFingerprint ? 'Intelligence active' : 'Awaiting discovery'}
                   </div>
                   <div className="text-muted-foreground/50 font-mono">
-                    {formatDistanceToNow(new Date(hasFingerprint ? project.updatedAt : project.createdAt))}
+                    {formatDistanceToNow(new Date(hasFingerprint ? project.updatedAt : project.createdAt), { short: true })}
                   </div>
                 </div>
                 {showFullDetails && (
@@ -296,9 +245,9 @@ export function ProjectStar({
           {/* Minimal footer for low zoom */}
           {!showMetadata && (
             <div className="flex-shrink-0 pt-2">
-              <div className="text-xs text-muted-foreground/50 font-mono">
-                {formatDistanceToNow(new Date(hasFingerprint ? project.updatedAt : project.createdAt))}
-              </div>
+            <div className="text-xs text-muted-foreground/50 font-mono">
+              {formatDistanceToNow(new Date(hasFingerprint ? project.updatedAt : project.createdAt), { short: true })}
+            </div>
             </div>
           )}
         </div>
