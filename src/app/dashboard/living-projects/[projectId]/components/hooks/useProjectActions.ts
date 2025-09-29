@@ -8,6 +8,7 @@
 import { useRouter } from 'next/navigation'
 import { useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
+import { getCurrentUserId } from '@/app/lib/api-helpers'
 
 export function useProjectActions(projectId: string) {
   const router = useRouter()
@@ -29,7 +30,8 @@ export function useProjectActions(projectId: string) {
     router.push('/dashboard/living-projects')
   }
 
-  const deleteProjectAction = async (userId: string) => {
+  const deleteProjectAction = async () => {
+    const userId = await getCurrentUserId()
     await deleteProject({ 
       projectId: projectId as any, 
       userId 

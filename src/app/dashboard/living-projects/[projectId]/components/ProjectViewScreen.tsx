@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState, useRef } from 'react'
-import { useAuth } from '@/app/context/auth-context'
+import React, { useState, useRef, useEffect } from 'react'
 import { useQuery } from 'convex/react'
+import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { api } from '@/convex/_generated/api'
 import { useProjectFingerprint } from '@/app/dashboard/living-projects/hooks/useProjectFingerprint'
 import { 
@@ -27,7 +27,7 @@ interface ProjectViewScreenProps {
 }
 
 export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
-  const { firebaseUser } = useAuth()
+  const [userId, setUserId] = useState<string | null>(null)
   const [showTransition, setShowTransition] = useState(false)
   const [highlightedWidget, setHighlightedWidget] = useState<string | null>(null)
   const [selectedWidget, setSelectedWidget] = useState<WidgetConfig | null>(null)
@@ -37,12 +37,25 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
+  // Get user ID on component mount
+  useEffect(() => {
+    const getUserId = async () => {
+      try {
+        const id = await getCurrentUserId()
+        setUserId(id)
+      } catch (error) {
+        console.error('Failed to get user ID:', error)
+      }
+    }
+    getUserId()
+  }, [])
+
   // Data fetching
   const project = useQuery(
     api.projectsQueries.getById,
-    projectId && firebaseUser?.uid ? { 
-      projectId: projectId as any, 
-      userId: firebaseUser.uid 
+    projectId && userId ? { 
+      projectId: projectId as any,
+      userId: userId
     } : 'skip'
   )
 
@@ -57,8 +70,7 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   const { isGenerating, regenerateWidgets } = useWidgetGeneration({
     projectId,
     currentFingerprint,
-    hasWidgets: !!projectWidgets?.widgets?.length,
-    firebaseUser
+    hasWidgets: !!projectWidgets?.widgets?.length
   })
 
   const { editFingerprint, goBack, deleteProjectAction } = useProjectActions(projectId)
@@ -74,11 +86,9 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   }
 
   const handleDeleteProject = async () => {
-    if (!firebaseUser?.uid) return
-    
     try {
       setIsDeleting(true)
-      await deleteProjectAction(firebaseUser.uid)
+      await deleteProjectAction()
     } catch (error) {
       console.error('Failed to delete project:', error)
       alert('Failed to delete project. Please try again.')
@@ -86,10 +96,6 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
       setIsDeleting(false)
       setShowDeleteModal(false)
     }
-  }
-
-  if (!firebaseUser) {
-    return <div>Loading...</div>
   }
 
   if (!project) {
