@@ -566,68 +566,80 @@ export default defineSchema({
   .index("by_timestamp", ["timestamp"])
   .index("by_user_timestamp", ["userId", "timestamp"]),
 
-  // Project Widgets - Personalized widgets for each project
+  // Project Widgets - Personalized widgets for each project (aligned with backend models)
   project_widgets: defineTable({
+    // Required core fields
     projectId: v.id("projects"),
     fingerprintId: v.id("project_fingerprints"),
     userId: v.string(),
 
-    // Dynamic categories/tabs
+    // Widget categories - flexible for AI generation
     categories: v.array(v.object({
       name: v.string(),
-      icon: v.string(),
-      description: v.string(),
+      icon: v.optional(v.string()),
+      description: v.optional(v.string()),
+      display_order: v.optional(v.number()),
     })),
 
-    // Widget configuration
+    // Individual widgets - flexible for AI generation
     widgets: v.array(v.object({
       widget_id: v.string(),
-      widget_type: v.string(), // tracker, chart, board, timeline, meter, etc.
+      widget_type: v.string(), // Any widget type
       title: v.string(),
-      description: v.string(),
-      category: v.string(), // Category/tab this widget belongs to
-      priority: v.number(), // 1-10
-      size: v.string(), // small, medium, large, xlarge
-      theme: v.string(), // warm, clean, professional, creative
-      position: v.number(), // Position in dashboard (1-based)
-      config: v.any(), // Widget-specific configuration
+      description: v.optional(v.string()),
+      category: v.string(),
+      
+      // Layout and appearance - flexible
+      priority: v.number(),
+      size: v.string(), // Any size
+      theme: v.string(), // Any theme
+      position: v.number(),
+      
+      // Configuration
+      config: v.any(),
       data_sources: v.array(v.string()),
-      update_frequency: v.string(), // realtime, hourly, daily, weekly
+      update_frequency: v.string(), // Any frequency
+      
+      // Permissions
       interactive: v.boolean(),
       editable: v.boolean(),
       shareable: v.boolean(),
     })),
 
-    // Layout configuration
-    layout_type: v.string(), // grid, dashboard, kanban, timeline
+    // Global layout settings - flexible
+    layout_type: v.string(), // Any layout type
     columns: v.number(),
     rows: v.number(),
 
-    // Theme and styling
-    global_theme: v.string(),
-    color_scheme: v.string(), // monochrome, colorful, pastel, vibrant
-    font_style: v.string(), // modern, classic, playful, professional
+    // Global appearance - flexible
+    global_theme: v.string(), // Any theme
+    color_scheme: v.string(), // Any color scheme
+    font_style: v.string(), // Any font style
 
-    // Interaction settings
+    // Customization settings
     allow_customization: v.boolean(),
     allow_reordering: v.boolean(),
     allow_resizing: v.boolean(),
 
-    // Data integration
+    // Technical settings
     required_integrations: v.array(v.string()),
-    data_refresh_strategy: v.string(),
+    data_refresh_strategy: v.string(), // Any strategy
 
-    // Metadata
-    generated_at: v.number(),
+    // Metadata - all required, set programmatically
     version: v.string(),
-    confidence: v.number(), // 0-1 confidence in widget recommendations
-    status: v.string(), // "generating", "active", "archived"
+    confidence: v.number(), // 0-1, validated in mutation
+    createdAt: v.optional(v.number()), // Unix timestamp, set programmatically (optional for migration)
+    updatedAt: v.optional(v.number()), // Unix timestamp, set programmatically (optional for migration)
+    status: v.string(), // Flexible status
+    
+    // Legacy AI fields (ignored but allowed for migration)
+    generated_at: v.optional(v.union(v.string(), v.number())),
   })
   .index("by_project", ["projectId"])
   .index("by_fingerprint", ["fingerprintId"])
   .index("by_user", ["userId"])
   .index("by_status", ["status"])
-  .index("by_generated", ["generated_at"]),
+  .index("by_created", ["createdAt"]),
 
   // Conversation Summaries - Real-time conversation analysis
   conversation_summaries: defineTable({

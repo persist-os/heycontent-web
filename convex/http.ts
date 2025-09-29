@@ -1337,133 +1337,8 @@ app.post("/api/projects/delete", async (c) => {
 
 
 
-// PROJECT WIDGETS ROUTES
-
-// Create project widgets
-app.post("/api/projects/:projectId/widgets", async (c) => {
-  const ctx = c.env;
-  const projectId = c.req.param("projectId") as Id<"projects">;
-  const widgetsData = await c.req.json();
-  
-  try {
-    const widgetsId = await ctx.runMutation(api.projectWidgetsMutations.createProjectWidgets, {
-      projectId,
-      ...widgetsData
-    });
-    return c.json({ success: true, widgetsId });
-  } catch (error: any) {
-    console.error("Failed to create project widgets:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to create project widgets",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// Get project widgets
-app.get("/api/projects/:projectId/widgets", async (c) => {
-  const ctx = c.env;
-  const projectId = c.req.param("projectId") as Id<"projects">;
-  
-  try {
-    const widgets = await ctx.runQuery(api.projectWidgetsQueries.getProjectWidgetsByProject, { projectId });
-    return c.json({ success: true, widgets });
-  } catch (error: any) {
-    console.error("Failed to get project widgets:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to get project widgets",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// Update project widgets
-app.patch("/api/projects/:projectId/widgets/:widgetsId", async (c) => {
-  const ctx = c.env;
-  const widgetsId = c.req.param("widgetsId") as Id<"project_widgets">;
-  const updates = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.projectWidgetsMutations.updateProjectWidgets, {
-      widgetsId,
-      updates
-    });
-    return c.json({ success: true, widgetsId: result });
-  } catch (error: any) {
-    console.error("Failed to update project widgets:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to update project widgets",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// Update widget configuration
-app.patch("/api/projects/:projectId/widgets/:widgetsId/config/:widgetId", async (c) => {
-  const ctx = c.env;
-  const widgetsId = c.req.param("widgetsId") as Id<"project_widgets">;
-  const widgetId = c.req.param("widgetId");
-  const { config } = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.projectWidgetsMutations.updateWidgetConfig, {
-      widgetsId,
-      widgetId,
-      config
-    });
-    return c.json({ success: true, result });
-  } catch (error: any) {
-    console.error("Failed to update widget config:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to update widget config",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// Reorder widgets
-app.post("/api/projects/:projectId/widgets/:widgetsId/reorder", async (c) => {
-  const ctx = c.env;
-  const widgetsId = c.req.param("widgetsId") as Id<"project_widgets">;
-  const { widgetOrder } = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.projectWidgetsMutations.reorderWidgets, {
-      widgetsId,
-      widgetOrder
-    });
-    return c.json({ success: true, result });
-  } catch (error: any) {
-    console.error("Failed to reorder widgets:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to reorder widgets",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// Delete project widgets
-app.delete("/api/projects/:projectId/widgets/:widgetsId", async (c) => {
-  const ctx = c.env;
-  const widgetsId = c.req.param("widgetsId") as Id<"project_widgets">;
-  
-  try {
-    const result = await ctx.runMutation(api.projectWidgetsMutations.deleteProjectWidgets, { widgetsId });
-    return c.json({ success: true, result });
-  } catch (error: any) {
-    console.error("Failed to delete project widgets:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to delete project widgets",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
+// PROJECT WIDGETS ROUTES - Clean and Optimized
+// 4 endpoints that map 1:1 to Convex functions
 
 // AGENT WORKFLOW ROUTES
 
@@ -1526,31 +1401,44 @@ app.post("/api/users/:userId/projects/:projectId/generate-widgets", async (c) =>
   }
 });
 
-// HTTP Routes for Backend Integration
-app.post("/api/project-widgets/createProjectWidgets", async (c) => {
+// ============================================================================
+// CLEAN PROJECT WIDGETS ENDPOINTS - Backend Integration
+// 4 endpoints that map 1:1 to Convex functions, no redundancy
+// ============================================================================
+
+/**
+ * Upsert project widgets - handles create and update
+ * Used by: Backend widget generation, frontend updates
+ */
+app.post("/api/project-widgets/upsert", async (c) => {
   const ctx = c.env;
   const widgetsData = await c.req.json();
   
   try {
-    const widgetsId = await ctx.runMutation(api.projectWidgetsMutations.createProjectWidgets, widgetsData);
+    const widgetsId = await ctx.runMutation(api.projectWidgetsMutations.upsertProjectWidgets, widgetsData);
     
     return c.json({
       success: true,
       data: widgetsId
     });
   } catch (error: any) {
-    console.error("Failed to create project widgets:", error);
+    console.error("Failed to upsert project widgets:", error);
     return c.json({ 
       success: false, 
-      error: "Failed to create project widgets",
+      error: "Failed to upsert project widgets",
       message: error.message || "Internal Server Error"
     }, 500);
   }
 });
 
-app.get("/api/project-widgets/getProjectWidgets", async (c) => {
+/**
+ * Get project widgets by widgets ID
+ * Used by: Direct widget access, updates
+ */
+app.get("/api/project-widgets/get", async (c) => {
   const ctx = c.env;
   const widgetsId = c.req.query("widgetsId");
+  const userId = c.req.query("userId"); // Optional for backend queries
   
   try {
     if (!widgetsId) {
@@ -1560,7 +1448,10 @@ app.get("/api/project-widgets/getProjectWidgets", async (c) => {
       }, 400);
     }
 
-    const widgets = await ctx.runQuery(api.projectWidgetsQueries.getProjectWidgets, { widgetsId: widgetsId as Id<"project_widgets"> });
+    const widgets = await ctx.runQuery(api.projectWidgetsQueries.getProjectWidgets, { 
+      widgetsId: widgetsId as Id<"project_widgets">,
+      userId
+    });
     
     return c.json({
       success: true,
@@ -1576,9 +1467,14 @@ app.get("/api/project-widgets/getProjectWidgets", async (c) => {
   }
 });
 
-app.get("/api/project-widgets/getProjectWidgetsByProject", async (c) => {
+/**
+ * Get project widgets by project ID - Primary access pattern
+ * Used by: Project dashboard, widget display
+ */
+app.get("/api/project-widgets/getByProject", async (c) => {
   const ctx = c.env;
   const projectId = c.req.query("projectId");
+  const userId = c.req.query("userId"); // Optional for backend queries
   
   try {
     if (!projectId) {
@@ -1588,7 +1484,10 @@ app.get("/api/project-widgets/getProjectWidgetsByProject", async (c) => {
       }, 400);
     }
 
-    const widgets = await ctx.runQuery(api.projectWidgetsQueries.getProjectWidgetsByProject, { projectId: projectId as Id<"projects"> });
+    const widgets = await ctx.runQuery(api.projectWidgetsQueries.getProjectWidgetsByProject, { 
+      projectId: projectId as Id<"projects">,
+      userId
+    });
     
     return c.json({
       success: true,
@@ -1604,47 +1503,33 @@ app.get("/api/project-widgets/getProjectWidgetsByProject", async (c) => {
   }
 });
 
-app.post("/api/project-widgets/updateProjectWidgets", async (c) => {
+/**
+ * Delete project widgets by project ID
+ * Used by: Project cleanup, widget deletion
+ */
+app.delete("/api/project-widgets/delete", async (c) => {
   const ctx = c.env;
-  const { widgetsId, ...updates } = await c.req.json();
+  const { projectId, userId } = await c.req.json();
   
   try {
-    if (!widgetsId) {
+    if (!projectId) {
       return c.json({ 
         success: false, 
-        error: "Missing widgetsId" 
+        error: "Missing projectId" 
       }, 400);
     }
 
-    const result = await ctx.runMutation(api.projectWidgetsMutations.updateProjectWidgets, { widgetsId, updates });
-    
-    return c.json({
-      success: true,
-      data: result
+    if (!userId) {
+      return c.json({ 
+        success: false, 
+        error: "Missing userId" 
+      }, 400);
+    }
+
+    const result = await ctx.runMutation(api.projectWidgetsMutations.deleteProjectWidgets, { 
+      projectId,
+      userId 
     });
-  } catch (error: any) {
-    console.error("Failed to update project widgets:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to update project widgets",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-app.post("/api/project-widgets/deleteProjectWidgets", async (c) => {
-  const ctx = c.env;
-  const { widgetsId } = await c.req.json();
-  
-  try {
-    if (!widgetsId) {
-      return c.json({ 
-        success: false, 
-        error: "Missing widgetsId" 
-      }, 400);
-    }
-
-    const result = await ctx.runMutation(api.projectWidgetsMutations.deleteProjectWidgets, { widgetsId });
     
     return c.json({
       success: true,
