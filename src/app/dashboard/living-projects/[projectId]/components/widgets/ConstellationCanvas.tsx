@@ -36,14 +36,13 @@ export function ConstellationCanvas({
     height: typeof window !== 'undefined' ? window.innerHeight : 800
   })
   
-  const containerRef = useRef<HTMLDivElement>(null)
-  
   // Generate constellation layout
   const layout = useWidgetLayout(widgets)
 
   // Pan and zoom functionality
   const {
     transform,
+    containerRef,
     handleWheel,
     handleMouseDown,
     zoomIn,
@@ -65,47 +64,13 @@ export function ConstellationCanvas({
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  // Prevent page scroll when constellation is active
+  // Prevent body scroll when constellation is active
   useEffect(() => {
     const originalOverflow = document.body.style.overflow
-    const originalHeight = document.body.style.height
-    const originalPosition = document.body.style.position
-
     document.body.style.overflow = 'hidden'
-    document.body.style.height = '100vh'
-    document.body.style.position = 'fixed'
-    document.body.style.width = '100%'
-
-    const preventWheel = (e: WheelEvent) => {
-      if (e.target instanceof Element) {
-        const constellationElement = containerRef.current
-        if (constellationElement && constellationElement.contains(e.target as Node)) {
-          e.preventDefault()
-          e.stopPropagation()
-        }
-      }
-    }
-
-    const preventTouch = (e: TouchEvent) => {
-      if (e.target instanceof Element) {
-        const constellationElement = containerRef.current
-        if (constellationElement && constellationElement.contains(e.target as Node)) {
-          e.preventDefault()
-          e.stopPropagation()
-        }
-      }
-    }
-
-    document.addEventListener('wheel', preventWheel, { passive: false })
-    document.addEventListener('touchmove', preventTouch, { passive: false })
 
     return () => {
       document.body.style.overflow = originalOverflow
-      document.body.style.height = originalHeight
-      document.body.style.position = originalPosition
-      document.body.style.width = ''
-      document.removeEventListener('wheel', preventWheel)
-      document.removeEventListener('touchmove', preventTouch)
     }
   }, [])
 
@@ -137,32 +102,16 @@ export function ConstellationCanvas({
     focusOnPoint(x, y)
   }, [focusOnPoint])
 
-  // Handle wheel events to prevent page scroll conflicts
-  const handleCanvasWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    handleWheel(e)
-  }, [handleWheel])
-
-  // Handle mouse events to prevent conflicts
-  const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    handleMouseDown(e)
-  }, [handleMouseDown])
-
   return (
-    <div className={`relative h-screen bg-gradient-to-br from-background via-background to-muted/20 overflow-hidden transition-all duration-300 ${showWidgetPanel ? 'w-[calc(100vw-24rem)]' : 'w-screen'}`} style={{ overscrollBehavior: 'none' }}>
+    <div className={`relative h-screen bg-gradient-to-br from-background via-background to-muted/20 overflow-hidden transition-all duration-300 ${showWidgetPanel ? 'w-[calc(100vw-24rem)]' : 'w-screen'}`}>
       {/* Widget Constellation Canvas */}
       <div
         ref={containerRef}
         className="absolute inset-0 cursor-grab active:cursor-grabbing select-none"
-        onWheel={handleCanvasWheel}
-        onMouseDown={handleCanvasMouseDown}
-        onContextMenu={(e) => e.preventDefault()}
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
         style={{
-          willChange: 'transform',
-          overscrollBehavior: 'none',
-          touchAction: 'none'
+          willChange: 'transform'
         }}
       >
         {/* Canvas Container */}
