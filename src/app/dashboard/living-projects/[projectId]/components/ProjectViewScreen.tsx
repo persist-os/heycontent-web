@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/app/context/auth-context'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
-import { useProjectFingerprintStore } from '@/store/project-fingerprint-store'
+import { useProjectFingerprint } from '@/app/dashboard/living-projects/hooks/useProjectFingerprint'
 import { useConvex } from 'convex/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -729,14 +729,10 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
     projectId ? { projectId: projectId as any } : 'skip'
   )
 
-  // Initialize fingerprint store
-  const { initializeFingerprintData, currentFingerprint, isLoading: fingerprintLoading } = useProjectFingerprintStore()
-
-  useEffect(() => {
-    if (firebaseUser?.uid && projectId && convex) {
-      initializeFingerprintData(projectId, firebaseUser.uid, convex)
-    }
-  }, [firebaseUser?.uid, projectId, convex, initializeFingerprintData])
+  // Get fingerprint data reactively
+  const { fingerprint: currentFingerprint, isLoading: fingerprintLoading } = useProjectFingerprint(
+    projectId ? projectId as any : undefined
+  )
 
   // Generate constellation layout
   const layout = useWidgetLayout((projectWidgets?.widgets || []) as WidgetConfig[])

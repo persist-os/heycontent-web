@@ -144,14 +144,10 @@ const project = useQuery(
 ### Fingerprint Loading
 
 ```tsx
-// Load fingerprint data for intelligence display
-const { currentFingerprint, isLoading: fingerprintLoading } = useProjectFingerprintStore()
-
-useEffect(() => {
-  if (firebaseUser?.uid && projectId) {
-    initializeFingerprintData(projectId, firebaseUser.uid)
-  }
-}, [firebaseUser?.uid, projectId])
+// Load fingerprint data reactively with Convex
+const { fingerprint: currentFingerprint, isLoading: fingerprintLoading } = useProjectFingerprint(
+  projectId as Id<'projects'>
+)
 ```
 
 ## 🎨 UI Components
