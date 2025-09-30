@@ -6,50 +6,43 @@ export async function POST(request: NextRequest) {
   console.log('🚀 [project-discovery-api] PROJECT DISCOVERY ROUTE HIT!');
   
   try {
-    // Local helper: normalize Authorization and identity once per request
-    const normalizeAuthAndIdentity = async () => {
-      const authHeader = request.headers.get('Authorization') || '';
-      const bearerPrefix = 'Bearer ';
-      const apiKey = authHeader.startsWith(bearerPrefix)
-        ? authHeader.slice(bearerPrefix.length).trim()
-        : '';
-
-      let parsedBody: any = undefined;
-      try {
-        parsedBody = await request.clone().json();
-      } catch {
-        parsedBody = undefined;
-      }
-
-      const user_id = typeof parsedBody?.user_id === 'string' && parsedBody.user_id.trim().length > 0
-        ? parsedBody.user_id.trim()
-        : '';
-
-      return { apiKey, user_id, parsedBody } as const;
-    };
-
-    const { apiKey, user_id, parsedBody } = await normalizeAuthAndIdentity();
+    // Extract API key from Authorization header
+    const authHeader = request.headers.get('Authorization') || '';
+    const bearerPrefix = 'Bearer ';
+    const apiKey = authHeader.startsWith(bearerPrefix)
+      ? authHeader.slice(bearerPrefix.length).trim()
+      : '';
 
     if (!apiKey) {
-      console.warn('[project-discovery-api] Authentication failed');
+      console.warn('[project-discovery-api] Authentication failed - no API key');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Extract user ID from API key (format: heycontent_userId_timestamp)
+    const apiKeyParts = apiKey.split('_');
+    const user_id = apiKeyParts.length >= 2 && apiKeyParts[0] === 'heycontent' ? apiKeyParts[1] : null;
+
     if (!user_id) {
-      console.warn('[project-discovery-api] Missing or invalid user_id');
-      return NextResponse.json({ error: 'Bad Request', detail: 'user_id is required and must be a non-empty string' }, { status: 400 });
+      console.warn('[project-discovery-api] Invalid API key format - cannot extract user_id');
+      return NextResponse.json({ error: 'Bad Request', detail: 'Invalid API key format' }, { status: 400 });
     }
 
-    const body = parsedBody ?? await request.json();
+    const body = await request.json();
     
     console.log('🚀 [project-discovery-api] Received request:', {
-      has_user_id: true,
+      user_id: user_id,
       query_length: body.query?.length || 0,
       has_content_context: !!body.content_context,
       project_name: body.project_name,
       backend_url: BACKEND_URL,
       timestamp: new Date().toISOString()
     });
+
+    // Ensure the body includes the user_id for the backend
+    const requestBody = {
+      ...body,
+      user_id: user_id
+    };
 
     // Forward the request to the backend project discovery endpoint
     const backendResponse = await fetch(`${BACKEND_URL}/api/v1/project-discovery`, {
@@ -58,7 +51,7 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(requestBody),
     });
 
     if (!backendResponse.ok) {
