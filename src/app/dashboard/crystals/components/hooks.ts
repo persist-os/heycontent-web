@@ -443,3 +443,18 @@ export const useMigrationStatus = (userId: string | undefined) => {
     isLoading: migrationStatus === undefined
   };
 };
+
+/**
+ * Hook to fetch recent formation run data for debugging/monitoring
+ */
+export const useFormationRuns = (userId: string | undefined, limit: number = 5) => {
+  const formationRuns = useQuery(
+    api.formationQueries.getRecentFormationRuns,
+    userId ? { userId, limit } : "skip"
+  );
+
+  return {
+    formationRuns: formationRuns || [],
+    isLoading: formationRuns === undefined
+  };
+};

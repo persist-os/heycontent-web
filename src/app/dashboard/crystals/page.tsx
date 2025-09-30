@@ -13,19 +13,21 @@ import {
   useCrystalData, 
   useFormationData,
   useMigrationStatus,
+  useFormationRuns,
   InsightsNavigation,
   OverviewView,
   CrystalsView,
   ShardsView,
   InsightsSkeleton,
   CrystalSystemExplanation,
+  SystemDebugInfo,
   ViewType
 } from './components';
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { toast } from 'sonner';
 import { getApiKey } from '@/app/lib/api-helpers';
-import { ChevronDown, ChevronUp, Activity, Settings2, Gem } from 'lucide-react';
+import { ChevronDown, ChevronUp, Activity, Gem } from 'lucide-react';
 
 export default function CrystalsPage() {
   const [activeView, setActiveView] = useState<ViewType>('overview');
@@ -38,6 +40,7 @@ export default function CrystalsPage() {
   const { crystalStats, recentCrystals, recentShards } = useCrystalData(userId);
   const { formationStatus, formationEligibility } = useFormationData(userId);
   const { needsMigration, attempts, contentProcessed, isLoading: isMigrationStatusLoading } = useMigrationStatus(userId);
+  const { formationRuns } = useFormationRuns(userId, 5);
   const markMigrationComplete = useMutation(api.crystalMigration.markMigrationComplete);
   
   const handleManualMigration = async () => {
@@ -345,131 +348,16 @@ export default function CrystalsPage() {
             )}
           </div>
 
-          {/* Debug Information */}
-          <div className="border border-border/40 rounded-2xl overflow-hidden">
-            <button
-              onClick={() => setShowDebugInfo(!showDebugInfo)}
-              className="w-full px-6 py-4 flex items-center justify-between bg-muted/10 hover:bg-muted/20 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <Settings2 className="w-5 h-5 text-muted-foreground" />
-                <div className="text-left">
-                  <div className="font-medium text-foreground">System Information</div>
-                  <div className="text-sm text-muted-foreground font-light">
-                    Formation logs, eligibility, and debug data
-                  </div>
-                </div>
-              </div>
-              {showDebugInfo ? (
-                <ChevronUp className="w-5 h-5 text-muted-foreground" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-muted-foreground" />
-              )}
-            </button>
-            
-            {showDebugInfo && (
-              <div className="px-6 py-4 space-y-4 bg-background">
-                
-                {/* Current Status */}
-                <div>
-                  <h4 className="font-medium text-sm text-foreground mb-3">Current Status</h4>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div className="bg-muted/20 rounded-lg p-3">
-                      <div className="text-muted-foreground mb-1">Total Shards</div>
-                      <div className="text-foreground font-medium">{formationEligibility?.shardCount || 0}</div>
-                    </div>
-                    <div className="bg-muted/20 rounded-lg p-3">
-                      <div className="text-muted-foreground mb-1">Total Crystals</div>
-                      <div className="text-foreground font-medium">{crystalStats?.crystalsCount || 0}</div>
-                    </div>
-                    <div className="bg-muted/20 rounded-lg p-3">
-                      <div className="text-muted-foreground mb-1">Formation Eligible</div>
-                      <div className="text-foreground font-medium">{formationEligibility?.eligible ? 'Yes' : 'No'}</div>
-                    </div>
-                    <div className="bg-muted/20 rounded-lg p-3">
-                      <div className="text-muted-foreground mb-1">Migration Status</div>
-                      <div className="text-foreground font-medium">{needsMigration ? 'Needed' : 'Complete'}</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Formation History */}
-                {formationStatus?.history && formationStatus.history.length > 0 && (
-                  <div className="pt-3 border-t border-border/20">
-                    <h4 className="font-medium text-sm text-foreground mb-3">Formation History</h4>
-                    <div className="space-y-2">
-                      {formationStatus.history.map((entry: any, idx: number) => (
-                        <div key={idx} className="bg-muted/20 rounded-lg p-3 text-sm">
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="text-foreground font-medium">
-                              {entry.status || 'Unknown'}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {entry.timestamp ? new Date(entry.timestamp).toLocaleString() : 'N/A'}
-                            </div>
-                          </div>
-                          {entry.crystalsCreated !== undefined && (
-                            <div className="text-muted-foreground">
-                              Created {entry.crystalsCreated} crystals from {entry.shardsProcessed || 0} shards
-                            </div>
-                          )}
-                          {entry.error && (
-                            <div className="text-destructive text-xs mt-1">{entry.error}</div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Formation Eligibility Details */}
-                <div className="pt-3 border-t border-border/20">
-                  <h4 className="font-medium text-sm text-foreground mb-3">Eligibility Details</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Days Since Last Run</span>
-                      <span className="text-foreground font-medium">
-                        {formationEligibility?.daysSinceLastRun?.toFixed(2) || 'N/A'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Has Running Formation</span>
-                      <span className="text-foreground font-medium">
-                        {formationEligibility?.hasRunningFormation ? 'Yes' : 'No'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Last Run Status</span>
-                      <span className="text-foreground font-medium">
-                        {formationStatus?.lastRunStatus || 'Unknown'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Migration Details */}
-                {!needsMigration && contentProcessed && (
-                  <div className="pt-3 border-t border-border/20">
-                    <h4 className="font-medium text-sm text-foreground mb-3">Migration Details</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Conversations Processed</span>
-                        <span className="text-foreground font-medium">{contentProcessed.conversations || 0}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Notes Processed</span>
-                        <span className="text-foreground font-medium">{contentProcessed.notes || 0}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Total Items</span>
-                        <span className="text-foreground font-medium">{contentProcessed.totalItems || 0}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          {/* System Debug Information */}
+          <SystemDebugInfo
+            crystalStats={crystalStats}
+            formationStatus={formationStatus}
+            formationEligibility={formationEligibility}
+            needsMigration={needsMigration}
+            contentProcessed={contentProcessed}
+            migrationAttempts={attempts}
+            formationRuns={formationRuns}
+          />
         </div>
       </div>
     </div>

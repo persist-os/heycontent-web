@@ -73,7 +73,7 @@ export const CrystalCard: React.FC<CrystalCardProps> = ({
           </span>
           {crystal.shardIds && crystal.shardIds.length > 0 && (
             <span className="px-2 py-1 bg-muted/30 rounded">
-              {shardsLoading ? 'Loading...' : `${shards.length}/${crystal.shardIds.length} shard${crystal.shardIds.length !== 1 ? 's' : ''}`}
+              {shardsLoading ? 'Loading...' : `${crystal.shardIds.length} shard${crystal.shardIds.length !== 1 ? 's' : ''}`}
             </span>
           )}
         </div>

@@ -28,5 +28,6 @@ export { ShardsView } from './ShardsView';
 export { InsightsNavigation } from './InsightsNavigation';
 export { InsightsSkeleton } from './InsightsSkeleton';
 
-// Explanation component
+// Explanation and system components
 export { CrystalSystemExplanation } from './CrystalSystemExplanation';
+export { SystemDebugInfo } from './SystemDebugInfo';

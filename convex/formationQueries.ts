@@ -360,3 +360,25 @@ export const queryFormation = query({
     };
   }
 });
+
+/**
+ * Get recent formation runs for a user
+ * For debugging and system information display
+ */
+export const getRecentFormationRuns = query({
+  args: {
+    userId: v.string(),
+    limit: v.optional(v.number())
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit || 5;
+    
+    const runs = await ctx.db
+      .query("crystal_formation_runs")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .order("desc")
+      .take(limit);
+    
+    return runs;
+  }
+});
