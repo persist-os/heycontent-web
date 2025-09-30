@@ -394,6 +394,102 @@ export const runFullMigration = internalMutation({
   },
 });
 
+// Migration 5: Delete projects with deprecated social media fields
+export const deleteProjectsWithSocialMediaFields = internalMutation({
+  args: { 
+    batchSize: v.optional(v.number()),
+    dryRun: v.optional(v.boolean())
+  },
+  returns: v.object({
+    deletedCount: v.number(),
+    totalProcessed: v.number(),
+    completed: v.boolean(),
+    deletedProjects: v.array(v.object({
+      _id: v.string(),
+      name: v.string(),
+      userId: v.string(),
+      fields: v.array(v.string())
+    }))
+  }),
+  handler: async (ctx, args) => {
+    const batchSize = args.batchSize ?? 100;
+    const dryRun = args.dryRun ?? false;
+    
+    console.log(`Starting deletion of projects with social media fields (dryRun: ${dryRun}, batchSize: ${batchSize})`);
+    
+    let totalProcessed = 0;
+    let deletedCount = 0;
+    let deletedProjects: Array<{_id: string, name: string, userId: string, fields: string[]}> = [];
+    let cursor: string | undefined = undefined;
+    
+    while (true) {
+      const result = await ctx.runQuery(internal.migrations.getAllDocuments, {
+        tableName: "projects",
+        cursor,
+        limit: batchSize
+      });
+      
+      if (result.documents.length === 0) {
+        break;
+      }
+      
+      for (const doc of result.documents) {
+        totalProcessed++;
+        
+        // Check if document has any of the deprecated social media fields
+        const deprecatedFields: string[] = [];
+        if ('gmailIds' in doc) deprecatedFields.push('gmailIds');
+        if ('instagramPostIds' in doc) deprecatedFields.push('instagramPostIds');
+        if ('youtubeVideoIds' in doc) deprecatedFields.push('youtubeVideoIds');
+        
+        if (deprecatedFields.length > 0) {
+          const projectInfo = {
+            _id: doc._id,
+            name: doc.name || 'Unnamed Project',
+            userId: doc.userId || 'Unknown User',
+            fields: deprecatedFields
+          };
+          
+          deletedProjects.push(projectInfo);
+          
+          if (!dryRun) {
+            await ctx.db.delete(doc._id);
+            console.log(`Deleted project: ${projectInfo.name} (${projectInfo._id}) - had fields: ${deprecatedFields.join(', ')}`);
+          } else {
+            console.log(`Would delete project: ${projectInfo.name} (${projectInfo._id}) - has fields: ${deprecatedFields.join(', ')}`);
+          }
+          
+          deletedCount++;
+        }
+      }
+      
+      console.log(`Processed ${totalProcessed} projects documents, ${dryRun ? 'would delete' : 'deleted'} ${deletedCount}`);
+      
+      if (result.isDone) {
+        break;
+      }
+      
+      cursor = result.continueCursor || undefined;
+    }
+    
+    console.log(`Completed project deletion. Total processed: ${totalProcessed}, ${dryRun ? 'Would delete' : 'Deleted'}: ${deletedCount}`);
+    
+    if (deletedProjects.length > 0) {
+      console.log('Projects affected:');
+      deletedProjects.forEach(project => {
+        console.log(`  - ${project.name} (${project._id}) - User: ${project.userId} - Fields: ${project.fields.join(', ')}`);
+      });
+    }
+    
+    return {
+      deletedCount,
+      totalProcessed,
+      completed: true,
+      deletedProjects
+    };
+  },
+});
+
 // Utility function to check migration status
 export const getMigrationStatus = internalQuery({
   args: {},
