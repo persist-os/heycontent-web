@@ -36,14 +36,18 @@ export function useNotepadState({
   const [refinementPreview, setRefinementPreview] = useState<string | null>(null)
   const [isRefining, setIsRefining] = useState(false)
   
-  // DEBUGGING: Log noteId prop to trace persona ID issue
-  console.log('🔍 [useNotepadState] Received noteId prop:', {
-    noteId,
-    type: typeof noteId,
-    length: noteId?.length,
-    isLikelyPersonaId: noteId && noteId.length > 20 && noteId.startsWith('jh7b'),
-    stackTrace: new Error().stack?.split('\n').slice(0, 5).join('\n')
-  })
+  // Debug logging only when we have a noteId and it might be invalid
+  if (process.env.NODE_ENV === 'development' && noteId) {
+    const isLikelyPersonaId = noteId.length > 20 && noteId.startsWith('jh7b')
+    if (isLikelyPersonaId) {
+      console.warn('[useNotepadState] Warning: Received persona ID instead of note ID:', {
+        noteId: noteId.substring(0, 20) + '...',
+        isPersonaId: true
+      })
+    } else {
+      console.debug('[useNotepadState] Opening note:', noteId.substring(0, 15) + '...')
+    }
+  }
 
   // Internal state for note management (controlled by handlers, not props)
   const [isNewNote, setIsNewNote] = useState(!noteId)

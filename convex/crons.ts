@@ -103,4 +103,12 @@ crons.cron(
   {}
 );
 
+// Process intelligence jobs every 5 minutes
+crons.interval(
+  "process intelligence jobs",
+  { minutes: 5 },
+  internal.intelligenceScheduled.processIntelligenceJobs,
+  {}
+);
+
 export default crons;

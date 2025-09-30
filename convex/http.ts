@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { HonoWithConvex, HttpRouterWithHono } from "convex-helpers/server/hono";
 import { ActionCtx } from "./_generated/server";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { cors } from "hono/cors";
 import { Id } from "./_generated/dataModel";
 import * as usageEventsApi from "./usageEvents";
@@ -1755,6 +1755,88 @@ app.post("/api/crystal/paginated", async (c) => {
   }
 });
 
+
+// === INTELLIGENCE SYSTEM ENDPOINTS ===
+
+// Trigger intelligence check (non-blocking)
+app.post("/api/intelligence/trigger", async (c) => {
+  const ctx = c.env;
+  const { userId, event_type } = await c.req.json();
+  
+  try {
+    // Fire and forget - trigger internal action without awaiting
+    // Use internal.* for internalAction (not api.*)
+    ctx.runAction(internal.intelligenceActions.checkIntelligenceTriggers, {
+      userId,
+      event_type
+    }).catch((error: any) => {
+      console.log(`[INTELLIGENCE] Trigger check failed (non-critical): ${error}`);
+    });
+    
+    // Return immediately
+    return c.json({ success: true, data: { queued: true } });
+  } catch (error: any) {
+    // Don't fail - trigger checks are non-critical
+    console.log(`[INTELLIGENCE] Trigger error (non-critical): ${error.message}`);
+    return c.json({ success: true, data: { queued: false } });
+  }
+});
+
+// Get user intelligence config
+app.post("/api/intelligence/config", async (c) => {
+  const ctx = c.env;
+  const { userId } = await c.req.json();
+  
+  try {
+    const config = await ctx.runQuery(api.intelligenceQueries.getUserConfig, { userId });
+    return c.json({ success: true, data: config });
+  } catch (error: any) {
+    console.error("[INTELLIGENCE] Config fetch error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// Get pending jobs
+app.post("/api/intelligence/jobs/pending", async (c) => {
+  const ctx = c.env;
+  const { limit } = await c.req.json();
+  
+  try {
+    const jobs = await ctx.runQuery(api.intelligenceQueries.getPendingJobs, { limit: limit || 10 });
+    return c.json({ success: true, data: jobs });
+  } catch (error: any) {
+    console.error("[INTELLIGENCE] Jobs fetch error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// Update job status
+app.post("/api/intelligence/job/update", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.intelligenceMutations.updateJobStatus, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[INTELLIGENCE] Job update error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// Update crystal intelligence state
+app.post("/api/intelligence/update", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.intelligenceMutations.updateIntelligenceState, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[INTELLIGENCE] Intelligence update error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
 
 
 // === SHARD LIFECYCLE ENDPOINTS ===

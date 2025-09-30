@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AmbientInsight } from '../chat/types';
+import { AmbientInsight } from '@/types/index';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { getApiKey } from '@/app/lib/api-helpers';
@@ -77,24 +77,23 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
   const [shownInsightIds, setShownInsightIds] = useState<Set<string>>(new Set());
 
   // Always call useQuery, passing skip if userId is not available
-  console.log('[CONVEX] AmbientInsights query called', {
-    timestamp: Date.now(),
-    userId
-  })
+  if (process.env.NODE_ENV === 'development' && userId) {
+    console.debug('[AmbientInsights] Query initialized for userId:', userId.substring(0, 8) + '...')
+  }
   
   const convexInsights = useQuery(
     api.ambientInsights.getMostRecentByUserId,
     userId ? { userId } : "skip"
   );
 
-  console.log('[CONVEX] AmbientInsights query result changed', {
-    queryName: 'getMostRecentByUserId',
-    data: convexInsights,
-    timestamp: Date.now(),
-    userId,
-    hasData: !!convexInsights,
-    dataLength: Array.isArray(convexInsights?.data) ? convexInsights.data.length : 0
-  })
+  // Only log when we have actual data, not during loading
+  if (process.env.NODE_ENV === 'development' && userId && convexInsights !== undefined) {
+    const hasData = !!convexInsights && Array.isArray(convexInsights?.data) && convexInsights.data.length > 0
+    console.debug('[AmbientInsights] Data loaded:', {
+      hasInsights: hasData,
+      count: Array.isArray(convexInsights?.data) ? convexInsights.data.length : 0
+    })
+  }
 
   // Only log once when insights actually change, not on every render
   useEffect(() => {

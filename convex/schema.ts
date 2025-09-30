@@ -1036,5 +1036,210 @@ export default defineSchema({
   .index("by_user_type", ["userId", "migrationType"])
   .index("by_type", ["migrationType"])
   .index("by_completion", ["completed"]),
+
+  // ========================================
+  // CRYSTAL INTELLIGENCE SYSTEM
+  // ========================================
+
+  // Intelligence Configuration - Per-user settings for analysis triggers and preferences
+  intelligence_config: defineTable({
+    userId: v.string(),
+    
+    // Trigger thresholds (configurable)
+    triggers: v.object({
+      chat_messages: v.number(),        // Default: 25
+      smart_notes: v.number(),          // Default: 10
+      crystal_formations: v.number(),   // Default: 5
+      days_since_last: v.number(),      // Default: 7
+    }),
+    
+    // Analysis preferences
+    preferences: v.object({
+      analysis_depth: v.union(v.literal("fast"), v.literal("standard"), v.literal("deep")),
+      auto_archival: v.boolean(),
+      review_notifications: v.boolean(),
+    }),
+    
+    // Execution tracking
+    last_analysis: v.number(),
+    next_scheduled_analysis: v.optional(v.number()),
+    
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_user", ["userId"])
+  .index("by_next_scheduled", ["next_scheduled_analysis"]),
+
+  // Activity Counters - Track user activity for trigger detection
+  user_activity_counters: defineTable({
+    userId: v.string(),
+    
+    // Activity counts since last intelligence analysis
+    since_last_analysis: v.object({
+      chat_messages: v.number(),
+      smart_notes: v.number(),
+      crystal_formations: v.number(),
+      crystal_retrievals: v.number(),
+    }),
+    
+    // Lifetime activity (for analytics)
+    lifetime: v.object({
+      chat_messages: v.number(),
+      smart_notes: v.number(),
+      crystal_formations: v.number(),
+      crystal_retrievals: v.number(),
+    }),
+    
+    // Trigger state
+    pending_analysis: v.boolean(),
+    analysis_priority: v.union(
+      v.literal("low"),
+      v.literal("normal"),
+      v.literal("high"),
+      v.literal("urgent")
+    ),
+    
+    updatedAt: v.number(),
+  })
+  .index("by_user", ["userId"])
+  .index("by_pending", ["pending_analysis", "analysis_priority"]),
+
+  // Crystal Intelligence State - Denormalized intelligence data for performance
+  crystal_intelligence: defineTable({
+    userId: v.string(),
+    crystalId: v.string(),
+    
+    // Usage statistics (aggregated from usageEvents)
+    usage: v.object({
+      total_retrievals: v.number(),
+      retrievals_last_7d: v.number(),
+      retrievals_last_30d: v.number(),
+      last_used: v.number(),
+      usage_frequency: v.number(),
+      contexts: v.array(v.string()),
+      co_occurrence: v.optional(v.array(v.string())),
+    }),
+    
+    // Relationship analysis (vector similarity based)
+    relationships: v.object({
+      related: v.array(v.object({
+        crystalId: v.string(),
+        similarity: v.number(),
+        relationship_type: v.string(),
+        confidence: v.number(),
+      })),
+      conflicting: v.array(v.object({
+        crystalId: v.string(),
+        conflict_score: v.number(),
+        conflict_type: v.string(),
+        resolution: v.optional(v.string()),
+      })),
+    }),
+    
+    // Contradiction analysis (shard-level)
+    contradictions: v.object({
+      shard_ids: v.array(v.string()),
+      severity: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
+      patterns: v.array(v.string()),
+      analysis: v.string(),
+    }),
+    
+    // Health scoring (composite metric)
+    health: v.object({
+      overall_score: v.number(),
+      components: v.object({
+        evidence_strength: v.number(),
+        usage_recency: v.number(),
+        usage_frequency: v.number(),
+        contradiction_impact: v.number(),
+        age_factor: v.number(),
+      }),
+      trend: v.union(v.literal("improving"), v.literal("stable"), v.literal("declining")),
+    }),
+    
+    // Lifecycle management
+    lifecycle: v.object({
+      review_priority: v.union(
+        v.literal("low"),
+        v.literal("medium"),
+        v.literal("high"),
+        v.literal("critical")
+      ),
+      next_review_due: v.number(),
+      archival_candidate: v.boolean(),
+      archival_reason: v.optional(v.string()),
+      archival_confidence: v.optional(v.number()),
+    }),
+    
+    // Metadata
+    analysis_version: v.string(),
+    last_analyzed: v.number(),
+    analysis_depth: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_user", ["userId"])
+  .index("by_crystal", ["userId", "crystalId"])
+  .index("by_health", ["userId", "health.overall_score"])
+  .index("by_review_priority", ["userId", "lifecycle.review_priority"])
+  .index("by_archival_candidate", ["userId", "lifecycle.archival_candidate"]),
+
+  // Intelligence Jobs - Background processing queue
+  intelligence_jobs: defineTable({
+    userId: v.string(),
+    
+    // Job configuration
+    job_type: v.union(
+      v.literal("quick_update"),
+      v.literal("standard_analysis"),
+      v.literal("deep_analysis"),
+      v.literal("archival_review")
+    ),
+    
+    // Execution details
+    status: v.union(
+      v.literal("pending"),
+      v.literal("running"),
+      v.literal("completed"),
+      v.literal("failed"),
+      v.literal("cancelled")
+    ),
+    
+    priority: v.union(
+      v.literal("low"),
+      v.literal("normal"),
+      v.literal("high"),
+      v.literal("urgent")
+    ),
+    
+    // Scope (what to analyze)
+    scope: v.object({
+      crystal_ids: v.optional(v.array(v.string())),
+      analyze_all: v.boolean(),
+      analysis_depth: v.string(),
+    }),
+    
+    // Execution tracking
+    trigger_source: v.string(),
+    scheduled_for: v.number(),
+    started_at: v.optional(v.number()),
+    completed_at: v.optional(v.number()),
+    duration_ms: v.optional(v.number()),
+    
+    // Results
+    results: v.optional(v.object({
+      crystals_analyzed: v.number(),
+      relationships_found: v.number(),
+      contradictions_found: v.number(),
+      health_scores_updated: v.number(),
+      error: v.optional(v.string()),
+    })),
+    
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_user", ["userId"])
+  .index("by_status", ["status", "priority", "scheduled_for"])
+  .index("by_user_status", ["userId", "status"]),
 });
 

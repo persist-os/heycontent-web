@@ -114,6 +114,31 @@ export const create_user = mutation(async ({ db }, { name, email, image, userId,
     updatedAt: now,
   });
   
+  // Initialize intelligence config for new user
+  try {
+    await db.insert("intelligence_config", {
+      userId,
+      triggers: {
+        chat_messages: 25,
+        smart_notes: 10,
+        crystal_formations: 5,
+        days_since_last: 7,
+      },
+      preferences: {
+        analysis_depth: "standard" as "fast" | "standard" | "deep",
+        auto_archival: false,
+        review_notifications: true,
+      },
+      last_analysis: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+    console.log(`[USER CREATION] Initialized intelligence config for user ${userId}`);
+  } catch (error) {
+    // Non-critical - log but don't fail user creation
+    console.log(`[USER CREATION] Failed to initialize intelligence config: ${error}`);
+  }
+  
   // Process referral if user was referred by someone
   if (referredBy && referredBy.trim()) {
     try {
