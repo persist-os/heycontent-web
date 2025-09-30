@@ -84,8 +84,7 @@ export default defineSchema({
       firstReferralDate: v.optional(v.number()),
       lastReferralDate: v.optional(v.number())
     })),
-    // TEMPORARY: Fields to be removed by migration
-    lastGmailFetch: v.optional(v.number()),
+    // ⚠️ DEPRECATED: Gmail integration removed - use crystal system for insights
   })
   .index("by_userId", ["userId"])
   .index("by_email", ["email"])
@@ -216,10 +215,7 @@ export default defineSchema({
     updatedAt: v.number(),
     crystalIds: v.optional(v.array(v.string())),
     shardIds: v.optional(v.array(v.string())),
-    // TEMPORARY: Fields to be removed by migration
-    gmailIds: v.optional(v.array(v.string())),
-    instagramPostIds: v.optional(v.array(v.string())),
-    youtubeVideoIds: v.optional(v.array(v.string())),
+    // ⚠️ DEPRECATED: Social media integrations removed - use crystal system for content insights
   })
   .index("by_user", ["userId"])
   .index("by_fingerprint", ["fingerprintId"])
@@ -735,7 +731,7 @@ export default defineSchema({
   // User Preferences - User privacy and notification settings
   user_preferences: defineTable({
     userId: v.string(),
-    showPersonaToFriends: v.boolean(),
+    showPersonaToFriends: v.boolean(), // TODO: Rename to showCrystalsToFriends or remove entirely
     allowFriendRequests: v.boolean(),
     friendRequestNotifications: v.boolean(),
     createdAt: v.number(),

@@ -41,9 +41,9 @@ export const getSharedWithMe = query({
     // Project-specific fields
     noteIds: v.optional(v.array(v.string())),
     conversationIds: v.optional(v.array(v.string())),
-    instagramPostIds: v.optional(v.array(v.string())),
-    youtubeVideoIds: v.optional(v.array(v.string())),
-    gmailIds: v.optional(v.array(v.string())),
+    // ⚠️ DEPRECATED: Social media IDs removed - use crystal system for content insights
+    crystalIds: v.optional(v.array(v.string())),
+    shardIds: v.optional(v.array(v.string())),
     analysisIds: v.optional(v.array(v.string())),
   })),
   handler: async (ctx, args) => {
@@ -330,9 +330,9 @@ export const getMySharedContent = query({
     // Project-specific fields
     noteIds: v.optional(v.array(v.string())),
     conversationIds: v.optional(v.array(v.string())),
-    instagramPostIds: v.optional(v.array(v.string())),
-    youtubeVideoIds: v.optional(v.array(v.string())),
-    gmailIds: v.optional(v.array(v.string())),
+    // ⚠️ DEPRECATED: Social media IDs removed - use crystal system for content insights
+    crystalIds: v.optional(v.array(v.string())),
+    shardIds: v.optional(v.array(v.string())),
     analysisIds: v.optional(v.array(v.string())),
   })),
   handler: async (ctx, args) => {

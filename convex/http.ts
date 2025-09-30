@@ -119,65 +119,8 @@ app.get("/api/users/:id/conversations", async (c) => {
   return c.json(result);
 });
 
-// Gmail quota optimization endpoints
-app.post("/api/query/getLastGmailFetch", async (c) => {
-  const ctx = c.env;
-  const { userId } = await c.req.json();
-
-  if (!userId) {
-    return c.json({ success: false, error: "Missing userId" }, 400);
-  }
-
-  try {
-    const timestamp = await ctx.runQuery(api.userQueries.getLastGmailFetch, { userId });
-    return c.json({ success: true, data: timestamp });
-  } catch (error) {
-    console.error("Failed to get last Gmail fetch timestamp:", error);
-    return c.json({ success: false, error: "Failed to get last Gmail fetch timestamp" }, 500);
-  }
-});
-
-app.post("/api/mutation/updateLastGmailFetch", async (c) => {
-  const ctx = c.env;
-  const { userId, timestamp } = await c.req.json();
-
-  if (!userId) {
-    return c.json({ success: false, error: "Missing userId" }, 400);
-  }
-
-  try {
-    const result = await ctx.runMutation(api.userMutations.updateLastGmailFetch, { 
-      userId,
-      timestamp
-    });
-    return c.json({ success: true, data: result });
-  } catch (error) {
-    console.error("Failed to update last Gmail fetch timestamp:", error);
-    return c.json({ success: false, error: "Failed to update last Gmail fetch timestamp" }, 500);
-  }
-});
-
-// Store Gmail thread analysis
-app.post("/api/mutation/storeGmailThreadAnalysis", async (c) => {
-  const ctx = c.env;
-  const { userId, threadId, analysis } = await c.req.json();
-
-  if (!userId || !threadId || !analysis) {
-    return c.json({ success: false, error: "Missing userId, threadId, or analysis" }, 400);
-  }
-
-  try {
-    const result = await ctx.runMutation(api.gmailMutations.storeGmailThreadAnalysis, { 
-      userId,
-      threadId,
-      analysis
-    });
-    return c.json({ success: true, data: result });
-  } catch (error) {
-    console.error("Failed to store Gmail thread analysis:", error);
-    return c.json({ success: false, error: "Failed to store Gmail thread analysis" }, 500);
-  }
-});
+// ⚠️ DEPRECATED: Gmail integration endpoints removed - use crystal system for email insights
+// TODO: Remove these comments after confirming no active usage
 
 // Chat with context - Enhanced chat that searches for relevant content
 app.post("/api/users/:id/chat_with_context", async (c) => {
@@ -1499,7 +1442,7 @@ app.post("/api/crystal/batch-mutate", async (c) => {
   }
 });
 
-// Persona data convenience endpoint
+// Crystal data convenience endpoint
 app.post("/api/crystal/persona", async (c) => {
   const ctx = c.env;
   const requestBody = await c.req.json();

@@ -1,10 +1,14 @@
 /**
- * SIMPLIFIED PERSONA SHARDS SCHEMA
- *
- * Optimized for Gemini Flash generation with focus on:
- * - Exact user quotes (primary data)
- * - Qualitative analysis over quantitative scoring
- * - Simple, flat structure for reliable LLM extraction
+ * ⚠️ DEPRECATED: PERSONA SYSTEM - SCHEDULED FOR REMOVAL
+ * 
+ * This entire persona system has been deprecated and replaced by the crystal system.
+ * These types are kept for backwards compatibility only and will be removed in a future version.
+ * 
+ * TODO: Remove this entire file after confirming no active usage
+ * TODO: Migrate any remaining persona data to crystal system
+ * TODO: Update all imports to use crystal types instead
+ * 
+ * @deprecated Use crystal system types instead
  */
 
 // === IDENTITY DIMENSIONS (What aspect of self this touches) ===

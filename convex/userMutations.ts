@@ -207,31 +207,8 @@ export const updateUserStripeData = mutation({
   },
 });
 
-// Gmail quota optimization - update lastGmailFetch timestamp
-export const updateLastGmailFetch = mutation({
-  args: {
-    userId: v.string(),
-    timestamp: v.optional(v.number()),
-  },
-  handler: async ({ db }, args) => {
-    const user = await db
-      .query("users")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .first();
-
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    const now = Date.now();
-    await db.patch(user._id, {
-      lastGmailFetch: args.timestamp || now,
-      updatedAt: now,
-    });
-    
-    return { success: true, userId: user._id, timestamp: args.timestamp || now };
-  },
-});
+// ⚠️ DEPRECATED: Gmail integration removed - use crystal system for email insights
+// TODO: Remove this mutation after confirming no active usage
 
 // Delete all user data
 export const deleteUserAndData = mutation({
@@ -271,10 +248,8 @@ export const deleteUserAndData = mutation({
     await batchDelete("users", () =>
       ctx.db.query("users").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
-    // Personas
-    await batchDelete("personas", () =>
-      ctx.db.query("personas").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
+    // ⚠️ DEPRECATED: Old personas table removed - now using crystal system
+    // TODO: Remove this comment after confirming no old persona data exists
     // Conversations
     await batchDelete("conversations", () =>
       ctx.db.query("conversations").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)

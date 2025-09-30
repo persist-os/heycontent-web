@@ -1,5 +1,18 @@
 'use client'
 
+/**
+ * ⚠️ DEPRECATED: PERSONA UI COMPONENTS - SCHEDULED FOR REMOVAL
+ * 
+ * This entire persona UI system has been deprecated and replaced by the crystal system.
+ * These components are kept for backwards compatibility only and will be removed in a future version.
+ * 
+ * TODO: Remove this entire file after confirming no active usage
+ * TODO: Replace any remaining persona UI with crystal-based components
+ * TODO: Update all imports to use crystal UI components instead
+ * 
+ * @deprecated Use crystal system UI components instead
+ */
+
 import React from 'react'
 
 const scenarios = [

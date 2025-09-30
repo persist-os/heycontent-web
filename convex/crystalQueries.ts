@@ -106,9 +106,9 @@ export const getCrystalData = query({
 });
 
 /**
- * Convenience function for common persona data operations
+ * Convenience function for crystal and shard data operations
  *
- * Provides pre-configured queries for typical use cases in persona management.
+ * Provides pre-configured queries for typical use cases in crystal/shard management.
  * Results are structured based on the operation type.
  *
  * @param userId - User ID for scoping queries
