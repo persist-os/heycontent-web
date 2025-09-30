@@ -36,6 +36,15 @@ export function useNotepadState({
   const [refinementPreview, setRefinementPreview] = useState<string | null>(null)
   const [isRefining, setIsRefining] = useState(false)
   
+  // DEBUGGING: Log noteId prop to trace persona ID issue
+  console.log('🔍 [useNotepadState] Received noteId prop:', {
+    noteId,
+    type: typeof noteId,
+    length: noteId?.length,
+    isLikelyPersonaId: noteId && noteId.length > 20 && noteId.startsWith('jh7b'),
+    stackTrace: new Error().stack?.split('\n').slice(0, 5).join('\n')
+  })
+
   // Internal state for note management (controlled by handlers, not props)
   const [isNewNote, setIsNewNote] = useState(!noteId)
   const [currentNoteId, setCurrentNoteId] = useState<string | Id<"notes"> | null>(noteId || null)
