@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Logo } from '@/components/ui/logo'
 import {
-  Users, Settings, FileText, LogOut, BarChart3, Menu, X, MessageSquare, Clock, Handshake, Trash2, Shield, Zap, Search, ArrowRight, Sparkles, Command
+  Users, Settings, FileText, LogOut, BarChart3, Menu, X, MessageSquare, Clock, Handshake, Trash2, Shield, Zap, Search, ArrowRight, Sparkles, Command, Gem
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { useSidebar } from '@/app/context/sidebar-context'
@@ -40,6 +40,15 @@ const navItems = [
     icon: Sparkles,
     href: '/dashboard/thinking_lab',
     dataAttr: 'data-thinking-lab-link',
+    category: 'explore',
+  },
+  {
+    id: 'crystals',
+    label: 'Crystals',
+    description: 'Crystallized insights from your content',
+    icon: Gem,
+    href: '/dashboard/crystals',
+    dataAttr: 'data-crystals-link',
     category: 'explore',
   },
 ]
@@ -245,6 +254,9 @@ export const DashboardNav = memo(function DashboardNav() {
       case 'thinking-lab':
         // This tab is active for thinking lab routes
         return pathname.startsWith('/dashboard/thinking_lab');
+      case 'crystals':
+        // This tab is active for crystals routes
+        return pathname.startsWith('/dashboard/crystals');
       case 'chat':
       case 'notes':
       case 'admin':

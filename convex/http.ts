@@ -1865,6 +1865,18 @@ app.post("/api/shard-lifecycle/mark-consumed", async (c) => {
   }
 });
 
+app.post("/api/shard-lifecycle/reserve-shards", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.shardLifecycleMutations.reserveShardsForFormation, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 app.post("/api/shard-lifecycle/stats", async (c) => {
   const ctx = c.env;
   const requestBody = await c.req.json();

@@ -870,11 +870,14 @@ export default defineSchema({
     // === SHARD LIFECYCLE TRACKING ===
     shard_status: v.optional(v.union(
         v.literal("unprocessed"),           // Never used for crystal generation
+        v.literal("reserved"),              // Reserved for processing (prevents race conditions)
         v.literal("used_for_crystal"),      // Consumed by a crystal
         v.literal("archived")               // Marked as irrelevant/outdated
     )),
     used_in_crystal_id: v.optional(v.string()), // Crystal ID that consumed this shard
     date_consumed: v.optional(v.number()),  // Timestamp when shard was consumed
+    reserved_by_formation: v.optional(v.string()), // Formation run ID that reserved this shard
+    reserved_at: v.optional(v.number()),    // Timestamp when shard was reserved
   })
       .index("by_user", ["userId"])
       .index("by_dimension", ["userId", "dimension"])

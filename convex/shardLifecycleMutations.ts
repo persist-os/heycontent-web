@@ -43,13 +43,16 @@ export const markShardsAsConsumed = mutation({
                     continue;
                 }
 
-                // Mark as consumed
+                // Mark as consumed (works for both "reserved" and "unprocessed" shards)
                 await ctx.db.patch(shardId, {
                     shard_status: "used_for_crystal",
                     used_in_crystal_id: crystalId,
                     date_consumed: currentTime,
                     updatedAt: currentTime,
                     last_referenced: currentTime,
+                    // Clear reservation fields if this was a reserved shard
+                    reserved_by_formation: undefined,
+                    reserved_at: undefined,
                 });
 
                 markedCount++;
@@ -185,6 +188,72 @@ export const initializeLegacyShardStatus = mutation({
             initializedCount,
             alreadyInitializedCount,
             message: `Initialized ${initializedCount} legacy shards. ${alreadyInitializedCount} shards already had status.`,
+        };
+    },
+});
+
+/**
+ * Reserve shards for processing (prevents concurrent formation runs from using same shards)
+ * 
+ * This MUST be called atomically when starting formation to prevent race conditions.
+ */
+export const reserveShardsForFormation = mutation({
+    args: {
+        shardIds: v.array(v.id("crystal_shards")),
+        formationRunId: v.string(),
+    },
+    returns: v.object({
+        success: v.boolean(),
+        reservedCount: v.number(),
+        alreadyReservedCount: v.number(),
+        errors: v.array(v.string()),
+    }),
+    handler: async (ctx, { shardIds, formationRunId }) => {
+        const currentTime = Date.now();
+        let reservedCount = 0;
+        let alreadyReservedCount = 0;
+        const errors: string[] = [];
+
+        for (const shardId of shardIds) {
+            try {
+                const shard = await ctx.db.get(shardId);
+                if (!shard) {
+                    errors.push(`Shard ${shardId} not found`);
+                    continue;
+                }
+
+                // Check if already reserved or consumed
+                if (shard.shard_status === "reserved") {
+                    alreadyReservedCount++;
+                    errors.push(`Shard ${shardId} already reserved by formation ${shard.reserved_by_formation || 'unknown'}`);
+                    continue;
+                }
+
+                if (shard.shard_status === "used_for_crystal") {
+                    alreadyReservedCount++;
+                    errors.push(`Shard ${shardId} already consumed by crystal ${shard.used_in_crystal_id}`);
+                    continue;
+                }
+
+                // Reserve the shard
+                await ctx.db.patch(shardId, {
+                    shard_status: "reserved",
+                    reserved_by_formation: formationRunId,
+                    reserved_at: currentTime,
+                    updatedAt: currentTime,
+                });
+
+                reservedCount++;
+            } catch (error) {
+                errors.push(`Failed to reserve shard ${shardId}: ${error}`);
+            }
+        }
+
+        return {
+            success: errors.length === 0,
+            reservedCount,
+            alreadyReservedCount,
+            errors,
         };
     },
 });

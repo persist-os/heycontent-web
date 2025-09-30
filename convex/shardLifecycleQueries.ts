@@ -4,8 +4,12 @@ import { query } from "./_generated/server";
 /**
  * Get all unprocessed shards for a user (core function for preventing shard reuse)
  * 
- * This is the primary query used by the formation pipeline to ensure
- * each shard is only consumed once.
+ * CRITICAL: This query ONLY returns shards that are truly unprocessed.
+ * It excludes:
+ * - Shards with shard_status = "used_for_crystal"
+ * - Shards with shard_status = "reserved" (being processed)
+ * - Shards with used_in_crystal_id set (already consumed)
+ * - Shards with shard_status = "archived"
  */
 export const getUnprocessedShards = query({
     args: {
@@ -17,21 +21,24 @@ export const getUnprocessedShards = query({
     returns: v.array(v.any()),
     handler: async (ctx, { userId, limit, minConfidence, dimensions }) => {
         // Get all shards for user and filter for unprocessed
-        // This handles backward compatibility for existing shards without shard_status
         const allShards = await ctx.db
             .query("crystal_shards")
             .withIndex("by_user", (q) => q.eq("userId", userId))
             .collect();
 
-        // Filter for unprocessed shards
-        // Handle transition: null/undefined status (legacy) OR explicitly "unprocessed" (new)
-        // but exclude any that are explicitly marked as used or archived
+        // Filter for TRULY unprocessed shards
         let results = allShards.filter(shard => {
-            // Explicitly exclude used or archived shards
-            if (shard.shard_status === "used_for_crystal" || shard.shard_status === "archived") {
+            // Explicitly exclude used, archived, or reserved shards
+            if (shard.shard_status === "used_for_crystal" || 
+                shard.shard_status === "archived" ||
+                shard.shard_status === "reserved") {
                 return false;
             }
-            // Include shards that are explicitly unprocessed OR have no status (legacy)
+            // CRITICAL: Exclude shards that are already consumed (have used_in_crystal_id)
+            if (shard.used_in_crystal_id) {
+                return false;
+            }
+            // Only include shards that are explicitly unprocessed OR have no status (truly new)
             return shard.shard_status === "unprocessed" || !shard.shard_status;
         });
 
