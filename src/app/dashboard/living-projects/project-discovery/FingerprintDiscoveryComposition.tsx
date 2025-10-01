@@ -339,15 +339,10 @@ const FingerprintDiscoveryComposition: React.FC<FingerprintDiscoveryCompositionP
 
         {/* Fingerprint Canvas Panel */}
         <div style={resizable.styles.rightPanelStyle} className="overflow-hidden bg-background">
-          <AmbientFingerprintCanvas 
+          <AmbientFingerprintCanvas
             projectId={projectId}
             messageCount={messages.length}
             isActive={true}
-            onAllStarsDiscovered={() => {
-              if (projectId) {
-                router.push(`/dashboard/living-projects/${projectId}`)
-              }
-            }}
           />
         </div>
       </div>

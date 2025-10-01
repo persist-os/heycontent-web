@@ -271,12 +271,9 @@ export const useFingerprintDiscovery = (
     return connections
   }, [discoveredFieldsData.fields])
 
-  // Trigger completion callback when fingerprint is complete (no state needed!)
-  useEffect(() => {
-    if (completionMetrics.isComplete && onAllStarsDiscovered) {
-      onAllStarsDiscovered()
-    }
-  }, [completionMetrics.isComplete, onAllStarsDiscovered])
+  // NOTE: Automatic transition removed - UI now shows a button when ready
+  // Users manually trigger progression to widget generation
+  // This prevents premature transitions and gives users control
 
   return {
     // Raw data (directly from Convex - ZERO state management!)

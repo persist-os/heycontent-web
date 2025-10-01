@@ -76,8 +76,8 @@ export const create = mutation({
       motivation_style: [],
       feedback_frequency: "",
       
-      // Initialize evolution settings
-      learning_sensitivity: 5, // Default middle value
+      // Initialize evolution settings - all empty until discovered
+      learning_sensitivity: 0, // Will be set to 1-10 during discovery
       change_triggers: [],
       stability_zones: [],
       growth_edges: [],
@@ -198,7 +198,20 @@ export const updateDiscoveryProgress = mutation({
     
     const completedFields = coreFields.filter(field => {
       const value = updatedFingerprint[field as keyof typeof updatedFingerprint];
-      return value !== null && value !== undefined && value !== '';
+      
+      // Check for null/undefined
+      if (value === null || value === undefined) return false;
+      
+      // Check for empty string
+      if (value === '') return false;
+      
+      // Check for empty arrays
+      if (Array.isArray(value) && value.length === 0) return false;
+      
+      // Check for zero numbers (learning_sensitivity valid range is 1-10, so 0 = not discovered)
+      if (typeof value === 'number' && value === 0) return false;
+      
+      return true;
     });
     
     // Update status if discovery is substantially complete (75% threshold)

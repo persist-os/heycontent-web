@@ -58,15 +58,41 @@ const AmbientFingerprintCanvas: React.FC<AmbientFingerprintCanvasProps> = ({
               <stop offset="100%" stopColor="rgb(59 130 246)" stopOpacity="0" />
             </radialGradient>
             
-            <linearGradient id="connectionLine" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="rgb(59 130 246)" stopOpacity="0.2" />
-              <stop offset="50%" stopColor="rgb(59 130 246)" stopOpacity="0.5" />
-              <stop offset="100%" stopColor="rgb(59 130 246)" stopOpacity="0.2" />
+            <radialGradient id="completionGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="rgb(59 130 246)" stopOpacity="0.08" />
+              <stop offset="50%" stopColor="rgb(139 92 246)" stopOpacity="0.05" />
+              <stop offset="100%" stopColor="rgb(59 130 246)" stopOpacity="0" />
+            </radialGradient>
+            
+            <linearGradient id="connectionLine" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="rgb(59 130 246)" stopOpacity="0.3" />
+              <stop offset="50%" stopColor="rgb(59 130 246)" stopOpacity="0.6" />
+              <stop offset="100%" stopColor="rgb(59 130 246)" stopOpacity="0.3" />
             </linearGradient>
+            
+            <filter id="softGlow">
+              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+              <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
           </defs>
 
+          {/* Completion glow effect - static, elegant glow when ready */}
+          {discovery.completion.isComplete && (
+            <circle
+              cx="400"
+              cy="400"
+              r="380"
+              fill="url(#completionGlow)"
+              className="opacity-90"
+              filter="url(#softGlow)"
+            />
+          )}
+
           {/* Auto-generated connections between related fields */}
-          {discovery.connections.map((connection, index) => {
+          {discovery.connections.map((connection) => {
             const fromPoint = discovery.getPointByField?.(connection.from)
             const toPoint = discovery.getPointByField?.(connection.to)
             
@@ -80,23 +106,17 @@ const AmbientFingerprintCanvas: React.FC<AmbientFingerprintCanvasProps> = ({
                 x2={toPoint.x}
                 y2={toPoint.y}
                 stroke="url(#connectionLine)"
-                strokeWidth={connection.strength * 2.5}
-                className="opacity-40 dark:opacity-50"
-              >
-                <animate
-                  attributeName="stroke-opacity"
-                  values="0.2;0.6;0.2"
-                  dur="6s"
-                  repeatCount="indefinite"
-                  begin={`${index * 0.8}s`}
-                />
-              </line>
+                strokeWidth={connection.strength * 2}
+                className={discovery.completion.isComplete ? "opacity-60 dark:opacity-70" : "opacity-40 dark:opacity-50"}
+                style={{ transition: 'all 0.5s ease-out' }}
+              />
             )
           })}
 
-          {/* Auto-discovered constellation points - More visible */}
+          {/* Auto-discovered constellation points - Clean and readable */}
           {discovery.constellationPoints.map(point => {
             const isHovered = hoveredField === point.field
+            const showLabel = discovery.completion.isComplete || point.isRecent
 
             return (
               <g
@@ -105,51 +125,50 @@ const AmbientFingerprintCanvas: React.FC<AmbientFingerprintCanvasProps> = ({
                 onMouseEnter={() => setHoveredField(point.field)}
                 onMouseLeave={() => setHoveredField(null)}
               >
-                {/* Outer glow - more prominent */}
+                {/* Outer glow - elegant and static when complete */}
                 <circle
                   cx={point.x}
                   cy={point.y}
-                  r={point.size * (isHovered ? 4.5 : 4)}
+                  r={point.size * (isHovered ? 5 : 4.5)}
                   fill="url(#starGlow)"
-                  className={`transition-all duration-300 ease-out ${
-                    isHovered
-                      ? 'opacity-80'
-                      : 'opacity-50'
-                  } ${discovery.isCompleting ? 'animate-pulse' : ''}`}
+                  filter="url(#softGlow)"
+                  className={`transition-all duration-500 ease-out ${
+                    isHovered ? 'opacity-90' : discovery.completion.isComplete ? 'opacity-70' : 'opacity-50'
+                  }`}
                 >
-                  {point.isRecent && (
+                  {point.isRecent && !discovery.completion.isComplete && (
                     <animate
                       attributeName="r"
-                      values={`${point.size * 3};${point.size * 6};${point.size * 3}`}
-                      dur="3s"
+                      values={`${point.size * 3};${point.size * 5};${point.size * 4.5}`}
+                      dur="2s"
                       repeatCount="1"
                     />
                   )}
                 </circle>
 
-                {/* Main star - larger and more visible */}
+                {/* Main star - crisp and visible */}
                 <circle
                   cx={point.x}
                   cy={point.y}
-                  r={point.size * (isHovered ? 2 : 1.5)}
-                  fill={`rgba(59, 130, 246, ${Math.max(point.intensity, 0.9)})`}
-                  stroke="rgba(255, 255, 255, 0.95)"
-                  strokeWidth={point.isRecent ? 3 : 2}
-                  className={`transition-all duration-300 ease-out ${
-                    discovery.completion.phase === 'completing' ? 'animate-ping' : ''
-                  } drop-shadow-[0_0_8px_rgba(59,130,246,1)]`}
+                  r={point.size * (isHovered ? 2.2 : 1.8)}
+                  fill={`rgba(59, 130, 246, ${discovery.completion.isComplete ? 1 : Math.max(point.intensity, 0.9)})`}
+                  stroke="rgba(255, 255, 255, 1)"
+                  strokeWidth={discovery.completion.isComplete ? 2.5 : isHovered ? 2.5 : 2}
+                  className="transition-all duration-500 ease-out drop-shadow-[0_0_12px_rgba(59,130,246,0.8)]"
+                  filter="url(#softGlow)"
                 />
 
-                {/* Field label - always visible for recent discoveries */}
-                {point.isRecent && (
+                {/* Field label - visible when complete or recent */}
+                {showLabel && (
                   <text
                     x={point.x}
-                    y={point.y - point.size * 2 - 12}
+                    y={point.y - point.size * 2 - 14}
                     fill="hsl(var(--foreground))"
-                    fontSize="14"
-                    fontWeight="500"
+                    fontSize={discovery.completion.isComplete ? "13" : "14"}
+                    fontWeight={discovery.completion.isComplete ? "400" : "500"}
                     textAnchor="middle"
-                    className="animate-fade-in drop-shadow-sm"
+                    className={`transition-all duration-500 ${discovery.completion.isComplete ? 'opacity-80' : 'opacity-90'}`}
+                    style={{ textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}
                   >
                     {point.field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                   </text>
@@ -159,7 +178,7 @@ const AmbientFingerprintCanvas: React.FC<AmbientFingerprintCanvasProps> = ({
                 <circle
                   cx={point.x}
                   cy={point.y}
-                  r={point.size * 5}
+                  r={point.size * 6}
                   fill="transparent"
                   className="cursor-pointer"
                 />
@@ -167,25 +186,6 @@ const AmbientFingerprintCanvas: React.FC<AmbientFingerprintCanvasProps> = ({
             )
           })}
 
-          {/* Completion animation */}
-          {discovery.completion.isComplete && (
-            <circle
-              cx="400"
-              cy="400"
-              r="0"
-              fill="none"
-              stroke="rgba(34, 197, 94, 0.8)"
-              strokeWidth="4"
-              className="animate-ping"
-            >
-              <animate
-                attributeName="r"
-                values="0;200;400"
-                dur="2s"
-                repeatCount="indefinite"
-              />
-            </circle>
-          )}
         </svg>
 
         {/* Tooltip for hovered field - More prominent */}
@@ -213,9 +213,15 @@ const AmbientFingerprintCanvas: React.FC<AmbientFingerprintCanvasProps> = ({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+                <div className={`w-2 h-2 rounded-full transition-colors duration-500 ${
+                  discovery.completion.isComplete 
+                    ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]' 
+                    : 'bg-blue-400 shadow-[0_0_6px_rgba(59,130,246,0.5)]'
+                }`} />
                 <p className="text-sm text-muted-foreground font-light">
-                  {discovery.completion.message}
+                  {discovery.completion.isComplete 
+                    ? 'Fingerprint ready!' 
+                    : discovery.completion.message}
                 </p>
               </div>
               
@@ -228,17 +234,43 @@ const AmbientFingerprintCanvas: React.FC<AmbientFingerprintCanvasProps> = ({
               </div>
             </div>
 
-            <button
-              type="button"
-              disabled={!projectId}
-              onClick={() => {
-                if (!projectId) return
-                router.push(`/dashboard/living-projects/${projectId}/edit-fingerprint`)
-              }}
-              className="w-full text-xs px-3 py-2 border border-border/40 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Skip to manual fingerprint editor
-            </button>
+            {/* Show prominent button when ready, subtle skip otherwise */}
+            {discovery.completion.isComplete ? (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  disabled={!projectId}
+                  onClick={() => {
+                    if (!projectId) return
+                    router.push(`/dashboard/living-projects/${projectId}`)
+                  }}
+                  className="w-full px-4 py-3 bg-gradient-to-b from-blue-500/10 to-purple-500/10 border border-blue-400/30 rounded-lg text-foreground font-medium hover:from-blue-500/20 hover:to-purple-500/20 hover:border-blue-400/50 transition-all disabled:opacity-40 disabled:cursor-not-allowed relative overflow-hidden group"
+                >
+                  <span className="relative z-10 flex items-center justify-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                    Continue to generation
+                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-b from-blue-400/0 via-blue-400/10 to-blue-400/0 translate-y-[-100%] group-hover:translate-y-[100%] transition-transform duration-1000" />
+                </button>
+                <p className="text-xs text-center text-muted-foreground/60">
+                  Or continue the conversation to refine further
+                </p>
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled={!projectId}
+                onClick={() => {
+                  if (!projectId) return
+                  router.push(`/dashboard/living-projects/${projectId}`)
+                }}
+                className="w-full text-xs px-3 py-2 border border-border/40 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Skip to generation
+              </button>
+            )}
           </div>
         ) : (
           <div className="text-center py-6">

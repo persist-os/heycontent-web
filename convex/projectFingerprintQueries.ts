@@ -143,15 +143,36 @@ export const getCompletionStatus = query({
 
     const discoveredFields = coreFields.filter(field => {
       const value = fingerprint[field as keyof typeof fingerprint];
-      return value !== null && value !== undefined && value !== '';
+      
+      // Check for null/undefined
+      if (value === null || value === undefined) return false;
+      
+      // Check for empty string
+      if (value === '') return false;
+      
+      // Check for empty arrays
+      if (Array.isArray(value) && value.length === 0) return false;
+      
+      // Check for zero numbers (learning_sensitivity valid range is 1-10, so 0 = not discovered)
+      if (typeof value === 'number' && value === 0) return false;
+      
+      return true;
     });
 
     const completion_percentage = Math.round((discoveredFields.length / coreFields.length) * 100);
+
+    // Debug: Log which fields are missing (helpful for development)
+    const missingFields = coreFields.filter(field => !discoveredFields.includes(field));
+    console.log(`[getCompletionStatus] Project ${projectId}: ${discoveredFields.length}/${coreFields.length} fields discovered`);
+    if (missingFields.length > 0 && missingFields.length <= 10) {
+      console.log(`[getCompletionStatus] Missing fields:`, missingFields);
+    }
 
     return {
       exists: true,
       completion_percentage,
       discovered_fields: discoveredFields,
+      missing_fields: missingFields, // Add this for debugging in frontend
       status: fingerprint.status,
       last_evolution: fingerprint.last_evolution,
       total_fields: coreFields.length,
