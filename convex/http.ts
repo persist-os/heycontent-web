@@ -1048,10 +1048,10 @@ app.post("/api/projects/create", async (c) => {
 // Get project by ID
 app.post("/api/projects/getById", async (c) => {
   const ctx = c.env;
-  const { projectId } = await c.req.json();
+  const { projectId, userId } = await c.req.json();
   
   try {
-    const project = await ctx.runQuery(api.projectsQueries.getById, { projectId });
+    const project = await ctx.runQuery(api.projectsQueries.getById, { projectId, userId });
     return c.json({ success: true, data: project });
   } catch (error: any) {
     console.error("Failed to get project:", error);
@@ -1839,7 +1839,8 @@ app.post("/api/intelligence/update", async (c) => {
 });
 
 
-// === SHARD LIFECYCLE ENDPOINTS ===
+// === SHARD LIFECYCLE QUERY ENDPOINTS ===
+// Query endpoints for shard data (read-only operations)
 
 app.post("/api/shard-lifecycle/unprocessed", async (c) => {
   const ctx = c.env;
@@ -1847,30 +1848,6 @@ app.post("/api/shard-lifecycle/unprocessed", async (c) => {
   
   try {
     const result = await ctx.runQuery(api.shardLifecycleQueries.getUnprocessedShards, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
-app.post("/api/shard-lifecycle/mark-consumed", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.shardLifecycleMutations.markShardsAsConsumed, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
-app.post("/api/shard-lifecycle/reserve-shards", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.shardLifecycleMutations.reserveShardsForFormation, requestBody);
     return c.json({ success: true, data: result });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
@@ -1901,24 +1878,75 @@ app.post("/api/shard-lifecycle/validate", async (c) => {
   }
 });
 
-app.post("/api/shard-lifecycle/batch-update-status", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.shardLifecycleMutations.batchUpdateShardStatus, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
 app.post("/api/shard-lifecycle/initialize-legacy", async (c) => {
   const ctx = c.env;
   const requestBody = await c.req.json();
   
   try {
     const result = await ctx.runMutation(api.shardLifecycleMutations.initializeLegacyShardStatus, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// === SHARD STATUS MANAGEMENT ===
+// Atomic shard lifecycle state transitions with validation
+
+app.post("/api/shard-status/update", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.shardStatusManager.updateShardStatus, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/shard-status/release", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.shardStatusManager.releaseReservedShards, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/shard-status/reserve", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.shardStatusManager.reserveShards, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/shard-status/consume", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.shardStatusManager.consumeShards, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/shard-status/archive", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.shardStatusManager.archiveShards, requestBody);
     return c.json({ success: true, data: result });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);

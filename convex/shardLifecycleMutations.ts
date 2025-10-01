@@ -3,130 +3,13 @@ import { mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
 /**
- * Mark multiple shards as consumed by a specific crystal
+ * Shard Lifecycle Mutations
  * 
- * This is the core function for implementing strict shard lifecycle management.
- * Once shards are marked as consumed, they cannot be reused for other crystals.
+ * DEPRECATED: This file is being phased out in favor of shardStatusManager.ts
+ * which provides centralized, optimized shard status management.
+ * 
+ * Only utility functions remain here for special operations.
  */
-export const markShardsAsConsumed = mutation({
-    args: {
-        shardIds: v.array(v.id("crystal_shards")),
-        crystalId: v.string(),
-        consumptionType: v.optional(v.string()),
-    },
-    returns: v.object({
-        success: v.boolean(),
-        markedCount: v.number(),
-        failedCount: v.number(),
-        errors: v.array(v.string()),
-    }),
-    handler: async (ctx, { shardIds, crystalId, consumptionType = "crystal_creation" }) => {
-        const currentTime = Date.now();
-        let markedCount = 0;
-        let failedCount = 0;
-        const errors: string[] = [];
-
-        for (const shardId of shardIds) {
-            try {
-                // Verify shard exists and is unprocessed
-                const shard = await ctx.db.get(shardId);
-                if (!shard) {
-                    errors.push(`Shard ${shardId} not found`);
-                    failedCount++;
-                    continue;
-                }
-
-                // Check if already consumed
-                if (shard.shard_status === "used_for_crystal") {
-                    errors.push(`Shard ${shardId} already consumed by crystal ${shard.used_in_crystal_id}`);
-                    failedCount++;
-                    continue;
-                }
-
-                // Mark as consumed (works for both "reserved" and "unprocessed" shards)
-                await ctx.db.patch(shardId, {
-                    shard_status: "used_for_crystal",
-                    used_in_crystal_id: crystalId,
-                    date_consumed: currentTime,
-                    updatedAt: currentTime,
-                    last_referenced: currentTime,
-                    // Clear reservation fields if this was a reserved shard
-                    reserved_by_formation: undefined,
-                    reserved_at: undefined,
-                });
-
-                markedCount++;
-            } catch (error) {
-                errors.push(`Failed to mark shard ${shardId}: ${error}`);
-                failedCount++;
-            }
-        }
-
-        return {
-            success: failedCount === 0,
-            markedCount,
-            failedCount,
-            errors,
-        };
-    },
-});
-
-/**
- * Batch update shard status for archiving or reactivating shards
- */
-export const batchUpdateShardStatus = mutation({
-    args: {
-        shardIds: v.array(v.id("crystal_shards")),
-        newStatus: v.union(
-            v.literal("unprocessed"),
-            v.literal("used_for_crystal"),
-            v.literal("archived")
-        ),
-        reason: v.optional(v.string()),
-    },
-    returns: v.object({
-        success: v.boolean(),
-        updatedCount: v.number(),
-        errors: v.array(v.string()),
-    }),
-    handler: async (ctx, { shardIds, newStatus, reason }) => {
-        const currentTime = Date.now();
-        let updatedCount = 0;
-        const errors: string[] = [];
-
-        for (const shardId of shardIds) {
-            try {
-                const shard = await ctx.db.get(shardId);
-                if (!shard) {
-                    errors.push(`Shard ${shardId} not found`);
-                    continue;
-                }
-
-                const updateData: any = {
-                    shard_status: newStatus,
-                    updatedAt: currentTime,
-                };
-
-                // Clear consumption data if returning to unprocessed
-                if (newStatus === "unprocessed") {
-                    updateData.used_in_crystal_id = undefined;
-                    updateData.date_consumed = undefined;
-                }
-
-                await ctx.db.patch(shardId, updateData);
-                updatedCount++;
-            } catch (error) {
-                errors.push(`Failed to update shard ${shardId}: ${error}`);
-            }
-        }
-
-        return {
-            success: errors.length === 0,
-            updatedCount,
-            errors,
-        };
-    },
-});
 
 /**
  * Initialize shard status for legacy shards that don't have explicit status
@@ -192,71 +75,6 @@ export const initializeLegacyShardStatus = mutation({
     },
 });
 
-/**
- * Reserve shards for processing (prevents concurrent formation runs from using same shards)
- * 
- * This MUST be called atomically when starting formation to prevent race conditions.
- */
-export const reserveShardsForFormation = mutation({
-    args: {
-        shardIds: v.array(v.id("crystal_shards")),
-        formationRunId: v.string(),
-    },
-    returns: v.object({
-        success: v.boolean(),
-        reservedCount: v.number(),
-        alreadyReservedCount: v.number(),
-        errors: v.array(v.string()),
-    }),
-    handler: async (ctx, { shardIds, formationRunId }) => {
-        const currentTime = Date.now();
-        let reservedCount = 0;
-        let alreadyReservedCount = 0;
-        const errors: string[] = [];
-
-        for (const shardId of shardIds) {
-            try {
-                const shard = await ctx.db.get(shardId);
-                if (!shard) {
-                    errors.push(`Shard ${shardId} not found`);
-                    continue;
-                }
-
-                // Check if already reserved or consumed
-                if (shard.shard_status === "reserved") {
-                    alreadyReservedCount++;
-                    errors.push(`Shard ${shardId} already reserved by formation ${shard.reserved_by_formation || 'unknown'}`);
-                    continue;
-                }
-
-                if (shard.shard_status === "used_for_crystal") {
-                    alreadyReservedCount++;
-                    errors.push(`Shard ${shardId} already consumed by crystal ${shard.used_in_crystal_id}`);
-                    continue;
-                }
-
-                // Reserve the shard
-                await ctx.db.patch(shardId, {
-                    shard_status: "reserved",
-                    reserved_by_formation: formationRunId,
-                    reserved_at: currentTime,
-                    updatedAt: currentTime,
-                });
-
-                reservedCount++;
-            } catch (error) {
-                errors.push(`Failed to reserve shard ${shardId}: ${error}`);
-            }
-        }
-
-        return {
-            success: errors.length === 0,
-            reservedCount,
-            alreadyReservedCount,
-            errors,
-        };
-    },
-});
 
 /**
  * Reset all shards for a user back to unprocessed status

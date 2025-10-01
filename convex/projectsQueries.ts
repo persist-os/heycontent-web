@@ -1,19 +1,63 @@
 import { v } from "convex/values";
-import { query } from "./_generated/server";
+import { query, QueryCtx } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
 /**
- * Optimized Projects Queries
- * Following Convex best practices for performance and scalability
+ * Project Queries
+ * 
+ * Provides read access to project data with user ownership validation.
+ * All queries return optimized data structures with computed counts.
  */
 
-// ============================================================================
-// PRIMARY QUERIES - Most commonly used
-// ============================================================================
+// Shared handler for retrieving project by ID with ownership validation
+async function getProjectByIdHandler(
+  ctx: QueryCtx,
+  projectId: Id<"projects">,
+  userId: string
+) {
+  const project = await ctx.db.get(projectId);
+  
+  if (!project || project.userId !== userId) {
+    return null;
+  }
+
+  return {
+    _id: project._id,
+    userId: project.userId,
+    name: project.name,
+    description: project.description,
+    
+    // Content arrays with computed counts
+    noteIds: project.noteIds || [],
+    noteCount: (project.noteIds || []).length,
+    conversationIds: project.conversationIds || [],
+    conversationCount: (project.conversationIds || []).length,
+    crystalIds: project.crystalIds || [],
+    crystalCount: (project.crystalIds || []).length,
+    shardIds: project.shardIds || [],
+    shardCount: (project.shardIds || []).length,
+    
+    // Analytics
+    analysisIds: project.analysisIds || [],
+    
+    // Intelligence
+    fingerprintId: project.fingerprintId,
+    
+    // Metadata
+    createdAt: project.createdAt,
+    updatedAt: project.updatedAt,
+  };
+}
 
 /**
- * Get project by ID - Primary access pattern
- * Used by: Frontend components, backend agents, fingerprint discovery
+ * Retrieve project by ID with ownership validation
+ * 
+ * Returns complete project data including all content arrays and computed
+ * counts. Returns null if project doesn't exist or user doesn't own it.
+ * 
+ * @param projectId - Project ID to retrieve
+ * @param userId - User ID for ownership validation
+ * @returns Project data or null if not found/unauthorized
  */
 export const getById = query({
   args: { 
@@ -21,49 +65,15 @@ export const getById = query({
     userId: v.string()
   },
   handler: async (ctx, { projectId, userId }) => {
-    const project = await ctx.db.get(projectId);
-    
-    if (!project) return null;
-    
-    // Validate user ownership
-    if (project.userId !== userId) {
-      return null;
-    }
-
-    // Return optimized data structure
-    return {
-      _id: project._id,
-      userId: project.userId,
-      name: project.name,
-      description: project.description,
-      
-      // Content arrays with counts for performance
-      noteIds: project.noteIds || [],
-      noteCount: (project.noteIds || []).length,
-      conversationIds: project.conversationIds || [],
-      conversationCount: (project.conversationIds || []).length,
-      crystalIds: project.crystalIds || [],
-      crystalCount: (project.crystalIds || []).length,
-      shardIds: project.shardIds || [],
-      shardCount: (project.shardIds || []).length,
-      
-      // Analytics
-      analysisIds: project.analysisIds || [],
-      
-      // Intelligence
-      fingerprintId: project.fingerprintId,
-      
-      // Metadata
-      createdAt: project.createdAt,
-      updatedAt: project.updatedAt,
-    };
+    return await getProjectByIdHandler(ctx, projectId, userId);
   },
 });
 
 /**
- * Get project details with user authorization
- * Used by: ProjectViewScreen, project pages
- * Legacy alias for getById with user validation
+ * Retrieve project details (alias for getById)
+ * 
+ * Legacy endpoint maintained for backward compatibility.
+ * Identical to getById - returns complete project data with validation.
  */
 export const getProjectDetails = query({
   args: { 
@@ -71,46 +81,19 @@ export const getProjectDetails = query({
     userId: v.string()
   },
   handler: async (ctx, { projectId, userId }) => {
-    const project = await ctx.db.get(projectId);
-    
-    if (!project) return null;
-    
-    // Validate user ownership
-    if (project.userId !== userId) return null;
-
-    // Return same structure as getById
-    return {
-      _id: project._id,
-      userId: project.userId,
-      name: project.name,
-      description: project.description,
-      
-      // Content arrays with counts for performance
-      noteIds: project.noteIds || [],
-      noteCount: (project.noteIds || []).length,
-      conversationIds: project.conversationIds || [],
-      conversationCount: (project.conversationIds || []).length,
-      crystalIds: project.crystalIds || [],
-      crystalCount: (project.crystalIds || []).length,
-      shardIds: project.shardIds || [],
-      shardCount: (project.shardIds || []).length,
-      
-      // Analytics
-      analysisIds: project.analysisIds || [],
-      
-      // Intelligence
-      fingerprintId: project.fingerprintId,
-      
-      // Metadata
-      createdAt: project.createdAt,
-      updatedAt: project.updatedAt,
-    };
+    return await getProjectByIdHandler(ctx, projectId, userId);
   },
 });
 
 /**
- * Get projects by user ID - Primary user access pattern
- * Used by: Dashboard, project list, project selection
+ * Retrieve all projects for a user
+ * 
+ * Returns user's projects with summary data and content counts,
+ * ordered by most recent first. Results are limited for performance.
+ * 
+ * @param userId - User ID to retrieve projects for
+ * @param limit - Maximum number of projects to return (capped at 100)
+ * @returns Array of project summaries with content counts
  */
 export const getByUser = query({
   args: { 
@@ -154,13 +137,16 @@ export const getByUser = query({
   },
 });
 
-// ============================================================================
-// CONTENT QUERIES - For project content management
-// ============================================================================
-
 /**
- * Get project with specific content type
- * Used by: Content filtering, type-specific views
+ * Retrieve project with filtered content type
+ * 
+ * Returns project data with only the specified content type populated,
+ * or all content if "all" is specified. Useful for reducing payload size
+ * when only specific content is needed.
+ * 
+ * @param projectId - Project ID to retrieve
+ * @param contentType - Type of content to include (notes, conversations, crystals, shards, all)
+ * @returns Project data with requested content type(s)
  */
 export const getWithContentType = query({
   args: { 
@@ -216,8 +202,14 @@ export const getWithContentType = query({
 });
 
 /**
- * Get projects with fingerprints - For intelligence dashboard
- * Used by: Analytics, fingerprint management
+ * Retrieve user's projects that have fingerprints
+ * 
+ * Returns only projects with linked intelligence fingerprints,
+ * useful for analytics and intelligence dashboards.
+ * 
+ * @param userId - User ID to retrieve projects for
+ * @param limit - Maximum number of projects to return (capped at 50)
+ * @returns Array of projects with fingerprints
  */
 export const getWithFingerprints = query({
   args: { 
@@ -249,13 +241,15 @@ export const getWithFingerprints = query({
   },
 });
 
-// ============================================================================
-// UTILITY QUERIES - For validation and checks
-// ============================================================================
-
 /**
- * Check if project exists and user has access
- * Used by: Authorization, validation
+ * Check project existence and access permissions
+ * 
+ * Validates whether a project exists and optionally checks user ownership.
+ * Lightweight query for authorization without fetching full project data.
+ * 
+ * @param projectId - Project ID to check
+ * @param userId - Optional user ID for ownership validation
+ * @returns Existence status, access status, and project name if accessible
  */
 export const exists = query({
   args: { 
@@ -281,8 +275,14 @@ export const exists = query({
 });
 
 /**
- * Get recent projects - For quick access
- * Used by: Recent items, quick switcher
+ * Retrieve user's recently updated projects
+ * 
+ * Returns minimal project data sorted by last update time,
+ * optimized for quick access menus and project switchers.
+ * 
+ * @param userId - User ID to retrieve projects for
+ * @param limit - Maximum number of projects to return (capped at 20)
+ * @returns Array of recent projects with minimal data
  */
 export const getRecent = query({
   args: { 
@@ -307,8 +307,15 @@ export const getRecent = query({
 });
 
 /**
- * Search projects by name - For project discovery
- * Used by: Search, project selection
+ * Search user's projects by name or description
+ * 
+ * Performs exact match search on project name and description fields.
+ * Returns matching projects with summary statistics.
+ * 
+ * @param userId - User ID to search within
+ * @param searchTerm - Term to search for (case-insensitive)
+ * @param limit - Maximum number of results (capped at 50)
+ * @returns Array of matching projects
  */
 export const searchByName = query({
   args: { 
@@ -344,8 +351,13 @@ export const searchByName = query({
 });
 
 /**
- * Get project statistics - For analytics
- * Used by: Dashboard analytics, insights
+ * Retrieve comprehensive project statistics
+ * 
+ * Returns detailed analytics including content counts, intelligence status,
+ * and timeline information. Useful for dashboards and analytics views.
+ * 
+ * @param projectId - Project ID to get statistics for
+ * @returns Detailed statistics object or null if project not found
  */
 export const getStats = query({
   args: { 

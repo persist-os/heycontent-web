@@ -425,66 +425,40 @@ export const getCrystalStats = query({
     }
 });
 
-/**
- * Internal function to get crystal shards by their IDs
- * Used by vector search to retrieve actual shard data after finding matches
- */
-export const getCrystalShardsByIds = internalQuery({
-    args: {
-        userId: v.string(),
-        shardIds: v.array(v.string()),
-    },
-    returns: v.array(v.object({
-        _id: v.id("crystal_shards"),
-        _creationTime: v.number(),
-        userId: v.string(),
-        quote: v.string(),
-        source: v.string(),
-        confidence_level: v.union(v.literal("high"), v.literal("medium"), v.literal("low")),
-        tags: v.optional(v.array(v.string())),
-        crystal_id: v.optional(v.id("crystals")),
-    })),
-    handler: async (ctx, { userId, shardIds }) => {
-        console.log('🔍 [GET SHARDS BY IDS] Fetching crystal shards by IDs');
-        console.log('🔍 [GET SHARDS BY IDS] User:', userId);
-        console.log('🔍 [GET SHARDS BY IDS] Shard IDs:', shardIds);
-        
+// Shared handler for retrieving shards by IDs with user validation
+async function getShardsByIdsHandler(
+    ctx: any,
+    userId: string,
+    shardIds: string[]
+) {
+    const shards = [];
+    
+    for (const shardId of shardIds) {
         try {
-            const shards = [];
+            const shard = await ctx.db.get(shardId as Id<"crystal_shards">);
             
-            for (const shardId of shardIds) {
-                try {
-                    // Convert string ID to proper Convex ID and fetch the shard
-                    const shard = await ctx.db.get(shardId as Id<"crystal_shards">);
-                    
-                    // Verify the shard belongs to the user and exists
-                    if (shard && shard.userId === userId) {
-                        shards.push(shard);
-                    } else if (shard) {
-                        console.warn('🔍 [GET SHARDS BY IDS] Shard belongs to different user:', shardId);
-                    } else {
-                        console.warn('🔍 [GET SHARDS BY IDS] Shard not found:', shardId);
-                    }
-                } catch (error) {
-                    console.warn('🔍 [GET SHARDS BY IDS] Error fetching shard:', shardId, error);
-                    // Continue with other shards
-                }
+            // Only include shards that exist and belong to the user
+            if (shard && shard.userId === userId) {
+                shards.push(shard);
             }
-            
-            console.log('✅ [GET SHARDS BY IDS] Successfully retrieved', shards.length, 'shards');
-            return shards;
-            
-        } catch (error: any) {
-            console.error('❌ [GET SHARDS BY IDS] Error:', error);
-            // Return empty array instead of throwing
-            return [];
+        } catch (error) {
+            // Skip invalid IDs, continue with others
+            continue;
         }
     }
-});
+    
+    return shards;
+}
 
 /**
- * Public query to get crystal shards by their IDs
- * Used by frontend components to display shard content for crystals
+ * Retrieve crystal shards by their IDs
+ * 
+ * Fetches multiple shards in a single query with user ownership validation.
+ * Silently skips shards that don't exist or belong to other users.
+ * 
+ * @param userId - User ID for ownership validation
+ * @param shardIds - Array of shard IDs to retrieve
+ * @returns Array of shard objects that exist and belong to the user
  */
 export const getShardsByIds = query({
     args: {
@@ -493,39 +467,23 @@ export const getShardsByIds = query({
     },
     returns: v.array(v.any()),
     handler: async (ctx, { userId, shardIds }) => {
-        console.log('🔍 [GET SHARDS BY IDS PUBLIC] Fetching crystal shards by IDs');
-        console.log('🔍 [GET SHARDS BY IDS PUBLIC] User:', userId);
-        console.log('🔍 [GET SHARDS BY IDS PUBLIC] Shard IDs:', shardIds);
-        
-        try {
-            const shards = [];
-            
-            for (const shardId of shardIds) {
-                try {
-                    // Convert string ID to proper Convex ID and fetch the shard
-                    const shard = await ctx.db.get(shardId as Id<"crystal_shards">);
-                    
-                    // Verify the shard belongs to the user and exists
-                    if (shard && shard.userId === userId) {
-                        shards.push(shard);
-                    } else if (shard) {
-                        console.warn('🔍 [GET SHARDS BY IDS PUBLIC] Shard belongs to different user:', shardId);
-                    } else {
-                        console.warn('🔍 [GET SHARDS BY IDS PUBLIC] Shard not found:', shardId);
-                    }
-                } catch (error) {
-                    console.warn('🔍 [GET SHARDS BY IDS PUBLIC] Error fetching shard:', shardId, error);
-                    // Continue with other shards
-                }
-            }
-            
-            console.log('✅ [GET SHARDS BY IDS PUBLIC] Successfully retrieved', shards.length, 'shards');
-            return shards;
-            
-        } catch (error: any) {
-            console.error('❌ [GET SHARDS BY IDS PUBLIC] Error:', error);
-            // Return empty array instead of throwing
-            return [];
-        }
+        return await getShardsByIdsHandler(ctx, userId, shardIds);
+    }
+});
+
+/**
+ * Internal query for shard retrieval by IDs
+ * 
+ * Used internally by other Convex functions (e.g., vector search).
+ * Same functionality as getShardsByIds but accessible only to internal calls.
+ */
+export const getCrystalShardsByIds = internalQuery({
+    args: {
+        userId: v.string(),
+        shardIds: v.array(v.string()),
+    },
+    returns: v.array(v.any()),
+    handler: async (ctx, { userId, shardIds }) => {
+        return await getShardsByIdsHandler(ctx, userId, shardIds);
     }
 });
