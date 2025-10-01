@@ -3,7 +3,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Id } from '@/convex/_generated/dataModel'
-import { useQuery } from 'convex/react'
+import { useQuery, useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { Message } from '@/app/types/chat'
 import { ChatInput } from '@/app/dashboard/thinking_lab/components/dialogue/input/chat-input'
@@ -25,16 +25,37 @@ const FingerprintDiscoveryComposition: React.FC<FingerprintDiscoveryCompositionP
   const [isLoading, setIsLoading] = useState(false)
   const [inputValue, setInputValue] = useState('')
   const [userId, setUserId] = useState<string | null>(null)
+  const [conversationId, setConversationId] = useState<Id<"conversations"> | null>(null)
   const [hasAutoStarted, setHasAutoStarted] = useState(false)
+  const [isInitialized, setIsInitialized] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const resizable = useResizablePanes(0.6)
 
-  // Get project details for auto-start
+  // Convex mutations
+  const createConversation = useMutation(api.chatMutations.createConversation)
+  const addMessage = useMutation(api.chatMutations.addMessageToConversation)
+  const linkConversation = useMutation(api.projectFingerprintMutations.linkDiscoveryConversation)
+
+  // Get project and fingerprint details
   const project = useQuery(
     api.projectsQueries.getById,
     projectId && userId ? { projectId, userId } : 'skip'
   )
 
+  const fingerprint = useQuery(
+    api.projectFingerprintQueries.getByProject,
+    projectId ? { projectId } : 'skip'
+  )
+
+  // Load existing conversation if fingerprint has one
+  const existingConversation = useQuery(
+    api.chatQueries.getConversation,
+    fingerprint?.discoveryConversationId && userId 
+      ? { conversationId: fingerprint.discoveryConversationId, userId } 
+      : 'skip'
+  )
+
+  // Initialize userId
   useEffect(() => {
     const fetchUserId = async () => {
       try {
@@ -47,6 +68,60 @@ const FingerprintDiscoveryComposition: React.FC<FingerprintDiscoveryCompositionP
     }
     fetchUserId()
   }, [])
+
+  // Initialize conversation and load messages
+  useEffect(() => {
+    if (!userId || !projectId || !project || isInitialized) return
+
+    const initializeConversation = async () => {
+      try {
+        // If fingerprint already has a conversation, load it
+        if (fingerprint?.discoveryConversationId && existingConversation) {
+          setConversationId(fingerprint.discoveryConversationId)
+          
+          // Convert Convex messages to Message format
+          const loadedMessages: Message[] = existingConversation.messages.map((msg: any, idx: number) => ({
+            id: `msg-${idx}`,
+            content: msg.content,
+            role: msg.role as 'user' | 'assistant',
+            timestamp: msg.timestamp?.toString() || Date.now().toString(),
+            chat_response: msg.content,
+            status: 'delivered' as const,
+            suggestions: [],
+          }))
+          
+          setMessages(loadedMessages)
+          setIsInitialized(true)
+          return
+        }
+
+        // Create new conversation for discovery
+        const conversationTitle = `Discovery: ${project.name}`
+        const newConversationId = await createConversation({
+          userId,
+          title: conversationTitle,
+          messages: [],
+        })
+
+        setConversationId(newConversationId)
+
+        // Link conversation to fingerprint
+        if (fingerprint?._id) {
+          await linkConversation({
+            projectId,
+            conversationId: newConversationId,
+          })
+        }
+
+        setIsInitialized(true)
+      } catch (error) {
+        console.error('Failed to initialize conversation:', error)
+        setIsInitialized(true)
+      }
+    }
+
+    initializeConversation()
+  }, [userId, projectId, project, fingerprint, existingConversation, isInitialized, createConversation, linkConversation])
 
   // Auto-snap to full screen when dragged close to edges
   useEffect(() => {
@@ -61,8 +136,8 @@ const FingerprintDiscoveryComposition: React.FC<FingerprintDiscoveryCompositionP
   }, [resizable.state.isDragging, resizable.state.splitRatio, resizable.actions])
 
   const handleSendMessage = useCallback(async (message: string) => {
-    if (!userId || !message.trim()) {
-      console.warn('Cannot send message: missing userId or empty message')
+    if (!userId || !message.trim() || !conversationId) {
+      console.warn('Cannot send message: missing userId, conversationId, or empty message')
       return
     }
 
@@ -71,24 +146,43 @@ const FingerprintDiscoveryComposition: React.FC<FingerprintDiscoveryCompositionP
       content: message.trim(),
       role: 'user',
       timestamp: Date.now().toString(),
-      chat_response: message.trim()
+      chat_response: message.trim(),
+      status: 'sent'
     }
 
-    setMessages(prev => [...prev, userMessage])
+    const typingMessage: Message = {
+      id: `typing-${Date.now()}`,
+      content: '',
+      role: 'assistant',
+      timestamp: Date.now().toString(),
+      chat_response: '',
+      status: 'typing',
+      statusHistory: []
+    }
+
+    setMessages(prev => [...prev, userMessage, typingMessage])
     setIsLoading(true)
     setInputValue('')
 
     try {
+      // Save user message to Convex
+      await addMessage({
+        userId,
+        conversationId,
+        message: {
+          content: message.trim(),
+          role: 'user',
+          timestamp: Date.now(),
+        }
+      })
+
+      // Send to backend for AI response
       const response = await sendDiscoveryMessage({
         query: message.trim(),
         projectId: projectId,
         isFirstMessage: messages.length === 0,
-        sessionId: sessionStorage.getItem('discovery_session_id') || undefined
+        sessionId: conversationId, // Use conversation ID as session ID
       })
-
-      if (response.session_id) {
-        sessionStorage.setItem('discovery_session_id', response.session_id)
-      }
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -97,12 +191,27 @@ const FingerprintDiscoveryComposition: React.FC<FingerprintDiscoveryCompositionP
         timestamp: Date.now().toString(),
         chat_response: response.response,
         suggestions: response.suggestions || [],
+        status: 'delivered',
         metadata: {
           suggestions: response.suggestions || []
         }
       }
 
-      setMessages(prev => [...prev, assistantMessage])
+      // Save assistant message to Convex
+      await addMessage({
+        userId,
+        conversationId,
+        message: {
+          content: response.response,
+          role: 'assistant',
+          timestamp: Date.now(),
+        }
+      })
+
+      // Replace typing message with actual response
+      setMessages(prev => prev.map(msg => 
+        msg.status === 'typing' ? assistantMessage : msg
+      ))
 
     } catch (error) {
       console.error('Discovery error:', error)
@@ -114,39 +223,39 @@ const FingerprintDiscoveryComposition: React.FC<FingerprintDiscoveryCompositionP
         timestamp: Date.now().toString(),
         chat_response: "I'm having trouble connecting right now. Could you try again?",
         suggestions: ["Let's start over", "Tell me about your project"],
+        status: 'failed',
         metadata: {
           suggestions: ["Let's start over", "Tell me about your project"]
         }
       }
 
-      setMessages(prev => [...prev, errorMessage])
+      setMessages(prev => prev.map(msg => 
+        msg.status === 'typing' ? errorMessage : msg
+      ))
     } finally {
       setIsLoading(false)
     }
-  }, [userId, messages.length, projectId])
+  }, [userId, messages.length, projectId, conversationId, addMessage])
 
   const handleSuggestionClick = useCallback((suggestion: any) => {
     const text = typeof suggestion === 'string' ? suggestion : suggestion?.text || suggestion
     if (text) {
-      // Append to existing input instead of sending immediately
       setInputValue(prev => {
         const current = prev.trim()
         return current ? `${current} ${text}` : text
       })
-      // Focus the input so user can edit or send
       inputRef.current?.focus()
     }
   }, [])
 
-  // Auto-start conversation when project loads
+  // Auto-start conversation when initialized
   useEffect(() => {
-    if (userId && project && !hasAutoStarted && messages.length === 0 && !isLoading) {
+    if (userId && project && !hasAutoStarted && messages.length === 0 && !isLoading && isInitialized && conversationId) {
       setHasAutoStarted(true)
       
       const projectName = project.name
       const projectDescription = project.description || ''
       
-      // Build focused, effective auto-start message
       const autoMessage = [
         `I'm working on a project called "${projectName}"${projectDescription ? `: ${projectDescription}` : ''}.`,
         `I want to set this up properly so you can understand how I work best and what I'm trying to achieve.`,
@@ -156,9 +265,9 @@ const FingerprintDiscoveryComposition: React.FC<FingerprintDiscoveryCompositionP
       
       handleSendMessage(autoMessage)
     }
-  }, [userId, project, hasAutoStarted, messages.length, isLoading, handleSendMessage])
+  }, [userId, project, hasAutoStarted, messages.length, isLoading, isInitialized, conversationId, handleSendMessage])
 
-  if (!userId) {
+  if (!userId || !isInitialized) {
     return (
       <div className="h-full flex items-center justify-center bg-background">
         <div className="text-center">
@@ -174,7 +283,7 @@ const FingerprintDiscoveryComposition: React.FC<FingerprintDiscoveryCompositionP
       <div ref={resizable.containerRef} className="flex flex-1 overflow-hidden">
         {/* Chat Panel */}
         <div style={resizable.styles.leftPanelStyle} className="flex flex-col h-full overflow-hidden">
-          {/* Header Spacer - prevents overlap with dashboard nav */}
+          {/* Header Spacer */}
           {messages.length > 0 && (
             <div className="flex-shrink-0 h-24 border-b border-border/20" />
           )}

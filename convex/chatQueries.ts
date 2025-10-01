@@ -20,11 +20,11 @@ export const getHistory = query({
 export const getConversation = query({
   args: {
     userId: v.string(),
-    conversationId: v.string(),
+    conversationId: v.id("conversations"),
   },
   handler: async (ctx, args) => {
     // Use direct ID lookup for reliable conversation fetching
-    const doc = await ctx.db.get(args.conversationId as any);
+    const doc = await ctx.db.get(args.conversationId);
 
     if (!doc) {
       return null;

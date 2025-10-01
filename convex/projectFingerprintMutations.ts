@@ -21,8 +21,9 @@ export const create = mutation({
     userId: v.string(),
     name: v.string(),
     description: v.optional(v.string()),
+    discoveryConversationId: v.optional(v.id("conversations")),
   },
-  handler: async (ctx, { projectId, userId, name, description }) => {
+  handler: async (ctx, { projectId, userId, name, description, discoveryConversationId }) => {
     // Check if fingerprint already exists
     const existing = await ctx.db
       .query("project_fingerprints")
@@ -40,6 +41,7 @@ export const create = mutation({
       userId,
       name,
       description,
+      discoveryConversationId,
       
       // Initialize core fields as empty - will be filled during discovery
       domain: "",
@@ -115,6 +117,33 @@ export const create = mutation({
       intelligence_version: "1.0",
       status: "discovering",
     });
+  },
+});
+
+/**
+ * Link fingerprint to discovery conversation
+ * Used by: Frontend when creating/resuming discovery
+ */
+export const linkDiscoveryConversation = mutation({
+  args: {
+    projectId: v.id("projects"),
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx, { projectId, conversationId }) => {
+    const fingerprint = await ctx.db
+      .query("project_fingerprints")
+      .withIndex("by_project", (q) => q.eq("projectId", projectId))
+      .first();
+
+    if (!fingerprint) {
+      throw new Error("Fingerprint not found for project");
+    }
+
+    await ctx.db.patch(fingerprint._id, {
+      discoveryConversationId: conversationId,
+    });
+
+    return { success: true, fingerprintId: fingerprint._id };
   },
 });
 

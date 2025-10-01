@@ -449,6 +449,7 @@ export default defineSchema({
     userId: v.string(),
     name: v.string(),
     description: v.optional(v.string()),
+    discoveryConversationId: v.optional(v.id("conversations")), // Link to discovery chat
 
     // AI-Discovered Project Nature (flattened for AI searchability)
     domain: v.optional(v.any()), // "academic", "creative", "business", "skill_development"

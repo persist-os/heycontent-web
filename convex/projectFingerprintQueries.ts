@@ -34,6 +34,7 @@ export const getByProject = query({
       userId: fingerprint.userId,
       name: fingerprint.name,
       description: fingerprint.description,
+      discoveryConversationId: fingerprint.discoveryConversationId,
       
       // AI-Discovered Project Nature
       domain: fingerprint.domain,
