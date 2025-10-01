@@ -45,8 +45,8 @@ const ChatPanel = React.memo<{
     <div className="flex flex-col h-full bg-background overflow-hidden">
       {messages.length > 0 ? (
         <>
-          {/* Header with New Conversation Button - fixed at top */}
-          <div className="flex justify-center p-2.5 border-b border-border flex-shrink-0">
+          {/* Header with New Conversation Button - prevents overlap with dashboard nav */}
+          <div className="flex justify-center items-center h-24 border-b border-border/20 flex-shrink-0">
             <button
               onClick={startNewConversation}
               className="text-sm font-light text-muted-foreground hover:text-foreground transition-colors duration-300 border-b border-transparent hover:border-current pb-1"
@@ -58,7 +58,7 @@ const ChatPanel = React.memo<{
           {/* Messages Area - takes remaining space */}
           <div className="flex-1 overflow-hidden">
             <div className="h-full overflow-y-auto scrollbar-hide">
-              <div className="p-4 sm:p-6">
+              <div className="p-4 sm:p-6 pl-12 sm:pl-12">
                 <div className="max-w-4xl mx-auto space-y-6">
                   <ChatMessagesList
                     messages={messages}

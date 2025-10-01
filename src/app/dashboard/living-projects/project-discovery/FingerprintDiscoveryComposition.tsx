@@ -174,10 +174,15 @@ const FingerprintDiscoveryComposition: React.FC<FingerprintDiscoveryCompositionP
       <div ref={resizable.containerRef} className="flex flex-1 overflow-hidden">
         {/* Chat Panel */}
         <div style={resizable.styles.leftPanelStyle} className="flex flex-col h-full overflow-hidden">
+          {/* Header Spacer - prevents overlap with dashboard nav */}
+          {messages.length > 0 && (
+            <div className="flex-shrink-0 h-24 border-b border-border/20" />
+          )}
+          
           {/* Messages Area */}
           <div className="flex-1 overflow-hidden">
             <div className="h-full overflow-y-auto scrollbar-hide">
-              <div className="p-4 sm:p-6">
+              <div className="p-4 sm:p-6 pl-12 sm:pl-12">
                 <div className="max-w-4xl mx-auto space-y-6">
                   <ChatMessagesList
                     messages={messages}
