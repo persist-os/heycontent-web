@@ -64,10 +64,53 @@ export const useFingerprintDiscovery = (
       'Context': ['user_constraints', 'external_dependencies', 'support_systems', 'potential_obstacles']
     }
 
-    // Generate constellation layout automatically
-    const centerX = 300
-    const centerY = 300
-    const baseRadius = 120
+    // Generate collision-free constellation layout
+    const centerX = 400  // Centered in 800x800 viewBox
+    const centerY = 400
+    const minRadius = 100
+    const maxRadius = 320
+    const minDistance = 60  // Minimum distance between points to prevent overlap
+    
+    const placedPoints: Array<{x: number, y: number, size: number}> = []
+    
+    // Helper function to check if a point is too close to existing points
+    const isTooClose = (x: number, y: number, size: number): boolean => {
+      return placedPoints.some(point => {
+        const distance = Math.sqrt(Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2))
+        const requiredDistance = minDistance + (size + point.size) * 2
+        return distance < requiredDistance
+      })
+    }
+    
+    // Helper function to find a valid position with collision detection
+    const findValidPosition = (preferredAngle: number, preferredRadius: number, size: number, maxAttempts = 50): {x: number, y: number} => {
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        // Add randomness that increases with each attempt
+        const angleVariation = (Math.random() - 0.5) * (attempt * 0.2)
+        const radiusVariation = (Math.random() - 0.5) * (attempt * 20)
+        
+        const angle = preferredAngle + angleVariation
+        const radius = Math.max(minRadius, Math.min(maxRadius, preferredRadius + radiusVariation))
+        
+        const x = centerX + Math.cos(angle) * radius
+        const y = centerY + Math.sin(angle) * radius
+        
+        // Check bounds
+        if (x < 50 || x > 750 || y < 50 || y > 750) continue
+        
+        if (!isTooClose(x, y, size)) {
+          return { x, y }
+        }
+      }
+      
+      // Fallback: place in a spiral pattern
+      const spiralAngle = placedPoints.length * 0.618 * 2 * Math.PI  // Golden angle
+      const spiralRadius = minRadius + (placedPoints.length * 12)
+      return {
+        x: centerX + Math.cos(spiralAngle) * spiralRadius,
+        y: centerY + Math.sin(spiralAngle) * spiralRadius
+      }
+    }
 
     // Auto-discover fields by checking if they have meaningful values
     Object.entries(fieldCategories).forEach(([category, categoryFields], categoryIndex) => {
@@ -96,14 +139,28 @@ export const useFingerprintDiscovery = (
           fields.add(field)
           discoveredInCategory.push(field)
 
-          // Auto-generate constellation position
+          // Determine size based on importance
+          const importance = (() => {
+            if (['core_intention', 'success_vision', 'domain', 'name'].includes(field)) return 'high'
+            if (category === 'Core Nature' || category === 'Intentions') return 'high'
+            if (category === 'AI Personality' || category === 'Context') return 'low'
+            return 'medium'
+          })() as 'low' | 'medium' | 'high'
+          
+          const size = importance === 'high' ? 8 : importance === 'medium' ? 6 : 4
+
+          // Calculate preferred position (spread categories evenly)
           const categoryCount = Object.keys(fieldCategories).length
           const categoryAngle = (categoryIndex / categoryCount) * 2 * Math.PI
-          const fieldAngle = categoryAngle + (fieldIndex - categoryFields.length / 2) * 0.3
-          const fieldRadius = baseRadius + (fieldIndex % 2) * 40
+          const fieldOffset = (fieldIndex - categoryFields.length / 2) * 0.4
+          const preferredAngle = categoryAngle + fieldOffset
+          const preferredRadius = minRadius + ((maxRadius - minRadius) * (fieldIndex / Math.max(categoryFields.length - 1, 1)))
           
-          const x = centerX + Math.cos(fieldAngle) * fieldRadius
-          const y = centerY + Math.sin(fieldAngle) * fieldRadius
+          // Find collision-free position
+          const { x, y } = findValidPosition(preferredAngle, preferredRadius, size)
+          
+          // Record this point
+          placedPoints.push({ x, y, size })
 
           // Smart display value generation
           const displayValue = (() => {
@@ -122,14 +179,6 @@ export const useFingerprintDiscovery = (
             }
             return String(value)
           })()
-
-          // Auto-determine importance based on field type and category
-          const importance = (() => {
-            if (['core_intention', 'success_vision', 'domain'].includes(field)) return 'high'
-            if (category === 'Core Nature' || category === 'Intentions') return 'high'
-            if (category === 'AI Personality' || category === 'Context') return 'low'
-            return 'medium'
-          })() as 'low' | 'medium' | 'high'
 
           insights.push({
             id: field,
