@@ -257,7 +257,7 @@ const FingerprintDiscoveryComposition: React.FC<FingerprintDiscoveryCompositionP
       const projectDescription = project.description || ''
       
       const autoMessage = [
-        `I'm working on a project called "${projectName}"${projectDescription ? `: ${projectDescription}` : ''}.`,
+        `I have a mission called "${projectName}"${projectDescription ? `: ${projectDescription}` : ''}.`,
         `I want to set this up properly so you can understand how I work best and what I'm trying to achieve.`,
         `Help me think through the key aspects - my working style, goals, success criteria, and how I want to approach this.`,
         `Ask me the questions that will help you really understand what I need.`

@@ -10,6 +10,29 @@ import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { Id } from '@/convex/_generated/dataModel'
 
+// SINGLE SOURCE OF TRUTH for core fingerprint fields
+// Only essential fields that matter for project understanding
+const FINGERPRINT_FIELD_CATEGORIES = {
+  'Core Nature': ['domain', 'complexity_level', 'collaboration_style', 'time_horizon'],
+  'Intentions': ['core_intention', 'success_vision', 'value_creation'],
+  'Timeline': ['natural_rhythm', 'flexibility_preference'],
+  'Outputs': ['tangible_deliverables', 'intangible_benefits'],
+  'Interface': ['cognitive_load_preference', 'information_density'],
+  'Evolution': ['learning_sensitivity', 'change_triggers', 'growth_edges'],
+  'Context': ['user_constraints', 'potential_obstacles']
+}
+
+// Extended fields for discovery display (not counted in completion)
+const EXTENDED_FIELD_CATEGORIES = {
+  ...FINGERPRINT_FIELD_CATEGORIES,
+  'Project Archetype': ['primary_pattern', 'working_style', 'decision_making', 'energy_patterns'],
+  'Timeline Extended': ['key_phases'],
+  'Outputs Extended': ['measurement_approach', 'sharing_intention'],
+  'Interface Extended': ['motivation_style', 'feedback_frequency'],
+  'Evolution Extended': ['stability_zones'],
+  'Context Extended': ['external_dependencies', 'support_systems']
+}
+
 export const useFingerprintDiscovery = (
   projectId?: Id<"projects">,
   onAllStarsDiscovered?: () => void
@@ -48,21 +71,6 @@ export const useFingerprintDiscovery = (
       x: number
       y: number
     }> = []
-
-    // Define field categories for organization (no manual field mapping needed!)
-    const fieldCategories = {
-      'Core Nature': ['domain', 'complexity_level', 'collaboration_style', 'time_horizon'],
-      'Project Archetype': ['primary_pattern', 'working_style', 'decision_making', 'energy_patterns'],
-      'Intentions': ['core_intention', 'success_vision', 'value_creation', 'personal_growth'],
-      'Timeline': ['natural_rhythm', 'key_phases', 'flexibility_preference'],
-      'Outputs': ['tangible_deliverables', 'intangible_benefits', 'measurement_approach', 'sharing_intention'],
-      'Interface': ['cognitive_load_preference', 'information_density', 'motivation_style', 'feedback_frequency'],
-      'Evolution': ['learning_sensitivity', 'change_triggers', 'stability_zones', 'growth_edges'],
-      'AI Coordination': ['morning_persona', 'evening_persona', 'event_triggers'],
-      'AI Personality': ['base_personality', 'project_voice', 'question_generation_style', 'suggestion_approach', 'clarification_method'],
-      'Dynamic Intelligence': ['dynamic_dimensions'],
-      'Context': ['user_constraints', 'external_dependencies', 'support_systems', 'potential_obstacles']
-    }
 
     // Generate collision-free constellation layout
     const centerX = 400  // Centered in 800x800 viewBox
@@ -112,8 +120,8 @@ export const useFingerprintDiscovery = (
       }
     }
 
-    // Auto-discover fields by checking if they have meaningful values
-    Object.entries(fieldCategories).forEach(([category, categoryFields], categoryIndex) => {
+    // Auto-discover fields by checking if they have meaningful values (use extended list for discovery)
+    Object.entries(EXTENDED_FIELD_CATEGORIES).forEach(([category, categoryFields], categoryIndex) => {
       const discoveredInCategory: string[] = []
       
       categoryFields.forEach((field, fieldIndex) => {
@@ -150,7 +158,7 @@ export const useFingerprintDiscovery = (
           const size = importance === 'high' ? 8 : importance === 'medium' ? 6 : 4
 
           // Calculate preferred position (spread categories evenly)
-          const categoryCount = Object.keys(fieldCategories).length
+          const categoryCount = Object.keys(EXTENDED_FIELD_CATEGORIES).length
           const categoryAngle = (categoryIndex / categoryCount) * 2 * Math.PI
           const fieldOffset = (fieldIndex - categoryFields.length / 2) * 0.4
           const preferredAngle = categoryAngle + fieldOffset
@@ -221,30 +229,37 @@ export const useFingerprintDiscovery = (
 
   // Reactive completion tracking
   const completionMetrics = useMemo(() => {
-    const totalFields = completionStatus?.total_fields || 20
-    const completedFields = completionStatus?.discovered_fields?.length || 0
+    // Only count CORE fields towards completion (not all the detailed subfields)
+    const coreFields = new Set(Object.values(FINGERPRINT_FIELD_CATEGORIES).flat())
+    const completedFields = Array.from(discoveredFieldsData.fields)
+      .filter(field => coreFields.has(field))
+      .length
+    
+    // Count only core fields for total
+    const totalFields = Object.values(FINGERPRINT_FIELD_CATEGORIES).flat().length
+    
     const percentage = Math.round((completedFields / totalFields) * 100)
     
     return {
       percentage,
       completedFields,
       totalFields,
-      isComplete: percentage >= 75,
+      isComplete: percentage >= 80, // Less strict - ready at 80% of core fields
       status: completionStatus?.status || 'not_started',
       phase: (() => {
-        if (percentage < 25) return 'initial'
+        if (percentage < 30) return 'initial'
         if (percentage < 50) return 'exploring'
-        if (percentage < 75) return 'deepening'
+        if (percentage < 60) return 'deepening'
         return 'completing'
       })(),
       message: (() => {
-        if (percentage < 25) return 'Beginning discovery...'
+        if (percentage < 30) return 'Beginning discovery...'
         if (percentage < 50) return 'Exploring patterns...'
-        if (percentage < 75) return 'Deepening understanding...'
+        if (percentage < 60) return 'Deepening understanding...'
         return 'Crystallizing insights...'
       })()
     }
-  }, [completionStatus])
+  }, [discoveredFieldsData.fields, completionStatus])
 
   // Generate connections between related fields automatically
   const connections = useMemo(() => {
