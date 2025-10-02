@@ -48,6 +48,7 @@ export async function POST(request: Request) {
     console.log(`[${requestId}] Forwarding chat message to backend`, {
       has_user_id: true,
       has_content: typeof body?.content === 'string' ? body.content.length > 0 : !!body?.content,
+      has_file_attachments: Array.isArray(body?.file_attachments) ? body.file_attachments.length : 0,
       timestamp: new Date().toISOString()
     });
 

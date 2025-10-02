@@ -34,8 +34,10 @@ export interface DialogueState {
   useContextSearch: boolean
 }
 
+import { FileUploadResponse } from '@/lib/file-upload'
+
 export interface DialogueActions {
-  sendMessage: (content: string) => Promise<void>
+  sendMessage: (content: string, fileAttachments?: FileUploadResponse[]) => Promise<void>
   addMessage: (message: Message) => void
   setLoading: (loading: boolean) => void
   startNewConversation: () => void

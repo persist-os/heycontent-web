@@ -15,6 +15,7 @@ import { useLayoutStore } from './layoutStore' // For getting context preference
 // Import proper chat types for compatibility
 import type { Message } from '@/app/types/chat'
 import type { DialogueState, DialogueActions, MessageTransmissionRequest } from '../types'
+import type { FileUploadResponse } from '@/lib/file-upload'
 
 type DialogueStore = DialogueState & DialogueActions
 
@@ -31,7 +32,7 @@ export const useDialogueStore = create<DialogueStore>()(
         quotedContent: "", // Content to be quoted to notepad
 
         // Actions
-        sendMessage: async (content: string) => {
+        sendMessage: async (content: string, fileAttachments?: FileUploadResponse[]) => {
             const { messages, sessionId, conversationId, useContextSearch } = get()
 
             // Add user message immediately
@@ -41,7 +42,8 @@ export const useDialogueStore = create<DialogueStore>()(
                 role: 'user',
                 timestamp: Date.now().toString(),
                 chat_response: content,
-                status: 'sent'
+                status: 'sent',
+                fileAttachments: fileAttachments || undefined
             }
 
             // Create typing message for thinking indicator
@@ -70,6 +72,7 @@ export const useDialogueStore = create<DialogueStore>()(
                     sessionIdentifier: sessionId,
                     workspaceContext: conversationId ? { contentId: conversationId } : null,
                     useContextSearch,
+                    fileAttachments,
                     onStatusUpdate: (status: string) => {
                         set({ currentStatus: status })
                         // Update the typing message with status updates

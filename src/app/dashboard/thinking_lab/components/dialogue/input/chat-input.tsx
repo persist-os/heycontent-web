@@ -3,15 +3,16 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { UnifiedContentSelector } from '@/components/ui/UnifiedContentSelector';
 import { useTheme } from 'next-themes';
-import { Send, Loader2, MessageSquare, FileText, Search } from 'lucide-react'
+import { Send, Loader2, MessageSquare, FileText, Search, Paperclip, X } from 'lucide-react'
 import { getCurrentUserId, getCurrentUserIdSync, waitForAuthReady } from '@/app/lib/api-helpers'
 import { AuthenticationError } from '@/app/lib/errors'
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import type { Message } from '@/app/types/chat';
+import { uploadFile, formatFileSize, getFileTypeIcon, getFileDisplayUrl, type FileUploadResponse } from '@/lib/file-upload';
 
 interface ChatInputProps {
-  onSend: (message: string) => void
+  onSend: (message: string, fileAttachments?: FileUploadResponse[]) => void
   isLoading?: boolean
   inputRef?: React.RefObject<HTMLTextAreaElement>
   maxLength?: number
@@ -72,7 +73,10 @@ export function ChatInput({
   const [input, setInput] = useState('')
   const [placeholder, setPlaceholder] = useState(placeholders[0])
   const [showFullReply, setShowFullReply] = useState(false)
+  const [fileAttachments, setFileAttachments] = useState<FileUploadResponse[]>([])
+  const [isUploading, setIsUploading] = useState(false)
   const internalInputRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = inputRef || internalInputRef
   const { theme } = useTheme()
   
@@ -297,24 +301,62 @@ export function ChatInput({
     return convertedText
   }, [allLinkableContent])
 
+  // File upload handlers
+  const handleFileSelect = useCallback(async (files: FileList | null) => {
+    if (!files || files.length === 0 || !userId) return
+    
+    setIsUploading(true)
+    const uploadPromises: Promise<FileUploadResponse>[] = []
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      uploadPromises.push(uploadFile(file, userId))
+    }
+    
+    try {
+      const uploadResults = await Promise.all(uploadPromises)
+      setFileAttachments(prev => [...prev, ...uploadResults])
+    } catch (error) {
+      console.error('File upload error:', error)
+      // You might want to show a toast notification here
+    } finally {
+      setIsUploading(false)
+    }
+  }, [userId])
+
+  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    handleFileSelect(e.target.files)
+    // Reset the input so the same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }, [handleFileSelect])
+
+  const removeFileAttachment = useCallback((index: number) => {
+    setFileAttachments(prev => prev.filter((_, i) => i !== index))
+  }, [])
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     console.log('🔔 [CHAT INPUT] handleSubmit called:', {
       hasContent: !!currentInput.trim(),
+      hasAttachments: fileAttachments.length > 0,
       isLoading,
       inputLength: currentInput.length,
       maxLength
     })
     
-    if (currentInput.trim() && !isLoading && currentInput.length <= maxLength) {
+    if ((currentInput.trim() || fileAttachments.length > 0) && !isLoading && currentInput.length <= maxLength) {
       // Convert truncated titles back to content IDs before sending
       const processedMessage = convertTitlesToContentIds(currentInput.trim())
       console.log('🔔 [CHAT INPUT] Sending message:', {
         originalMessage: currentInput.trim(),
-        processedMessage
+        processedMessage,
+        fileAttachments: fileAttachments.length
       })
-      onSend(processedMessage)
+      onSend(processedMessage, fileAttachments.length > 0 ? fileAttachments : undefined)
       setCurrentInput('')
+      setFileAttachments([])
     }
   }
 
@@ -337,12 +379,13 @@ export function ChatInput({
       } else {
         // Send message with Enter
         e.preventDefault()
-        if (!currentInput.trim() || isLoading || characterCount >= maxLength) return
+        if ((!currentInput.trim() && fileAttachments.length === 0) || isLoading || characterCount >= maxLength) return
         
         // Convert truncated titles back to content IDs before sending
         const processedMessage = convertTitlesToContentIds(currentInput.trim())
-        onSend(processedMessage)
+        onSend(processedMessage, fileAttachments.length > 0 ? fileAttachments : undefined)
         setCurrentInput('')
+        setFileAttachments([])
       }
     }
 
@@ -471,6 +514,117 @@ export function ChatInput({
           </div>
         )}
 
+        {/* File attachments preview */}
+        {fileAttachments.length > 0 && (
+          <div className="w-full mb-2">
+            <div className="flex flex-wrap gap-2">
+              {fileAttachments.map((attachment, index) => {
+                const { content_type, original_filename, file_size } = attachment.file_metadata;
+                const isImage = content_type.startsWith('image/');
+                const isVideo = content_type.startsWith('video/');
+                
+                return (
+                  <div
+                    key={index}
+                    className={`relative group ${
+                      isImage ? 'max-w-[200px]' : 'max-w-[300px]'
+                    }`}
+                  >
+                    {isImage ? (
+                      // Image preview
+                      <div className="bg-muted/50 rounded-lg border border-border/50 overflow-hidden relative">
+                        <img
+                          src={getFileDisplayUrl(attachment.file_url)}
+                          alt={original_filename}
+                          className="w-full h-24 object-cover"
+                          onError={(e) => {
+                            // Show fallback on error
+                            e.currentTarget.style.display = 'none';
+                            const fallback = e.currentTarget.parentElement?.querySelector('.image-fallback') as HTMLElement;
+                            if (fallback) {
+                              fallback.style.display = 'flex';
+                            }
+                          }}
+                        />
+                        <div className="image-fallback hidden items-center gap-2 p-2 text-xs h-24">
+                          <span className="text-base">
+                            {getFileTypeIcon(content_type)}
+                          </span>
+                          <span className="truncate text-foreground">
+                            {original_filename}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {formatFileSize(file_size)}
+                          </span>
+                        </div>
+                        <div className="absolute top-1 right-1">
+                          <button
+                            onClick={() => removeFileAttachment(index)}
+                            className="bg-black/50 text-white hover:bg-black/70 p-1 rounded-full transition-colors"
+                            aria-label="Remove file"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : isVideo ? (
+                      // Video preview
+                      <div className="bg-muted/50 rounded-lg border border-border/50 overflow-hidden">
+                        <video
+                          src={getFileDisplayUrl(attachment.file_url)}
+                          className="w-full h-24 object-cover"
+                          preload="metadata"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                          <div className="bg-black/50 rounded-full p-2">
+                            <span className="text-white text-lg">▶️</span>
+                          </div>
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
+                          <div className="flex items-center gap-2 text-white text-xs">
+                            <span>{getFileTypeIcon(content_type)}</span>
+                            <span className="truncate">{original_filename}</span>
+                            <span className="text-white/70">{formatFileSize(file_size)}</span>
+                          </div>
+                        </div>
+                        <div className="absolute top-1 right-1">
+                          <button
+                            onClick={() => removeFileAttachment(index)}
+                            className="bg-black/50 text-white hover:bg-black/70 p-1 rounded-full transition-colors"
+                            aria-label="Remove file"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      // Regular file preview
+                      <div className="flex items-center gap-2 bg-muted/50 p-2 rounded-lg border border-border/50 text-xs">
+                        <span className="text-base">
+                          {getFileTypeIcon(content_type)}
+                        </span>
+                        <span className="truncate max-w-[120px] text-foreground">
+                          {original_filename}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {formatFileSize(file_size)}
+                        </span>
+                        <button
+                          onClick={() => removeFileAttachment(index)}
+                          className="text-muted-foreground hover:text-foreground p-0.5 rounded transition-colors"
+                          aria-label="Remove file"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="flex gap-2 items-end w-full relative">
           <div className={`
             flex-1 relative rounded-xl transition-all duration-200
@@ -505,15 +659,20 @@ export function ChatInput({
             </div>
 
             {/* Bottom section - Buttons area */}
-            <div className={`flex items-center justify-between rounded-b-xl
+            <div className={`flex items-center justify-end rounded-b-xl
               px-3 py-2 h-10
             `}>
-              {/* Left side - empty now, toggles moved to top bar */}
-              <div className="flex items-center">
-              </div>
-
-              {/* Right side - Character count, Notes, Send */}
+              {/* Right side - Character count, File attachment, Send */}
               <div className="flex items-center gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  onChange={handleFileInputChange}
+                  className="hidden"
+                  accept="image/*,.pdf,.doc,.docx,.txt,.csv,.xlsx,.xls"
+                  aria-label="Select files to attach"
+                />
                 {/* Character count */}
                 {!isLoading && (
                   <div className={`text-xs
@@ -524,13 +683,29 @@ export function ChatInput({
                     {characterCount.toLocaleString()}/{maxLength.toLocaleString()}
                   </div>
                 )}
+                
+                {/* File attachment button */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isLoading || disabled || isUploading}
+                  className="p-1.5 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Attach files"
+                >
+                  {isUploading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Paperclip className="w-4 h-4" />
+                  )}
+                </button>
+                
                 {/* Send button */}
                 <button
                   type="submit"
                   aria-label="Send message"
-                  disabled={isLoading || !currentInput.trim() || isAtLimit || disabled}
+                  disabled={isLoading || (!currentInput.trim() && fileAttachments.length === 0) || isAtLimit || disabled}
                   className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-200
-                    ${isLoading || !currentInput.trim() || isAtLimit || disabled 
+                    ${isLoading || (!currentInput.trim() && fileAttachments.length === 0) || isAtLimit || disabled 
                       ? 'bg-muted text-muted-foreground cursor-not-allowed' 
                       : `${accentBg} text-white ${accentBgHover} shadow-sm hover:shadow-md hover:scale-105 active:scale-95`
                     }`}

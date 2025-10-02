@@ -6,6 +6,7 @@
  */
 
 import { WorkspaceContext, NotepadContext } from '../core/labCore'
+import { FileUploadResponse } from '@/lib/file-upload'
 
 export interface MessageTransmissionRequest {
   content: string
@@ -15,6 +16,7 @@ export interface MessageTransmissionRequest {
   notepadContext?: NotepadContext | null
   additionalData?: Record<string, any>
   useContextSearch?: boolean
+  fileAttachments?: FileUploadResponse[]
   onStatusUpdate?: (status: string) => void
 }
 

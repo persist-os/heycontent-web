@@ -26,7 +26,7 @@ import type {
  * This calls /api/chat/message which forwards to the backend.
  */
 export async function transmitMessageWithContext(params: MessageTransmissionRequest): Promise<LabResponseData> {
-  const { content, useContextSearch = true, onStatusUpdate } = params;
+  const { content, useContextSearch = true, fileAttachments, onStatusUpdate } = params;
   
   // Auth readiness and userId resolution with retry
   onStatusUpdate?.('Preparing secure session...');
@@ -54,19 +54,27 @@ export async function transmitMessageWithContext(params: MessageTransmissionRequ
     onStatusUpdate?.('Processing your request...');
     onStatusUpdate?.('Searching for relevant context...');
 
+    // Prepare request body with file attachments
+    const requestBody: any = {
+      user_id: userId,
+      query: content,
+      content_types: ["note", "crystal", "conversation"],
+      include_context: useContextSearch,
+      max_results: 10,
+      similarity_threshold: 0.7,
+      generate_embeddings: false,
+      store_conversation: true
+    };
+
+    // Add file attachments if present
+    if (fileAttachments && fileAttachments.length > 0) {
+      requestBody.file_attachments = fileAttachments;
+    }
+
     // Call the Next.js API route
     const response = await fetchWithApiKey('/api/chat/message', {
       method: 'POST',
-      body: JSON.stringify({
-        user_id: userId,
-        query: content,
-        content_types: ["note", "crystal", "conversation"],
-        include_context: useContextSearch,
-        max_results: 10,
-        similarity_threshold: 0.7,
-        generate_embeddings: false,
-        store_conversation: true
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {

@@ -9,7 +9,7 @@ interface ChatInputAreaProps {
   showAmbient: boolean;
   currentContext?: any;
   handleActionClick: (action: string) => void;
-  handleSendMessage: (message: string) => void;
+  handleSendMessage: (message: string, fileAttachments?: any[]) => void;
   inputRef: React.RefObject<HTMLTextAreaElement>;
   isLoading: boolean;
   referencedMessage: Message | null;

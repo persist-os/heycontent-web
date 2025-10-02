@@ -7,6 +7,7 @@ import { HorizontalProgressiveThinking } from '../components/HorizontalProgressi
 import { CopyButton } from '@/components/ui/copy-button'
 import React, { useState, useEffect } from 'react'
 import { ContentRenderer } from './ContentRenderer'
+import { FileAttachmentRenderer } from '@/components/ui/FileAttachmentRenderer'
 
 interface MessageBubbleProps {
   message: Message
@@ -119,6 +120,13 @@ export function MessageBubble({
                 <div className={`${isUser ? 'text-primary-foreground dark:text-black' : 'text-foreground'}`} style={{ userSelect: 'text' }}>
                   <MarkdownRenderer content={message.content} />
                 </div>
+
+                {/* File attachments */}
+                {message.fileAttachments && message.fileAttachments.length > 0 && (
+                  <div className="mt-3">
+                    <FileAttachmentRenderer attachments={message.fileAttachments} />
+                  </div>
+                )}
 
                 {/* Content renderer for linked content - only if content has @ links */}
                 {message.content.includes('@[') && (

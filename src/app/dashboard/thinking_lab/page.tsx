@@ -24,7 +24,7 @@ export default function ThinkingLabPage() {
     chatId,
     query,
     allParams: Object.fromEntries(searchParams.entries()),
-    url: window?.location?.href
+    url: typeof window !== 'undefined' ? window.location.href : 'SSR'
   })
   
   // VALIDATION: Check if noteId looks like a persona ID (deprecated system)
