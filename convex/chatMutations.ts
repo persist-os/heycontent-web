@@ -32,8 +32,7 @@ export const createConversation = mutation({
         starred: false,
       });
 
-      // Note: Embeddings will be created automatically on next heartbeat
-      console.log('📝 [CONVERSATION] Embedding will be created on next heartbeat sync');
+      // Note: Embeddings are generated automatically by the backend after conversation is stored
 
       return conversationId;
     },
@@ -70,9 +69,6 @@ handler: async (ctx, args) => {
       messages: updatedMessages,
       updatedAt: Date.now(),
     });
-
-    // Note: Embeddings will be updated automatically on next heartbeat
-    console.log('📝 [CONVERSATION] Embedding will be updated on next heartbeat sync');
 
     return args.conversationId;
 },

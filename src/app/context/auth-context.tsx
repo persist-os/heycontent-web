@@ -35,9 +35,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isRedirecting = useRef(false);
   const lastUserId = useRef<string | null>(null);
 
-  // Action to trigger login sync
-  const handleUserLogin = useAction(api.userActions.handleUserLogin);
-
   useEffect(() => {
     // Skip auth state changes on server side
     if (typeof window === 'undefined') {
@@ -72,14 +69,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setAuthLoading(false);
           setError(null);
           
-          // Trigger login sync if user logged in (not just auth state change)
+          // Track user login for logging (embeddings are now automatic)
           if (user && currentUserId !== previousUserId) {
-            console.log('🔐 [AUTH-CONTEXT] New user login detected, triggering sync:', currentUserId);
-            try {
-              await handleUserLogin({ userId: currentUserId });
-            } catch (error) {
-              console.error('Failed to trigger login sync:', error);
-            }
+            console.log('🔐 [AUTH-CONTEXT] User logged in:', currentUserId);
           }
           
           lastUserId.current = currentUserId;
@@ -102,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       unsubscribe();
       window.__FIREBASE_AUTH_IN_EFFECT = false;
     };
-  }, [handleUserLogin]);
+  }, []);
 
   const safeRedirect = (path: string) => {
     isRedirecting.current = true;

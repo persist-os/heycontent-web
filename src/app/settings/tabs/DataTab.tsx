@@ -365,7 +365,7 @@ const DataTab = () => {
           <p className="text-muted-foreground">Smart search and AI-powered insights for your content</p>
         </div>
 
-        {userId && <AutomaticEmbeddingStatus userId={userId} />}
+        <AutomaticEmbeddingStatus />
       </div>
     </div>
   )

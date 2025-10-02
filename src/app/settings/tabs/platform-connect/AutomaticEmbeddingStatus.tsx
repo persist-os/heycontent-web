@@ -1,104 +1,105 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAction, useQuery } from 'convex/react';
+import { useAction } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { 
   CheckCircle, 
-  Clock, 
   AlertCircle, 
   RefreshCw, 
   FileText, 
-  MessageCircle, 
-  Youtube, 
-  Instagram, 
-  Mail, 
-  Lightbulb,
-  Activity,
+  MessageCircle,
+  Gem,
   TrendingUp
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { getCurrentUserId } from '@/app/lib/api-helpers';
 
-interface AutomaticEmbeddingStatusProps {
-  userId: string;
-}
-
-const PLATFORM_ICONS: Record<string, React.ComponentType<any>> = {
+const CONTENT_ICONS: Record<string, React.ComponentType<any>> = {
   notes: FileText,
   conversations: MessageCircle,
-  youtube: Youtube,
-  instagram: Instagram,
-  gmail: Mail,
-  insights: Lightbulb
+  crystals: Gem,
 };
 
-const PLATFORM_LABELS: Record<string, string> = {
+const CONTENT_LABELS: Record<string, string> = {
   notes: 'Notes',
   conversations: 'Conversations',
-  youtube: 'YouTube',
-  instagram: 'Instagram',
-  gmail: 'Gmail',
-  insights: 'AI Insights'
+  crystals: 'Crystals'
 };
 
-export function AutomaticEmbeddingStatus({ userId }: AutomaticEmbeddingStatusProps) {
-  const [statusData, setStatusData] = useState<any>(null);
+export function AutomaticEmbeddingStatus() {
+  const [countsData, setCountsData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
   
-  const getEmbeddingStatus = useAction(api.userActions.getEmbeddingSyncStatus);
-  const userHeartbeat = useAction(api.embeddingSystem.userHeartbeat);
+  const getEmbeddingCounts = useAction(api.userActions.getEmbeddingCounts);
 
-  const fetchStatus = async () => {
+  const fetchCounts = async (uid: string) => {
     try {
       setIsLoading(true);
-      const status = await getEmbeddingStatus({ userId });
-      setStatusData(status);
+      const counts = await getEmbeddingCounts({ userId: uid });
+      setCountsData(counts);
     } catch (error) {
-      console.error('Failed to fetch embedding status:', error);
+      console.error('Failed to fetch embedding counts:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Initial sync call only - heartbeat is handled by chat components
   useEffect(() => {
-    if (!userId) return;
+    let mounted = true;
     
-    // Only do initial sync call, no interval to prevent conflicts with chat heartbeats
-    userHeartbeat({ userId }).catch(console.error);
-  }, [userId, userHeartbeat]);
-
-  useEffect(() => {
-    fetchStatus();
-    // Refresh status every 60 seconds (reduced frequency to prevent render loops)
-    const interval = setInterval(fetchStatus, 60000);
-    return () => clearInterval(interval);
-  }, [userId]);
+    const initialize = async () => {
+      try {
+        const uid = await getCurrentUserId();
+        if (mounted) {
+          setUserId(uid);
+          await fetchCounts(uid);
+          
+          // Refresh counts every 60 seconds
+          const interval = setInterval(() => fetchCounts(uid), 60000);
+          return interval;
+        }
+      } catch (error) {
+        console.error('Failed to initialize embedding status:', error);
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+    
+    const intervalPromise = initialize();
+    
+    return () => {
+      mounted = false;
+      intervalPromise.then(interval => {
+        if (interval) clearInterval(interval);
+      });
+    };
+  }, []);
 
   if (isLoading) {
     return (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Activity className="w-5 h-5" />
+            <TrendingUp className="w-5 h-5" />
             Smart Search Knowledge
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
             <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
-            <span className="ml-2 text-muted-foreground">Loading sync status...</span>
+            <span className="ml-2 text-muted-foreground">Loading content...</span>
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  if (!statusData?.success) {
+  if (!countsData?.success) {
     return (
       <Card>
         <CardHeader>
@@ -109,9 +110,17 @@ export function AutomaticEmbeddingStatus({ userId }: AutomaticEmbeddingStatusPro
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground mb-4">
-            Unable to load content sync status. Please try refreshing.
+            Unable to load content. Please try refreshing.
           </p>
-          <Button onClick={fetchStatus} variant="outline">
+          <Button 
+            onClick={() => {
+              if (userId) {
+                fetchCounts(userId);
+              }
+            }} 
+            variant="outline"
+            disabled={!userId}
+          >
             <RefreshCw className="w-4 h-4 mr-2" />
             Retry
           </Button>
@@ -120,125 +129,56 @@ export function AutomaticEmbeddingStatus({ userId }: AutomaticEmbeddingStatusPro
     );
   }
 
-  const { queueStatus, lastUpdate, embeddingCounts } = statusData;
+  const { total, byType } = countsData;
 
   return (
-    <div className="space-y-6">
-      {/* Main Status Card */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="w-5 h-5" />
-              Smart Search Knowledge
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              {queueStatus.pending > 0 ? (
-                <Badge variant="secondary">
-                  <Clock className="w-3 h-3 mr-1" />
-                  {queueStatus.pending} syncing
-                </Badge>
-              ) : (
-                <Badge variant="default" className="bg-green-500">
-                  <CheckCircle className="w-3 h-3 mr-1" />
-                  All synced
-                </Badge>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="text-sm text-muted-foreground">
-            Your content is automatically processed and stored as searchable knowledge for AI-powered insights and context. 
-            Content syncs automatically while you're active to keep everything up to date.
-          </div>
-
-          {/* Simple status - no queues */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span>Content Sync</span>
-              <span className="text-muted-foreground">
-                Active
-              </span>
-            </div>
-            <Progress value={100} className="h-2" />
-          </div>
-
-          {/* Last Update Info */}
-          <div className="p-3 bg-muted rounded-lg">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Last Update</span>
-              <Badge variant="outline" className="border-green-500 text-green-700">
-                Active
-              </Badge>
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {lastUpdate ? (
-                <>
-                  Last sync: {new Date(lastUpdate.timestamp).toLocaleString()}
-                  {lastUpdate.itemsProcessed > 0 && (
-                    <span className="ml-2">
-                      • {lastUpdate.itemsSucceeded} items processed
-                    </span>
-                  )}
-                </>
-              ) : (
-                'No recent sync activity'
-              )}
-            </div>
-          </div>
-
-          {/* Auto-sync info */}
-          <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
-            <div className="flex items-start gap-2">
-              <Activity className="w-4 h-4 mt-0.5 text-blue-600 dark:text-blue-400" />
-              <div className="text-xs text-blue-800 dark:text-blue-200">
-                <div className="font-medium mb-1">Automatic Syncing</div>
-                <div>Content updates automatically every 2 minutes while you're active, and immediately when you log in. No manual action needed!</div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Platform Breakdown */}
-      <Card>
-        <CardHeader>
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="w-5 h-5" />
             Your Content Library
           </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between py-2">
-              <span className="font-medium">Total Content Stored</span>
-              <Badge variant="secondary">{embeddingCounts.total}</Badge>
-            </div>
-            
-            {Object.entries(embeddingCounts.byPlatform).map(([platform, count]) => {
-              const IconComponent = PLATFORM_ICONS[platform] || FileText;
-              const label = PLATFORM_LABELS[platform] || platform;
-              
-              return (
-                <div key={platform} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                  <div className="flex items-center gap-2">
-                    <IconComponent className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm">{label}</span>
-                  </div>
-                  <Badge variant="outline">{count}</Badge>
-                </div>
-              );
-            })}
-            
-            {Object.keys(embeddingCounts.byPlatform).length > 0 && (
-              <div className="pt-2 text-xs text-muted-foreground">
-                All your content is available for smart search and AI-powered insights across the platform.
-              </div>
-            )}
+          <Badge variant="default" className="bg-green-500">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Active
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="text-sm text-muted-foreground">
+          Your content is automatically processed for AI-powered search and insights. 
+          Embeddings are generated when you create notes, conversations, or crystals.
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between py-2">
+            <span className="font-medium">Total Searchable Content</span>
+            <Badge variant="outline">{total}</Badge>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+          
+          {Object.entries(byType).map(([type, count]) => {
+            const IconComponent = CONTENT_ICONS[type] || FileText;
+            const label = CONTENT_LABELS[type] || type;
+            
+            return (
+              <div key={type} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                <div className="flex items-center gap-2">
+                  <IconComponent className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm">{label}</span>
+                </div>
+                <Badge variant="outline">{count as number}</Badge>
+              </div>
+            );
+          })}
+          
+          {Object.keys(byType).length > 0 && (
+            <div className="pt-2 text-xs text-muted-foreground">
+              All your content is available for smart search and AI-powered insights.
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 } 
