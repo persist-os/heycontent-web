@@ -172,11 +172,17 @@ export default defineSchema({
     updatedAt: v.number(),
     titleGenerated: v.optional(v.boolean()),
     typeGenerated: v.optional(v.boolean()),
+    
+    // Widget linkage
+    widgetId: v.optional(v.string()),
+    isWidgetOutput: v.optional(v.boolean()),
+    projectId: v.optional(v.id("projects")),
   })
   .index("by_user", ["userId"])
   .index("by_creation", ["createdAt"])
   .index("by_type", ["type"])
-  .index("by_folder", ["folderId"]),
+  .index("by_folder", ["folderId"])
+  .index("by_widget", ["widgetId"]),
 
   // Folders
   folders: defineTable({
@@ -611,6 +617,15 @@ export default defineSchema({
       interactive: v.boolean(),
       editable: v.boolean(),
       shareable: v.boolean(),
+      
+      // Execution tracking
+      lastRunAt: v.optional(v.number()),
+      lastRunStatus: v.optional(v.union(
+        v.literal("idle"),
+        v.literal("running"),
+        v.literal("success"),
+        v.literal("failed")
+      )),
     })),
 
     // Global layout settings - flexible
@@ -647,6 +662,27 @@ export default defineSchema({
   .index("by_user", ["userId"])
   .index("by_status", ["status"])
   .index("by_created", ["createdAt"]),
+
+  // Widget Outputs - Generated deliverables from widget execution
+  widget_outputs: defineTable({
+    outputId: v.string(),
+    widgetId: v.string(),
+    projectId: v.id("projects"),
+    userId: v.string(),
+    
+    // Content
+    noteId: v.string(),  // Reference to created note
+    prompts: v.array(v.object({
+      text: v.string(),
+      priority: v.number(),
+    })),
+    
+    // Metadata
+    createdAt: v.number(),
+  })
+    .index("by_widget", ["widgetId"])
+    .index("by_project", ["projectId"])
+    .index("by_output_id", ["outputId"]),
 
   // Conversation Summaries - Real-time conversation analysis
   conversation_summaries: defineTable({

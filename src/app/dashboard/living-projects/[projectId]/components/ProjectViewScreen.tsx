@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { useQuery } from 'convex/react'
+import { useRouter } from 'next/navigation'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { api } from '@/convex/_generated/api'
 import { useProjectFingerprint } from '@/app/dashboard/living-projects/hooks/useProjectFingerprint'
@@ -21,6 +22,7 @@ import { WidgetDetailsPanel } from './widgets/WidgetDetailsPanel'
 import { WidgetGenerationLoader } from './widgets/WidgetGenerationLoader'
 import { ConstellationCanvas } from './widgets/ConstellationCanvas'
 import { formatDistanceToNow } from './utils/dateFormatting'
+import { useWidgetRunner } from '@/app/dashboard/living-projects/hooks/useWidgetRunner'
 
 interface ProjectViewScreenProps {
   projectId: string
@@ -75,6 +77,11 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
 
   const { editFingerprint, goBack, deleteProjectAction } = useProjectActions(projectId)
 
+  // Widget runner hook
+  const router = useRouter()
+  const { executeWidget, isRunning: isWidgetRunning, lastResult } = useWidgetRunner()
+  const [runningWidgetId, setRunningWidgetId] = useState<string | null>(null)
+
   // Event handlers
   const handleWidgetClick = (widget: WidgetConfig) => {
     setSelectedWidget(widget)
@@ -83,6 +90,40 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
 
   const handleWidgetHover = (widgetId: string | null) => {
     setHighlightedWidget(widgetId)
+  }
+
+  const handleWidgetRun = async (widgetId: string) => {
+    try {
+      setRunningWidgetId(widgetId)
+      
+      // First, find and set the widget before execution to ensure panel can open
+      const widget = projectWidgets?.widgets.find(
+        (w: any) => w.widget_id === widgetId
+      ) as WidgetConfig | undefined
+      
+      if (!widget) {
+        console.error('Widget not found:', widgetId)
+        return
+      }
+
+      const result = await executeWidget({
+        widgetId,
+        projectId
+      })
+
+      if (result) {
+        // Success! Open the details panel to show the output
+        console.log('Widget executed successfully:', result)
+        
+        // Set selected widget and open panel
+        setSelectedWidget(widget)
+        setShowWidgetPanel(true)
+      }
+    } catch (error) {
+      console.error('Failed to run widget:', error)
+    } finally {
+      setRunningWidgetId(null)
+    }
   }
 
   const handleDeleteProject = async () => {
@@ -227,6 +268,8 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
               onWidgetHover={handleWidgetHover}
               highlightedWidget={highlightedWidget}
               showWidgetPanel={showWidgetPanel}
+              onWidgetRun={handleWidgetRun}
+              runningWidgetId={runningWidgetId}
             />
           ) : (
             <div className="flex items-center justify-center h-64">
@@ -262,6 +305,7 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
           setShowWidgetPanel(false)
           setSelectedWidget(null)
         }}
+        projectId={projectId}
       />
     </>
   )

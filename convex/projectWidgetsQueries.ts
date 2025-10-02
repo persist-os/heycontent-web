@@ -66,6 +66,51 @@ export const getProjectWidgets = query({
 });
 
 /**
+ * Get a single widget by widget_id from a project
+ * Used by: Widget execution, individual widget operations
+ */
+export const getWidgetById = query({
+  args: {
+    projectId: v.id("projects"),
+    widgetId: v.string(),
+    userId: v.optional(v.string()),
+  },
+  returns: v.union(v.null(), v.any()),
+  handler: async (ctx, { projectId, widgetId, userId }) => {
+    // Validate project access if userId provided
+    if (userId) {
+      const project = await ctx.db.get(projectId);
+      if (!project || project.userId !== userId) {
+        return null;
+      }
+    }
+
+    // Find active widgets for this project
+    const projectWidgets = await ctx.db
+      .query("project_widgets")
+      .withIndex("by_project", (q) => q.eq("projectId", projectId))
+      .filter((q) => q.eq(q.field("status"), "active"))
+      .first();
+
+    if (!projectWidgets) {
+      return null;
+    }
+
+    // Additional user validation
+    if (userId && projectWidgets.userId !== userId) {
+      return null;
+    }
+
+    // Find the specific widget in the widgets array
+    const widget = projectWidgets.widgets.find(
+      (w: any) => w.widget_id === widgetId
+    );
+
+    return widget || null;
+  },
+});
+
+/**
  * Get project widgets by project ID - Primary access pattern
  * Used by: Project dashboard, widget display
  */
