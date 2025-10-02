@@ -2,7 +2,6 @@
 
 import React from 'react'
 import { getFileTypeIcon, formatFileSize, getFileDisplayUrl } from '@/lib/file-upload'
-import { Download, ExternalLink } from 'lucide-react'
 
 interface FileAttachment {
   file_url: string
@@ -44,8 +43,7 @@ export function FileAttachmentRenderer({ attachments, className = '' }: FileAtta
                 <img
                   src={getFileDisplayUrl(attachment.file_url)}
                   alt={original_filename}
-                  className="w-full max-h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                  onClick={() => window.open(getFileDisplayUrl(attachment.file_url), '_blank')}
+                  className="w-full max-h-48 object-cover"
                   onError={(e) => {
                     // Show fallback on error
                     e.currentTarget.style.display = 'none';
@@ -65,22 +63,6 @@ export function FileAttachmentRenderer({ attachments, className = '' }: FileAtta
                       {formatFileSize(file_size)}
                     </div>
                   </div>
-                  <button
-                    onClick={() => window.open(getFileDisplayUrl(attachment.file_url), '_blank')}
-                    className="text-muted-foreground hover:text-foreground p-1.5 rounded-full hover:bg-muted transition-colors"
-                    aria-label="Open file"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </button>
-                </div>
-                <div className="absolute top-2 right-2">
-                  <button
-                    onClick={() => window.open(getFileDisplayUrl(attachment.file_url), '_blank')}
-                    className="bg-black/50 text-white hover:bg-black/70 p-1.5 rounded-full transition-colors"
-                    aria-label="Open image in new tab"
-                  >
-                    <ExternalLink className="w-3 h-3" />
-                  </button>
                 </div>
                 <div className="p-2 bg-gradient-to-t from-black/70 to-transparent absolute bottom-0 left-0 right-0">
                   <div className="flex items-center gap-2 text-white text-xs">
@@ -139,23 +121,6 @@ export function FileAttachmentRenderer({ attachments, className = '' }: FileAtta
                     <div className="text-xs text-muted-foreground">
                       {formatFileSize(file_size)}
                     </div>
-                  </div>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => window.open(attachment.file_url, '_blank')}
-                      className="text-muted-foreground hover:text-foreground p-1.5 rounded-full hover:bg-muted transition-colors"
-                      aria-label="Open file"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </button>
-                    <a
-                      href={getFileDisplayUrl(attachment.file_url)}
-                      download={original_filename}
-                      className="text-muted-foreground hover:text-foreground p-1.5 rounded-full hover:bg-muted transition-colors"
-                      aria-label="Download file"
-                    >
-                      <Download className="w-4 h-4" />
-                    </a>
                   </div>
                 </div>
               </div>
