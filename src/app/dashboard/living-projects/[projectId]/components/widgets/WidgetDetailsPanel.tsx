@@ -8,7 +8,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { X, Layers, Palette, Clock, Activity, Target, Calendar, Lightbulb, FileText, ExternalLink } from 'lucide-react'
+import { X, Layers, Palette, Clock, Activity, Target, Calendar, Lightbulb, FileText, ExternalLink, Maximize2, Play, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { WidgetConfig } from '@/types/projectWidgets'
@@ -17,6 +17,7 @@ import { useRouter } from 'next/navigation'
 import { api } from '@/convex/_generated/api'
 import { useQuery } from 'convex/react'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
+import { useWidgetRunner } from '@/app/dashboard/living-projects/hooks/useWidgetRunner'
 
 interface WidgetDetailsPanelProps {
   widget: WidgetConfig | null
@@ -36,6 +37,7 @@ export function WidgetDetailsPanel({
 }: WidgetDetailsPanelProps) {
   const router = useRouter()
   const [userId, setUserId] = useState<string | null>(null)
+  const { executeWidget, isRunning } = useWidgetRunner()
 
   // Get user ID on mount
   useEffect(() => {
@@ -80,6 +82,24 @@ export function WidgetDetailsPanel({
       // Use outputId field from the output object (Convex _id)
       const outputIdParam = output.outputId || output._id
       router.push(`/dashboard/thinking_lab?noteId=${output.noteId}&widgetOutputId=${outputIdParam}`)
+    }
+  }
+
+  const handleOpenFullDashboard = () => {
+    router.push(`/dashboard/living-projects/${projectId}/widgets/${widget.widget_id}`)
+  }
+
+  const handleRunWidget = async () => {
+    if (!widget) return
+    
+    try {
+      await executeWidget({
+        widgetId: widget.widget_id,
+        projectId
+      })
+      // Output will appear automatically via the query
+    } catch (error) {
+      console.error('Failed to run widget:', error)
     }
   }
 
@@ -198,6 +218,36 @@ export function WidgetDetailsPanel({
                 {widget.widget_id}
               </code>
             </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="pt-4 border-t border-border/30 space-y-2">
+            <Button 
+              onClick={handleRunWidget}
+              disabled={isRunning}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {isRunning ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Running...
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4 mr-2" />
+                  Run Widget
+                </>
+              )}
+            </Button>
+            
+            <Button 
+              onClick={handleOpenFullDashboard}
+              variant="outline"
+              className="w-full"
+            >
+              <Maximize2 className="w-4 h-4 mr-2" />
+              Open Full Dashboard
+            </Button>
           </div>
 
           {/* Latest Output - Always visible */}
