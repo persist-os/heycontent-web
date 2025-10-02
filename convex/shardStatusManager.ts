@@ -254,7 +254,8 @@ export const releaseReservedShards = mutation({
  * Reserve shards for crystal formation
  * 
  * Atomically marks shards as reserved to prevent concurrent formation runs
- * from using the same shards. Only transitions shards from unprocessed state.
+ * from using the same shards. Accepts shards from unprocessed or already
+ * reserved states (to allow re-reserving stuck/old reservations).
  * 
  * @param shardIds - Array of shard IDs to reserve
  * @param formationRunId - Formation run ID claiming these shards
@@ -277,7 +278,7 @@ export const reserveShards = mutation({
       shardIds,
       "reserved",
       { formationRunId },
-      ["unprocessed"]
+      ["unprocessed", "reserved"]  // Allow re-reserving old reservations
     );
 
     return {

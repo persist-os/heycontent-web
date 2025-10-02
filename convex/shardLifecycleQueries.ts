@@ -20,48 +20,99 @@ export const getUnprocessedShards = query({
     },
     returns: v.array(v.any()),
     handler: async (ctx, { userId, limit, minConfidence, dimensions }) => {
+        console.log(`[getUnprocessedShards] Starting query for user: ${userId}`);
+        console.log(`[getUnprocessedShards] Filters - limit: ${limit}, minConfidence: ${minConfidence}, dimensions: ${dimensions?.join(',') || 'none'}`);
+        
         // Get all shards for user and filter for unprocessed
         const allShards = await ctx.db
             .query("crystal_shards")
             .withIndex("by_user", (q) => q.eq("userId", userId))
             .collect();
 
+        console.log(`[getUnprocessedShards] Total shards found: ${allShards.length}`);
+        
+        // Count by status for debugging
+        const statusCounts: Record<string, number> = {};
+        let consumedCount = 0;
+        let recentReservedCount = 0;
+        let oldReservedCount = 0;
+        
         // Filter for TRULY unprocessed shards
+        // SOURCE OF TRUTH: used_in_crystal_id indicates actual consumption
         let results = allShards.filter(shard => {
-            // Explicitly exclude used, archived, or reserved shards
-            if (shard.shard_status === "used_for_crystal" || 
-                shard.shard_status === "archived" ||
-                shard.shard_status === "reserved") {
-                return false;
-            }
-            // CRITICAL: Exclude shards that are already consumed (have used_in_crystal_id)
+            const status = shard.shard_status || 'null';
+            statusCounts[status] = (statusCounts[status] || 0) + 1;
+            
+            // PRIMARY CHECK: Exclude shards that are actually consumed
             if (shard.used_in_crystal_id) {
+                consumedCount++;
+                console.log(`[getUnprocessedShards] Excluded - consumed: ${shard._id} (crystal: ${shard.used_in_crystal_id})`);
                 return false;
             }
-            // Only include shards that are explicitly unprocessed OR have no status (truly new)
-            return shard.shard_status === "unprocessed" || !shard.shard_status;
+            
+            // SECONDARY CHECK: Exclude archived shards
+            if (shard.shard_status === "archived") {
+                console.log(`[getUnprocessedShards] Excluded - archived: ${shard._id}`);
+                return false;
+            }
+            
+            // RESERVED SHARDS: Allow if older than 10 minutes (stuck/failed formation)
+            // This prevents permanent blocking while still protecting recent formations
+            if (shard.shard_status === "reserved") {
+                const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
+                const reservedAge = shard.reserved_at ? Date.now() - shard.reserved_at : 'unknown';
+                const reservedAgeMinutes = typeof reservedAge === 'number' ? Math.floor(reservedAge / 60000) : 'unknown';
+                
+                // If reserved recently, exclude (active formation)
+                if (shard.reserved_at && shard.reserved_at > tenMinutesAgo) {
+                    recentReservedCount++;
+                    console.log(`[getUnprocessedShards] Excluded - recently reserved: ${shard._id} (age: ${reservedAgeMinutes}min, formation: ${shard.reserved_by_formation})`);
+                    return false;
+                }
+                // If reserved long ago, include (stuck/failed formation)
+                oldReservedCount++;
+                console.log(`[getUnprocessedShards] Included - old reserved: ${shard._id} (age: ${reservedAgeMinutes}min, formation: ${shard.reserved_by_formation})`);
+            }
+            
+            // Include all other shards (unprocessed, null status, or old reserved)
+            return true;
         });
+
+        console.log(`[getUnprocessedShards] Status breakdown:`, statusCounts);
+        console.log(`[getUnprocessedShards] Exclusion counts - consumed: ${consumedCount}, recent reserved: ${recentReservedCount}, old reserved (included): ${oldReservedCount}`);
+        console.log(`[getUnprocessedShards] After basic filtering: ${results.length} shards`);
 
         // Filter by confidence level if specified
         if (minConfidence) {
+            const beforeCount = results.length;
             const confidenceOrder = { "low": 1, "medium": 2, "high": 3 };
             const minLevel = confidenceOrder[minConfidence];
             results = results.filter(shard => {
                 const shardLevel = confidenceOrder[shard.confidence_level as keyof typeof confidenceOrder] || 1;
                 return shardLevel >= minLevel;
             });
+            console.log(`[getUnprocessedShards] Confidence filter (${minConfidence}): ${beforeCount} -> ${results.length} shards`);
         }
 
         // Filter by dimensions if specified
         if (dimensions && dimensions.length > 0) {
+            const beforeCount = results.length;
             results = results.filter(shard => 
                 shard.dimension && dimensions.includes(shard.dimension)
             );
+            console.log(`[getUnprocessedShards] Dimension filter (${dimensions.join(',')}): ${beforeCount} -> ${results.length} shards`);
         }
 
         // Apply limit
         if (limit) {
+            const beforeCount = results.length;
             results = results.slice(0, limit);
+            console.log(`[getUnprocessedShards] Limit applied (${limit}): ${beforeCount} -> ${results.length} shards`);
+        }
+
+        console.log(`[getUnprocessedShards] FINAL RESULT: Returning ${results.length} unprocessed shards`);
+        if (results.length > 0) {
+            console.log(`[getUnprocessedShards] Sample shard IDs:`, results.slice(0, 5).map(s => s._id));
         }
 
         return results;
@@ -78,6 +129,7 @@ export const getShardConsumptionStats = query({
     returns: v.object({
         totalShards: v.number(),
         unprocessed: v.number(),
+        reserved: v.number(),
         usedForCrystal: v.number(),
         archived: v.number(),
         unknownStatus: v.number(),
@@ -94,6 +146,7 @@ export const getShardConsumptionStats = query({
         const stats = {
             totalShards: allShards.length,
             unprocessed: 0,
+            reserved: 0,
             usedForCrystal: 0,
             archived: 0,
             unknownStatus: 0,
@@ -107,6 +160,9 @@ export const getShardConsumptionStats = query({
             switch (shard.shard_status) {
                 case "unprocessed":
                     stats.unprocessed++;
+                    break;
+                case "reserved":
+                    stats.reserved++;
                     break;
                 case "used_for_crystal":
                     stats.usedForCrystal++;
@@ -269,3 +325,4 @@ export const getCrystalToShardMapping = query({
         return mapping;
     },
 });
+

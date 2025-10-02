@@ -26,7 +26,16 @@ import type {
  * This calls /api/chat/message which forwards to the backend.
  */
 export async function transmitMessageWithContext(params: MessageTransmissionRequest): Promise<LabResponseData> {
-  const { content, useContextSearch = true, fileAttachments, onStatusUpdate } = params;
+  const { 
+    content, 
+    useContextSearch = true, 
+    fileAttachments,
+    notepadContext,
+    workspaceContext,
+    isFirstMessage,
+    sessionIdentifier,
+    onStatusUpdate 
+  } = params;
   
   // Auth readiness and userId resolution with retry
   onStatusUpdate?.('Preparing secure session...');
@@ -54,16 +63,15 @@ export async function transmitMessageWithContext(params: MessageTransmissionRequ
     onStatusUpdate?.('Processing your request...');
     onStatusUpdate?.('Searching for relevant context...');
 
-    // Prepare request body with file attachments
+    // Prepare request body for thinking lab endpoint
     const requestBody: any = {
       user_id: userId,
       query: content,
-      content_types: ["note", "crystal", "conversation"],
-      include_context: useContextSearch,
-      max_results: 10,
-      similarity_threshold: 0.7,
-      generate_embeddings: false,
-      store_conversation: true
+      is_first_message: isFirstMessage,
+      session_identifier: sessionIdentifier,
+      notepad_context: notepadContext,
+      workspace_context: workspaceContext,
+      use_vector_search: useContextSearch
     };
 
     // Add file attachments if present
@@ -71,38 +79,54 @@ export async function transmitMessageWithContext(params: MessageTransmissionRequ
       requestBody.file_attachments = fileAttachments;
     }
 
-    // Call the Next.js API route
-    const response = await fetchWithApiKey('/api/chat/message', {
+    console.log('[MessageService] Sending to lab endpoint:', {
+      url: '/api/lab/message',
+      hasNotepadContext: !!notepadContext,
+      notepadContentLength: notepadContext?.content?.length || 0,
+      hasWorkspaceContext: !!workspaceContext,
+      isFirstMessage,
+      sessionIdentifier
+    });
+
+    // Call the thinking lab API endpoint (not the generic chat endpoint)
+    const response = await fetchWithApiKey('/api/lab/message', {
       method: 'POST',
       body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
+      console.error('[MessageService] Response not OK:', response.status, response.statusText);
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
     const data = await response.json();
+    console.log('[MessageService] Received response from API:', {
+      hasData: !!data,
+      dataKeys: Object.keys(data),
+      hasResponseContent: !!data.response_content,
+      responseContentLength: data.response_content?.length,
+      hasSessionId: !!data.session_identifier,
+      data: data
+    });
+    
     onStatusUpdate?.('Generating response...');
     
-    // Transform backend response to expected format
-    if (data.success && data.data) {
-      return {
-        response_content: data.data.response || generateResponseFromContext(data.data),
-        session_identifier: data.data.session_id || `session-${Date.now()}`,
-        user_input: content, // Use the original user input
-        suggestions: data.data.suggestions || [],
-        metadata: data.data.metadata || {}
-      };
-    }
-    
-    // Handle error case
-    return {
-      response_content: data.error || 'No response received',
-      session_identifier: `session-${Date.now()}`,
-      user_input: content,
-      suggestions: [],
-      metadata: { error: data.error }
+    // Lab endpoint returns the response directly (not wrapped in success/data)
+    const result = {
+      response_content: data.response_content || 'No response received',
+      session_identifier: data.session_identifier || `session-${Date.now()}`,
+      user_input: data.user_input || content,
+      suggestions: data.suggestions || [],
+      metadata: data.metadata || {}
     };
+    
+    console.log('[MessageService] Returning result:', {
+      response_content_length: result.response_content.length,
+      session_identifier: result.session_identifier,
+      has_suggestions: result.suggestions.length > 0
+    });
+    
+    return result;
 
   } catch (error) {
     if (error instanceof AuthenticationError) {

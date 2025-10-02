@@ -77,6 +77,54 @@ export const initializeLegacyShardStatus = mutation({
 
 
 /**
+ * Release stuck reserved shards back to unprocessed
+ * 
+ * Fixes shards that are stuck in 'reserved' status from failed formations.
+ * Only releases shards that are reserved but not consumed.
+ */
+export const releaseStuckReservedShards = mutation({
+    args: {
+        userId: v.string(),
+    },
+    returns: v.object({
+        success: v.boolean(),
+        releasedCount: v.number(),
+        message: v.string(),
+    }),
+    handler: async (ctx, { userId }) => {
+        const currentTime = Date.now();
+        let releasedCount = 0;
+
+        // Get all reserved shards for user
+        const shards = await ctx.db
+            .query("crystal_shards")
+            .withIndex("by_user", (q) => q.eq("userId", userId))
+            .collect();
+
+        for (const shard of shards) {
+            // Only release shards that are:
+            // 1. In 'reserved' status
+            // 2. NOT consumed (no used_in_crystal_id)
+            if (shard.shard_status === "reserved" && !shard.used_in_crystal_id) {
+                await ctx.db.patch(shard._id, {
+                    shard_status: "unprocessed",
+                    reserved_by_formation: undefined,
+                    reserved_at: undefined,
+                    updatedAt: currentTime,
+                });
+                releasedCount++;
+            }
+        }
+
+        return {
+            success: true,
+            releasedCount,
+            message: `Released ${releasedCount} stuck reserved shards back to unprocessed`,
+        };
+    },
+});
+
+/**
  * Reset all shards for a user back to unprocessed status
  * DANGER: This is for debugging/recovery only
  */
@@ -113,6 +161,8 @@ export const resetUserShardStatus = mutation({
                 shard_status: "unprocessed",
                 used_in_crystal_id: undefined,
                 date_consumed: undefined,
+                reserved_by_formation: undefined,
+                reserved_at: undefined,
                 updatedAt: currentTime,
             });
             resetCount++;
