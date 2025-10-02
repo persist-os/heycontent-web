@@ -1375,25 +1375,6 @@ app.delete("/api/project-widgets/delete", async (c) => {
   }
 });
 
-// Helper to transform reserved status in responses for backend compatibility
-// Recursively transforms 'reserved' to 'unprocessed' in any response structure
-const transformReservedStatus = (result: any): any => {
-  if (!result) return result;
-  
-  if (Array.isArray(result)) {
-    result.forEach((item: any) => {
-      if (item?.shard_status === 'reserved') item.shard_status = 'unprocessed';
-    });
-  } else if (typeof result === 'object') {
-    if (result.shard_status === 'reserved') result.shard_status = 'unprocessed';
-    if (result.shards && Array.isArray(result.shards)) {
-      result.shards.forEach((item: any) => {
-        if (item?.shard_status === 'reserved') item.shard_status = 'unprocessed';
-      });
-    }
-  }
-  return result;
-};
 
 // Single query endpoint that mirrors getCrystalData exactly
 app.post("/api/crystal/query", async (c) => {
@@ -1402,7 +1383,7 @@ app.post("/api/crystal/query", async (c) => {
   
   try {
     const result = await ctx.runQuery(api.crystalQueries.getCrystalData, requestBody);
-    return c.json({ success: true, data: transformReservedStatus(result) });
+    return c.json({ success: true, data: result });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   }
@@ -1415,7 +1396,7 @@ app.post("/api/crystal/mutate", async (c) => {
   
   try {
     const result = await ctx.runMutation(api.crystalMutations.mutateCrystalData, requestBody);
-    return c.json({ success: true, data: transformReservedStatus(result) });
+    return c.json({ success: true, data: result });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   }
@@ -1428,7 +1409,7 @@ app.post("/api/crystal/batch-mutate", async (c) => {
   
   try {
     const result = await ctx.runMutation(api.crystalMutations.batchMutateCrystalData, requestBody);
-    return c.json({ success: true, data: transformReservedStatus(result) });
+    return c.json({ success: true, data: result });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   }
@@ -1840,7 +1821,8 @@ app.post("/api/shard-lifecycle/unprocessed", async (c) => {
   
   try {
     const result = await ctx.runQuery(api.shardLifecycleQueries.getUnprocessedShards, requestBody);
-    return c.json({ success: true, data: transformReservedStatus(result) });
+    // Return raw result - backend's call_convex_api will wrap it in { success, data }
+    return c.json(result);
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   }
@@ -1876,7 +1858,43 @@ app.post("/api/shard-lifecycle/initialize-legacy", async (c) => {
   
   try {
     const result = await ctx.runMutation(api.shardLifecycleMutations.initializeLegacyShardStatus, requestBody);
-    return c.json({ success: true, data: transformReservedStatus(result) });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/shard-lifecycle/release-stuck", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.shardLifecycleMutations.releaseStuckReservedShards, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// === MIGRATIONS ===
+app.post("/api/migrations/reserved-shards", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.migrations.migrateReservedShards.migrateReservedShardsToUnprocessed, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.get("/api/migrations/shard-status-distribution", async (c) => {
+  const ctx = c.env;
+  
+  try {
+    const result = await ctx.runMutation(api.migrations.migrateReservedShards.getShardStatusDistribution, {});
+    return c.json({ success: true, data: result });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   }
@@ -1891,7 +1909,7 @@ app.post("/api/shard-status/update", async (c) => {
   
   try {
     const result = await ctx.runMutation(api.shardStatusManager.updateShardStatus, requestBody);
-    return c.json({ success: true, data: transformReservedStatus(result) });
+    return c.json({ success: true, data: result });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   }
@@ -1903,7 +1921,7 @@ app.post("/api/shard-status/release", async (c) => {
   
   try {
     const result = await ctx.runMutation(api.shardStatusManager.releaseReservedShards, requestBody);
-    return c.json({ success: true, data: transformReservedStatus(result) });
+    return c.json({ success: true, data: result });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   }
@@ -1915,7 +1933,7 @@ app.post("/api/shard-status/reserve", async (c) => {
   
   try {
     const result = await ctx.runMutation(api.shardStatusManager.reserveShards, requestBody);
-    return c.json({ success: true, data: transformReservedStatus(result) });
+    return c.json({ success: true, data: result });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   }
@@ -1927,7 +1945,7 @@ app.post("/api/shard-status/consume", async (c) => {
   
   try {
     const result = await ctx.runMutation(api.shardStatusManager.consumeShards, requestBody);
-    return c.json({ success: true, data: transformReservedStatus(result) });
+    return c.json({ success: true, data: result });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   }
@@ -1939,7 +1957,7 @@ app.post("/api/shard-status/archive", async (c) => {
   
   try {
     const result = await ctx.runMutation(api.shardStatusManager.archiveShards, requestBody);
-    return c.json({ success: true, data: transformReservedStatus(result) });
+    return c.json({ success: true, data: result });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   }

@@ -10,6 +10,7 @@
 import React from 'react'
 import { Columns2 } from 'lucide-react'
 import { useDialogueStore } from '../stores/dialogueStore'
+import { useNotepadStore } from '../stores/notepadStore'
 import { MarkdownNotepad } from '../components/notepad/MarkdownNotepad'
 import ChatInputArea from '../components/dialogue/input/ChatInputArea'
 import { BottomBarActions } from '../components/dialogue/components/BottomBarActions'
@@ -145,10 +146,10 @@ NotepadPanel.displayName = 'NotepadPanel'
 
 function useInputSection(clearQuotedContent: () => void) {
   const { isLoading, sendMessage } = useDialogueStore()
+  const { includeInMessages, setIncludeInMessages } = useNotepadStore()
   const inputRef = React.useRef<HTMLTextAreaElement>(null)
   const [inputValue, setInputValue] = React.useState("")
   const [useContextSearch, setUseContextSearch] = React.useState(true)
-  const [includeNotepadInMessages, setIncludeNotepadInMessages] = React.useState(false)
 
   const handleInputPopulate = React.useCallback((text: string) => {
     const cleanText = text
@@ -183,8 +184,8 @@ function useInputSection(clearQuotedContent: () => void) {
       embeddingInfo={{ hasEmbeddings: false, count: 0 }}
       useContextSearch={useContextSearch}
       onToggleContextSearch={setUseContextSearch}
-      includeNotepadInMessages={includeNotepadInMessages}
-      onToggleNotepadInMessages={setIncludeNotepadInMessages}
+      includeNotepadInMessages={includeInMessages}
+      onToggleNotepadInMessages={setIncludeInMessages}
     />
   ), [
     sendMessage,
@@ -194,8 +195,8 @@ function useInputSection(clearQuotedContent: () => void) {
     handleInputPopulate,
     useContextSearch,
     setUseContextSearch,
-    includeNotepadInMessages,
-    setIncludeNotepadInMessages,
+    includeInMessages,
+    setIncludeInMessages,
     clearQuotedContent
   ])
 

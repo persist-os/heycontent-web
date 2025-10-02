@@ -6,6 +6,7 @@ import { useNotes } from '@/app/context/notes-context'
 import { useCreateNote } from '@/app/dashboard/notes/hooks/useCreateNote'
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
+import { useNotepadStore } from '../../../stores/notepadStore'
 import type { Note, NoteUpdate } from '../../../../notes/types'
 import type { Id } from "@/convex/_generated/dataModel"
 import type { LexicalNotepadEditorRef } from '@/components/ui/lexical-editor/LexicalNotepadEditor'
@@ -109,6 +110,13 @@ export function useNotepadState({
     // REMOVED: Premature content clearing that caused erratic behavior
     // Only set content when we actually have note data, never clear preemptively
   }, [existingNote?._id]) // Simplified dependencies - only re-run when note ID changes
+
+  // Sync note title to notepad store for cross-component access
+  useEffect(() => {
+    const title = note.title || 'Untitled Note'
+    useNotepadStore.getState().updateTitle(title)
+    useNotepadStore.getState().setCurrentNoteId(currentNoteId as string)
+  }, [note.title, currentNoteId])
 
   // Handle quoted content insertion
   useEffect(() => {

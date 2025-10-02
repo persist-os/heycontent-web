@@ -11,6 +11,7 @@ import { subscribeWithSelector } from 'zustand/middleware'
 // Import API services
 import { transmitMessageWithContext } from '../modules/api/messageService'
 import { useLayoutStore } from './layoutStore' // For getting context preferences
+import { useNotepadStore } from './notepadStore' // For getting notepad context
 
 // Import proper chat types for compatibility
 import type { Message } from '@/app/types/chat'
@@ -65,12 +66,29 @@ export const useDialogueStore = create<DialogueStore>()(
             })
 
             try {
+                // Get notepad context if enabled
+                const notepadState = useNotepadStore.getState()
+                const notepadContext = notepadState.includeInMessages && notepadState.currentContent
+                    ? {
+                        content: notepadState.currentContent,
+                        title: notepadState.currentTitle || 'Untitled'
+                      }
+                    : null
+                
+                console.log('[DialogueStore] Sending message with notepad context:', {
+                    hasNotepadContext: !!notepadContext,
+                    includeInMessages: notepadState.includeInMessages,
+                    contentLength: notepadState.currentContent.length,
+                    title: notepadState.currentTitle
+                })
+
                 // Prepare request parameters
                 const requestParams: MessageTransmissionRequest = {
                     content,
                     isFirstMessage: messages.length === 0,
                     sessionIdentifier: sessionId,
                     workspaceContext: conversationId ? { contentId: conversationId } : null,
+                    notepadContext, // Include notepad context
                     useContextSearch,
                     fileAttachments,
                     onStatusUpdate: (status: string) => {
@@ -92,6 +110,14 @@ export const useDialogueStore = create<DialogueStore>()(
 
                 // Call the enhanced message service
                 const response = await transmitMessageWithContext(requestParams)
+                
+                console.log('[DialogueStore] Received response from messageService:', {
+                    hasResponse: !!response,
+                    responseKeys: response ? Object.keys(response) : [],
+                    response_content: response?.response_content,
+                    response_content_length: response?.response_content?.length,
+                    session_identifier: response?.session_identifier
+                })
 
                 // Create assistant message from response
                 const assistantMessage: Message = {
