@@ -54,30 +54,19 @@ import { Infer, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import schema from "./schema";
-import { validateConvexId, formationRunIdValidator } from "./utils/idValidation";
 
-// Helper function to extract and validate run ID from various formats
-function extractAndValidateRunId(runIdValue: any, operation: string): Id<"crystal_formation_runs"> {
-  if (!runIdValue) {
+// Helper function to extract run ID - just cast it, Convex will validate
+function extractRunId(runIdValue: any, operation: string): Id<"crystal_formation_runs"> {
+  if (!runIdValue || runIdValue === "" || runIdValue === null || runIdValue === undefined) {
     throw new Error(`runId is required for ${operation} operation`);
   }
   
-  // Extract run ID from various formats
-  let extractedValue = runIdValue;
-  if (typeof runIdValue === 'object' && runIdValue?.data) {
-    extractedValue = runIdValue.data;
+  if (typeof runIdValue !== 'string') {
+    throw new Error(`runId must be a string, got ${typeof runIdValue}`);
   }
   
-  // Additional validation for empty or invalid runId values
-  if (!extractedValue || extractedValue === "" || extractedValue === null || extractedValue === undefined) {
-    throw new Error(`runId cannot be empty or null for ${operation} operation`);
-  }
-  
-  try {
-    return validateConvexId(extractedValue, "crystal_formation_runs");
-  } catch (error) {
-    throw new Error(`Invalid runId format for ${operation} operation: ${error instanceof Error ? error.message : String(error)}`);
-  }
+  // Just cast to the right type - Convex will validate when we use it
+  return runIdValue as Id<"crystal_formation_runs">;
 }
 
 const formationRunValidator = schema.tables.crystal_formation_runs.validator;
@@ -222,8 +211,7 @@ export const mutateFormation = mutation({
 
     if (args.operation === "complete") {
       try {
-        const runId = extractAndValidateRunId(args.runId, "complete");
-        
+        const runId = extractRunId(args.runId, "complete");
         const run = await ctx.db.get(runId);
         if (!run) {
           throw new Error(`Formation run ${runId} not found. The run may have been deleted.`);
@@ -246,7 +234,7 @@ export const mutateFormation = mutation({
 
     if (args.operation === "fail") {
       try {
-        const runId = extractAndValidateRunId(args.runId, "fail");
+        const runId = extractRunId(args.runId, "fail");
         
         const run = await ctx.db.get(runId);
         if (!run) {
@@ -286,8 +274,8 @@ export const mutateFormation = mutation({
       }
       
       try {
-        // Use the helper function to extract and validate the run ID
-        const runId = extractAndValidateRunId(args.runId, "track_event");
+        // Use the helper function to extract the run ID
+        const runId = extractRunId(args.runId, "track_event");
         
         const run = await ctx.db.get(runId);
         if (!run) {
