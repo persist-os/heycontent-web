@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useAuth } from '@/app/context/auth-context';
-import { useContentResolver } from '@/lib/content-resolver';
+import { useContentResolver } from '../../thinking_lab/lib/content-resolver';
 import { 
   FileText, 
   Search, 

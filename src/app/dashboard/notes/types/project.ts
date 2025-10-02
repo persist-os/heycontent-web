@@ -3,18 +3,31 @@ import { Note } from "./index";
 
 export interface Project {
   _id: Id<"projects">;
-  _creationTime: number;
   userId: string;
   name: string;
   description?: string;
-  noteIds?: string[];
-  conversationIds?: string[];
-  instagramPostIds?: string[];
-  youtubeVideoIds?: string[];
-  gmailIds?: string[];
-  analysisIds?: string[];
+  
+  // Clean content arrays - aligned with schema
+  noteIds: string[];
+  conversationIds: string[];
+  crystalIds: string[];
+  shardIds: string[];
+  analysisIds: string[];
+  
+  // Intelligence
+  fingerprintId?: Id<"project_fingerprints">;
+  
+  // Metadata
   createdAt: number;
   updatedAt: number;
+  
+  // Computed fields from queries
+  noteCount?: number;
+  conversationCount?: number;
+  crystalCount?: number;
+  shardCount?: number;
+  totalContent?: number;
+  hasFingerprintId?: boolean;
 }
 
 export interface ProjectWithItems extends Project {
@@ -22,7 +35,6 @@ export interface ProjectWithItems extends Project {
     notes: Note[];
     conversations: Array<{
       _id: Id<"conversations">;
-      _creationTime: number;
       userId: string;
       title: string;
       messages: Array<{
@@ -34,51 +46,27 @@ export interface ProjectWithItems extends Project {
       updatedAt: number;
       starred: boolean;
     }>;
-    instagramPosts: Array<{
-      _id: Id<"instagramPosts">;
-      _creationTime: number;
+    crystals: Array<{
+      _id: Id<"crystals">;
       userId: string;
-      instagramAccountId: string;
-      postId: string;
-      mediaType: "IMAGE" | "VIDEO" | "CAROUSEL_ALBUM" | "REELS";
-      data: {
-        id: string;
-        caption: string;
-        media_url: string;
-        permalink: string;
-        timestamp: number;
-        username: string;
-        like_count?: number;
-        comments_count?: number;
-        thumbnail_url?: string;
-      };
+      crystal_id: string;
+      name: string;
+      crystal_type: string;
+      dimension: string;
+      description?: string;
       createdAt: number;
       updatedAt: number;
     }>;
-    youtubeVideos: Array<{
-      _id: Id<"youtubeVideos">;
-      _creationTime: number;
+    shards: Array<{
+      _id: Id<"crystal_shards">;
       userId: string;
-      videoId: string;
-      snippet?: {
-        title: string;
-        description: string;
-        published_at: string;
-        thumbnails?: {
-          high?: string;
-          medium?: string;
-          default?: string;
-        };
-      };
-      statistics?: {
-        views?: number;
-        likes?: number;
-        comments?: number;
-      };
+      dimension?: string;
+      exact_quote?: string;
+      what_it_reveals?: string;
+      situation_context?: string;
       createdAt: number;
       updatedAt: number;
     }>;
-    gmailItems: Array<any>;
     analysisItems: Array<any>;
   };
 }
@@ -88,11 +76,12 @@ export interface ProjectUpdate {
   description?: string;
 }
 
-export type ItemType = "note" | "conversation" | "analysis";
+// Updated content types - removed legacy social media, added crystals/shards
+export type ContentType = "note" | "conversation" | "crystal" | "shard" | "analysis";
 
 export interface ProjectItem {
   id: string;
-  type: ItemType;
+  type: ContentType;
   title: string;
   preview?: string;
   date: number;

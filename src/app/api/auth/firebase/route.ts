@@ -67,11 +67,13 @@ export async function POST(request: Request) {
       const apiKey =
         apiKeyData?.apiKey ||
         (apiKeyData?.data && typeof apiKeyData.data.key === 'string' ? apiKeyData.data.key : undefined);
+      let apiKeyCookieSet = false;
       const response = NextResponse.json({
         success: true,
-        redirect: '/dashboard/chat',
+        redirect: '/dashboard',
         apiKey,
-        apiKeyData
+        apiKeyData,
+        apiKeyCookieSet: false,
       });
       
       // Set cookie with proper expiry tracking
@@ -92,8 +94,31 @@ export async function POST(request: Request) {
         path: '/',
         maxAge: 60 * 60 // 1 hour in seconds
       });
-      
-      return response;
+      // If we received an apiKey, set it as a cookie for synchronous availability
+      if (apiKey && typeof apiKey === 'string') {
+        try {
+          response.cookies.set('apiKey', JSON.stringify(apiKey), {
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            path: '/',
+            maxAge: 60 * 60 * 24 * 7, // 7 days in seconds
+          });
+          apiKeyCookieSet = true;
+        } catch (e) {
+          logger.warn('Failed to set apiKey cookie on auth response', { requestId, error: String(e) });
+        }
+      }
+      // Return response with updated JSON body
+      return NextResponse.json({
+        success: true,
+        redirect: '/dashboard',
+        apiKey,
+        apiKeyData,
+        apiKeyCookieSet,
+      }, {
+        status: 200,
+        headers: response.headers
+      });
     
   } catch (err: any) {
     logger.error('Authentication request failed', err, {

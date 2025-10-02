@@ -84,8 +84,7 @@ export default defineSchema({
       firstReferralDate: v.optional(v.number()),
       lastReferralDate: v.optional(v.number())
     })),
-    // TEMPORARY: Fields to be removed by migration
-    lastGmailFetch: v.optional(v.number()),
+    // ⚠️ DEPRECATED: Gmail integration removed - use crystal system for insights
   })
   .index("by_userId", ["userId"])
   .index("by_email", ["email"])
@@ -109,33 +108,6 @@ export default defineSchema({
   .index("by_userId", ["userId"]),
 
 
-  // Personas
-  personas: defineTable({
-    current_name: v.string(),
-    current_description: v.string(),
-    experience_level: v.string(),
-    content_formats: v.array(v.string()),
-    content_tone: v.string(),
-    content_voice: v.string(),
-    content_pillars: v.array(v.string()),
-    unique_value: v.string(),
-    future_name: v.string(),
-    future_description: v.string(),
-    goals: v.array(v.string()),
-    desired_impact: v.string(),
-    primary_topics: v.array(v.string()),
-    secondary_topics: v.array(v.string()),
-    tone_descriptors: v.array(v.string()),
-    style_descriptors: v.array(v.string()),
-    audience_type: v.string(),
-    engagement_style: v.array(v.string()),
-    userId: v.string(),
-    isActive: v.boolean(),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-  .index("by_userId", ["userId"])
-  .index("by_active", ["isActive"]),
 
   // Chat conversations
   conversations: defineTable({
@@ -147,6 +119,15 @@ export default defineSchema({
       timestamp: v.optional(v.number()),
       // Optional hidden context used during generation, never shown in UI
       context: v.optional(v.string()),
+      // File attachments - metadata only, actual files in GCS
+      fileAttachments: v.optional(v.array(v.object({
+        file_url: v.string(),
+        original_filename: v.string(),
+        content_type: v.string(),
+        file_size: v.number(),
+        gcs_url: v.string(),
+        uploaded_at: v.string(),
+      }))),
     })),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -241,10 +222,9 @@ export default defineSchema({
     fingerprintId: v.optional(v.id("project_fingerprints")), // Links to project fingerprint
     createdAt: v.number(),
     updatedAt: v.number(),
-    // TEMPORARY: Fields to be removed by migration
-    gmailIds: v.optional(v.array(v.string())),
-    instagramPostIds: v.optional(v.array(v.string())),
-    youtubeVideoIds: v.optional(v.array(v.string())),
+    crystalIds: v.optional(v.array(v.string())),
+    shardIds: v.optional(v.array(v.string())),
+    // ⚠️ DEPRECATED: Social media integrations removed - use crystal system for content insights
   })
   .index("by_user", ["userId"])
   .index("by_fingerprint", ["fingerprintId"])
@@ -302,7 +282,8 @@ export default defineSchema({
     contentId: v.string(), // ID of the original content (conversation, post, etc.)
     contentType: v.union(
       v.literal("conversation"),
-      v.literal("note")
+      v.literal("note"),
+      v.literal("crystal")
     ),
     title: v.string(),
     content: v.string(),
@@ -340,7 +321,8 @@ export default defineSchema({
     )),
     contentType: v.optional(v.union(
       v.literal("conversation"),
-      v.literal("note")
+      v.literal("note"),
+      v.literal("crystal")
     )),
     contentId: v.optional(v.string()),
     itemsProcessed: v.optional(v.number()),
@@ -476,101 +458,75 @@ export default defineSchema({
     userId: v.string(),
     name: v.string(),
     description: v.optional(v.string()),
+    discoveryConversationId: v.optional(v.id("conversations")), // Link to discovery chat
 
     // AI-Discovered Project Nature (flattened for AI searchability)
-    domain: v.string(), // "academic", "creative", "business", "skill_development"
-    complexity_level: v.number(), // 1-10 scale
-    collaboration_style: v.string(), // "solo", "small_team", "large_group", "community"
-    time_horizon: v.string(), // "sprint", "project", "journey", "lifestyle"
+    domain: v.optional(v.any()), // "academic", "creative", "business", "skill_development"
+    complexity_level: v.optional(v.any()), // 1-10 scale
+    collaboration_style: v.optional(v.any()), // "solo", "small_team", "large_group", "community"
+    time_horizon: v.optional(v.any()), // "sprint", "project", "journey", "lifestyle"
 
     // AI-Generated Project Archetype (flattened)
-    primary_pattern: v.string(), // "iterative_creator", "systematic_builder", "exploratory_learner"
-    working_style: v.array(v.string()), // Array of working style preferences
-    decision_making: v.string(), // How user approaches choices
-    energy_patterns: v.string(), // When/how user works best
+    primary_pattern: v.optional(v.any()), // "iterative_creator", "systematic_builder", "exploratory_learner"
+    working_style: v.optional(v.any()), // Array of working style preferences
+    decision_making: v.optional(v.any()), // How user approaches choices
+    energy_patterns: v.optional(v.any()), // When/how user works best
 
     // Intentions (User + AI refined)
-    core_intention: v.string(), // The deep "why"
-    success_vision: v.string(), // What success looks/feels like
-    value_creation: v.string(), // What this creates for user/world
-    personal_growth: v.array(v.string()), // How user wants to evolve through this
+    core_intention: v.optional(v.any()), // The deep "why"
+    success_vision: v.optional(v.any()), // What success looks/feels like
+    value_creation: v.optional(v.any()), // What this creates for user/world
+    personal_growth: v.optional(v.any()), // How user wants to evolve through this
 
     // Dynamic Timeline (AI suggests, user refines)
-    natural_rhythm: v.string(), // "daily", "weekly", "monthly", "seasonal", "milestone_driven"
-    key_phases: v.array(v.object({
-      name: v.string(),
-      essence: v.string(), // What this phase is really about
-      estimated_duration: v.string(),
-      readiness_indicators: v.array(v.string()), // When to move to next phase
-    })),
-    flexibility_preference: v.string(), // "structured", "adaptive", "emergent"
+    natural_rhythm: v.optional(v.any()), // "daily", "weekly", "monthly", "seasonal", "milestone_driven"
+    key_phases: v.optional(v.any()),
+    flexibility_preference: v.optional(v.any()), // "structured", "adaptive", "emergent"
 
     // Output Desires (AI helps articulate)
-    tangible_deliverables: v.array(v.string()),
-    intangible_benefits: v.array(v.string()),
-    measurement_approach: v.string(), // How user wants to track progress
-    sharing_intention: v.string(), // "private", "selective", "public", "community"
+    tangible_deliverables: v.optional(v.any()),
+    intangible_benefits: v.optional(v.any()),
+    measurement_approach: v.optional(v.any()), // How user wants to track progress
+    sharing_intention: v.optional(v.any()), // "private", "selective", "public", "community"
 
     // Interface Preferences (AI learns from behavior)
-    cognitive_load_preference: v.string(), // "minimal", "rich", "customizable"
-    information_density: v.string(), // "focused", "contextual", "comprehensive"
-    motivation_style: v.array(v.string()), // What keeps user engaged
-    feedback_frequency: v.string(), // How often user wants check-ins
+    cognitive_load_preference: v.optional(v.any()), // "minimal", "rich", "customizable"
+    information_density: v.optional(v.any()), // "focused", "contextual", "comprehensive"
+    motivation_style: v.optional(v.any()), // What keeps user engaged
+    feedback_frequency: v.optional(v.any()), // How often user wants check-ins
 
     // Evolution Intelligence
-    learning_sensitivity: v.number(), // How quickly to adapt (1-10)
-    change_triggers: v.array(v.object({
-      condition_type: v.string(),
-      threshold: v.number(),
-      response_style: v.string(),
-    })),
-    stability_zones: v.array(v.string()), // What should rarely change
-    growth_edges: v.array(v.string()), // What should evolve actively
+    learning_sensitivity: v.optional(v.any()), // How quickly to adapt (1-10)
+    change_triggers: v.optional(v.any()),
+    stability_zones: v.optional(v.any()), // What should rarely change
+    growth_edges: v.optional(v.any()), // What should evolve actively
 
     // AI Agent Coordination
-    morning_persona: v.object({
-      energy_match: v.string(), // Matches user's morning energy
-      focus_style: v.string(), // How to help user start days
-      preparation_depth: v.string(),
-    }),
-    evening_persona: v.object({
-      reflection_approach: v.string(), // How user processes
-      consolidation_style: v.string(),
-      transition_support: v.string(), // Help with day-to-night shift
-    }),
-    event_triggers: v.array(v.object({
-      trigger_pattern: v.string(),
-      response_personality: v.string(),
-      coordination_rules: v.array(v.string()),
-    })),
+    morning_persona: v.optional(v.any()),
+    evening_persona: v.optional(v.any()),
+    event_triggers: v.optional(v.any()),
 
     // AI Prompt Generation
-    base_personality: v.string(), // Derived from user persona
-    project_voice: v.string(), // How AI should talk about THIS project
-    question_generation_style: v.string(),
-    suggestion_approach: v.string(),
-    clarification_method: v.string(),
+    base_personality: v.optional(v.any()), // Derived from user persona
+    project_voice: v.optional(v.any()), // How AI should talk about THIS project
+    question_generation_style: v.optional(v.any()),
+    suggestion_approach: v.optional(v.any()),
+    clarification_method: v.optional(v.any()),
 
     // Dynamic Intelligence Fields (AI-generated based on project)
-    dynamic_dimensions: v.array(v.object({
-      dimension_name: v.string(), // e.g., "Research Depth", "Creative Flow", "Market Validation"
-      dimension_type: v.string(), // "progress_tracker", "quality_metric", "decision_point", "resource_monitor"
-      measurement_approach: v.string(),
-      evolution_sensitivity: v.number(),
-      ui_representation: v.string(), // How to show this in UI
-    })),
+    dynamic_dimensions: v.optional(v.any()),
 
     // Contextual Awareness
-    user_constraints: v.array(v.string()), // Time, resources, skills
-    external_dependencies: v.array(v.string()),
-    support_systems: v.array(v.string()),
-    potential_obstacles: v.array(v.string()),
+    user_constraints: v.optional(v.any()), // Time, resources, skills
+    external_dependencies: v.optional(v.any()),
+    support_systems: v.optional(v.any()),
+    potential_obstacles: v.optional(v.any()),
 
     // Metadata
     created_at: v.number(),
-    last_evolution: v.number(),
-    intelligence_version: v.string(),
-    status: v.string(), // "discovering", "active", "evolving", "completing", "archived"
+    last_evolution: v.optional(v.number()),
+    intelligence_version: v.optional(v.string()),
+    status: v.optional(v.string()), // "discovering", "active", "evolving", "completing", "archived"
   })
   .index("by_project", ["projectId"])
   .index("by_user", ["userId"])
@@ -616,68 +572,80 @@ export default defineSchema({
   .index("by_timestamp", ["timestamp"])
   .index("by_user_timestamp", ["userId", "timestamp"]),
 
-  // Project Widgets - Personalized widgets for each project
+  // Project Widgets - Personalized widgets for each project (aligned with backend models)
   project_widgets: defineTable({
+    // Required core fields
     projectId: v.id("projects"),
     fingerprintId: v.id("project_fingerprints"),
     userId: v.string(),
 
-    // Dynamic categories/tabs
+    // Widget categories - flexible for AI generation
     categories: v.array(v.object({
       name: v.string(),
-      icon: v.string(),
-      description: v.string(),
+      icon: v.optional(v.string()),
+      description: v.optional(v.string()),
+      display_order: v.optional(v.number()),
     })),
 
-    // Widget configuration
+    // Individual widgets - flexible for AI generation
     widgets: v.array(v.object({
       widget_id: v.string(),
-      widget_type: v.string(), // tracker, chart, board, timeline, meter, etc.
+      widget_type: v.string(), // Any widget type
       title: v.string(),
-      description: v.string(),
-      category: v.string(), // Category/tab this widget belongs to
-      priority: v.number(), // 1-10
-      size: v.string(), // small, medium, large, xlarge
-      theme: v.string(), // warm, clean, professional, creative
-      position: v.number(), // Position in dashboard (1-based)
-      config: v.any(), // Widget-specific configuration
+      description: v.optional(v.string()),
+      category: v.string(),
+      
+      // Layout and appearance - flexible
+      priority: v.number(),
+      size: v.string(), // Any size
+      theme: v.string(), // Any theme
+      position: v.number(),
+      
+      // Configuration
+      config: v.any(),
       data_sources: v.array(v.string()),
-      update_frequency: v.string(), // realtime, hourly, daily, weekly
+      update_frequency: v.string(), // Any frequency
+      
+      // Permissions
       interactive: v.boolean(),
       editable: v.boolean(),
       shareable: v.boolean(),
     })),
 
-    // Layout configuration
-    layout_type: v.string(), // grid, dashboard, kanban, timeline
+    // Global layout settings - flexible
+    layout_type: v.string(), // Any layout type
     columns: v.number(),
     rows: v.number(),
 
-    // Theme and styling
-    global_theme: v.string(),
-    color_scheme: v.string(), // monochrome, colorful, pastel, vibrant
-    font_style: v.string(), // modern, classic, playful, professional
+    // Global appearance - flexible
+    global_theme: v.string(), // Any theme
+    color_scheme: v.string(), // Any color scheme
+    font_style: v.string(), // Any font style
 
-    // Interaction settings
+    // Customization settings
     allow_customization: v.boolean(),
     allow_reordering: v.boolean(),
     allow_resizing: v.boolean(),
 
-    // Data integration
+    // Technical settings
     required_integrations: v.array(v.string()),
-    data_refresh_strategy: v.string(),
+    data_refresh_strategy: v.string(), // Any strategy
 
-    // Metadata
-    generated_at: v.number(),
+    // Metadata - all required, set programmatically
     version: v.string(),
-    confidence: v.number(), // 0-1 confidence in widget recommendations
-    status: v.string(), // "generating", "active", "archived"
+    confidence: v.number(), // 0-1, validated in mutation
+    createdAt: v.optional(v.number()), // Unix timestamp, set programmatically (optional for migration)
+    updatedAt: v.optional(v.number()), // Unix timestamp, set programmatically (optional for migration)
+    status: v.string(), // Flexible status
+    
+    // Legacy AI fields (ignored but allowed for migration)
+    generated_at: v.optional(v.union(v.string(), v.number())),
   })
   .index("by_project", ["projectId"])
   .index("by_fingerprint", ["fingerprintId"])
   .index("by_user", ["userId"])
   .index("by_status", ["status"])
-  .index("by_generated", ["generated_at"]),
+  .index("by_created", ["createdAt"]),
 
   // Conversation Summaries - Real-time conversation analysis
   conversation_summaries: defineTable({
@@ -773,7 +741,7 @@ export default defineSchema({
   // User Preferences - User privacy and notification settings
   user_preferences: defineTable({
     userId: v.string(),
-    showPersonaToFriends: v.boolean(),
+    showPersonaToFriends: v.boolean(), // TODO: Rename to showCrystalsToFriends or remove entirely
     allowFriendRequests: v.boolean(),
     friendRequestNotifications: v.boolean(),
     createdAt: v.number(),
@@ -842,4 +810,449 @@ export default defineSchema({
   .index("by_operation", ["operationId"])
   .index("by_note_user", ["noteId", "userId"])
   .index("by_user_client", ["userId", "clientId"]),
+
+  // Crystal Cache - Intelligent caching for frequently accessed crystal data
+  crystalCache: defineTable({
+    userId: v.string(),
+    cacheKey: v.string(),
+    cacheType: v.union(
+      v.literal("crystal_context"),
+      v.literal("vector_search"),
+      v.literal("formation_context"),
+      v.literal("similarity_results")
+    ),
+    data: v.any(),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+    accessCount: v.number(),
+    lastAccessed: v.number(),
+    dataSize: v.number(),
+    metadata: v.optional(v.object({
+      queryParams: v.optional(v.string()),
+      resultCount: v.optional(v.number()),
+      processingTime: v.optional(v.number()),
+    })),
+  })
+  .index("by_user", ["userId"])
+  .index("by_user_key", ["userId", "cacheKey"])
+  .index("by_type", ["cacheType"])
+  .index("by_expiration", ["expiresAt"])
+  .index("by_access", ["lastAccessed"]),
+
+  crystal_shards: defineTable({
+    // === CORE IDENTIFICATION (REQUIRED) ===
+    userId: v.string(),                      // REQUIRED: User who owns this shard
+    // === SOURCE METADATA (FLEXIBLE) ===
+    source: v.optional(v.string()),         // Optional: "conversation_2024_01_15", "note_daily_review"
+    sourceIds: v.optional(v.array(v.string())),  // Optional: Multiple sources that contributed to this shard
+    source_type: v.optional(v.union(v.literal("conversation"), v.literal("note"), v.literal("document"), v.literal("behavior_observation"))),
+    extraction_timestamp: v.optional(v.number()),
+    extraction_method: v.optional(v.union(v.literal("direct_quote"), v.literal("behavioral_inference"), v.literal("pattern_synthesis"))),
+
+    // === CORE REVELATION (MINIMAL REQUIREMENTS) ===
+    dimension: v.optional(v.string()),      // Optional: Identity dimension this touches
+    exact_quote: v.optional(v.string()),    // Optional: Their precise words (can be empty for behavioral observations)
+    what_it_reveals: v.optional(v.string()), // Optional: Qualitative interpretation
+    situation_context: v.optional(v.string()), // Optional: What was happening
+    why_significant: v.optional(v.string()),   // Optional: Why this matters
+
+    // === QUALITY INDICATORS (ALL OPTIONAL) ===
+    confidence_level: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
+    linguistic_intensity: v.optional(v.union(v.literal("weak"), v.literal("moderate"), v.literal("strong"))), // "might" vs "always" vs "absolutely"
+    emotional_weight: v.optional(v.union(v.literal("neutral"), v.literal("mild"), v.literal("strong"))),      // How much they seem to care
+    specificity: v.optional(v.union(v.literal("vague"), v.literal("specific"), v.literal("very_specific"))),  // How detailed/concrete
+
+    // === PATTERN CONNECTIONS (ALL OPTIONAL) ===
+    connects_to: v.optional(v.array(v.string())),       // Optional: Tags for connecting to other shards
+    contradicts: v.optional(v.array(v.string())),       // Optional: Shard IDs that conflict
+    reinforces: v.optional(v.array(v.string())),        // Optional: Shard IDs that support this
+
+    // === TEMPORAL DATA (OPTIONAL) ===
+    temporal_context: v.optional(v.string()),           // Optional: "during stressful periods", "when working on creative projects"
+    recency_weight: v.optional(v.union(v.literal("recent"), v.literal("moderate"), v.literal("old"))), // Optional: How recent/relevant
+
+    // === METADATA (REQUIRED FOR TRACKING) ===
+    createdAt: v.number(),                   // REQUIRED: Creation timestamp
+    updatedAt: v.number(),                   // REQUIRED: Last update timestamp
+    last_referenced: v.optional(v.number()), // Optional: When this shard was last used in crystal formation
+    reference_count: v.optional(v.number()), // Optional: How many crystals reference this shard
+    
+    // === SHARD LIFECYCLE TRACKING ===
+    shard_status: v.optional(v.union(
+        v.literal("unprocessed"),           // Never used for crystal generation
+        v.literal("reserved"),              // Reserved for processing (prevents race conditions)
+        v.literal("used_for_crystal"),      // Consumed by a crystal
+        v.literal("archived")               // Marked as irrelevant/outdated
+    )),
+    used_in_crystal_id: v.optional(v.string()), // Crystal ID that consumed this shard
+    date_consumed: v.optional(v.number()),  // Timestamp when shard was consumed
+    reserved_by_formation: v.optional(v.string()), // Formation run ID that reserved this shard
+    reserved_at: v.optional(v.number()),    // Timestamp when shard was reserved
+  })
+      .index("by_user", ["userId"])
+      .index("by_dimension", ["userId", "dimension"])
+      .index("by_confidence", ["userId", "confidence_level"])
+      .index("by_recency", ["userId", "recency_weight"])
+      .index("by_status", ["userId", "shard_status"])
+      .index("by_crystal_usage", ["userId", "used_in_crystal_id"])
+      .index("by_unprocessed", ["userId", "shard_status", "createdAt"]),
+
+
+// === COMPREHENSIVE CRYSTALS TABLE ===
+
+    crystals: defineTable({
+    // === CORE IDENTIFICATION (REQUIRED) ===
+    userId: v.string(),                     // REQUIRED: User who owns this crystal
+    crystal_id: v.string(),                 // REQUIRED: Unique identifier
+
+    // === CRYSTAL DEFINITION (CORE REQUIRED FIELDS) ===
+    name: v.string(),                       // REQUIRED: "Morning Productivity Pattern", "Direct Communication Preference"
+    crystal_type: v.union(
+        v.literal("stable_trait"),            // Enduring personality characteristic
+        v.literal("behavioral_pattern"),      // How they consistently act
+        v.literal("preference_cluster"),      // Related preferences that group together
+        v.literal("value_system"),           // Core beliefs and values
+        v.literal("contextual_adaptation"),  // How they adapt to different situations
+        v.literal("growth_trajectory"),      // How they're evolving over time
+        v.literal("contradiction_resolution") // How they handle internal conflicts
+    ),
+    dimension: v.string(),                  // REQUIRED: Primary identity dimension
+
+    // === FLEXIBLE CRYSTAL CONTENT ===
+    secondary_dimensions: v.optional(v.array(v.string())), // Optional: Other dimensions this crystal touches
+    description: v.optional(v.string()),    // Optional: Comprehensive description of the pattern
+    core_insight: v.optional(v.string()),   // Optional: The key understanding in one sentence
+    detailed_analysis: v.optional(v.string()), // Optional: Deep dive into what this means
+
+    // === SUPPORTING EVIDENCE (FLEXIBLE) ===
+    shardIds: v.optional(v.array(v.string())), // Optional: All supporting shards (relaxed validation)
+    supporting_quotes: v.optional(v.array(v.string())), // Optional: Supporting evidence
+
+    // === CONFIDENCE & RELIABILITY (WITH DEFAULTS) ===
+    confidence_score: v.optional(v.string()), // Flexible string field for confidence scores
+    evidence_strength: v.optional(v.string()), // Flexible string field for evidence strength
+    consistency_rating: v.optional(v.string()), // Flexible string field for consistency rating
+    observation_count: v.optional(v.number()), // Optional: Number of times we've observed this pattern
+    time_span_days: v.optional(v.number()),    // Optional: How long we've been observing this pattern
+
+    // === PATTERN METADATA (ALL OPTIONAL) ===
+    tags: v.optional(v.array(v.string())),  // Optional: Semantic tags for retrieval
+    behavioral_implications: v.optional(v.array(v.string())), // Optional: What this suggests they might do
+    interaction_guidance: v.optional(v.array(v.string())),    // Optional: How AI should adapt based on this
+
+    // === CONTRADICTIONS & NUANCE (OPTIONAL) ===
+    contradicting_shards: v.optional(v.array(v.string())), // Optional: Shards that contradict this pattern
+    contradiction_analysis: v.optional(v.string()), // Optional: How contradictions are resolved/understood
+
+    // === EVOLUTION TRACKING (FLEXIBLE) ===
+    evolution_history: v.optional(v.array(v.object({
+      timestamp: v.number(),
+      change_type: v.union(v.literal("strengthened"), v.literal("weakened"), v.literal("refined"), v.literal("contradicted"), v.literal("created")),
+      description: v.string(),
+      triggering_shard_id: v.string() // Relaxed validation for temp IDs
+    }))),
+    stability_trend: v.optional(v.string()), // Flexible string field for stability trend
+    last_evolution: v.optional(v.number()), // Optional: When this crystal last changed significantly
+
+    // === CROSS-CRYSTAL RELATIONSHIPS (OPTIONAL) ===
+    related_crystals: v.optional(v.array(v.string())), // Optional: Other crystals this connects to
+    conflicting_crystals: v.optional(v.array(v.string())), // Optional: Crystals that contradict this one
+
+    // === UTILIZATION METADATA (OPTIONAL) ===
+    usage_count: v.optional(v.number()),    // Optional: How many times this crystal has been used
+    usage_frequency: v.optional(v.number()), // Optional: How often this crystal is referenced
+    last_used: v.optional(v.number()),      // Optional: When this was last used for AI decisions
+
+    // === METADATA (REQUIRED FOR TRACKING) ===
+    createdAt: v.number(),                  // REQUIRED: Creation timestamp
+    updatedAt: v.number(),                  // REQUIRED: Last update timestamp
+    next_review_due: v.optional(v.number()), // Optional: When this crystal should be reviewed/updated
+    review_priority: v.optional(v.string()), // Flexible string field for review priority
+    
+    // === ARCHIVAL FIELDS (FOR CAPACITY MANAGEMENT) ===
+    archived: v.optional(v.boolean()),      // Optional: Whether this crystal has been archived
+    archived_at: v.optional(v.number()),    // Optional: When this crystal was archived
+  })
+
+      .index("by_user", ["userId"])
+      .index("by_dimension", ["userId", "dimension"])
+      .index("by_confidence", ["userId", "confidence_score"])
+      .index("by_type", ["userId","crystal_type"])
+      .index("by_usage", ["userId", "usage_frequency"])
+    .index("by_review_due", ["userId", "next_review_due"]),
+    
+    
+    crystal_formation_runs: defineTable({
+      userId: v.string(),
+      status: v.union(
+        v.literal("running"),
+        v.literal("completed"), 
+        v.literal("failed")
+      ),
+      
+      // Input data
+      input_shard_count: v.number(),
+      trigger_type: v.union(
+        v.literal("threshold_reached"),    // 15+ shards
+        v.literal("periodic_refresh"),     // Background job
+        v.literal("manual_trigger")        // User initiated
+      ),
+      
+        // Event tracking
+        event_type: v.optional(v.string()),             // Event type for tracking
+        timestamp: v.optional(v.number()),              // Event timestamp
+        
+        // Results
+        clusters_formed: v.optional(v.number()),
+        crystals_created: v.optional(v.number()),
+        crystals_failed: v.optional(v.number()),
+        
+        // Additional tracking fields for management system
+        crystal_count: v.optional(v.number()),           // Number of crystals being processed
+        crystals_updated: v.optional(v.number()),        // Crystals that were updated
+        crystals_merged: v.optional(v.number()),         // Crystals that were merged
+        crystals_archived: v.optional(v.number()),       // Crystals that were archived
+        evolution_events: v.optional(v.number()),        // Number of evolution events
+        vector_matches_found: v.optional(v.number()),    // Vector search matches found
+        agent_recommendations_used: v.optional(v.number()), // Agent recommendations used
+        raw_crystals_generated: v.optional(v.number()),  // Raw crystals generated during formation
+        
+        // Timing
+        started_at: v.number(),
+        completed_at: v.optional(v.number()),
+        duration_ms: v.optional(v.number()),
+        
+        // Error handling
+        error_message: v.optional(v.string()),
+        
+        // Metadata
+        formation_version: v.string(),      // Track algorithm versions
+      })
+      .index("by_user", ["userId"])
+      .index("by_status", ["status"])
+      .index("by_user_status", ["userId", "status"]),
+
+  // Migration Tracking - Clean separation for one-time migrations
+  migration_tracking: defineTable({
+    userId: v.string(),
+    migrationType: v.string(), // "crystal_initial_generation", future migration types
+    completed: v.boolean(),
+    completedAt: v.optional(v.number()),
+    attempts: v.optional(v.number()),
+    lastAttemptAt: v.optional(v.number()),
+    contentProcessed: v.optional(v.object({
+      conversations: v.number(),
+      notes: v.number(),
+      totalItems: v.number()
+    }))
+  })
+  .index("by_user_type", ["userId", "migrationType"])
+  .index("by_type", ["migrationType"])
+  .index("by_completion", ["completed"]),
+
+  // ========================================
+  // CRYSTAL INTELLIGENCE SYSTEM
+  // ========================================
+
+  // Intelligence Configuration - Per-user settings for analysis triggers and preferences
+  intelligence_config: defineTable({
+    userId: v.string(),
+    
+    // Trigger thresholds (configurable)
+    triggers: v.object({
+      chat_messages: v.number(),        // Default: 25
+      smart_notes: v.number(),          // Default: 10
+      crystal_formations: v.number(),   // Default: 5
+      days_since_last: v.number(),      // Default: 7
+    }),
+    
+    // Analysis preferences
+    preferences: v.object({
+      analysis_depth: v.union(v.literal("fast"), v.literal("standard"), v.literal("deep")),
+      auto_archival: v.boolean(),
+      review_notifications: v.boolean(),
+    }),
+    
+    // Execution tracking
+    last_analysis: v.number(),
+    next_scheduled_analysis: v.optional(v.number()),
+    
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_user", ["userId"])
+  .index("by_next_scheduled", ["next_scheduled_analysis"]),
+
+  // Activity Counters - Track user activity for trigger detection
+  user_activity_counters: defineTable({
+    userId: v.string(),
+    
+    // Activity counts since last intelligence analysis
+    since_last_analysis: v.object({
+      chat_messages: v.number(),
+      smart_notes: v.number(),
+      crystal_formations: v.number(),
+      crystal_retrievals: v.number(),
+    }),
+    
+    // Lifetime activity (for analytics)
+    lifetime: v.object({
+      chat_messages: v.number(),
+      smart_notes: v.number(),
+      crystal_formations: v.number(),
+      crystal_retrievals: v.number(),
+    }),
+    
+    // Trigger state
+    pending_analysis: v.boolean(),
+    analysis_priority: v.union(
+      v.literal("low"),
+      v.literal("normal"),
+      v.literal("high"),
+      v.literal("urgent")
+    ),
+    
+    updatedAt: v.number(),
+  })
+  .index("by_user", ["userId"])
+  .index("by_pending", ["pending_analysis", "analysis_priority"]),
+
+  // Crystal Intelligence State - Denormalized intelligence data for performance
+  crystal_intelligence: defineTable({
+    userId: v.string(),
+    crystalId: v.string(),
+    
+    // Usage statistics (aggregated from usageEvents)
+    usage: v.object({
+      total_retrievals: v.number(),
+      retrievals_last_7d: v.number(),
+      retrievals_last_30d: v.number(),
+      last_used: v.number(),
+      usage_frequency: v.number(),
+      contexts: v.array(v.string()),
+      co_occurrence: v.optional(v.array(v.string())),
+    }),
+    
+    // Relationship analysis (vector similarity based)
+    relationships: v.object({
+      related: v.array(v.object({
+        crystalId: v.string(),
+        similarity: v.number(),
+        relationship_type: v.string(),
+        confidence: v.number(),
+      })),
+      conflicting: v.array(v.object({
+        crystalId: v.string(),
+        conflict_score: v.number(),
+        conflict_type: v.string(),
+        resolution: v.optional(v.string()),
+      })),
+    }),
+    
+    // Contradiction analysis (shard-level)
+    contradictions: v.object({
+      shard_ids: v.array(v.string()),
+      severity: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
+      patterns: v.array(v.string()),
+      analysis: v.string(),
+    }),
+    
+    // Health scoring (composite metric)
+    health: v.object({
+      overall_score: v.number(),
+      components: v.object({
+        evidence_strength: v.number(),
+        usage_recency: v.number(),
+        usage_frequency: v.number(),
+        contradiction_impact: v.number(),
+        age_factor: v.number(),
+      }),
+      trend: v.union(v.literal("improving"), v.literal("stable"), v.literal("declining")),
+    }),
+    
+    // Lifecycle management
+    lifecycle: v.object({
+      review_priority: v.union(
+        v.literal("low"),
+        v.literal("medium"),
+        v.literal("high"),
+        v.literal("critical")
+      ),
+      next_review_due: v.number(),
+      archival_candidate: v.boolean(),
+      archival_reason: v.optional(v.string()),
+      archival_confidence: v.optional(v.number()),
+    }),
+    
+    // Metadata
+    analysis_version: v.string(),
+    last_analyzed: v.number(),
+    analysis_depth: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_user", ["userId"])
+  .index("by_crystal", ["userId", "crystalId"])
+  .index("by_health", ["userId", "health.overall_score"])
+  .index("by_review_priority", ["userId", "lifecycle.review_priority"])
+  .index("by_archival_candidate", ["userId", "lifecycle.archival_candidate"]),
+
+  // Intelligence Jobs - Background processing queue
+  intelligence_jobs: defineTable({
+    userId: v.string(),
+    
+    // Job configuration
+    job_type: v.union(
+      v.literal("quick_update"),
+      v.literal("standard_analysis"),
+      v.literal("deep_analysis"),
+      v.literal("archival_review")
+    ),
+    
+    // Execution details
+    status: v.union(
+      v.literal("pending"),
+      v.literal("running"),
+      v.literal("completed"),
+      v.literal("failed"),
+      v.literal("cancelled")
+    ),
+    
+    priority: v.union(
+      v.literal("low"),
+      v.literal("normal"),
+      v.literal("high"),
+      v.literal("urgent")
+    ),
+    
+    // Scope (what to analyze)
+    scope: v.object({
+      crystal_ids: v.optional(v.array(v.string())),
+      analyze_all: v.boolean(),
+      analysis_depth: v.string(),
+    }),
+    
+    // Execution tracking
+    trigger_source: v.string(),
+    scheduled_for: v.number(),
+    started_at: v.optional(v.number()),
+    completed_at: v.optional(v.number()),
+    duration_ms: v.optional(v.number()),
+    
+    // Results
+    results: v.optional(v.object({
+      crystals_analyzed: v.number(),
+      relationships_found: v.number(),
+      contradictions_found: v.number(),
+      health_scores_updated: v.number(),
+      error: v.optional(v.string()),
+    })),
+    
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_user", ["userId"])
+  .index("by_status", ["status", "priority", "scheduled_for"])
+  .index("by_user_status", ["userId", "status"]),
 });
+

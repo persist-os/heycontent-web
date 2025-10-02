@@ -73,8 +73,9 @@ export async function POST(
     let projectDescription = 'Project description not available'; // Default fallback
     
     try {
-      const project = await convex.query(api.projectsQueries.getProjectById, {
-        projectId: projectId as any
+      const project = await convex.query(api.projectsQueries.getById, {
+        projectId: projectId as any,
+        userId: userId
       });
       if (project) {
         projectName = project.name || projectName;

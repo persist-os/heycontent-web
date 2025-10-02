@@ -102,7 +102,7 @@ export function ProjectItemsGrid({ project }: ProjectItemsGridProps) {
   };
 
   const handleChatClick = (chatId: string) => {
-    router.push(`/dashboard/chat?id=${chatId}`);
+    router.push(`/dashboard/thinking_lab?chatId=${chatId}`);
   };
 
   // Delete handler for notes

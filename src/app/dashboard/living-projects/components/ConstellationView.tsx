@@ -41,7 +41,7 @@ export function ConstellationView() {
 
   // Fetch user's projects
   const projects = useQuery(
-    api.projectsQueries.getProjectsForUser,
+    api.projectsQueries.getByUser,
     firebaseUser?.uid ? { userId: firebaseUser.uid } : 'skip'
   ) as Project[] | undefined
 
@@ -121,7 +121,7 @@ export function ConstellationView() {
       name,
       ...(description && { description })
     })
-    router.push(`/dashboard/project-discovery?${params}`)
+    router.push(`/dashboard/living-projects/project-discovery?${params}`)
   }, [router])
 
   // Handle clicking on a project
@@ -129,7 +129,7 @@ export function ConstellationView() {
     if (project.fingerprintId) {
       router.push(`/dashboard/living-projects/${project._id}`)
     } else {
-      router.push(`/dashboard/project-discovery?projectId=${project._id}`)
+      router.push(`/dashboard/living-projects/project-discovery?projectId=${project._id}`)
     }
   }, [router])
 

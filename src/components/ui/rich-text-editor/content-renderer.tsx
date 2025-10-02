@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { MarkdownRenderer } from '@/app/dashboard/chat/markdown-renderer'
+import { MarkdownRenderer } from '@/app/dashboard/thinking_lab/components/dialogue/messages/MarkdownRenderer'
 import { LinkedContentRenderer } from '@/app/dashboard/notes/components/LinkedContentRenderer'
 import { NoteLinkCard } from './note-link-card'
 import { NoteLink } from './rich-text-editor.types'

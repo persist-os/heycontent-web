@@ -61,7 +61,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "convex": "^1.24.6",
-    "convex-helpers": "^0.1.79",
+    "convex-helpers": "^0.1.104",
     "critters": "^0.0.23",
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.7",

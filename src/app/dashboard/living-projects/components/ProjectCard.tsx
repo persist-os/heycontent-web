@@ -6,21 +6,8 @@ import { useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { useAuth } from '@/app/context/auth-context'
 import { DeleteProjectModal } from '../[projectId]/components/DeleteProjectModal'
-// Simple date formatting utility
-const formatDistanceToNow = (date: Date, options?: { addSuffix?: boolean }) => {
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMinutes = Math.floor(diffMs / (1000 * 60))
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-  
-  if (diffMinutes < 1) return 'now'
-  if (diffMinutes < 60) return `${diffMinutes}m ago`
-  if (diffHours < 24) return `${diffHours}h ago`
-  if (diffDays < 7) return `${diffDays}d ago`
-  
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
+import { formatDistanceToNow } from '../[projectId]/components/utils/dateFormatting'
+import { getProjectStatus } from '../[projectId]/components/utils/widgetStyling'
 
 interface ProjectCardProps {
   project: {
@@ -63,28 +50,7 @@ export function ProjectCard({ project, onClick, onDelete }: ProjectCardProps) {
     }
   }, [showMenu])
   
-  const getProjectStatus = () => {
-    if (!hasFingerprint) {
-      return {
-        label: 'Discovering',
-        stage: 'early'
-      }
-    }
-    
-    if (isRecent) {
-      return {
-        label: 'Active',
-        stage: 'active'
-      }
-    }
-    
-    return {
-      label: 'Living',
-      stage: 'established'
-    }
-  }
-
-  const status = getProjectStatus()
+  const status = getProjectStatus(project)
 
   const handleDelete = async () => {
     if (!firebaseUser?.uid) return
@@ -151,6 +117,7 @@ export function ProjectCard({ project, onClick, onDelete }: ProjectCardProps) {
                 {/* 3-dots menu */}
                 <div className="relative" ref={menuRef}>
                   <button
+                    title="More options"
                     onClick={handleMenuClick}
                     className="p-1 hover:bg-muted/50 rounded-md transition-colors opacity-0 group-hover:opacity-100"
                     disabled={isDeleting}

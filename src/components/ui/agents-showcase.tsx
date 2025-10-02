@@ -5,7 +5,7 @@ import { X, Send, Copy, MessageSquare, FileText, Plus, ChevronRight, ChevronLeft
 import { useTheme } from 'next-themes'
 import { motion } from "framer-motion"
 import { Loader2, ArrowRight } from 'lucide-react'
-import { MobileTabBar } from '@/app/dashboard/chat/components/notepad/MobileTabBar'
+import { MobileTabBar } from '@/app/dashboard/thinking_lab/components/notepad/MobileTabBar'
 import { CreateNoteButton } from '@/components/ui/CreateNoteButton'
 
 interface Source {

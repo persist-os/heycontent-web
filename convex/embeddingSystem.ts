@@ -26,7 +26,7 @@ export const syncEmbeddingsOnHeartbeat = action({
 
     try {
       // 1. Get all existing embeddings for this user
-      const existingEmbeddings = await ctx.runQuery(api.vectorSearch.getUserEmbeddings, {
+      const existingEmbeddings = await ctx.runQuery(api.vectorSearchQueries.getUserEmbeddings, {
         userId,
         limit: 2000
       });
@@ -57,8 +57,7 @@ export const syncEmbeddingsOnHeartbeat = action({
               contentType: 'note',
               title: note.title || 'Untitled Note',
               content: noteContent,
-              triggerType: 'automatic_update',
-              platform: 'notes'
+              triggerType: 'automatic_update'
             });
             results.created++;
           } catch (error) {
@@ -93,8 +92,7 @@ export const syncEmbeddingsOnHeartbeat = action({
               contentType: 'conversation',
               title: conv.title || 'Conversation',
               content: searchableContent,
-              triggerType: 'automatic_update',
-              platform: 'conversations'
+              triggerType: 'automatic_update'
             });
             results.created++;
           } catch (error) {
@@ -103,19 +101,69 @@ export const syncEmbeddingsOnHeartbeat = action({
         }
       }
 
-
-
+      // Crystals
+      let crystals = [];
+      try {
+        crystals = await ctx.runQuery(api.crystalQueries.getCrystalData, { 
+          userId,
+          table: 'crystals',
+          limit: 1000
+        });
+      } catch (error) {
+        console.warn('⚠️ [EMBEDDING] Failed to fetch crystals:', error);
+        results.errors.push(`Failed to fetch crystals: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+      
+      for (const crystal of crystals) {
+        const contentId = `crystal:${crystal._id}`;
+        if (!existingEmbeddingIds.has(contentId)) {
+          try {
+            // Create content from crystal data
+            const crystalContent = [
+              crystal.core_insight || '',
+              crystal.detailed_analysis || '',
+              crystal.description || '',
+              crystal.contradiction_analysis || '',
+              ...(crystal.supporting_quotes || [])
+            ].filter(text => text && text.trim()).join('\n');
+            
+            // Skip crystals with empty content
+            if (!crystalContent.trim()) {
+              console.warn('⚠️ [EMBEDDING] Skipping crystal with empty content:', crystal._id);
+              results.errors.push(`Skipped crystal with empty content: ${crystal._id}`);
+              continue;
+            }
+            
+            const title = crystal.name || crystal.dimension || crystal.core_insight ? 
+              `Crystal: ${crystal.name || crystal.dimension || crystal.core_insight.substring(0, 50)}` : 
+              `Crystal: ${crystal._id}`;
+            
+            await ctx.runAction(api.vectorSearch.autoCreateEmbedding, {
+              userId,
+              contentId,
+              contentType: 'crystal',
+              title,
+              content: crystalContent,
+              triggerType: 'automatic_update'
+            });
+            results.created++;
+          } catch (error) {
+            results.errors.push(`Failed to create crystal embedding: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          }
+        }
+      }
 
       // 3. Clean up orphaned embeddings (embeddings without corresponding content)
       const allContentIds = new Set([
         ...notes.map(n => `notes:${n._id}`),
-        ...conversations.map(c => `conversations:${c._id}`)
+        ...conversations.map(c => `conversations:${c._id}`),
+        ...crystals.map(c => `crystal:${c._id}`)
       ]);
 
       for (const embedding of existingEmbeddings) {
         if (!allContentIds.has(embedding.contentId)) {
           try {
-            await ctx.runMutation(api.vectorSearch.deleteEmbedding, {
+            await ctx.runMutation(api.vectorSearchMutations.deleteEmbedding, {
               userId,
               contentId: embedding.contentId
             });

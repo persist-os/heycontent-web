@@ -63,9 +63,8 @@ export async function POST(
         })
         
         // Get fingerprint by project ID (this ensures we get the correct fingerprint for this project)
-        fingerprint_data = await convex.query(api.projectFingerprintQueries.getFingerprintByProject, {
-          projectId: projectId as any,
-          userId: userId
+        fingerprint_data = await convex.query(api.projectFingerprintQueries.getByProject, {
+          projectId: projectId as any
         })
         console.log('Retrieved fingerprint data by project:', fingerprint_data)
         

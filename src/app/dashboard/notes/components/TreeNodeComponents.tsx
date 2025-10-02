@@ -98,7 +98,7 @@ export function DraggableNote({ node, router, searchTerm }: DraggableComponentPr
                ? `&conversationId=${node.note!.sourceConversationId}` 
                : '';
              
-             router.push(`/dashboard/chat?noteId=${node.note!._id}${conversationParam}`);
+             router.push(`/dashboard/thinking_lab?noteId=${node.note!._id}${conversationParam}`);
            }}>
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <div className="relative flex-shrink-0">

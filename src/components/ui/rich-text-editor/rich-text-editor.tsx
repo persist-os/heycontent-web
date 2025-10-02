@@ -6,7 +6,7 @@ import { useRichTextEditor } from './use-rich-text-editor'
 import { RichTextEditorProps } from './rich-text-editor.types'
 import { InlineCommandPalette } from '@/app/dashboard/notes/components/InlineCommandPalette'
 import { getCursorCoordinates } from './formatting-utils'
-import { MarkdownRenderer } from '@/app/dashboard/chat/markdown-renderer'
+import { MarkdownRenderer } from '@/app/dashboard/thinking_lab/components/dialogue/messages/MarkdownRenderer'
 
 export interface RichTextEditorRef {
   triggerCommandPalette: () => void;

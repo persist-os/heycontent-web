@@ -12,7 +12,7 @@ export const getTimelineData = query({
   },
   handler: async (ctx, { userId }) => {
     // Core timeline data (always fetch)
-    const [conversations, notes, personas] = await Promise.all([
+    const [conversations, notes, crystals, crystal_shards] = await Promise.all([
       // Chat conversations
       ctx.db
         .query('conversations')
@@ -27,80 +27,27 @@ export const getTimelineData = query({
         .order('desc')
         .take(100), // Limit for performance
       
-      // Personas
+      // Crystals (replaced old personas and social media)
       ctx.db
-        .query('personas')
-        .withIndex('by_userId', (q) => q.eq('userId', userId))
-        .order('desc')
-        .collect()
-    ])
-
-    // Content data (social media posts)
-    const [instagramPosts, youtubeVideos] = await Promise.all([
-      // Instagram posts
-      ctx.db
-        .query('instagramPosts')
-        .withIndex('by_userId', (q) => q.eq('userId', userId))
+        .query('crystals')
+        .withIndex('by_user', (q) => q.eq('userId', userId))
         .order('desc')
         .take(50), // Limit for performance
-      
-      // YouTube videos
+
+      // Crystal shards (detailed persona insights)
       ctx.db
-        .query('youtubeVideos')
-        .withIndex('by_userId', (q) => q.eq('userId', userId))
+        .query('crystal_shards')
+        .withIndex('by_user', (q) => q.eq('userId', userId))
         .order('desc')
-        .take(50) // Limit for performance
+        .take(100) // Limit for performance
     ])
-
-    // Analytics data (always fetch as requested)
-    const [instagramAccount, youtubeChannel] = await Promise.all([
-      ctx.db
-        .query('instagramAccounts')
-        .withIndex('by_userId', (q) => q.eq('userId', userId))
-        .first(),
-      
-      ctx.db
-        .query('youtubeChannels')
-        .withIndex('by_userId', (q) => q.eq('userId', userId))
-        .first()
-    ])
-
-    // Fetch batch analysis if accounts exist
-    const [instagramAnalytics, youtubeAnalytics] = await Promise.all([
-      instagramAccount 
-        ? ctx.db
-            .query('instagramBatchAnalysis')
-            .withIndex('by_userId', (q) => q.eq('userId', userId))
-            .first()
-        : null,
-      
-      youtubeChannel
-        ? ctx.db
-            .query('youtubeBatchAnalysis') 
-            .withIndex('by_userId', (q) => q.eq('userId', userId))
-            .first()
-        : null
-    ])
-
-    const analyticsData = {
-      instagramAccount,
-      youtubeChannel,
-      instagramAnalytics,
-      youtubeAnalytics
-    }
 
     return {
       // Core timeline data
       conversations,
       notes,
-      personas,
-      
-      // Content data
-      instagramPosts,
-      youtubeVideos,
-      
-      // Analytics data (always included)
-      analytics: analyticsData,
+      crystals, // Crystal system replaces old personas and social media
+      crystal_shards, // Detailed insights and patterns
       
       // Metadata
       fetchedAt: Date.now()

@@ -169,7 +169,7 @@ const navigationCommands: NavigationCommand[] = [
     label: 'Chat With Content',
     description: 'Open AI chat interface',
     icon: MessageSquare,
-    href: '/dashboard/chat',
+    href: '/dashboard',
     shortcut: ['g', 'c'],
     tags: ['chat', 'ai', 'conversation'],
   },
@@ -247,7 +247,7 @@ const actionCommands: ActionCommand[] = [
     shortcut: ['c'],
     tags: ['new', 'chat', 'ai'],
     action: () => {
-      window.location.href = '/dashboard/chat';
+      window.location.href = '/dashboard';
     },
   },
   {
@@ -519,7 +519,7 @@ async function vectorSearchContent(query: string, limit: number = 5): Promise<Se
         userId,
         query,
         limit,
-        contentTypes: ["conversation", "note"],
+        contentTypes: ["conversation", "note", "crystal"],
         minSimilarity: 0.3 // Lower threshold for command palette search
       });
 
@@ -567,7 +567,7 @@ async function vectorSearchContent(query: string, limit: number = 5): Promise<Se
     }
 
     // Fallback to old search method
-    const vectorResults = await convex.action(api.vectorSearch.searchRelevantContent, {
+    const vectorResults = await convex.action(api.vectorSearchHelpers.searchRelevantContent, {
       userId,
       query,
       limit,
@@ -637,7 +637,7 @@ function getColorForContentType(contentType: string) {
 
 function getPathForContentType(contentType: string, contentId: string) {
   switch (contentType) {
-    case 'conversation': return `/dashboard/chat/${contentId}`;
+    case 'conversation': return `/dashboard/thinking_lab?chatId=${contentId}`;
     case 'note': return `/dashboard/notes/${contentId}`;
     default: return '/dashboard';
   }
