@@ -18,11 +18,13 @@ export default function ThinkingLabPage() {
   const noteId = searchParams.get('noteId')
   const chatId = searchParams.get('chatId')
   const query = searchParams.get('query')
+  const widgetOutputId = searchParams.get('widgetOutputId')
   
   console.log('🚨 [THINKING LAB PAGE] URL Parameters:', {
     noteId,
     chatId,
     query,
+    widgetOutputId,
     allParams: Object.fromEntries(searchParams.entries()),
     url: typeof window !== 'undefined' ? window.location.href : 'SSR'
   })
@@ -41,6 +43,7 @@ export default function ThinkingLabPage() {
           chatId={chatId || undefined}
           noteId={undefined} // Don't pass persona ID
           askQuery={query || undefined}
+          widgetOutputId={widgetOutputId || undefined}
         />
       )
     }
@@ -51,6 +54,7 @@ export default function ThinkingLabPage() {
       chatId={chatId || undefined}
       noteId={noteId || undefined}
       askQuery={query || undefined}
+      widgetOutputId={widgetOutputId || undefined}
     />
   )
 }

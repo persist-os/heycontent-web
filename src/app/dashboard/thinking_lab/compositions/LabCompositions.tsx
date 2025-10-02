@@ -15,6 +15,7 @@ import { MarkdownNotepad } from '../components/notepad/MarkdownNotepad'
 import ChatInputArea from '../components/dialogue/input/ChatInputArea'
 import { BottomBarActions } from '../components/dialogue/components/BottomBarActions'
 import { AmbientInsights } from '@/app/dashboard/ambient_insights/AmbientInsights'
+import { WidgetPrompts } from '../components/WidgetPrompts'
 import ChatMessagesList from '../components/dialogue/components/ChatMessagesList'
 import { useOptimizedAuth } from '../components/notepad/hooks/useOptimizedAuth'
 import { useResizablePanes } from '../hooks/useResizablePanes'
@@ -26,7 +27,8 @@ import { useResizablePanes } from '../hooks/useResizablePanes'
 const ChatPanel = React.memo<{
   onInputPopulate: (text: string) => void
   onQuoteToNotepad: (text: string) => void
-}>(({ onInputPopulate, onQuoteToNotepad }) => {
+  widgetOutputId?: string
+}>(({ onInputPopulate, onQuoteToNotepad, widgetOutputId }) => {
   const { messages, sendMessage, startNewConversation } = useDialogueStore()
   const authData = useOptimizedAuth()
 
@@ -82,16 +84,26 @@ const ChatPanel = React.memo<{
           </div>
         </>
       ) : (
-        /* Empty state - no header needed */
+        /* Empty state - show widget prompts or ambient insights */
         <div className="h-full flex flex-col">
           <div className="flex-1 px-6 py-4">
-            <AmbientInsights
-              userId={authData.user?.uid}
-              onInsightClick={(action: string, insight: any) => {
-                const fullMessage = `${insight.title}\n\n${insight.description}\n\n${action}`
-                sendMessage(fullMessage)
-              }}
-            />
+            {widgetOutputId && authData.user?.uid ? (
+              <WidgetPrompts
+                widgetOutputId={widgetOutputId}
+                userId={authData.user.uid}
+                onPromptClick={(promptText) => {
+                  onInputPopulate(promptText)
+                }}
+              />
+            ) : (
+              <AmbientInsights
+                userId={authData.user?.uid}
+                onInsightClick={(action: string, insight: any) => {
+                  const fullMessage = `${insight.title}\n\n${insight.description}\n\n${action}`
+                  sendMessage(fullMessage)
+                }}
+              />
+            )}
           </div>
           <div className="px-6 py-3 border-t border-border">
             <BottomBarActions
@@ -213,6 +225,7 @@ interface LabCompositionProps {
   noteId?: string
   askQuery?: string
   contentContext?: any
+  widgetOutputId?: string
 }
 
 export function FullThinkingLab({
@@ -220,7 +233,8 @@ export function FullThinkingLab({
   chatId,
   noteId,
   askQuery,
-  contentContext
+  contentContext,
+  widgetOutputId
 }: LabCompositionProps) {
   const { quotedContent, setQuotedContent, clearQuotedContent } = useDialogueStore()
   const { inputComponent, handleInputPopulate } = useInputSection(clearQuotedContent)
@@ -253,6 +267,7 @@ export function FullThinkingLab({
             <ChatPanel 
               onInputPopulate={handleInputPopulate}
               onQuoteToNotepad={setQuotedContent}
+              widgetOutputId={widgetOutputId}
             />
           </div>
           

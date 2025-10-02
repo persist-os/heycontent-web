@@ -82,6 +82,8 @@ import type * as vectorSearch from "../vectorSearch.js";
 import type * as vectorSearchBatch from "../vectorSearchBatch.js";
 import type * as vectorSearchMutations from "../vectorSearchMutations.js";
 import type * as vectorSearchQueries from "../vectorSearchQueries.js";
+import type * as widgetOutputsMutations from "../widgetOutputsMutations.js";
+import type * as widgetOutputsQueries from "../widgetOutputsQueries.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -161,6 +163,8 @@ declare const fullApi: ApiFromModules<{
   vectorSearchBatch: typeof vectorSearchBatch;
   vectorSearchMutations: typeof vectorSearchMutations;
   vectorSearchQueries: typeof vectorSearchQueries;
+  widgetOutputsMutations: typeof widgetOutputsMutations;
+  widgetOutputsQueries: typeof widgetOutputsQueries;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,

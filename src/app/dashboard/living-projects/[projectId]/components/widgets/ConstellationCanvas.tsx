@@ -22,6 +22,8 @@ interface ConstellationCanvasProps {
   onWidgetHover: (widgetId: string | null) => void
   highlightedWidget: string | null
   showWidgetPanel: boolean
+  onWidgetRun?: (widgetId: string) => void
+  runningWidgetId?: string | null
 }
 
 export function ConstellationCanvas({
@@ -29,7 +31,9 @@ export function ConstellationCanvas({
   onWidgetClick,
   onWidgetHover,
   highlightedWidget,
-  showWidgetPanel
+  showWidgetPanel,
+  onWidgetRun,
+  runningWidgetId
 }: ConstellationCanvasProps) {
   const [viewportSize, setViewportSize] = useState({
     width: typeof window !== 'undefined' ? window.innerWidth : 1200,
@@ -156,6 +160,8 @@ export function ConstellationCanvas({
                 scale={transform.scale}
                 onClick={() => onWidgetClick(widget)}
                 onHover={onWidgetHover}
+                onRun={onWidgetRun}
+                isRunning={runningWidgetId === position.id}
               />
             )
           })}

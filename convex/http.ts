@@ -1334,6 +1334,58 @@ app.get("/api/project-widgets/getByProject", async (c) => {
 });
 
 /**
+ * Get a single widget by widget_id
+ * Used by: Widget execution, individual widget operations
+ */
+app.get("/api/project-widgets/getWidget", async (c) => {
+  const ctx = c.env;
+  const projectId = c.req.query("projectId");
+  const widgetId = c.req.query("widgetId");
+  const userId = c.req.query("userId"); // Optional for backend queries
+  
+  try {
+    if (!projectId) {
+      return c.json({ 
+        success: false, 
+        error: "Missing projectId parameter" 
+      }, 400);
+    }
+
+    if (!widgetId) {
+      return c.json({ 
+        success: false, 
+        error: "Missing widgetId parameter" 
+      }, 400);
+    }
+
+    const widget = await ctx.runQuery(api.projectWidgetsQueries.getWidgetById, { 
+      projectId: projectId as Id<"projects">,
+      widgetId,
+      userId
+    });
+
+    if (!widget) {
+      return c.json({ 
+        success: false, 
+        error: "Widget not found" 
+      }, 404);
+    }
+    
+    return c.json({
+      success: true,
+      data: widget
+    });
+  } catch (error: any) {
+    console.error("Failed to get widget:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get widget",
+      message: error.message 
+    }, 500);
+  }
+});
+
+/**
  * Delete project widgets by project ID
  * Used by: Project cleanup, widget deletion
  */
@@ -2225,6 +2277,71 @@ app.post("/api/project-fingerprint/batchUpdate", async (c) => {
       success: false, 
       error: "Failed to batch update fields",
       message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// WIDGET OUTPUTS ROUTES - Generic pattern for widget execution outputs
+
+/**
+ * POST /api/widgetOutputs/query
+ * Generic query endpoint for widget outputs with dynamic filtering
+ */
+app.post("/api/widgetOutputs/query", async (c) => {
+  try {
+    const requestBody = await c.req.json();
+    
+    // Validate required fields
+    if (!requestBody.userId) {
+      return c.json({
+        error: "userId is required",
+        success: false
+      }, 400);
+    }
+
+    const result = await c.env.runQuery(api.widgetOutputsQueries.getWidgetOutputData, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Widget outputs query error:", error);
+    return c.json({ 
+      error: "Internal server error",
+      message: error.message || "Unknown error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/widgetOutputs/mutate
+ * Batch mutation endpoint for widget outputs (create/update/delete)
+ */
+app.post("/api/widgetOutputs/mutate", async (c) => {
+  try {
+    const requestBody = await c.req.json();
+    
+    // Validate operations array
+    if (!Array.isArray(requestBody.operations) || requestBody.operations.length === 0) {
+      return c.json({
+        error: "operations array is required and must not be empty",
+        success: false
+      }, 400);
+    }
+
+    const result = await c.env.runMutation(api.widgetOutputsMutations.batchMutateWidgetOutputs, requestBody);
+    
+    if (result.success) {
+      return c.json({ success: true, data: result });
+    } else {
+      return c.json({
+        success: false,
+        error: "Batch operation partially failed",
+        details: result.results
+      }, 400);
+    }
+  } catch (error: any) {
+    console.error("Widget outputs mutation error:", error);
+    return c.json({ 
+      error: "Internal server error",
+      message: error.message || "Unknown error"
     }, 500);
   }
 });

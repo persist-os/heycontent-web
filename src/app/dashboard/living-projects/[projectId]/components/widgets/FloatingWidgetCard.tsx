@@ -10,6 +10,7 @@
 import React from 'react'
 import { WidgetConfig } from '@/types/projectWidgets'
 import { getWidgetThemeClasses } from '../utils/widgetStyling'
+import { PlayCircle } from 'lucide-react'
 
 interface FloatingWidgetCardProps {
   widget: WidgetConfig
@@ -21,6 +22,8 @@ interface FloatingWidgetCardProps {
   scale: number
   onClick: () => void
   onHover?: (widgetId: string | null) => void
+  onRun?: (widgetId: string) => void
+  isRunning?: boolean
 }
 
 /**
@@ -36,7 +39,9 @@ export function FloatingWidgetCard({
   isHighlighted = false,
   scale,
   onClick,
-  onHover
+  onHover,
+  onRun,
+  isRunning = false
 }: FloatingWidgetCardProps) {
   // Dynamic sizing based on zoom level and content
   const getCardDimensions = () => {
@@ -140,6 +145,28 @@ export function FloatingWidgetCard({
                 <span className="font-medium text-foreground text-xs">{widget.priority}/10</span>
               </div>
             </div>
+            
+            {/* Run Widget Button - shown at medium zoom and above */}
+            {onRun && scale > 0.8 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation() // Prevent card click
+                  onRun(widget.widget_id)
+                }}
+                disabled={isRunning}
+                className={`
+                  w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg
+                  text-sm font-medium transition-all duration-200
+                  ${isRunning 
+                    ? 'bg-muted text-muted-foreground cursor-not-allowed' 
+                    : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 active:scale-[0.98]'
+                  }
+                `}
+              >
+                <PlayCircle className={`w-4 h-4 ${isRunning ? 'animate-pulse' : ''}`} />
+                <span>{isRunning ? 'Running...' : 'Run Widget'}</span>
+              </button>
+            )}
             {showMetadata && (
               <>
                 <div className="flex items-center justify-between text-sm">

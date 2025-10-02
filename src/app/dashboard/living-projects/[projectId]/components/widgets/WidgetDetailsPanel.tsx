@@ -7,17 +7,22 @@
 
 'use client'
 
-import React from 'react'
-import { X, Layers, Palette, Clock, Activity, Target, Calendar } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+import { X, Layers, Palette, Clock, Activity, Target, Calendar, Lightbulb, FileText, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { WidgetConfig } from '@/types/projectWidgets'
 import { getWidgetThemeClasses } from '../utils/widgetStyling'
+import { useRouter } from 'next/navigation'
+import { api } from '@/convex/_generated/api'
+import { useQuery } from 'convex/react'
+import { getCurrentUserId } from '@/app/lib/api-helpers'
 
 interface WidgetDetailsPanelProps {
   widget: WidgetConfig | null
   isOpen: boolean
   onClose: () => void
+  projectId: string
 }
 
 /**
@@ -26,9 +31,57 @@ interface WidgetDetailsPanelProps {
 export function WidgetDetailsPanel({ 
   widget, 
   isOpen, 
-  onClose 
+  onClose,
+  projectId
 }: WidgetDetailsPanelProps) {
+  const router = useRouter()
+  const [userId, setUserId] = useState<string | null>(null)
+
+  // Get user ID on mount
+  useEffect(() => {
+    const getUserId = async () => {
+      try {
+        const id = await getCurrentUserId()
+        setUserId(id)
+      } catch (error) {
+        console.error('Failed to get user ID:', error)
+      }
+    }
+    getUserId()
+  }, [])
+  
+  // Fetch latest widget output
+  const latestOutput = useQuery(
+    api.widgetOutputsQueries.getWidgetOutputData,
+    widget && userId ? {
+      userId,
+      filters: { widgetId: widget.widget_id },
+      limit: 1,
+      orderBy: 'desc'
+    } : 'skip'
+  )
+
   if (!isOpen || !widget) return null
+
+  // When limit: 1, the query returns a single object, not an array
+  const output = latestOutput && typeof latestOutput === 'object' && '_id' in latestOutput
+    ? latestOutput 
+    : null
+
+  // Debug logging
+  console.log('[WidgetDetailsPanel] Widget:', widget.widget_id, widget.title)
+  console.log('[WidgetDetailsPanel] Latest output raw:', latestOutput)
+  console.log('[WidgetDetailsPanel] Parsed output:', output)
+  console.log('[WidgetDetailsPanel] Has noteId:', output?.noteId)
+  console.log('[WidgetDetailsPanel] Has prompts:', output?.prompts?.length || 0)
+
+  const handleLaunchThinkingLab = () => {
+    if (output?.noteId) {
+      // Use outputId field from the output object (Convex _id)
+      const outputIdParam = output.outputId || output._id
+      router.push(`/dashboard/thinking_lab?noteId=${output.noteId}&widgetOutputId=${outputIdParam}`)
+    }
+  }
 
   const getPriorityColor = (priority: number) => {
     if (priority >= 8) return 'text-red-600 dark:text-red-400'
@@ -145,6 +198,94 @@ export function WidgetDetailsPanel({
                 {widget.widget_id}
               </code>
             </div>
+          </div>
+
+          {/* Latest Output - Always visible */}
+          <div className="pt-4 border-t border-border/30">
+            <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Latest Output
+            </h3>
+            
+            {output ? (
+              <>
+                {/* Launch Thinking Lab Button */}
+                {output.noteId && (
+                  <Button 
+                    onClick={handleLaunchThinkingLab}
+                    className="w-full mb-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Launch Thinking Lab
+                  </Button>
+                )}
+
+                {/* Output Details */}
+                <div className="space-y-3 mb-4">
+                  <div className="bg-muted/30 rounded-md p-3">
+                    <div className="text-xs font-medium text-muted-foreground mb-2">Output ID</div>
+                    <code className="text-xs text-foreground font-mono break-all">
+                      {output.outputId || output._id}
+                    </code>
+                  </div>
+                  
+                  {output.noteId && (
+                    <div className="bg-muted/30 rounded-md p-3">
+                      <div className="text-xs font-medium text-muted-foreground mb-2">Note ID</div>
+                      <code className="text-xs text-foreground font-mono break-all">
+                        {output.noteId}
+                      </code>
+                    </div>
+                  )}
+                </div>
+
+                {/* Conversation Prompts */}
+                {output.prompts && output.prompts.length > 0 ? (
+                  <div className="mb-4">
+                    <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                      <Lightbulb className="w-3 h-3" />
+                      Conversation Starters ({output.prompts.length})
+                    </h4>
+                    <div className="space-y-2">
+                      {output.prompts.slice(0, 3).map((prompt: any, idx: number) => (
+                        <div 
+                          key={idx}
+                          className="bg-muted/30 rounded-md p-2 text-xs text-foreground/80 hover:bg-muted/50 transition-colors cursor-default"
+                        >
+                          {prompt.text}
+                        </div>
+                      ))}
+                      {output.prompts.length > 3 && (
+                        <div className="text-xs text-muted-foreground/60 text-center">
+                          +{output.prompts.length - 3} more prompts
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mb-4 text-xs text-muted-foreground/60">
+                    No conversation prompts generated
+                  </div>
+                )}
+
+                {/* Output Timestamp */}
+                <div className="text-xs text-muted-foreground/60">
+                  Generated {new Date(output.createdAt).toLocaleDateString()} at {new Date(output.createdAt).toLocaleTimeString()}
+                </div>
+              </>
+            ) : (
+              <div className="space-y-2">
+                <div className="text-xs text-muted-foreground/60">
+                  {latestOutput === undefined ? 'Loading output data...' : 'No output generated yet. Run this widget to create output.'}
+                </div>
+                {latestOutput === undefined && (
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs text-muted-foreground/50">Fetching latest results...</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Actions */}
