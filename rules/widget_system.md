@@ -9,6 +9,7 @@ Transform project widgets from static AI-generated cards into a living, intellig
 ## Core Principles
 
 ### User Control First
+
 - Users can edit ANY widget property (title, description, type, schedule, deliverables)
 - Users can delete widgets (with warning about deleting all associated content)
 - Users can add custom widgets manually
@@ -16,18 +17,21 @@ Transform project widgets from static AI-generated cards into a living, intellig
 - Users save positions, system respects them
 
 ### Async Intelligence
+
 - AI works in background before user asks
 - Proactive but intentional - asks for input when needed
 - Tangible outputs (reports, lists, analyses) not empty screens
 - Smart defaults but full customization available
 
 ### Seamless Integration
+
 - Widget-created content visible across entire platform
 - Auto-suggest relevant notes/conversations to widgets
 - Widgets share intelligence through project-level context
 - Cross-widget data flow with visual indicators
 
 ### Simplicity & Elegance
+
 - Leverage ALL existing patterns (agent factory, distributed locks, circuit breaker)
 - No reinvention - use embedding service, convex toolkit, existing utilities
 - Small, modular code - nothing over 400 lines
@@ -76,6 +80,7 @@ Transform project widgets from static AI-generated cards into a living, intellig
 ### Extended Schema Changes
 
 #### 1. Update `project_widgets.widgets` Array
+
 Add fields to each widget object:
 
 ```typescript
@@ -122,6 +127,7 @@ Add fields to each widget object:
 ```
 
 #### 2. New Table: `widget_jobs`
+
 Job queue and execution tracking:
 
 ```typescript
@@ -196,6 +202,7 @@ widget_jobs: defineTable({
 ```
 
 #### 3. New Table: `widget_outputs`
+
 Deliverables and generated content:
 
 ```typescript
@@ -250,6 +257,7 @@ widget_outputs: defineTable({
 ```
 
 #### 4. New Table: `widget_activity_log`
+
 Centralized tracking for constellation view:
 
 ```typescript
@@ -291,6 +299,7 @@ widget_activity_log: defineTable({
 ```
 
 #### 5. New Table: `widget_data_flows`
+
 Track cross-widget intelligence sharing:
 
 ```typescript
@@ -316,6 +325,7 @@ widget_data_flows: defineTable({
 ```
 
 #### 6. New Table: `project_execution_limits`
+
 Track concurrent execution limits:
 
 ```typescript
@@ -342,6 +352,7 @@ project_execution_limits: defineTable({
 #### 7. Update Existing Tables
 
 **Add to `notes`:**
+
 ```typescript
 widgetId: v.optional(v.string()),   // Widget that created this
 projectId: v.optional(v.id("projects")), // Project association
@@ -349,6 +360,7 @@ isWidgetGenerated: v.optional(v.boolean()), // Flag for UI
 ```
 
 **Add to `conversations`:**
+
 ```typescript
 widgetId: v.optional(v.string()),
 projectId: v.optional(v.id("projects")),
@@ -381,6 +393,7 @@ backend-new/app/agents/widget_agents/
 ### Key Services
 
 #### 1. Widget Agent Factory
+
 Extends existing `agent_factory.py` pattern:
 
 ```python
@@ -413,6 +426,7 @@ async def create_widget_agent(
 ```
 
 #### 2. Job Queue Manager
+
 Handles distributed execution with locks:
 
 ```python
@@ -451,6 +465,7 @@ class WidgetJobQueueManager:
 ```
 
 #### 3. Content Suggester
+
 Leverages existing embedding service:
 
 ```python
@@ -497,6 +512,7 @@ class WidgetContentSuggester:
 ```
 
 #### 4. Intelligence Tracker
+
 Tracks cross-widget data flows:
 
 ```python
@@ -632,6 +648,7 @@ src/app/dashboard/living-projects/[projectId]/
 ### Key Components
 
 #### 1. Constellation Canvas (Infinite Space)
+
 Enhanced from current implementation:
 
 ```tsx
@@ -699,6 +716,7 @@ export function ConstellationCanvas({
 ```
 
 #### 2. Enhanced Widget Card
+
 Show status, notifications, quick actions:
 
 ```tsx
@@ -743,6 +761,7 @@ export function FloatingWidgetCard({ widget, onMove, onClick }) {
 ```
 
 #### 3. Redesigned Details Panel
+
 Comprehensive widget management:
 
 ```tsx
@@ -800,6 +819,7 @@ export function WidgetDetailsPanel({ widget, isOpen, onClose }) {
 ```
 
 #### 4. Activity Log Panel
+
 Centralized tracking overlay:
 
 ```tsx
@@ -836,9 +856,11 @@ export function ActivityLogPanel({ projectId }) {
 ## Implementation Strategy
 
 ### Phase 1: Foundation (Week 1)
+
 **Goal**: Schema, basic CRUD, no execution yet
 
 #### Tasks
+
 1. **Schema Extension**
    - Add fields to `project_widgets.widgets`
    - Create `widget_jobs` table
@@ -869,9 +891,11 @@ export function ActivityLogPanel({ projectId }) {
 ---
 
 ### Phase 2: Job System (Week 2)
+
 **Goal**: Job queue, execution, circuit breaker
 
 #### Backend Tasks
+
 1. **Job Queue Manager**
    - Create `job_queue_manager.py`
    - Implement distributed locking per widget
@@ -895,6 +919,7 @@ export function ActivityLogPanel({ projectId }) {
    - Graceful degradation with user notification
 
 #### Frontend Tasks
+
 1. **Job Status Components**
    - Create `WidgetJobStatus` - Real-time progress
    - Add status indicators to `FloatingWidgetCard`
@@ -913,9 +938,11 @@ export function ActivityLogPanel({ projectId }) {
 ---
 
 ### Phase 3: Outputs & Content (Week 3)
+
 **Goal**: Generate deliverables, auto-suggest content
 
 #### Backend Tasks
+
 1. **Output Generation**
    - Agents create outputs in `widget_outputs` table
    - Markdown formatting for reports
@@ -933,6 +960,7 @@ export function ActivityLogPanel({ projectId }) {
    - Allow manual association via UI
 
 #### Frontend Tasks
+
 1. **Output Display**
    - Create `WidgetOutputCard` component
    - Show in Details Panel "Outputs" tab
@@ -953,9 +981,11 @@ export function ActivityLogPanel({ projectId }) {
 ---
 
 ### Phase 4: Intelligence & Visualization (Week 4)
+
 **Goal**: Cross-widget data flows, crystal tracking, connection lines
 
 #### Backend Tasks
+
 1. **Intelligence Tracker**
    - Create `intelligence_tracker.py`
    - Track when Widget A uses Widget B's output
@@ -968,6 +998,7 @@ export function ActivityLogPanel({ projectId }) {
    - Provide API to fetch widget-crystal relationships
 
 #### Frontend Tasks
+
 1. **Connection Lines**
    - Update `ConnectionLines` component
    - Draw lines between widgets that share data
@@ -1068,6 +1099,7 @@ function ConnectionLines({ widgets, dataFlows, scale }) {
 ```
 
 ### Interaction
+
 - Hover over line → Show tooltip: "Research data from Vendor Tracker"
 - Click line → Highlight both connected widgets
 - Toggle button to show/hide connection lines
@@ -1128,18 +1160,21 @@ class WidgetCircuitBreakerManager:
 ## Testing Strategy
 
 ### Unit Tests
+
 - Widget mutations (CRUD)
 - Job queue logic
 - Circuit breaker integration
 - Content suggestion algorithm
 
 ### Integration Tests
+
 - End-to-end job execution
 - Distributed locking (prevent concurrent runs)
 - Real-time updates to frontend
 - Execution limit enforcement
 
 ### Manual Testing Checklist
+
 - [ ] Drag widget, position saved
 - [ ] Edit widget properties
 - [ ] Click "Run", job queued
@@ -1197,6 +1232,7 @@ export const migrateExistingWidgets = internalMutation({
 ```
 
 ### Graceful Degradation
+
 - If job system down, widgets still viewable/editable
 - If content suggester fails, manual association still works
 - If circuit breaker open, show clear message to user
@@ -1206,6 +1242,7 @@ export const migrateExistingWidgets = internalMutation({
 ## Next Steps
 
 ### Questions to Answer
+
 1. **Max active projects**: Start with 3, adjust based on usage?
 2. **Job timeout**: 10 minutes reasonable for all widget types?
 3. **Output storage**: Pure markdown in Convex, or support file attachments?
@@ -1213,6 +1250,7 @@ export const migrateExistingWidgets = internalMutation({
 5. **Custom widget creation**: Should AI suggest widget type, or user picks from list?
 
 ### Before Implementation
+
 1. Review this plan with team
 2. Confirm execution limits (3 per project, 3 projects per user)
 3. Finalize widget agent types (research, tracking, analysis, ?)
@@ -1220,6 +1258,7 @@ export const migrateExistingWidgets = internalMutation({
 5. Create migration script for existing widgets
 
 ### Implementation Order
+
 1. ✅ **Week 1**: Schema + Basic CRUD (foundation)
 2. **Week 2**: Job System (execution)
 3. **Week 3**: Outputs & Content (deliverables)
@@ -1230,6 +1269,7 @@ export const migrateExistingWidgets = internalMutation({
 ## Success Criteria
 
 ### MVP Launch (End of Week 4)
+
 - [ ] Users can drag widgets, positions saved
 - [ ] Users can edit any widget property
 - [ ] Users can click "Run" on widget → job executes async
@@ -1244,6 +1284,7 @@ export const migrateExistingWidgets = internalMutation({
 - [ ] Widget-created content labeled in platform
 
 ### Future Enhancements (Post-MVP)
+
 - Manual content association UI
 - Custom widget templates
 - Widget cloning/duplication
@@ -1259,4 +1300,3 @@ export const migrateExistingWidgets = internalMutation({
 *Document Version: 1.0*  
 *Last Updated: October 2, 2025*  
 *Status: Planning - Ready for Implementation*
-

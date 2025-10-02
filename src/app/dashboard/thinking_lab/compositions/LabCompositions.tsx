@@ -89,6 +89,7 @@ const ChatPanel = React.memo<{
           <div className="flex-1 px-6 py-4">
             {widgetOutputId && authData.user?.uid ? (
               <WidgetPrompts
+                key={widgetOutputId}
                 widgetOutputId={widgetOutputId}
                 userId={authData.user.uid}
                 onPromptClick={(promptText) => {
@@ -236,9 +237,17 @@ export function FullThinkingLab({
   contentContext,
   widgetOutputId
 }: LabCompositionProps) {
-  const { quotedContent, setQuotedContent, clearQuotedContent } = useDialogueStore()
+  const { quotedContent, setQuotedContent, clearQuotedContent, resetForWidget } = useDialogueStore()
   const { inputComponent, handleInputPopulate } = useInputSection(clearQuotedContent)
   const resizable = useResizablePanes(0.5)
+
+  // Reset dialogue store when widget output ID changes
+  React.useEffect(() => {
+    if (widgetOutputId) {
+      console.log('[FullThinkingLab] New widgetOutputId detected, resetting dialogue store:', widgetOutputId)
+      resetForWidget()
+    }
+  }, [widgetOutputId, resetForWidget])
 
   // Auto-snap to full screen when dragged close to edges
   React.useEffect(() => {

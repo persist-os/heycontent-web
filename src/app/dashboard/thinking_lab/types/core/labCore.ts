@@ -91,6 +91,7 @@ export interface DialogueActions {
     setStatus: (status: string | undefined) => void
     setQuotedContent: (content: string) => void
     clearQuotedContent: () => void
+    resetForWidget: () => void
 }
 
 export interface DialogueContextValue {

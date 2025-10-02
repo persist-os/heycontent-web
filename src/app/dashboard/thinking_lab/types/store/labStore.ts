@@ -47,6 +47,7 @@ export interface DialogueActions {
   setError: (error: string | undefined) => void
   setStatus: (status: string | undefined) => void
   toggleContextSearch: () => void
+  resetForWidget: () => void
 }
 
 export interface ContextItem {
