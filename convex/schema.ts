@@ -119,6 +119,15 @@ export default defineSchema({
       timestamp: v.optional(v.number()),
       // Optional hidden context used during generation, never shown in UI
       context: v.optional(v.string()),
+      // File attachments - metadata only, actual files in GCS
+      fileAttachments: v.optional(v.array(v.object({
+        file_url: v.string(),
+        original_filename: v.string(),
+        content_type: v.string(),
+        file_size: v.number(),
+        gcs_url: v.string(),
+        uploaded_at: v.string(),
+      }))),
     })),
     createdAt: v.number(),
     updatedAt: v.number(),

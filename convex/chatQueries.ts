@@ -46,4 +46,35 @@ export const getConversation = query({
   },
 });
 
+export const getConversationsWithFiles = query({
+  args: {
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const conversations = await ctx.db
+      .query("conversations")
+      .filter((q) => q.eq(q.field("userId"), args.userId))
+      .order("desc")
+      .collect();
+
+    // Filter to only conversations that have messages with file attachments
+    const conversationsWithFiles = conversations.filter(conv => 
+      conv.messages.some((msg: any) => 
+        msg.fileAttachments && msg.fileAttachments.length > 0
+      )
+    );
+
+    // Calculate total file count for each conversation
+    return conversationsWithFiles.map(conv => {
+      const fileCount = conv.messages.reduce((total: number, msg: any) => {
+        return total + (msg.fileAttachments?.length || 0);
+      }, 0);
+
+      return {
+        ...conv,
+        fileCount
+      };
+    });
+  },
+});
 
