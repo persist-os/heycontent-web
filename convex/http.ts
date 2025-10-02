@@ -1504,15 +1504,15 @@ const vectorSearchMutationSchema = z.object({
   maxConcurrent: z.number().int().positive().max(10).optional(),
 });
 
-// POST /api/vectorSearch/query - Optimized generic query endpoint
-app.post("/api/vectorSearch/query", async (c) => {
+// POST /api/vectorSearch/action - Optimized generic action endpoint (supports ctx.runAction)
+app.post("/api/vectorSearch/action", async (c) => {
   try {
     const requestBody = await c.req.json();
     const validation = vectorSearchQuerySchema.safeParse(requestBody);
     
     if (!validation.success) {
       return c.json({
-        error: "Invalid vector search query parameters",
+        error: "Invalid vector search action parameters",
         details: validation.error.flatten()
       }, 400);
     }
@@ -1523,17 +1523,18 @@ app.post("/api/vectorSearch/query", async (c) => {
       return c.json({ error: "userId and operation are required" }, 400);
     }
     
-    const result = await c.env.runQuery(api.vectorSearchQueries.getVectorSearchData, {
+    // Call as action instead of query to support ctx.runAction calls
+    const result = await c.env.runAction(api.vectorSearchQueries.getVectorSearchData, {
       userId,
       operation,
       ...rest
     });
     return c.json(result);
   } catch (error) {
-    console.error('Vector search query error:', error);
+    console.error('Vector search action error:', error);
     return c.json({ 
       success: false, 
-      error: 'Vector search query failed',
+      error: 'Vector search action failed',
       data: null 
     }, 500);
   }
