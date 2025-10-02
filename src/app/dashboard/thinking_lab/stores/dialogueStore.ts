@@ -255,6 +255,18 @@ export const useDialogueStore = create<DialogueStore>()(
 
         clearQuotedContent: () => {
             set({ quotedContent: "" })
+        },
+
+        // Reset for widget context - clears messages but preserves widget context
+        resetForWidget: () => {
+            set({
+                messages: [],
+                sessionId: `session-${Date.now()}`,
+                error: undefined,
+                currentStatus: undefined,
+                quotedContent: "",
+                // Note: conversationId is preserved for widget context
+            })
         }
     }))
 )
