@@ -288,6 +288,7 @@ export default defineSchema({
     title: v.string(),
     content: v.string(),
     embedding: v.array(v.float64()),
+    metadata: v.optional(v.any()), // Optional metadata for additional context
     createdAt: v.number(),
     updatedAt: v.number(),
   })

@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { api } from "./_generated/api";
 
 const noteType = v.union(
   v.literal("idea_bank"),
@@ -36,7 +37,10 @@ export const createNote = mutation({
       createdAt: now,
       updatedAt: now,
     });
-    return ctx.db.get(noteId);
+
+    const note = await ctx.db.get(noteId);
+
+    return note;
   },
 });
 

@@ -32,7 +32,7 @@ export default function SubscriptionOverview() {
   const { firebaseUser, authLoading } = useAuth();
   const { isAdmin, isSuperAdmin } = useAdminAuth();
   const canSeeAdminUsage = Boolean(isAdmin || isSuperAdmin);
-  const userId = getCurrentUserId() || '';
+  const [userId, setUserId] = useState<string>('');
   
   // API data state
   const [plans, setPlans] = useState<Record<string, any>>({});
@@ -50,6 +50,19 @@ export default function SubscriptionOverview() {
   const [processingSubscription, setProcessingSubscription] = useState(false);
   const [updatingQuantity, setUpdatingQuantity] = useState(false);
   const [redirectingToPortal, setRedirectingToPortal] = useState(false);
+
+  // Initialize userId on mount
+  useEffect(() => {
+    async function initUserId() {
+      try {
+        const uid = await getCurrentUserId();
+        setUserId(uid);
+      } catch (error) {
+        console.error('Failed to get userId:', error);
+      }
+    }
+    initUserId();
+  }, []);
 
   // Convex usage queries
   const convexUsageSummary = useQuery(api.usageEvents.getUsageSummary, userId ? { userId } : "skip");
@@ -109,8 +122,7 @@ export default function SubscriptionOverview() {
   // Fetch plans and subscription status from API
   useEffect(() => {
     async function fetchData() {
-      const currentUserId = getCurrentUserId();
-      if (!currentUserId) return;
+      if (!userId) return;
       setLoading(true);
       try {
         const apiKey = await getApiKeyWithRetry();
@@ -277,8 +289,7 @@ export default function SubscriptionOverview() {
   
   // Handle manage subscription (redirect to Stripe Customer Portal)
   const handleManageSubscription = async () => {
-    const currentUserId = getCurrentUserId();
-    if (!currentUserId) return;
+    if (!userId) return;
     setRedirectingToPortal(true);
     try {
       const apiKey = await getApiKey();
@@ -286,7 +297,7 @@ export default function SubscriptionOverview() {
         throw new Error('No API key found. Please log in again.');
       }
       const returnUrl = window.location.origin + '/settings';
-      const response = await createCustomerPortalSession(apiKey, currentUserId, firebaseUser?.email || '', returnUrl);
+      const response = await createCustomerPortalSession(apiKey, userId, firebaseUser?.email || '', returnUrl);
       if (response.success && response.data?.url) {
         window.location.href = response.data.url;
       } else {
@@ -314,9 +325,8 @@ export default function SubscriptionOverview() {
   const handleCloseQuantityModal = () => setShowQuantityModal(false);
 
   const handleSaveUbp = async (newUbpEnabled: boolean, newMonthlyLimit: number) => {
-    const currentUserId = getCurrentUserId();
-    if (!currentUserId) {
-      console.error('Cannot save: missing userId from API key');
+    if (!userId) {
+      console.error('Cannot save: missing userId');
       return;
     }
     
@@ -326,7 +336,7 @@ export default function SubscriptionOverview() {
       const safeLimit = Number.isFinite(newMonthlyLimit) ? Math.max(0, Math.floor(Number(newMonthlyLimit))) : 25;
       
       await mutateOverageSettings({ 
-        userId: currentUserId, 
+        userId: userId, 
         ubpEnabled: newUbpEnabled, 
         monthlyLimit: safeLimit 
       });
