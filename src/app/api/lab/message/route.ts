@@ -81,14 +81,15 @@ export async function POST(request: Request) {
     }
 
     console.log(`[${requestId}] Forwarding to chat API:`, {
-      url: `${BACKEND_URL}/api/v1/chat`,
+      url: `${BACKEND_URL}/api/v1/chat/message`,
       user_id: authenticated_user_id,
       query_length: query.length,
+      has_notepad_context: !!chatRequestBody.notepad_context,
       has_content_context: !!chatRequestBody.content_context
     });
 
-    // Forward to existing chat API
-    const response = await fetch(`${BACKEND_URL}/api/v1/chat`, {
+    // Forward to chat message endpoint
+    const response = await fetch(`${BACKEND_URL}/api/v1/chat/message`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -110,14 +111,17 @@ export async function POST(request: Request) {
 
     const data = await response.json();
     
+    // Backend wraps response in { success: true, data: {...} }
+    const backendData = data.success ? data.data : data;
+    
     // Transform chat API response to thinking lab format
     const labResponse = {
-      response_content: data.response || data.chat_response,
-      session_identifier: data.session_id,
-      user_input: data.user_message || query,
-      suggestions: data.suggestions || [],
+      response_content: backendData.response || backendData.chat_response || 'No response received',
+      session_identifier: backendData.session_id || session_identifier,
+      user_input: backendData.user_message || query,
+      suggestions: backendData.suggestions || [],
       metadata: {
-        ...data.metadata,
+        ...backendData.metadata,
         request_id: requestId,
         processing_time_ms: Date.now() - startTime
       }
@@ -126,7 +130,8 @@ export async function POST(request: Request) {
     console.log(`[${requestId}] Lab message request completed`, {
       duration_ms: Date.now() - startTime,
       response_length: labResponse.response_content?.length || 0,
-      suggestions_count: labResponse.suggestions?.length || 0
+      suggestions_count: labResponse.suggestions?.length || 0,
+      has_notepad_context: !!chatRequestBody.notepad_context
     });
 
     return NextResponse.json(labResponse);

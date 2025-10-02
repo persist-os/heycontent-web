@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef } from 'react'
+import { useNotepadStore } from '../../../stores/notepadStore'
 import type { Note, NoteUpdate } from '../../../../notes/types'
 import type { Id } from "@/convex/_generated/dataModel"
 import type { NoteHandlers, NotepadState, NotepadRefs } from '../types'
@@ -316,6 +317,9 @@ export function useNotepadHandlers({
     }
     
     setContent(newContent)
+    
+    // Sync with notepad store for cross-component access (e.g., chat can include notepad context)
+    useNotepadStore.getState().updateContent(newContent)
     
     // Clear existing auto-save timeout
     if (autoSaveTimeoutRef.current) {

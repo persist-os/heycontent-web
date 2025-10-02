@@ -45,6 +45,7 @@ import type * as intelligenceMutations from "../intelligenceMutations.js";
 import type * as intelligenceQueries from "../intelligenceQueries.js";
 import type * as intelligenceScheduled from "../intelligenceScheduled.js";
 import type * as internal_ from "../internal.js";
+import type * as migrations_migrateReservedShards from "../migrations/migrateReservedShards.js";
 import type * as migrations from "../migrations.js";
 import type * as noteMutations from "../noteMutations.js";
 import type * as noteQueries from "../noteQueries.js";
@@ -123,6 +124,7 @@ declare const fullApi: ApiFromModules<{
   intelligenceQueries: typeof intelligenceQueries;
   intelligenceScheduled: typeof intelligenceScheduled;
   internal: typeof internal_;
+  "migrations/migrateReservedShards": typeof migrations_migrateReservedShards;
   migrations: typeof migrations;
   noteMutations: typeof noteMutations;
   noteQueries: typeof noteQueries;

@@ -1,5 +1,6 @@
-import { query } from "./_generated/server";
+import { query, action } from "./_generated/server";
 import { v } from "convex/values";
+import { api } from "./_generated/api";
 
 /**
  * Optimized Vector Search Queries
@@ -63,8 +64,8 @@ const queryVectorSearchWithOptions = async (
   return options.limit ? await orderedQuery.take(options.limit) : await orderedQuery.take(50);
 };
 
-// Single generic vector search query function
-export const getVectorSearchData = query({
+// Single generic vector search action function (changed from query to support ctx.runAction)
+export const getVectorSearchData = action({
   args: {
     userId: v.string(),
     operation: v.string(),
