@@ -257,7 +257,7 @@ export default function HistoryPage() {
             {searchQuery ? 'No conversations match your search.' : 'Start a conversation to see your chat history here.'}
           </p>
           <Button
-            onClick={() => router.push('/dashboard/chat')}
+            onClick={() => router.push('/dashboard/thinking_lab')}
             className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
             Start New Chat
@@ -273,7 +273,7 @@ export default function HistoryPage() {
               <div className="flex items-start justify-between">
                 <div
                   className="flex-1 cursor-pointer"
-                  onClick={() => router.push(`/dashboard/chat?id=${chat.id}`)}
+                  onClick={() => router.push(`/dashboard/thinking_lab?chatId=${chat.id}`)}
                 >
                   <div className="flex items-start gap-3">
                     <MessageSquare className="w-5 h-5 text-muted-foreground/70 shrink-0 mt-0.5" />

@@ -25,9 +25,11 @@ Living Projects treats each project as a unique entity with its own personality,
 
 #### 🧩 **Widget Ecosystem**
 
-- **WidgetFactory**: AI-powered widget recommendation engine
-- **LivingProjectView**: Personalized project dashboard with dynamic widgets
-- **ProjectReveal**: Fingerprint evolution and widget instantiation
+- **ConstellationCanvas**: Main widget constellation view with pan/zoom
+- **FloatingWidgetCard**: Individual widget cards with dynamic sizing
+- **WidgetGenerationLoader**: Loading states during AI widget generation
+- **WidgetDetailsPanel**: Detailed widget information and interactions
+- **useWidgetGeneration**: Hook for AI-powered widget generation via backend agents
 
 #### 🎨 **UI Components**
 
@@ -44,25 +46,32 @@ living-projects/
 ├── [projectId]/
 │   ├── page.tsx                # Individual project view
 │   └── components/
-│       └── ProjectViewScreen.tsx # Project detail screen
+│       ├── ProjectViewScreen.tsx # Project detail screen with AI widgets
+│       ├── hooks/
+│       │   ├── useWidgetGeneration.ts # AI widget generation hook
+│       │   ├── useProjectActions.ts   # Project CRUD operations
+│       │   ├── useProjectFingerprint.ts # Fingerprint data fetching
+│       │   └── useWidgetLayout.ts     # Widget positioning logic
+│       ├── utils/
+│       │   └── widgetStyling.ts      # Widget theme and styling utilities
+│       └── widgets/
+│           ├── ConstellationCanvas.tsx # Main widget constellation view
+│           ├── FloatingWidgetCard.tsx  # Individual widget rendering
+│           ├── WidgetDetailsPanel.tsx  # Widget detail view
+│           └── WidgetGenerationLoader.tsx # Generation loading state
 ├── components/
-│   ├── ConstellationView.tsx     # Main constellation interface
+│   ├── ConstellationView.tsx     # Main project constellation interface
 │   ├── ConnectionLines.tsx       # Project relationship lines
 │   ├── ConstellationControls.tsx # Navigation controls
 │   ├── ConstellationMinimap.tsx  # Overview minimap
 │   ├── CreateProjectModal.tsx    # New project creation
 │   ├── LoadingState.tsx          # Loading UI
-│   ├── widgets/
-│   │   ├── README.md            # Widget system documentation
-│   │   ├── WidgetFactory.tsx    # Widget recommendation engine
-│   │   ├── LivingProjectView.tsx # Project dashboard
-│   │   ├── ProjectReveal.tsx    # Fingerprint revelation
-│   │   └── ConstellationTransition.tsx # Transition animations
-│   └── ...
+│   └── widgets/
+│       └── ConstellationTransition.tsx # Transition animations
 └── hooks/
-    ├── useConstellationLayout.ts # Layout algorithms
-    ├── usePanZoom.ts           # Pan/zoom functionality
-    └── useProjectConnections.ts # Project relationships
+   ├── useConstellationLayout.ts # Layout algorithms
+   ├── usePanZoom.ts           # Pan/zoom functionality
+   └── useProjectConnections.ts # Project relationships
 ```
 
 ## 🔄 Data Flow
@@ -93,18 +102,29 @@ import { ProjectDiscoveryChat } from '../chat/components/ProjectDiscoveryChat'
 const fingerprint = await generateFingerprint(conversationHistory)
 ```
 
-### 4. Widget Recommendation
+### 4. AI Widget Generation
 
 ```tsx
-// Widget factory suggests personalized widgets
-const widgets = analyzeFingerprintForWidgets(fingerprint)
+// Backend AI agents generate personalized widgets
+const response = await fetchWithApiKey(`/api/projects/${projectId}/generate-widgets`, {
+  method: 'POST',
+  body: JSON.stringify({
+    fingerprint_id: currentFingerprint._id,
+    project_id: projectId,
+    user_preferences: {}
+  })
+})
 ```
 
-### 5. Dashboard Creation
+### 5. Widget Display
 
 ```tsx
-// Living project view renders personalized dashboard
-<LivingProjectView fingerprint={fingerprint} widgets={widgets} />
+// ConstellationCanvas renders AI-generated widgets
+<ConstellationCanvas
+  widgets={projectWidgets.widgets}
+  onWidgetClick={handleWidgetClick}
+  onWidgetHover={handleWidgetHover}
+/>
 ```
 
 ## 🔗 Chat System Integration
@@ -125,7 +145,7 @@ const handleProjectClick = (project: Project) => {
     router.push(`/dashboard/living-projects/${project._id}`)
   } else {
     // Start discovery chat
-    router.push(`/dashboard/chat?projectId=${project._id}`)
+    router.push(`/dashboard/thinking_lab?projectId=${project._id}`)
   }
 }
 ```
@@ -222,10 +242,23 @@ function ProjectSetup({ projectId }) {
 ### Widget Integration
 
 ```tsx
-import { LivingProjectView } from './components/widgets/LivingProjectView'
+import { ConstellationCanvas } from './[projectId]/components/widgets/ConstellationCanvas'
+import { useQuery } from 'convex/react'
+import { api } from '@/convex/_generated/api'
 
-function ProjectDashboard({ fingerprint }) {
-  return <LivingProjectView fingerprint={fingerprint} />
+function ProjectDashboard({ projectId }) {
+  const projectWidgets = useQuery(
+    api.projectWidgetsQueries.getProjectWidgetsByProject,
+    { projectId }
+  )
+  
+  return (
+    <ConstellationCanvas
+      widgets={projectWidgets?.widgets || []}
+      onWidgetClick={(widget) => console.log('Clicked:', widget)}
+      onWidgetHover={(widgetId) => console.log('Hovered:', widgetId)}
+    />
+  )
 }
 ```
 
@@ -270,7 +303,18 @@ The system continuously learns from:
 
 ## 🎯 Widget System
 
+### AI-Driven Widget Generation
+
+Widgets are now generated by backend AI agents that analyze project fingerprints and user behavior:
+
+1. **Backend Generation**: `/api/projects/${projectId}/generate-widgets` endpoint
+2. **Intelligent Analysis**: AI agents examine fingerprint characteristics
+3. **Convex Storage**: Generated widgets stored in real-time database
+4. **Automatic Updates**: Widgets regenerate when fingerprint evolves
+
 ### Widget Types
+
+Widget types are dynamically determined by AI based on project characteristics:
 
 - **Chat**: AI conversation interface
 - **Progress Trackers**: Writing, code, research progress
@@ -278,27 +322,34 @@ The system continuously learns from:
 - **Collaboration**: Team boards, peer review systems
 - **Resource Management**: Libraries, inspiration boards
 - **Analytics**: Mood tracking, productivity metrics
+- **Domain-Specific**: Custom widgets for unique project types
 
 ### Theme System
+
+Theme classes are centralized in `widgetStyling.ts`:
 
 - **Warm**: Orange/yellow gradients for creative projects
 - **Clean**: Slate/gray gradients for technical projects
 - **Professional**: Blue/indigo gradients for business projects
+- **Creative**: Purple/pink gradients for artistic projects
 
-### Layout Engine
+### Constellation Layout
 
-- **Force-directed positioning** for natural project relationships
-- **Responsive grid system** that adapts to screen size
-- **Zoom-based detail levels** for scalable information density
+- **Force-directed positioning** for natural widget relationships
+- **Virtual rendering** for performance with many widgets
+- **Zoom-responsive detail** showing more content at higher zoom levels
+- **Pan and zoom** with smooth gesture support
+- **Connection visualization** showing widget relationships
 
 ## 🔮 Future Evolution
 
 ### AI Integration
 
-- **ML-powered widget recommendations** based on user behavior
-- **Natural language project analysis** for automatic categorization
-- **Predictive features** anticipating user needs
-- **Collaborative AI** learning from team patterns
+- ✅ **AI-powered widget generation** using backend agents (IMPLEMENTED)
+- ✅ **Fingerprint-based recommendations** analyzing 25+ project characteristics (IMPLEMENTED)
+- **Enhanced ML personalization** learning from widget interaction patterns
+- **Predictive features** anticipating user needs based on project evolution
+- **Collaborative AI** learning from team patterns and shared workflows
 
 ### Advanced Features
 
@@ -339,8 +390,9 @@ npm test -- --testPathPattern=layout
 ## 🔗 System Dependencies
 
 ### Required Systems
-- **Chat System** (`/dashboard/chat/`): Required for project discovery and fingerprinting
-- **Convex Backend**: Real-time data persistence and synchronization
+- **Chat System** (`/dashboard/thinking_lab/`): Required for project discovery and fingerprinting
+- **Convex Backend**: Real-time data persistence, synchronization, and widget storage
+- **Backend AI Agents** (`/api/projects/.../generate-widgets`): AI-driven widget generation
 - **Authentication**: Firebase user management and permissions
 
 ### Optional Integrations
@@ -352,11 +404,12 @@ npm test -- --testPathPattern=layout
 
 The living projects system is designed to be extensible:
 
-1. **New Widget Types**: Add to `WidgetFactory.tsx` with appropriate themes
-2. **Layout Algorithms**: Extend `useConstellationLayout.ts` for new positioning
-3. **Interaction Patterns**: Modify hooks in `/hooks` directory
-4. **Visual Themes**: Update theme system in widget components
-5. **Chat Integration**: Extend discovery flows in `/chat/components/`
+1. **New Widget Types**: Extend backend AI agents to generate new widget types
+2. **Widget Themes**: Update `widgetStyling.ts` for new visual themes
+3. **Layout Algorithms**: Extend `useWidgetLayout.ts` for new positioning strategies
+4. **Interaction Patterns**: Modify hooks in `/[projectId]/components/hooks/` directory
+5. **AI Generation Logic**: Enhance backend agents for better widget recommendations
+6. **Chat Integration**: Extend discovery flows in `/chat/components/`
 
 ## 📈 Performance Considerations
 

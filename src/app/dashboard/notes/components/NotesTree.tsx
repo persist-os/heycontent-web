@@ -104,7 +104,7 @@ export function NotesTree({
         customType: selectedFilter === 'projects' ? undefined : (selectedFilter !== 'all' ? selectedFilter : undefined)
       });
       if (newNoteId) {
-        router.push(`/dashboard/chat?noteId=${newNoteId}`);
+        router.push(`/dashboard/thinking_lab?noteId=${newNoteId}`);
       }
     } catch (error) {
       console.error('Failed to create note:', error);

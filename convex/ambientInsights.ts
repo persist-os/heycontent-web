@@ -121,68 +121,105 @@ export const createNewInsightsDocument = internalMutation({
 
 /**
  * Aggregate user data for Ambient Insights agent (single call)
+ * Robust error handling ensures system never fails due to data fetch issues
  */
 export const getUserDataBundle = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
     const userId = args.userId;
-    // Fetch last 3 conversations
+    
+    // Initialize all data arrays to ensure they always exist
     let conversations: any[] = [];
+    let notes: any[] = [];
+    let crystals: any[] = [];
+    let crystalShards: any[] = [];
+    let projects: any[] = [];
+    
+    // Fetch last 3 conversations with robust error handling
     try {
       conversations = await ctx.db
         .query("conversations")
         .withIndex("by_user", q => q.eq("userId", userId))
         .order("desc")
         .take(3);
-    } catch (e) {
+    } catch (error) {
+      console.warn(`Failed to fetch conversations for user ${userId}:`, error);
       conversations = [];
     }
 
-    // Fetch last 3 notes
-    let notes: any[] = [];
+    // Fetch last 3 notes with robust error handling
     try {
       notes = await ctx.db
         .query("notes")
         .withIndex("by_user", q => q.eq("userId", userId))
         .order("desc")
         .take(3);
-    } catch (e) {
+    } catch (error) {
+      console.warn(`Failed to fetch notes for user ${userId}:`, error);
       notes = [];
     }
 
-    // Fetch last 3 YouTube video analyses
-    let youtubeAnalyses: any[] = [];
+    // Fetch all crystals for the user with robust error handling
     try {
-      youtubeAnalyses = await ctx.db
-        .query("youtubeVideos")
-        .withIndex("by_userId", q => q.eq("userId", userId))
-        .filter(q => q.neq(q.field("analysis"), null))
+      crystals = await ctx.db
+        .query("crystals")
+        .withIndex("by_user", q => q.eq("userId", userId))
+        .collect();
+    } catch (error) {
+      console.warn(`Failed to fetch crystals for user ${userId}:`, error);
+      crystals = [];
+    }
+
+    // Fetch 10 most recent crystal shards with robust error handling
+    try {
+      crystalShards = await ctx.db
+        .query("crystal_shards")
+        .withIndex("by_user", q => q.eq("userId", userId))
         .order("desc")
-        .take(3);
-    } catch (e) {
-      youtubeAnalyses = [];
+        .take(10);
+    } catch (error) {
+      console.warn(`Failed to fetch crystal shards for user ${userId}:`, error);
+      crystalShards = [];
     }
 
-    // Fetch current persona
-    let persona = null;
+    // Fetch projects with structured summary and robust error handling
     try {
-      persona = await ctx.db
-        .query("personas")
-        .withIndex("by_userId", q => q.eq("userId", userId))
-        .filter(q => q.eq(q.field("isActive"), true))
-        .first();
-    } catch (e) {
-      persona = null;
+      const allProjects = await ctx.db
+        .query("projects")
+        .withIndex("by_user", q => q.eq("userId", userId))
+        .order("desc")
+        .collect();
+      
+      // Create structured summaries for each project (removed YouTube, Instagram, Gmail)
+      projects = allProjects.map(project => ({
+        _id: project._id,
+        name: project.name,
+        description: project.description,
+        createdAt: project.createdAt,
+        updatedAt: project.updatedAt,
+        summary: {
+          totalItems: (project.noteIds?.length || 0) + 
+                     (project.conversationIds?.length || 0),
+          itemTypes: {
+            notes: project.noteIds?.length || 0,
+            conversations: project.conversationIds?.length || 0,
+          },
+          hasFingerprint: !!project.fingerprintId,
+          lastActivity: project.updatedAt,
+        }
+      }));
+    } catch (error) {
+      console.warn(`Failed to fetch projects for user ${userId}:`, error);
+      projects = [];
     }
 
-    // Note: Ambient insights are intentionally excluded from the data bundle
-    // to prevent the AI from being influenced by previous insights when generating new ones
-
+    // Always return a valid data structure, even if all fetches fail
     return {
       conversations,
       notes,
-      youtubeAnalyses,
-      persona,
+      crystals,
+      crystalShards,
+      projects,
     };
   },
 });

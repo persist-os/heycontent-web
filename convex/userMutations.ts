@@ -114,6 +114,31 @@ export const create_user = mutation(async ({ db }, { name, email, image, userId,
     updatedAt: now,
   });
   
+  // Initialize intelligence config for new user
+  try {
+    await db.insert("intelligence_config", {
+      userId,
+      triggers: {
+        chat_messages: 25,
+        smart_notes: 10,
+        crystal_formations: 5,
+        days_since_last: 7,
+      },
+      preferences: {
+        analysis_depth: "standard" as "fast" | "standard" | "deep",
+        auto_archival: false,
+        review_notifications: true,
+      },
+      last_analysis: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+    console.log(`[USER CREATION] Initialized intelligence config for user ${userId}`);
+  } catch (error) {
+    // Non-critical - log but don't fail user creation
+    console.log(`[USER CREATION] Failed to initialize intelligence config: ${error}`);
+  }
+  
   // Process referral if user was referred by someone
   if (referredBy && referredBy.trim()) {
     try {
@@ -207,31 +232,8 @@ export const updateUserStripeData = mutation({
   },
 });
 
-// Gmail quota optimization - update lastGmailFetch timestamp
-export const updateLastGmailFetch = mutation({
-  args: {
-    userId: v.string(),
-    timestamp: v.optional(v.number()),
-  },
-  handler: async ({ db }, args) => {
-    const user = await db
-      .query("users")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .first();
-
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    const now = Date.now();
-    await db.patch(user._id, {
-      lastGmailFetch: args.timestamp || now,
-      updatedAt: now,
-    });
-    
-    return { success: true, userId: user._id, timestamp: args.timestamp || now };
-  },
-});
+// ⚠️ DEPRECATED: Gmail integration removed - use crystal system for email insights
+// TODO: Remove this mutation after confirming no active usage
 
 // Delete all user data
 export const deleteUserAndData = mutation({
@@ -271,10 +273,8 @@ export const deleteUserAndData = mutation({
     await batchDelete("users", () =>
       ctx.db.query("users").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
-    // Personas
-    await batchDelete("personas", () =>
-      ctx.db.query("personas").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
+    // ⚠️ DEPRECATED: Old personas table removed - now using crystal system
+    // TODO: Remove this comment after confirming no old persona data exists
     // Conversations
     await batchDelete("conversations", () =>
       ctx.db.query("conversations").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
@@ -292,57 +292,25 @@ export const deleteUserAndData = mutation({
     await batchDelete("rate_limits", () =>
       ctx.db.query("rate_limits").withIndex("by_user_resource", (q) => q.eq("user_id", userId)).take(BATCH_SIZE)
     );
-    // gmailTokens
-    await batchDelete("gmailTokens", () =>
-      ctx.db.query("gmailTokens").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // gmailAccounts
-    await batchDelete("gmailAccounts", () =>
-      ctx.db.query("gmailAccounts").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // gmailThreads
-    await batchDelete("gmailThreads", () =>
-      ctx.db.query("gmailThreads").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // gmailMessages
-    await batchDelete("gmailMessages", () =>
-      ctx.db.query("gmailMessages").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // gmailHistory
-    await batchDelete("gmailHistory", () =>
-      ctx.db.query("gmailHistory").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // youtubeTokens
-    await batchDelete("youtubeTokens", () =>
-      ctx.db.query("youtubeTokens").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // youtubeChannels
-    await batchDelete("youtubeChannels", () =>
-      ctx.db.query("youtubeChannels").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // youtubeVideos
-    await batchDelete("youtubeVideos", () =>
-      ctx.db.query("youtubeVideos").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // instagramAccounts
-    await batchDelete("instagramAccounts", () =>
-      ctx.db.query("instagramAccounts").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // instagramPosts
-    await batchDelete("instagramPosts", () =>
-      ctx.db.query("instagramPosts").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // instagramTrackerAnalysis
-    await batchDelete("instagramTrackerAnalysis", () =>
-      ctx.db.query("instagramTrackerAnalysis").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // instagramBatchAnalysis
-    await batchDelete("instagramBatchAnalysis", () =>
-      ctx.db.query("instagramBatchAnalysis").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
     // usageEvents
     await batchDelete("usageEvents", () =>
       ctx.db.query("usageEvents").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // crystals
+    await batchDelete("crystals", () =>
+      ctx.db.query("crystals").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // crystal_shards
+    await batchDelete("crystal_shards", () =>
+      ctx.db.query("crystal_shards").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // crystal_formation_runs
+    await batchDelete("crystal_formation_runs", () =>
+      ctx.db.query("crystal_formation_runs").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    // folders
+    await batchDelete("folders", () =>
+      ctx.db.query("folders").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
     return summary;
   },

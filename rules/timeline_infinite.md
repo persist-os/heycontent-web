@@ -38,10 +38,11 @@ This document is a technical guide for developers working on the Infinite Timeli
 - **isLoading:** UI loading state.
 - **Actions:** `setZoomLevel`, `setScrollPosition`, `setVisibleDateRange`, `addEvents`, `setLoading`.
 
-### Persona Store (`@persona-store.ts`)
-- **allPersonas, personaHistory, currentPersona:** All personas, historical, and active.
-- **Actions:** `initializePersonaData`, `refreshPersonaData`, `activatePersona`, `updatePersona`, `deletePersona`, etc.
-- **Best Practice:** Always call `refreshPersonaData` after a mutation to ensure UI consistency.
+### ⚠️ DEPRECATED: Crystal Store (formerly Persona Store)
+- **REPLACED BY:** Crystal and shard system - use crystal queries instead
+- **OLD ACTIONS:** `initializePersonaData`, `refreshPersonaData`, etc. - DEPRECATED
+- **NEW PATTERN:** Use `api.crystalQueries.getPersonaData` for crystal/shard data
+- **TODO:** Update this documentation to reflect crystal system patterns
 
 ---
 

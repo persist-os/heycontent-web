@@ -46,6 +46,31 @@ export async function POST(request: Request) {
     const { noteId, noteContent } = body;
     debug('Parsed request data:', { noteId, noteContent: noteContent?.length });
     
+    // PERSONA ID DETECTION LOG
+    const isLikelyPersonaId = noteId && noteId.length > 20 && noteId.startsWith('jh7b')
+    console.log(`🚨 [METADATA API] ${requestId} - ID Analysis:`, {
+      noteId,
+      contentLength: noteContent?.length,
+      isLikelyPersonaId,
+      idLength: noteId?.length,
+      idPrefix: noteId?.substring(0, 10),
+      timestamp: Date.now(),
+      stackTrace: new Error().stack?.split('\n').slice(0, 3).join('\n')
+    });
+    
+    if (isLikelyPersonaId) {
+      console.error(`🚨 [PERSONA ID IN METADATA API] ${requestId}:`, {
+        noteId,
+        message: 'Deprecated persona ID detected in metadata generation request',
+        shouldReject: true
+      });
+      return NextResponse.json({ 
+        error: 'Invalid ID format - persona IDs are deprecated', 
+        status: 400,
+        noteId 
+      }, { status: 400 });
+    }
+    
     // DUPLICATE DETECTION LOG
     console.log(`🔍 [DUPLICATE CHECK] ${requestId}:`, {
       noteId,

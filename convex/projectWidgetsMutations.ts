@@ -2,56 +2,150 @@ import { v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
-// Create project widgets
-export const createProjectWidgets = mutation({
+/**
+ * Clean Project Widgets Mutations
+ * Optimized for performance, validation, and simplicity
+ * Only 2 functions needed - no redundancy, no optional chaos
+ */
+
+// ============================================================================
+// WIDGET CATEGORY VALIDATOR
+// ============================================================================
+
+const widgetCategoryValidator = v.object({
+  name: v.string(),
+  icon: v.optional(v.string()),
+  description: v.optional(v.string()),
+  display_order: v.optional(v.number()),
+});
+
+// ============================================================================
+// WIDGET VALIDATOR
+// ============================================================================
+
+const widgetValidator = v.object({
+  widget_id: v.string(),
+  widget_type: v.string(), // Flexible - any widget type
+  title: v.string(),
+  description: v.optional(v.string()),
+  category: v.string(),
+  
+  // Layout and appearance - flexible
+  priority: v.number(),
+  size: v.string(), // Flexible - any size
+  theme: v.string(), // Flexible - any theme
+  position: v.number(),
+  
+  // Configuration
+  config: v.any(),
+  data_sources: v.array(v.string()),
+  update_frequency: v.string(), // Flexible - any frequency
+  
+  // Permissions
+  interactive: v.boolean(),
+  editable: v.boolean(),
+  shareable: v.boolean(),
+});
+
+// ============================================================================
+// CORE MUTATIONS
+// ============================================================================
+
+/**
+ * Upsert project widgets - handles both create and update
+ * Used by: Backend widget generation, frontend updates
+ */
+export const upsertProjectWidgets = mutation({
   args: {
     projectId: v.id("projects"),
     fingerprintId: v.id("project_fingerprints"),
     userId: v.string(),
-    categories: v.array(v.object({
-      name: v.string(),
-      icon: v.string(),
-      description: v.string(),
-    })),
-    widgets: v.array(v.object({
-      widget_id: v.string(),
-      widget_type: v.string(),
-      title: v.string(),
-      description: v.string(),
-      category: v.string(),
-      priority: v.number(),
-      size: v.string(),
-      theme: v.string(),
-      position: v.number(),
-      config: v.any(),
-      data_sources: v.array(v.string()),
-      update_frequency: v.string(),
-      interactive: v.boolean(),
-      editable: v.boolean(),
-      shareable: v.boolean(),
-    })),
-    layout_type: v.string(),
+    
+    // Widget data with full validation
+    categories: v.array(widgetCategoryValidator),
+    widgets: v.array(widgetValidator),
+    
+    // Global layout settings - flexible
+    layout_type: v.string(), // Any layout type
     columns: v.number(),
     rows: v.number(),
-    global_theme: v.string(),
-    color_scheme: v.string(),
-    font_style: v.string(),
+    
+    // Global appearance - flexible
+    global_theme: v.string(), // Any theme
+    color_scheme: v.string(), // Any color scheme
+    font_style: v.string(), // Any font style
+    
+    // Customization settings
     allow_customization: v.boolean(),
     allow_reordering: v.boolean(),
     allow_resizing: v.boolean(),
+    
+    // Technical settings
     required_integrations: v.array(v.string()),
-    data_refresh_strategy: v.string(),
+    data_refresh_strategy: v.string(), // Any strategy
+    
+    // Metadata
     version: v.string(),
-    confidence: v.number(),
+    confidence: v.number(), // 0-1
+    
+    // Optional AI-generated timestamps (ignored, we set our own)
+    generated_at: v.optional(v.union(v.string(), v.number())),
+    updated_at: v.optional(v.union(v.string(), v.number()))
   },
+  returns: v.id("project_widgets"),
   handler: async (ctx, args) => {
+    // Validate required fields
+    if (!args.userId || args.userId.trim() === '') {
+      throw new Error("Valid user ID is required");
+    }
+    
+    // Validate project exists and user owns it
+    const project = await ctx.db.get(args.projectId);
+    if (!project) {
+      throw new Error("Project not found");
+    }
+    
+    if (project.userId !== args.userId) {
+      throw new Error("Access denied: You don't own this project");
+    }
+    
+    // Validate fingerprint exists and belongs to this project
+    const fingerprint = await ctx.db.get(args.fingerprintId);
+    if (!fingerprint) {
+      throw new Error("Fingerprint not found");
+    }
+    
+    if (fingerprint.projectId !== args.projectId || fingerprint.userId !== args.userId) {
+      throw new Error("Access denied: Fingerprint doesn't belong to this project");
+    }
+    
+    // Basic validation only (no strict ranges)
+    if (args.confidence < 0 || args.confidence > 1) {
+      throw new Error("Confidence must be between 0 and 1");
+    }
+    
+    // Check if widgets already exist for this project
+    const existingWidgets = await ctx.db
+      .query("project_widgets")
+      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+      .filter((q) => q.eq(q.field("status"), "active"))
+      .first();
+    
     const now = Date.now();
     
-    const widgetsId = await ctx.db.insert("project_widgets", {
+    // Clean the data - remove AI timestamps and use programmatic ones
+    // Add missing display_order to categories if not provided
+    const cleanCategories = args.categories.map((category, index) => ({
+      ...category,
+      display_order: category.display_order ?? index + 1,
+    }));
+    
+    // Explicitly exclude AI timestamp fields and build clean data
+    const cleanData = {
       projectId: args.projectId,
       fingerprintId: args.fingerprintId,
       userId: args.userId,
-      categories: args.categories,
+      categories: cleanCategories,
       widgets: args.widgets,
       layout_type: args.layout_type,
       columns: args.columns,
@@ -64,175 +158,75 @@ export const createProjectWidgets = mutation({
       allow_resizing: args.allow_resizing,
       required_integrations: args.required_integrations,
       data_refresh_strategy: args.data_refresh_strategy,
-      generated_at: now,
       version: args.version,
       confidence: args.confidence,
+      // Always use programmatic timestamps - never AI generated ones  
       status: "active",
-    });
-
-    return widgetsId;
-  },
-});
-
-// Update project widgets
-export const updateProjectWidgets = mutation({
-  args: {
-    widgetsId: v.id("project_widgets"),
-    updates: v.object({
-      widgets: v.optional(v.array(v.object({
-        widget_id: v.string(),
-        widget_type: v.string(),
-        title: v.string(),
-        description: v.string(),
-        category: v.string(),
-        priority: v.number(),
-        size: v.string(),
-        theme: v.string(),
-        position: v.number(),
-        config: v.any(),
-        data_sources: v.array(v.string()),
-        update_frequency: v.string(),
-        interactive: v.boolean(),
-        editable: v.boolean(),
-        shareable: v.boolean(),
-      }))),
-      layout_type: v.optional(v.string()),
-      columns: v.optional(v.number()),
-      rows: v.optional(v.number()),
-      global_theme: v.optional(v.string()),
-      color_scheme: v.optional(v.string()),
-      font_style: v.optional(v.string()),
-      allow_customization: v.optional(v.boolean()),
-      allow_reordering: v.optional(v.boolean()),
-      allow_resizing: v.optional(v.boolean()),
-      required_integrations: v.optional(v.array(v.string())),
-      data_refresh_strategy: v.optional(v.string()),
-      version: v.optional(v.string()),
-      confidence: v.optional(v.number()),
-      status: v.optional(v.string()),
-    }),
-  },
-  handler: async (ctx, args) => {
-    const { widgetsId, updates } = args;
+      // Note: generated_at and updated_at from AI are explicitly excluded
+    };
     
-    await ctx.db.patch(widgetsId, updates);
-
-    return widgetsId;
-  },
-});
-
-// Update widget configuration
-export const updateWidgetConfig = mutation({
-  args: {
-    widgetsId: v.id("project_widgets"),
-    widgetId: v.string(),
-    config: v.any(),
-  },
-  handler: async (ctx, args) => {
-    const widgets = await ctx.db.get(args.widgetsId);
-    if (!widgets) {
-      throw new Error("Project widgets not found");
+    if (existingWidgets) {
+      // Update existing widgets - always ensure both timestamps exist
+      await ctx.db.patch(existingWidgets._id, {
+        ...cleanData,
+        // Preserve original createdAt if it exists, otherwise set it now for migration
+        createdAt: existingWidgets.createdAt ?? now,
+        // Always update updatedAt to current time
+        updatedAt: now,
+      });
+      return existingWidgets._id;
+    } else {
+      // Create new widgets - always set both timestamps
+      const widgetsId = await ctx.db.insert("project_widgets", {
+        ...cleanData,
+        createdAt: now,
+        updatedAt: now,
+      });
+      return widgetsId;
     }
-
-    const updatedWidgets = widgets.widgets.map(widget => 
-      widget.widget_id === args.widgetId 
-        ? { ...widget, config: args.config }
-        : widget
-    );
-
-    await ctx.db.patch(args.widgetsId, {
-      widgets: updatedWidgets,
-    });
-
-    return { success: true };
   },
 });
 
-// Reorder widgets
-export const reorderWidgets = mutation({
-  args: {
-    widgetsId: v.id("project_widgets"),
-    widgetOrder: v.array(v.string()), // Array of widget IDs in new order
-  },
-  handler: async (ctx, args) => {
-    const widgets = await ctx.db.get(args.widgetsId);
-    if (!widgets) {
-      throw new Error("Project widgets not found");
-    }
-
-    // Create a map of widget ID to widget for quick lookup
-    const widgetMap = new Map(widgets.widgets.map(widget => [widget.widget_id, widget]));
-    
-    // Reorder widgets based on the provided order
-    const reorderedWidgets = args.widgetOrder
-      .map((widgetId, index) => {
-        const widget = widgetMap.get(widgetId);
-        if (widget) {
-          return { ...widget, position: index + 1 };
-        }
-        return null;
-      })
-      .filter(Boolean);
-
-    // Add any widgets not in the order array at the end
-    const orderedIds = new Set(args.widgetOrder);
-    const remainingWidgets = widgets.widgets
-      .filter(widget => !orderedIds.has(widget.widget_id))
-      .map((widget, index) => ({
-        ...widget,
-        position: args.widgetOrder.length + index + 1
-      }));
-
-    const finalWidgets = [...reorderedWidgets, ...remainingWidgets];
-
-    await ctx.db.patch(args.widgetsId, {
-      widgets: finalWidgets,
-    });
-
-    return { success: true };
-  },
-});
-
-// Archive project widgets
-export const archiveProjectWidgets = mutation({
-  args: {
-    widgetsId: v.id("project_widgets"),
-  },
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.widgetsId, {
-      status: "archived",
-    });
-
-    return { success: true };
-  },
-});
-
-// Delete project widgets
+/**
+ * Delete project widgets - Clean deletion with validation
+ * Used by: Project cleanup, widget deletion
+ */
 export const deleteProjectWidgets = mutation({
   args: {
-    widgetsId: v.id("project_widgets"),
-  },
-  handler: async (ctx, args) => {
-    await ctx.db.delete(args.widgetsId);
-    return { success: true };
-  },
-});
-
-// Delete all widgets for a project
-export const deleteProjectWidgetsByProject = mutation({
-  args: {
     projectId: v.id("projects"),
+    userId: v.string(),
   },
-  handler: async (ctx, args) => {
+  returns: v.object({
+    success: v.boolean(),
+    deletedCount: v.number(),
+  }),
+  handler: async (ctx, { projectId, userId }) => {
+    // Validate project ownership
+    const project = await ctx.db.get(projectId);
+    if (!project) {
+      throw new Error("Project not found");
+    }
+    
+    if (project.userId !== userId) {
+      throw new Error("Access denied: You don't own this project");
+    }
+
+    // Find all widgets for this project
     const widgets = await ctx.db
       .query("project_widgets")
-      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+      .withIndex("by_project", (q) => q.eq("projectId", projectId))
       .collect();
 
-    for (const widget of widgets) {
+    // Only delete widgets owned by the user (additional safety check)
+    const userWidgets = widgets.filter(w => w.userId === userId);
+
+    for (const widget of userWidgets) {
       await ctx.db.delete(widget._id);
     }
 
-    return { success: true, deletedCount: widgets.length };
+    return { 
+      success: true, 
+      deletedCount: userWidgets.length 
+    };
   },
 });

@@ -144,14 +144,10 @@ const project = useQuery(
 ### Fingerprint Loading
 
 ```tsx
-// Load fingerprint data for intelligence display
-const { currentFingerprint, isLoading: fingerprintLoading } = useProjectFingerprintStore()
-
-useEffect(() => {
-  if (firebaseUser?.uid && projectId) {
-    initializeFingerprintData(projectId, firebaseUser.uid)
-  }
-}, [firebaseUser?.uid, projectId])
+// Load fingerprint data reactively with Convex
+const { fingerprint: currentFingerprint, isLoading: fingerprintLoading } = useProjectFingerprint(
+  projectId as Id<'projects'>
+)
 ```
 
 ## 🎨 UI Components
@@ -291,7 +287,7 @@ if (!project || !currentFingerprint) {
 
 ```tsx
 const handleStartChat = () => {
-  router.push(`/dashboard/chat?projectId=${projectId}`)
+  router.push(`/dashboard/thinking_lab?projectId=${projectId}`)
 }
 
 const handleCreateNote = () => {
@@ -311,7 +307,7 @@ const handleBackToProjects = () => {
 }
 
 const handleBackToChat = () => {
-  router.push(`/dashboard/chat?projectId=${projectId}`)
+  router.push(`/dashboard/thinking_lab?projectId=${projectId}`)
 }
 ```
 

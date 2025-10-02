@@ -138,8 +138,21 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
       });
 
       const apiKeyData = await apiKeyResponse.json();
-      if (apiKeyResponse.ok && apiKeyData.apiKey) {
-        Cookies.set('apiKey', JSON.stringify(apiKeyData.apiKey), { expires: 7, sameSite: 'Lax', secure: process.env.NODE_ENV === 'production', path: '/' });
+      if (apiKeyResponse.ok) {
+        // Confirm cookie set by server; fallback to client set if needed
+        const confirmCookie = async () => {
+          const start = Date.now();
+          const deadline = start + 500; // wait up to 500ms
+          let cookie = Cookies.get('apiKey');
+          while (!cookie && Date.now() < deadline) {
+            await new Promise(r => setTimeout(r, 25));
+            cookie = Cookies.get('apiKey');
+          }
+          if (!cookie && apiKeyData.apiKey) {
+            Cookies.set('apiKey', JSON.stringify(apiKeyData.apiKey), { expires: 7, sameSite: 'Lax', secure: process.env.NODE_ENV === 'production', path: '/' });
+          }
+        };
+        await confirmCookie();
         onSuccess(name);
       } else {
         setError(apiKeyData.error || 'Failed to get API key');

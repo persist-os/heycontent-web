@@ -60,4 +60,38 @@ export const updateUserInternal = internalMutation({
       userId: args.userId,
     });
   },
-}); 
+});
+
+// Migration function to clean up legacy project widgets
+export const cleanLegacyProjectWidgets = internalMutation({
+  args: {},
+  handler: async ({ db }) => {
+    const widgets = await db.query("project_widgets").collect();
+    let cleaned = 0;
+    
+    for (const widget of widgets) {
+      const now = Date.now();
+      const needsUpdate = 
+        widget.generated_at !== undefined ||
+        widget.createdAt === undefined ||
+        widget.updatedAt === undefined;
+      
+      if (needsUpdate) {
+        // Remove legacy fields and ensure proper timestamps
+        const cleanData: any = { ...widget };
+        delete cleanData.generated_at;
+        delete cleanData._id;
+        delete cleanData._creationTime;
+        
+        // Ensure proper timestamps
+        cleanData.createdAt = widget.createdAt ?? now;
+        cleanData.updatedAt = now;
+        
+        await db.patch(widget._id, cleanData);
+        cleaned++;
+      }
+    }
+    
+    return { cleaned, total: widgets.length };
+  },
+});

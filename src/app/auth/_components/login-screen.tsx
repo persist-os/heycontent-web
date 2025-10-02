@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { getFirebaseAuth } from '@/app/lib/firebase';
@@ -8,6 +8,7 @@ import { getFirebaseAuth } from '@/app/lib/firebase';
 import { Logo } from '@/components/ui/logo';
 import { motion } from "framer-motion";
 import Cookies from 'js-cookie';
+import { waitForAuthReady } from '@/app/lib/api-helpers';
 
 interface LoginScreenProps {
   onSuccess?: (apiKey: string) => void;
@@ -20,6 +21,21 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, reason }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [authInitializing, setAuthInitializing] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const ready = await waitForAuthReady(5, 150);
+      if (!mounted) return;
+      setAuthInitializing(false);
+      if (!ready) {
+        // Non-blocking: keep form usable but show a soft warning
+        setError(prev => prev || 'Initializing authentication… If sign in fails, please retry.');
+      }
+    })();
+    return () => { mounted = false };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     Cookies.remove('apiKey');
@@ -69,9 +85,22 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, reason }) => {
       });
       const apiKeyData = await apiKeyResponse.json();
       if (apiKeyResponse.ok) {
-        if (apiKeyData.apiKey) {
-          Cookies.set('apiKey', JSON.stringify(apiKeyData.apiKey), { expires: 7, sameSite: 'Lax', secure: process.env.NODE_ENV === 'production', path: '/' });
-        }
+        // Confirm cookie set by server; fallback to client set if needed
+        const confirmCookie = async () => {
+          const start = Date.now();
+          const deadline = start + 500; // wait up to 500ms
+          let cookie = Cookies.get('apiKey');
+          while (!cookie && Date.now() < deadline) {
+            await new Promise(r => setTimeout(r, 25));
+            cookie = Cookies.get('apiKey');
+          }
+          if (!cookie && apiKeyData.apiKey) {
+            Cookies.set('apiKey', JSON.stringify(apiKeyData.apiKey), { expires: 7, sameSite: 'Lax', secure: process.env.NODE_ENV === 'production', path: '/' });
+          }
+        };
+        await confirmCookie();
+        // Ensure client auth state has settled before redirect
+        await waitForAuthReady(3, 200);
         if (apiKeyData.redirect) {
           window.location.href = apiKeyData.redirect;
           return;
