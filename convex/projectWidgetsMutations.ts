@@ -88,9 +88,9 @@ export const upsertProjectWidgets = mutation({
     version: v.string(),
     confidence: v.number(), // 0-1
     
-    // Optional AI-generated timestamps (ignored, we set our own)
-    generated_at: v.optional(v.union(v.string(), v.number())),
-    updated_at: v.optional(v.union(v.string(), v.number()))
+    // Optional AI-generated timestamps (accepted but completely ignored - we always set our own)
+    generated_at: v.optional(v.any()),
+    updated_at: v.optional(v.any())
   },
   returns: v.id("project_widgets"),
   handler: async (ctx, args) => {
