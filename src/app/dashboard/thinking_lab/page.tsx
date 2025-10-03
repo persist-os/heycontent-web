@@ -31,13 +31,6 @@ export default function ThinkingLabPage() {
   
   // VALIDATION: Check if noteId looks like a persona ID (deprecated system)
   if (noteId) {
-    const isLikelyPersonaId = noteId.length > 20 && noteId.startsWith('jh7b')
-    if (isLikelyPersonaId) {
-      console.error('🚨 [PERSONA ID DETECTED] Deprecated persona ID passed as noteId:', {
-        noteId,
-        stackTrace: new Error().stack
-      })
-      // Don't pass the persona ID - let the component handle the invalid ID gracefully
       return (
         <FullThinkingLab 
           chatId={chatId || undefined}
@@ -46,7 +39,6 @@ export default function ThinkingLabPage() {
           widgetOutputId={widgetOutputId || undefined}
         />
       )
-    }
   }
   
   return (
