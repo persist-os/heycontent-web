@@ -25,6 +25,7 @@ import { WidgetPropertiesCard } from './components/WidgetPropertiesCard'
 import { ConnectedNotesStats } from './components/ConnectedNotesStats'
 import { ConnectedNoteCard } from './components/ConnectedNoteCard'
 import { WidgetOutputCard } from './components/WidgetOutputCard'
+import { launchThinkingLabWithOutput } from '@/app/dashboard/living-projects/utils/thinkingLabLauncher'
 
 export default function WidgetDashboardPage() {
   const params = useParams()
@@ -119,7 +120,6 @@ export default function WidgetDashboardPage() {
 
   const handleLaunchThinkingLab = (output: WidgetOutput) => {
     // Use the unified launcher utility with full context
-    const { launchThinkingLabWithOutput } = require('@/app/dashboard/living-projects/utils/thinkingLabLauncher')
     launchThinkingLabWithOutput(router, output, projectId, widgetId)
   }
 
