@@ -155,9 +155,9 @@ export function useNotepadHandlers({
         customType: note.type,
         sourceConversationId: sessionId || undefined,
         // Pass context from container
-        projectId: projectId,
-        widgetId: widgetId,
-        widgetOutputId: widgetOutputId,
+        projectId,
+        widgetId,
+        widgetOutputId,
         isWidgetOutput: false // User-created note, not widget-generated
       })
       
