@@ -30,10 +30,9 @@ export default function WidgetDashboardPage() {
   const params = useParams()
   const router = useRouter()
   const projectId = params.projectId as Id<"projects">
-  const widgetId = params.widgetId as string
+  const widgetId = params.widgetId as Id<"widgets">  // ✅ Convex ID type
 
   const [userId, setUserId] = useState<string | null>(null)
-  const [widget, setWidget] = useState<WidgetConfig | null>(null)
   const [outputLimit, setOutputLimit] = useState(10)
   const [expandedOutputs, setExpandedOutputs] = useState<Set<string>>(new Set())
 
@@ -52,23 +51,13 @@ export default function WidgetDashboardPage() {
     getUserId()
   }, [])
 
-  // Fetch project widgets to get widget data
-  const projectWidgets = useQuery(
-    api.projectWidgetsQueries.getProjectWidgetsByProject,
-    userId && projectId ? { userId, projectId } : 'skip'
-  )
+  // ✅ OPTIMIZED: Direct widget query using Convex ID (no table scan)
+  const widget = useQuery(
+    api.widgetsQueries.getWidget,
+    userId && widgetId ? { widgetId, userId } : 'skip'
+  ) as WidgetConfig | null | undefined
 
-  // Extract the specific widget
-  useEffect(() => {
-    if (projectWidgets?.widgets) {
-      const foundWidget = projectWidgets.widgets.find(
-        (w: WidgetConfig) => w.widget_id === widgetId
-      )
-      setWidget(foundWidget as WidgetConfig || null)
-    }
-  }, [projectWidgets, widgetId])
-
-  // Fetch outputs for this widget
+  // ✅ OPTIMIZED: Direct outputs query with Convex ID filter
   const outputs = useQuery(
     api.widgetOutputsQueries.getWidgetOutputData,
     userId && widgetId ? {
@@ -116,7 +105,7 @@ export default function WidgetDashboardPage() {
     
     try {
       await executeWidget({
-        widgetId: widget._id,  // ✅ Use Convex ID (_id)
+        widgetId,  // ✅ Use Convex ID directly from URL params
         projectId
       })
     } catch (error) {
