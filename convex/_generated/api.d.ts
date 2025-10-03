@@ -82,8 +82,6 @@ import type * as usageEvents from "../usageEvents.js";
 import type * as userActions from "../userActions.js";
 import type * as userMutations from "../userMutations.js";
 import type * as userQueries from "../userQueries.js";
-import type * as utils_idValidation from "../utils/idValidation.js";
-import type * as utils_types from "../utils/types.js";
 import type * as vectorSearch from "../vectorSearch.js";
 import type * as vectorSearchBatch from "../vectorSearchBatch.js";
 import type * as vectorSearchMutations from "../vectorSearchMutations.js";
@@ -171,8 +169,6 @@ declare const fullApi: ApiFromModules<{
   userActions: typeof userActions;
   userMutations: typeof userMutations;
   userQueries: typeof userQueries;
-  "utils/idValidation": typeof utils_idValidation;
-  "utils/types": typeof utils_types;
   vectorSearch: typeof vectorSearch;
   vectorSearchBatch: typeof vectorSearchBatch;
   vectorSearchMutations: typeof vectorSearchMutations;
