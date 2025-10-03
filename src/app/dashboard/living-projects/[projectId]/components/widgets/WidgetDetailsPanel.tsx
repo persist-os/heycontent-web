@@ -18,6 +18,7 @@ import { api } from '@/convex/_generated/api'
 import { useQuery } from 'convex/react'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { useWidgetRunner } from '@/app/dashboard/living-projects/hooks/useWidgetRunner'
+import { launchThinkingLabWithOutput } from '@/app/dashboard/living-projects/utils/thinkingLabLauncher'
 
 interface WidgetDetailsPanelProps {
   widget: WidgetConfig | null
@@ -79,9 +80,7 @@ export function WidgetDetailsPanel({
 
   const handleLaunchThinkingLab = () => {
     if (output?.noteId) {
-      // Use outputId field from the output object (Convex _id)
-      const outputIdParam = output.outputId || output._id
-      router.push(`/dashboard/thinking_lab?noteId=${output.noteId}&widgetOutputId=${outputIdParam}`)
+      launchThinkingLabWithOutput(router, output)
     }
   }
 

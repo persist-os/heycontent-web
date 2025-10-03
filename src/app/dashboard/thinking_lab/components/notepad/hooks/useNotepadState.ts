@@ -37,17 +37,9 @@ export function useNotepadState({
   const [refinementPreview, setRefinementPreview] = useState<string | null>(null)
   const [isRefining, setIsRefining] = useState(false)
   
-  // Debug logging only when we have a noteId and it might be invalid
+  // Debug logging for note loading
   if (process.env.NODE_ENV === 'development' && noteId) {
-    const isLikelyPersonaId = noteId.length > 20 && noteId.startsWith('jh7b')
-    if (isLikelyPersonaId) {
-      console.warn('[useNotepadState] Warning: Received persona ID instead of note ID:', {
-        noteId: noteId.substring(0, 20) + '...',
-        isPersonaId: true
-      })
-    } else {
-      console.debug('[useNotepadState] Opening note:', noteId.substring(0, 15) + '...')
-    }
+    console.debug('[useNotepadState] Opening note:', noteId.substring(0, 15) + '...')
   }
 
   // Internal state for note management (controlled by handlers, not props)
