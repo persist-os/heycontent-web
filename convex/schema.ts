@@ -132,9 +132,27 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
     starred: v.boolean(),
+    
+    // Project & Widget Context - Links conversations to their originating context
+    projectId: v.optional(v.id("projects")),
+    widgetId: v.optional(v.string()),
+    widgetOutputId: v.optional(v.string()),
+    
+    // Conversation type/source for filtering and UI
+    conversationType: v.optional(v.union(
+      v.literal("general"),        // Regular chat
+      v.literal("widget_prompt"),  // Started from widget prompt
+      v.literal("project_scoped"), // Project-specific conversation
+      v.literal("discovery")       // Project discovery conversation
+    )),
   })
   .index("by_user", ["userId"])
-  .index("by_creation", ["createdAt"]),
+  .index("by_creation", ["createdAt"])
+  .index("by_user_project", ["userId", "projectId"])
+  .index("by_user_widget", ["userId", "widgetId"])
+  .index("by_widget_output", ["widgetOutputId"])
+  .index("by_project", ["projectId"])
+  .index("by_type", ["conversationType"]),
 
   // Notes
   notes: defineTable({
@@ -885,6 +903,11 @@ export default defineSchema({
     source_type: v.optional(v.union(v.literal("conversation"), v.literal("note"), v.literal("document"), v.literal("behavior_observation"))),
     extraction_timestamp: v.optional(v.number()),
     extraction_method: v.optional(v.union(v.literal("direct_quote"), v.literal("behavioral_inference"), v.literal("pattern_synthesis"))),
+    
+    // === PROJECT & WIDGET CONTEXT ===
+    projectId: v.optional(v.id("projects")),     // Optional: Project this shard belongs to
+    widgetId: v.optional(v.string()),            // Optional: Widget this shard originated from
+    conversationId: v.optional(v.string()),      // Optional: Conversation this shard came from
 
     // === CORE REVELATION (MINIMAL REQUIREMENTS) ===
     dimension: v.optional(v.string()),      // Optional: Identity dimension this touches
@@ -932,7 +955,11 @@ export default defineSchema({
       .index("by_recency", ["userId", "recency_weight"])
       .index("by_status", ["userId", "shard_status"])
       .index("by_crystal_usage", ["userId", "used_in_crystal_id"])
-      .index("by_unprocessed", ["userId", "shard_status", "createdAt"]),
+      .index("by_unprocessed", ["userId", "shard_status", "createdAt"])
+      .index("by_project", ["projectId"])
+      .index("by_user_project", ["userId", "projectId"])
+      .index("by_widget", ["widgetId"])
+      .index("by_conversation", ["conversationId"]),
 
 
 // === COMPREHENSIVE CRYSTALS TABLE ===
@@ -954,6 +981,10 @@ export default defineSchema({
         v.literal("contradiction_resolution") // How they handle internal conflicts
     ),
     dimension: v.string(),                  // REQUIRED: Primary identity dimension
+    
+    // === PROJECT & WIDGET CONTEXT ===
+    projectId: v.optional(v.id("projects")),     // Optional: Project this crystal belongs to
+    widgetId: v.optional(v.string()),            // Optional: Widget this crystal originated from
 
     // === FLEXIBLE CRYSTAL CONTENT ===
     secondary_dimensions: v.optional(v.array(v.string())), // Optional: Other dimensions this crystal touches
@@ -1016,7 +1047,10 @@ export default defineSchema({
       .index("by_confidence", ["userId", "confidence_score"])
       .index("by_type", ["userId","crystal_type"])
       .index("by_usage", ["userId", "usage_frequency"])
-    .index("by_review_due", ["userId", "next_review_due"]),
+    .index("by_review_due", ["userId", "next_review_due"])
+    .index("by_project", ["projectId"])
+    .index("by_user_project", ["userId", "projectId"])
+    .index("by_widget", ["widgetId"]),
     
     
     crystal_formation_runs: defineTable({

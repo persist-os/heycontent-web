@@ -260,3 +260,30 @@ export const getNoteWithPermissions = query({
     }
   },
 });
+
+/**
+ * Get all notes connected to a specific widget
+ * @param widgetId - The widget ID to filter notes by
+ * @param userId - The user ID for authorization
+ */
+export const getNotesByWidgetId = query({
+  args: {
+    widgetId: v.string(),
+    userId: v.string(),
+  },
+  handler: async (ctx, { widgetId, userId }) => {
+    try {
+      const notes = await ctx.db
+        .query("notes")
+        .withIndex("by_widget", (q) => q.eq("widgetId", widgetId))
+        .filter((q) => q.eq(q.field("userId"), userId))
+        .order("desc")
+        .collect();
+      
+      return notes;
+    } catch (error) {
+      console.error('Error fetching notes by widgetId:', error);
+      return [];
+    }
+  },
+});
