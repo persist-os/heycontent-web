@@ -6,10 +6,10 @@ import { useRouter } from 'next/navigation'
 import { Logo } from './logo'
 
 const searchSuggestions = [
-  "Help me think through this project idea",
-  "Refine this draft with my writing style", 
-  "What patterns do you see in my notes?",
-  "Connect this to what we discussed before"
+  "How does this connect to what we discussed last week?",
+  "Find the pattern in my recent notes",
+  "Help me think through this idea",
+  "What am I missing here?"
 ]
 
 export function HeroSection() {
@@ -95,20 +95,20 @@ export function HeroSection() {
           <div className="space-y-8 sm:space-y-10">
             <div className="space-y-6 sm:space-y-8">
               <div className="text-slate-500 dark:text-slate-400 text-sm sm:text-lg font-light tracking-wider uppercase animate-fade-in-up hover:text-slate-700 dark:hover:text-slate-300 hover:tracking-widest transition-all duration-300 cursor-default">
-                Intelligence that evolves with your work
+                Stop explaining. Stop repeating. Stop starting over.
               </div>
               
               <h1 className="text-3xl sm:text-5xl lg:text-7xl font-light text-slate-900 dark:text-slate-100 leading-tight animate-fade-in-up hover:text-slate-700 dark:hover:text-slate-200 transition-colors duration-300 cursor-default" style={{animationDelay: '0.1s'}}>
-                <span className="inline-block">Your AI </span>
-                <span className="block text-4xl sm:text-6xl lg:text-8xl font-extralight text-blue-600 dark:text-blue-400 mt-1 sm:mt-2 hover:text-blue-700 dark:hover:text-blue-300 transition-colors duration-300">project platform</span>
+                <span className="inline-block">Work with AI </span>
+                <span className="block text-4xl sm:text-6xl lg:text-8xl font-extralight text-blue-600 dark:text-blue-400 mt-1 sm:mt-2 hover:text-blue-700 dark:hover:text-blue-300 transition-colors duration-300">that learns you</span>
               </h1>
               
               <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 animate-fade-in-up" style={{animationDelay: '0.2s'}}>
                 <p className="text-lg sm:text-xl lg:text-2xl text-slate-600 dark:text-slate-400 font-light leading-relaxed hover:text-slate-700 dark:hover:text-slate-300 transition-colors duration-300 cursor-default">
-                  Conversations that build connections. Context that grows smarter. Projects that remember everything.
+                  What you said last week connects to what you're thinking right now. Your scattered notes reveal patterns you missed. Everything you write feeds understanding that grows deeper every day.
                 </p>
                 <p className="text-base sm:text-lg lg:text-xl text-slate-500 dark:text-slate-500 font-light leading-relaxed hover:text-slate-600 dark:hover:text-slate-400 transition-colors duration-300 cursor-default">
-                  Not another tool to manage. Intelligence that thinks alongside you.
+                  No organizing. No managing. Just natural conversation that builds permanent memory.
                 </p>
               </div>
             </div>
@@ -121,7 +121,7 @@ export function HeroSection() {
                 onTouchEnd={() => setIsButtonPressed(false)}
                 className={`group px-8 sm:px-10 py-3 sm:py-4 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-base sm:text-lg font-medium hover:bg-slate-800 dark:hover:bg-slate-200 transition-all duration-300 active:scale-95 hover:scale-105 hover:shadow-xl min-w-[200px] sm:min-w-[240px] ${isButtonPressed ? 'scale-95' : ''} ${isMobile ? 'min-h-[48px] touch-manipulation' : ''}`}
               >
-                <span className="transition-all duration-300 group-active:tracking-wide">Start your workspace</span>
+                <span className="transition-all duration-300 group-active:tracking-wide">See how it works</span>
               </button>
             </div>
           </div>

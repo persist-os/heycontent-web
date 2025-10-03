@@ -4,24 +4,24 @@ import React from 'react'
 
 const currentFeatures = [
   {
-    title: "Contextual conversations",
-    current: "Chat that connects what you said yesterday to what you're thinking today. Context builds naturally, like human understanding does.",
-    future: "Living project intelligence that evolves continuously as agents work overnight to reconcile contradictions and surface insights before you even ask"
+    title: "Conversations that build on each other",
+    current: "Every message adds to permanent memory. What you said three weeks ago surfaces when it's relevant today. No searching. No reminding. It just knows.",
+    future: "Conversations from months ago connect automatically. Patterns emerge across everything you've ever discussed. Understanding compounds until it knows you better than you know yourself."
   },
   {
-    title: "Connected thinking",
-    current: "Notes that spot patterns in your thinking and connect ideas across conversations. Intelligence that sees relationships you might miss.",
-    future: "Self-updating project briefs that condense messy inputs into structured schemas with goals, risks, and decisions automatically maintained"
+    title: "Notes that show you what you're missing",
+    current: "Jot down half-formed thoughts. Scattered ideas. Random observations. The system spots patterns you don't see and shows how everything connects.",
+    future: "Your notes reorganize themselves around emerging themes. Contradictions surface before they cause problems. Clarity appears from chaos without you touching anything."
   },
   {
-    title: "Voice learning",
-    current: "Writing help that learns how you sound and think. Understanding of your style that gets more accurate with every interaction.",
-    future: "Context-aware content generation that understands your entire project landscape and suggests ideas based on evolving project schemas"
+    title: "Writing that captures how you actually think",
+    current: "Every message, every note, every draft teaches the system how you communicate. It learns your voice by listening. Help with writing feels like you, not a robot.",
+    future: "Generate ideas that sound exactly like you'd say them. First drafts that need minimal editing. Communication that maintains your voice at scale."
   },
   {
-    title: "Personal AI",
-    current: "AI that learns your preferences, patterns, and working style. Gets smarter about what you need without being told.",
-    future: "Multi-agent orchestration where specialized agents handle different aspects of your projects, condensing information, detecting contradictions, and preparing insights"
+    title: "Work that continues when you're not working",
+    current: "Set a task in motion. Come back later to find refined thinking, organized notes, and insights you didn't ask for. Processing happens in the background, ready when you are.",
+    future: "Wake up to work that progressed overnight. Different aspects of your thinking handled simultaneously, each making the others better. Depth that builds while you sleep."
   }
 ]
 
@@ -36,7 +36,7 @@ export function ValueCards() {
               <div className="text-xs sm:text-sm font-medium text-blue-600 dark:text-blue-400 tracking-wide uppercase hover:text-blue-700 dark:hover:text-blue-300 hover:tracking-wider transition-all duration-300 cursor-default">
                 Available today
               </div>
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-light text-slate-900 dark:text-slate-100 leading-tight hover:text-slate-700 dark:hover:text-slate-200 transition-colors duration-300 cursor-default">Memory that grows like you
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-light text-slate-900 dark:text-slate-100 leading-tight hover:text-slate-700 dark:hover:text-slate-200 transition-colors duration-300 cursor-default">Works from day one
               </h2>
             </div>
             
@@ -61,7 +61,7 @@ export function ValueCards() {
                 Coming soon
               </div>
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-light text-slate-900 dark:text-slate-100 leading-tight hover:text-slate-700 dark:hover:text-slate-200 transition-colors duration-300 cursor-default">
-                Projects that evolve while you sleep
+                Gets more powerful over time
               </h2>
             </div>
             

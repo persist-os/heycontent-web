@@ -26,6 +26,7 @@ import type * as contentSharingQueries from "../contentSharingQueries.js";
 import type * as conversationSummariesMutations from "../conversationSummariesMutations.js";
 import type * as conversationSummariesQueries from "../conversationSummariesQueries.js";
 import type * as crons from "../crons.js";
+import type * as crystalAtomicMutations from "../crystalAtomicMutations.js";
 import type * as crystalCache from "../crystalCache.js";
 import type * as crystalContextOptimized from "../crystalContextOptimized.js";
 import type * as crystalMigration from "../crystalMigration.js";
@@ -39,6 +40,9 @@ import type * as formationQueries from "../formationQueries.js";
 import type * as friendshipMutations from "../friendshipMutations.js";
 import type * as friendshipQueries from "../friendshipQueries.js";
 import type * as http from "../http.js";
+import type * as httpActions_index from "../httpActions/index.js";
+import type * as httpActions_notes_notes from "../httpActions/notes/notes.js";
+import type * as httpHono from "../httpHono.js";
 import type * as intelligenceActions from "../intelligenceActions.js";
 import type * as intelligenceConfig from "../intelligenceConfig.js";
 import type * as intelligenceMutations from "../intelligenceMutations.js";
@@ -46,6 +50,8 @@ import type * as intelligenceQueries from "../intelligenceQueries.js";
 import type * as intelligenceScheduled from "../intelligenceScheduled.js";
 import type * as internal_ from "../internal.js";
 import type * as migrations_migrateReservedShards from "../migrations/migrateReservedShards.js";
+import type * as migrations_migrateToConvexWidgetIds from "../migrations/migrateToConvexWidgetIds.js";
+import type * as migrations_migrateWidgetsToIndividualDocs from "../migrations/migrateWidgetsToIndividualDocs.js";
 import type * as migrations from "../migrations.js";
 import type * as noteMutations from "../noteMutations.js";
 import type * as noteQueries from "../noteQueries.js";
@@ -84,6 +90,8 @@ import type * as vectorSearchMutations from "../vectorSearchMutations.js";
 import type * as vectorSearchQueries from "../vectorSearchQueries.js";
 import type * as widgetOutputsMutations from "../widgetOutputsMutations.js";
 import type * as widgetOutputsQueries from "../widgetOutputsQueries.js";
+import type * as widgetsMutations from "../widgetsMutations.js";
+import type * as widgetsQueries from "../widgetsQueries.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -107,6 +115,7 @@ declare const fullApi: ApiFromModules<{
   conversationSummariesMutations: typeof conversationSummariesMutations;
   conversationSummariesQueries: typeof conversationSummariesQueries;
   crons: typeof crons;
+  crystalAtomicMutations: typeof crystalAtomicMutations;
   crystalCache: typeof crystalCache;
   crystalContextOptimized: typeof crystalContextOptimized;
   crystalMigration: typeof crystalMigration;
@@ -120,6 +129,9 @@ declare const fullApi: ApiFromModules<{
   friendshipMutations: typeof friendshipMutations;
   friendshipQueries: typeof friendshipQueries;
   http: typeof http;
+  "httpActions/index": typeof httpActions_index;
+  "httpActions/notes/notes": typeof httpActions_notes_notes;
+  httpHono: typeof httpHono;
   intelligenceActions: typeof intelligenceActions;
   intelligenceConfig: typeof intelligenceConfig;
   intelligenceMutations: typeof intelligenceMutations;
@@ -127,6 +139,8 @@ declare const fullApi: ApiFromModules<{
   intelligenceScheduled: typeof intelligenceScheduled;
   internal: typeof internal_;
   "migrations/migrateReservedShards": typeof migrations_migrateReservedShards;
+  "migrations/migrateToConvexWidgetIds": typeof migrations_migrateToConvexWidgetIds;
+  "migrations/migrateWidgetsToIndividualDocs": typeof migrations_migrateWidgetsToIndividualDocs;
   migrations: typeof migrations;
   noteMutations: typeof noteMutations;
   noteQueries: typeof noteQueries;
@@ -165,6 +179,8 @@ declare const fullApi: ApiFromModules<{
   vectorSearchQueries: typeof vectorSearchQueries;
   widgetOutputsMutations: typeof widgetOutputsMutations;
   widgetOutputsQueries: typeof widgetOutputsQueries;
+  widgetsMutations: typeof widgetsMutations;
+  widgetsQueries: typeof widgetsQueries;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,

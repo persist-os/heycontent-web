@@ -9,7 +9,7 @@ export function WhyItWorks() {
         <div className="space-y-12 sm:space-y-16">
           <div className="text-center space-y-4 sm:space-y-6">
             <h2 className="text-2xl sm:text-4xl lg:text-5xl font-light leading-tight hover:text-white transition-colors duration-300 cursor-default">
-              The time you'll save back
+              Most AI makes you work for it. This one works for you.
             </h2>
           </div>
 
@@ -17,28 +17,28 @@ export function WhyItWorks() {
             <div className="text-center space-y-6 sm:space-y-8">
               <div className="space-y-3 sm:space-y-4 p-4 rounded-lg hover:bg-white/5 transition-all duration-300 cursor-pointer">
                 <p className="text-lg sm:text-2xl font-light text-slate-300">
-                  2 hours every morning
+                  Start where you left off, instantly
                 </p>
                 <p className="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
-                  Stop re-reading yesterday's notes, hunting through chat history, and rebuilding context from scratch. Your AI already knows where you left off.
+                  No more "wait, what was I doing?" No more rereading yesterday's notes. No more rebuilding context in your head. Open it up, and it remembers exactly where your thinking left off. Including the details you forgot.
                 </p>
               </div>
 
               <div className="space-y-3 sm:space-y-4 p-4 rounded-lg hover:bg-white/5 transition-all duration-300 cursor-pointer">
                 <p className="text-lg sm:text-2xl font-light text-slate-300">
-                  4 hours every week
+                  Explain yourself once, never again
                 </p>
                 <p className="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
-                  No more status meetings to sync everyone up. No more writing project summaries. No more losing track of decisions made in scattered conversations.
+                  How you prefer feedback. What matters in your work. Which ideas you're exploring. Your communication style. Every pattern learned once and remembered forever. It adapts to you instead of making you adapt to it.
                 </p>
               </div>
 
               <div className="space-y-3 sm:space-y-4 p-4 rounded-lg hover:bg-white/5 transition-all duration-300 cursor-pointer">
                 <p className="text-lg sm:text-2xl font-light text-slate-300">
-                  Entire weekends back
+                  Stop managing, start creating
                 </p>
                 <p className="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
-                  When projects coordinate themselves and contradictions surface automatically, you focus on creating instead of organizing. Your best work happens when your tools disappear.
+                  No folders to organize. No tags to maintain. No systems to manage. Talk naturally about your work. The structure builds itself. Connections form automatically. You focus on thinking. It handles the rest.
                 </p>
               </div>
             </div>
@@ -47,10 +47,10 @@ export function WhyItWorks() {
           <div className="border-t border-slate-700 pt-12 sm:pt-16">
             <div className="text-center space-y-4 sm:space-y-6">
               <p className="text-lg sm:text-xl font-light text-slate-300 max-w-2xl mx-auto leading-relaxed hover:text-white transition-colors duration-300 cursor-default">
-                Start saving time today. Save even more time tomorrow.
+                The more you use it, the more valuable it becomes. Not because you put in more effort.
               </p>
               <p className="text-sm sm:text-base text-slate-400 max-w-xl mx-auto hover:text-slate-300 transition-colors duration-300 cursor-default">
-                Your projects remember everything so you can focus on what only you can do.
+                Because it's actually learning.
               </p>
             </div>
           </div>

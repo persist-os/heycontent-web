@@ -13,7 +13,7 @@ const operationSchema = v.object({
   type: v.union(v.literal("create"), v.literal("update"), v.literal("delete")),
   data: v.optional(v.object({
     outputId: v.optional(v.string()),
-    widgetId: v.optional(v.string()),
+    widgetId: v.optional(v.union(v.string(), v.id("widgets"))),  // 🔄 Migration: supports both legacy string and Convex ID
     projectId: v.optional(v.id("projects")),
     userId: v.string(), // Required for all operations
     noteId: v.optional(v.string()),

@@ -65,6 +65,10 @@ export const processIntelligenceJobs = internalAction({
               status: "failed",
               completed_at: Date.now(),
               results: {
+                crystals_analyzed: 0,
+                relationships_found: 0,
+                contradictions_found: 0,
+                health_scores_updated: 0,
                 error: result.error || "Analysis failed"
               }
             });
@@ -84,6 +88,10 @@ export const processIntelligenceJobs = internalAction({
               status: "failed",
               completed_at: Date.now(),
               results: {
+                crystals_analyzed: 0,
+                relationships_found: 0,
+                contradictions_found: 0,
+                health_scores_updated: 0,
                 error: error.message || "Unknown error"
               }
             });
@@ -120,22 +128,31 @@ export const processIntelligenceJobs = internalAction({
 /**
  * Call Python analyzer service to perform intelligence analysis.
  * 
- * This makes an HTTP request to the backend analyzer endpoint.
+ * This makes an HTTP request to the backend analyzer endpoint using
+ * system-level authentication (BACKEND_API_KEY for internal cron jobs).
  */
 async function callPythonAnalyzer(job: any): Promise<{success: boolean, data?: any, error?: string}> {
   try {
-    // Get backend URL from environment
+    // Get backend URL and system API key from environment
     const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
+    const systemApiKey = process.env.BACKEND_API_KEY;
     
     if (!backendUrl) {
       throw new Error("BACKEND_URL not configured");
     }
     
-    // Call Python analyzer endpoint
-    const response = await fetch(`${backendUrl}/api/v1/intelligence/analyze`, {
+    if (!systemApiKey) {
+      throw new Error("BACKEND_API_KEY not configured - required for system authentication");
+    }
+    
+    // Call Python analyzer endpoint with system authentication
+    // The backend intelligence route accepts system keys (userId starting with "system_" or "service_")
+    // and allows them to analyze any user's crystals
+    const response = await fetch(`${backendUrl}/api/v1/crystal_intelligence/analyze`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Authorization": `Bearer ${systemApiKey}`,
       },
       body: JSON.stringify({
         userId: job.userId,
