@@ -150,22 +150,24 @@ export const getPersonaData = query({
     handler: async (ctx, { userId, operation, limit }) => {
         switch (operation) {
             case "shards":
-                return queryWithOptions(ctx, "crystal_shards", userId, { limit });
+                return queryWithOptions(ctx, "crystal_shards", userId, { limit, orderBy: "desc" });
 
             case "crystals":
-                return queryWithOptions(ctx, "crystals", userId, { limit });
+                return queryWithOptions(ctx, "crystals", userId, { limit, orderBy: "desc" });
 
             case "high_confidence":
                 const [shards, crystals] = await Promise.all([
                     queryWithOptions(ctx, "crystal_shards", userId, {
                         useIndex: "by_confidence",
                         indexFields: { confidence_level: "high" },
-                        limit
+                        limit,
+                        orderBy: "desc"
                     }),
                     queryWithOptions(ctx, "crystals", userId, {
                         useIndex: "by_confidence",
                         indexFields: { confidence_score: "high" },
-                        limit
+                        limit,
+                        orderBy: "desc"
                     })
                 ]);
                 return { shards, crystals };
@@ -173,7 +175,8 @@ export const getPersonaData = query({
             case "due_review":
                 return queryWithOptions(ctx, "crystals", userId, {
                     useIndex: "by_review_due",
-                    filters: { next_review_due: Date.now() }
+                    filters: { next_review_due: Date.now() },
+                    orderBy: "desc"
                 });
 
             case "overview":
@@ -446,6 +449,9 @@ async function getShardsByIdsHandler(
             continue;
         }
     }
+    
+    // Sort by creation time, most recent first
+    shards.sort((a, b) => b._creationTime - a._creationTime);
     
     return shards;
 }

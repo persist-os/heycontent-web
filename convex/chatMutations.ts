@@ -21,6 +21,16 @@ export const createConversation = mutation({
           uploaded_at: v.string(),
         }))),
       })),
+      // NEW: Optional project/widget context fields
+      projectId: v.optional(v.id("projects")),
+      widgetId: v.optional(v.string()),
+      widgetOutputId: v.optional(v.string()),
+      conversationType: v.optional(v.union(
+        v.literal("general"),
+        v.literal("widget_prompt"),
+        v.literal("project_scoped"),
+        v.literal("discovery")
+      )),
     },
     handler: async (ctx, args) => {
       const conversationId = await ctx.db.insert("conversations", {
@@ -30,6 +40,11 @@ export const createConversation = mutation({
         createdAt: Date.now(),
         updatedAt: Date.now(),
         starred: false,
+        // NEW: Include context fields if provided
+        projectId: args.projectId,
+        widgetId: args.widgetId,
+        widgetOutputId: args.widgetOutputId,
+        conversationType: args.conversationType,
       });
 
       // Note: Embeddings are generated automatically by the backend after conversation is stored
