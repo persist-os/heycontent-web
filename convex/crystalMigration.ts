@@ -250,12 +250,19 @@ export const triggerCrystalMigration = action({
 
       console.log(`🔮 [MIGRATION] Step 5: Calling backend with ${contentItems.length} content items for user: ${userId}`);
       
-      // Call backend migration endpoint
+      // Get system API key for internal service authentication
+      const systemApiKey = process.env.BACKEND_API_KEY;
+      if (!systemApiKey) {
+        throw new Error("BACKEND_API_KEY not configured - required for system authentication");
+      }
+      
+      // Call backend migration endpoint with system authentication
+      // System keys (userId starting with "system_" or "service_") can operate on behalf of any user
       const migrationResponse = await fetch(`${BACKEND_URL}/api/v1/migration/bulk-add-content`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.BACKEND_API_KEY}`,
+          'Authorization': `Bearer ${systemApiKey}`,
         },
         body: JSON.stringify({
           user_id: userId,
