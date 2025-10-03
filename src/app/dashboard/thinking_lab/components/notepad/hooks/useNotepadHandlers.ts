@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef } from 'react'
 import { useNotepadStore } from '../../../stores/notepadStore'
+import { useDialogueStore } from '../../../stores/dialogueStore'
 import type { Note, NoteUpdate } from '../../../../notes/types'
 import type { Id } from "@/convex/_generated/dataModel"
 import type { NoteHandlers, NotepadState, NotepadRefs } from '../types'
@@ -137,12 +138,27 @@ export function useNotepadHandlers({
     }
     
     if (isNewNote) {
-      // Create new note with conversation link
+      // Read context from dialogue store (context container)
+      const { projectId, widgetId, widgetOutputId } = useDialogueStore.getState();
+      
+      console.log('📝 [MarkdownNotepad] Creating note with context:', { 
+        projectId, 
+        widgetId, 
+        widgetOutputId,
+        hasContext: !!(projectId || widgetId)
+      });
+      
+      // Create new note with conversation link and context
       const newNoteId = await createNote(content.trim(), {
         redirect: false,
         customTitle: note.title !== 'Untitled Note' ? note.title : undefined,
         customType: note.type,
-        sourceConversationId: sessionId || undefined
+        sourceConversationId: sessionId || undefined,
+        // Pass context from container
+        projectId: projectId,
+        widgetId: widgetId,
+        widgetOutputId: widgetOutputId,
+        isWidgetOutput: false // User-created note, not widget-generated
       })
       
       if (newNoteId) {

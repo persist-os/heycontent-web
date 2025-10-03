@@ -11,6 +11,8 @@ export interface WidgetOutputReference {
   noteId: string
   outputId?: string
   _id?: string
+  projectId?: string
+  widgetId?: string
 }
 
 /**
@@ -18,10 +20,14 @@ export interface WidgetOutputReference {
  * 
  * @param router - Next.js router instance
  * @param output - Widget output containing noteId and outputId
+ * @param projectId - Optional project context (can also be in output)
+ * @param widgetId - Optional widget context (can also be in output)
  */
 export function launchThinkingLabWithOutput(
   router: AppRouterInstance,
-  output: WidgetOutputReference
+  output: WidgetOutputReference,
+  projectId?: string,
+  widgetId?: string
 ): void {
   if (!output.noteId) {
     console.error('[ThinkingLabLauncher] Cannot launch: noteId is missing from output', output)
@@ -30,19 +36,35 @@ export function launchThinkingLabWithOutput(
 
   // Use outputId if available, otherwise fall back to _id
   const widgetOutputId = output.outputId || output._id
+  
+  // Use provided IDs or fall back to output properties
+  const finalProjectId = projectId || output.projectId
+  const finalWidgetId = widgetId || output.widgetId
 
   if (!widgetOutputId) {
     console.warn('[ThinkingLabLauncher] No outputId found, launching with noteId only')
-    router.push(`/dashboard/thinking_lab?noteId=${output.noteId}`)
+    const baseUrl = `/dashboard/thinking_lab?noteId=${output.noteId}`
+    const urlWithContext = finalProjectId 
+      ? `${baseUrl}&projectId=${finalProjectId}${finalWidgetId ? `&widgetId=${finalWidgetId}` : ''}`
+      : baseUrl
+    router.push(urlWithContext)
     return
   }
 
-  // Build the full URL with both noteId and widgetOutputId
-  const url = `/dashboard/thinking_lab?noteId=${output.noteId}&widgetOutputId=${widgetOutputId}`
+  // Build the full URL with all context parameters
+  let url = `/dashboard/thinking_lab?noteId=${output.noteId}&widgetOutputId=${widgetOutputId}`
+  if (finalProjectId) {
+    url += `&projectId=${finalProjectId}`
+  }
+  if (finalWidgetId) {
+    url += `&widgetId=${finalWidgetId}`
+  }
   
   console.log('[ThinkingLabLauncher] Launching Thinking Lab:', { 
     noteId: output.noteId, 
     widgetOutputId,
+    projectId: finalProjectId,
+    widgetId: finalWidgetId,
     url 
   })
 

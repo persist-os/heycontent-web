@@ -65,6 +65,10 @@ export const processIntelligenceJobs = internalAction({
               status: "failed",
               completed_at: Date.now(),
               results: {
+                crystals_analyzed: 0,
+                relationships_found: 0,
+                contradictions_found: 0,
+                health_scores_updated: 0,
                 error: result.error || "Analysis failed"
               }
             });
@@ -84,6 +88,10 @@ export const processIntelligenceJobs = internalAction({
               status: "failed",
               completed_at: Date.now(),
               results: {
+                crystals_analyzed: 0,
+                relationships_found: 0,
+                contradictions_found: 0,
+                health_scores_updated: 0,
                 error: error.message || "Unknown error"
               }
             });
@@ -124,18 +132,24 @@ export const processIntelligenceJobs = internalAction({
  */
 async function callPythonAnalyzer(job: any): Promise<{success: boolean, data?: any, error?: string}> {
   try {
-    // Get backend URL from environment
+    // Get backend URL and API key from environment
     const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
+    const backendApiKey = process.env.BACKEND_API_KEY;
     
     if (!backendUrl) {
       throw new Error("BACKEND_URL not configured");
     }
     
-    // Call Python analyzer endpoint
-    const response = await fetch(`${backendUrl}/api/v1/intelligence/analyze`, {
+    if (!backendApiKey) {
+      throw new Error("BACKEND_API_KEY not configured");
+    }
+    
+    // Call Python analyzer endpoint with authentication
+    const response = await fetch(`${backendUrl}/api/v1/crystal_intelligence/analyze`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Authorization": `Bearer ${backendApiKey}`,
       },
       body: JSON.stringify({
         userId: job.userId,

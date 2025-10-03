@@ -30,20 +30,7 @@ export const checkIntelligenceTriggers = internalAction({
         ctx.runQuery(api.intelligenceQueries.getUserConfig, { userId }),
         ctx.runQuery(api.intelligenceQueries.getActivityCounters, { userId }),
       ]);
-      
-      // Increment counter for this event
-      const activity_map: Record<string, string> = {
-        "crystal_retrieval": "crystal_retrieval",
-        "chat": "chat",
-        "smart_note": "smart_note",
-        "crystal_formation": "crystal_formation",
-      };
-      
-      await ctx.runMutation(api.intelligenceMutations.incrementActivity, {
-        userId,
-        activity_type: activity_map[event_type] || "chat",
-      });
-      
+
       // Check if any threshold is met
       const should_trigger = shouldTriggerAnalysis(config, counters, event_type);
       

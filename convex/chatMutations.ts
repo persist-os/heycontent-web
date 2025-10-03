@@ -85,6 +85,15 @@ handler: async (ctx, args) => {
       updatedAt: Date.now(),
     });
 
+    // ✅ TRACK INTELLIGENCE: Only track user messages for activity monitoring
+    // Call incrementActivity directly to increment counters and trigger checks
+    if (args.message.role === "user") {
+      await ctx.runMutation(api.intelligenceMutations.incrementActivity, {
+        userId: args.userId,
+        activity_type: "chat",
+      });
+    }
+
     return args.conversationId;
 },
 });

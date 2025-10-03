@@ -120,7 +120,7 @@ export function WidgetDetailsPanel({
 
   const handleLaunchThinkingLab = () => {
     if (output?.noteId) {
-      launchThinkingLabWithOutput(router, output)
+      launchThinkingLabWithOutput(router, output, projectId, widget.widget_id)
     }
   }
 

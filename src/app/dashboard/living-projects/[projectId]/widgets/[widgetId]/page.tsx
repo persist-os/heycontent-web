@@ -129,7 +129,9 @@ export default function WidgetDashboardPage() {
   }
 
   const handleLaunchThinkingLab = (output: WidgetOutput) => {
-    router.push(`/dashboard/thinking_lab?noteId=${output.noteId}&widgetOutputId=${output.outputId}`)
+    // Use the unified launcher utility with full context
+    const { launchThinkingLabWithOutput } = require('@/app/dashboard/living-projects/utils/thinkingLabLauncher')
+    launchThinkingLabWithOutput(router, output, projectId, widgetId)
   }
 
   const handleNoteClick = (noteId: string) => {

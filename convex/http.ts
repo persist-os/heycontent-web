@@ -401,6 +401,10 @@ app.post("/api/notes", async (c) => {
       type: noteData.type,
       tags: noteData.tags,
       platform: noteData.platform,
+      widgetId: noteData.widgetId,
+      projectId: noteData.projectId,
+      isWidgetOutput: noteData.isWidgetOutput,
+      widgetOutputId: noteData.widgetOutputId,
     });
     return c.json({ success: true, note: newNote });
   } catch (error: any) {
@@ -1239,17 +1243,24 @@ app.post("/api/users/:userId/projects/:projectId/generate-widgets", async (c) =>
 /**
  * Upsert project widgets - handles create and update
  * Used by: Backend widget generation, frontend updates
+ * 
+ * REDESIGNED: Now returns { layoutId, widgetIds[] } instead of single ID
+ * Maintains backward compatibility with backend data format
  */
 app.post("/api/project-widgets/upsert", async (c) => {
   const ctx = c.env;
   const widgetsData = await c.req.json();
   
   try {
-    const widgetsId = await ctx.runMutation(api.projectWidgetsMutations.upsertProjectWidgets, widgetsData);
+    const result = await ctx.runMutation(api.projectWidgetsMutations.upsertProjectWidgets, widgetsData);
     
     return c.json({
       success: true,
-      data: widgetsId
+      data: {
+        layoutId: result.layoutId,
+        widgetIds: result.widgetIds,
+        widgetCount: result.widgetIds.length,
+      }
     });
   } catch (error: any) {
     console.error("Failed to upsert project widgets:", error);
@@ -1388,6 +1399,7 @@ app.get("/api/project-widgets/getWidget", async (c) => {
 /**
  * Delete project widgets by project ID
  * Used by: Project cleanup, widget deletion
+ * REDESIGNED: Now deletes both layout and individual widgets
  */
 app.delete("/api/project-widgets/delete", async (c) => {
   const ctx = c.env;
@@ -1422,6 +1434,212 @@ app.delete("/api/project-widgets/delete", async (c) => {
     return c.json({ 
       success: false, 
       error: "Failed to delete project widgets",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// ============================================================================
+// INDIVIDUAL WIDGET ENDPOINTS (NEW - Optimized Operations)
+// These endpoints work with individual widgets, each with its own Convex ID
+// ============================================================================
+
+/**
+ * Create a single widget
+ */
+app.post("/api/widgets/create", async (c) => {
+  const ctx = c.env;
+  const widgetData = await c.req.json();
+  
+  try {
+    const widgetId = await ctx.runMutation(api.widgetsMutations.createWidget, widgetData);
+    
+    return c.json({
+      success: true,
+      data: { widgetId }
+    });
+  } catch (error: any) {
+    console.error("Failed to create widget:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to create widget",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * Update a single widget by Convex ID
+ */
+app.patch("/api/widgets/:widgetId", async (c) => {
+  const ctx = c.env;
+  const widgetId = c.req.param("widgetId") as Id<"widgets">;
+  const { userId, updates } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.widgetsMutations.updateWidget, {
+      widgetId,
+      userId,
+      updates
+    });
+    
+    return c.json({
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    console.error("Failed to update widget:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to update widget",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * Delete a single widget by Convex ID
+ */
+app.delete("/api/widgets/:widgetId", async (c) => {
+  const ctx = c.env;
+  const widgetId = c.req.param("widgetId") as Id<"widgets">;
+  const { userId, hardDelete } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.widgetsMutations.deleteWidget, {
+      widgetId,
+      userId,
+      hardDelete
+    });
+    
+    return c.json({
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    console.error("Failed to delete widget:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to delete widget",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * Get a single widget by Convex ID
+ */
+app.get("/api/widgets/:widgetId", async (c) => {
+  const ctx = c.env;
+  const widgetId = c.req.param("widgetId") as Id<"widgets">;
+  const userId = c.req.query("userId");
+  
+  try {
+    const widget = await ctx.runQuery(api.widgetsQueries.getWidget, {
+      widgetId,
+      userId
+    });
+    
+    if (!widget) {
+      return c.json({ 
+        success: false, 
+        error: "Widget not found" 
+      }, 404);
+    }
+    
+    return c.json({
+      success: true,
+      data: widget
+    });
+  } catch (error: any) {
+    console.error("Failed to get widget:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get widget",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * Get all widgets for a project
+ */
+app.get("/api/widgets/project/:projectId", async (c) => {
+  const ctx = c.env;
+  const projectId = c.req.param("projectId") as Id<"projects">;
+  const userId = c.req.query("userId");
+  const includeArchived = c.req.query("includeArchived") === "true";
+  
+  try {
+    const widgets = await ctx.runQuery(api.widgetsQueries.getProjectWidgets, {
+      projectId,
+      userId,
+      includeArchived
+    });
+    
+    return c.json({
+      success: true,
+      data: widgets,
+      count: widgets.length
+    });
+  } catch (error: any) {
+    console.error("Failed to get project widgets:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get project widgets",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * Batch create widgets
+ */
+app.post("/api/widgets/batch-create", async (c) => {
+  const ctx = c.env;
+  const batchData = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.widgetsMutations.batchCreateWidgets, batchData);
+    
+    return c.json({
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    console.error("Failed to batch create widgets:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to batch create widgets",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * Update widget execution status
+ */
+app.patch("/api/widgets/:widgetId/execution", async (c) => {
+  const ctx = c.env;
+  const widgetId = c.req.param("widgetId") as Id<"widgets">;
+  const { userId, status } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.widgetsMutations.updateWidgetExecution, {
+      widgetId,
+      userId,
+      status
+    });
+    
+    return c.json({
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    console.error("Failed to update widget execution:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to update widget execution",
       message: error.message || "Internal Server Error"
     }, 500);
   }
@@ -1785,26 +2003,42 @@ app.post("/api/crystal/paginated", async (c) => {
 // === INTELLIGENCE SYSTEM ENDPOINTS ===
 
 // Trigger intelligence check (non-blocking)
+// Called by Python backend (observatory) to track activity
 app.post("/api/intelligence/trigger", async (c) => {
   const ctx = c.env;
   const { userId, event_type } = await c.req.json();
   
+  // Early validation prevents unnecessary processing
+  const VALID_ACTIVITY_TYPES = ["chat", "smart_note", "crystal_formation", "crystal_retrieval"];
+  
+  if (!userId || !event_type) {
+    return c.json({
+      success: false,
+      error: "Missing required fields: userId, event_type"
+    }, 400);
+  }
+  
+  if (!VALID_ACTIVITY_TYPES.includes(event_type)) {
+    return c.json({
+      success: false,
+      error: `Invalid event_type. Must be one of: ${VALID_ACTIVITY_TYPES.join(", ")}`
+    }, 400);
+  }
+  
   try {
-    // Fire and forget - trigger internal action without awaiting
-    // Use internal.* for internalAction (not api.*)
-    ctx.runAction(internal.intelligenceActions.checkIntelligenceTriggers, {
+    // Call incrementActivity mutation which will:
+    // 1. Increment activity counters
+    // 2. Schedule intelligence check (via ctx.scheduler)
+    await ctx.runMutation(api.intelligenceMutations.incrementActivity, {
       userId,
-      event_type
-    }).catch((error: any) => {
-      console.log(`[INTELLIGENCE] Trigger check failed (non-critical): ${error}`);
+      activity_type: event_type,
     });
     
-    // Return immediately
-    return c.json({ success: true, data: { queued: true } });
+    return c.json({ success: true, data: { tracked: true } });
   } catch (error: any) {
-    // Don't fail - trigger checks are non-critical
-    console.log(`[INTELLIGENCE] Trigger error (non-critical): ${error.message}`);
-    return c.json({ success: true, data: { queued: false } });
+    // Don't fail - activity tracking is non-critical
+    console.log(`[INTELLIGENCE] Activity tracking error (non-critical): ${error.message}`);
+    return c.json({ success: true, data: { tracked: false, error: error.message } });
   }
 });
 
@@ -1930,10 +2164,64 @@ app.post("/api/shard-lifecycle/release-stuck", async (c) => {
 });
 
 // === MIGRATIONS ===
+
+// Widget migration endpoints
+app.post("/api/migrations/widgets/status", async (c) => {
+  const ctx = c.env;
+
+  try {
+    const result = await ctx.runQuery(api.migrations.migrateWidgetsToIndividualDocs.checkMigrationStatus, {});
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/migrations/widgets/migrate", async (c) => {
+  const ctx = c.env;
+  const { dryRun, batchSize } = await c.req.json();
+
+  try {
+    const result = await ctx.runMutation(api.migrations.migrateWidgetsToIndividualDocs.runMigration, {
+      dryRun: dryRun || false,
+      batchSize: batchSize || 100
+    });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/migrations/widgets/verify", async (c) => {
+  const ctx = c.env;
+
+  try {
+    const result = await ctx.runQuery(api.migrations.migrateWidgetsToIndividualDocs.verifyMigration, {});
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/migrations/widgets/cleanup", async (c) => {
+  const ctx = c.env;
+  const { dryRun } = await c.req.json();
+
+  try {
+    const result = await ctx.runMutation(api.migrations.migrateWidgetsToIndividualDocs.cleanupEmptyWidgetsField, {
+      dryRun: dryRun || false
+    });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// Legacy shard migration endpoints
 app.post("/api/migrations/reserved-shards", async (c) => {
   const ctx = c.env;
   const requestBody = await c.req.json();
-  
+
   try {
     const result = await ctx.runMutation(api.migrations.migrateReservedShards.migrateReservedShardsToUnprocessed, requestBody);
     return c.json({ success: true, data: result });
@@ -1944,7 +2232,7 @@ app.post("/api/migrations/reserved-shards", async (c) => {
 
 app.get("/api/migrations/shard-status-distribution", async (c) => {
   const ctx = c.env;
-  
+
   try {
     const result = await ctx.runMutation(api.migrations.migrateReservedShards.getShardStatusDistribution, {});
     return c.json({ success: true, data: result });

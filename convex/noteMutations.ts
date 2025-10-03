@@ -22,6 +22,11 @@ export const createNote = mutation({
     tags: v.optional(v.array(v.string())),
     platform: v.optional(v.string()),
     sourceConversationId: v.optional(v.string()),
+    // Context fields for project/widget linkage
+    widgetId: v.optional(v.string()),
+    projectId: v.optional(v.id("projects")),
+    isWidgetOutput: v.optional(v.boolean()),
+    widgetOutputId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -36,6 +41,11 @@ export const createNote = mutation({
       important: false,
       createdAt: now,
       updatedAt: now,
+      // Include context fields if provided
+      widgetId: args.widgetId,
+      projectId: args.projectId,
+      isWidgetOutput: args.isWidgetOutput,
+      widgetOutputId: args.widgetOutputId,
     });
 
     const note = await ctx.db.get(noteId);
