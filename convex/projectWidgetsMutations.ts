@@ -188,6 +188,136 @@ export const upsertProjectWidgets = mutation({
 });
 
 /**
+ * Update a single widget within a project's widget collection
+ * Used by: Widget editing UI
+ */
+export const updateWidget = mutation({
+  args: {
+    projectId: v.id("projects"),
+    userId: v.string(),
+    widgetId: v.string(),
+    updates: v.object({
+      title: v.optional(v.string()),
+      description: v.optional(v.string()),
+      priority: v.optional(v.number()),
+      size: v.optional(v.string()),
+      theme: v.optional(v.string()),
+      category: v.optional(v.string()),
+      update_frequency: v.optional(v.string()),
+      interactive: v.optional(v.boolean()),
+      editable: v.optional(v.boolean()),
+      shareable: v.optional(v.boolean()),
+    }),
+  },
+  returns: v.object({
+    success: v.boolean(),
+  }),
+  handler: async (ctx, { projectId, userId, widgetId, updates }) => {
+    // Validate project ownership
+    const project = await ctx.db.get(projectId);
+    if (!project) {
+      throw new Error("Project not found");
+    }
+    
+    if (project.userId !== userId) {
+      throw new Error("Access denied: You don't own this project");
+    }
+
+    // Find the project widgets document
+    const projectWidgets = await ctx.db
+      .query("project_widgets")
+      .withIndex("by_project", (q) => q.eq("projectId", projectId))
+      .filter((q) => q.eq(q.field("status"), "active"))
+      .first();
+
+    if (!projectWidgets) {
+      throw new Error("Project widgets not found");
+    }
+
+    if (projectWidgets.userId !== userId) {
+      throw new Error("Access denied: You don't own these widgets");
+    }
+
+    // Find the widget in the array
+    const widgetIndex = projectWidgets.widgets.findIndex(w => w.widget_id === widgetId);
+    if (widgetIndex === -1) {
+      throw new Error("Widget not found");
+    }
+
+    // Update the widget with new values
+    const updatedWidgets = [...projectWidgets.widgets];
+    updatedWidgets[widgetIndex] = {
+      ...updatedWidgets[widgetIndex],
+      ...updates,
+    };
+
+    // Update the document
+    await ctx.db.patch(projectWidgets._id, {
+      widgets: updatedWidgets,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+/**
+ * Delete a single widget from a project's widget collection
+ * Used by: Widget deletion UI
+ */
+export const deleteWidget = mutation({
+  args: {
+    projectId: v.id("projects"),
+    userId: v.string(),
+    widgetId: v.string(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+  }),
+  handler: async (ctx, { projectId, userId, widgetId }) => {
+    // Validate project ownership
+    const project = await ctx.db.get(projectId);
+    if (!project) {
+      throw new Error("Project not found");
+    }
+    
+    if (project.userId !== userId) {
+      throw new Error("Access denied: You don't own this project");
+    }
+
+    // Find the project widgets document
+    const projectWidgets = await ctx.db
+      .query("project_widgets")
+      .withIndex("by_project", (q) => q.eq("projectId", projectId))
+      .filter((q) => q.eq(q.field("status"), "active"))
+      .first();
+
+    if (!projectWidgets) {
+      throw new Error("Project widgets not found");
+    }
+
+    if (projectWidgets.userId !== userId) {
+      throw new Error("Access denied: You don't own these widgets");
+    }
+
+    // Filter out the widget
+    const updatedWidgets = projectWidgets.widgets.filter(w => w.widget_id !== widgetId);
+
+    if (updatedWidgets.length === projectWidgets.widgets.length) {
+      throw new Error("Widget not found");
+    }
+
+    // Update the document
+    await ctx.db.patch(projectWidgets._id, {
+      widgets: updatedWidgets,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+/**
  * Delete project widgets - Clean deletion with validation
  * Used by: Project cleanup, widget deletion
  */

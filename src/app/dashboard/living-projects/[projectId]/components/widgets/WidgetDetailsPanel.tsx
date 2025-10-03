@@ -8,14 +8,18 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { X, Layers, Palette, Clock, Activity, Target, Calendar, Lightbulb, FileText, ExternalLink, Maximize2, Play, Loader2 } from 'lucide-react'
+import { X, Layers, Palette, Clock, Activity, Target, Calendar, Lightbulb, FileText, ExternalLink, Maximize2, Play, Loader2, Edit, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { WidgetConfig } from '@/types/projectWidgets'
 import { getWidgetThemeClasses } from '../utils/widgetStyling'
 import { useRouter } from 'next/navigation'
 import { api } from '@/convex/_generated/api'
-import { useQuery } from 'convex/react'
+import { useQuery, useMutation } from 'convex/react'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { useWidgetRunner } from '@/app/dashboard/living-projects/hooks/useWidgetRunner'
 import { launchThinkingLabWithOutput } from '@/app/dashboard/living-projects/utils/thinkingLabLauncher'
@@ -39,6 +43,28 @@ export function WidgetDetailsPanel({
   const router = useRouter()
   const [userId, setUserId] = useState<string | null>(null)
   const { executeWidget, isRunning } = useWidgetRunner()
+  
+  // Edit dialog state
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [editForm, setEditForm] = useState({
+    title: '',
+    description: '',
+    priority: 5,
+    size: 'medium',
+    theme: 'clean',
+    update_frequency: 'daily'
+  })
+  
+  // Delete dialog state
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  
+  // Mutations
+  const updateWidget = useMutation(api.projectWidgetsMutations.updateWidget)
+  const deleteWidget = useMutation(api.projectWidgetsMutations.deleteWidget)
+  
+  // Loading states
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Get user ID on mount
   useEffect(() => {
@@ -52,6 +78,20 @@ export function WidgetDetailsPanel({
     }
     getUserId()
   }, [])
+  
+  // Update edit form when widget changes
+  useEffect(() => {
+    if (widget) {
+      setEditForm({
+        title: widget.title,
+        description: widget.description || '',
+        priority: widget.priority,
+        size: widget.size,
+        theme: widget.theme,
+        update_frequency: widget.update_frequency
+      })
+    }
+  }, [widget])
   
   // Fetch latest widget output
   const latestOutput = useQuery(
@@ -99,6 +139,55 @@ export function WidgetDetailsPanel({
       // Output will appear automatically via the query
     } catch (error) {
       console.error('Failed to run widget:', error)
+    }
+  }
+  
+  const handleEditWidget = async () => {
+    if (!widget || !userId) return
+    
+    setIsUpdating(true)
+    try {
+      await updateWidget({
+        projectId: projectId as any,
+        userId,
+        widgetId: widget.widget_id,
+        updates: {
+          title: editForm.title,
+          description: editForm.description,
+          priority: editForm.priority,
+          size: editForm.size,
+          theme: editForm.theme,
+          update_frequency: editForm.update_frequency
+        }
+      })
+      setIsEditDialogOpen(false)
+      // Refresh will happen automatically via the query
+    } catch (error) {
+      console.error('Failed to update widget:', error)
+      alert('Failed to update widget. Please try again.')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+  
+  const handleDeleteWidget = async () => {
+    if (!widget || !userId) return
+    
+    setIsDeleting(true)
+    try {
+      await deleteWidget({
+        projectId: projectId as any,
+        userId,
+        widgetId: widget.widget_id
+      })
+      setIsDeleteDialogOpen(false)
+      onClose() // Close the panel after deletion
+      // Refresh will happen automatically via the query
+    } catch (error) {
+      console.error('Failed to delete widget:', error)
+      alert('Failed to delete widget. Please try again.')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -341,6 +430,24 @@ export function WidgetDetailsPanel({
           <div className="pt-4 border-t border-border/30">
             <h3 className="text-sm font-medium text-muted-foreground mb-3">Actions</h3>
             <div className="space-y-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full justify-start"
+                onClick={() => setIsEditDialogOpen(true)}
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Edit Widget
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                onClick={() => setIsDeleteDialogOpen(true)}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Widget
+              </Button>
               <Button variant="outline" size="sm" className="w-full justify-start">
                 <Activity className="w-4 h-4 mr-2" />
                 View Activity
@@ -364,6 +471,155 @@ export function WidgetDetailsPanel({
           </div>
         </div>
       </div>
+
+      {/* Edit Widget Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Widget</DialogTitle>
+            <DialogDescription>
+              Make changes to your widget configuration. Click save when you're done.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
+                value={editForm.title}
+                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                placeholder="Widget title"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description">Description</Label>
+              <Input
+                id="description"
+                value={editForm.description}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                placeholder="Widget description"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="priority">Priority (1-10)</Label>
+              <Input
+                id="priority"
+                type="number"
+                min="1"
+                max="10"
+                value={editForm.priority}
+                onChange={(e) => setEditForm({ ...editForm, priority: parseInt(e.target.value) || 1 })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="size">Size</Label>
+              <Select
+                value={editForm.size}
+                onValueChange={(value) => setEditForm({ ...editForm, size: value })}
+              >
+                <SelectTrigger id="size">
+                  <SelectValue placeholder="Select size" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="small">Small</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="large">Large</SelectItem>
+                  <SelectItem value="xlarge">Extra Large</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="theme">Theme</Label>
+              <Select
+                value={editForm.theme}
+                onValueChange={(value) => setEditForm({ ...editForm, theme: value })}
+              >
+                <SelectTrigger id="theme">
+                  <SelectValue placeholder="Select theme" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="warm">Warm</SelectItem>
+                  <SelectItem value="clean">Clean</SelectItem>
+                  <SelectItem value="professional">Professional</SelectItem>
+                  <SelectItem value="creative">Creative</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="update_frequency">Update Frequency</Label>
+              <Select
+                value={editForm.update_frequency}
+                onValueChange={(value) => setEditForm({ ...editForm, update_frequency: value })}
+              >
+                <SelectTrigger id="update_frequency">
+                  <SelectValue placeholder="Select frequency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="realtime">Real-time</SelectItem>
+                  <SelectItem value="hourly">Hourly</SelectItem>
+                  <SelectItem value="daily">Daily</SelectItem>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditWidget} disabled={isUpdating}>
+              {isUpdating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Widget Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Delete Widget</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this widget? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="bg-muted/30 rounded-md p-4 space-y-2">
+              <div className="font-medium">{widget?.title}</div>
+              <div className="text-sm text-muted-foreground">{widget?.description}</div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteWidget}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Widget
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
