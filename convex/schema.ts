@@ -1252,67 +1252,71 @@ export default defineSchema({
     userId: v.string(),
     crystalId: v.string(),
     
-    // Usage statistics (aggregated from usageEvents)
-    usage: v.object({
-      total_retrievals: v.number(),
-      retrievals_last_7d: v.number(),
-      retrievals_last_30d: v.number(),
-      last_used: v.number(),
-      usage_frequency: v.number(),
-      contexts: v.array(v.string()),
+    // Usage statistics (aggregated from usageEvents) - all optional for incremental updates
+    usage: v.optional(v.object({
+      total_retrievals: v.optional(v.number()),
+      retrievals_last_7d: v.optional(v.number()),
+      retrievals_last_30d: v.optional(v.number()),
+      last_used: v.optional(v.number()),
+      last_retrieved: v.optional(v.number()),
+      usage_frequency: v.optional(v.number()),
+      contexts: v.optional(v.array(v.string())),
       co_occurrence: v.optional(v.array(v.string())),
-    }),
+    })),
     
-    // Relationship analysis (vector similarity based)
-    relationships: v.object({
-      related: v.array(v.object({
+    // Relationship analysis (vector similarity based) - all optional for incremental updates
+    relationships: v.optional(v.object({
+      related: v.optional(v.array(v.object({
         crystalId: v.string(),
         similarity: v.number(),
         relationship_type: v.string(),
         confidence: v.number(),
-      })),
-      conflicting: v.array(v.object({
+      }))),
+      related_crystal_ids: v.optional(v.array(v.string())),
+      relationship_scores: v.optional(v.any()),
+      conflicting: v.optional(v.array(v.object({
         crystalId: v.string(),
         conflict_score: v.number(),
         conflict_type: v.string(),
         resolution: v.optional(v.string()),
+      }))),
+    })),
+    
+    // Contradiction analysis (shard-level) - all optional for incremental updates
+    contradictions: v.optional(v.object({
+      shard_ids: v.optional(v.array(v.string())),
+      severity: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
+      patterns: v.optional(v.array(v.string())),
+      analysis: v.optional(v.string()),
+    })),
+    
+    // Health scoring (composite metric) - all optional for incremental updates
+    health: v.optional(v.object({
+      overall_score: v.optional(v.number()),
+      last_computed: v.optional(v.number()),
+      components: v.optional(v.object({
+        evidence_strength: v.optional(v.number()),
+        usage_recency: v.optional(v.number()),
+        usage_frequency: v.optional(v.number()),
+        contradiction_impact: v.optional(v.number()),
+        age_factor: v.optional(v.number()),
       })),
-    }),
+      trend: v.optional(v.union(v.literal("improving"), v.literal("stable"), v.literal("declining"))),
+    })),
     
-    // Contradiction analysis (shard-level)
-    contradictions: v.object({
-      shard_ids: v.array(v.string()),
-      severity: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
-      patterns: v.array(v.string()),
-      analysis: v.string(),
-    }),
-    
-    // Health scoring (composite metric)
-    health: v.object({
-      overall_score: v.number(),
-      components: v.object({
-        evidence_strength: v.number(),
-        usage_recency: v.number(),
-        usage_frequency: v.number(),
-        contradiction_impact: v.number(),
-        age_factor: v.number(),
-      }),
-      trend: v.union(v.literal("improving"), v.literal("stable"), v.literal("declining")),
-    }),
-    
-    // Lifecycle management
-    lifecycle: v.object({
-      review_priority: v.union(
+    // Lifecycle management - all optional for incremental updates
+    lifecycle: v.optional(v.object({
+      review_priority: v.optional(v.union(
         v.literal("low"),
         v.literal("medium"),
         v.literal("high"),
         v.literal("critical")
-      ),
-      next_review_due: v.number(),
-      archival_candidate: v.boolean(),
+      )),
+      next_review_due: v.optional(v.number()),
+      archival_candidate: v.optional(v.boolean()),
       archival_reason: v.optional(v.string()),
       archival_confidence: v.optional(v.number()),
-    }),
+    })),
     
     // Metadata
     analysis_version: v.string(),
@@ -1323,9 +1327,8 @@ export default defineSchema({
   })
   .index("by_user", ["userId"])
   .index("by_crystal", ["userId", "crystalId"])
-  .index("by_health", ["userId", "health.overall_score"])
-  .index("by_review_priority", ["userId", "lifecycle.review_priority"])
-  .index("by_archival_candidate", ["userId", "lifecycle.archival_candidate"]),
+  .index("by_last_analyzed", ["userId", "last_analyzed"])
+  .index("by_analysis_depth", ["userId", "analysis_depth"]),
 
   // Intelligence Jobs - Background processing queue
   intelligence_jobs: defineTable({
