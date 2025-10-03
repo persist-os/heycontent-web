@@ -10,7 +10,7 @@ import React from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Calendar, ExternalLink, Clock, Hash, Star } from 'lucide-react'
+import { Calendar, ExternalLink, Clock, Star } from 'lucide-react'
 import { truncateContent } from '../utils'
 import type { ConnectedNote } from '../types'
 
@@ -86,15 +86,9 @@ export function ConnectedNoteCard({ note, onNoteClick }: ConnectedNoteCardProps)
           )}
 
           {/* Metadata Footer */}
-          <div className="flex items-center gap-4 text-xs text-muted-foreground pt-2 border-t border-border/30">
-            <div className="flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5" />
-              <span>Updated {updatedDate.toLocaleDateString()}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Hash className="w-3.5 h-3.5" />
-              <code className="font-mono">{note._id.slice(0, 8)}</code>
-            </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t border-border/30">
+            <Clock className="w-3.5 h-3.5" />
+            <span>Updated {updatedDate.toLocaleDateString()}</span>
           </div>
         </div>
       </CardContent>

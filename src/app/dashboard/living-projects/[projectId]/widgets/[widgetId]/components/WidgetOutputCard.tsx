@@ -8,13 +8,11 @@
 
 import React from 'react'
 import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { 
   Calendar, 
   ExternalLink, 
   Lightbulb, 
-  Hash, 
   ChevronDown, 
   ChevronUp 
 } from 'lucide-react'
@@ -33,7 +31,26 @@ export function WidgetOutputCard({
   onToggle, 
   onLaunchLab 
 }: WidgetOutputCardProps) {
-  const createdDate = new Date(output.createdAt)
+  const getRelativeTime = (timestamp: number) => {
+    const now = Date.now()
+    const diff = now - timestamp
+    
+    const seconds = Math.floor(diff / 1000)
+    const minutes = Math.floor(seconds / 60)
+    const hours = Math.floor(minutes / 60)
+    const days = Math.floor(hours / 24)
+    const weeks = Math.floor(days / 7)
+    const months = Math.floor(days / 30)
+    const years = Math.floor(days / 365)
+    
+    if (seconds < 60) return 'just now'
+    if (minutes < 60) return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`
+    if (hours < 24) return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`
+    if (days < 7) return `${days} ${days === 1 ? 'day' : 'days'} ago`
+    if (weeks < 4) return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`
+    if (months < 12) return `${months} ${months === 1 ? 'month' : 'months'} ago`
+    return `${years} ${years === 1 ? 'year' : 'years'} ago`
+  }
 
   return (
     <Card className="border-border/50 overflow-hidden">
@@ -45,19 +62,13 @@ export function WidgetOutputCard({
               <div className="flex items-center gap-3">
                 <Calendar className="w-4 h-4 text-muted-foreground" />
                 <span className="text-sm text-foreground">
-                  {createdDate.toLocaleDateString()} at {createdDate.toLocaleTimeString()}
+                  {getRelativeTime(output.createdAt)}
                 </span>
               </div>
               
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <Lightbulb className="w-4 h-4" />
-                  <span>{output.prompts?.length || 0} prompts</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Hash className="w-4 h-4" />
-                  <code className="text-xs font-mono">{output.outputId.slice(0, 8)}</code>
-                </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Lightbulb className="w-4 h-4" />
+                <span>{output.prompts?.length || 0} conversation starters</span>
               </div>
             </div>
 
@@ -89,52 +100,28 @@ export function WidgetOutputCard({
         {/* Expandable Content */}
         {isExpanded && (
           <div className="p-6 space-y-4 bg-muted/20">
-            {/* Note ID */}
-            <div>
-              <h4 className="text-xs font-medium text-muted-foreground mb-2">Note ID</h4>
-              <div className="bg-muted/30 rounded p-3 break-all">
-                <code className="text-xs text-foreground font-mono">
-                  {output.noteId}
-                </code>
-              </div>
-            </div>
-
             {/* Conversation Prompts */}
-            {output.prompts && output.prompts.length > 0 && (
-              <div>
-                <h4 className="text-xs font-medium text-muted-foreground mb-3">
-                  Conversation Starters
-                </h4>
-                <div className="space-y-2">
-                  {output.prompts.map((prompt, idx) => (
-                    <div
-                      key={idx}
-                      className="bg-muted/30 rounded p-3 text-sm text-foreground/80"
-                    >
-                      <div className="flex items-start gap-3">
-                        <span className="text-xs text-muted-foreground font-medium mt-0.5">
-                          {idx + 1}.
-                        </span>
-                        <span className="flex-1">{prompt.text}</span>
-                        <Badge variant="outline" className="text-xs">
-                          P{prompt.priority}
-                        </Badge>
-                      </div>
+            {output.prompts && output.prompts.length > 0 ? (
+              <div className="space-y-2">
+                {output.prompts.map((prompt, idx) => (
+                  <div
+                    key={idx}
+                    className="bg-muted/30 rounded p-4 text-sm text-foreground leading-relaxed"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="text-xs text-muted-foreground font-medium mt-0.5">
+                        {idx + 1}.
+                      </span>
+                      <span className="flex-1">{prompt.text}</span>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No conversation starters available
+              </p>
             )}
-
-            {/* Output ID */}
-            <div>
-              <h4 className="text-xs font-medium text-muted-foreground mb-2">Output ID</h4>
-              <div className="bg-muted/30 rounded p-3 break-all">
-                <code className="text-xs text-muted-foreground font-mono">
-                  {output.outputId}
-                </code>
-              </div>
-            </div>
           </div>
         )}
       </CardContent>

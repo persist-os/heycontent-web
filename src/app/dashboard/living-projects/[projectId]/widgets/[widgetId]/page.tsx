@@ -22,7 +22,6 @@ import type { WidgetOutput, ConnectedNote } from './types'
 import { WidgetHeader } from './components/WidgetHeader'
 import { WidgetStatusCard } from './components/WidgetStatusCard'
 import { WidgetPropertiesCard } from './components/WidgetPropertiesCard'
-import { WidgetIdCard } from './components/WidgetIdCard'
 import { ConnectedNotesStats } from './components/ConnectedNotesStats'
 import { ConnectedNoteCard } from './components/ConnectedNoteCard'
 import { WidgetOutputCard } from './components/WidgetOutputCard'
@@ -125,6 +124,10 @@ export default function WidgetDashboardPage() {
     }
   }
 
+  const handleOpenInLab = () => {
+    router.push(`/dashboard/thinking_lab?widgetId=${widgetId}&projectId=${projectId}`)
+  }
+
   const handleLaunchThinkingLab = (output: WidgetOutput) => {
     router.push(`/dashboard/thinking_lab?noteId=${output.noteId}&widgetOutputId=${output.outputId}`)
   }
@@ -168,10 +171,11 @@ export default function WidgetDashboardPage() {
         projectId={projectId}
         isRunning={isRunning}
         onRunWidget={handleRunWidget}
+        onOpenInLab={handleOpenInLab}
       />
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-6 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column: Metadata & Stats */}
           <div className="lg:col-span-1 space-y-6">
@@ -182,7 +186,6 @@ export default function WidgetDashboardPage() {
               totalOutputs={totalOutputs}
             />
             <WidgetPropertiesCard widget={widget} />
-            <WidgetIdCard widgetId={widget.widget_id} />
           </div>
 
           {/* Right Column: Notes & Outputs */}

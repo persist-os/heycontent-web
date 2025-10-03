@@ -10,7 +10,7 @@ import React from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Play, Loader2 } from 'lucide-react'
+import { ArrowLeft, Play, Loader2, FlaskConical } from 'lucide-react'
 import { Id } from '@/convex/_generated/dataModel'
 import type { WidgetConfig } from '@/types/projectWidgets'
 
@@ -19,19 +19,21 @@ interface WidgetHeaderProps {
   projectId: Id<"projects">
   isRunning: boolean
   onRunWidget: () => void
+  onOpenInLab: () => void
 }
 
 export function WidgetHeader({ 
   widget, 
   projectId, 
   isRunning, 
-  onRunWidget 
+  onRunWidget,
+  onOpenInLab 
 }: WidgetHeaderProps) {
   const router = useRouter()
 
   return (
     <div className="border-b border-border/30">
-      <div className="max-w-7xl mx-auto px-6 py-6">
+      <div className="max-w-7xl mx-auto px-6 py-10">
         <div className="flex items-start justify-between gap-6">
           {/* Left: Title & Metadata */}
           <div className="flex-1 space-y-4">
@@ -62,7 +64,15 @@ export function WidgetHeader({
           </div>
 
           {/* Right: Actions */}
-          <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={onOpenInLab}
+              variant="outline"
+              className="hover:bg-muted/50 transition-colors duration-300"
+            >
+              <FlaskConical className="w-4 h-4 mr-2" />
+              Open in Lab
+            </Button>
             <Button
               onClick={onRunWidget}
               disabled={isRunning}
