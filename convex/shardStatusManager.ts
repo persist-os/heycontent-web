@@ -291,47 +291,6 @@ export const reserveShards = mutation({
 });
 
 /**
- * Mark shards as consumed by a crystal
- * 
- * Permanently associates shards with a crystal, preventing reuse. Accepts
- * shards from both reserved and unprocessed states. Automatically clears
- * reservation metadata when consuming reserved shards.
- * 
- * @param shardIds - Array of shard IDs to consume
- * @param crystalId - Crystal ID that will use these shards
- * @returns Consumption results with failure count and errors
- */
-export const consumeShards = mutation({
-  args: {
-    shardIds: v.array(v.id("crystal_shards")),
-    crystalId: v.string(),
-    consumptionType: v.optional(v.string()),
-  },
-  returns: v.object({
-    success: v.boolean(),
-    markedCount: v.number(),
-    failedCount: v.number(),
-    errors: v.array(v.string()),
-  }),
-  handler: async (ctx, { shardIds, crystalId }) => {
-    const result = await updateShardStatusHandler(
-      ctx,
-      shardIds,
-      "used_for_crystal",
-      { crystalId },
-      ["reserved", "unprocessed"]
-    );
-
-    return {
-      success: result.success,
-      markedCount: result.updatedCount,
-      failedCount: result.failedCount,
-      errors: result.errors,
-    };
-  },
-});
-
-/**
  * Archive shards to remove from active use
  * 
  * Moves shards to archived state, removing them from queries and formation

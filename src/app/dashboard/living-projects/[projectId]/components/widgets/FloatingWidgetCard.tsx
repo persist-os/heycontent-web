@@ -151,7 +151,7 @@ export function FloatingWidgetCard({
               <button
                 onClick={(e) => {
                   e.stopPropagation() // Prevent card click
-                  onRun(widget.widget_id)
+                  onRun(widget._id)  // ✅ Use Convex ID (_id)
                 }}
                 disabled={isRunning}
                 className={`

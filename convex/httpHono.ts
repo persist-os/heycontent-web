@@ -3,47 +3,17 @@ import { HonoWithConvex, HttpRouterWithHono } from "convex-helpers/server/hono";
 import { ActionCtx } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import { cors } from "hono/cors";
-
-/**
- * PARALLEL SYSTEM: Native Convex Actions + Hono Fallback
- * 
- * Native actions are integrated directly into Hono for pilot domains.
- * This ensures zero breaking changes while testing the new approach.
- * 
- * PILOT: notes domain (3 routes use native Convex, marked below)
- */
 import { Id } from "./_generated/dataModel";
 import * as usageEventsApi from "./usageEvents";
 // Removed unused imports for httpRouter and httpAction
 
 const app: HonoWithConvex<ActionCtx> = new Hono();
 
-// Enhanced logging middleware with domain tracking
+// Add global logging middleware
 app.use('*', async (c, next) => {
-  const startTime = Date.now();
-  const { method, path } = c.req;
-  
-  // Determine domain for better tracking
-  let domain = 'unknown';
-  if (path.includes('/notes')) domain = 'notes';
-  else if (path.includes('/users')) domain = 'users';
-  else if (path.includes('/projects')) domain = 'projects';
-  else if (path.includes('/widgets')) domain = 'widgets';
-  else if (path.includes('/crystal')) domain = 'crystal';
-  else if (path.includes('/intelligence')) domain = 'intelligence';
-  else if (path.includes('/api-keys')) domain = 'api_keys';
-  else if (path.includes('/rate')) domain = 'rate_limiting';
-  else if (path.includes('/formation')) domain = 'formation';
-  else if (path.includes('/vector')) domain = 'vector';
-  else if (path.includes('/subscription') || path.includes('/stripe')) domain = 'subscription';
-  else if (path.includes('/feedback')) domain = 'feedback';
-  
-  console.log(`🔵 [${domain.toUpperCase()}] ${method} ${path} - START`);
-  
+  console.log(`HTTP_TS_DEBUG: Request received: Method=${c.req.method}, Path=${c.req.path}`);
   await next();
-  
-  const duration = Date.now() - startTime;
-  console.log(`✅ [${domain.toUpperCase()}] ${method} ${path} - ${c.res.status} (${duration}ms)`);
+  console.log(`HTTP_TS_DEBUG: Response sent for: Method=${c.req.method}, Path=${c.req.path}, Status=${c.res.status}`);
 });
 
 // Add CORS middleware
@@ -1728,55 +1698,6 @@ app.post("/api/crystal/persona", async (c) => {
   }
 });
 
-// ===== ATOMIC CRYSTAL OPERATIONS =====
-// These endpoints ensure crystal creation and shard consumption happen atomically
-
-/**
- * Atomically create a crystal and mark its shards as consumed.
- * This is the RECOMMENDED way to create crystals - it ensures consistency.
- */
-app.post("/api/crystal/atomic-create", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.crystalAtomicMutations.createCrystalWithShardConsumption, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
-/**
- * Atomically update a crystal and adjust shard associations.
- */
-app.post("/api/crystal/atomic-update", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.crystalAtomicMutations.updateCrystalWithShardAdjustment, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
-/**
- * Delete a crystal and optionally release its shards.
- */
-app.post("/api/crystal/atomic-delete", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.crystalAtomicMutations.deleteCrystalAndReleaseShards, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
 // Formation query endpoint that mirrors queryFormation exactly
 app.post("/api/formation/query", async (c) => {
   const ctx = c.env;
@@ -2249,7 +2170,7 @@ app.post("/api/migrations/widgets/status", async (c) => {
   const ctx = c.env;
 
   try {
-    const result = await ctx.runQuery(internal.migrations.migrateWidgetsToIndividualDocs.checkMigrationStatus, {});
+    const result = await ctx.runQuery(api.migrations.migrateWidgetsToIndividualDocs.checkMigrationStatus, {});
     return c.json({ success: true, data: result });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
@@ -2261,7 +2182,7 @@ app.post("/api/migrations/widgets/migrate", async (c) => {
   const { dryRun, batchSize } = await c.req.json();
 
   try {
-    const result = await ctx.runMutation(internal.migrations.migrateWidgetsToIndividualDocs.runMigration, {
+    const result = await ctx.runMutation(api.migrations.migrateWidgetsToIndividualDocs.runMigration, {
       dryRun: dryRun || false,
       batchSize: batchSize || 100
     });
@@ -2275,7 +2196,7 @@ app.post("/api/migrations/widgets/verify", async (c) => {
   const ctx = c.env;
 
   try {
-    const result = await ctx.runQuery(internal.migrations.migrateWidgetsToIndividualDocs.verifyMigration, {});
+    const result = await ctx.runQuery(api.migrations.migrateWidgetsToIndividualDocs.verifyMigration, {});
     return c.json({ success: true, data: result });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
@@ -2287,7 +2208,7 @@ app.post("/api/migrations/widgets/cleanup", async (c) => {
   const { dryRun } = await c.req.json();
 
   try {
-    const result = await ctx.runMutation(internal.migrations.migrateWidgetsToIndividualDocs.cleanupEmptyWidgetsField, {
+    const result = await ctx.runMutation(api.migrations.migrateWidgetsToIndividualDocs.cleanupEmptyWidgetsField, {
       dryRun: dryRun || false
     });
     return c.json({ success: true, data: result });

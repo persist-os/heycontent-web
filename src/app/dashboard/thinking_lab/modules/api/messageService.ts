@@ -26,15 +26,19 @@ import type {
  * This calls /api/chat/message which forwards to the backend.
  */
 export async function transmitMessageWithContext(params: MessageTransmissionRequest): Promise<LabResponseData> {
-  const { 
-    content, 
-    useContextSearch = true, 
+  const {
+    content,
+    useContextSearch = true,
     fileAttachments,
     notepadContext,
     workspaceContext,
     isFirstMessage,
     sessionIdentifier,
-    onStatusUpdate 
+    onStatusUpdate,
+    projectId,
+    widgetId,
+    widgetOutputId,
+    conversationType
   } = params;
   
   // Auth readiness and userId resolution with retry
@@ -77,6 +81,20 @@ export async function transmitMessageWithContext(params: MessageTransmissionRequ
     // Add file attachments if present
     if (fileAttachments && fileAttachments.length > 0) {
       requestBody.file_attachments = fileAttachments;
+    }
+
+    // Add project/widget context if present
+    if (projectId) {
+      requestBody.project_id = projectId;
+    }
+    if (widgetId) {
+      requestBody.widget_id = widgetId;
+    }
+    if (widgetOutputId) {
+      requestBody.widget_output_id = widgetOutputId;
+    }
+    if (conversationType) {
+      requestBody.conversation_type = conversationType;
     }
 
     console.log('[MessageService] Sending to lab endpoint:', {

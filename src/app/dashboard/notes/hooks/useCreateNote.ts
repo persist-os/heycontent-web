@@ -63,13 +63,37 @@ export const useCreateNote = () => {
       customTitle?: string;
       customType?: string;
       sourceConversationId?: string;
+      // Context container fields
+      projectId?: string;
+      widgetId?: string;
+      widgetOutputId?: string;
+      isWidgetOutput?: boolean;
     } = {}
   ): Promise<string | null> => {
-    const { redirect = false, callback, customTitle, customType, sourceConversationId } = options;
+    const { 
+      redirect = false, 
+      callback, 
+      customTitle, 
+      customType, 
+      sourceConversationId,
+      projectId,
+      widgetId,
+      widgetOutputId,
+      isWidgetOutput
+    } = options;
     setIsCreating(true);
     setError(null);
     try {
-      const noteUpdate: any = { content, title: customTitle, sourceConversationId };
+      const noteUpdate: any = { 
+        content, 
+        title: customTitle, 
+        sourceConversationId,
+        // Pass context to Convex
+        projectId,
+        widgetId,
+        widgetOutputId,
+        isWidgetOutput
+      };
       if (customType && ['idea_bank','content_script','collaboration_note','analytics_insight','reflection_journal','task_checklist'].includes(customType)) {
         noteUpdate.type = customType;
       }

@@ -5,31 +5,31 @@ import { ChevronDown } from 'lucide-react'
 const faqData = [
   {
     question: "What's available right now?",
-    answer: "Intelligence that builds like yours does. Conversations that remember what you discussed last week and connect it to what you're thinking today. Notes that spot patterns in your thinking. Writing help that knows your voice because it's been listening.<br><br>Not another chatbot. Not another note-taking app. An AI system that evolves with your work."
+    answer: "Memory that accumulates and connects automatically. Every conversation you have, every note you write, feeds a system that spots patterns and surfaces insights.<br><br>Chat that references what you said last month without prompting. Notes that link to related thinking across all your content. Writing assistance that knows your voice because it's been listening.<br><br>Not a storage system. Active memory that processes and grows."
   },
   {
-    question: "What's the project platform you're building toward?",
-    answer: "Projects with their own living intelligence. Briefs that rewrite themselves as decisions change. Context that flows between team members without meetings or handoffs. Contradictions that surface before they become problems.<br><br>We're not building project management software. We're building projects that manage themselves through evolving AI."
+    question: "Where is this headed?",
+    answer: "Background processing that happens overnight. Contradictions spotted before you see them. Understanding that refines itself while you're away.<br><br>Multiple forms of analysis running simultaneously—each one feeding insights to the others. Your work developing depth even when you're not actively working on it.<br><br>Eventually: memory so deep it anticipates what you need before you ask."
   },
   {
     question: "How is this different from ChatGPT or Claude?",
-    answer: "ChatGPT and Claude can remember conversations and have project features, but their memory is static. You upload a document once, it stays exactly the same forever.<br><br>HeyContext memory evolves. Your project briefs update themselves as you add new information. Contradictions get flagged automatically. Context builds and improves over time without you having to manage it.<br><br>It's the difference between a filing cabinet that stores things versus a project manager that actually thinks about your work."
+    answer: "They remember conversations. We extract understanding.<br><br>ChatGPT and Claude: You upload a document, it stays exactly as uploaded. Static memory that requires you to manage it.<br><br>This: Every interaction feeds background analysis. Connections form between old conversations and new ones. Patterns emerge across everything you've said. Memory that actively processes instead of passively storing.<br><br>Their memory is a filing cabinet. Ours is a living system that thinks about your work even when you're not."
   },
   {
-    question: "Is this for teams or individuals?",
-    answer: "Anyone whose work depends on context and continuity. Right now, each person gets their own evolving AI system. Soon, teams will share living project intelligence that updates everyone automatically.<br><br>Whether you're working alone or with others, the core value is the same: AI that thinks with you."
+    question: "Who is this for?",
+    answer: "Anyone drowning in scattered notes and disconnected thoughts.<br><br>Anyone tired of re-explaining the same context to AI over and over.<br><br>Anyone who wishes their tools remembered not just what they said, but why it mattered.<br><br>If your work involves ideas that build over time, this was built for you."
   },
   {
-    question: "How do you handle privacy?",
-    answer: "Your information stays yours. We only use cloud AI when you explicitly ask for help, and we show you exactly what's being processed. Your conversations, notes, and projects remain private.<br><br>No training on your data. No sharing with third parties. Your thoughts belong to you."
+    question: "What about privacy?",
+    answer: "Your conversations and notes stay yours. Period.<br><br>We use cloud AI only when you explicitly ask for help. You see exactly what's processing. Nothing trains external models. Nothing gets shared or sold.<br><br>Your thinking belongs to you. We just help you make sense of it."
   },
   {
-    question: "Do I need to be technical to use this?",
-    answer: "Just think out loud. Chat about your work, jot down notes, work naturally. The AI builds itself around how you actually think and work.<br><br>No prompting. No organizing. No setup. Intelligence that adapts to you, not the other way around."
+    question: "Is this complicated to use?",
+    answer: "Talk about whatever you're working on. Write notes like you normally would. The system figures out what matters.<br><br>No prompt engineering. No organizing into the 'right' format. No setup rituals. It learns how you naturally communicate and adapts.<br><br>Complicated under the hood. Dead simple in practice."
   },
   {
-    question: "How do I get started?",
-    answer: "Start talking about your work. The understanding begins forming immediately. Every conversation, every note, every idea becomes part of a growing intelligence that gets more valuable over time.<br><br>Your AI starts working from day one and gets smarter every day after."
+    question: "How do I start?",
+    answer: "Sign up. Start a conversation about your work.<br><br>The memory begins building immediately. Every message adds context. Every note creates connections. Within days, you'll have an AI that knows your work better than any tool you've used.<br><br>The sooner you start, the sooner it becomes indispensable."
   }
 ]
 
@@ -72,7 +72,7 @@ export function FAQ() {
                   <button
                     onClick={() => toggleItem(index)}
                     className="w-full px-4 sm:px-6 py-4 sm:py-5 text-left flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition-colors duration-200 touch-manipulation"
-                    aria-expanded={isOpen.toString()}
+                    aria-expanded={isOpen}
                     aria-controls={`faq-answer-${index}`}
                   >
                     <h3 className="text-base sm:text-lg font-medium text-slate-900 dark:text-slate-100 pr-3 sm:pr-4">

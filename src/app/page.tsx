@@ -17,13 +17,13 @@ const faqJsonLd = {
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": [
-    {"@type": "Question","name": "What's available right now?","acceptedAnswer": {"@type": "Answer","text": "Advanced chat that remembers your conversations, smart notes that connect to your discussions, inline writing assistance that learns your style, and a personal AI that understands your preferences."}},
-    {"@type": "Question","name": "What's the project platform you're building toward?","acceptedAnswer": {"@type": "Answer","text": "We're adding features that coordinate projects automatically: auto-generated briefs, team context sharing, contradiction detection, and intelligent task management."}},
-    {"@type": "Question","name": "How is this different from ChatGPT or Claude?","acceptedAnswer": {"@type": "Answer","text": "Those tools start fresh every conversation. HeyContext builds understanding over time, connects ideas across conversations, and organizes itself around your actual work."}},
-    {"@type": "Question","name": "Is this for teams or individuals?","acceptedAnswer": {"@type": "Answer","text": "Both. Right now, each person gets their own contextual AI. Soon, we're adding team features so project context can be shared seamlessly across 2-5 person teams."}},
-    {"@type": "Question","name": "How do you handle privacy?","acceptedAnswer": {"@type": "Answer","text": "Your conversations stay private. We only use cloud AI services when you explicitly ask for help, and we show you exactly what's being processed."}},
-    {"@type": "Question","name": "Do I need to be technical to use this?","acceptedAnswer": {"@type": "Answer","text": "Not at all. Just chat naturally and take notes. The AI organizes itself around your work style. No prompting required, no complex setup."}},
-    {"@type": "Question","name": "How do I get started?","acceptedAnswer": {"@type": "Answer","text": "Sign up and start chatting about your work or projects. The AI will begin building context immediately."}}
+    {"@type": "Question","name": "What's available right now?","acceptedAnswer": {"@type": "Answer","text": "Memory that accumulates and connects automatically. Every conversation you have, every note you write, feeds a system that spots patterns and surfaces insights. Chat that references what you said last month without prompting. Notes that link to related thinking across all your content. Active memory that processes and grows."}},
+    {"@type": "Question","name": "Where is this headed?","acceptedAnswer": {"@type": "Answer","text": "Background processing that happens overnight. Contradictions spotted before you see them. Understanding that refines itself while you're away. Multiple forms of analysis running simultaneously—each one feeding insights to the others. Eventually: memory so deep it anticipates what you need before you ask."}},
+    {"@type": "Question","name": "How is this different from ChatGPT or Claude?","acceptedAnswer": {"@type": "Answer","text": "They remember conversations. We extract understanding. ChatGPT and Claude: You upload a document, it stays exactly as uploaded. Static memory. This: Every interaction feeds background analysis. Connections form between old conversations and new ones. Memory that actively processes instead of passively storing."}},
+    {"@type": "Question","name": "Who is this for?","acceptedAnswer": {"@type": "Answer","text": "Anyone drowning in scattered notes and disconnected thoughts. Anyone tired of re-explaining the same context to AI over and over. Anyone who wishes their tools remembered not just what they said, but why it mattered. If your work involves ideas that build over time, this was built for you."}},
+    {"@type": "Question","name": "What about privacy?","acceptedAnswer": {"@type": "Answer","text": "Your conversations and notes stay yours. Period. We use cloud AI only when you explicitly ask for help. Nothing trains external models. Nothing gets shared or sold. Your thinking belongs to you."}},
+    {"@type": "Question","name": "Is this complicated to use?","acceptedAnswer": {"@type": "Answer","text": "Talk about whatever you're working on. Write notes like you normally would. The system figures out what matters. No prompt engineering. No organizing. No setup rituals. Complicated under the hood. Dead simple in practice."}},
+    {"@type": "Question","name": "How do I start?","acceptedAnswer": {"@type": "Answer","text": "Sign up. Start a conversation about your work. The memory begins building immediately. Every message adds context. Every note creates connections. Within days, you'll have an AI that knows your work better than any tool you've used."}}
   ]
 }
 
@@ -35,15 +35,15 @@ export default function LandingPage() {
   return (
     <>
       <Head>
-        <title>HeyContext - Building toward the AI Project Platform</title>
-        <meta name="description" content="Advanced chat, smart notes, and writing assistance that understand your context. Building toward the AI project platform with team coordination and automated project management." />
-        <meta name="keywords" content="contextual AI, smart notes, project coordination, team collaboration, AI assistant" />
-        <meta property="og:title" content="HeyContext - Building toward the AI Project Platform" />
-        <meta property="og:description" content="Advanced AI tools that build understanding over time. Start with contextual chat and notes, evolve toward full project coordination." />
+        <title>Stop Repeating Yourself - AI That Actually Learns You</title>
+        <meta name="description" content="Memory that grows with every conversation. Connections that form automatically. Stop explaining context over and over. Start with AI that already knows how you think." />
+        <meta name="keywords" content="AI memory that evolves, stop repeating yourself, connected thinking, permanent AI memory, context aware AI, background processing AI" />
+        <meta property="og:title" content="Stop Repeating Yourself - AI That Actually Learns You" />
+        <meta property="og:description" content="Memory that grows. Connections that form automatically. Patterns that emerge from your scattered thinking. AI that finally works the way you think." />
         <meta property="og:type" content="website" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="HeyContext - Contextual AI for thoughtful work" />
-        <meta name="twitter:description" content="AI that remembers your conversations, organizes your notes, and builds understanding over time." />
+        <meta name="twitter:title" content="AI That Actually Learns You" />
+        <meta name="twitter:description" content="Memory that evolves. What you said last month connects to today. Your scattered notes reveal patterns. Stop explaining yourself over and over." />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}

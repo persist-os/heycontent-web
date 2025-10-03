@@ -18,6 +18,11 @@ export interface MessageTransmissionRequest {
   useContextSearch?: boolean
   fileAttachments?: FileUploadResponse[]
   onStatusUpdate?: (status: string) => void
+  // Project/widget context for conversation linkage
+  projectId?: string
+  widgetId?: string
+  widgetOutputId?: string
+  conversationType?: string
 }
 
 export interface ProjectTransmissionRequest {

@@ -77,6 +77,10 @@ export interface DialogueState {
     currentStatus?: string
     useContextSearch: boolean
     quotedContent: string
+    // Project/widget context
+    projectId?: string
+    widgetId?: string
+    widgetOutputId?: string
 }
 
 export interface DialogueActions {
@@ -92,6 +96,8 @@ export interface DialogueActions {
     setQuotedContent: (content: string) => void
     clearQuotedContent: () => void
     resetForWidget: () => void
+    setProjectContext: (projectId?: string, widgetId?: string, widgetOutputId?: string) => void
+    clearProjectContext: () => void
 }
 
 export interface DialogueContextValue {

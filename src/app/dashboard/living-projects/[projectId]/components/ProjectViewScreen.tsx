@@ -96,9 +96,9 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
     try {
       setRunningWidgetId(widgetId)
       
-      // First, find and set the widget before execution to ensure panel can open
+      // Find widget by Convex ID
       const widget = projectWidgets?.widgets.find(
-        (w: any) => w.widget_id === widgetId
+        (w: any) => w._id === widgetId  // ✅ Use Convex ID (_id)
       ) as WidgetConfig | undefined
       
       if (!widget) {
@@ -107,7 +107,7 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
       }
 
       const result = await executeWidget({
-        widgetId,
+        widgetId,  // ✅ Already Convex ID from FloatingWidgetCard
         projectId
       })
 

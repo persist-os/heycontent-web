@@ -10,6 +10,7 @@
 
 import { mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import { DEFAULT_INTELLIGENCE_CONFIG, ANALYSIS_VERSION } from "./intelligenceConfig";
 
 /**
@@ -83,6 +84,14 @@ export const incrementActivity = mutation({
         updatedAt: now,
       });
     }
+    
+    // ✅ CHECK INTELLIGENCE TRIGGERS (non-blocking)
+    // This checks if activity thresholds are met and queues analysis jobs if needed.
+    // We schedule it to run after this mutation completes to avoid blocking the user.
+    await ctx.scheduler.runAfter(0, internal.intelligenceActions.checkIntelligenceTriggers, {
+      userId,
+      event_type: activity_type,
+    });
   },
 });
 

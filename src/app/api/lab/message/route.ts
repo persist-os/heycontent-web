@@ -35,7 +35,12 @@ export async function POST(request: Request) {
       workspace_context,
       use_vector_search,
       intent_analysis,
-      vector_search_metadata
+      vector_search_metadata,
+      // Context parameters for project/widget linkage
+      project_id,
+      widget_id,
+      widget_output_id,
+      conversation_type
     } = body;
 
     console.log(`[${requestId}] Received lab request:`, {
@@ -78,6 +83,20 @@ export async function POST(request: Request) {
         platform: 'thinking_lab',
         content: workspace_context
       };
+    }
+
+    // Add project/widget context if provided
+    if (project_id) {
+      chatRequestBody.project_id = project_id;
+    }
+    if (widget_id) {
+      chatRequestBody.widget_id = widget_id;
+    }
+    if (widget_output_id) {
+      chatRequestBody.widget_output_id = widget_output_id;
+    }
+    if (conversation_type) {
+      chatRequestBody.conversation_type = conversation_type;
     }
 
     console.log(`[${requestId}] Forwarding to chat API:`, {

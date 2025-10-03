@@ -19,6 +19,7 @@ import { WidgetPrompts } from '../components/WidgetPrompts'
 import ChatMessagesList from '../components/dialogue/components/ChatMessagesList'
 import { useOptimizedAuth } from '../components/notepad/hooks/useOptimizedAuth'
 import { useResizablePanes } from '../hooks/useResizablePanes'
+import { ContextIndicator } from '../components/ContextIndicator'
 
 // =============================================================================
 // PANEL COMPONENTS
@@ -227,6 +228,8 @@ interface LabCompositionProps {
   askQuery?: string
   contentContext?: any
   widgetOutputId?: string
+  projectId?: string
+  widgetId?: string
 }
 
 export function FullThinkingLab({
@@ -235,11 +238,16 @@ export function FullThinkingLab({
   noteId,
   askQuery,
   contentContext,
-  widgetOutputId
+  widgetOutputId,
+  projectId,
+  widgetId
 }: LabCompositionProps) {
   const { quotedContent, setQuotedContent, clearQuotedContent, resetForWidget } = useDialogueStore()
   const { inputComponent, handleInputPopulate } = useInputSection(clearQuotedContent)
   const resizable = useResizablePanes(0.5)
+
+  // Note: Context initialization is handled by page.tsx from URL params
+  // This component only needs to reset dialogue state when widget changes
 
   // Reset dialogue store when widget output ID changes
   React.useEffect(() => {
@@ -268,6 +276,9 @@ export function FullThinkingLab({
 
   return (
     <div className={`h-screen flex flex-col bg-background overflow-hidden ${className} relative`}>
+      {/* Context Indicator - shows when in project/widget container */}
+      <ContextIndicator />
+      
       {/* Resizable Split Panes */}
       <div ref={resizable.containerRef} className="flex flex-1 overflow-hidden">
         {/* Chat Panel */}

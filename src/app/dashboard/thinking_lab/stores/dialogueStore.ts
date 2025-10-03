@@ -31,6 +31,10 @@ export const useDialogueStore = create<DialogueStore>()(
         currentStatus: undefined,
         useContextSearch: true, // Default to enabled
         quotedContent: "", // Content to be quoted to notepad
+        // Project/widget context
+        projectId: undefined,
+        widgetId: undefined,
+        widgetOutputId: undefined,
 
         // Actions
         sendMessage: async (content: string, fileAttachments?: FileUploadResponse[]) => {
@@ -82,6 +86,12 @@ export const useDialogueStore = create<DialogueStore>()(
                     title: notepadState.currentTitle
                 })
 
+                // Get project/widget context from store
+                const { projectId, widgetId, widgetOutputId } = get()
+
+                // Determine conversation type based on context
+                const conversationType = widgetOutputId ? 'widget_prompt' : 'general'
+
                 // Prepare request parameters
                 const requestParams: MessageTransmissionRequest = {
                     content,
@@ -91,6 +101,11 @@ export const useDialogueStore = create<DialogueStore>()(
                     notepadContext, // Include notepad context
                     useContextSearch,
                     fileAttachments,
+                    // Pass project/widget context
+                    projectId,
+                    widgetId,
+                    widgetOutputId,
+                    conversationType, // Set conversation type
                     onStatusUpdate: (status: string) => {
                         set({ currentStatus: status })
                         // Update the typing message with status updates
@@ -266,6 +281,26 @@ export const useDialogueStore = create<DialogueStore>()(
                 currentStatus: undefined,
                 quotedContent: "",
                 // Note: conversationId is preserved for widget context
+            })
+        },
+
+        // Set project/widget context
+        setProjectContext: (projectId?: string, widgetId?: string, widgetOutputId?: string) => {
+            console.log('[DIALOGUE STORE] Setting context:', { projectId, widgetId, widgetOutputId });
+            set({
+                projectId,
+                widgetId,
+                widgetOutputId
+            })
+        },
+
+        // Clear project/widget context (exit container)
+        clearProjectContext: () => {
+            console.log('[DIALOGUE STORE] Clearing context');
+            set({
+                projectId: undefined,
+                widgetId: undefined,
+                widgetOutputId: undefined
             })
         }
     }))

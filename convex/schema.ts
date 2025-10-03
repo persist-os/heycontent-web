@@ -135,7 +135,7 @@ export default defineSchema({
     
     // Project & Widget Context - Links conversations to their originating context
     projectId: v.optional(v.id("projects")),
-    widgetId: v.optional(v.string()),
+    widgetId: v.optional(v.union(v.string(), v.id("widgets"))),  // 🔄 Migration: supports both legacy string and Convex ID
     widgetOutputId: v.optional(v.string()),
     
     // Conversation type/source for filtering and UI
@@ -192,15 +192,17 @@ export default defineSchema({
     typeGenerated: v.optional(v.boolean()),
     
     // Widget linkage
-    widgetId: v.optional(v.string()),
+    widgetId: v.optional(v.union(v.string(), v.id("widgets"))),  // 🔄 Migration: supports both legacy string and Convex ID
     isWidgetOutput: v.optional(v.boolean()),
     projectId: v.optional(v.id("projects")),
+    widgetOutputId: v.optional(v.string()), // Links to specific widget output
   })
   .index("by_user", ["userId"])
   .index("by_creation", ["createdAt"])
   .index("by_type", ["type"])
   .index("by_folder", ["folderId"])
-  .index("by_widget", ["widgetId"]),
+  .index("by_widget", ["widgetId"])
+  .index("by_widget_output", ["widgetOutputId"]),
 
   // Folders
   folders: defineTable({
@@ -598,13 +600,76 @@ export default defineSchema({
   .index("by_user_timestamp", ["userId", "timestamp"]),
 
   // Project Widgets - Personalized widgets for each project (aligned with backend models)
+  // ============================================================================
+  // WIDGETS - Individual widget documents (REDESIGNED for Convex best practices)
+  // Each widget gets its own Convex ID for optimal queries and updates
+  // ============================================================================
+  widgets: defineTable({
+    // Foreign keys - establish relationships
+    projectId: v.id("projects"),
+    fingerprintId: v.id("project_fingerprints"),
+    userId: v.string(),
+    
+    // Widget identity
+    widget_id: v.string(), // Legacy string ID for backward compatibility
+    widget_type: v.string(), // Any widget type (flexible)
+    title: v.string(),
+    description: v.optional(v.string()),
+    category: v.string(),
+    
+    // Layout and appearance
+    priority: v.number(),
+    size: v.string(), // Any size (flexible)
+    theme: v.string(), // Any theme (flexible)
+    position: v.number(),
+    
+    // Configuration
+    config: v.any(),
+    data_sources: v.array(v.string()),
+    update_frequency: v.string(), // Any frequency (flexible)
+    
+    // Permissions
+    interactive: v.boolean(),
+    editable: v.boolean(),
+    shareable: v.boolean(),
+    
+    // Execution tracking
+    lastRunAt: v.optional(v.number()),
+    lastRunStatus: v.optional(v.union(
+      v.literal("idle"),
+      v.literal("running"),
+      v.literal("success"),
+      v.literal("failed")
+    )),
+    
+    // Metadata
+    status: v.union(
+      v.literal("active"),
+      v.literal("archived"),
+      v.literal("deleted")
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_project", ["projectId"])
+  .index("by_user", ["userId"])
+  .index("by_fingerprint", ["fingerprintId"])
+  .index("by_category", ["projectId", "category"])
+  .index("by_status", ["projectId", "status"])
+  .index("by_widget_id", ["projectId", "widget_id"]) // For legacy lookups
+  .index("by_created", ["createdAt"]),
+
+  // ============================================================================
+  // PROJECT WIDGET LAYOUTS - Layout configuration and categories
+  // Stores global layout settings, no individual widget data
+  // ============================================================================
   project_widgets: defineTable({
-    // Required core fields
+    // Foreign keys
     projectId: v.id("projects"),
     fingerprintId: v.id("project_fingerprints"),
     userId: v.string(),
 
-    // Widget categories - flexible for AI generation
+    // Widget categories for organization
     categories: v.array(v.object({
       name: v.string(),
       icon: v.optional(v.string()),
@@ -612,49 +677,15 @@ export default defineSchema({
       display_order: v.optional(v.number()),
     })),
 
-    // Individual widgets - flexible for AI generation
-    widgets: v.array(v.object({
-      widget_id: v.string(),
-      widget_type: v.string(), // Any widget type
-      title: v.string(),
-      description: v.optional(v.string()),
-      category: v.string(),
-      
-      // Layout and appearance - flexible
-      priority: v.number(),
-      size: v.string(), // Any size
-      theme: v.string(), // Any theme
-      position: v.number(),
-      
-      // Configuration
-      config: v.any(),
-      data_sources: v.array(v.string()),
-      update_frequency: v.string(), // Any frequency
-      
-      // Permissions
-      interactive: v.boolean(),
-      editable: v.boolean(),
-      shareable: v.boolean(),
-      
-      // Execution tracking
-      lastRunAt: v.optional(v.number()),
-      lastRunStatus: v.optional(v.union(
-        v.literal("idle"),
-        v.literal("running"),
-        v.literal("success"),
-        v.literal("failed")
-      )),
-    })),
-
-    // Global layout settings - flexible
-    layout_type: v.string(), // Any layout type
+    // Global layout settings
+    layout_type: v.string(), // Any layout type (flexible)
     columns: v.number(),
     rows: v.number(),
 
-    // Global appearance - flexible
-    global_theme: v.string(), // Any theme
-    color_scheme: v.string(), // Any color scheme
-    font_style: v.string(), // Any font style
+    // Global appearance
+    global_theme: v.string(), // Any theme (flexible)
+    color_scheme: v.string(), // Any color scheme (flexible)
+    font_style: v.string(), // Any font style (flexible)
 
     // Customization settings
     allow_customization: v.boolean(),
@@ -663,17 +694,45 @@ export default defineSchema({
 
     // Technical settings
     required_integrations: v.array(v.string()),
-    data_refresh_strategy: v.string(), // Any strategy
+    data_refresh_strategy: v.string(), // Any strategy (flexible)
 
-    // Metadata - all required, set programmatically
+    // Metadata
     version: v.string(),
-    confidence: v.number(), // 0-1, validated in mutation
-    createdAt: v.optional(v.number()), // Unix timestamp, set programmatically (optional for migration)
-    updatedAt: v.optional(v.number()), // Unix timestamp, set programmatically (optional for migration)
-    status: v.string(), // Flexible status
+    confidence: v.number(), // 0-1
+    status: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
     
-    // Legacy AI fields (ignored but allowed for migration)
+    // Legacy AI field (for migration)
     generated_at: v.optional(v.union(v.string(), v.number())),
+    
+    // ⚠️ LEGACY MIGRATION FIELD - Will be removed after migration
+    // Old format stored widgets as array in this document
+    // Migration script will move these to individual widget documents
+    widgets: v.optional(v.array(v.object({
+      widget_id: v.string(),
+      widget_type: v.string(),
+      title: v.string(),
+      description: v.optional(v.string()),
+      category: v.string(),
+      priority: v.number(),
+      size: v.string(),
+      theme: v.string(),
+      position: v.number(),
+      config: v.any(),
+      data_sources: v.array(v.string()),
+      update_frequency: v.string(),
+      interactive: v.boolean(),
+      editable: v.boolean(),
+      shareable: v.boolean(),
+      lastRunAt: v.optional(v.number()),
+      lastRunStatus: v.optional(v.union(
+        v.literal("idle"),
+        v.literal("running"),
+        v.literal("success"),
+        v.literal("failed")
+      )),
+    }))),
   })
   .index("by_project", ["projectId"])
   .index("by_fingerprint", ["fingerprintId"])
@@ -684,7 +743,7 @@ export default defineSchema({
   // Widget Outputs - Generated deliverables from widget execution
   widget_outputs: defineTable({
     outputId: v.string(),
-    widgetId: v.string(),
+    widgetId: v.union(v.string(), v.id("widgets")),  // 🔄 Migration: supports both legacy string and Convex ID
     projectId: v.id("projects"),
     userId: v.string(),
     
