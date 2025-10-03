@@ -150,7 +150,7 @@ export function useWidgetLayout(widgets: WidgetConfig[]): WidgetLayoutResult {
       }
 
       positions.push({
-        id: widget.widget_id,
+        id: widget._id,  // ✅ Use Convex ID (_id)
         x: bestPosition.x,
         y: bestPosition.y,
         size: widget.size as 'small' | 'medium' | 'large',
@@ -164,8 +164,8 @@ export function useWidgetLayout(widgets: WidgetConfig[]): WidgetLayoutResult {
 
     positions.forEach((pos1, i) => {
       positions.slice(i + 1).forEach(pos2 => {
-        const widget1 = widgetsWithImportance.find(w => w.widget_id === pos1.id)!
-        const widget2 = widgetsWithImportance.find(w => w.widget_id === pos2.id)!
+        const widget1 = widgetsWithImportance.find(w => w._id === pos1.id)!  // ✅ Use Convex ID (_id)
+        const widget2 = widgetsWithImportance.find(w => w._id === pos2.id)!  // ✅ Use Convex ID (_id)
 
         let connectionStrength = 0
 

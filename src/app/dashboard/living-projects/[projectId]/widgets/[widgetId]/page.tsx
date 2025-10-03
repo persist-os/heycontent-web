@@ -116,7 +116,7 @@ export default function WidgetDashboardPage() {
     
     try {
       await executeWidget({
-        widgetId: widget.widget_id,
+        widgetId: widget._id,  // ✅ Use Convex ID (_id)
         projectId
       })
     } catch (error) {

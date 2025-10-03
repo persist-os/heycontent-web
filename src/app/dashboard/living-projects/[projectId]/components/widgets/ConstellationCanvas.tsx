@@ -94,10 +94,10 @@ export function ConstellationCanvas({
     )
   }, [layout.positions, transform, viewportSize])
 
-  // Create widget lookup for performance
+  // Create widget lookup for performance using Convex IDs
   const widgetMap = useMemo(() => {
     const map = new Map<string, WidgetConfig>()
-    widgets.forEach(widget => map.set(widget.widget_id, widget))
+    widgets.forEach(widget => map.set(widget._id, widget))
     return map
   }, [widgets])
 

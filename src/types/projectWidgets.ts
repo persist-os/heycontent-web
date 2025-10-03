@@ -3,6 +3,8 @@
  * Ensures consistency across frontend and backend
  */
 
+import type { Id } from '@/convex/_generated/dataModel'
+
 export interface CategoryConfig {
   name: string;
   icon: string;
@@ -10,7 +12,8 @@ export interface CategoryConfig {
 }
 
 export interface WidgetConfig {
-  widget_id: string;
+  _id: Id<"widgets">; // Convex ID - primary identifier
+  widget_id: string; // Legacy string ID for backward compatibility
   widget_type: string;
   title: string;
   description: string;

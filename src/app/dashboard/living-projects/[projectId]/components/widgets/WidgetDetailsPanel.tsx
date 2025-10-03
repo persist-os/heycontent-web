@@ -98,7 +98,7 @@ export function WidgetDetailsPanel({
     api.widgetOutputsQueries.getWidgetOutputData,
     widget && userId ? {
       userId,
-      filters: { widgetId: widget.widget_id },
+      filters: { widgetId: widget._id },  // ✅ Use Convex ID (_id)
       limit: 1,
       orderBy: 'desc'
     } : 'skip'
@@ -120,12 +120,12 @@ export function WidgetDetailsPanel({
 
   const handleLaunchThinkingLab = () => {
     if (output?.noteId) {
-      launchThinkingLabWithOutput(router, output, projectId, widget.widget_id)
+      launchThinkingLabWithOutput(router, output, projectId, widget._id)  // ✅ Use Convex ID (_id) instead of widget_id
     }
   }
 
   const handleOpenFullDashboard = () => {
-    router.push(`/dashboard/living-projects/${projectId}/widgets/${widget.widget_id}`)
+    router.push(`/dashboard/living-projects/${projectId}/widgets/${widget._id}`)  // ✅ Use Convex ID (_id) for URL
   }
 
   const handleRunWidget = async () => {
@@ -133,7 +133,7 @@ export function WidgetDetailsPanel({
     
     try {
       await executeWidget({
-        widgetId: widget.widget_id,
+        widgetId: widget._id,  // ✅ Use Convex ID (_id) instead of widget_id
         projectId
       })
       // Output will appear automatically via the query
@@ -150,7 +150,7 @@ export function WidgetDetailsPanel({
       await updateWidget({
         projectId: projectId as any,
         userId,
-        widgetId: widget.widget_id,
+        widgetId: widget._id as any,  // Cast to handle type inference
         updates: {
           title: editForm.title,
           description: editForm.description,
@@ -178,7 +178,7 @@ export function WidgetDetailsPanel({
       await deleteWidget({
         projectId: projectId as any,
         userId,
-        widgetId: widget.widget_id
+        widgetId: widget._id as any  // Cast to handle type inference
       })
       setIsDeleteDialogOpen(false)
       onClose() // Close the panel after deletion
