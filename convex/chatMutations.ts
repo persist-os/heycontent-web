@@ -23,7 +23,7 @@ export const createConversation = mutation({
       })),
       // NEW: Optional project/widget context fields
       projectId: v.optional(v.id("projects")),
-      widgetId: v.optional(v.string()),
+      widgetId: v.optional(v.union(v.string(), v.id("widgets"))),  // 🔄 Migration: supports both legacy string and Convex ID
       widgetOutputId: v.optional(v.string()),
       conversationType: v.optional(v.union(
         v.literal("general"),

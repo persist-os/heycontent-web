@@ -91,11 +91,12 @@ export const getProjectWidgets = query({
     // Sort by position
     const sortedWidgets = widgets.sort((a, b) => a.position - b.position);
 
-    // Return in old format for backward compatibility
+    // Return with Convex IDs included
     return {
       ...layout,
       widgets: sortedWidgets.map(w => ({
-        widget_id: w.widget_id,
+        _id: w._id, // Convex ID - primary identifier
+        widget_id: w.widget_id, // Legacy string ID for backward compatibility
         widget_type: w.widget_type,
         title: w.title,
         description: w.description,
@@ -167,11 +168,12 @@ export const getProjectWidgetsByProject = query({
     // Sort by position
     const sortedWidgets = userWidgets.sort((a, b) => a.position - b.position);
 
-    // Return in old format for backward compatibility
+    // Return with Convex IDs included
     return {
       ...layout,
       widgets: sortedWidgets.map(w => ({
-        widget_id: w.widget_id,
+        _id: w._id, // ✅ Convex ID - primary identifier
+        widget_id: w.widget_id, // Legacy string ID for backward compatibility
         widget_type: w.widget_type,
         title: w.title,
         description: w.description,

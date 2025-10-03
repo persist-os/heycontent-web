@@ -135,7 +135,7 @@ export default defineSchema({
     
     // Project & Widget Context - Links conversations to their originating context
     projectId: v.optional(v.id("projects")),
-    widgetId: v.optional(v.string()),
+    widgetId: v.optional(v.union(v.string(), v.id("widgets"))),  // 🔄 Migration: supports both legacy string and Convex ID
     widgetOutputId: v.optional(v.string()),
     
     // Conversation type/source for filtering and UI
@@ -192,7 +192,7 @@ export default defineSchema({
     typeGenerated: v.optional(v.boolean()),
     
     // Widget linkage
-    widgetId: v.optional(v.string()),
+    widgetId: v.optional(v.union(v.string(), v.id("widgets"))),  // 🔄 Migration: supports both legacy string and Convex ID
     isWidgetOutput: v.optional(v.boolean()),
     projectId: v.optional(v.id("projects")),
     widgetOutputId: v.optional(v.string()), // Links to specific widget output
@@ -743,7 +743,7 @@ export default defineSchema({
   // Widget Outputs - Generated deliverables from widget execution
   widget_outputs: defineTable({
     outputId: v.string(),
-    widgetId: v.string(),
+    widgetId: v.union(v.string(), v.id("widgets")),  // 🔄 Migration: supports both legacy string and Convex ID
     projectId: v.id("projects"),
     userId: v.string(),
     

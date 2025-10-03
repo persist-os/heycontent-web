@@ -23,7 +23,7 @@ export const createNote = mutation({
     platform: v.optional(v.string()),
     sourceConversationId: v.optional(v.string()),
     // Context fields for project/widget linkage
-    widgetId: v.optional(v.string()),
+    widgetId: v.optional(v.union(v.string(), v.id("widgets"))),  // 🔄 Migration: supports both legacy string and Convex ID
     projectId: v.optional(v.id("projects")),
     isWidgetOutput: v.optional(v.boolean()),
     widgetOutputId: v.optional(v.string()),

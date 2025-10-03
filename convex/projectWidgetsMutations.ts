@@ -366,14 +366,13 @@ export const deleteProjectWidgets = mutation({
 // ============================================================================
 
 /**
- * @deprecated Use individual widget mutations instead
- * Update a single widget - now delegates to widgets table
+ * Update a single widget using Convex ID
  */
 export const updateWidget = mutation({
   args: {
     projectId: v.id("projects"),
     userId: v.string(),
-    widgetId: v.string(),
+    widgetId: v.id("widgets"), // Use Convex ID
     updates: v.object({
       title: v.optional(v.string()),
       description: v.optional(v.string()),
@@ -391,21 +390,20 @@ export const updateWidget = mutation({
     success: v.boolean(),
   }),
   handler: async (ctx, { projectId, userId, widgetId, updates }) => {
-    // Find the widget by legacy string ID
-    const widget = await ctx.db
-      .query("widgets")
-      .withIndex("by_widget_id", (q) =>
-        q.eq("projectId", projectId).eq("widget_id", widgetId)
-      )
-      .filter((q) => q.eq(q.field("userId"), userId))
-      .first();
+    // Get widget directly by Convex ID
+    const widget = await ctx.db.get(widgetId);
 
     if (!widget) {
       throw new Error("Widget not found");
     }
 
+    // Verify ownership
+    if (widget.projectId !== projectId || widget.userId !== userId) {
+      throw new Error("Access denied: You don't own this widget");
+    }
+
     // Update the widget
-    await ctx.db.patch(widget._id, {
+    await ctx.db.patch(widgetId, {
       ...updates,
       updatedAt: Date.now(),
     });
@@ -415,34 +413,32 @@ export const updateWidget = mutation({
 });
 
 /**
- * @deprecated Use individual widget mutations instead
- * Delete a single widget
+ * Delete a single widget using Convex ID
  */
 export const deleteWidget = mutation({
   args: {
     projectId: v.id("projects"),
     userId: v.string(),
-    widgetId: v.string(),
+    widgetId: v.id("widgets"), // Use Convex ID
   },
   returns: v.object({
     success: v.boolean(),
   }),
   handler: async (ctx, { projectId, userId, widgetId }) => {
-    // Find the widget by legacy string ID
-    const widget = await ctx.db
-      .query("widgets")
-      .withIndex("by_widget_id", (q) =>
-        q.eq("projectId", projectId).eq("widget_id", widgetId)
-      )
-      .filter((q) => q.eq(q.field("userId"), userId))
-      .first();
+    // Get widget directly by Convex ID
+    const widget = await ctx.db.get(widgetId);
 
     if (!widget) {
       throw new Error("Widget not found");
     }
 
+    // Verify ownership
+    if (widget.projectId !== projectId || widget.userId !== userId) {
+      throw new Error("Access denied: You don't own this widget");
+    }
+
     // Delete the widget
-    await ctx.db.delete(widget._id);
+    await ctx.db.delete(widgetId);
 
     return { success: true };
   },
