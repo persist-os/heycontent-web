@@ -138,24 +138,23 @@ export const getCrystalsNeedingReview = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, { userId, limit }) => {
-    const highPriority = await ctx.db
+    // Get all intelligence for user and filter by priority
+    const all = await ctx.db
       .query("crystal_intelligence")
-      .withIndex("by_review_priority", (q) => 
-        q.eq("userId", userId).eq("lifecycle.review_priority", "high")
-      )
-      .take(limit || 20);
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
     
-    const criticalPriority = await ctx.db
-      .query("crystal_intelligence")
-      .withIndex("by_review_priority", (q) => 
-        q.eq("userId", userId).eq("lifecycle.review_priority", "critical")
-      )
-      .take(limit || 20);
+    // Filter for high/critical priority
+    const needsReview = all.filter(intel => 
+      intel.lifecycle?.review_priority === "high" || 
+      intel.lifecycle?.review_priority === "critical"
+    );
     
-    // Combine and sort by health score (lowest first)
-    const combined = [...criticalPriority, ...highPriority];
-    combined.sort((a, b) => a.health.overall_score - b.health.overall_score);
+    // Sort by health score (lowest first)
+    needsReview.sort((a, b) => 
+      (a.health?.overall_score ?? 1) - (b.health?.overall_score ?? 1)
+    );
     
-    return combined.slice(0, limit || 20);
+    return needsReview.slice(0, limit || 20);
   },
 });

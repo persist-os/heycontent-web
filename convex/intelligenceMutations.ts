@@ -311,58 +311,62 @@ export const updateIntelligenceState = mutation({
     userId: v.string(),
     crystalId: v.string(),
     intelligence: v.object({
-      usage: v.object({
-        total_retrievals: v.number(),
-        retrievals_last_7d: v.number(),
-        retrievals_last_30d: v.number(),
-        last_used: v.number(),
-        usage_frequency: v.number(),
-        contexts: v.array(v.string()),
+      usage: v.optional(v.object({
+        total_retrievals: v.optional(v.number()),
+        retrievals_last_7d: v.optional(v.number()),
+        retrievals_last_30d: v.optional(v.number()),
+        last_used: v.optional(v.number()),
+        last_retrieved: v.optional(v.number()),  // Backend uses this field
+        usage_frequency: v.optional(v.number()),
+        contexts: v.optional(v.array(v.string())),
         co_occurrence: v.optional(v.array(v.string())),
-      }),
-      relationships: v.object({
-        related: v.array(v.object({
+      })),
+      relationships: v.optional(v.object({
+        related: v.optional(v.array(v.object({
           crystalId: v.string(),
           similarity: v.number(),
           relationship_type: v.string(),
           confidence: v.number(),
-        })),
-        conflicting: v.array(v.object({
+        }))),
+        related_crystal_ids: v.optional(v.array(v.string())),  // Backend uses this field
+        relationship_scores: v.optional(v.any()),  // Backend uses this field
+        conflicting: v.optional(v.array(v.object({
           crystalId: v.string(),
           conflict_score: v.number(),
           conflict_type: v.string(),
           resolution: v.optional(v.string()),
+        }))),
+      })),
+      contradictions: v.optional(v.object({
+        shard_ids: v.optional(v.array(v.string())),
+        severity: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
+        patterns: v.optional(v.array(v.string())),
+        analysis: v.optional(v.string()),
+      })),
+      health: v.optional(v.object({
+        overall_score: v.optional(v.number()),
+        last_computed: v.optional(v.number()),  // Backend uses this field
+        components: v.optional(v.object({
+          evidence_strength: v.optional(v.number()),
+          usage_recency: v.optional(v.number()),
+          usage_frequency: v.optional(v.number()),
+          contradiction_impact: v.optional(v.number()),
+          age_factor: v.optional(v.number()),
         })),
-      }),
-      contradictions: v.object({
-        shard_ids: v.array(v.string()),
-        severity: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
-        patterns: v.array(v.string()),
-        analysis: v.string(),
-      }),
-      health: v.object({
-        overall_score: v.number(),
-        components: v.object({
-          evidence_strength: v.number(),
-          usage_recency: v.number(),
-          usage_frequency: v.number(),
-          contradiction_impact: v.number(),
-          age_factor: v.number(),
-        }),
-        trend: v.union(v.literal("improving"), v.literal("stable"), v.literal("declining")),
-      }),
-      lifecycle: v.object({
-        review_priority: v.union(
+        trend: v.optional(v.union(v.literal("improving"), v.literal("stable"), v.literal("declining"))),
+      })),
+      lifecycle: v.optional(v.object({
+        review_priority: v.optional(v.union(
           v.literal("low"),
           v.literal("medium"),
           v.literal("high"),
           v.literal("critical")
-        ),
-        next_review_due: v.number(),
-        archival_candidate: v.boolean(),
+        )),
+        next_review_due: v.optional(v.number()),
+        archival_candidate: v.optional(v.boolean()),
         archival_reason: v.optional(v.string()),
         archival_confidence: v.optional(v.number()),
-      }),
+      })),
     }),
     analysis_depth: v.string(),
   },
@@ -377,14 +381,24 @@ export const updateIntelligenceState = mutation({
     const now = Date.now();
     
     if (existing) {
+      // Merge partial updates with existing data
+      const merged = {
+        usage: intelligence.usage ? { ...existing.usage, ...intelligence.usage } : existing.usage,
+        relationships: intelligence.relationships ? { ...existing.relationships, ...intelligence.relationships } : existing.relationships,
+        contradictions: intelligence.contradictions ? { ...existing.contradictions, ...intelligence.contradictions } : existing.contradictions,
+        health: intelligence.health ? { ...existing.health, ...intelligence.health } : existing.health,
+        lifecycle: intelligence.lifecycle ? { ...existing.lifecycle, ...intelligence.lifecycle } : existing.lifecycle,
+      };
+      
       await ctx.db.patch(existing._id, {
-        ...intelligence,
+        ...merged,
         analysis_version: ANALYSIS_VERSION,
         last_analyzed: now,
         analysis_depth,
         updatedAt: now,
       });
     } else {
+      // New record - just insert with provided data
       await ctx.db.insert("crystal_intelligence", {
         userId,
         crystalId,
