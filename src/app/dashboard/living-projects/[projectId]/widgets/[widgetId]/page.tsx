@@ -91,7 +91,11 @@ export default function WidgetDashboardPage() {
   }
 
   const handleNoteClick = (noteId: string) => {
-    router.push(`/dashboard/thinking_lab?noteId=${noteId}`)
+    router.push(`/dashboard/thinking_lab?noteId=${noteId}&projectId=${projectId}&widgetId=${widgetId}`)
+  }
+
+  const handleConversationClick = (conversationId: string) => {
+    router.push(`/dashboard/thinking_lab?conversationId=${conversationId}&projectId=${projectId}&widgetId=${widgetId}`)
   }
 
   const toggleOutput = (outputId: string) => {
@@ -213,7 +217,7 @@ export default function WidgetDashboardPage() {
               widgetId={widgetId}
               userId={userId}
               onNoteClick={handleNoteClick}
-              onConversationClick={(conversationId) => router.push(`/dashboard/thinking_lab?conversationId=${conversationId}`)}
+              onConversationClick={handleConversationClick}
               onAddContent={() => setShowAttachmentPanel(true)}
             />
           </div>
