@@ -21,6 +21,7 @@ import {
   InsightsSkeleton,
   CrystalSystemExplanation,
   SystemDebugInfo,
+  DeletionTools,
   ViewType
 } from './components';
 import { useMutation } from 'convex/react';
@@ -343,6 +344,13 @@ export default function CrystalsPage() {
                       {isFormingCrystals ? 'Forming...' : 'Form Crystals'}
                     </button>
                   </div>
+
+                  {/* Data Management */}
+                  {userId && (
+                    <div className="pt-4 border-t border-border/20">
+                      <DeletionTools userId={userId} />
+                    </div>
+                  )}
                 </div>
               </div>
             )}

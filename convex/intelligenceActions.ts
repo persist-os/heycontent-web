@@ -1,20 +1,26 @@
 /**
- * Intelligence Actions - Async operations for intelligence system
+ * Intelligence Actions - Async operations for MAB-based intelligence system
  * 
- * Provides actions for:
- * - Trigger detection (non-blocking)
- * - Job processing coordination
- * - Analysis orchestration
+ * Uses Multi-Armed Bandit (MAB) with Thompson Sampling for adaptive intelligence triggering.
+ * The system learns optimal trigger timing for each user through continuous feedback loops.
+ * 
+ * Intelligence analysis is triggered automatically after crystal formation when the MAB
+ * determines sufficient semantic drift or activity has occurred. Manual triggering is
+ * also available for testing and user-initiated analysis.
  */
 
 import { action, internalAction } from "./_generated/server";
 import { v } from "convex/values";
-import { api, internal } from "./_generated/api";
-import { determineJobType, calculatePriority } from "./intelligenceConfig";
+import { api } from "./_generated/api";
 
 /**
- * Check if intelligence analysis should be triggered.
- * Called after every tracked activity (non-blocking).
+ * Track user activity for MAB state computation.
+ * 
+ * Increments activity counters that the MAB controller uses to compute user state
+ * and semantic drift. The actual decision to trigger intelligence analysis is made
+ * by the backend MAB controller after crystal formation using Thompson Sampling.
+ * 
+ * Called automatically after tracked activities (non-blocking, fire-and-forget).
  */
 export const checkIntelligenceTriggers = internalAction({
   args: {
@@ -23,83 +29,103 @@ export const checkIntelligenceTriggers = internalAction({
   },
   handler: async (ctx, { userId, event_type }) => {
     try {
-      console.log(`[TRIGGERS] Checking triggers for user ${userId} after ${event_type} event`);
+      console.log(`[MAB] Activity tracked for user ${userId}: ${event_type}`);
       
-      // Get user's config and counters
-      const [config, counters] = await Promise.all([
-        ctx.runQuery(api.intelligenceQueries.getUserConfig, { userId }),
-        ctx.runQuery(api.intelligenceQueries.getActivityCounters, { userId }),
-      ]);
-
-      // Check if any threshold is met
-      const should_trigger = shouldTriggerAnalysis(config, counters, event_type);
+      // Update activity counter for MAB state computation
+      await ctx.runMutation(api.intelligenceMutations.incrementActivity, {
+        userId,
+        activity_type: event_type,
+      });
       
-      if (should_trigger) {
-        console.log(`[TRIGGERS] Threshold met for user ${userId}. Queueing analysis job.`);
-        
-        // Determine job type and priority
-        const job_type = determineJobType(config, counters.since_last_analysis);
-        const priority = calculatePriority(counters.since_last_analysis);
-        
-        // Queue analysis job
-        await ctx.runMutation(api.intelligenceMutations.queueAnalysisJob, {
-          userId,
-          job_type,
-          priority,
-          trigger_source: event_type,
-        });
-        
-        // Reset counters
-        await ctx.runMutation(api.intelligenceMutations.resetActivityCounters, { userId });
-        
-        console.log(`[TRIGGERS] Queued ${job_type} job with ${priority} priority for user ${userId}`);
-      }
+      // MAB controller will use these counters to:
+      // 1. Compute semantic drift after crystal formation
+      // 2. Evaluate user state for trigger decision
+      // 3. Select optimal trigger strategy using Thompson Sampling
+      
+      return {
+        success: true,
+        message: "Activity tracked for MAB state computation",
+        mab_managed: true
+      };
+      
     } catch (error) {
       // Trigger checks are non-critical - log but don't throw
-      console.log(`[TRIGGERS] Trigger check failed for user ${userId}: ${error}`);
+      console.log(`[MAB TRIGGERS] Error for user ${userId}: ${error}`);
+      return {
+        success: false,
+        error: String(error),
+        message: "Trigger check failed (non-critical)"
+      };
     }
   },
 });
 
 /**
- * Helper function to determine if analysis should be triggered.
+ * Manually trigger intelligence analysis, bypassing MAB decision logic.
+ * 
+ * Enqueues an intelligence job directly to the Redis queue without waiting for
+ * the MAB controller's trigger decision. Useful for testing, admin operations,
+ * or user-initiated forced analysis.
  */
-function shouldTriggerAnalysis(
-  config: any,
-  counters: any,
-  event_type: string
-): boolean {
-  const thresholds = config.triggers;
-  const counts = counters.since_last_analysis;
-  
-  // Primary triggers: activity thresholds
-  if (counts.chat_messages >= thresholds.chat_messages) {
-    console.log(`[TRIGGERS] Chat messages threshold met: ${counts.chat_messages} >= ${thresholds.chat_messages}`);
-    return true;
-  }
-  
-  if (counts.smart_notes >= thresholds.smart_notes) {
-    console.log(`[TRIGGERS] Smart notes threshold met: ${counts.smart_notes} >= ${thresholds.smart_notes}`);
-    return true;
-  }
-  
-  if (counts.crystal_formations >= thresholds.crystal_formations) {
-    console.log(`[TRIGGERS] Crystal formations threshold met: ${counts.crystal_formations} >= ${thresholds.crystal_formations}`);
-    return true;
-  }
-  
-  // Secondary trigger: time-based fallback (for inactive users)
-  const days_since = (Date.now() - config.last_analysis) / (1000 * 60 * 60 * 24);
-  if (days_since >= thresholds.days_since_last) {
-    console.log(`[TRIGGERS] Time threshold met: ${days_since.toFixed(1)} days >= ${thresholds.days_since_last} days`);
-    return true;
-  }
-  
-  // Tertiary trigger: immediate analysis on crystal formation if enough accumulated
-  if (event_type === "crystal_formation" && counts.crystal_formations >= 3) {
-    console.log(`[TRIGGERS] Immediate crystal formation trigger: ${counts.crystal_formations} formations`);
-    return true;
-  }
-  
-  return false;
-}
+export const manualTriggerAnalysis = action({
+  args: {
+    userId: v.string(),
+    analysis_depth: v.optional(v.union(
+      v.literal("fast"),
+      v.literal("standard"),
+      v.literal("deep")
+    )),
+  },
+  handler: async (ctx, { userId, analysis_depth = "standard" }) => {
+    try {
+      console.log(`[MANUAL TRIGGER] Manually triggering analysis for user ${userId}`);
+      
+      // Call backend to enqueue job (bypasses MAB decision)
+      const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
+      
+      if (!backendUrl) {
+        throw new Error("BACKEND_URL not configured");
+      }
+      
+      // Get user's auth token (if available)
+      // For manual triggers, we'll use the system API key
+      const systemApiKey = process.env.BACKEND_API_KEY;
+      
+      const response = await fetch(`${backendUrl}/api/v1/background_jobs/trigger_intelligence`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${systemApiKey}`,
+        },
+        body: JSON.stringify({
+          userId,
+          analysis_depth,
+          trigger_source: "manual"
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Backend returned ${response.status}: ${errorText}`);
+      }
+      
+      const data = await response.json();
+      
+      console.log(`[MANUAL TRIGGER] Analysis triggered for user ${userId}, job: ${data.job_id}`);
+      
+      return {
+        success: true,
+        job_id: data.job_id,
+        message: "Intelligence analysis triggered manually"
+      };
+      
+    } catch (error: any) {
+      console.error(`[MANUAL TRIGGER] Failed for user ${userId}:`, error);
+      return {
+        success: false,
+        error: error.message,
+        message: "Failed to trigger analysis"
+      };
+    }
+  },
+});

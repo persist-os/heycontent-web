@@ -39,6 +39,11 @@ export const CrystalCard: React.FC<CrystalCardProps> = ({
   const { deleteCrystal, isLoading } = useCrystalMutations();
   const userId = useAuth();
   const { shards, isLoading: shardsLoading, hasShards } = useShardsByIds(userId, crystal.shardIds);
+  
+  // Sort shards by creation time (most recent first) and limit to 50
+  const sortedShards = shards ? [...shards].sort((a: any, b: any) => 
+    (b._creationTime || 0) - (a._creationTime || 0)
+  ).slice(0, 50) : [];
 
   const handleDelete = async () => {
     const success = await deleteCrystal(crystal._id);
@@ -53,6 +58,28 @@ export const CrystalCard: React.FC<CrystalCardProps> = ({
   const handleEditSuccess = () => {
     // Convex will automatically invalidate and refresh the query
   };
+
+  const formatTimestamp = (timestamp: number) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const diffWeeks = Math.floor(diffDays / 7);
+    const diffMonths = Math.floor(diffDays / 30);
+    
+    if (diffSeconds < 60) return `${diffSeconds} second${diffSeconds !== 1 ? 's' : ''} ago`;
+    if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+    if (diffWeeks < 4) return `${diffWeeks} week${diffWeeks !== 1 ? 's' : ''} ago`;
+    if (diffMonths < 12) return `${diffMonths} month${diffMonths !== 1 ? 's' : ''} ago`;
+    return date.toLocaleDateString();
+  };
+
   if (isCompact) {
     return (
       <div className="space-y-2 py-3 border-l-2 border-blue-400/30 pl-4">
@@ -150,7 +177,7 @@ export const CrystalCard: React.FC<CrystalCardProps> = ({
         <div className="space-y-2">
           <h5 className="text-sm font-medium text-foreground">Direct Quotes</h5>
           <div className="space-y-2">
-            {crystal.supporting_quotes.slice(0, 2).map((quote: string, index: number) => (
+            {[...crystal.supporting_quotes].reverse().slice(0, 2).map((quote: string, index: number) => (
               <blockquote key={index} className="text-sm text-muted-foreground italic border-l-2 border-border/50 pl-3 leading-relaxed">
                 "{quote}"
               </blockquote>
@@ -170,12 +197,12 @@ export const CrystalCard: React.FC<CrystalCardProps> = ({
               <span className="text-xs text-muted-foreground">
                 {crystal.shardIds.length} shard{crystal.shardIds.length !== 1 ? 's' : ''}
               </span>
-              {shards.length > 3 && (
+              {sortedShards.length > 3 && (
                 <button
                   onClick={() => setShowAllShards(!showAllShards)}
                   className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                 >
-                  {showAllShards ? 'Show less' : `Show all ${shards.length}`}
+                  {showAllShards ? 'Show less' : `Show more`}
                 </button>
               )}
             </div>
@@ -183,7 +210,7 @@ export const CrystalCard: React.FC<CrystalCardProps> = ({
           
           {hasShards && (
             <div className="space-y-2">
-              {(showAllShards ? shards : shards.slice(0, 3)).map((shard: any) => (
+              {(showAllShards ? sortedShards : sortedShards.slice(0, 3)).map((shard: any) => (
                 <div key={shard._id} className="border border-border/30 rounded-lg p-3 space-y-2 bg-muted/20">
                   {shard.exact_quote && (
                     <blockquote className="text-xs text-foreground italic border-l-2 border-blue-400/40 pl-2">
@@ -207,20 +234,27 @@ export const CrystalCard: React.FC<CrystalCardProps> = ({
                     )}
                   </div>
                   
-                  <div className="flex items-center gap-2 pt-1">
-                    <span className="text-xs px-1.5 py-0.5 bg-muted/50 rounded text-muted-foreground">
-                      {shard.dimension}
-                    </span>
-                    <span className={`text-xs px-1.5 py-0.5 rounded ${
-                      shard.confidence_level === 'high' ? 'bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300' :
-                      shard.confidence_level === 'medium' ? 'bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300' :
-                      'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
-                    }`}>
-                      {shard.confidence_level}
-                    </span>
-                    {shard.source_type && (
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs px-1.5 py-0.5 bg-muted/50 rounded text-muted-foreground">
+                        {shard.dimension}
+                      </span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded ${
+                        shard.confidence_level === 'high' ? 'bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300' :
+                        shard.confidence_level === 'medium' ? 'bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300' :
+                        'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                      }`}>
+                        {shard.confidence_level}
+                      </span>
+                      {shard.source_type && (
+                        <span className="text-xs text-muted-foreground">
+                          {shard.source_type}
+                        </span>
+                      )}
+                    </div>
+                    {shard._creationTime && (
                       <span className="text-xs text-muted-foreground">
-                        {shard.source_type}
+                        {formatTimestamp(shard._creationTime)}
                       </span>
                     )}
                   </div>

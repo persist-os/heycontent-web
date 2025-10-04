@@ -55,11 +55,41 @@ const queryWidgetOutputsWithOptions = async (
     orderedQuery = filteredQuery.order(options.orderBy);
   }
 
-  // Pagination
+  // Get widget outputs
+  let outputs;
   if (options.limit === 1) {
-    return await orderedQuery.first();
+    outputs = await orderedQuery.first();
+    outputs = outputs ? [outputs] : [];
+  } else {
+    outputs = options.limit ? await orderedQuery.take(options.limit) : await orderedQuery.collect();
   }
-  return options.limit ? await orderedQuery.take(options.limit) : await orderedQuery.collect();
+
+  // If we have outputs, enrich them with note titles
+  if (outputs && Array.isArray(outputs)) {
+    const enrichedOutputs = await Promise.all(
+      outputs.map(async (output: any) => {
+        if (output.noteId) {
+          try {
+            const note = await ctx.db.get(output.noteId);
+            return {
+              ...output,
+              noteTitle: note?.title || "Untitled Note"
+            };
+          } catch (error) {
+            console.error('Error fetching note title for output:', output.outputId, error);
+            return {
+              ...output,
+              noteTitle: "Note Title Unavailable"
+            };
+          }
+        }
+        return output;
+      })
+    );
+    return options.limit === 1 ? enrichedOutputs[0] : enrichedOutputs;
+  }
+
+  return outputs;
 };
 
 /**

@@ -188,20 +188,17 @@ export default function DashboardLayout({
       {/* Floating Command Palette Trigger */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="fixed top-6 left-6 z-40 group p-5"
+        className="fixed top-12 left-6 z-40 group p-3"
         aria-label="Open command palette"
         title="Open command palette (⌘K)"
       >
         <div className="relative">
-          {/* White glow effect */}
-          <div className="absolute inset-0 bg-white/40 dark:bg-white/20 blur-xl rounded-2xl opacity-60 group-hover:opacity-100 transition-all duration-300" />
-          
-          {/* Backdrop blur effect */}
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm rounded-2xl border border-border/40 shadow-2xl group-hover:shadow-[0_0_40px_rgba(255,255,255,0.3)] group-hover:border-border/60 transition-all duration-300" />
+          {/* Subtle glow effect */}
+          <div className="absolute inset-0 bg-primary/20 blur-md rounded-lg opacity-40 group-hover:opacity-60 transition-all duration-200" />
 
           {/* Button content */}
-          <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-            <Menu className="w-6 h-6 text-primary/70" />
+          <div className="relative w-10 h-10 rounded-lg bg-primary/15 backdrop-blur-sm border border-border/30 flex items-center justify-center transition-all duration-200 hover:bg-primary/20 hover:border-border/50">
+            <Menu className="w-5 h-5 text-primary/60" />
           </div>
         </div>
       </button>
