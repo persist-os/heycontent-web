@@ -110,6 +110,12 @@ export const WidgetPrompts: React.FC<WidgetPromptsProps> = ({
     );
   }
 
+  // If there's an opening message, don't render anything
+  // The opening message will be shown as a chat bubble with suggestion chips
+  if (parsedOutput?.openingMessage) {
+    return null;
+  }
+
   return (
     <PromptsContainer>
       <div className="space-y-4 py-4">
