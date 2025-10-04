@@ -58,8 +58,8 @@ export const getConversationsWithFiles = query({
       .collect();
 
     // Filter to only conversations that have messages with file attachments
-    const conversationsWithFiles = conversations.filter(conv => 
-      conv.messages.some((msg: any) => 
+    const conversationsWithFiles = conversations.filter(conv =>
+      conv.messages.some((msg: any) =>
         msg.fileAttachments && msg.fileAttachments.length > 0
       )
     );
@@ -75,6 +75,62 @@ export const getConversationsWithFiles = query({
         fileCount
       };
     });
+  },
+});
+
+/**
+ * Get all conversations connected to a specific widget
+ * @param widgetId - The widget ID to filter conversations by
+ * @param userId - The user ID for authorization
+ */
+export const getConversationsByWidgetId = query({
+  args: {
+    widgetId: v.union(v.string(), v.id("widgets")),
+    userId: v.string(),
+  },
+  handler: async (ctx, { widgetId, userId }) => {
+    try {
+      const conversations = await ctx.db
+        .query("conversations")
+        .withIndex("by_user_widget", (q) =>
+          q.eq("userId", userId).eq("widgetId", widgetId)
+        )
+        .order("desc")
+        .collect();
+
+      return conversations;
+    } catch (error) {
+      console.error('Error fetching conversations by widgetId:', error);
+      return [];
+    }
+  },
+});
+
+/**
+ * Get all conversations connected to a specific project
+ * @param projectId - The project ID to filter conversations by
+ * @param userId - The user ID for authorization
+ */
+export const getConversationsByProjectId = query({
+  args: {
+    projectId: v.id("projects"),
+    userId: v.string(),
+  },
+  handler: async (ctx, { projectId, userId }) => {
+    try {
+      const conversations = await ctx.db
+        .query("conversations")
+        .withIndex("by_user_project", (q) =>
+          q.eq("userId", userId).eq("projectId", projectId)
+        )
+        .order("desc")
+        .collect();
+
+      return conversations;
+    } catch (error) {
+      console.error('Error fetching conversations by projectId:', error);
+      return [];
+    }
   },
 });
 

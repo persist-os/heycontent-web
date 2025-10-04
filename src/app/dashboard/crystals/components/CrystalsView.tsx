@@ -38,7 +38,11 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
   );
   
   const shardsLoading = shards === undefined;
-  const hasShards = shards && shards.length > 0;
+  // Sort shards by creation time (most recent first) and limit to 50
+  const sortedShards = shards ? [...shards].sort((a: any, b: any) => 
+    (b._creationTime || 0) - (a._creationTime || 0)
+  ).slice(0, 50) : [];
+  const hasShards = sortedShards && sortedShards.length > 0;
 
   const toggleSection = (section: string) => {
     setExpandedSection(expandedSection === section ? null : section);
@@ -108,12 +112,20 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
     const date = new Date(timestamp);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const diffWeeks = Math.floor(diffDays / 7);
+    const diffMonths = Math.floor(diffDays / 30);
+    
+    if (diffSeconds < 60) return `${diffSeconds} second${diffSeconds !== 1 ? 's' : ''} ago`;
+    if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+    if (diffWeeks < 4) return `${diffWeeks} week${diffWeeks !== 1 ? 's' : ''} ago`;
+    if (diffMonths < 12) return `${diffMonths} month${diffMonths !== 1 ? 's' : ''} ago`;
     return date.toLocaleDateString();
   };
 
@@ -306,7 +318,9 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
               
               {expandedSection === 'evolution' && (
                 <div className="space-y-2 ml-5">
-                  {(showAllEvolution ? crystal.evolution_history : crystal.evolution_history.slice(0, 3))
+                  {[...crystal.evolution_history]
+                    .sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0))
+                    .slice(0, showAllEvolution ? crystal.evolution_history.length : 3)
                     .map((event: any, i: number) => (
                     <div key={i} className="flex items-start gap-3 text-xs">
                       <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
@@ -390,7 +404,7 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
               
               {expandedSection === 'quotes' && (
                 <div className="space-y-2 ml-5">
-                  {crystal.supporting_quotes.slice(0, 3).map((quote: string, i: number) => (
+                  {[...crystal.supporting_quotes].reverse().slice(0, 3).map((quote: string, i: number) => (
                     <blockquote key={i} className="text-xs text-muted-foreground italic border-l-2 border-border/50 pl-3 leading-relaxed">
                       "{quote}"
                     </blockquote>
@@ -417,7 +431,7 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
               
               {expandedSection === 'shards' && hasShards && (
                 <div className="space-y-2 ml-5">
-                  {(showAllShards ? shards : shards.slice(0, 3)).map((shard: any) => (
+                  {(showAllShards ? sortedShards : sortedShards.slice(0, 3)).map((shard: any) => (
                     <div key={shard._id} className="border border-border/30 rounded-lg p-3 space-y-2 bg-muted/10">
                       {shard.exact_quote && (
                         <blockquote className="text-xs text-foreground italic border-l-2 border-blue-400/40 pl-2">
@@ -441,32 +455,39 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
                         )}
                       </div>
                       
-                      <div className="flex items-center gap-2 pt-1">
-                        <span className="text-xs px-1.5 py-0.5 bg-muted/50 rounded text-muted-foreground">
-                          {shard.dimension}
-                        </span>
-                        <span className={`text-xs px-1.5 py-0.5 rounded ${
-                          shard.confidence_level === 'high' ? 'bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300' :
-                          shard.confidence_level === 'medium' ? 'bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300' :
-                          'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
-                        }`}>
-                          {shard.confidence_level}
-                        </span>
-                        {shard.source_type && (
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs px-1.5 py-0.5 bg-muted/50 rounded text-muted-foreground">
+                            {shard.dimension}
+                          </span>
+                          <span className={`text-xs px-1.5 py-0.5 rounded ${
+                            shard.confidence_level === 'high' ? 'bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300' :
+                            shard.confidence_level === 'medium' ? 'bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300' :
+                            'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                          }`}>
+                            {shard.confidence_level}
+                          </span>
+                          {shard.source_type && (
+                            <span className="text-xs text-muted-foreground">
+                              from {shard.source_type}
+                            </span>
+                          )}
+                        </div>
+                        {shard._creationTime && (
                           <span className="text-xs text-muted-foreground">
-                            from {shard.source_type}
+                            {formatTimestamp(shard._creationTime)}
                           </span>
                         )}
                       </div>
                     </div>
                   ))}
                   
-                  {shards.length > 3 && (
+                  {sortedShards.length > 3 && (
                     <button
                       onClick={() => setShowAllShards(!showAllShards)}
                       className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                     >
-                      {showAllShards ? 'Show less' : `Show all ${shards.length} insights`}
+                      {showAllShards ? 'Show less' : `Show more insights`}
                     </button>
                   )}
                 </div>

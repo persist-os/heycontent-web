@@ -11,6 +11,7 @@ export interface WidgetOutput {
   projectId: string
   userId: string
   noteId: string
+  noteTitle?: string
   prompts: Array<{
     text: string
     priority: number

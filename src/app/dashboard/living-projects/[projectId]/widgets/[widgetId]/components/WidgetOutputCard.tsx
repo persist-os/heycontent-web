@@ -1,21 +1,14 @@
 /**
  * WIDGET OUTPUT CARD COMPONENT
  * 
- * Displays a widget output with expandable prompts and metadata
+ * Displays a widget output with expandable prompts, note preview, and metadata
  */
 
 'use client'
 
 import React from 'react'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { 
-  Calendar, 
-  ExternalLink, 
-  Lightbulb, 
-  ChevronDown, 
-  ChevronUp 
-} from 'lucide-react'
+import { FileText, MessageSquare, Calendar, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react'
 import type { WidgetOutput } from '../types'
 
 interface WidgetOutputCardProps {
@@ -39,53 +32,54 @@ export function WidgetOutputCard({
     const minutes = Math.floor(seconds / 60)
     const hours = Math.floor(minutes / 60)
     const days = Math.floor(hours / 24)
-    const weeks = Math.floor(days / 7)
-    const months = Math.floor(days / 30)
-    const years = Math.floor(days / 365)
     
     if (seconds < 60) return 'just now'
-    if (minutes < 60) return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`
-    if (hours < 24) return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`
-    if (days < 7) return `${days} ${days === 1 ? 'day' : 'days'} ago`
-    if (weeks < 4) return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`
-    if (months < 12) return `${months} ${months === 1 ? 'month' : 'months'} ago`
-    return `${years} ${years === 1 ? 'year' : 'years'} ago`
+    if (minutes < 60) return `${minutes}m ago`
+    if (hours < 24) return `${hours}h ago`
+    if (days < 7) return `${days}d ago`
+    return new Date(timestamp).toLocaleDateString()
   }
 
-  return (
-    <Card className="border-border/50 overflow-hidden">
-      <CardContent className="p-0">
-        {/* Output Header */}
-        <div className="p-6 border-b border-border/30">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1 space-y-2">
-              <div className="flex items-center gap-3">
-                <Calendar className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm text-foreground">
-                  {getRelativeTime(output.createdAt)}
-                </span>
-              </div>
-              
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Lightbulb className="w-4 h-4" />
-                <span>{output.prompts?.length || 0} conversation starters</span>
-              </div>
-            </div>
+  const promptCount = output.prompts?.length || 0
+  const hasNote = output.noteId
 
-            <div className="flex items-center gap-2">
+  return (
+    <div className="border border-border/40 hover:border-border/60 transition-all duration-200 group">
+      <div className="p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 space-y-4">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center">
+                  <MessageSquare className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-base font-light text-foreground">
+                      {getRelativeTime(output.createdAt)}
+                    </span>
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <Calendar className="w-3 h-3" />
+                      {new Date(output.createdAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                    <span>{promptCount} conversation {promptCount === 1 ? 'starter' : 'starters'}</span>
+                    {hasNote && (
+                      <span className="flex items-center gap-1">
+                        <FileText className="w-3 h-3" />
+                        + generated note
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
               <Button
                 size="sm"
                 variant="outline"
-                onClick={onLaunchLab}
-              >
-                <ExternalLink className="w-4 h-4 mr-2" />
-                Launch Lab
-              </Button>
-              
-              <Button
-                size="sm"
-                variant="ghost"
                 onClick={onToggle}
+                className="rounded-xl"
               >
                 {isExpanded ? (
                   <ChevronUp className="w-4 h-4" />
@@ -94,38 +88,103 @@ export function WidgetOutputCard({
                 )}
               </Button>
             </div>
+
+            {/* Note Preview */}
+            {hasNote && (
+              <div className="p-4 bg-muted/10 rounded-xl border border-border/20">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-muted-foreground" />
+                  <h4 className="text-sm font-medium text-foreground">
+                    {output.noteTitle || "Generated Note"}
+                  </h4>
+                </div>
+              </div>
+            )}
+
+            {/* Prompts Preview */}
+            {promptCount > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium text-foreground/80">
+                  Conversation Starters
+                </h4>
+                <div className="space-y-2">
+                  {output.prompts.slice(0, isExpanded ? output.prompts.length : 2).map((prompt, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3 bg-muted/20 rounded-lg border border-border/20"
+                    >
+                      <div className="flex items-start gap-2">
+                        <span className="text-xs font-medium text-muted-foreground bg-muted/40 px-2 py-1 rounded-full">
+                          {prompt.priority}
+                        </span>
+                        <p className="text-sm text-foreground/80 font-light leading-relaxed">
+                          {prompt.text}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  {!isExpanded && promptCount > 2 && (
+                    <div className="text-xs text-muted-foreground/60 text-center py-2">
+                      +{promptCount - 2} more starters
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Expandable Content */}
+        {/* Expanded Content */}
         {isExpanded && (
-          <div className="p-6 space-y-4 bg-muted/20">
-            {/* Conversation Prompts */}
-            {output.prompts && output.prompts.length > 0 ? (
-              <div className="space-y-2">
-                {output.prompts.map((prompt, idx) => (
-                  <div
-                    key={idx}
-                    className="bg-muted/30 rounded p-4 text-sm text-foreground leading-relaxed"
-                  >
-                    <div className="flex items-start gap-3">
-                      <span className="text-xs text-muted-foreground font-medium mt-0.5">
-                        {idx + 1}.
-                      </span>
-                      <span className="flex-1">{prompt.text}</span>
-                    </div>
+          <div className="mt-6 pt-6 border-t border-border/20">
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <h4 className="text-sm font-medium text-foreground/80 mb-3">
+                  Output Details
+                </h4>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <div className="flex justify-between">
+                    <span>Output ID:</span>
+                    <span className="font-mono text-xs">{output.outputId}</span>
                   </div>
-                ))}
+                  <div className="flex justify-between">
+                    <span>Created:</span>
+                    <span>{new Date(output.createdAt).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Conversation Starters:</span>
+                    <span>{promptCount}</span>
+                  </div>
+                  {hasNote && (
+                    <div className="flex justify-between">
+                      <span>Generated Note:</span>
+                      <span className="text-green-600 dark:text-green-400">✓ Created</span>
+                    </div>
+                  )}
+                </div>
               </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No conversation starters available
-              </p>
-            )}
+              
+              <div>
+                <h4 className="text-sm font-medium text-foreground/80 mb-3">
+                  Actions
+                </h4>
+                <div className="space-y-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start rounded-xl"
+                    onClick={onLaunchLab}
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Open in Thinking Lab
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 
