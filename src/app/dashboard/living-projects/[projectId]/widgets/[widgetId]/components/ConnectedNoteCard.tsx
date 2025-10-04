@@ -6,11 +6,8 @@
 
 'use client'
 
-import React from 'react'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Calendar, ExternalLink, Clock, Star } from 'lucide-react'
 import { truncateContent } from '../utils'
 import type { ConnectedNote } from '../types'
 
@@ -20,79 +17,113 @@ interface ConnectedNoteCardProps {
 }
 
 export function ConnectedNoteCard({ note, onNoteClick }: ConnectedNoteCardProps) {
+  const [showMetadata, setShowMetadata] = useState(false)
+  
   const createdDate = new Date(note.createdAt)
   const updatedDate = new Date(note.updatedAt)
 
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    })
+  }
+
   return (
-    <Card 
-      className="border-border/50 hover:border-border transition-colors cursor-pointer"
+    <div
+      className="border border-border/50 hover:border-border transition-all duration-300 cursor-pointer group"
       onClick={() => onNoteClick(note._id)}
     >
-      <CardContent className="p-6">
+      <div className="p-6 space-y-4">
+        {/* Title and Preview */}
         <div className="space-y-3">
-          {/* Note Header */}
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-medium text-foreground mb-2 truncate">
-                {note.title || 'Untitled Note'}
-              </h3>
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5" />
-                  <span>{createdDate.toLocaleDateString()}</span>
-                </div>
-                {note.type && (
-                  <Badge variant="outline" className="text-xs">
-                    {note.type.replace(/_/g, ' ')}
-                  </Badge>
-                )}
-                {note.important && (
-                  <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
-                )}
-              </div>
-            </div>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={(e) => {
-                e.stopPropagation()
-                onNoteClick(note._id)
-              }}
-            >
-              <ExternalLink className="w-4 h-4" />
-            </Button>
-          </div>
-
-          {/* Content Preview */}
-          <div className="bg-muted/20 rounded-lg p-4">
-            <p className="text-sm text-foreground/80 leading-relaxed">
-              {truncateContent(note.content || '')}
-            </p>
-          </div>
-
-          {/* Tags */}
-          {note.tags && note.tags.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap">
-              {note.tags.map((tag, idx) => (
-                <Badge 
-                  key={idx} 
-                  variant="outline"
-                  className="text-xs"
-                >
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          )}
-
-          {/* Metadata Footer */}
-          <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t border-border/30">
-            <Clock className="w-3.5 h-3.5" />
-            <span>Updated {updatedDate.toLocaleDateString()}</span>
-          </div>
+          <h3 className="text-xl font-light tracking-tight text-foreground group-hover:text-foreground/80 transition-colors">
+            {note.title || 'Untitled Note'}
+          </h3>
+          
+          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
+            {truncateContent(note.content || '', 200)}
+          </p>
         </div>
-      </CardContent>
-    </Card>
+
+        {/* Metadata Toggle */}
+        <div className="flex items-center justify-between pt-3 border-t border-border/30">
+          <div className="flex items-baseline gap-4 text-xs text-muted-foreground">
+            <span>{formatDate(createdDate)}</span>
+            {note.tags && note.tags.length > 0 && (
+              <span>{note.tags.length} tags</span>
+            )}
+          </div>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              setShowMetadata(!showMetadata)
+            }}
+            className="text-xs text-muted-foreground hover:text-foreground h-auto py-1 px-2"
+          >
+            {showMetadata ? 'Hide Details' : 'Show Details'}
+          </Button>
+        </div>
+
+        {/* Expandable Metadata */}
+        {showMetadata && (
+          <div className="pt-4 space-y-3 border-t border-border/30">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+              <div>
+                <span className="text-muted-foreground">Created</span>
+                <p className="text-foreground font-light">{formatDate(createdDate)}</p>
+              </div>
+              
+              <div>
+                <span className="text-muted-foreground">Updated</span>
+                <p className="text-foreground font-light">{formatDate(updatedDate)}</p>
+              </div>
+              
+              {note.type && (
+                <div>
+                  <span className="text-muted-foreground">Type</span>
+                  <p className="text-foreground font-light">{note.type.replace(/_/g, ' ')}</p>
+                </div>
+              )}
+              
+              {note.platform && (
+                <div>
+                  <span className="text-muted-foreground">Platform</span>
+                  <p className="text-foreground font-light">{note.platform}</p>
+                </div>
+              )}
+            </div>
+
+            {note.tags && note.tags.length > 0 && (
+              <div className="pt-2">
+                <span className="text-sm text-muted-foreground">Tags</span>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {note.tags.map((tag, idx) => (
+                    <span
+                      key={idx}
+                      className="text-xs px-2 py-1 border border-border/50 text-muted-foreground"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {note.references && note.references.length > 0 && (
+              <div className="pt-2">
+                <span className="text-sm text-muted-foreground">References</span>
+                <p className="text-xs text-foreground/60 mt-1">{note.references.length} linked items</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
 

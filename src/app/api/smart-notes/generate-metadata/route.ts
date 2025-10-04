@@ -6,81 +6,22 @@ dotenv.config();
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 export async function POST(request: Request) {
-  const debug = (...args: any[]) => console.log('[SMART-NOTE-METADATA]', ...args);
   const startTime = Date.now();
   const requestId = Math.random().toString(36).substring(7);
 
-  // 🚨 STACK TRACE DEBUG - FIND WHERE THIS IS CALLED FROM
-  console.error('🚨 METADATA API CALLED FROM:', new Error().stack);
-
-  console.log(`[${requestId}] Smart note metadata generation request started`, {
-    timestamp: new Date().toISOString(),
-    method: request.method,
-    url: request.url
-  });
-
   try {
-    debug('--- New Request ---');
-    debug('Request method:', request.method);
-    debug('Request url:', request.url);
-    if (process.env.NODE_ENV !== 'production') {
-      debug('Request headers:', JSON.stringify(Object.fromEntries(request.headers.entries()), null, 2));
-    } else {
-      debug('Request headers: [REDACTED]');
-    }
-
     // Get API key from Authorization header
     const authHeader = request.headers.get('Authorization');
-    debug('Extracted Authorization header:', authHeader);
     const apiKey = authHeader?.replace('Bearer ', '').trim();
-    debug('Extracted apiKey:', apiKey);
     
     if (!apiKey) {
-      console.warn(`[${requestId}] Authentication failed: No Authorization header or invalid format`);
       return NextResponse.json({ error: 'Unauthorized - Missing or invalid Authorization header' }, { status: 401 });
     }
 
     const body = await request.json();
-    debug('Request body:', body);
-    
     const { noteId, noteContent } = body;
-    debug('Parsed request data:', { noteId, noteContent: noteContent?.length });
-    
-    // PERSONA ID DETECTION LOG
-    const isLikelyPersonaId = noteId && noteId.length > 20 && noteId.startsWith('jh7b')
-    console.log(`🚨 [METADATA API] ${requestId} - ID Analysis:`, {
-      noteId,
-      contentLength: noteContent?.length,
-      isLikelyPersonaId,
-      idLength: noteId?.length,
-      idPrefix: noteId?.substring(0, 10),
-      timestamp: Date.now(),
-      stackTrace: new Error().stack?.split('\n').slice(0, 3).join('\n')
-    });
-    
-    if (isLikelyPersonaId) {
-      console.error(`🚨 [PERSONA ID IN METADATA API] ${requestId}:`, {
-        noteId,
-        message: 'Deprecated persona ID detected in metadata generation request',
-        shouldReject: true
-      });
-      return NextResponse.json({ 
-        error: 'Invalid ID format - persona IDs are deprecated', 
-        status: 400,
-        noteId 
-      }, { status: 400 });
-    }
-    
-    // DUPLICATE DETECTION LOG
-    console.log(`🔍 [DUPLICATE CHECK] ${requestId}:`, {
-      noteId,
-      contentLength: noteContent?.length,
-      contentHash: noteContent ? noteContent.substring(0, 50) + '...' : 'empty',
-      timestamp: Date.now()
-    });
     
     if (!noteId || !noteContent) {
-      console.warn(`[${requestId}] Invalid request: Missing required fields`);
       return NextResponse.json({ error: 'noteId and noteContent are required', status: 400 }, { status: 400 });
     }
 
@@ -89,55 +30,29 @@ export async function POST(request: Request) {
       note_id: noteId,
       note_content: noteContent,
     };
-    debug('Prepared payload for backend:', { ...payload, note_content: payload.note_content?.length });
-
-    const headersToSend = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    };
-    debug('Headers to backend:', headersToSend);
-    debug('Backend URL:', `${BACKEND_URL}/api/v1/smart-notes/generate-metadata`);
 
     const response = await fetch(`${BACKEND_URL}/api/v1/smart-notes/generate-metadata`, {
       method: 'POST',
-      headers: headersToSend,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
       body: JSON.stringify(payload)
     });
 
-    debug('Backend response status:', response.status);
-    let backendData = null;
-    try {
-      backendData = await response.clone().json();
-      debug('Backend response JSON:', backendData);
-    } catch (jsonErr) {
-      debug('Backend response not JSON or failed to parse:', jsonErr);
-    }
-
     if (!response.ok) {
-      debug('Backend returned error status:', response.status, response.statusText);
-      throw new Error(`Backend API responded with status: ${response.status} (${response.statusText})`);
+      throw new Error(`Backend API responded with status: ${response.status}`);
     }
 
-    const data = backendData;
-    const totalDuration = Date.now() - startTime;
-
-    // Log success with more details
-    console.info(`[${requestId}] Request completed successfully`, {
-      duration_ms: totalDuration,
-      note_id: data.noteId,
-      response_size: JSON.stringify(data).length
-    });
-
-    // Return the response data
+    const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
     const totalDuration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    const errorStack = error instanceof Error ? error.stack : undefined;
     const errorName = error instanceof Error ? error.name : 'UnknownError';
 
-    debug('Request failed:', { errorName, errorMessage, errorStack, totalDuration });
+    console.error(`[${requestId}] Metadata generation failed:`, errorMessage);
 
     return NextResponse.json({
       success: false,

@@ -9,8 +9,7 @@
 import React from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Play, Loader2, FlaskConical } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { Id } from '@/convex/_generated/dataModel'
 import type { WidgetConfig } from '@/types/projectWidgets'
 
@@ -33,61 +32,57 @@ export function WidgetHeader({
 
   return (
     <div className="border-b border-border/30">
-      <div className="max-w-7xl mx-auto px-6 py-10">
-        <div className="flex items-start justify-between gap-6">
+      <div className="max-w-[1600px] mx-auto px-8 py-12">
+        <div className="flex items-start justify-between gap-8">
           {/* Left: Title & Metadata */}
-          <div className="flex-1 space-y-4">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
+          <div className="flex-1 space-y-6">
+            <div>
+              <button
                 onClick={() => router.push(`/dashboard/living-projects/${projectId}`)}
-                className="text-muted-foreground hover:text-foreground"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300 mb-6 block"
               >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Project
-              </Button>
+                ← Back to Project
+              </button>
             </div>
 
-            <div className="flex items-baseline gap-4">
-              <h1 className="text-4xl font-light tracking-tight text-foreground">
-                {widget.title}
-              </h1>
-              <Badge variant="outline" className="text-sm">
-                {widget.widget_type}
-              </Badge>
-            </div>
+            <div className="space-y-3">
+              <div className="flex items-baseline gap-6">
+                <h1 className="text-5xl font-light tracking-tight text-foreground">
+                  {widget.title}
+                </h1>
+                <span className="text-sm text-muted-foreground">
+                  {widget.widget_type}
+                </span>
+              </div>
 
-            <p className="text-lg text-muted-foreground leading-relaxed max-w-3xl">
-              {widget.description}
-            </p>
+              <p className="text-base text-muted-foreground leading-relaxed max-w-3xl">
+                {widget.description}
+              </p>
+            </div>
           </div>
 
           {/* Right: Actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 pt-8">
             <Button
               onClick={onOpenInLab}
-              variant="outline"
-              className="hover:bg-muted/50 transition-colors duration-300"
+              variant="ghost"
+              className="text-muted-foreground hover:text-foreground transition-colors duration-300"
             >
-              <FlaskConical className="w-4 h-4 mr-2" />
               Open in Lab
             </Button>
             <Button
               onClick={onRunWidget}
               disabled={isRunning}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              variant="outline"
+              className="hover:bg-muted/50 transition-colors duration-300"
             >
               {isRunning ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Running...
+                  Running
                 </>
               ) : (
-                <>
-                  <Play className="w-4 h-4 mr-2" />
-                  Run Widget
-                </>
+                'Run Widget'
               )}
             </Button>
           </div>

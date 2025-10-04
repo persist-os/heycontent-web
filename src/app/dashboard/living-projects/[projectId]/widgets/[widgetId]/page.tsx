@@ -14,17 +14,14 @@ import { api } from '@/convex/_generated/api'
 import { Id } from '@/convex/_generated/dataModel'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Loader2, FileText, Play } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { useWidgetRunner } from '@/app/dashboard/living-projects/hooks/useWidgetRunner'
 import type { WidgetConfig } from '@/types/projectWidgets'
-import type { WidgetOutput, ConnectedNote } from './types'
+import type { WidgetOutput } from './types'
 import { WidgetHeader } from './components/WidgetHeader'
-import { WidgetStatusCard } from './components/WidgetStatusCard'
-import { WidgetPropertiesCard } from './components/WidgetPropertiesCard'
-import { ConnectedNotesStats } from './components/ConnectedNotesStats'
-import { ConnectedNoteCard } from './components/ConnectedNoteCard'
 import { WidgetOutputCard } from './components/WidgetOutputCard'
+import { WidgetAttachmentPanel } from './components/WidgetAttachmentPanel'
+import { ConnectedContentSection } from './components/ConnectedContentSection'
 import { launchThinkingLabWithOutput } from '@/app/dashboard/living-projects/utils/thinkingLabLauncher'
 
 export default function WidgetDashboardPage() {
@@ -36,6 +33,7 @@ export default function WidgetDashboardPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [outputLimit, setOutputLimit] = useState(10)
   const [expandedOutputs, setExpandedOutputs] = useState<Set<string>>(new Set())
+  const [showAttachmentPanel, setShowAttachmentPanel] = useState(false)
 
   const { executeWidget, isRunning } = useWidgetRunner()
 
@@ -69,37 +67,6 @@ export default function WidgetDashboardPage() {
     } : 'skip'
   ) as WidgetOutput[] | undefined
 
-  // Get unique noteIds from outputs
-  const noteIds = outputs 
-    ? [...new Set(outputs.map(output => output.noteId).filter(Boolean))]
-    : []
-
-  // Fetch individual notes using useQuery for each noteId
-  // This follows the Convex pattern of using hooks directly in components
-  const note1 = useQuery(
-    api.noteQueries.getNote,
-    noteIds[0] && userId ? { noteId: noteIds[0], userId } : 'skip'
-  )
-  const note2 = useQuery(
-    api.noteQueries.getNote,
-    noteIds[1] && userId ? { noteId: noteIds[1], userId } : 'skip'
-  )
-  const note3 = useQuery(
-    api.noteQueries.getNote,
-    noteIds[2] && userId ? { noteId: noteIds[2], userId } : 'skip'
-  )
-  const note4 = useQuery(
-    api.noteQueries.getNote,
-    noteIds[3] && userId ? { noteId: noteIds[3], userId } : 'skip'
-  )
-  const note5 = useQuery(
-    api.noteQueries.getNote,
-    noteIds[4] && userId ? { noteId: noteIds[4], userId } : 'skip'
-  )
-
-  // Combine all fetched notes into a single array
-  const connectedNotes = [note1, note2, note3, note4, note5]
-    .filter(note => note !== null && note !== undefined) as ConnectedNote[]
 
   const handleRunWidget = async () => {
     if (!widget) return
@@ -149,7 +116,6 @@ export default function WidgetDashboardPage() {
   }
 
   const totalOutputs = outputs?.length || 0
-  const totalNotes = connectedNotes?.length || 0
   const widgetData = widget as any
   const lastRun = widgetData.lastRunAt ? new Date(widgetData.lastRunAt).toLocaleString() : 'Never'
   const status = widgetData.lastRunStatus || 'idle'
@@ -165,108 +131,106 @@ export default function WidgetDashboardPage() {
         onOpenInLab={handleOpenInLab}
       />
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column: Metadata & Stats */}
-          <div className="lg:col-span-1 space-y-6">
-            <ConnectedNotesStats totalNotes={totalNotes} />
-            <WidgetStatusCard 
-              status={status}
-              lastRun={lastRun}
-              totalOutputs={totalOutputs}
-            />
-            <WidgetPropertiesCard widget={widget} />
-          </div>
-
-          {/* Right Column: Notes & Outputs */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Connected Notes Section */}
-            {totalNotes > 0 && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-light text-foreground">
-                    Connected Notes
-                    <span className="text-muted-foreground ml-3 text-lg">
-                      ({totalNotes})
-                    </span>
-                  </h2>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4">
-                  {connectedNotes?.map((note) => (
-                    <ConnectedNoteCard
-                      key={note._id}
-                      note={note}
-                      onNoteClick={handleNoteClick}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Widget Outputs Section */}
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-light text-foreground">
-                  Widget Outputs
-                  <span className="text-muted-foreground ml-3 text-lg">
-                    ({totalOutputs})
-                  </span>
-                </h2>
-              </div>
-
-              <div className="space-y-4">
-                {!outputs || outputs.length === 0 ? (
-                  <Card className="border-border/50">
-                    <CardContent className="p-12 text-center">
-                      <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
-                      <h3 className="text-lg font-medium text-foreground mb-2">
-                        No Outputs Yet
-                      </h3>
-                      <p className="text-sm text-muted-foreground mb-6">
-                        Run this widget to generate your first output
-                      </p>
-                      <Button
-                        onClick={handleRunWidget}
-                        disabled={isRunning}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                      >
-                        <Play className="w-4 h-4 mr-2" />
-                        Run Widget Now
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <>
-                    {outputs.map((output) => (
-                      <WidgetOutputCard
-                        key={output.outputId}
-                        output={output}
-                        isExpanded={expandedOutputs.has(output.outputId)}
-                        onToggle={() => toggleOutput(output.outputId)}
-                        onLaunchLab={() => handleLaunchThinkingLab(output)}
-                      />
-                    ))}
-
-                    {/* Load More Button */}
-                    {outputs && outputs.length >= outputLimit && (
-                      <div className="flex justify-center pt-4">
-                        <Button
-                          variant="outline"
-                          onClick={() => setOutputLimit(prev => prev + 10)}
-                        >
-                          Load More Outputs
-                        </Button>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
+      {/* Main Content - New Layout */}
+      <div className="max-w-[1600px] mx-auto px-8 py-12" style={{ marginLeft: '120px' }}>
+        {/* Widget Metadata Bar */}
+        <div className="flex items-start gap-12 pb-12 mb-12 border-b border-border/30">
+          <div className="flex-1 grid grid-cols-3 gap-8">
+            <div>
+              <span className="text-sm text-muted-foreground">Status</span>
+              <p className="text-lg font-light text-foreground mt-1 capitalize">{status}</p>
+            </div>
+            <div>
+              <span className="text-sm text-muted-foreground">Last Run</span>
+              <p className="text-lg font-light text-foreground mt-1">{lastRun}</p>
+            </div>
+            <div>
+              <span className="text-sm text-muted-foreground">Total Outputs</span>
+              <p className="text-lg font-light text-foreground mt-1">{totalOutputs}</p>
             </div>
           </div>
         </div>
+
+        {/* Two Column Layout */}
+        <div className="grid grid-cols-1 xl:grid-cols-5 gap-16">
+          {/* Left Column - Outputs (Wider) */}
+          <div className="xl:col-span-3 space-y-8">
+            <div className="flex items-baseline gap-6">
+              <h2 className="text-3xl font-light tracking-tight text-foreground">
+                Outputs
+              </h2>
+              <span className="text-sm text-muted-foreground">
+                {totalOutputs} total
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              {!outputs || outputs.length === 0 ? (
+                <div className="border border-dashed border-border/50 rounded p-16 text-center">
+                  <p className="text-base text-muted-foreground mb-8 leading-relaxed">
+                    Run this widget to generate your first output
+                  </p>
+                  <Button
+                    onClick={handleRunWidget}
+                    disabled={isRunning}
+                    variant="outline"
+                    className="hover:bg-muted/50 transition-colors duration-300"
+                  >
+                    Run Widget Now
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  {outputs.map((output) => (
+                    <WidgetOutputCard
+                      key={output.outputId}
+                      output={output}
+                      isExpanded={expandedOutputs.has(output.outputId)}
+                      onToggle={() => toggleOutput(output.outputId)}
+                      onLaunchLab={() => handleLaunchThinkingLab(output)}
+                    />
+                  ))}
+
+                  {outputs && outputs.length >= outputLimit && (
+                    <div className="flex justify-center pt-4">
+                      <Button
+                        variant="ghost"
+                        onClick={() => setOutputLimit(prev => prev + 10)}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        Load More
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Right Column - Connected Content */}
+          <div className="xl:col-span-2">
+            <ConnectedContentSection
+              widgetId={widgetId}
+              userId={userId}
+              onNoteClick={handleNoteClick}
+              onConversationClick={(conversationId) => router.push(`/dashboard/thinking_lab?conversationId=${conversationId}`)}
+              onAddContent={() => setShowAttachmentPanel(true)}
+            />
+          </div>
+        </div>
       </div>
+
+      {/* Attachment Panel */}
+      {showAttachmentPanel && (
+        <WidgetAttachmentPanel
+          widgetId={widgetId}
+          userId={userId}
+          isOpen={showAttachmentPanel}
+          onClose={() => setShowAttachmentPanel(false)}
+          attachedNoteIds={[]}
+          attachedConversationIds={[]}
+        />
+      )}
     </div>
   )
 }

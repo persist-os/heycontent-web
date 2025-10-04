@@ -31,3 +31,4 @@ export { InsightsSkeleton } from './InsightsSkeleton';
 // Explanation and system components
 export { CrystalSystemExplanation } from './CrystalSystemExplanation';
 export { SystemDebugInfo } from './SystemDebugInfo';
+export { DeletionTools } from './DeletionTools';
