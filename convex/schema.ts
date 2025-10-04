@@ -753,6 +753,7 @@ export default defineSchema({
       text: v.string(),
       priority: v.number(),
     })),
+    openingMessage: v.optional(v.string()),  // AI's first conversational message to start the dialogue
     
     // Metadata
     createdAt: v.number(),

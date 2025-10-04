@@ -16,6 +16,7 @@ export interface WidgetOutput {
     text: string
     priority: number
   }>
+  openingMessage?: string  // AI's first conversational message to start the dialogue
   createdAt: number
 }
 

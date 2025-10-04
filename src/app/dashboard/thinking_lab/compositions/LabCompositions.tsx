@@ -9,6 +9,8 @@
 
 import React from 'react'
 import { Columns2 } from 'lucide-react'
+import { useQuery } from 'convex/react'
+import { api } from '@/convex/_generated/api'
 import { useDialogueStore } from '../stores/dialogueStore'
 import { useNotepadStore } from '../stores/notepadStore'
 import { MarkdownNotepad } from '../components/notepad/MarkdownNotepad'
@@ -242,20 +244,69 @@ export function FullThinkingLab({
   projectId,
   widgetId
 }: LabCompositionProps) {
-  const { quotedContent, setQuotedContent, clearQuotedContent, resetForWidget } = useDialogueStore()
+  const { quotedContent, setQuotedContent, clearQuotedContent, resetForWidget, messages, addMessage } = useDialogueStore()
   const { inputComponent, handleInputPopulate } = useInputSection(clearQuotedContent)
   const resizable = useResizablePanes(0.5)
+  const [userId, setUserId] = React.useState<string | null>(null)
+  const [openingMessageSent, setOpeningMessageSent] = React.useState(false)
 
-  // Note: Context initialization is handled by page.tsx from URL params
-  // This component only needs to reset dialogue state when widget changes
+  // Get user ID
+  React.useEffect(() => {
+    const getUserId = async () => {
+      try {
+        const { getCurrentUserId } = await import('@/app/lib/api-helpers')
+        const id = await getCurrentUserId()
+        setUserId(id)
+      } catch (error) {
+        console.error('[FullThinkingLab] Failed to get user ID:', error)
+      }
+    }
+    getUserId()
+  }, [])
 
-  // Reset dialogue store when widget output ID changes
+  // Fetch widget output data to get opening message
+  const widgetOutputData = useQuery(
+    api.widgetOutputsQueries.getWidgetOutputData,
+    widgetOutputId && userId ? {
+      userId,
+      filters: { outputId: widgetOutputId },
+      limit: 1
+    } : 'skip'
+  )
+
+  // Reset dialogue store and opening message flag when widget changes
   React.useEffect(() => {
     if (widgetOutputId) {
       console.log('[FullThinkingLab] New widgetOutputId detected, resetting dialogue store:', widgetOutputId)
       resetForWidget()
+      setOpeningMessageSent(false)
     }
   }, [widgetOutputId, resetForWidget])
+
+  // Auto-send opening message when widget output loads
+  React.useEffect(() => {
+    if (!widgetOutputId || !widgetOutputData || openingMessageSent) return
+
+    const output = Array.isArray(widgetOutputData) ? widgetOutputData[0] : widgetOutputData
+    
+    if (output?.openingMessage && messages.length === 0) {
+      console.log('[FullThinkingLab] Auto-sending opening message from widget output')
+      
+      const aiMessage = {
+        id: `msg-${Date.now()}`,
+        content: output.openingMessage,
+        role: 'assistant' as const,
+        timestamp: Date.now().toString(),
+        chat_response: output.openingMessage,
+        status: 'delivered' as const,
+        suggestions: output.prompts?.map((p: any) => p.text) || [],
+        metadata: {}
+      }
+      
+      addMessage(aiMessage)
+      setOpeningMessageSent(true)
+    }
+  }, [widgetOutputId, widgetOutputData, openingMessageSent, messages.length, addMessage])
 
   // Auto-snap to full screen when dragged close to edges
   React.useEffect(() => {

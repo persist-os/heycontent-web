@@ -27,6 +27,7 @@ export interface WidgetRunResponse {
     text: string;
     priority: number;
   }>;
+  opening_message?: string;  // AI's first conversational message to start the dialogue
   user_id: string;
 }
 
