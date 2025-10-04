@@ -1205,6 +1205,8 @@ export default defineSchema({
     
     // Execution tracking
     last_analysis: v.number(),
+    last_analysis_triggered_at: v.optional(v.number()),  // Last time MAB triggered analysis (for cooldown)
+    last_analysis_snapshot: v.optional(v.any()),  // Snapshot for drift calculation
     next_scheduled_analysis: v.optional(v.number()),
     
     createdAt: v.number(),
@@ -1379,6 +1381,7 @@ export default defineSchema({
       contradictions_found: v.number(),
       health_scores_updated: v.number(),
       error: v.optional(v.string()),
+      details: v.optional(v.any()),  // Additional analysis details from backend
     })),
     
     createdAt: v.number(),
@@ -1387,5 +1390,130 @@ export default defineSchema({
   .index("by_user", ["userId"])
   .index("by_status", ["status", "priority", "scheduled_for"])
   .index("by_user_status", ["userId", "status"]),
+
+  // ========================================
+  // ASYNC JOB QUEUE SYSTEM (Redis-backed)
+  // ========================================
+  
+  // Background Jobs - Redis Stream job tracking
+  background_jobs: defineTable({
+    // Core identification
+    jobId: v.string(),              // Redis message ID (e.g. "1234567890-0")
+    userId: v.string(),
+    
+    // Job classification
+    type: v.union(
+      v.literal("shard_extraction"),
+      v.literal("crystal_formation"),
+      v.literal("intelligence_analysis")
+    ),
+    payload: v.any(),               // Job-specific payload data
+    
+    // Status tracking
+    status: v.union(
+      v.literal("queued"),
+      v.literal("running"),
+      v.literal("completed"),
+      v.literal("failed")
+    ),
+    priority: v.union(
+      v.literal("low"),
+      v.literal("normal"),
+      v.literal("high"),
+      v.literal("urgent")
+    ),
+    
+    // Timing
+    createdAt: v.number(),
+    startedAt: v.optional(v.number()),
+    completedAt: v.optional(v.number()),
+    
+    // Results and errors
+    result: v.optional(v.any()),
+    error: v.optional(v.string()),
+    
+    // Retry tracking
+    attempts: v.number(),
+    maxAttempts: v.number(),
+    
+    // Worker metadata
+    workerId: v.optional(v.string()),
+  })
+  .index("by_user", ["userId"])
+  .index("by_status", ["status"])
+  .index("by_type", ["type"])
+  .index("by_user_type_status", ["userId", "type", "status"])
+  .index("by_job_id", ["jobId"]),
+
+  // ========================================
+  // MULTI-ARMED BANDIT (MAB) LEARNING SYSTEM
+  // ========================================
+  
+  // Intelligence Bandit Arms - MAB trigger strategies per user
+  intelligence_bandit_arms: defineTable({
+    userId: v.string(),
+    armId: v.string(),
+    armName: v.string(),
+    
+    // Thompson Sampling parameters (Beta distribution)
+    alpha: v.number(),
+    beta: v.number(),
+    
+    // Performance tracking
+    total_pulls: v.number(),
+    total_reward: v.number(),
+    avg_reward: v.number(),
+    
+    // Confidence metrics
+    mean_estimate: v.number(),
+    confidence_interval: v.object({
+      lower: v.number(),
+      upper: v.number(),
+    }),
+    
+    last_pulled: v.optional(v.number()),
+    updatedAt: v.number(),
+  })
+  .index("by_user", ["userId"])
+  .index("by_user_arm", ["userId", "armId"])
+  .index("by_performance", ["userId", "avg_reward"]),
+
+  // Intelligence Bandit Decisions - Track every MAB trigger decision
+  intelligence_bandit_decisions: defineTable({
+    userId: v.string(),
+    jobId: v.optional(v.string()),  // Link to background_jobs if triggered
+    
+    // Decision context
+    armPulled: v.string(),
+    triggered: v.boolean(),
+    
+    // State snapshot at decision time
+    state_snapshot: v.object({
+      semantic_drift: v.number(),
+      activity_velocity: v.number(),
+      hours_since_last: v.number(),
+      crystal_count: v.number(),
+      active_crystals: v.number(),
+      formations_since_last: v.number(),
+    }),
+    
+    // All arms' state for analysis
+    arms_state: v.array(v.object({
+      armId: v.string(),
+      armName: v.string(),
+      alpha: v.number(),
+      beta: v.number(),
+      sampled_value: v.number(),
+    })),
+    
+    // Outcome (populated after analysis)
+    reward: v.optional(v.number()),
+    
+    decisionAt: v.number(),
+    rewardObservedAt: v.optional(v.number()),
+  })
+  .index("by_user", ["userId"])
+  .index("by_triggered", ["triggered"])
+  .index("by_decision_time", ["decisionAt"]),
 });
 

@@ -37,6 +37,7 @@ app.use('*', async (c, next) => {
   else if (path.includes('/vector')) domain = 'vector';
   else if (path.includes('/subscription') || path.includes('/stripe')) domain = 'subscription';
   else if (path.includes('/feedback')) domain = 'feedback';
+  else if (path.includes('/backgroundJobs') || path.includes('/background')) domain = 'background_jobs';
   
   console.log(`🔵 [${domain.toUpperCase()}] ${method} ${path} - START`);
   
@@ -2135,6 +2136,35 @@ app.post("/api/intelligence/config", async (c) => {
   }
 });
 
+// Update user intelligence config
+app.post("/api/intelligence/config/update", async (c) => {
+  const ctx = c.env;
+  const { userId, updates } = await c.req.json();
+  
+  if (!userId || !updates) {
+    return c.json({ 
+      success: false, 
+      error: "Missing required fields: userId and updates" 
+    }, 400);
+  }
+  
+  try {
+    const result = await ctx.runMutation(api.intelligenceMutations.updateUserConfig, { 
+      userId, 
+      triggers: updates.triggers,
+      preferences: updates.preferences,
+      // Support direct field updates (last_analysis, last_analysis_triggered_at, etc.)
+      ...(updates.last_analysis !== undefined && { last_analysis: updates.last_analysis }),
+      ...(updates.last_analysis_triggered_at !== undefined && { last_analysis_triggered_at: updates.last_analysis_triggered_at }),
+      ...(updates.last_analysis_snapshot !== undefined && { last_analysis_snapshot: updates.last_analysis_snapshot }),
+    });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[INTELLIGENCE] Config update error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 // Get pending jobs
 app.post("/api/intelligence/jobs/pending", async (c) => {
   const ctx = c.env;
@@ -2173,6 +2203,107 @@ app.post("/api/intelligence/update", async (c) => {
     return c.json({ success: true, data: result });
   } catch (error: any) {
     console.error("[INTELLIGENCE] Intelligence update error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+
+// === INTELLIGENCE BANDIT (MAB) ENDPOINTS ===
+// Multi-Armed Bandit learning system for adaptive intelligence triggering
+
+app.post("/api/intelligenceBandit/getUserArms", async (c) => {
+  const ctx = c.env;
+  const { userId } = await c.req.json();
+  
+  try {
+    const arms = await ctx.runQuery(api.intelligenceBandit.getUserArms, { userId });
+    // Return arms directly as array - backend expects this format
+    return c.json(arms);
+  } catch (error: any) {
+    console.error("[MAB] Get arms error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/intelligenceBandit/initializeArms", async (c) => {
+  const ctx = c.env;
+  const { userId, arms } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.intelligenceBandit.initializeArms, { userId, arms });
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[MAB] Initialize arms error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/intelligenceBandit/createDecision", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const decisionId = await ctx.runMutation(api.intelligenceBandit.createDecision, requestBody);
+    // Return decisionId at top level for Python to access as response.get("data")
+    return c.json(decisionId);
+  } catch (error: any) {
+    console.error("[MAB] Create decision error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/intelligenceBandit/updateArmPerformance", async (c) => {
+  const ctx = c.env;
+  const { userId, decisionId, valueScore } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.intelligenceBandit.updateArmPerformance, {
+      userId,
+      decisionId,
+      valueScore
+    });
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[MAB] Update arm performance error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/intelligenceBandit/getBanditPerformance", async (c) => {
+  const ctx = c.env;
+  const { userId } = await c.req.json();
+  
+  try {
+    const performance = await ctx.runQuery(api.intelligenceBandit.getBanditPerformance, { userId });
+    return c.json({ success: true, data: performance });
+  } catch (error: any) {
+    console.error("[MAB] Get performance error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/intelligenceBandit/getRecentDecisions", async (c) => {
+  const ctx = c.env;
+  const { userId, limit } = await c.req.json();
+  
+  try {
+    const decisions = await ctx.runQuery(api.intelligenceBandit.getRecentDecisions, { userId, limit });
+    return c.json({ success: true, data: decisions });
+  } catch (error: any) {
+    console.error("[MAB] Get recent decisions error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/intelligenceBandit/getArmDecisionHistory", async (c) => {
+  const ctx = c.env;
+  const { userId, armId, limit } = await c.req.json();
+  
+  try {
+    const decisions = await ctx.runQuery(api.intelligenceBandit.getArmDecisionHistory, { userId, armId, limit });
+    return c.json({ success: true, data: decisions });
+  } catch (error: any) {
+    console.error("[MAB] Get arm decision history error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -2697,6 +2828,126 @@ app.post("/api/widgetOutputs/mutate", async (c) => {
     return c.json({ 
       error: "Internal server error",
       message: error.message || "Unknown error"
+    }, 500);
+  }
+});
+
+// BACKGROUND JOBS ROUTES - Async job queue tracking
+
+/**
+ * POST /api/backgroundJobs/create
+ * Create a new background job record and get Convex-generated job ID
+ * Called BEFORE Redis enqueue to get the job ID
+ */
+app.post("/api/backgroundJobs/create", async (c) => {
+  try {
+    const ctx = c.env;
+    const { userId, type, payload, priority } = await c.req.json();
+    
+    // Validate required fields
+    if (!userId || !type) {
+      return c.json({ 
+        success: false,
+        error: "Missing required fields: userId and type"
+      }, 400);
+    }
+    
+    const result = await ctx.runMutation(api.backgroundJobs.create, {
+      userId,
+      type,
+      payload,
+      priority: priority || "normal",
+    });
+    
+    // result is { success: true, jobId: "..." }
+    // Return jobId at top level for Python backend
+    return c.json({ 
+      success: result.success,
+      jobId: result.jobId 
+    });
+  } catch (error: any) {
+    console.error("Background job creation error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to create job record",
+      message: error.message || "Internal server error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/backgroundJobs/updateStatus
+ * Update job status (called by workers)
+ */
+app.post("/api/backgroundJobs/updateStatus", async (c) => {
+  try {
+    const ctx = c.env;
+    const { jobId, status, workerId, result, error } = await c.req.json();
+    
+    const updateResult = await ctx.runMutation(api.backgroundJobs.updateStatus, {
+      jobId,
+      status,
+      workerId,
+      result,
+      error,
+    });
+    
+    return c.json({ success: true, data: updateResult });
+  } catch (error: any) {
+    console.error("Background job status update error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to update job status",
+      message: error.message || "Internal server error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/backgroundJobs/getUserJobs
+ * Get user's jobs with optional filtering
+ */
+app.post("/api/backgroundJobs/getUserJobs", async (c) => {
+  try {
+    const ctx = c.env;
+    const { userId, jobType, status, limit } = await c.req.json();
+    
+    const jobs = await ctx.runQuery(api.backgroundJobs.getUserJobs, {
+      userId,
+      jobType,
+      status,
+      limit: limit || 10,
+    });
+    
+    return c.json({ success: true, data: jobs });
+  } catch (error: any) {
+    console.error("Get user jobs error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to get user jobs",
+      message: error.message || "Internal server error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/backgroundJobs/getJobStats
+ * Get job statistics for a user
+ */
+app.post("/api/backgroundJobs/getJobStats", async (c) => {
+  try {
+    const ctx = c.env;
+    const { userId } = await c.req.json();
+    
+    const stats = await ctx.runQuery(api.backgroundJobs.getJobStats, { userId });
+    
+    return c.json({ success: true, data: stats });
+  } catch (error: any) {
+    console.error("Get job stats error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to get job stats",
+      message: error.message || "Internal server error"
     }, 500);
   }
 });

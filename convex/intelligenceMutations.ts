@@ -85,13 +85,9 @@ export const incrementActivity = mutation({
       });
     }
     
-    // ✅ CHECK INTELLIGENCE TRIGGERS (non-blocking)
-    // This checks if activity thresholds are met and queues analysis jobs if needed.
-    // We schedule it to run after this mutation completes to avoid blocking the user.
-    await ctx.scheduler.runAfter(0, internal.intelligenceActions.checkIntelligenceTriggers, {
-      userId,
-      event_type: activity_type,
-    });
+    // Activity counters are used by MAB for state computation
+    // Actual trigger decisions are made by the MAB after crystal formation
+    // (see executors.py -> crystal_formation_hook -> intelligence_bandit_controller)
   },
 });
 
@@ -193,6 +189,7 @@ export const updateJobStatus = mutation({
       contradictions_found: v.number(),
       health_scores_updated: v.number(),
       error: v.optional(v.string()),
+      details: v.optional(v.any()),  // Additional analysis details from backend
     })),
     error: v.optional(v.string()),
   },
@@ -271,9 +268,13 @@ export const updateUserConfig = mutation({
       auto_archival: v.boolean(),
       review_notifications: v.boolean(),
     })),
+    // Support direct field updates for intelligence system
+    last_analysis: v.optional(v.number()),
+    last_analysis_triggered_at: v.optional(v.number()),
+    last_analysis_snapshot: v.optional(v.any()),
   },
   handler: async (ctx, args) => {
-    const { userId, triggers, preferences } = args;
+    const { userId, triggers, preferences, last_analysis, last_analysis_triggered_at, last_analysis_snapshot } = args;
     
     const existing = await ctx.db
       .query("intelligence_config")
@@ -287,7 +288,9 @@ export const updateUserConfig = mutation({
         userId,
         triggers: triggers || DEFAULT_INTELLIGENCE_CONFIG.triggers,
         preferences: preferences || DEFAULT_INTELLIGENCE_CONFIG.preferences,
-        last_analysis: 0,
+        last_analysis: last_analysis || 0,
+        last_analysis_triggered_at: last_analysis_triggered_at,
+        last_analysis_snapshot: last_analysis_snapshot,
         createdAt: now,
         updatedAt: now,
       });
@@ -296,6 +299,9 @@ export const updateUserConfig = mutation({
     const updates: any = { updatedAt: Date.now() };
     if (triggers) updates.triggers = triggers;
     if (preferences) updates.preferences = preferences;
+    if (last_analysis !== undefined) updates.last_analysis = last_analysis;
+    if (last_analysis_triggered_at !== undefined) updates.last_analysis_triggered_at = last_analysis_triggered_at;
+    if (last_analysis_snapshot !== undefined) updates.last_analysis_snapshot = last_analysis_snapshot;
     
     await ctx.db.patch(existing._id, updates);
     return existing._id;
