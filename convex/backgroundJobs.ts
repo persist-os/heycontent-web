@@ -296,12 +296,7 @@ export const cancelJobs = mutation({
   args: {
     userId: v.string(),
     jobId: v.optional(v.string()),
-    type: v.optional(v.union(
-      v.literal("shard_extraction"),
-      v.literal("crystal_formation"),
-      v.literal("intelligence_analysis"),
-      v.literal("chatgpt_import")
-    )),
+    type: v.optional(jobTypeValidator),
     reason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
