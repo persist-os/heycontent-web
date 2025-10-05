@@ -16,6 +16,8 @@ import type {
   MessageTransmissionRequest
 } from '@/app/dashboard/thinking_lab/types';
 
+// Import progressive thinking utilities
+import { startProgressiveThinking, sleep, POST_THINK_DELAY_MS } from '@/app/dashboard/thinking_lab/hooks/useProgressiveThinking';
 
 // =============================================================================
 // ENHANCED MESSAGE TRANSMISSION WITH CONTEXT INTELLIGENCE
@@ -62,11 +64,11 @@ export async function transmitMessageWithContext(params: MessageTransmissionRequ
     userId = await getCurrentUserId();
   }
 
+  let stopThinking: (() => void) | null = null;
   try {
-    // Status updates
-    onStatusUpdate?.('Processing your request...');
-    onStatusUpdate?.('Searching for relevant context...');
-
+    // Start staggered thinking sequence
+    stopThinking = startProgressiveThinking(useContextSearch, onStatusUpdate);
+    
     // Prepare request body for thinking lab endpoint
     const requestBody: any = {
       user_id: userId,
@@ -127,6 +129,9 @@ export async function transmitMessageWithContext(params: MessageTransmissionRequ
       data: data
     });
     
+    stopThinking?.();
+    onStatusUpdate?.('Putting my thoughts together');
+    await sleep(POST_THINK_DELAY_MS);
     onStatusUpdate?.('Generating response...');
     
     // Lab endpoint returns the response directly (not wrapped in success/data)
@@ -147,10 +152,15 @@ export async function transmitMessageWithContext(params: MessageTransmissionRequ
     return result;
 
   } catch (error) {
+    // Ensure we always stop the thinking sequence on error
+    stopThinking?.();
     if (error instanceof AuthenticationError) {
       throw error;
     }
     throw new Error(error instanceof Error ? error.message : 'Failed to send message');
+  } finally {
+    // Defensive: ensure the thinking sequence does not continue
+    stopThinking?.();
   }
 }
 

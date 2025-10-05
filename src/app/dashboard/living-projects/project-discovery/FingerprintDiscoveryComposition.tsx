@@ -11,7 +11,9 @@ import ChatMessagesList from '@/app/dashboard/thinking_lab/components/dialogue/c
 import { sendDiscoveryMessage } from './services/discoveryService'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { useResizablePanes } from '@/app/dashboard/thinking_lab/hooks/useResizablePanes'
+import { useAutoScroll } from '@/app/dashboard/thinking_lab/hooks/useAutoScroll'
 import AmbientFingerprintCanvas from './components/AmbientFingerprintCanvas'
+import { sleep, POST_THINK_DELAY_MS } from '@/app/dashboard/thinking_lab/hooks/useProgressiveThinking'
 
 interface FingerprintDiscoveryCompositionProps {
   projectId?: Id<"projects">
@@ -30,6 +32,9 @@ const FingerprintDiscoveryComposition: React.FC<FingerprintDiscoveryCompositionP
   const [isInitialized, setIsInitialized] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const resizable = useResizablePanes(0.6)
+  
+  // Auto-scroll when messages change
+  const scrollRef = useAutoScroll([messages])
 
   // Convex mutations
   const createConversation = useMutation(api.chatMutations.createConversation)
@@ -150,8 +155,9 @@ const FingerprintDiscoveryComposition: React.FC<FingerprintDiscoveryCompositionP
       status: 'sent'
     }
 
+    const typingId = `typing-${Date.now()}`
     const typingMessage: Message = {
-      id: `typing-${Date.now()}`,
+      id: typingId,
       content: '',
       role: 'assistant',
       timestamp: Date.now().toString(),
@@ -164,7 +170,20 @@ const FingerprintDiscoveryComposition: React.FC<FingerprintDiscoveryCompositionP
     setIsLoading(true)
     setInputValue('')
 
+    // Import progressive thinking dynamically (avoid hook in callback)
+    const { startProgressiveThinking } = await import('@/app/dashboard/thinking_lab/hooks/useProgressiveThinking')
+    let stopThinking: (() => void) | null = null
+
     try {
+      // Start progressive thinking UI
+      stopThinking = startProgressiveThinking(true, (status) => {
+        setMessages(prev => prev.map(m =>
+          m.id === typingId
+            ? { ...m, statusHistory: [...(m.statusHistory || []), status], searchStatus: status }
+            : m
+        ))
+      })
+
       // Save user message to Convex
       await addMessage({
         userId,
@@ -183,6 +202,20 @@ const FingerprintDiscoveryComposition: React.FC<FingerprintDiscoveryCompositionP
         isFirstMessage: messages.length === 0,
         sessionId: conversationId, // Use conversation ID as session ID
       })
+
+      // Transition to generation steps
+      stopThinking?.()
+      setMessages(prev => prev.map(m =>
+        m.id === typingId
+          ? { ...m, statusHistory: [...(m.statusHistory || []), 'Putting my thoughts together'], searchStatus: 'Putting my thoughts together' }
+          : m
+      ))
+      await sleep(POST_THINK_DELAY_MS)
+      setMessages(prev => prev.map(m =>
+        m.id === typingId
+          ? { ...m, statusHistory: [...(m.statusHistory || []), 'Generating response...'], searchStatus: 'Generating response...' }
+          : m
+      ))
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -210,11 +243,12 @@ const FingerprintDiscoveryComposition: React.FC<FingerprintDiscoveryCompositionP
 
       // Replace typing message with actual response
       setMessages(prev => prev.map(msg => 
-        msg.status === 'typing' ? assistantMessage : msg
+        msg.id === typingId || msg.status === 'typing' ? assistantMessage : msg
       ))
 
     } catch (error) {
       console.error('Discovery error:', error)
+      stopThinking?.()
       
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -230,9 +264,10 @@ const FingerprintDiscoveryComposition: React.FC<FingerprintDiscoveryCompositionP
       }
 
       setMessages(prev => prev.map(msg => 
-        msg.status === 'typing' ? errorMessage : msg
+        msg.id === typingId || msg.status === 'typing' ? errorMessage : msg
       ))
     } finally {
+      stopThinking?.()
       setIsLoading(false)
     }
   }, [userId, messages.length, projectId, conversationId, addMessage])
@@ -308,6 +343,8 @@ const FingerprintDiscoveryComposition: React.FC<FingerprintDiscoveryCompositionP
                     onQuoteToNotepad={() => {}}
                     onContentClick={() => {}}
                   />
+                  {/* Scroll anchor */}
+                  <div ref={scrollRef} />
                 </div>
               </div>
             </div>

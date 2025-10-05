@@ -21,6 +21,7 @@ const operationSchema = v.object({
       text: v.string(),
       priority: v.number(),
     }))),
+    openingMessage: v.optional(v.string()),  // AI's first conversational message
   })),
   id: v.optional(v.id("widget_outputs")),
   outputId: v.optional(v.string()), // For delete by outputId
@@ -73,6 +74,7 @@ export const batchMutateWidgetOutputs = mutation({
               userId: op.data.userId,
               noteId: op.data.noteId!,
               prompts: op.data.prompts || [],
+              openingMessage: op.data.openingMessage,
               createdAt: Date.now(),
             });
             break;
