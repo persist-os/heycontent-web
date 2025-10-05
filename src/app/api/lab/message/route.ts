@@ -33,7 +33,6 @@ export async function POST(request: Request) {
       session_identifier,
       notepad_context,
       workspace_context,
-      use_vector_search,
       intent_analysis,
       vector_search_metadata,
       // Context parameters for project/widget linkage
@@ -50,7 +49,6 @@ export async function POST(request: Request) {
       session_identifier,
       has_notepad_context: !!notepad_context,
       has_workspace_context: !!workspace_context,
-      use_vector_search,
       has_intent_analysis: !!intent_analysis,
       has_vector_search_metadata: !!vector_search_metadata
     });
@@ -67,14 +65,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized - Invalid API key format or missing user_id' }, { status: 401 });
     }
 
-    // Build payload for chat API
+    // Build payload for chat API (MAB now controls all context decisions)
     const chatRequestBody: any = {
       user_id: authenticated_user_id,
       query,
       is_first_message: is_first_message === true,
       session_id: is_first_message === true ? null : (session_identifier || null),
       notepad_context,
-      vector_search_metadata: use_vector_search ? vector_search_metadata : undefined
+      vector_search_metadata
     };
 
     // Add workspace context as content_context if provided

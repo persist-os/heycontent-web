@@ -171,7 +171,6 @@ function useInputSection(clearQuotedContent: () => void) {
   const { includeInMessages, setIncludeInMessages } = useNotepadStore()
   const inputRef = React.useRef<HTMLTextAreaElement>(null)
   const [inputValue, setInputValue] = React.useState("")
-  const [useContextSearch, setUseContextSearch] = React.useState(true)
 
   const handleInputPopulate = React.useCallback((text: string) => {
     const cleanText = text
@@ -204,8 +203,6 @@ function useInputSection(clearQuotedContent: () => void) {
       isMobile={false}
       activeTab="chat"
       embeddingInfo={{ hasEmbeddings: false, count: 0 }}
-      useContextSearch={useContextSearch}
-      onToggleContextSearch={setUseContextSearch}
       includeNotepadInMessages={includeInMessages}
       onToggleNotepadInMessages={setIncludeInMessages}
     />
@@ -215,8 +212,6 @@ function useInputSection(clearQuotedContent: () => void) {
     inputValue,
     setInputValue,
     handleInputPopulate,
-    useContextSearch,
-    setUseContextSearch,
     includeInMessages,
     setIncludeInMessages,
     clearQuotedContent

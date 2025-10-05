@@ -129,20 +129,11 @@ export const updateUserRole = mutation({
       throw new Error("Only super admins can change user roles");
     }
 
-    // Try to find user by Firebase UID first
-    let user = await ctx.db
+    // Find user by Firebase UID
+    const user = await ctx.db
       .query("users")
       .withIndex("by_userId", (q) => q.eq("userId", args.targetUserId))
       .unique();
-
-    // If not found by UID, try to find by Convex ID
-    if (!user) {
-      try {
-        user = await ctx.db.get(args.targetUserId as any);
-      } catch (error) {
-        // Ignore error, user will be null
-      }
-    }
 
     if (!user) {
       throw new Error("User not found");

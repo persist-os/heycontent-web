@@ -104,3 +104,105 @@ export const removeConversationFromWidget = mutation({
     return { success: true };
   },
 });
+
+/**
+ * Add a crystal to a widget by updating the crystal's widgetId
+ */
+export const addCrystalToWidget = mutation({
+  args: {
+    crystalId: v.id("crystals"),
+    widgetId: v.union(v.string(), v.id("widgets")),
+    userId: v.string(),
+  },
+  handler: async (ctx, { crystalId, widgetId, userId }) => {
+    // Verify user owns the crystal
+    const crystal = await ctx.db.get(crystalId);
+    if (!crystal || crystal.userId !== userId) {
+      throw new Error("Crystal not found or unauthorized");
+    }
+
+    // Update crystal with widgetId
+    await ctx.db.patch(crystalId, {
+      widgetId: widgetId,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+/**
+ * Remove a crystal from a widget by clearing the widgetId
+ */
+export const removeCrystalFromWidget = mutation({
+  args: {
+    crystalId: v.id("crystals"),
+    userId: v.string(),
+  },
+  handler: async (ctx, { crystalId, userId }) => {
+    // Verify user owns the crystal
+    const crystal = await ctx.db.get(crystalId);
+    if (!crystal || crystal.userId !== userId) {
+      throw new Error("Crystal not found or unauthorized");
+    }
+
+    // Clear widgetId
+    await ctx.db.patch(crystalId, {
+      widgetId: undefined,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+/**
+ * Add a shard to a widget by updating the shard's widgetId
+ */
+export const addShardToWidget = mutation({
+  args: {
+    shardId: v.id("crystal_shards"),
+    widgetId: v.union(v.string(), v.id("widgets")),
+    userId: v.string(),
+  },
+  handler: async (ctx, { shardId, widgetId, userId }) => {
+    // Verify user owns the shard
+    const shard = await ctx.db.get(shardId);
+    if (!shard || shard.userId !== userId) {
+      throw new Error("Shard not found or unauthorized");
+    }
+
+    // Update shard with widgetId
+    await ctx.db.patch(shardId, {
+      widgetId: widgetId,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+/**
+ * Remove a shard from a widget by clearing the widgetId
+ */
+export const removeShardFromWidget = mutation({
+  args: {
+    shardId: v.id("crystal_shards"),
+    userId: v.string(),
+  },
+  handler: async (ctx, { shardId, userId }) => {
+    // Verify user owns the shard
+    const shard = await ctx.db.get(shardId);
+    if (!shard || shard.userId !== userId) {
+      throw new Error("Shard not found or unauthorized");
+    }
+
+    // Clear widgetId
+    await ctx.db.patch(shardId, {
+      widgetId: undefined,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});

@@ -16,6 +16,188 @@ import {
 } from "./types/backgroundJobs";
 
 /**
+ * Find jobs stuck in RUNNING status (for recovery after backend restart)
+ */
+export const getStuckJobs = query({
+  args: {
+    maxAgeMinutes: v.optional(v.number()),
+  },
+  handler: async (ctx, { maxAgeMinutes = 10 }) => {
+    const now = Date.now();
+    const cutoffTime = now - (maxAgeMinutes * 60 * 1000);
+    
+    // Use by_status index for better performance
+    const runningJobs = await ctx.db
+      .query("background_jobs")
+      .withIndex("by_status", (q) => q.eq("status", "running"))
+      .collect();
+    
+    // Filter stuck jobs: either no startedAt (broken state) or startedAt is too old
+    const stuckJobs = runningJobs.filter(job => {
+      // Job stuck if it has no startedAt (shouldn't happen but catch it)
+      if (!job.startedAt) {
+        return true;
+      }
+      // Job stuck if it started too long ago
+      return job.startedAt < cutoffTime;
+    });
+    
+    return {
+      success: true,
+      currentTime: now,
+      cutoffTime: cutoffTime,
+      totalRunning: runningJobs.length,
+      stuckCount: stuckJobs.length,
+      jobs: stuckJobs.map(job => ({
+        _id: job._id,
+        jobId: job.jobId,
+        userId: job.userId,
+        type: job.type,
+        status: job.status,
+        createdAt: job.createdAt,
+        startedAt: job.startedAt,
+        runningForMinutes: job.startedAt ? Math.floor((now - job.startedAt) / 60000) : null,
+        workerId: job.workerId,
+      })),
+    };
+  },
+});
+
+/**
+ * Reset a stuck job back to queued status
+ */
+export const resetStuckJob = mutation({
+  args: {
+    jobId: v.string(),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, { jobId, reason }) => {
+    const job = await ctx.db
+      .query("background_jobs")
+      .withIndex("by_job_id", (q) => q.eq("jobId", jobId))
+      .first();
+    
+    if (!job) {
+      return { success: false, message: "Job not found" };
+    }
+    
+    await ctx.db.patch(job._id, {
+      status: "queued",
+      workerId: undefined,
+      startedAt: undefined,
+      error: reason || "Reset after backend restart",
+    });
+    
+    return { success: true };
+  },
+});
+
+/**
+ * Bulk reset ALL stuck jobs at once
+ * Useful for emergency cleanup after backend crashes
+ */
+export const resetAllStuckJobs = mutation({
+  args: {
+    maxAgeMinutes: v.optional(v.number()),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, { maxAgeMinutes = 10, reason }) => {
+    const now = Date.now();
+    const cutoffTime = now - (maxAgeMinutes * 60 * 1000);
+    
+    // Get all running jobs
+    const runningJobs = await ctx.db
+      .query("background_jobs")
+      .withIndex("by_status", (q) => q.eq("status", "running"))
+      .collect();
+    
+    // Filter stuck jobs
+    const stuckJobs = runningJobs.filter(job => {
+      if (!job.startedAt) return true;
+      return job.startedAt < cutoffTime;
+    });
+    
+    if (stuckJobs.length === 0) {
+      return { 
+        success: true, 
+        resetCount: 0,
+        message: "No stuck jobs found"
+      };
+    }
+    
+    // Reset all stuck jobs
+    const resetReason = reason || `Bulk reset: stuck in RUNNING for ${maxAgeMinutes}+ minutes`;
+    
+    for (const job of stuckJobs) {
+      await ctx.db.patch(job._id, {
+        status: "queued",
+        workerId: undefined,
+        startedAt: undefined,
+        error: resetReason,
+      });
+    }
+    
+    return { 
+      success: true, 
+      resetCount: stuckJobs.length,
+      message: `Reset ${stuckJobs.length} stuck job(s)`,
+      jobs: stuckJobs.map(j => ({
+        jobId: j.jobId,
+        type: j.type,
+        userId: j.userId,
+      }))
+    };
+  },
+});
+
+/**
+ * Force reset ALL running jobs (emergency use only)
+ * Use when you need to clean up everything regardless of time
+ */
+export const forceResetAllRunningJobs = mutation({
+  args: {
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, { reason }) => {
+    // Get ALL running jobs regardless of age
+    const runningJobs = await ctx.db
+      .query("background_jobs")
+      .withIndex("by_status", (q) => q.eq("status", "running"))
+      .collect();
+    
+    if (runningJobs.length === 0) {
+      return { 
+        success: true, 
+        resetCount: 0,
+        message: "No running jobs found"
+      };
+    }
+    
+    const resetReason = reason || "Force reset: emergency cleanup of all running jobs";
+    
+    for (const job of runningJobs) {
+      await ctx.db.patch(job._id, {
+        status: "queued",
+        workerId: undefined,
+        startedAt: undefined,
+        error: resetReason,
+      });
+    }
+    
+    return { 
+      success: true, 
+      resetCount: runningJobs.length,
+      message: `Force reset ${runningJobs.length} running job(s)`,
+      jobs: runningJobs.map(j => ({
+        jobId: j.jobId,
+        type: j.type,
+        userId: j.userId,
+      }))
+    };
+  },
+});
+
+/**
  * Create a new background job record
  * Called BEFORE enqueueing to Redis to get the job ID
  * Returns the Convex document ID as the jobId
@@ -103,6 +285,73 @@ export const updateStatus = mutation({
     await ctx.db.patch(job._id, updates);
     
     return { success: true };
+  },
+});
+
+/**
+ * Cancel/stop specific job or all jobs of a type
+ * Useful for emergency stops
+ */
+export const cancelJobs = mutation({
+  args: {
+    userId: v.string(),
+    jobId: v.optional(v.string()),
+    type: v.optional(jobTypeValidator),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    let jobs = [];
+    
+    if (args.jobId) {
+      // Cancel specific job
+      const job = await ctx.db
+        .query("background_jobs")
+        .withIndex("by_job_id", (q) => q.eq("jobId", args.jobId))
+        .first();
+      if (job) jobs.push(job);
+    } else if (args.type) {
+      // Cancel all jobs of a specific type for the user
+      jobs = await ctx.db
+        .query("background_jobs")
+        .withIndex("by_user_type_status", (q) => 
+          q.eq("userId", args.userId).eq("type", args.type)
+        )
+        .filter((q) => 
+          q.or(
+            q.eq(q.field("status"), "queued"),
+            q.eq(q.field("status"), "running")
+          )
+        )
+        .collect();
+    } else {
+      // Cancel all active jobs for user
+      jobs = await ctx.db
+        .query("background_jobs")
+        .withIndex("by_user", (q) => q.eq("userId", args.userId))
+        .filter((q) => 
+          q.or(
+            q.eq(q.field("status"), "queued"),
+            q.eq(q.field("status"), "running")
+          )
+        )
+        .collect();
+    }
+    
+    let cancelledCount = 0;
+    for (const job of jobs) {
+      await ctx.db.patch(job._id, {
+        status: "failed",
+        error: args.reason || "Manually cancelled by user",
+        completedAt: Date.now(),
+      });
+      cancelledCount++;
+    }
+    
+    return { 
+      success: true, 
+      cancelledCount,
+      message: `Cancelled ${cancelledCount} job(s)`
+    };
   },
 });
 

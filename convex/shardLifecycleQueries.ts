@@ -326,3 +326,125 @@ export const getCrystalToShardMapping = query({
     },
 });
 
+/**
+ * Search shards for inline writing - searches ALL shards with contextual filtering
+ * 
+ * This query enables searching through ALL user shards (not just recent ones)
+ * by filtering on dimensions, tags, and other metadata.
+ */
+export const searchShardsForInlineWriting = query({
+    args: {
+        userId: v.string(),
+        dimensions: v.optional(v.array(v.string())), // Filter by specific dimensions
+        tags: v.optional(v.array(v.string())),       // Filter by tags
+        keywords: v.optional(v.array(v.string())),   // Keywords to search in text fields
+        minConfidence: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
+        limit: v.optional(v.number()),               // Max results to return (default 50)
+    },
+    returns: v.array(v.any()),
+    handler: async (ctx, { userId, dimensions, tags, keywords, minConfidence, limit = 50 }) => {
+        console.log(`[searchShardsForInlineWriting] Search for user: ${userId}`);
+        console.log(`[searchShardsForInlineWriting] Filters - dimensions: ${dimensions?.join(',') || 'none'}, tags: ${tags?.join(',') || 'none'}, keywords: ${keywords?.join(',') || 'none'}`);
+        
+        let results;
+        
+        // Optimize query strategy based on filters
+        if (dimensions && dimensions.length > 0) {
+            // Use dimension index for efficient filtering
+            const dimensionResults = [];
+            for (const dimension of dimensions) {
+                const dimShards = await ctx.db
+                    .query("crystal_shards")
+                    .withIndex("by_dimension", (q) => 
+                        q.eq("userId", userId).eq("dimension", dimension)
+                    )
+                    .collect();
+                dimensionResults.push(...dimShards);
+            }
+            results = dimensionResults;
+            console.log(`[searchShardsForInlineWriting] Dimension query returned ${results.length} shards`);
+        } else {
+            // No dimension filter - get all shards for user
+            results = await ctx.db
+                .query("crystal_shards")
+                .withIndex("by_user", (q) => q.eq("userId", userId))
+                .collect();
+            console.log(`[searchShardsForInlineWriting] User query returned ${results.length} total shards`);
+        }
+        
+        // Filter by tags if specified
+        if (tags && tags.length > 0) {
+            const beforeCount = results.length;
+            const tagsLower = tags.map(t => t.toLowerCase());
+            results = results.filter(shard => {
+                const shardTags = shard.tags || [];
+                return shardTags.some((tag: string) => 
+                    tagsLower.includes(tag.toLowerCase())
+                );
+            });
+            console.log(`[searchShardsForInlineWriting] Tag filter: ${beforeCount} -> ${results.length} shards`);
+        }
+        
+        // Filter by keywords if specified (search in exact_quote, what_it_reveals, situation_context)
+        if (keywords && keywords.length > 0) {
+            const beforeCount = results.length;
+            const keywordsLower = keywords.map(k => k.toLowerCase());
+            results = results.filter(shard => {
+                const searchText = [
+                    shard.exact_quote || '',
+                    shard.what_it_reveals || '',
+                    shard.situation_context || '',
+                    shard.dimension || ''
+                ].join(' ').toLowerCase();
+                
+                return keywordsLower.some(keyword => searchText.includes(keyword));
+            });
+            console.log(`[searchShardsForInlineWriting] Keyword filter: ${beforeCount} -> ${results.length} shards`);
+        }
+        
+        // Filter by confidence level if specified
+        if (minConfidence) {
+            const beforeCount = results.length;
+            const confidenceOrder = { "low": 1, "medium": 2, "high": 3 };
+            const minLevel = confidenceOrder[minConfidence];
+            results = results.filter(shard => {
+                const shardLevel = confidenceOrder[shard.confidence_level as keyof typeof confidenceOrder] || 1;
+                return shardLevel >= minLevel;
+            });
+            console.log(`[searchShardsForInlineWriting] Confidence filter (${minConfidence}): ${beforeCount} -> ${results.length} shards`);
+        }
+        
+        // Prioritize shards with exact_quote (essential for voice matching)
+        const shardsWithQuotes = results.filter(s => s.exact_quote && s.exact_quote.length > 10);
+        const shardsWithoutQuotes = results.filter(s => !s.exact_quote || s.exact_quote.length <= 10);
+        
+        // Sort each group by recency and confidence
+        const sortShards = (shards: any[]) => {
+            return shards.sort((a, b) => {
+                // Primary: recency_weight (higher is better)
+                const recencyDiff = (b.recency_weight || 0) - (a.recency_weight || 0);
+                if (Math.abs(recencyDiff) > 0.01) return recencyDiff;
+                
+                // Secondary: confidence_level
+                const confidenceOrder = { "high": 3, "medium": 2, "low": 1 };
+                const aConf = confidenceOrder[a.confidence_level as keyof typeof confidenceOrder] || 1;
+                const bConf = confidenceOrder[b.confidence_level as keyof typeof confidenceOrder] || 1;
+                return bConf - aConf;
+            });
+        };
+        
+        const sortedWithQuotes = sortShards(shardsWithQuotes);
+        const sortedWithoutQuotes = sortShards(shardsWithoutQuotes);
+        
+        // Combine: quotes first, then others
+        const finalResults = [...sortedWithQuotes, ...sortedWithoutQuotes];
+        
+        // Apply limit
+        const limitedResults = finalResults.slice(0, limit);
+        
+        console.log(`[searchShardsForInlineWriting] FINAL: Returning ${limitedResults.length} shards (${shardsWithQuotes.length} with quotes, ${shardsWithoutQuotes.length} without)`);
+        
+        return limitedResults;
+    },
+});
+

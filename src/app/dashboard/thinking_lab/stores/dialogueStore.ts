@@ -29,7 +29,6 @@ export const useDialogueStore = create<DialogueStore>()(
         conversationId: undefined,
         error: undefined,
         currentStatus: undefined,
-        useContextSearch: true, // Default to enabled
         quotedContent: "", // Content to be quoted to notepad
         // Project/widget context
         projectId: undefined,
@@ -38,7 +37,7 @@ export const useDialogueStore = create<DialogueStore>()(
 
         // Actions
         sendMessage: async (content: string, fileAttachments?: FileUploadResponse[]) => {
-            const { messages, sessionId, conversationId, useContextSearch } = get()
+            const { messages, sessionId, conversationId } = get()
 
             // Add user message immediately
             const userMessage: Message = {
@@ -99,7 +98,6 @@ export const useDialogueStore = create<DialogueStore>()(
                     sessionIdentifier: sessionId,
                     workspaceContext: conversationId ? { contentId: conversationId } : null,
                     notepadContext, // Include notepad context
-                    useContextSearch,
                     fileAttachments,
                     // Pass project/widget context
                     projectId,
@@ -259,9 +257,6 @@ export const useDialogueStore = create<DialogueStore>()(
             set({ currentStatus: status })
         },
 
-        toggleContextSearch: () => {
-            set(state => ({ useContextSearch: !state.useContextSearch }))
-        },
 
         // Quote functionality
         setQuotedContent: (content: string) => {

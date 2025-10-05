@@ -30,7 +30,8 @@ app.use('*', async (c, next) => {
   else if (path.includes('/projects')) domain = 'projects';
   else if (path.includes('/widgets')) domain = 'widgets';
   else if (path.includes('/crystal')) domain = 'crystal';
-  else if (path.includes('/intelligence')) domain = 'intelligence';
+  else if (path.includes('/contextEnrichmentBandit')) domain = 'context_mab';
+  else if (path.includes('/intelligenceBandit') || path.includes('/intelligence')) domain = 'intelligence';
   else if (path.includes('/api-keys')) domain = 'api_keys';
   else if (path.includes('/rate')) domain = 'rate_limiting';
   else if (path.includes('/formation')) domain = 'formation';
@@ -118,7 +119,8 @@ app.post("/api/users/:id/create_conversation", async (c) => {
   return c.json(result);
 });
 
-// Add message to conversation
+// Add message to conversation (LEGACY - uses old messages array)
+// TODO: Remove after migration complete
 app.post("/api/users/:id/add_message_to_conversation", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
@@ -135,6 +137,71 @@ app.post("/api/users/:id/add_message_to_conversation", async (c) => {
     conversationId,
     message: messageWithTimestamp,
   });
+  return c.json(result);
+});
+
+// ===== NEW MESSAGES TABLE ENDPOINTS (Dual-write system) =====
+
+// Add message to conversation (NEW - writes to messages table + legacy array)
+app.post("/api/users/:id/messages/add", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const body = await c.req.json();
+  
+  const messageId = await ctx.runMutation(api.messagesMutations.addMessage, {
+    conversationId: body.conversationId,
+    userId,
+    content: body.content,
+    role: body.role,
+    timestamp: body.timestamp || Date.now(),
+    context: body.context,
+    fileAttachments: body.fileAttachments,
+    enrichment_metadata: body.enrichment_metadata,
+  });
+  
+  return c.json({ messageId });
+});
+
+// Get messages for a conversation (NEW) - POST to pass conversationId in body
+app.post("/api/users/:id/messages/get", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const body = await c.req.json();
+  
+  const messages = await ctx.runQuery(api.messagesQueries.getConversationMessages, {
+    conversationId: body.conversationId,  // Convex ID from body
+  });
+  
+  return c.json({ messages });
+});
+
+// Get paginated messages (NEW) - POST to pass conversationId in body
+app.post("/api/users/:id/messages/paginated", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const body = await c.req.json();
+  
+  const messages = await ctx.runQuery(api.messagesQueries.getPaginatedMessages, {
+    conversationId: body.conversationId,
+    limit: body.limit || 20,
+    beforeSequence: body.beforeSequence,
+  });
+  
+  return c.json({ messages });
+});
+
+// Update message metadata (e.g., enrichment_metadata)
+app.post("/api/users/:id/messages/update_metadata", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const body = await c.req.json();
+  
+  const result = await ctx.runMutation(api.messagesMutations.updateMessageMetadata, {
+    messageId: body.messageId,  // Convex ID from body
+    userId,
+    enrichment_metadata: body.enrichment_metadata,
+  });
+  
   return c.json(result);
 });
 
@@ -2309,6 +2376,101 @@ app.post("/api/intelligenceBandit/getArmDecisionHistory", async (c) => {
 });
 
 
+// === CONTEXT ENRICHMENT BANDIT (MAB) ENDPOINTS ===
+// Multi-Armed Bandit learning system for adaptive context strategies
+
+app.post("/api/contextEnrichmentBandit/getUserArms", async (c) => {
+  const ctx = c.env;
+  const { userId, agentType } = await c.req.json();
+  
+  try {
+    const arms = await ctx.runQuery(api.contextEnrichmentBandit.getUserArms, { userId, agentType });
+    // Return arms directly as array - backend expects this format
+    return c.json(arms);
+  } catch (error: any) {
+    console.error("[ContextMAB] Get arms error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/contextEnrichmentBandit/initializeArms", async (c) => {
+  const ctx = c.env;
+  const { userId, agentType, arms } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.contextEnrichmentBandit.initializeArms, { userId, agentType, arms });
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ContextMAB] Initialize arms error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/contextEnrichmentBandit/createDecision", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const decisionId = await ctx.runMutation(api.contextEnrichmentBandit.createDecision, requestBody);
+    // Return decisionId at top level for Python to access
+    return c.json(decisionId);
+  } catch (error: any) {
+    console.error("[ContextMAB] Create decision error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/contextEnrichmentBandit/updateDecisionContext", async (c) => {
+  const ctx = c.env;
+  const { decisionId, conversationId, messageIndex } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.contextEnrichmentBandit.updateDecisionContext, {
+      decisionId,
+      conversationId,
+      messageIndex
+    });
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ContextMAB] Update decision context error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/contextEnrichmentBandit/updateArmPerformance", async (c) => {
+  const ctx = c.env;
+  const { userId, agentType, decisionId, engagementScore, gradingScore, finalReward } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.contextEnrichmentBandit.updateArmPerformance, {
+      userId,
+      agentType,
+      decisionId,
+      engagementScore,
+      gradingScore,
+      finalReward
+    });
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ContextMAB] Update arm performance error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/contextEnrichmentBandit/getBanditPerformance", async (c) => {
+  const ctx = c.env;
+  const { userId, agentType } = await c.req.json();
+  
+  try {
+    const performance = await ctx.runQuery(api.contextEnrichmentBandit.getBanditPerformance, { userId, agentType });
+    return c.json({ success: true, data: performance });
+  } catch (error: any) {
+    console.error("[ContextMAB] Get performance error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+
 // === SHARD LIFECYCLE QUERY ENDPOINTS ===
 // Query endpoints for shard data (read-only operations)
 
@@ -2321,6 +2483,19 @@ app.post("/api/shard-lifecycle/unprocessed", async (c) => {
     // Return raw result - backend's call_convex_api will wrap it in { success, data }
     return c.json(result);
   } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/query/searchShardsForInlineWriting", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runQuery(api.shardLifecycleQueries.searchShardsForInlineWriting, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[SHARD SEARCH] Error searching shards for inline writing:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -2832,6 +3007,215 @@ app.post("/api/widgetOutputs/mutate", async (c) => {
   }
 });
 
+// CHATGPT IMPORT ROUTES - One-time import tracking
+
+/**
+ * POST /api/chatgptImport/checkHasImported
+ * Check if user has already completed a ChatGPT import
+ */
+app.post("/api/chatgptImport/checkHasImported", async (c) => {
+  try {
+    const ctx = c.env;
+    const { userId } = await c.req.json();
+    
+    if (!userId) {
+      return c.json({ 
+        success: false,
+        error: "Missing required field: userId"
+      }, 400);
+    }
+    
+    const result = await ctx.runQuery(api.chatgptImport.checkHasImported, { userId });
+    
+    return c.json({ 
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    console.error("Check ChatGPT import error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to check import status",
+      message: error.message || "Internal server error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/chatgptImport/markImportComplete
+ * Mark ChatGPT import as completed with content stats
+ */
+app.post("/api/chatgptImport/markImportComplete", async (c) => {
+  try {
+    const ctx = c.env;
+    const { userId, contentProcessed } = await c.req.json();
+    
+    if (!userId) {
+      return c.json({ 
+        success: false,
+        error: "Missing required field: userId"
+      }, 400);
+    }
+    
+    const result = await ctx.runMutation(api.chatgptImport.markImportComplete, {
+      userId,
+      contentProcessed
+    });
+    
+    return c.json({ 
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    console.error("Mark ChatGPT import complete error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to mark import complete",
+      message: error.message || "Internal server error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/chatgptImport/recordImportAttempt
+ * Record an import attempt (for failure tracking)
+ */
+app.post("/api/chatgptImport/recordImportAttempt", async (c) => {
+  try {
+    const ctx = c.env;
+    const { userId } = await c.req.json();
+    
+    if (!userId) {
+      return c.json({ 
+        success: false,
+        error: "Missing required field: userId"
+      }, 400);
+    }
+    
+    const result = await ctx.runMutation(api.chatgptImport.recordImportAttempt, { userId });
+    
+    return c.json({ 
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    console.error("Record ChatGPT import attempt error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to record import attempt",
+      message: error.message || "Internal server error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/chatgptImport/updateImportStatus
+ * Update import status in real-time (called by backend)
+ * Includes detailed progress tracking for user visibility
+ */
+app.post("/api/chatgptImport/updateImportStatus", async (c) => {
+  try {
+    const ctx = c.env;
+    const { userId, jobId, status, progress, error, progressDetails, contentProcessed } = await c.req.json();
+    
+    if (!userId || !status) {
+      return c.json({ 
+        success: false,
+        error: "Missing required fields: userId and status"
+      }, 400);
+    }
+    
+    const result = await ctx.runMutation(api.chatgptImport.updateImportStatus, {
+      userId,
+      jobId,
+      status,
+      progress,
+      error,
+      progressDetails,
+      contentProcessed
+    });
+    
+    return c.json({ 
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    console.error("Update ChatGPT import status error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to update import status",
+      message: error.message || "Internal server error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/chatgptImport/cancelImport
+ * Cancel ChatGPT import and all related jobs
+ */
+app.post("/api/chatgptImport/cancelImport", async (c) => {
+  try {
+    const ctx = c.env;
+    const { userId, reason } = await c.req.json();
+    
+    if (!userId) {
+      return c.json({ 
+        success: false,
+        error: "userId is required"
+      }, 400);
+    }
+    
+    const result = await ctx.runMutation(api.chatgptImport.cancelImport, {
+      userId,
+      reason: reason || undefined
+    });
+    
+    return c.json({
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    console.error("Cancel ChatGPT import error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to cancel import",
+      message: error.message || "Internal server error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/chatgptImport/getImportStatus
+ * Get current import status (for reactive frontend)
+ */
+app.post("/api/chatgptImport/getImportStatus", async (c) => {
+  try {
+    const ctx = c.env;
+    const { userId } = await c.req.json();
+    
+    if (!userId) {
+      return c.json({ 
+        success: false,
+        error: "Missing required field: userId"
+      }, 400);
+    }
+    
+    const result = await ctx.runQuery(api.chatgptImport.getImportStatus, { userId });
+    
+    return c.json({ 
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    console.error("Get ChatGPT import status error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to get import status",
+      message: error.message || "Internal server error"
+    }, 500);
+  }
+});
+
 // BACKGROUND JOBS ROUTES - Async job queue tracking
 
 /**
@@ -2947,6 +3331,299 @@ app.post("/api/backgroundJobs/getJobStats", async (c) => {
     return c.json({ 
       success: false,
       error: "Failed to get job stats",
+      message: error.message || "Internal server error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/backgroundJobs/getStuckJobs
+ * Find jobs stuck in RUNNING status (for recovery after backend restart)
+ */
+app.post("/api/backgroundJobs/getStuckJobs", async (c) => {
+  try {
+    const ctx = c.env;
+    const { maxAgeMinutes } = await c.req.json();
+    
+    const result = await ctx.runQuery(api.backgroundJobs.getStuckJobs, {
+      maxAgeMinutes: maxAgeMinutes || 30,
+    });
+    
+    return c.json(result);
+  } catch (error: any) {
+    console.error("Get stuck jobs error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to get stuck jobs",
+      message: error.message || "Internal server error",
+      jobs: []
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/backgroundJobs/resetStuckJob
+ * Reset a stuck job back to queued status
+ */
+app.post("/api/backgroundJobs/resetStuckJob", async (c) => {
+  try {
+    const ctx = c.env;
+    const { jobId, reason } = await c.req.json();
+    
+    if (!jobId) {
+      return c.json({ 
+        success: false,
+        error: "Missing required field: jobId"
+      }, 400);
+    }
+    
+    const result = await ctx.runMutation(api.backgroundJobs.resetStuckJob, {
+      jobId,
+      reason,
+    });
+    
+    return c.json(result);
+  } catch (error: any) {
+    console.error("Reset stuck job error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to reset stuck job",
+      message: error.message || "Internal server error"
+    }, 500);
+  }
+});
+
+// CONTENT SHARING ROUTES - Universal sharing for notes, projects, widgets, conversations
+
+/**
+ * POST /api/contentSharing/getSharedWithMe
+ * Get all content shared with a user
+ */
+app.post("/api/contentSharing/getSharedWithMe", async (c) => {
+  try {
+    const ctx = c.env;
+    const { userId, contentType } = await c.req.json();
+    
+    if (!userId) {
+      return c.json({ 
+        success: false,
+        error: "Missing required field: userId"
+      }, 400);
+    }
+    
+    const result = await ctx.runQuery(api.contentSharingQueries.getSharedWithMe, {
+      userId,
+      contentType,
+    });
+    
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Get shared with me error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to get shared content",
+      message: error.message || "Internal server error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/contentSharing/getContentSharedUsers
+ * Get all users who have access to specific content
+ */
+app.post("/api/contentSharing/getContentSharedUsers", async (c) => {
+  try {
+    const ctx = c.env;
+    const { userId, contentType, contentId } = await c.req.json();
+    
+    if (!userId || !contentType || !contentId) {
+      return c.json({ 
+        success: false,
+        error: "Missing required fields: userId, contentType, contentId"
+      }, 400);
+    }
+    
+    const result = await ctx.runQuery(api.contentSharingQueries.getContentSharedUsers, {
+      userId,
+      contentType,
+      contentId,
+    });
+    
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Get content shared users error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to get shared users",
+      message: error.message || "Internal server error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/contentSharing/getMySharedContent
+ * Get all content that a user has shared with others
+ */
+app.post("/api/contentSharing/getMySharedContent", async (c) => {
+  try {
+    const ctx = c.env;
+    const { userId, contentType } = await c.req.json();
+    
+    if (!userId) {
+      return c.json({ 
+        success: false,
+        error: "Missing required field: userId"
+      }, 400);
+    }
+    
+    const result = await ctx.runQuery(api.contentSharingQueries.getMySharedContent, {
+      userId,
+      contentType,
+    });
+    
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Get my shared content error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to get shared content",
+      message: error.message || "Internal server error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/contentSharing/checkContentAccess
+ * Check if a user has access to specific content
+ */
+app.post("/api/contentSharing/checkContentAccess", async (c) => {
+  try {
+    const ctx = c.env;
+    const { userId, contentType, contentId } = await c.req.json();
+    
+    if (!userId || !contentType || !contentId) {
+      return c.json({ 
+        success: false,
+        error: "Missing required fields: userId, contentType, contentId"
+      }, 400);
+    }
+    
+    const result = await ctx.runQuery(api.contentSharingQueries.checkContentAccess, {
+      userId,
+      contentType,
+      contentId,
+    });
+    
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Check content access error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to check content access",
+      message: error.message || "Internal server error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/contentSharing/share
+ * Share content with another user
+ */
+app.post("/api/contentSharing/share", async (c) => {
+  try {
+    const ctx = c.env;
+    const { userId, contentType, contentId, friendUserId, permission } = await c.req.json();
+    
+    if (!userId || !contentType || !contentId || !friendUserId || !permission) {
+      return c.json({ 
+        success: false,
+        error: "Missing required fields: userId, contentType, contentId, friendUserId, permission"
+      }, 400);
+    }
+    
+    const result = await ctx.runMutation(api.contentSharingMutations.shareContent, {
+      userId,
+      contentType,
+      contentId,
+      friendUserId,
+      permission,
+    });
+    
+    return c.json(result);
+  } catch (error: any) {
+    console.error("Share content error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to share content",
+      message: error.message || "Internal server error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/contentSharing/updatePermission
+ * Update permission for shared content
+ */
+app.post("/api/contentSharing/updatePermission", async (c) => {
+  try {
+    const ctx = c.env;
+    const { userId, contentType, contentId, targetUserId, newPermission } = await c.req.json();
+    
+    if (!userId || !contentType || !contentId || !targetUserId || !newPermission) {
+      return c.json({ 
+        success: false,
+        error: "Missing required fields: userId, contentType, contentId, targetUserId, newPermission"
+      }, 400);
+    }
+    
+    const result = await ctx.runMutation(api.contentSharingMutations.updateContentPermission, {
+      userId,
+      contentType,
+      contentId,
+      targetUserId,
+      newPermission,
+    });
+    
+    return c.json(result);
+  } catch (error: any) {
+    console.error("Update content permission error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to update permission",
+      message: error.message || "Internal server error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/contentSharing/revoke
+ * Revoke access to shared content
+ */
+app.post("/api/contentSharing/revoke", async (c) => {
+  try {
+    const ctx = c.env;
+    const { userId, contentType, contentId, targetUserId } = await c.req.json();
+    
+    if (!userId || !contentType || !contentId || !targetUserId) {
+      return c.json({ 
+        success: false,
+        error: "Missing required fields: userId, contentType, contentId, targetUserId"
+      }, 400);
+    }
+    
+    const result = await ctx.runMutation(api.contentSharingMutations.revokeContentAccess, {
+      userId,
+      contentType,
+      contentId,
+      targetUserId,
+    });
+    
+    return c.json(result);
+  } catch (error: any) {
+    console.error("Revoke content access error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to revoke access",
       message: error.message || "Internal server error"
     }, 500);
   }
