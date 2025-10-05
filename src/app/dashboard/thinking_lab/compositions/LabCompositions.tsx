@@ -22,6 +22,7 @@ import ChatMessagesList from '../components/dialogue/components/ChatMessagesList
 import { useOptimizedAuth } from '../components/notepad/hooks/useOptimizedAuth'
 import { useResizablePanes } from '../hooks/useResizablePanes'
 import { ContextIndicator } from '../components/ContextIndicator'
+import { useAutoScroll } from '../hooks/useAutoScroll'
 
 // =============================================================================
 // PANEL COMPONENTS
@@ -34,6 +35,9 @@ const ChatPanel = React.memo<{
 }>(({ onInputPopulate, onQuoteToNotepad, widgetOutputId }) => {
   const { messages, sendMessage, startNewConversation } = useDialogueStore()
   const authData = useOptimizedAuth()
+  
+  // Auto-scroll when messages change
+  const scrollRef = useAutoScroll([messages])
 
   const handleSuggestionClick = React.useCallback((suggestion: any, onSendMessage: (text: string) => void) => {
     if (typeof suggestion === 'string') {
@@ -81,6 +85,8 @@ const ChatPanel = React.memo<{
                     onQuoteToNotepad={onQuoteToNotepad}
                     onContentClick={() => {}}
                   />
+                  {/* Scroll anchor */}
+                  <div ref={scrollRef} />
                 </div>
               </div>
             </div>
