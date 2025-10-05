@@ -758,7 +758,6 @@ export default defineSchema({
       text: v.string(),
       priority: v.number(),
     })),
-    openingMessage: v.optional(v.string()),  // AI's first conversational message to start the dialogue
     
     // Metadata
     createdAt: v.number(),
@@ -1557,6 +1556,11 @@ export default defineSchema({
       threshold: v.number(),
       limit: v.number(),
       content_types: v.array(v.string()),
+      shard_params: v.optional(v.object({
+        limit: v.number(),
+        dimensions: v.union(v.null(), v.array(v.string())),
+        min_confidence: v.union(v.null(), v.string()),
+      })),
     }),
     
     // Thompson Sampling parameters (Beta distribution)
@@ -1596,6 +1600,11 @@ export default defineSchema({
       threshold: v.number(),
       limit: v.number(),
       content_types: v.array(v.string()),
+      shard_params: v.optional(v.object({
+        limit: v.number(),
+        dimensions: v.union(v.null(), v.array(v.string())),
+        min_confidence: v.union(v.null(), v.string()),
+      })),
     }),
     
     // All arms' state at decision time (for analysis)

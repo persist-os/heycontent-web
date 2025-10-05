@@ -21,6 +21,11 @@ export const initializeArms = mutation({
         threshold: v.number(),
         limit: v.number(),
         content_types: v.array(v.string()),
+        shard_params: v.optional(v.object({
+          limit: v.number(),
+          dimensions: v.union(v.null(), v.array(v.string())),
+          min_confidence: v.union(v.null(), v.string()),
+        })),
       }),
       description: v.string(),
     })),
@@ -86,6 +91,11 @@ export const createDecision = mutation({
       threshold: v.number(),
       limit: v.number(),
       content_types: v.array(v.string()),
+      shard_params: v.optional(v.object({
+        limit: v.number(),
+        dimensions: v.union(v.null(), v.array(v.string())),
+        min_confidence: v.union(v.null(), v.string()),
+      })),
     }),
     arms_state: v.array(v.object({
       armId: v.string(),
