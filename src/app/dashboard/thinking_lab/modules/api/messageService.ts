@@ -19,29 +19,35 @@ import type {
 // Pace and orchestrate progressive thinking statuses
 const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
 const THINKING_STEP_DELAY_MS = 700;
+const POST_THINK_DELAY_MS = 250;
 
-function startProgressiveThinking(useContextSearch: boolean, onStatusUpdate?: (s: string) => void) {
+function startProgressiveThinking(useContextSearch: boolean, onStatusUpdate?: (s: string) => void): () => void {
   let stopped = false;
   const stop = () => { stopped = true };
 
   (async () => {
-    const steps = [
-      "Understanding what you're thinking about",
-      ...(useContextSearch ? [
-        "Query needs context - proceeding with vector search",
-        "Looking through all your content",
-        "Looking at each piece carefully",
-        "Quality filtering",
-      ] : []),
-    ];
+    try {
+      const steps = [
+        "Understanding what you're thinking about",
+        ...(useContextSearch ? [
+          "Query needs context - searching related content",
+          "Looking through all your content",
+          "Looking at each piece carefully",
+          "Quality filtering",
+        ] : []),
+      ];
 
-    for (const step of steps) {
-      if (stopped) return;
-      onStatusUpdate?.(step);
-      await sleep(THINKING_STEP_DELAY_MS);
+      for (const step of steps) {
+        if (stopped) return;
+        onStatusUpdate?.(step);
+        await sleep(THINKING_STEP_DELAY_MS);
+      }
+    } catch (error) {
+      console.error('[MessageService] Error in thinking sequence:', error);
+      // Don't throw - this is a background process for UX feedback
     }
   })();
-
+  
   return stop;
 }
 
@@ -90,10 +96,11 @@ export async function transmitMessageWithContext(params: MessageTransmissionRequ
     userId = await getCurrentUserId();
   }
 
+  let stopThinking: (() => void) | null = null;
   try {
     // Start staggered thinking sequence
-    const stopThinking = startProgressiveThinking(useContextSearch, onStatusUpdate);
-
+    stopThinking = startProgressiveThinking(useContextSearch, onStatusUpdate);
+    
     // Prepare request body for thinking lab endpoint
     const requestBody: any = {
       user_id: userId,
@@ -154,9 +161,9 @@ export async function transmitMessageWithContext(params: MessageTransmissionRequ
       data: data
     });
     
-    stopThinking();
+    stopThinking?.();
     onStatusUpdate?.('Putting my thoughts together');
-    await sleep(250);
+    await sleep(POST_THINK_DELAY_MS);
     onStatusUpdate?.('Generating response...');
     
     // Lab endpoint returns the response directly (not wrapped in success/data)
@@ -177,10 +184,15 @@ export async function transmitMessageWithContext(params: MessageTransmissionRequ
     return result;
 
   } catch (error) {
+    // Ensure we always stop the thinking sequence on error
+    stopThinking?.();
     if (error instanceof AuthenticationError) {
       throw error;
     }
     throw new Error(error instanceof Error ? error.message : 'Failed to send message');
+  } finally {
+    // Defensive: ensure the thinking sequence does not continue
+    stopThinking?.();
   }
 }
 
