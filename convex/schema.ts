@@ -111,17 +111,18 @@ export default defineSchema({
 
 
 
-  // Chat conversations
+  // Chat conversations - Simplified after messages migration
   conversations: defineTable({
     userId: v.string(),
     title: v.string(),
-    messages: v.array(v.object({
+    
+    // 🔄 DUAL-WRITE MIGRATION: messages array kept during migration
+    // Will be removed after migration complete
+    messages: v.optional(v.array(v.object({
       content: v.string(),
       role: v.string(),
       timestamp: v.optional(v.number()),
-      // Optional hidden context used during generation, never shown in UI
       context: v.optional(v.string()),
-      // File attachments - metadata only, actual files in GCS
       fileAttachments: v.optional(v.array(v.object({
         file_url: v.string(),
         original_filename: v.string(),
@@ -130,25 +131,33 @@ export default defineSchema({
         gcs_url: v.string(),
         uploaded_at: v.string(),
       }))),
-      // Context enrichment metadata for MAB feedback loop
       enrichment_metadata: v.optional(v.any()),
-    })),
+    }))),
+    
+    // Message statistics (denormalized for performance)
+    messageCount: v.optional(v.number()),  // Optional during migration, will be required after
+    lastMessageAt: v.optional(v.number()),
+    
     createdAt: v.number(),
     updatedAt: v.number(),
     starred: v.boolean(),
     
     // Project & Widget Context - Links conversations to their originating context
     projectId: v.optional(v.id("projects")),
-    widgetId: v.optional(v.union(v.string(), v.id("widgets"))),  // 🔄 Migration: supports both legacy string and Convex ID
+    widgetId: v.optional(v.union(v.string(), v.id("widgets"))),
     widgetOutputId: v.optional(v.string()),
     
     // Conversation type/source for filtering and UI
     conversationType: v.optional(v.union(
-      v.literal("general"),        // Regular chat
-      v.literal("widget_prompt"),  // Started from widget prompt
-      v.literal("project_scoped"), // Project-specific conversation
-      v.literal("discovery")       // Project discovery conversation
+      v.literal("general"),
+      v.literal("widget_prompt"),
+      v.literal("project_scoped"),
+      v.literal("discovery")
     )),
+    
+    // 🔄 MIGRATION TRACKING: Temporary fields for migration
+    _migrated: v.optional(v.boolean()),  // Track migration status
+    _migration_verified: v.optional(v.boolean()),  // Verify data integrity
   })
   .index("by_user", ["userId"])
   .index("by_creation", ["createdAt"])
@@ -157,6 +166,50 @@ export default defineSchema({
   .index("by_widget_output", ["widgetOutputId"])
   .index("by_project", ["projectId"])
   .index("by_type", ["conversationType"]),
+
+  // Chat messages - Individual message entries (NEW)
+  messages: defineTable({
+    // Foreign Keys & User Context
+    conversationId: v.id("conversations"),
+    userId: v.string(),
+    
+    // Core Message Data
+    content: v.string(),
+    role: v.union(v.literal("user"), v.literal("assistant")),
+    
+    // Ordering & Timing
+    sequence: v.number(),  // Explicit ordering within conversation (0, 1, 2, ...)
+    timestamp: v.number(),  // Message creation time (required)
+    
+    // Optional Hidden Context
+    context: v.optional(v.string()),
+    
+    // File Attachments - Metadata only, actual files in GCS
+    fileAttachments: v.optional(v.array(v.object({
+      file_url: v.string(),
+      original_filename: v.string(),
+      content_type: v.string(),
+      file_size: v.number(),
+      gcs_url: v.string(),
+      uploaded_at: v.string(),
+    }))),
+    
+    // Context Enrichment MAB Metadata
+    enrichment_metadata: v.optional(v.any()),
+    
+    // Timestamps
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    
+    // Future Extensions (for gradual rollout)
+    editedAt: v.optional(v.number()),
+    deletedAt: v.optional(v.number()),  // Soft delete
+  })
+  .index("by_conversation", ["conversationId", "sequence"])  // Primary access pattern
+  .index("by_conversation_role", ["conversationId", "role"])
+  .index("by_user", ["userId", "createdAt"])
+  .index("by_timestamp", ["timestamp"])
+  .index("by_user_timestamp", ["userId", "timestamp"]),
 
   // Notes
   notes: defineTable({
@@ -753,7 +806,7 @@ export default defineSchema({
     
     // Content
     noteId: v.string(),  // Reference to created note
-    openingMessage: v.optional(v.string()),  // Widget's opening message/context
+    openingMessage: v.optional(v.string()),  // AI's first conversational message to start the dialogue
     prompts: v.array(v.object({
       text: v.string(),
       priority: v.number(),

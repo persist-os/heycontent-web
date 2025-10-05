@@ -119,7 +119,8 @@ app.post("/api/users/:id/create_conversation", async (c) => {
   return c.json(result);
 });
 
-// Add message to conversation
+// Add message to conversation (LEGACY - uses old messages array)
+// TODO: Remove after migration complete
 app.post("/api/users/:id/add_message_to_conversation", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
@@ -136,6 +137,71 @@ app.post("/api/users/:id/add_message_to_conversation", async (c) => {
     conversationId,
     message: messageWithTimestamp,
   });
+  return c.json(result);
+});
+
+// ===== NEW MESSAGES TABLE ENDPOINTS (Dual-write system) =====
+
+// Add message to conversation (NEW - writes to messages table + legacy array)
+app.post("/api/users/:id/messages/add", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const body = await c.req.json();
+  
+  const messageId = await ctx.runMutation(api.messagesMutations.addMessage, {
+    conversationId: body.conversationId,
+    userId,
+    content: body.content,
+    role: body.role,
+    timestamp: body.timestamp || Date.now(),
+    context: body.context,
+    fileAttachments: body.fileAttachments,
+    enrichment_metadata: body.enrichment_metadata,
+  });
+  
+  return c.json({ messageId });
+});
+
+// Get messages for a conversation (NEW) - POST to pass conversationId in body
+app.post("/api/users/:id/messages/get", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const body = await c.req.json();
+  
+  const messages = await ctx.runQuery(api.messagesQueries.getConversationMessages, {
+    conversationId: body.conversationId,  // Convex ID from body
+  });
+  
+  return c.json({ messages });
+});
+
+// Get paginated messages (NEW) - POST to pass conversationId in body
+app.post("/api/users/:id/messages/paginated", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const body = await c.req.json();
+  
+  const messages = await ctx.runQuery(api.messagesQueries.getPaginatedMessages, {
+    conversationId: body.conversationId,
+    limit: body.limit || 20,
+    beforeSequence: body.beforeSequence,
+  });
+  
+  return c.json({ messages });
+});
+
+// Update message metadata (e.g., enrichment_metadata)
+app.post("/api/users/:id/messages/update_metadata", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const body = await c.req.json();
+  
+  const result = await ctx.runMutation(api.messagesMutations.updateMessageMetadata, {
+    messageId: body.messageId,  // Convex ID from body
+    userId,
+    enrichment_metadata: body.enrichment_metadata,
+  });
+  
   return c.json(result);
 });
 

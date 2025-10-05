@@ -38,6 +38,8 @@ export const createConversation = mutation({
         userId: args.userId,
         title: args.title,
         messages: args.messages,
+        messageCount: args.messages.length,
+        lastMessageAt: args.messages.length > 0 ? args.messages[args.messages.length - 1].timestamp : undefined,
         createdAt: Date.now(),
         updatedAt: Date.now(),
         starred: false,
@@ -80,15 +82,37 @@ handler: async (ctx, args) => {
       throw new Error("Conversation not found or access denied");
     }
 
-    const updatedMessages = [...conversation.messages, args.message];
+    const now = Date.now();
+    const sequence = conversation.messageCount || (conversation.messages || []).length;
+
+    // 🔄 DUAL-WRITE: Write to BOTH new messages table AND legacy array
+    
+    // 1. Write to NEW messages table
+    await ctx.db.insert("messages", {
+      conversationId: args.conversationId,
+      userId: args.userId,
+      content: args.message.content,
+      role: args.message.role,
+      sequence,
+      timestamp: args.message.timestamp,
+      context: args.message.context,
+      fileAttachments: args.message.fileAttachments,
+      enrichment_metadata: args.message.enrichment_metadata,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // 2. Write to LEGACY messages array (for backward compatibility during migration)
+    const updatedMessages = [...(conversation.messages || []), args.message];
     
     await ctx.db.patch(args.conversationId, {
       messages: updatedMessages,
-      updatedAt: Date.now(),
+      messageCount: sequence + 1,
+      lastMessageAt: args.message.timestamp,
+      updatedAt: now,
     });
 
     // ✅ TRACK INTELLIGENCE: Only track user messages for activity monitoring
-    // Call incrementActivity directly to increment counters and trigger checks
     if (args.message.role === "user") {
       await ctx.runMutation(api.intelligenceMutations.incrementActivity, {
         userId: args.userId,
