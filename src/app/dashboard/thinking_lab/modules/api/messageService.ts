@@ -16,40 +16,8 @@ import type {
   MessageTransmissionRequest
 } from '@/app/dashboard/thinking_lab/types';
 
-// Pace and orchestrate progressive thinking statuses
-const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
-const THINKING_STEP_DELAY_MS = 700;
-const POST_THINK_DELAY_MS = 250;
-
-function startProgressiveThinking(useContextSearch: boolean, onStatusUpdate?: (s: string) => void): () => void {
-  let stopped = false;
-  const stop = () => { stopped = true };
-
-  (async () => {
-    try {
-      const steps = [
-        "Understanding what you're thinking about",
-        ...(useContextSearch ? [
-          "Query needs context - searching related content",
-          "Looking through all your content",
-          "Looking at each piece carefully",
-          "Quality filtering",
-        ] : []),
-      ];
-
-      for (const step of steps) {
-        if (stopped) return;
-        onStatusUpdate?.(step);
-        await sleep(THINKING_STEP_DELAY_MS);
-      }
-    } catch (error) {
-      console.error('[MessageService] Error in thinking sequence:', error);
-      // Don't throw - this is a background process for UX feedback
-    }
-  })();
-  
-  return stop;
-}
+// Import progressive thinking utilities
+import { startProgressiveThinking, sleep, POST_THINK_DELAY_MS } from '@/app/dashboard/thinking_lab/hooks/useProgressiveThinking';
 
 // =============================================================================
 // ENHANCED MESSAGE TRANSMISSION WITH CONTEXT INTELLIGENCE

@@ -22,6 +22,7 @@ import ChatMessagesList from '../components/dialogue/components/ChatMessagesList
 import { useOptimizedAuth } from '../components/notepad/hooks/useOptimizedAuth'
 import { useResizablePanes } from '../hooks/useResizablePanes'
 import { ContextIndicator } from '../components/ContextIndicator'
+import { useAutoScroll } from '../hooks/useAutoScroll'
 
 // =============================================================================
 // PANEL COMPONENTS
@@ -34,7 +35,9 @@ const ChatPanel = React.memo<{
 }>(({ onInputPopulate, onQuoteToNotepad, widgetOutputId }) => {
   const { messages, sendMessage, startNewConversation } = useDialogueStore()
   const authData = useOptimizedAuth()
-  const scrollContainerRef = React.useRef<HTMLDivElement>(null)
+  
+  // Auto-scroll when messages change
+  const scrollRef = useAutoScroll([messages])
 
   const handleSuggestionClick = React.useCallback((suggestion: any, onSendMessage: (text: string) => void) => {
     if (typeof suggestion === 'string') {
@@ -47,18 +50,6 @@ const ChatPanel = React.memo<{
   const handleActionClick = React.useCallback((action: string) => {
     sendMessage(action)
   }, [sendMessage])
-
-  // Auto-scroll to bottom when messages change
-  React.useEffect(() => {
-    const container = scrollContainerRef.current
-    if (container) {
-      // Smooth scroll to bottom
-      container.scrollTo({
-        top: container.scrollHeight,
-        behavior: 'smooth'
-      })
-    }
-  }, [messages])
 
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden">
@@ -76,8 +67,8 @@ const ChatPanel = React.memo<{
 
           {/* Messages Area - takes remaining space */}
           <div className="flex-1 overflow-hidden">
-            <div ref={scrollContainerRef} className="h-full overflow-y-auto scrollbar-hide">
-              <div className="p-4 sm:p-6 pl-12 sm:pl-12 pb-24">
+            <div className="h-full overflow-y-auto scrollbar-hide">
+              <div className="p-4 sm:p-6 pl-12 sm:pl-12">
                 <div className="max-w-4xl mx-auto space-y-6">
                   <ChatMessagesList
                     messages={messages}
@@ -94,6 +85,8 @@ const ChatPanel = React.memo<{
                     onQuoteToNotepad={onQuoteToNotepad}
                     onContentClick={() => {}}
                   />
+                  {/* Scroll anchor */}
+                  <div ref={scrollRef} />
                 </div>
               </div>
             </div>

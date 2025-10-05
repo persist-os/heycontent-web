@@ -11,41 +11,9 @@ import ChatMessagesList from '@/app/dashboard/thinking_lab/components/dialogue/c
 import { sendDiscoveryMessage } from './services/discoveryService'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { useResizablePanes } from '@/app/dashboard/thinking_lab/hooks/useResizablePanes'
+import { useAutoScroll } from '@/app/dashboard/thinking_lab/hooks/useAutoScroll'
 import AmbientFingerprintCanvas from './components/AmbientFingerprintCanvas'
-
-// Progressive thinking helpers
-const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
-const THINKING_STEP_DELAY_MS = 700;
-const POST_THINK_DELAY_MS = 250;
-
-function startProgressiveThinking(useContextSearch: boolean, onUpdate?: (status: string) => void) {
-  let stopped = false;
-  const stop = () => { stopped = true };
-
-  (async () => {
-    try {
-      const steps = [
-        "Understanding what you're thinking about",
-        ...(useContextSearch ? [
-          "Query needs context - searching related content",
-          "Looking through all your content",
-          "Looking at each piece carefully",
-          "Quality filtering",
-        ] : []),
-      ];
-
-      for (const step of steps) {
-        if (stopped) return;
-        onUpdate?.(step);
-        await sleep(THINKING_STEP_DELAY_MS);
-      }
-    } catch (e) {
-      console.warn('[Discovery] thinking sequence error', e);
-    }
-  })();
-
-  return stop;
-}
+import { sleep, POST_THINK_DELAY_MS } from '@/app/dashboard/thinking_lab/hooks/useProgressiveThinking'
 
 interface FingerprintDiscoveryCompositionProps {
   projectId?: Id<"projects">
@@ -64,7 +32,9 @@ const FingerprintDiscoveryComposition: React.FC<FingerprintDiscoveryCompositionP
   const [isInitialized, setIsInitialized] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const resizable = useResizablePanes(0.6)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  
+  // Auto-scroll when messages change
+  const scrollRef = useAutoScroll([messages])
 
   // Convex mutations
   const createConversation = useMutation(api.chatMutations.createConversation)
@@ -170,11 +140,6 @@ const FingerprintDiscoveryComposition: React.FC<FingerprintDiscoveryCompositionP
     }
   }, [resizable.state.isDragging, resizable.state.splitRatio, resizable.actions])
 
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
   const handleSendMessage = useCallback(async (message: string) => {
     if (!userId || !message.trim() || !conversationId) {
       console.warn('Cannot send message: missing userId, conversationId, or empty message')
@@ -205,6 +170,8 @@ const FingerprintDiscoveryComposition: React.FC<FingerprintDiscoveryCompositionP
     setIsLoading(true)
     setInputValue('')
 
+    // Import progressive thinking dynamically (avoid hook in callback)
+    const { startProgressiveThinking } = await import('@/app/dashboard/thinking_lab/hooks/useProgressiveThinking')
     let stopThinking: (() => void) | null = null
 
     try {
@@ -376,8 +343,8 @@ const FingerprintDiscoveryComposition: React.FC<FingerprintDiscoveryCompositionP
                     onQuoteToNotepad={() => {}}
                     onContentClick={() => {}}
                   />
-                  {/* Invisible anchor for auto-scroll */}
-                  <div ref={messagesEndRef} />
+                  {/* Scroll anchor */}
+                  <div ref={scrollRef} />
                 </div>
               </div>
             </div>
