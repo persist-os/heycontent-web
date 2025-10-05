@@ -3,7 +3,7 @@ import { ChatInput } from './chat-input';
 import { AmbientInsights } from '@/app/dashboard/ambient_insights/AmbientInsights';
 import { BottomBarActions } from '../components/BottomBarActions';
 import { Message } from '@/app/types/chat';
-import { getCurrentUserId } from '@/app/lib/api-helpers';
+import { getCurrentUserIdSync } from '@/app/lib/api-helpers';
 
 interface ChatInputAreaProps {
   showAmbient: boolean;
@@ -74,7 +74,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
             {/* Ambient Insights component - handles its own data fetching */}
             <div className="flex-1 overflow-y-auto px-3 sm:px-4 pb-4 scrollbar-hide">
               <AmbientInsights
-                userId=""
+                userId={getCurrentUserIdSync()}
                 onInsightClick={(action, insight) => handleSendMessage(action)}
               />
             </div>
