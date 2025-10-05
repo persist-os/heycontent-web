@@ -16,6 +16,34 @@ import type {
   MessageTransmissionRequest
 } from '@/app/dashboard/thinking_lab/types';
 
+// Pace and orchestrate progressive thinking statuses
+const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
+const THINKING_STEP_DELAY_MS = 700;
+
+function startProgressiveThinking(useContextSearch: boolean, onStatusUpdate?: (s: string) => void) {
+  let stopped = false;
+  const stop = () => { stopped = true };
+
+  (async () => {
+    const steps = [
+      "Understanding what you're thinking about",
+      ...(useContextSearch ? [
+        "Query needs context - proceeding with vector search",
+        "Looking through all your content",
+        "Looking at each piece carefully",
+        "Quality filtering",
+      ] : []),
+    ];
+
+    for (const step of steps) {
+      if (stopped) return;
+      onStatusUpdate?.(step);
+      await sleep(THINKING_STEP_DELAY_MS);
+    }
+  })();
+
+  return stop;
+}
 
 // =============================================================================
 // ENHANCED MESSAGE TRANSMISSION WITH CONTEXT INTELLIGENCE
@@ -63,9 +91,8 @@ export async function transmitMessageWithContext(params: MessageTransmissionRequ
   }
 
   try {
-    // Status updates
-    onStatusUpdate?.('Processing your request...');
-    onStatusUpdate?.('Searching for relevant context...');
+    // Start staggered thinking sequence
+    const stopThinking = startProgressiveThinking(useContextSearch, onStatusUpdate);
 
     // Prepare request body for thinking lab endpoint
     const requestBody: any = {
@@ -127,6 +154,9 @@ export async function transmitMessageWithContext(params: MessageTransmissionRequ
       data: data
     });
     
+    stopThinking();
+    onStatusUpdate?.('Putting my thoughts together');
+    await sleep(250);
     onStatusUpdate?.('Generating response...');
     
     // Lab endpoint returns the response directly (not wrapped in success/data)
