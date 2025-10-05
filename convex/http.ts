@@ -2354,6 +2354,23 @@ app.post("/api/contextEnrichmentBandit/createDecision", async (c) => {
   }
 });
 
+app.post("/api/contextEnrichmentBandit/updateDecisionContext", async (c) => {
+  const ctx = c.env;
+  const { decisionId, conversationId, messageIndex } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.contextEnrichmentBandit.updateDecisionContext, {
+      decisionId,
+      conversationId,
+      messageIndex
+    });
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ContextMAB] Update decision context error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 app.post("/api/contextEnrichmentBandit/updateArmPerformance", async (c) => {
   const ctx = c.env;
   const { userId, agentType, decisionId, engagementScore, gradingScore, finalReward } = await c.req.json();

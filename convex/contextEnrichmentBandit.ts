@@ -114,6 +114,24 @@ export const createDecision = mutation({
 });
 
 /**
+ * Update decision record with conversation context after message persistence
+ */
+export const updateDecisionContext = mutation({
+  args: {
+    decisionId: v.string(),
+    conversationId: v.string(),
+    messageIndex: v.number(),
+  },
+  handler: async (ctx, { decisionId, conversationId, messageIndex }) => {
+    await ctx.db.patch(decisionId as any, {
+      conversationId,
+      messageIndex,
+    });
+    return { success: true };
+  },
+});
+
+/**
  * Update arm performance with reward (Bayesian update)
  */
 export const updateArmPerformance = mutation({
