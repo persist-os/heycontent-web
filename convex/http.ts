@@ -3033,7 +3033,7 @@ app.post("/api/chatgptImport/recordImportAttempt", async (c) => {
 app.post("/api/chatgptImport/updateImportStatus", async (c) => {
   try {
     const ctx = c.env;
-    const { userId, jobId, status, progress, error, addShardExtractionJob, progressDetails, contentProcessed } = await c.req.json();
+    const { userId, jobId, status, progress, error, progressDetails, contentProcessed } = await c.req.json();
     
     if (!userId || !status) {
       return c.json({ 
@@ -3048,7 +3048,6 @@ app.post("/api/chatgptImport/updateImportStatus", async (c) => {
       status,
       progress,
       error,
-      addShardExtractionJob,
       progressDetails,
       contentProcessed
     });
@@ -3249,6 +3248,63 @@ app.post("/api/backgroundJobs/getJobStats", async (c) => {
     return c.json({ 
       success: false,
       error: "Failed to get job stats",
+      message: error.message || "Internal server error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/backgroundJobs/getStuckJobs
+ * Find jobs stuck in RUNNING status (for recovery after backend restart)
+ */
+app.post("/api/backgroundJobs/getStuckJobs", async (c) => {
+  try {
+    const ctx = c.env;
+    const { maxAgeMinutes } = await c.req.json();
+    
+    const result = await ctx.runQuery(api.backgroundJobs.getStuckJobs, {
+      maxAgeMinutes: maxAgeMinutes || 30,
+    });
+    
+    return c.json(result);
+  } catch (error: any) {
+    console.error("Get stuck jobs error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to get stuck jobs",
+      message: error.message || "Internal server error",
+      jobs: []
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/backgroundJobs/resetStuckJob
+ * Reset a stuck job back to queued status
+ */
+app.post("/api/backgroundJobs/resetStuckJob", async (c) => {
+  try {
+    const ctx = c.env;
+    const { jobId, reason } = await c.req.json();
+    
+    if (!jobId) {
+      return c.json({ 
+        success: false,
+        error: "Missing required field: jobId"
+      }, 400);
+    }
+    
+    const result = await ctx.runMutation(api.backgroundJobs.resetStuckJob, {
+      jobId,
+      reason,
+    });
+    
+    return c.json(result);
+  } catch (error: any) {
+    console.error("Reset stuck job error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to reset stuck job",
       message: error.message || "Internal server error"
     }, 500);
   }
