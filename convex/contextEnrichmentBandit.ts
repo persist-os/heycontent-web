@@ -25,6 +25,8 @@ export const initializeArms = mutation({
           limit: v.number(),
           dimensions: v.union(v.null(), v.array(v.string())),
           min_confidence: v.union(v.null(), v.string()),
+          keywords: v.union(v.null(), v.array(v.string())),
+          tags: v.union(v.null(), v.array(v.string())),
         })),
       }),
       description: v.string(),
@@ -65,6 +67,25 @@ export const initializeArms = mutation({
 });
 
 /**
+ * Delete all arms for a user + agent type (for reset purposes)
+ */
+export const deleteUserArms = mutation({
+  args: { userId: v.string(), agentType: v.string() },
+  handler: async (ctx, { userId, agentType }) => {
+    const arms = await ctx.db
+      .query("context_enrichment_arms")
+      .withIndex("by_user_agent", (q) => q.eq("userId", userId).eq("agentType", agentType))
+      .collect();
+    
+    for (const arm of arms) {
+      await ctx.db.delete(arm._id);
+    }
+    
+    return { success: true, deletedCount: arms.length };
+  },
+});
+
+/**
  * Get user's MAB arms for a specific agent type
  */
 export const getUserArms = query({
@@ -95,6 +116,8 @@ export const createDecision = mutation({
         limit: v.number(),
         dimensions: v.union(v.null(), v.array(v.string())),
         min_confidence: v.union(v.null(), v.string()),
+        keywords: v.union(v.null(), v.array(v.string())),
+        tags: v.union(v.null(), v.array(v.string())),
       })),
     }),
     arms_state: v.array(v.object({

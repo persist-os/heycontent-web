@@ -30,7 +30,6 @@ import { startProgressiveThinking, sleep, POST_THINK_DELAY_MS } from '@/app/dash
 export async function transmitMessageWithContext(params: MessageTransmissionRequest): Promise<LabResponseData> {
   const {
     content,
-    useContextSearch = true,
     fileAttachments,
     notepadContext,
     workspaceContext,
@@ -67,7 +66,7 @@ export async function transmitMessageWithContext(params: MessageTransmissionRequ
   let stopThinking: (() => void) | null = null;
   try {
     // Start staggered thinking sequence
-    stopThinking = startProgressiveThinking(useContextSearch, onStatusUpdate);
+    stopThinking = startProgressiveThinking(onStatusUpdate); // MAB controls context strategy
     
     // Prepare request body for thinking lab endpoint
     const requestBody: any = {
@@ -76,8 +75,7 @@ export async function transmitMessageWithContext(params: MessageTransmissionRequ
       is_first_message: isFirstMessage,
       session_identifier: sessionIdentifier,
       notepad_context: notepadContext,
-      workspace_context: workspaceContext,
-      use_vector_search: useContextSearch
+      workspace_context: workspaceContext
     };
 
     // Add file attachments if present

@@ -3,15 +3,34 @@ import { mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
 /**
- * Share content (notes or projects) with another user
+ * Universal content sharing mutations for notes, projects, widgets, and conversations
+ * No deprecated social media fields - uses crystal system for content insights
+ */
+
+// Content type validator for reuse
+const contentTypeValidator = v.union(
+  v.literal("note"),
+  v.literal("project"),
+  v.literal("widget"),
+  v.literal("conversation")
+);
+
+// Permission validator for reuse
+const permissionValidator = v.union(
+  v.literal("read"),
+  v.literal("edit")
+);
+
+/**
+ * Share content (notes, projects, widgets, or conversations) with another user
  */
 export const shareContent = mutation({
   args: {
     userId: v.string(),
-    contentType: v.union(v.literal("note"), v.literal("project")),
+    contentType: contentTypeValidator,
     contentId: v.string(),
     friendUserId: v.string(),
-    permission: v.union(v.literal("read"), v.literal("edit")),
+    permission: permissionValidator,
   },
   returns: v.object({
     success: v.boolean(),
@@ -59,28 +78,25 @@ export const shareContent = mutation({
       // Verify friendship exists
       const friendship = await ctx.db
         .query("friendships")
-        .withIndex("by_userId1", (q) => q.eq("userId1", userId))
-        .filter((q) => q.and(q.eq(q.field("userId2"), friendUserId), q.eq(q.field("status"), "accepted")))
-        .first();
+        .withIndex("by_user_pair", (q) => 
+          q.eq("userId1", userId < friendUserId ? userId : friendUserId)
+           .eq("userId2", userId < friendUserId ? friendUserId : userId)
+        )
+        .filter((q) => q.eq(q.field("status"), "accepted"))
+        .unique();
 
-      const reverseFriendship = await ctx.db
-        .query("friendships")
-        .withIndex("by_userId1", (q) => q.eq("userId1", friendUserId))
-        .filter((q) => q.and(q.eq(q.field("userId2"), userId), q.eq(q.field("status"), "accepted")))
-        .first();
-
-      if (!friendship && !reverseFriendship) {
+      if (!friendship) {
         return {
           success: false,
-          message: "You can only share content with friends",
+          message: "You can only share content with friends. Please send a friend request first.",
         };
       }
 
-      // Get the friend user details
+      // Get friend user details
       const friendUser = await ctx.db
         .query("users")
-        .withIndex("by_userId", (q) => q.eq("userId", friendUserId))
-        .first();
+        .filter((q) => q.eq(q.field("userId"), friendUserId))
+        .unique();
 
       if (!friendUser) {
         return {
@@ -89,12 +105,12 @@ export const shareContent = mutation({
         };
       }
 
-      // Validate content ownership and existence
-      let content = null;
-      let canShare = false;
+      // Verify ownership and get owner ID
+      let content: any;
+      let ownerId: string;
 
       if (contentType === "note") {
-        // For notes, check ownership or existing edit permission
+        // For notes, check both ownership and edit permission
         content = await ctx.db.get(contentId as Id<"notes">);
         if (!content) {
           return {
@@ -103,28 +119,15 @@ export const shareContent = mutation({
           };
         }
 
-        // Check if user owns the note
-        canShare = content.userId === userId;
-
-        // If not owner, check if user has edit permission via shared_notes
-        if (!canShare) {
-          const sharedNote = await ctx.db
-            .query("shared_notes")
-            .withIndex("by_note_user", (q) => 
-              q.eq("noteId", contentId as Id<"notes">).eq("sharedWithUserId", userId)
-            )
-            .filter((q) => q.and(q.eq(q.field("isActive"), true), q.eq(q.field("permission"), "edit")))
-            .first();
-          
-          canShare = !!sharedNote;
-        }
-
+        const canShare = content.userId === userId || await hasEditPermission(ctx, contentId as Id<"notes">, userId);
         if (!canShare) {
           return {
             success: false,
             message: "You don't have permission to share this note",
           };
         }
+
+        ownerId = content.userId;
 
         // Check if already shared with this user via shared_notes
         const existingShare = await ctx.db
@@ -133,7 +136,7 @@ export const shareContent = mutation({
             q.eq("noteId", contentId as Id<"notes">).eq("sharedWithUserId", friendUserId)
           )
           .filter((q) => q.eq(q.field("isActive"), true))
-          .first();
+          .unique();
 
         if (existingShare) {
           // Update existing share permission
@@ -154,10 +157,10 @@ export const shareContent = mutation({
           };
         }
 
-        // Create new share record in shared_notes
+        // Create new share record in shared_notes (legacy table)
         await ctx.db.insert("shared_notes", {
           noteId: contentId as Id<"notes">,
-          ownerId: content.userId,
+          ownerId: ownerId,
           sharedWithUserId: friendUserId,
           permission: permission,
           sharedAt: Date.now(),
@@ -166,7 +169,6 @@ export const shareContent = mutation({
         });
 
       } else if (contentType === "project") {
-        // For projects, check ownership
         content = await ctx.db.get(contentId as Id<"projects">);
         if (!content) {
           return {
@@ -183,13 +185,64 @@ export const shareContent = mutation({
           };
         }
 
+        ownerId = content.userId;
+
+      } else if (contentType === "widget") {
+        content = await ctx.db.get(contentId as Id<"widgets">);
+        if (!content) {
+          return {
+            success: false,
+            message: "Widget not found",
+          };
+        }
+
+        // Only widget owner can share widgets
+        if (content.userId !== userId) {
+          return {
+            success: false,
+            message: "You don't have permission to share this widget",
+          };
+        }
+
+        ownerId = content.userId;
+
+      } else if (contentType === "conversation") {
+        content = await ctx.db.get(contentId as Id<"conversations">);
+        if (!content) {
+          return {
+            success: false,
+            message: "Conversation not found",
+          };
+        }
+
+        // Only conversation owner can share conversations
+        if (content.userId !== userId) {
+          return {
+            success: false,
+            message: "You don't have permission to share this conversation",
+          };
+        }
+
+        ownerId = content.userId;
+      } else {
+        return {
+          success: false,
+          message: "Invalid content type",
+        };
+      }
+
+      // For all content types except notes (which use legacy table), use shared_content
+      if (contentType !== "note") {
         // Check if already shared with this user via shared_content
         const existingShare = await ctx.db
           .query("shared_content")
           .withIndex("by_content_user", (q) => 
             q.eq("contentId", contentId).eq("sharedWithUserId", friendUserId)
           )
-          .filter((q) => q.and(q.eq(q.field("contentType"), "project"), q.eq(q.field("isActive"), true)))
+          .filter((q) => q.and(
+            q.eq(q.field("contentType"), contentType),
+            q.eq(q.field("isActive"), true)
+          ))
           .first();
 
         if (existingShare) {
@@ -214,9 +267,9 @@ export const shareContent = mutation({
 
         // Create new share record in shared_content
         await ctx.db.insert("shared_content", {
-          contentType: "project",
+          contentType: contentType,
           contentId: contentId,
-          ownerId: content.userId,
+          ownerId: ownerId,
           sharedWithUserId: friendUserId,
           permission: permission,
           sharedBy: userId,
@@ -227,9 +280,10 @@ export const shareContent = mutation({
         });
       }
 
+      const contentTypeLabel = contentType.charAt(0).toUpperCase() + contentType.slice(1);
       return {
         success: true,
-        message: `${contentType === "note" ? "Note" : "Project"} shared with ${friendUser.name}`,
+        message: `${contentTypeLabel} shared with ${friendUser.name}`,
         sharedWithUser: {
           _id: friendUser._id,
           name: friendUser.name,
@@ -253,153 +307,222 @@ export const shareContent = mutation({
 export const updateContentPermission = mutation({
   args: {
     userId: v.string(),
-    sharedContentId: v.id("shared_content"),
-    newPermission: v.union(v.literal("read"), v.literal("edit")),
+    contentType: contentTypeValidator,
+    contentId: v.string(),
+    targetUserId: v.string(),
+    newPermission: permissionValidator,
   },
   returns: v.object({
     success: v.boolean(),
     message: v.string(),
   }),
   handler: async (ctx, args) => {
-    const { userId, sharedContentId, newPermission } = args;
-
-    // Validation
-    if (!userId || userId.trim() === '') {
-      return {
-        success: false,
-        message: "User ID is required",
-      };
-    }
-
     try {
-      // Get the shared content record
-      const sharedContent = await ctx.db.get(sharedContentId);
-      if (!sharedContent) {
+      // Verify the user is the owner
+      const hasOwnership = await verifyOwnership(ctx, args.userId, args.contentType, args.contentId);
+      if (!hasOwnership) {
         return {
           success: false,
-          message: "Shared content not found",
+          message: "You don't have permission to update sharing permissions",
         };
       }
 
-      if (!sharedContent.isActive) {
-        return {
-          success: false,
-          message: "This content share is no longer active",
-        };
-      }
+      // Update permission based on content type
+      if (args.contentType === "note") {
+        const share = await ctx.db
+          .query("shared_notes")
+          .withIndex("by_note_user", (q) => 
+            q.eq("noteId", args.contentId as Id<"notes">).eq("sharedWithUserId", args.targetUserId)
+          )
+          .filter((q) => q.eq(q.field("isActive"), true))
+          .unique();
 
-      // Verify user has permission to update (must be owner or the person who shared it)
-      if (sharedContent.ownerId !== userId && sharedContent.sharedBy !== userId) {
-        return {
-          success: false,
-          message: "You don't have permission to update this share",
-        };
-      }
+        if (!share) {
+          return {
+            success: false,
+            message: "Share not found",
+          };
+        }
 
-      // Update the permission
-      await ctx.db.patch(sharedContentId, {
-        permission: newPermission,
-        updatedAt: Date.now(),
-      });
+        await ctx.db.patch(share._id, {
+          permission: args.newPermission,
+          updatedAt: Date.now(),
+        });
+      } else {
+        const share = await ctx.db
+          .query("shared_content")
+          .withIndex("by_content_user", (q) => 
+            q.eq("contentId", args.contentId).eq("sharedWithUserId", args.targetUserId)
+          )
+          .filter((q) => q.and(
+            q.eq(q.field("contentType"), args.contentType),
+            q.eq(q.field("isActive"), true)
+          ))
+          .unique();
+
+        if (!share) {
+          return {
+            success: false,
+            message: "Share not found",
+          };
+        }
+
+        await ctx.db.patch(share._id, {
+          permission: args.newPermission,
+          updatedAt: Date.now(),
+        });
+      }
 
       return {
         success: true,
         message: "Permission updated successfully",
       };
-
     } catch (error) {
-      console.error("Error updating content permission:", error);
+      console.error("Error updating permission:", error);
       return {
         success: false,
-        message: `Failed to update permission: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        message: "Failed to update permission",
       };
     }
   },
 });
 
 /**
- * Revoke content access for a user
+ * Revoke access to shared content
  */
 export const revokeContentAccess = mutation({
   args: {
     userId: v.string(),
-    sharedContentId: v.id("shared_content"),
+    contentType: contentTypeValidator,
+    contentId: v.string(),
+    targetUserId: v.string(),
   },
   returns: v.object({
     success: v.boolean(),
     message: v.string(),
   }),
   handler: async (ctx, args) => {
-    const { userId, sharedContentId } = args;
-
-    // Validation
-    if (!userId || userId.trim() === '') {
-      return {
-        success: false,
-        message: "User ID is required",
-      };
-    }
-
     try {
-      // Get the shared content record
-      const sharedContent = await ctx.db.get(sharedContentId);
-      if (!sharedContent) {
+      // Verify the user is the owner
+      const hasOwnership = await verifyOwnership(ctx, args.userId, args.contentType, args.contentId);
+      if (!hasOwnership) {
         return {
           success: false,
-          message: "Shared content not found",
+          message: "You don't have permission to revoke access",
         };
       }
 
-      if (!sharedContent.isActive) {
-        return {
-          success: false,
-          message: "This content share is already inactive",
-        };
-      }
-
-      // Verify user has permission to revoke (must be owner)
-      if (sharedContent.ownerId !== userId) {
-        return {
-          success: false,
-          message: "Only the content owner can revoke access",
-        };
-      }
-
-      // Soft delete the share record
-      await ctx.db.patch(sharedContentId, {
-        isActive: false,
-        updatedAt: Date.now(),
-      });
-
-      // If this is a note, also handle the shared_notes table for backward compatibility
-      if (sharedContent.contentType === "note") {
-        const noteShare = await ctx.db
+      // Revoke access based on content type
+      if (args.contentType === "note") {
+        const share = await ctx.db
           .query("shared_notes")
           .withIndex("by_note_user", (q) => 
-            q.eq("noteId", sharedContent.contentId as Id<"notes">)
-             .eq("sharedWithUserId", sharedContent.sharedWithUserId)
+            q.eq("noteId", args.contentId as Id<"notes">).eq("sharedWithUserId", args.targetUserId)
           )
           .filter((q) => q.eq(q.field("isActive"), true))
-          .first();
+          .unique();
 
-        if (noteShare) {
-          await ctx.db.patch(noteShare._id, {
-            isActive: false,
-          });
+        if (!share) {
+          return {
+            success: false,
+            message: "Share not found",
+          };
         }
+
+        await ctx.db.patch(share._id, {
+          isActive: false,
+        });
+      } else {
+        const share = await ctx.db
+          .query("shared_content")
+          .withIndex("by_content_user", (q) => 
+            q.eq("contentId", args.contentId).eq("sharedWithUserId", args.targetUserId)
+          )
+          .filter((q) => q.and(
+            q.eq(q.field("contentType"), args.contentType),
+            q.eq(q.field("isActive"), true)
+          ))
+          .unique();
+
+        if (!share) {
+          return {
+            success: false,
+            message: "Share not found",
+          };
+        }
+
+        await ctx.db.patch(share._id, {
+          isActive: false,
+          updatedAt: Date.now(),
+        });
       }
 
       return {
         success: true,
         message: "Access revoked successfully",
       };
-
     } catch (error) {
-      console.error("Error revoking content access:", error);
+      console.error("Error revoking access:", error);
       return {
         success: false,
-        message: `Failed to revoke access: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        message: "Failed to revoke access",
       };
     }
   },
 });
+
+/**
+ * Helper: Check if user has edit permission for a note
+ */
+async function hasEditPermission(ctx: any, noteId: Id<"notes">, userId: string): Promise<boolean> {
+  const share = await ctx.db
+    .query("shared_notes")
+    .withIndex("by_note_user", (q) => 
+      q.eq("noteId", noteId).eq("sharedWithUserId", userId)
+    )
+    .filter((q) => q.eq(q.field("isActive"), true))
+    .unique();
+
+  if (share && share.permission === "edit") {
+    return true;
+  }
+
+  // Also check shared_content table
+  const contentShare = await ctx.db
+    .query("shared_content")
+    .withIndex("by_content_user", (q) => 
+      q.eq("contentId", noteId).eq("sharedWithUserId", userId)
+    )
+    .filter((q) => q.and(
+      q.eq(q.field("contentType"), "note"),
+      q.eq(q.field("isActive"), true)
+    ))
+    .unique();
+
+  return contentShare?.permission === "edit";
+}
+
+/**
+ * Helper: Verify ownership of content
+ */
+async function verifyOwnership(
+  ctx: any,
+  userId: string,
+  contentType: "note" | "project" | "widget" | "conversation",
+  contentId: string
+): Promise<boolean> {
+  if (contentType === "note") {
+    const note = await ctx.db.get(contentId as Id<"notes">);
+    return note?.userId === userId;
+  } else if (contentType === "project") {
+    const project = await ctx.db.get(contentId as Id<"projects">);
+    return project?.userId === userId;
+  } else if (contentType === "widget") {
+    const widget = await ctx.db.get(contentId as Id<"widgets">);
+    return widget?.userId === userId;
+  } else if (contentType === "conversation") {
+    const conversation = await ctx.db.get(contentId as Id<"conversations">);
+    return conversation?.userId === userId;
+  }
+  return false;
+}

@@ -3393,5 +3393,241 @@ app.post("/api/backgroundJobs/resetStuckJob", async (c) => {
   }
 });
 
+// CONTENT SHARING ROUTES - Universal sharing for notes, projects, widgets, conversations
+
+/**
+ * POST /api/contentSharing/getSharedWithMe
+ * Get all content shared with a user
+ */
+app.post("/api/contentSharing/getSharedWithMe", async (c) => {
+  try {
+    const ctx = c.env;
+    const { userId, contentType } = await c.req.json();
+    
+    if (!userId) {
+      return c.json({ 
+        success: false,
+        error: "Missing required field: userId"
+      }, 400);
+    }
+    
+    const result = await ctx.runQuery(api.contentSharingQueries.getSharedWithMe, {
+      userId,
+      contentType,
+    });
+    
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Get shared with me error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to get shared content",
+      message: error.message || "Internal server error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/contentSharing/getContentSharedUsers
+ * Get all users who have access to specific content
+ */
+app.post("/api/contentSharing/getContentSharedUsers", async (c) => {
+  try {
+    const ctx = c.env;
+    const { userId, contentType, contentId } = await c.req.json();
+    
+    if (!userId || !contentType || !contentId) {
+      return c.json({ 
+        success: false,
+        error: "Missing required fields: userId, contentType, contentId"
+      }, 400);
+    }
+    
+    const result = await ctx.runQuery(api.contentSharingQueries.getContentSharedUsers, {
+      userId,
+      contentType,
+      contentId,
+    });
+    
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Get content shared users error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to get shared users",
+      message: error.message || "Internal server error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/contentSharing/getMySharedContent
+ * Get all content that a user has shared with others
+ */
+app.post("/api/contentSharing/getMySharedContent", async (c) => {
+  try {
+    const ctx = c.env;
+    const { userId, contentType } = await c.req.json();
+    
+    if (!userId) {
+      return c.json({ 
+        success: false,
+        error: "Missing required field: userId"
+      }, 400);
+    }
+    
+    const result = await ctx.runQuery(api.contentSharingQueries.getMySharedContent, {
+      userId,
+      contentType,
+    });
+    
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Get my shared content error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to get shared content",
+      message: error.message || "Internal server error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/contentSharing/checkContentAccess
+ * Check if a user has access to specific content
+ */
+app.post("/api/contentSharing/checkContentAccess", async (c) => {
+  try {
+    const ctx = c.env;
+    const { userId, contentType, contentId } = await c.req.json();
+    
+    if (!userId || !contentType || !contentId) {
+      return c.json({ 
+        success: false,
+        error: "Missing required fields: userId, contentType, contentId"
+      }, 400);
+    }
+    
+    const result = await ctx.runQuery(api.contentSharingQueries.checkContentAccess, {
+      userId,
+      contentType,
+      contentId,
+    });
+    
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Check content access error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to check content access",
+      message: error.message || "Internal server error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/contentSharing/share
+ * Share content with another user
+ */
+app.post("/api/contentSharing/share", async (c) => {
+  try {
+    const ctx = c.env;
+    const { userId, contentType, contentId, friendUserId, permission } = await c.req.json();
+    
+    if (!userId || !contentType || !contentId || !friendUserId || !permission) {
+      return c.json({ 
+        success: false,
+        error: "Missing required fields: userId, contentType, contentId, friendUserId, permission"
+      }, 400);
+    }
+    
+    const result = await ctx.runMutation(api.contentSharingMutations.shareContent, {
+      userId,
+      contentType,
+      contentId,
+      friendUserId,
+      permission,
+    });
+    
+    return c.json(result);
+  } catch (error: any) {
+    console.error("Share content error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to share content",
+      message: error.message || "Internal server error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/contentSharing/updatePermission
+ * Update permission for shared content
+ */
+app.post("/api/contentSharing/updatePermission", async (c) => {
+  try {
+    const ctx = c.env;
+    const { userId, contentType, contentId, targetUserId, newPermission } = await c.req.json();
+    
+    if (!userId || !contentType || !contentId || !targetUserId || !newPermission) {
+      return c.json({ 
+        success: false,
+        error: "Missing required fields: userId, contentType, contentId, targetUserId, newPermission"
+      }, 400);
+    }
+    
+    const result = await ctx.runMutation(api.contentSharingMutations.updateContentPermission, {
+      userId,
+      contentType,
+      contentId,
+      targetUserId,
+      newPermission,
+    });
+    
+    return c.json(result);
+  } catch (error: any) {
+    console.error("Update content permission error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to update permission",
+      message: error.message || "Internal server error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/contentSharing/revoke
+ * Revoke access to shared content
+ */
+app.post("/api/contentSharing/revoke", async (c) => {
+  try {
+    const ctx = c.env;
+    const { userId, contentType, contentId, targetUserId } = await c.req.json();
+    
+    if (!userId || !contentType || !contentId || !targetUserId) {
+      return c.json({ 
+        success: false,
+        error: "Missing required fields: userId, contentType, contentId, targetUserId"
+      }, 400);
+    }
+    
+    const result = await ctx.runMutation(api.contentSharingMutations.revokeContentAccess, {
+      userId,
+      contentType,
+      contentId,
+      targetUserId,
+    });
+    
+    return c.json(result);
+  } catch (error: any) {
+    console.error("Revoke content access error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to revoke access",
+      message: error.message || "Internal server error"
+    }, 500);
+  }
+});
+
 const router = new HttpRouterWithHono(app);
 export default router;

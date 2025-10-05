@@ -882,11 +882,13 @@ export default defineSchema({
   .index("by_user1_status", ["userId1", "status"])
   .index("by_user2_status", ["userId2", "status"]),
 
-  // Shared Content - Content sharing between users
+  // Shared Content - Universal content sharing between users
   shared_content: defineTable({
     contentType: v.union(
       v.literal("note"),
-      v.literal("project")
+      v.literal("project"),
+      v.literal("widget"),
+      v.literal("conversation")
     ),
     contentId: v.string(),
     ownerId: v.string(),
@@ -1613,6 +1615,8 @@ export default defineSchema({
         limit: v.number(),
         dimensions: v.union(v.null(), v.array(v.string())),
         min_confidence: v.union(v.null(), v.string()),
+        keywords: v.union(v.null(), v.array(v.string())),
+        tags: v.union(v.null(), v.array(v.string())),
       })),
     }),
     
@@ -1657,6 +1661,8 @@ export default defineSchema({
         limit: v.number(),
         dimensions: v.union(v.null(), v.array(v.string())),
         min_confidence: v.union(v.null(), v.string()),
+        keywords: v.union(v.null(), v.array(v.string())),
+        tags: v.union(v.null(), v.array(v.string())),
       })),
     }),
     

@@ -13,12 +13,10 @@ const sleep = (ms: number) => new Promise(res => setTimeout(res, ms))
 /**
  * Hook that manages progressive thinking status updates
  * @param enabled - Whether the thinking sequence is active
- * @param useContextSearch - Whether to show context search steps
  * @param onStatusUpdate - Callback that receives each status update
  */
 export function useProgressiveThinking(
   enabled: boolean,
-  useContextSearch: boolean,
   onStatusUpdate?: (status: string) => void
 ) {
   const stopRef = useRef<(() => void) | null>(null)
@@ -35,14 +33,12 @@ export function useProgressiveThinking(
 
     ;(async () => {
       try {
+        // MAB controls all context decisions automatically
         const steps = [
           "Understanding what you're thinking about",
-          ...(useContextSearch ? [
-            "Query needs context - searching related content",
-            "Looking through all your content",
-            "Looking at each piece carefully",
-            "Quality filtering",
-          ] : []),
+          "Searching related content",
+          "Looking through all your content",
+          "Quality filtering",
         ]
 
         for (const step of steps) {
@@ -60,7 +56,7 @@ export function useProgressiveThinking(
       stopped = true
       stopRef.current = null
     }
-  }, [enabled, useContextSearch, onStatusUpdate])
+  }, [enabled, onStatusUpdate])
 
   return {
     stop: () => stopRef.current?.(),
@@ -74,9 +70,9 @@ export function useProgressiveThinking(
 
 /**
  * Standalone function for use in non-React contexts (like messageService)
+ * MAB now controls all context decisions automatically
  */
 export function startProgressiveThinking(
-  useContextSearch: boolean,
   onUpdate?: (status: string) => void
 ): () => void {
   let stopped = false
@@ -86,12 +82,9 @@ export function startProgressiveThinking(
     try {
       const steps = [
         "Understanding what you're thinking about",
-        ...(useContextSearch ? [
-          "Query needs context - searching related content",
-          "Looking through all your content",
-          "Looking at each piece carefully",
-          "Quality filtering",
-        ] : []),
+        "Searching related content",
+        "Looking through all your content",
+        "Quality filtering",
       ]
 
       for (const step of steps) {

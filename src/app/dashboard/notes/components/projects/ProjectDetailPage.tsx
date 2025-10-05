@@ -7,8 +7,8 @@ import { useProjectDetails } from '../../hooks/useProjectDetails';
 import { useProjects } from '../../hooks/useProjects';
 import { useCreateNote } from '../../hooks/useCreateNote';
 import { useNotes } from '@/app/context/notes-context';
+import { useAuth } from '@/app/context/auth-context';
 import { Id } from '@/convex/_generated/dataModel';
-import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Edit, Trash2, Plus, Folder } from 'lucide-react';
 import { UnifiedContentSelector } from '@/components/ui/UnifiedContentSelector';
@@ -22,7 +22,8 @@ interface ProjectDetailPageProps {
 
 export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
   const router = useRouter();
-  const userId = getCurrentUserId();
+  const { firebaseUser, authLoading } = useAuth();
+  const userId = firebaseUser?.uid;
   const { project, isLoading } = useProjectDetails(projectId, userId);
   const { updateProject, deleteProject, addItemToProject, removeItemFromProject, migrateAnalysisItems } = useProjects(userId);
   const { createNote } = useCreateNote();
@@ -169,7 +170,7 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || authLoading) {
     return (
       <div className="flex flex-col h-full">
         {/* Elegant loading header */}
