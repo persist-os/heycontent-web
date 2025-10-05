@@ -20,6 +20,7 @@ export const createConversation = mutation({
           gcs_url: v.string(),
           uploaded_at: v.string(),
         }))),
+        enrichment_metadata: v.optional(v.any()),
       })),
       // NEW: Optional project/widget context fields
       projectId: v.optional(v.id("projects")),
@@ -70,6 +71,7 @@ args: {
         gcs_url: v.string(),
         uploaded_at: v.string(),
       }))),
+      enrichment_metadata: v.optional(v.any()),
     }),
 },
 handler: async (ctx, args) => {

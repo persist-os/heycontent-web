@@ -1,6 +1,7 @@
 "use node";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { jobTypeValidator, jobStatusValidator, jobPriorityValidator } from "./types/backgroundJobs";
 
 export default defineSchema({
   // User Info
@@ -129,6 +130,8 @@ export default defineSchema({
         gcs_url: v.string(),
         uploaded_at: v.string(),
       }))),
+      // Context enrichment metadata for MAB feedback loop
+      enrichment_metadata: v.optional(v.any()),
     })),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -1431,12 +1434,7 @@ export default defineSchema({
     userId: v.string(),
     
     // Job classification
-    type: v.union(
-      v.literal("shard_extraction"),
-      v.literal("crystal_formation"),
-      v.literal("intelligence_analysis"),
-      v.literal("chatgpt_import")
-    ),
+    type: jobTypeValidator,         // Import from types/backgroundJobs.ts
     payload: v.any(),               // Job-specific payload data
     
     // Status tracking
@@ -1447,12 +1445,7 @@ export default defineSchema({
       v.literal("failed"),
       v.literal("cancelled")
     ),
-    priority: v.union(
-      v.literal("low"),
-      v.literal("normal"),
-      v.literal("high"),
-      v.literal("urgent")
-    ),
+    priority: jobPriorityValidator,  // Import from types/backgroundJobs.ts
     
     // Timing
     createdAt: v.number(),
