@@ -107,6 +107,78 @@ export const updateStatus = mutation({
 });
 
 /**
+ * Cancel/stop specific job or all jobs of a type
+ * Useful for emergency stops
+ */
+export const cancelJobs = mutation({
+  args: {
+    userId: v.string(),
+    jobId: v.optional(v.string()),
+    type: v.optional(v.union(
+      v.literal("shard_extraction"),
+      v.literal("crystal_formation"),
+      v.literal("intelligence_analysis"),
+      v.literal("chatgpt_import")
+    )),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    let jobs = [];
+    
+    if (args.jobId) {
+      // Cancel specific job
+      const job = await ctx.db
+        .query("background_jobs")
+        .withIndex("by_job_id", (q) => q.eq("jobId", args.jobId))
+        .first();
+      if (job) jobs.push(job);
+    } else if (args.type) {
+      // Cancel all jobs of a specific type for the user
+      jobs = await ctx.db
+        .query("background_jobs")
+        .withIndex("by_user_type_status", (q) => 
+          q.eq("userId", args.userId).eq("type", args.type)
+        )
+        .filter((q) => 
+          q.or(
+            q.eq(q.field("status"), "queued"),
+            q.eq(q.field("status"), "running")
+          )
+        )
+        .collect();
+    } else {
+      // Cancel all active jobs for user
+      jobs = await ctx.db
+        .query("background_jobs")
+        .withIndex("by_user", (q) => q.eq("userId", args.userId))
+        .filter((q) => 
+          q.or(
+            q.eq(q.field("status"), "queued"),
+            q.eq(q.field("status"), "running")
+          )
+        )
+        .collect();
+    }
+    
+    let cancelledCount = 0;
+    for (const job of jobs) {
+      await ctx.db.patch(job._id, {
+        status: "failed",
+        error: args.reason || "Manually cancelled by user",
+        completedAt: Date.now(),
+      });
+      cancelledCount++;
+    }
+    
+    return { 
+      success: true, 
+      cancelledCount,
+      message: `Cancelled ${cancelledCount} job(s)`
+    };
+  },
+});
+
+/**
  * Get user's jobs with optional filtering
  */
 export const getUserJobs = query({

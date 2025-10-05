@@ -159,24 +159,27 @@ export const getUserDataBundle = query({
       notes = [];
     }
 
-    // Fetch all crystals for the user with robust error handling
+    // Fetch top 5 crystals for the user with robust error handling
+    // Prioritize quality over quantity - just the most significant crystals
     try {
       crystals = await ctx.db
         .query("crystals")
         .withIndex("by_user", q => q.eq("userId", userId))
-        .collect();
+        .order("desc")
+        .take(5);
     } catch (error) {
       console.warn(`Failed to fetch crystals for user ${userId}:`, error);
       crystals = [];
     }
 
-    // Fetch 10 most recent crystal shards with robust error handling
+    // Fetch 30 most recent crystal shards with extensive metadata
+    // Shards contain the actual quotes and insights - these are the gold
     try {
       crystalShards = await ctx.db
         .query("crystal_shards")
         .withIndex("by_user", q => q.eq("userId", userId))
         .order("desc")
-        .take(10);
+        .take(30);
     } catch (error) {
       console.warn(`Failed to fetch crystal shards for user ${userId}:`, error);
       crystalShards = [];

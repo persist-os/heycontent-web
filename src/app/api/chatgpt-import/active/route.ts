@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { job_id: string } }
-) {
+export async function GET(request: NextRequest) {
   try {
     // Get API key from Authorization header
     const authHeader = request.headers.get('Authorization');
@@ -14,14 +11,9 @@ export async function GET(
     }
 
     const apiKey = authHeader.substring(7);
-    const jobId = params.job_id;
     
-    if (!jobId) {
-      return NextResponse.json({ error: 'Missing job_id' }, { status: 400 });
-    }
-    
-    // Forward to backend
-    const response = await fetch(`${BACKEND_URL}/api/v1/chatgpt/import/${jobId}/status`, {
+    // Forward to backend to get user's active ChatGPT imports
+    const response = await fetch(`${BACKEND_URL}/api/v1/chatgpt/imports/active`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -37,7 +29,7 @@ export async function GET(
     return NextResponse.json(data);
 
   } catch (error) {
-    console.error('[chatgpt-import/status] Error:', error);
+    console.error('[chatgpt-import/active] Error:', error);
     return NextResponse.json(
       { error: 'Internal server error', detail: String(error) },
       { status: 500 }

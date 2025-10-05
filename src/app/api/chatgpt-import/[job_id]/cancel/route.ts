@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
-export async function GET(
+export async function POST(
   request: NextRequest,
   { params }: { params: { job_id: string } }
 ) {
@@ -21,8 +21,8 @@ export async function GET(
     }
     
     // Forward to backend
-    const response = await fetch(`${BACKEND_URL}/api/v1/chatgpt/import/${jobId}/status`, {
-      method: 'GET',
+    const response = await fetch(`${BACKEND_URL}/api/v1/chatgpt/import/${jobId}/cancel`, {
+      method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
       },
@@ -37,7 +37,7 @@ export async function GET(
     return NextResponse.json(data);
 
   } catch (error) {
-    console.error('[chatgpt-import/status] Error:', error);
+    console.error('[chatgpt-import/cancel] Error:', error);
     return NextResponse.json(
       { error: 'Internal server error', detail: String(error) },
       { status: 500 }

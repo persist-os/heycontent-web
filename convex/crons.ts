@@ -1,6 +1,6 @@
 import { cronJobs } from "convex/server";
-import { internal } from "./_generated/api";
-import { internalMutation } from "./_generated/server";
+import { api, internal } from "./_generated/api";
+import { internalMutation, internalAction } from "./_generated/server";
 import { v } from "convex/values";
 
 // Internal mutation to run the stale formation cleanup
@@ -85,6 +85,147 @@ export const cleanupOldFormations = internalMutation({
   },
 });
 
+// Internal action to trigger background crystal formation cycle
+export const triggerFormationCycle = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    try {
+      console.log("[CRON] Triggering background crystal formation cycle");
+      
+      const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
+      if (!backendUrl) {
+        throw new Error("BACKEND_URL not configured");
+      }
+      
+      const systemApiKey = process.env.BACKEND_API_KEY;
+      
+      const response = await fetch(`${backendUrl}/api/v1/background-tasks/crystal-formation-cycle`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${systemApiKey}`,
+        },
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Backend returned ${response.status}: ${errorText}`);
+      }
+      
+      const result = await response.json();
+      
+      console.log(`[CRON] Formation cycle complete: ${result.users_processed} users, ${result.formations_triggered} formations`);
+      
+      return {
+        success: true,
+        ...result
+      };
+    } catch (error: any) {
+      console.error("[CRON] Formation cycle failed:", error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  },
+});
+
+// Internal action to process pending intelligence jobs
+export const processIntelligenceJobs = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    try {
+      console.log("[CRON] Processing pending intelligence jobs");
+      
+      // Get pending jobs from the database
+      const pendingJobs = await ctx.runQuery(internal.intelligenceQueries.getPendingJobs, {
+        limit: 20 // Process up to 20 jobs per cycle
+      });
+      
+      if (pendingJobs.length === 0) {
+        console.log("[CRON] No pending intelligence jobs");
+        return {
+          success: true,
+          jobs_processed: 0,
+          message: "No pending jobs"
+        };
+      }
+      
+      console.log(`[CRON] Found ${pendingJobs.length} pending intelligence jobs`);
+      
+      const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
+      if (!backendUrl) {
+        throw new Error("BACKEND_URL not configured");
+      }
+      
+      const systemApiKey = process.env.BACKEND_API_KEY;
+      let processed = 0;
+      let failed = 0;
+      
+      // Process each job
+      for (const job of pendingJobs) {
+        try {
+          // Mark job as running
+          await ctx.runMutation(internal.intelligenceMutations.updateJobStatus, {
+            jobId: job._id,
+            status: "running" as const,
+          });
+          
+          // Trigger backend analysis
+          const response = await fetch(`${backendUrl}/api/v1/background_jobs/trigger_intelligence`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${systemApiKey}`,
+            },
+            body: JSON.stringify({
+              userId: job.userId,
+              analysis_depth: job.scope.analysis_depth,
+              trigger_source: "scheduled",
+              convex_job_id: job._id
+            }),
+          });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Backend returned ${response.status}: ${errorText}`);
+          }
+          
+          processed++;
+          console.log(`[CRON] Processed intelligence job ${job._id} for user ${job.userId}`);
+          
+        } catch (error: any) {
+          failed++;
+          console.error(`[CRON] Failed to process job ${job._id}:`, error);
+          
+          // Mark job as failed
+          await ctx.runMutation(internal.intelligenceMutations.updateJobStatus, {
+            jobId: job._id,
+            status: "failed" as const,
+            error: error.message
+          });
+        }
+      }
+      
+      console.log(`[CRON] Intelligence processing complete: ${processed} processed, ${failed} failed`);
+      
+      return {
+        success: true,
+        jobs_processed: processed,
+        jobs_failed: failed,
+        message: `Processed ${processed} intelligence jobs`
+      };
+      
+    } catch (error: any) {
+      console.error("[CRON] Intelligence processing failed:", error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  },
+});
+
 const crons = cronJobs();
 
 // Run stale formation cleanup every 15 minutes
@@ -100,6 +241,24 @@ crons.cron(
   "cleanup old formations",
   "0 2 * * *", // Daily at 2 AM
   internal.crons.cleanupOldFormations,
+  {}
+);
+
+// Run background crystal formation cycle every 5 hours
+// Checks all users for unprocessed shards (12+) and triggers formation
+crons.interval(
+  "background crystal formation",
+  { hours: 5 },
+  internal.crons.triggerFormationCycle,
+  {}
+);
+
+// Process pending intelligence jobs every 30 minutes
+// This picks up any jobs that weren't processed by the MAB system
+crons.interval(
+  "process intelligence jobs",
+  { minutes: 30 },
+  internal.crons.processIntelligenceJobs,
   {}
 );
 
