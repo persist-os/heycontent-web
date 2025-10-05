@@ -47,23 +47,6 @@ export function StatusDisplay({ status, onCancel }: StatusDisplayProps) {
         )}
       </div>
 
-      {/* Progress Bar - Show when running or processing with percentage */}
-      {(status.status === 'running' || status.status === 'processing') && progressDetails?.percentComplete !== undefined && (
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Progress</span>
-            <span className="font-medium">{Math.round(progressDetails.percentComplete)}%</span>
-          </div>
-          <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-            <div 
-              className={`h-full transition-all duration-300 ease-out ${
-                status.status === 'processing' ? 'bg-purple-600' : 'bg-blue-600'
-              }`}
-              style={{ width: `${Math.min(100, progressDetails.percentComplete)}%` }}
-            />
-          </div>
-        </div>
-      )}
 
       {/* Detailed Progress Stats - Show when running or processing */}
       {(status.status === 'running' || status.status === 'processing') && progressDetails && (

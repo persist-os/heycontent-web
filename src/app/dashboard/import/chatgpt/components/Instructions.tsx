@@ -25,7 +25,7 @@ export function Instructions() {
       <div className="bg-muted rounded-lg p-4 text-sm space-y-2">
         <h4 className="font-semibold">What happens next?</h4>
         <ul className="space-y-1 text-muted-foreground">
-          <li>• Your conversations are processed in the background (non-blocking)</li>
+          <li>• Your conversations are processed in the background</li>
           <li>• Both user and assistant messages are included for full context</li>
           <li>• Content is added to the Crystal Dam in batches</li>
           <li>• Shard extraction and crystal formation happen automatically</li>
