@@ -17,6 +17,7 @@ export default defineSchema({
     // Role-based access control
     role: v.optional(v.union(
       v.literal("user"),
+      v.literal("developer"),
       v.literal("admin"),
       v.literal("super_admin"),
       v.literal("ambassador"),
@@ -1406,7 +1407,8 @@ export default defineSchema({
     type: v.union(
       v.literal("shard_extraction"),
       v.literal("crystal_formation"),
-      v.literal("intelligence_analysis")
+      v.literal("intelligence_analysis"),
+      v.literal("chatgpt_import")
     ),
     payload: v.any(),               // Job-specific payload data
     

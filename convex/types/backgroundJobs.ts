@@ -11,7 +11,8 @@ import { v } from "convex/values";
 export const jobTypeValidator = v.union(
   v.literal("shard_extraction"),
   v.literal("crystal_formation"),
-  v.literal("intelligence_analysis")
+  v.literal("intelligence_analysis"),
+  v.literal("chatgpt_import")
 );
 
 // Job status validator - matches Python JobStatus enum
@@ -31,7 +32,7 @@ export const jobPriorityValidator = v.union(
 );
 
 // Type exports for TypeScript code
-export type JobType = "shard_extraction" | "crystal_formation" | "intelligence_analysis";
+export type JobType = "shard_extraction" | "crystal_formation" | "intelligence_analysis" | "chatgpt_import";
 export type JobStatus = "queued" | "running" | "completed" | "failed";
 export type JobPriority = "low" | "normal" | "high" | "urgent";
 
@@ -51,6 +52,11 @@ export const intelligenceAnalysisPayloadValidator = v.object({
   trigger_source: v.string(),
 });
 
+export const chatgptImportPayloadValidator = v.object({
+  file_path: v.string(),
+  filename: v.string(),
+});
+
 // TypeScript interfaces matching Python dataclasses
 export interface ShardExtractionPayload {
   batch_content: any[];
@@ -67,3 +73,7 @@ export interface IntelligenceAnalysisPayload {
   trigger_source: string;
 }
 
+export interface ChatGPTImportPayload {
+  file_path: string;
+  filename: string;
+}

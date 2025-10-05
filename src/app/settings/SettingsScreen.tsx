@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/context/auth-context';
 import { Button } from '@/components/ui/button'
-import { LogOut } from 'lucide-react'
+import { LogOut, Upload, ArrowRight } from 'lucide-react'
 import AccountTab from './tabs/AccountTab'
 import DataTab from './tabs/DataTab'
 import FriendsTab from './tabs/FriendsTab'
@@ -41,7 +41,7 @@ const SettingsScreen = () => {
     // 0) Session flag set before navigating to /settings
     try {
       const stored = window.sessionStorage.getItem('settingsActiveTab')
-      if (stored && ['account', 'friends', 'subscription', 'notifications', 'integrations', 'ai-preferences', 'data'].includes(stored)) {
+      if (stored && ['account', 'friends', 'subscription', 'notifications', 'integrations', 'ai-preferences', 'data', 'imports'].includes(stored)) {
         setActiveTab(stored)
         window.sessionStorage.removeItem('settingsActiveTab')
         return
@@ -50,14 +50,14 @@ const SettingsScreen = () => {
 
     // 1) Prefer hash routing e.g. /settings#subscription
     const hash = (window.location.hash || '').replace('#', '')
-    if (['account', 'friends', 'subscription', 'notifications', 'integrations', 'ai-preferences', 'data'].includes(hash)) {
+    if (['account', 'friends', 'subscription', 'notifications', 'integrations', 'ai-preferences', 'data', 'imports'].includes(hash)) {
       setActiveTab(hash)
       return
     }
     // 2) Fallback to tab query parameter e.g. /settings?tab=subscription
     const urlParams = new URLSearchParams(window.location.search)
     const tabParam = urlParams.get('tab')
-    if (tabParam && ['account', 'friends', 'subscription', 'notifications', 'integrations', 'ai-preferences', 'data'].includes(tabParam)) {
+    if (tabParam && ['account', 'friends', 'subscription', 'notifications', 'integrations', 'ai-preferences', 'data', 'imports'].includes(tabParam)) {
       setActiveTab(tabParam)
       return
     }
@@ -150,6 +150,7 @@ const SettingsScreen = () => {
               { id: 'account', label: 'Account', description: 'Profile and personal information' },
               { id: 'friends', label: 'Friends', description: 'Manage friends and sharing' },
               { id: 'subscription', label: 'Subscription', description: 'Billing and plan details' },
+              { id: 'imports', label: 'Imports', description: 'Import external data' },
               { id: 'data', label: 'Privacy', description: 'Security and data management' }
             ].map((tab) => (
               <button
@@ -201,6 +202,68 @@ const SettingsScreen = () => {
           {activeTab === 'subscription' && (
             <div className="space-y-8">
               <SubscriptionOverview />
+            </div>
+          )}
+
+          {activeTab === 'imports' && (
+            <div className="space-y-8">
+              {/* Imports Section */}
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-semibold">Import External Data</h2>
+                  <p className="text-muted-foreground">
+                    Import your data from external platforms to enhance your Crystal Dam
+                  </p>
+                </div>
+
+                {/* ChatGPT Import Card */}
+                <div className="border border-border rounded-lg p-6 hover:border-primary/50 transition-colors">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-4">
+                      <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/20">
+                        <Upload className="h-6 w-6 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div className="space-y-2">
+                        <h3 className="text-lg font-semibold">ChatGPT Conversations</h3>
+                        <p className="text-sm text-muted-foreground max-w-md">
+                          Import your ChatGPT conversation history. Upload your conversations.json.zip file
+                          to add your ChatGPT interactions to your content library.
+                        </p>
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          <span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300">
+                            Background Processing
+                          </span>
+                          <span className="text-xs px-2 py-1 rounded-full bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300">
+                            Non-blocking
+                          </span>
+                          <span className="text-xs px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300">
+                            Full Context
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <Button 
+                      onClick={() => router.push('/dashboard/import/chatgpt')}
+                      className="flex items-center gap-2"
+                    >
+                      Import Now
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Coming Soon - Other Imports */}
+                <div className="border border-dashed border-border rounded-lg p-6 opacity-60">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-semibold">More Import Options Coming Soon</h3>
+                      <p className="text-sm text-muted-foreground">
+                        We're working on additional import options for other platforms.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
