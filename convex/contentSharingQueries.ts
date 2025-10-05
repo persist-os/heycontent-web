@@ -3,16 +3,36 @@ import { query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
 /**
- * Get all content shared with a user (notes and projects)
+ * Universal content sharing system supporting notes, projects, widgets, and conversations
+ * No deprecated social media fields - uses crystal system for content insights
+ */
+
+// Content type validator for reuse
+const contentTypeValidator = v.union(
+  v.literal("note"),
+  v.literal("project"),
+  v.literal("widget"),
+  v.literal("conversation")
+);
+
+// Permission validator for reuse
+const permissionValidator = v.union(
+  v.literal("owner"),
+  v.literal("read"),
+  v.literal("edit")
+);
+
+/**
+ * Get all content shared with a user (notes, projects, widgets, conversations)
  */
 export const getSharedWithMe = query({
   args: {
     userId: v.string(),
-    contentType: v.optional(v.union(v.literal("note"), v.literal("project"))),
+    contentType: v.optional(contentTypeValidator),
   },
   returns: v.array(v.object({
     _id: v.string(),
-    contentType: v.union(v.literal("note"), v.literal("project")),
+    contentType: contentTypeValidator,
     contentId: v.string(),
     title: v.string(),
     description: v.optional(v.string()),
@@ -41,13 +61,18 @@ export const getSharedWithMe = query({
     // Project-specific fields
     noteIds: v.optional(v.array(v.string())),
     conversationIds: v.optional(v.array(v.string())),
-    // ⚠️ DEPRECATED: Social media IDs removed - use crystal system for content insights
     crystalIds: v.optional(v.array(v.string())),
     shardIds: v.optional(v.array(v.string())),
-    analysisIds: v.optional(v.array(v.string())),
+    // Widget-specific fields
+    widgetType: v.optional(v.string()),
+    category: v.optional(v.string()),
+    projectId: v.optional(v.string()),
+    // Conversation-specific fields
+    messageCount: v.optional(v.number()),
+    lastMessageAt: v.optional(v.number()),
+    starred: v.optional(v.boolean()),
   })),
   handler: async (ctx, args) => {
-    // Get shared content from both shared_notes and shared_content tables
     const sharedContent = [];
 
     // Get shared notes from legacy shared_notes table
@@ -62,7 +87,6 @@ export const getSharedWithMe = query({
         const note = await ctx.db.get(share.noteId);
         if (!note) continue;
 
-        // Get owner details
         const owner = await ctx.db
           .query("users")
           .filter((q) => q.eq(q.field("userId"), share.ownerId))
@@ -85,17 +109,19 @@ export const getSharedWithMe = query({
           sharedBy: share.sharedBy,
           createdAt: note.createdAt,
           updatedAt: note.updatedAt,
-          // Note-specific fields
           type: note.type,
           tags: note.tags,
           important: note.important,
-          // Project-specific fields (undefined for notes)
           noteIds: undefined,
           conversationIds: undefined,
-          instagramPostIds: undefined,
-          youtubeVideoIds: undefined,
-          gmailIds: undefined,
-          analysisIds: undefined,
+          crystalIds: undefined,
+          shardIds: undefined,
+          widgetType: undefined,
+          category: undefined,
+          projectId: undefined,
+          messageCount: undefined,
+          lastMessageAt: undefined,
+          starred: undefined,
         });
       }
     }
@@ -111,7 +137,6 @@ export const getSharedWithMe = query({
       : await sharedContentQuery.collect();
 
     for (const share of sharedContentRecords) {
-      // Get owner details
       const owner = await ctx.db
         .query("users")
         .filter((q) => q.eq(q.field("userId"), share.ownerId))
@@ -138,17 +163,19 @@ export const getSharedWithMe = query({
           sharedBy: share.sharedBy,
           createdAt: note.createdAt,
           updatedAt: note.updatedAt,
-          // Note-specific fields
           type: note.type,
           tags: note.tags,
           important: note.important,
-          // Project-specific fields (undefined for notes)
           noteIds: undefined,
           conversationIds: undefined,
-          instagramPostIds: undefined,
-          youtubeVideoIds: undefined,
-          gmailIds: undefined,
-          analysisIds: undefined,
+          crystalIds: undefined,
+          shardIds: undefined,
+          widgetType: undefined,
+          category: undefined,
+          projectId: undefined,
+          messageCount: undefined,
+          lastMessageAt: undefined,
+          starred: undefined,
         });
       } else if (share.contentType === "project") {
         const project = await ctx.db.get(share.contentId as Id<"projects">);
@@ -169,17 +196,85 @@ export const getSharedWithMe = query({
           sharedBy: share.sharedBy,
           createdAt: project.createdAt,
           updatedAt: project.updatedAt,
-          // Note-specific fields (undefined for projects)
           type: undefined,
           tags: undefined,
           important: undefined,
-          // Project-specific fields
           noteIds: project.noteIds,
           conversationIds: project.conversationIds,
-          instagramPostIds: project.instagramPostIds,
-          youtubeVideoIds: project.youtubeVideoIds,
-          gmailIds: project.gmailIds,
-          analysisIds: project.analysisIds,
+          crystalIds: project.crystalIds,
+          shardIds: project.shardIds,
+          widgetType: undefined,
+          category: undefined,
+          projectId: undefined,
+          messageCount: undefined,
+          lastMessageAt: undefined,
+          starred: undefined,
+        });
+      } else if (share.contentType === "widget") {
+        const widget = await ctx.db.get(share.contentId as Id<"widgets">);
+        if (!widget) continue;
+
+        sharedContent.push({
+          _id: share._id,
+          contentType: "widget" as const,
+          contentId: share.contentId,
+          title: widget.title,
+          description: widget.description,
+          content: undefined,
+          ownerId: share.ownerId,
+          ownerName: owner.name,
+          ownerEmail: owner.email,
+          permission: share.permission,
+          sharedAt: share.sharedAt,
+          sharedBy: share.sharedBy,
+          createdAt: widget.createdAt,
+          updatedAt: widget.updatedAt,
+          type: undefined,
+          tags: undefined,
+          important: undefined,
+          noteIds: undefined,
+          conversationIds: undefined,
+          crystalIds: undefined,
+          shardIds: undefined,
+          widgetType: widget.widget_type,
+          category: widget.category,
+          projectId: widget.projectId,
+          messageCount: undefined,
+          lastMessageAt: undefined,
+          starred: undefined,
+        });
+      } else if (share.contentType === "conversation") {
+        const conversation = await ctx.db.get(share.contentId as Id<"conversations">);
+        if (!conversation) continue;
+
+        sharedContent.push({
+          _id: share._id,
+          contentType: "conversation" as const,
+          contentId: share.contentId,
+          title: conversation.title,
+          description: undefined,
+          content: undefined,
+          ownerId: share.ownerId,
+          ownerName: owner.name,
+          ownerEmail: owner.email,
+          permission: share.permission,
+          sharedAt: share.sharedAt,
+          sharedBy: share.sharedBy,
+          createdAt: conversation.createdAt,
+          updatedAt: conversation.updatedAt,
+          type: undefined,
+          tags: undefined,
+          important: undefined,
+          noteIds: undefined,
+          conversationIds: undefined,
+          crystalIds: undefined,
+          shardIds: undefined,
+          widgetType: undefined,
+          category: undefined,
+          projectId: conversation.projectId,
+          messageCount: conversation.messageCount,
+          lastMessageAt: conversation.lastMessageAt,
+          starred: conversation.starred,
         });
       }
     }
@@ -195,7 +290,7 @@ export const getSharedWithMe = query({
 export const getContentSharedUsers = query({
   args: {
     userId: v.string(),
-    contentType: v.union(v.literal("note"), v.literal("project")),
+    contentType: contentTypeValidator,
     contentId: v.string(),
   },
   returns: v.array(v.object({
@@ -216,8 +311,8 @@ export const getContentSharedUsers = query({
 
     const sharedUsers = [];
 
+    // Check legacy shared_notes table for notes
     if (args.contentType === "note") {
-      // Check legacy shared_notes table
       const legacyShares = await ctx.db
         .query("shared_notes")
         .withIndex("by_note", (q) => q.eq("noteId", args.contentId as Id<"notes">))
@@ -295,11 +390,11 @@ export const getContentSharedUsers = query({
 export const getMySharedContent = query({
   args: {
     userId: v.string(),
-    contentType: v.optional(v.union(v.literal("note"), v.literal("project"))),
+    contentType: v.optional(contentTypeValidator),
   },
   returns: v.array(v.object({
     _id: v.string(),
-    contentType: v.union(v.literal("note"), v.literal("project")),
+    contentType: contentTypeValidator,
     contentId: v.string(),
     title: v.string(),
     description: v.optional(v.string()),
@@ -330,10 +425,16 @@ export const getMySharedContent = query({
     // Project-specific fields
     noteIds: v.optional(v.array(v.string())),
     conversationIds: v.optional(v.array(v.string())),
-    // ⚠️ DEPRECATED: Social media IDs removed - use crystal system for content insights
     crystalIds: v.optional(v.array(v.string())),
     shardIds: v.optional(v.array(v.string())),
-    analysisIds: v.optional(v.array(v.string())),
+    // Widget-specific fields
+    widgetType: v.optional(v.string()),
+    category: v.optional(v.string()),
+    projectId: v.optional(v.string()),
+    // Conversation-specific fields
+    messageCount: v.optional(v.number()),
+    lastMessageAt: v.optional(v.number()),
+    starred: v.optional(v.boolean()),
   })),
   handler: async (ctx, args) => {
     const sharedContentMap = new Map();
@@ -363,17 +464,19 @@ export const getMySharedContent = query({
             updatedAt: note.updatedAt,
             sharedWithCount: 0,
             sharedUsers: [],
-            // Note-specific fields
             type: note.type,
             tags: note.tags,
             important: note.important,
-            // Project-specific fields (undefined for notes)
             noteIds: undefined,
             conversationIds: undefined,
-            instagramPostIds: undefined,
-            youtubeVideoIds: undefined,
-            gmailIds: undefined,
-            analysisIds: undefined,
+            crystalIds: undefined,
+            shardIds: undefined,
+            widgetType: undefined,
+            category: undefined,
+            projectId: undefined,
+            messageCount: undefined,
+            lastMessageAt: undefined,
+            starred: undefined,
           });
         }
 
@@ -425,17 +528,19 @@ export const getMySharedContent = query({
             updatedAt: note.updatedAt,
             sharedWithCount: 0,
             sharedUsers: [],
-            // Note-specific fields
             type: note.type,
             tags: note.tags,
             important: note.important,
-            // Project-specific fields (undefined for notes)
             noteIds: undefined,
             conversationIds: undefined,
-            instagramPostIds: undefined,
-            youtubeVideoIds: undefined,
-            gmailIds: undefined,
-            analysisIds: undefined,
+            crystalIds: undefined,
+            shardIds: undefined,
+            widgetType: undefined,
+            category: undefined,
+            projectId: undefined,
+            messageCount: undefined,
+            lastMessageAt: undefined,
+            starred: undefined,
           });
         } else if (share.contentType === "project") {
           const project = await ctx.db.get(share.contentId as Id<"projects">);
@@ -452,17 +557,77 @@ export const getMySharedContent = query({
             updatedAt: project.updatedAt,
             sharedWithCount: 0,
             sharedUsers: [],
-            // Note-specific fields (undefined for projects)
             type: undefined,
             tags: undefined,
             important: undefined,
-            // Project-specific fields
             noteIds: project.noteIds,
             conversationIds: project.conversationIds,
-            instagramPostIds: project.instagramPostIds,
-            youtubeVideoIds: project.youtubeVideoIds,
-            gmailIds: project.gmailIds,
-            analysisIds: project.analysisIds,
+            crystalIds: project.crystalIds,
+            shardIds: project.shardIds,
+            widgetType: undefined,
+            category: undefined,
+            projectId: undefined,
+            messageCount: undefined,
+            lastMessageAt: undefined,
+            starred: undefined,
+          });
+        } else if (share.contentType === "widget") {
+          const widget = await ctx.db.get(share.contentId as Id<"widgets">);
+          if (!widget) continue;
+
+          sharedContentMap.set(key, {
+            _id: share.contentId,
+            contentType: "widget" as const,
+            contentId: share.contentId,
+            title: widget.title,
+            description: widget.description,
+            content: undefined,
+            createdAt: widget.createdAt,
+            updatedAt: widget.updatedAt,
+            sharedWithCount: 0,
+            sharedUsers: [],
+            type: undefined,
+            tags: undefined,
+            important: undefined,
+            noteIds: undefined,
+            conversationIds: undefined,
+            crystalIds: undefined,
+            shardIds: undefined,
+            widgetType: widget.widget_type,
+            category: widget.category,
+            projectId: widget.projectId,
+            messageCount: undefined,
+            lastMessageAt: undefined,
+            starred: undefined,
+          });
+        } else if (share.contentType === "conversation") {
+          const conversation = await ctx.db.get(share.contentId as Id<"conversations">);
+          if (!conversation) continue;
+
+          sharedContentMap.set(key, {
+            _id: share.contentId,
+            contentType: "conversation" as const,
+            contentId: share.contentId,
+            title: conversation.title,
+            description: undefined,
+            content: undefined,
+            createdAt: conversation.createdAt,
+            updatedAt: conversation.updatedAt,
+            sharedWithCount: 0,
+            sharedUsers: [],
+            type: undefined,
+            tags: undefined,
+            important: undefined,
+            noteIds: undefined,
+            conversationIds: undefined,
+            crystalIds: undefined,
+            shardIds: undefined,
+            widgetType: undefined,
+            category: undefined,
+            projectId: conversation.projectId,
+            messageCount: conversation.messageCount,
+            lastMessageAt: conversation.lastMessageAt,
+            starred: conversation.starred,
           });
         }
       }
@@ -474,17 +639,19 @@ export const getMySharedContent = query({
 
       if (user) {
         const contentItem = sharedContentMap.get(key);
-        // Avoid duplicates from legacy table
-        const existingUser = contentItem.sharedUsers.find((u: any) => u.userId === share.sharedWithUserId);
-        if (!existingUser) {
-          contentItem.sharedUsers.push({
-            userId: share.sharedWithUserId,
-            name: user.name,
-            email: user.email,
-            permission: share.permission,
-            sharedAt: share.sharedAt,
-          });
-          contentItem.sharedWithCount++;
+        if (contentItem) {
+          // Avoid duplicates from legacy table
+          const existingUser = contentItem.sharedUsers.find((u: any) => u.userId === share.sharedWithUserId);
+          if (!existingUser) {
+            contentItem.sharedUsers.push({
+              userId: share.sharedWithUserId,
+              name: user.name,
+              email: user.email,
+              permission: share.permission,
+              sharedAt: share.sharedAt,
+            });
+            contentItem.sharedWithCount++;
+          }
         }
       }
     }
@@ -501,12 +668,12 @@ export const getMySharedContent = query({
 export const checkContentAccess = query({
   args: {
     userId: v.string(),
-    contentType: v.union(v.literal("note"), v.literal("project")),
+    contentType: contentTypeValidator,
     contentId: v.string(),
   },
   returns: v.object({
     hasAccess: v.boolean(),
-    permission: v.optional(v.union(v.literal("owner"), v.literal("read"), v.literal("edit"))),
+    permission: v.optional(permissionValidator),
     isOwner: v.boolean(),
   }),
   handler: async (ctx, args) => {
@@ -520,7 +687,7 @@ export const checkContentAccess = query({
 async function checkUserContentAccess(
   ctx: any,
   userId: string,
-  contentType: "note" | "project",
+  contentType: "note" | "project" | "widget" | "conversation",
   contentId: string
 ): Promise<{
   hasAccess: boolean;
@@ -557,6 +724,24 @@ async function checkUserContentAccess(
   } else if (contentType === "project") {
     const project = await ctx.db.get(contentId as Id<"projects">);
     if (project?.userId === userId) {
+      return {
+        hasAccess: true,
+        permission: "owner" as const,
+        isOwner: true,
+      };
+    }
+  } else if (contentType === "widget") {
+    const widget = await ctx.db.get(contentId as Id<"widgets">);
+    if (widget?.userId === userId) {
+      return {
+        hasAccess: true,
+        permission: "owner" as const,
+        isOwner: true,
+      };
+    }
+  } else if (contentType === "conversation") {
+    const conversation = await ctx.db.get(contentId as Id<"conversations">);
+    if (conversation?.userId === userId) {
       return {
         hasAccess: true,
         permission: "owner" as const,

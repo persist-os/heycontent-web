@@ -7,7 +7,7 @@ import { Id } from '@/convex/_generated/dataModel';
 import { useNotes } from '@/app/context/notes-context';
 import { useWidgetContent } from '@/app/dashboard/living-projects/hooks/useWidgetContent';
 import { motion } from 'framer-motion';
-import { X, Search, FileText, MessageSquare, Calendar, Tag, Type, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Search, FileText, MessageSquare, Calendar, Tag, Type, ChevronDown, ChevronUp, Sparkles, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +19,8 @@ interface WidgetAttachmentPanelProps {
   onClose: () => void;
   attachedNoteIds: string[];
   attachedConversationIds: string[];
+  attachedCrystalIds?: string[];
+  attachedShardIds?: string[];
 }
 
 export function WidgetAttachmentPanel({
@@ -27,20 +29,43 @@ export function WidgetAttachmentPanel({
   isOpen,
   onClose,
   attachedNoteIds,
-  attachedConversationIds
+  attachedConversationIds,
+  attachedCrystalIds = [],
+  attachedShardIds = []
 }: WidgetAttachmentPanelProps) {
   const { notes } = useNotes();
-  const { addNoteToWidget, removeNoteFromWidget, addConversationToWidget, removeConversationFromWidget } = useWidgetContent(userId);
+  const { 
+    addNoteToWidget, 
+    removeNoteFromWidget, 
+    addConversationToWidget, 
+    removeConversationFromWidget,
+    addCrystalToWidget,
+    removeCrystalFromWidget,
+    addShardToWidget,
+    removeShardFromWidget
+  } = useWidgetContent(userId);
   const panelRef = useRef<HTMLDivElement>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedType, setSelectedType] = useState<'all' | 'note' | 'conversation'>('all');
+  const [selectedType, setSelectedType] = useState<'all' | 'note' | 'conversation' | 'crystal' | 'shard'>('all');
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
   // Fetch conversations
   const conversations = useQuery(
     api.chatQueries.getHistory,
     userId ? { userId } : "skip"
+  );
+
+  // Fetch crystals
+  const crystals = useQuery(
+    api.crystalQueries.getPersonaData,
+    userId ? { userId, operation: "crystals", limit: 100 } : "skip"
+  );
+
+  // Fetch shards
+  const shards = useQuery(
+    api.crystalQueries.getPersonaData,
+    userId ? { userId, operation: "shards", limit: 100 } : "skip"
   );
 
   // Convert to unified format with more metadata
@@ -92,8 +117,66 @@ export function WidgetAttachmentPanel({
       });
     });
 
+    // Add crystals with enhanced metadata
+    if (Array.isArray(crystals)) {
+      crystals.forEach((crystal: any) => {
+        // Show first quote in preview if available, otherwise description
+        const quotePreview = crystal.supporting_quotes && crystal.supporting_quotes.length > 0
+          ? `"${crystal.supporting_quotes[0]}"${crystal.supporting_quotes.length > 1 ? ` +${crystal.supporting_quotes.length - 1} more` : ''}`
+          : crystal.description?.substring(0, 150) || crystal.core_insight?.substring(0, 150) || '';
+
+        items.push({
+          id: crystal._id,
+          type: 'crystal',
+          title: crystal.name || 'Untitled Crystal',
+          preview: quotePreview,
+          fullContent: crystal.description || crystal.core_insight || '',
+          timestamp: crystal.updatedAt,
+          createdAt: crystal.createdAt,
+          isAttached: attachedCrystalIds.includes(crystal._id),
+          metadata: {
+            dimension: crystal.dimension || 'unknown',
+            crystalType: crystal.crystal_type || 'stable_trait',
+            confidenceScore: crystal.confidence_score || 'unknown',
+            shardCount: crystal.shardIds?.length || 0,
+            usageCount: crystal.usage_count || 0,
+            projectId: crystal.projectId,
+            widgetId: crystal.widgetId,
+            supportingQuotes: crystal.supporting_quotes || [],
+            hasQuotes: crystal.supporting_quotes && crystal.supporting_quotes.length > 0
+          }
+        });
+      });
+    }
+
+    // Add shards with enhanced metadata
+    if (Array.isArray(shards)) {
+      shards.forEach((shard: any) => {
+        items.push({
+          id: shard._id,
+          type: 'shard',
+          title: shard.exact_quote || (shard.dimension ? `${shard.dimension} Insight` : 'Insight Shard'),
+          preview: shard.what_it_reveals?.substring(0, 150) || '',
+          fullContent: shard.what_it_reveals || '',
+          timestamp: shard.updatedAt,
+          createdAt: shard.createdAt,
+          isAttached: attachedShardIds.includes(shard._id),
+          metadata: {
+            dimension: shard.dimension || 'unknown',
+            confidenceLevel: shard.confidence_level || 'unknown',
+            sourceType: shard.source_type || 'unknown',
+            usedInCrystal: shard.used_in_crystal_id || null,
+            shardStatus: shard.shard_status || 'unprocessed',
+            projectId: shard.projectId,
+            widgetId: shard.widgetId,
+            conversationId: shard.conversationId
+          }
+        });
+      });
+    }
+
     return items;
-  }, [notes, conversations, attachedNoteIds, attachedConversationIds]);
+  }, [notes, conversations, crystals, shards, attachedNoteIds, attachedConversationIds, attachedCrystalIds, attachedShardIds]);
 
   // Filter items
   const filteredItems = useMemo(() => {
@@ -122,6 +205,18 @@ export function WidgetAttachmentPanel({
         await removeConversationFromWidget(item.id as Id<"conversations">);
       } else {
         await addConversationToWidget(item.id as Id<"conversations">, widgetId);
+      }
+    } else if (item.type === 'crystal') {
+      if (item.isAttached) {
+        await removeCrystalFromWidget(item.id as Id<"crystals">);
+      } else {
+        await addCrystalToWidget(item.id as Id<"crystals">, widgetId);
+      }
+    } else if (item.type === 'shard') {
+      if (item.isAttached) {
+        await removeShardFromWidget(item.id as Id<"crystal_shards">);
+      } else {
+        await addShardToWidget(item.id as Id<"crystal_shards">, widgetId);
       }
     }
   };
@@ -230,6 +325,24 @@ export function WidgetAttachmentPanel({
               >
                 Conversations
               </Button>
+              <Button
+                variant={selectedType === 'crystal' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedType('crystal')}
+                className="rounded-xl"
+              >
+                <Sparkles className="w-3 h-3 mr-1" />
+                Crystals
+              </Button>
+              <Button
+                variant={selectedType === 'shard' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedType('shard')}
+                className="rounded-xl"
+              >
+                <Zap className="w-3 h-3 mr-1" />
+                Shards
+              </Button>
             </div>
           </div>
         </div>
@@ -303,7 +416,10 @@ function EnhancedItemCard({
   onToggleExpanded, 
   getRelativeTime 
 }: any) {
-  const Icon = item.type === 'note' ? FileText : MessageSquare;
+  const Icon = item.type === 'note' ? FileText 
+    : item.type === 'conversation' ? MessageSquare 
+    : item.type === 'crystal' ? Sparkles 
+    : Zap;
 
   return (
     <motion.div
@@ -319,10 +435,10 @@ function EnhancedItemCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <h4 className="font-medium text-foreground group-hover:text-foreground transition-colors truncate">
+              <h4 className={`font-medium text-foreground group-hover:text-foreground transition-colors ${item.type === 'shard' ? 'line-clamp-2' : 'truncate'}`}>
                 {item.title}
               </h4>
-              <p className="text-sm text-muted-foreground/70 line-clamp-2 mt-1 font-light">
+              <p className={`text-sm text-muted-foreground/70 line-clamp-2 mt-1 font-light ${item.type === 'crystal' && item.metadata.hasQuotes ? 'italic' : ''}`}>
                 {item.preview}
               </p>
               
@@ -353,6 +469,34 @@ function EnhancedItemCard({
                     {item.metadata.tags.length} tags
                   </div>
                 )}
+
+                {item.metadata.dimension && (
+                  <div className="flex items-center gap-1">
+                    <Type className="w-3 h-3" />
+                    {item.metadata.dimension}
+                  </div>
+                )}
+
+                {item.metadata.crystalType && (
+                  <div className="flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    {item.metadata.crystalType.replace('_', ' ')}
+                  </div>
+                )}
+
+                {item.metadata.shardCount !== undefined && item.metadata.shardCount > 0 && (
+                  <div className="flex items-center gap-1">
+                    <Zap className="w-3 h-3" />
+                    {item.metadata.shardCount} shards
+                  </div>
+                )}
+
+                {item.metadata.confidenceLevel && (
+                  <div className="flex items-center gap-1">
+                    <Type className="w-3 h-3" />
+                    {item.metadata.confidenceLevel} confidence
+                  </div>
+                )}
               </div>
 
               {/* Tags */}
@@ -379,8 +523,28 @@ function EnhancedItemCard({
                   exit={{ opacity: 0, height: 0 }}
                   className="mt-4 pt-4 border-t border-border/20"
                 >
-                  <div className="text-sm text-muted-foreground/80 font-light leading-relaxed">
-                    {item.fullContent}
+                  <div className="space-y-4">
+                    {item.type === 'crystal' && item.metadata.supportingQuotes?.length > 1 && (
+                      <div className="space-y-3">
+                        <div className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wide">All Supporting Quotes</div>
+                        {item.metadata.supportingQuotes.map((quote: string, idx: number) => (
+                          <div key={idx} className="text-sm text-muted-foreground/80 font-light leading-relaxed italic border-l-2 border-primary/30 pl-3">
+                            "{quote}"
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {item.fullContent && (
+                      <div>
+                        {item.type === 'crystal' && item.metadata.supportingQuotes?.length > 0 && (
+                          <div className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wide mb-2">Pattern Analysis</div>
+                        )}
+                        <div className="text-sm text-muted-foreground/80 font-light leading-relaxed">
+                          {item.fullContent}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   
                   {/* Additional Metadata */}
@@ -403,6 +567,32 @@ function EnhancedItemCard({
                       <div className="flex items-center gap-1">
                         <span className="font-medium">Source:</span> 
                         <Badge variant="outline" className="text-xs">Widget Output</Badge>
+                      </div>
+                    )}
+                    {item.metadata.confidenceScore && (
+                      <div>
+                        <span className="font-medium">Confidence:</span> {item.metadata.confidenceScore}
+                      </div>
+                    )}
+                    {item.metadata.usageCount !== undefined && (
+                      <div>
+                        <span className="font-medium">Usage:</span> {item.metadata.usageCount} times
+                      </div>
+                    )}
+                    {item.metadata.sourceType && (
+                      <div>
+                        <span className="font-medium">Source Type:</span> {item.metadata.sourceType}
+                      </div>
+                    )}
+                    {item.metadata.shardStatus && (
+                      <div>
+                        <span className="font-medium">Status:</span> {item.metadata.shardStatus.replace('_', ' ')}
+                      </div>
+                    )}
+                    {item.metadata.usedInCrystal && (
+                      <div className="flex items-center gap-1">
+                        <span className="font-medium">Used in Crystal:</span> 
+                        <Badge variant="outline" className="text-xs">Yes</Badge>
                       </div>
                     )}
                   </div>

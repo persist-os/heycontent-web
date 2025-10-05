@@ -67,6 +67,27 @@ export default function WidgetDashboardPage() {
     } : 'skip'
   ) as WidgetOutput[] | undefined
 
+  // Query for connected content
+  const connectedNotes = useQuery(
+    api.noteQueries.getNotesByWidgetId,
+    userId && widgetId ? { widgetId, userId } : 'skip'
+  ) as any[] | undefined
+
+  const connectedConversations = useQuery(
+    api.chatQueries.getConversationsByWidgetId,
+    userId && widgetId ? { widgetId, userId } : 'skip'
+  ) as any[] | undefined
+
+  const connectedCrystals = useQuery(
+    api.crystalQueries.getCrystalsByWidgetId,
+    userId && widgetId ? { widgetId, userId } : 'skip'
+  ) as any[] | undefined
+
+  const connectedShards = useQuery(
+    api.crystalQueries.getShardsByWidgetId,
+    userId && widgetId ? { widgetId, userId } : 'skip'
+  ) as any[] | undefined
+
 
   const handleRunWidget = async () => {
     if (!widget) return
@@ -231,8 +252,10 @@ export default function WidgetDashboardPage() {
           userId={userId}
           isOpen={showAttachmentPanel}
           onClose={() => setShowAttachmentPanel(false)}
-          attachedNoteIds={[]}
-          attachedConversationIds={[]}
+          attachedNoteIds={connectedNotes?.map(n => n._id) || []}
+          attachedConversationIds={connectedConversations?.map(c => c._id) || []}
+          attachedCrystalIds={connectedCrystals?.map(c => c._id) || []}
+          attachedShardIds={connectedShards?.map(s => s._id) || []}
         />
       )}
     </div>

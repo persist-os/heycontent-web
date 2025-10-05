@@ -15,7 +15,6 @@ export interface MessageTransmissionRequest {
   workspaceContext?: WorkspaceContext | null
   notepadContext?: NotepadContext | null
   additionalData?: Record<string, any>
-  useContextSearch?: boolean
   fileAttachments?: FileUploadResponse[]
   onStatusUpdate?: (status: string) => void
   // Project/widget context for conversation linkage

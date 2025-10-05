@@ -27,10 +27,8 @@ interface ChatInputAreaProps {
   // Mobile props
   isMobile?: boolean;
   activeTab?: 'chat' | 'notes';
-  // New anti-corporate controls
+  // Notepad control
   embeddingInfo?: { hasEmbeddings: boolean; count: number };
-  useContextSearch?: boolean;
-  onToggleContextSearch?: (enabled: boolean) => void;
   includeNotepadInMessages?: boolean;
   onToggleNotepadInMessages?: (enabled: boolean) => void;
 }
@@ -48,8 +46,6 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   inputValue,
   onInputChange,
   onInputPopulate,
-  useContextSearch,
-  onToggleContextSearch,
   embeddingInfo,
   notepadOpen,
   openNotepad,
@@ -78,7 +74,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
             {/* Ambient Insights component - handles its own data fetching */}
             <div className="flex-1 overflow-y-auto px-3 sm:px-4 pb-4 scrollbar-hide">
               <AmbientInsights
-                userId={getCurrentUserId()}
+                userId=""
                 onInsightClick={(action, insight) => handleSendMessage(action)}
               />
             </div>
@@ -96,22 +92,6 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
         <div className="px-2 sm:px-3 pt-1 pb-2">
           {/* Chat controls - positioned above input for visibility */}
           <div className="flex items-center justify-end gap-3 pb-3 px-2">
-            {/* Smart Search Control */}
-            <button
-              onClick={() => onToggleContextSearch?.(!useContextSearch)}
-              title={useContextSearch 
-                ? `Context search active - using ${embeddingInfo?.count || 0} content items`
-                : 'Enable context search to reference your content'
-              }
-              className={`px-3 py-1.5 text-xs font-light transition-colors duration-300 border-b ${
-                useContextSearch 
-                  ? 'text-foreground border-current' 
-                  : 'text-muted-foreground border-transparent hover:text-foreground hover:border-current'
-              }`}
-            >
-              Smart Search {useContextSearch ? 'on' : 'off'}
-            </button>
-            
             {/* Notepad Inclusion Control */}
             <button
               onClick={() => onToggleNotepadInMessages?.(!includeNotepadInMessages)}

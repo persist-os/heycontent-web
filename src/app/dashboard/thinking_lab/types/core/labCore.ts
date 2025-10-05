@@ -75,7 +75,6 @@ export interface DialogueState {
     conversationId?: string
     error?: string
     currentStatus?: string
-    useContextSearch: boolean
     quotedContent: string
     // Project/widget context
     projectId?: string
@@ -89,7 +88,6 @@ export interface DialogueActions {
     loadConversation: (conversationId: string) => Promise<void>
     clearMessages: () => void
     setError: (error: string | undefined) => void
-    toggleContextSearch: () => void
     addMessage: (message: any) => void
     setLoading: (loading: boolean) => void
     setStatus: (status: string | undefined) => void

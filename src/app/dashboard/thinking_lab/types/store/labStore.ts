@@ -31,7 +31,6 @@ export interface DialogueState {
   conversationId?: string
   error?: string
   currentStatus?: string
-  useContextSearch: boolean
 }
 
 import { FileUploadResponse } from '@/lib/file-upload'
@@ -46,7 +45,6 @@ export interface DialogueActions {
   clearMessages: () => void
   setError: (error: string | undefined) => void
   setStatus: (status: string | undefined) => void
-  toggleContextSearch: () => void
   resetForWidget: () => void
 }
 

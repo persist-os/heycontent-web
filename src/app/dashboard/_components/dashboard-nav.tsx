@@ -451,8 +451,9 @@ export const DashboardNav = memo(function DashboardNav() {
             )}
 
             {/* Theme */}
-            <div className="p-6 border-t border-border/20">
-              <div className="flex items-center justify-end">
+            <div className="p-6 border-t border-border/20 bg-muted/10">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-light text-muted-foreground/70">Theme</span>
                 <ThemeToggle />
               </div>
             </div>

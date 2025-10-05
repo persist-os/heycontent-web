@@ -16,34 +16,8 @@ import type {
   MessageTransmissionRequest
 } from '@/app/dashboard/thinking_lab/types';
 
-// Pace and orchestrate progressive thinking statuses
-const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
-const THINKING_STEP_DELAY_MS = 700;
-
-function startProgressiveThinking(useContextSearch: boolean, onStatusUpdate?: (s: string) => void) {
-  let stopped = false;
-  const stop = () => { stopped = true };
-
-  (async () => {
-    const steps = [
-      "Understanding what you're thinking about",
-      ...(useContextSearch ? [
-        "Query needs context - proceeding with vector search",
-        "Looking through all your content",
-        "Looking at each piece carefully",
-        "Quality filtering",
-      ] : []),
-    ];
-
-    for (const step of steps) {
-      if (stopped) return;
-      onStatusUpdate?.(step);
-      await sleep(THINKING_STEP_DELAY_MS);
-    }
-  })();
-
-  return stop;
-}
+// Import progressive thinking utilities
+import { startProgressiveThinking, sleep, POST_THINK_DELAY_MS } from '@/app/dashboard/thinking_lab/hooks/useProgressiveThinking';
 
 // =============================================================================
 // ENHANCED MESSAGE TRANSMISSION WITH CONTEXT INTELLIGENCE
@@ -56,7 +30,6 @@ function startProgressiveThinking(useContextSearch: boolean, onStatusUpdate?: (s
 export async function transmitMessageWithContext(params: MessageTransmissionRequest): Promise<LabResponseData> {
   const {
     content,
-    useContextSearch = true,
     fileAttachments,
     notepadContext,
     workspaceContext,
@@ -90,10 +63,11 @@ export async function transmitMessageWithContext(params: MessageTransmissionRequ
     userId = await getCurrentUserId();
   }
 
+  let stopThinking: (() => void) | null = null;
   try {
     // Start staggered thinking sequence
-    const stopThinking = startProgressiveThinking(useContextSearch, onStatusUpdate);
-
+    stopThinking = startProgressiveThinking(onStatusUpdate); // MAB controls context strategy
+    
     // Prepare request body for thinking lab endpoint
     const requestBody: any = {
       user_id: userId,
@@ -101,8 +75,7 @@ export async function transmitMessageWithContext(params: MessageTransmissionRequ
       is_first_message: isFirstMessage,
       session_identifier: sessionIdentifier,
       notepad_context: notepadContext,
-      workspace_context: workspaceContext,
-      use_vector_search: useContextSearch
+      workspace_context: workspaceContext
     };
 
     // Add file attachments if present
@@ -154,9 +127,9 @@ export async function transmitMessageWithContext(params: MessageTransmissionRequ
       data: data
     });
     
-    stopThinking();
+    stopThinking?.();
     onStatusUpdate?.('Putting my thoughts together');
-    await sleep(250);
+    await sleep(POST_THINK_DELAY_MS);
     onStatusUpdate?.('Generating response...');
     
     // Lab endpoint returns the response directly (not wrapped in success/data)
@@ -177,10 +150,15 @@ export async function transmitMessageWithContext(params: MessageTransmissionRequ
     return result;
 
   } catch (error) {
+    // Ensure we always stop the thinking sequence on error
+    stopThinking?.();
     if (error instanceof AuthenticationError) {
       throw error;
     }
     throw new Error(error instanceof Error ? error.message : 'Failed to send message');
+  } finally {
+    // Defensive: ensure the thinking sequence does not continue
+    stopThinking?.();
   }
 }
 
