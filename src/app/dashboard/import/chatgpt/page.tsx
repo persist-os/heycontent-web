@@ -9,10 +9,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Upload, Loader2 } from 'lucide-react';
+import { Upload, Loader2, CheckCircle } from 'lucide-react';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
-import { ChatGPTImportService } from './service';
-import { useChatGPTImport } from './hooks';
+import { ChatGPTImportService } from './chatGPTImportService';
+import { useChatGPTImport } from './useChatGPTImport';
 import { UploadZone } from './components/UploadZone';
 import { StatusDisplay } from './components/StatusDisplay';
 import { Instructions } from './components/Instructions';
@@ -20,7 +20,15 @@ import { Instructions } from './components/Instructions';
 export default function ChatGPTImportPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
-  const { uploading, importStatus, uploadFile, startPolling } = useChatGPTImport();
+  const { 
+    uploading, 
+    importStatus, 
+    checkingExisting,
+    hasActiveImport,
+    hasAlreadyImported,
+    uploadFile,
+    cancelImport 
+  } = useChatGPTImport();
 
   // Get userId on mount
   useEffect(() => {
@@ -47,10 +55,8 @@ export default function ChatGPTImportPage() {
   const handleUpload = async () => {
     if (!file || !userId) return;
     
-    const jobId = await uploadFile(file);
-    if (jobId) {
-      startPolling(jobId);
-    }
+    // Upload file - Convex will automatically track status via reactive query
+    await uploadFile(file);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -68,13 +74,15 @@ export default function ChatGPTImportPage() {
     }
   };
 
-  // Show loading state while getting userId
-  if (!userId) {
+  // Show loading state while getting userId or checking existing imports
+  if (!userId || checkingExisting) {
     return (
       <div className="container mx-auto max-w-4xl p-6 flex items-center justify-center min-h-[400px]">
         <div className="text-center space-y-3">
           <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground">
+            {!userId ? 'Loading...' : 'Checking for existing imports...'}
+          </p>
         </div>
       </div>
     );
@@ -92,37 +100,68 @@ export default function ChatGPTImportPage() {
 
       <Instructions />
 
-      {/* Upload Zone */}
-      <UploadZone
-        file={file}
-        onFileChange={handleFileChange}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-      />
+      {/* Already Imported Warning */}
+      {hasAlreadyImported && (
+        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-6">
+          <div className="flex items-start gap-3">
+            <CheckCircle className="h-6 w-6 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                Already Imported
+              </h3>
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                You've already imported your ChatGPT conversations. Each user can only import once to prevent duplicates.
+                Your conversations are now part of your Crystal Dam and are being processed into insights.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* Upload Button */}
-      {file && !importStatus && (
-        <button
-          onClick={handleUpload}
-          disabled={uploading}
-          className="w-full px-4 py-3 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-        >
-          {uploading ? (
-            <>
-              <Loader2 className="h-5 w-5 animate-spin" />
-              Uploading...
-            </>
-          ) : (
-            <>
-              <Upload className="h-5 w-5" />
-              Upload and Import
-            </>
+      {/* Active Import Warning */}
+      {!hasAlreadyImported && hasActiveImport && (
+        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-lg p-4">
+          <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+            You have an active import in progress. Please wait for it to complete or cancel it before starting a new import.
+          </p>
+        </div>
+      )}
+
+      {/* Upload Zone - Disabled if already imported or active import */}
+      {!hasAlreadyImported && !hasActiveImport && (
+        <>
+          <UploadZone
+            file={file}
+            onFileChange={handleFileChange}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+          />
+
+          {/* Upload Button */}
+          {file && !importStatus && (
+            <button
+              onClick={handleUpload}
+              disabled={uploading}
+              className="w-full px-4 py-3 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {uploading ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-5 w-5" />
+                  Upload and Import
+                </>
+              )}
+            </button>
           )}
-        </button>
+        </>
       )}
 
       {/* Status Display */}
-      {importStatus && <StatusDisplay status={importStatus} />}
+      {importStatus && <StatusDisplay status={importStatus} onCancel={cancelImport} />}
     </div>
   );
 }

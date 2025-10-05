@@ -493,3 +493,43 @@ export const getCrystalShardsByIds = internalQuery({
         return await getShardsByIdsHandler(ctx, userId, shardIds);
     }
 });
+
+/**
+ * Get crystals by widget ID
+ */
+export const getCrystalsByWidgetId = query({
+    args: {
+        widgetId: v.union(v.string(), v.id("widgets")),
+        userId: v.string(),
+    },
+    returns: v.array(v.any()),
+    handler: async (ctx, { widgetId, userId }) => {
+        const crystals = await ctx.db
+            .query("crystals")
+            .withIndex("by_widget", (q) => q.eq("widgetId", widgetId))
+            .filter((q) => q.eq(q.field("userId"), userId))
+            .collect();
+        
+        return crystals;
+    },
+});
+
+/**
+ * Get shards by widget ID
+ */
+export const getShardsByWidgetId = query({
+    args: {
+        widgetId: v.union(v.string(), v.id("widgets")),
+        userId: v.string(),
+    },
+    returns: v.array(v.any()),
+    handler: async (ctx, { widgetId, userId }) => {
+        const shards = await ctx.db
+            .query("crystal_shards")
+            .withIndex("by_widget", (q) => q.eq("widgetId", widgetId))
+            .filter((q) => q.eq(q.field("userId"), userId))
+            .collect();
+        
+        return shards;
+    },
+});

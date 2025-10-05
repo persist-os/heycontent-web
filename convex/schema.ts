@@ -750,6 +750,7 @@ export default defineSchema({
     
     // Content
     noteId: v.string(),  // Reference to created note
+    openingMessage: v.optional(v.string()),  // Widget's opening message/context
     prompts: v.array(v.object({
       text: v.string(),
       priority: v.number(),
@@ -1166,11 +1167,37 @@ export default defineSchema({
   // Migration Tracking - Clean separation for one-time migrations
   migration_tracking: defineTable({
     userId: v.string(),
-    migrationType: v.string(), // "crystal_initial_generation", future migration types
+    migrationType: v.string(), // "chatgpt_import", "crystal_initial_generation", etc.
     completed: v.boolean(),
     completedAt: v.optional(v.number()),
     attempts: v.optional(v.number()),
     lastAttemptAt: v.optional(v.number()),
+    
+    // Real-time status tracking (for reactive UI)
+    status: v.optional(v.string()), // "queued", "running", "completed", "failed"
+    progress: v.optional(v.string()), // Human-readable progress message
+    jobId: v.optional(v.string()), // Background job ID
+    error: v.optional(v.string()), // Error message if failed
+    
+    // Detailed progress tracking (for ChatGPT import and similar jobs)
+    progressDetails: v.optional(v.object({
+      totalConversations: v.optional(v.number()), // Total conversations discovered
+      processedConversations: v.optional(v.number()), // Conversations processed so far
+      totalBatches: v.optional(v.number()), // Total batches to process
+      processedBatches: v.optional(v.number()), // Batches processed so far
+      totalMessages: v.optional(v.number()), // Total messages discovered
+      processedMessages: v.optional(v.number()), // Messages processed so far
+      percentComplete: v.optional(v.number()), // 0-100 progress percentage
+      currentBatch: v.optional(v.number()), // Current batch being processed
+      processingPhase: v.optional(v.string()), // Current processing phase: parsing | importing | shard_extraction | formation | complete
+      // DEPRECATED: These fields kept for backward compatibility but no longer used
+      // Frontend now queries background_jobs table directly for related jobs
+      shardExtractionJobIds: v.optional(v.array(v.string())),
+      formationJobId: v.optional(v.string()),
+      totalRelatedJobs: v.optional(v.number()),
+      completedRelatedJobs: v.optional(v.number()),
+    })),
+    
     contentProcessed: v.optional(v.object({
       conversations: v.number(),
       notes: v.number(),
@@ -1179,7 +1206,8 @@ export default defineSchema({
   })
   .index("by_user_type", ["userId", "migrationType"])
   .index("by_type", ["migrationType"])
-  .index("by_completion", ["completed"]),
+  .index("by_completion", ["completed"])
+  .index("by_status", ["status"]),
 
   // ========================================
   // CRYSTAL INTELLIGENCE SYSTEM
@@ -1416,7 +1444,8 @@ export default defineSchema({
       v.literal("queued"),
       v.literal("running"),
       v.literal("completed"),
-      v.literal("failed")
+      v.literal("failed"),
+      v.literal("cancelled")
     ),
     priority: v.union(
       v.literal("low"),
@@ -1516,6 +1545,85 @@ export default defineSchema({
   })
   .index("by_user", ["userId"])
   .index("by_triggered", ["triggered"])
+  .index("by_decision_time", ["decisionAt"]),
+
+  // ========================================
+  // CONTEXT ENRICHMENT MAB - Learn optimal context strategies per user
+  // ========================================
+  
+  // Context Enrichment Arms - MAB context strategies per user per agent type
+  context_enrichment_arms: defineTable({
+    userId: v.string(),
+    agentType: v.string(),  // "chat", "widget", "discovery"
+    armId: v.string(),
+    armName: v.string(),
+    
+    // Strategy parameters (stored for reference)
+    strategy_params: v.object({
+      threshold: v.number(),
+      limit: v.number(),
+      content_types: v.array(v.string()),
+    }),
+    
+    // Thompson Sampling parameters (Beta distribution)
+    alpha: v.number(),
+    beta: v.number(),
+    
+    // Performance tracking
+    total_pulls: v.number(),
+    total_reward: v.number(),
+    avg_reward: v.number(),
+    
+    // Confidence metrics
+    mean_estimate: v.number(),
+    confidence_interval: v.object({
+      lower: v.number(),
+      upper: v.number(),
+    }),
+    
+    last_pulled: v.optional(v.number()),
+    updatedAt: v.number(),
+  })
+  .index("by_user", ["userId"])
+  .index("by_user_agent", ["userId", "agentType"])
+  .index("by_user_agent_arm", ["userId", "agentType", "armId"])
+  .index("by_performance", ["userId", "agentType", "avg_reward"]),
+
+  // Context Enrichment Decisions - Track every context enrichment decision
+  context_enrichment_decisions: defineTable({
+    userId: v.string(),
+    agentType: v.string(),
+    conversationId: v.string(),
+    messageIndex: v.number(),  // Which assistant message this decision is for
+    
+    // Decision context
+    armPulled: v.string(),
+    strategyUsed: v.object({
+      threshold: v.number(),
+      limit: v.number(),
+      content_types: v.array(v.string()),
+    }),
+    
+    // All arms' state at decision time (for analysis)
+    arms_state: v.array(v.object({
+      armId: v.string(),
+      armName: v.string(),
+      alpha: v.number(),
+      beta: v.number(),
+      sampled_value: v.number(),
+    })),
+    
+    // Outcome (populated after user responds)
+    engagement_score: v.optional(v.number()),
+    grading_score: v.optional(v.number()),  // If LLM grading was used (10% sample)
+    final_reward: v.optional(v.number()),
+    
+    decisionAt: v.number(),
+    rewardObservedAt: v.optional(v.number()),
+  })
+  .index("by_user", ["userId"])
+  .index("by_user_agent", ["userId", "agentType"])
+  .index("by_conversation", ["conversationId"])
   .index("by_decision_time", ["decisionAt"]),
 });
 
