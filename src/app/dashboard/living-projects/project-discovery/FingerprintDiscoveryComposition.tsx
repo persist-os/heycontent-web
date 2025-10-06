@@ -175,8 +175,8 @@ const FingerprintDiscoveryComposition: React.FC<FingerprintDiscoveryCompositionP
     let stopThinking: (() => void) | null = null
 
     try {
-      // Start progressive thinking UI
-      stopThinking = startProgressiveThinking(true, (status) => {
+      // Start progressive thinking UI (MAB controls context automatically)
+      stopThinking = startProgressiveThinking((status) => {
         setMessages(prev => prev.map(m =>
           m.id === typingId
             ? { ...m, statusHistory: [...(m.statusHistory || []), status], searchStatus: status }
