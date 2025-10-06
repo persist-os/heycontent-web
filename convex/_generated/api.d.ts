@@ -57,6 +57,7 @@ import type * as migrations_migrateConversationMessages from "../migrations/migr
 import type * as migrations_migrateReservedShards from "../migrations/migrateReservedShards.js";
 import type * as migrations_migrateToConvexWidgetIds from "../migrations/migrateToConvexWidgetIds.js";
 import type * as migrations_migrateWidgetsToIndividualDocs from "../migrations/migrateWidgetsToIndividualDocs.js";
+import type * as migrations_runMigration from "../migrations/runMigration.js";
 import type * as migrations from "../migrations.js";
 import type * as noteMutations from "../noteMutations.js";
 import type * as noteQueries from "../noteQueries.js";
@@ -152,6 +153,7 @@ declare const fullApi: ApiFromModules<{
   "migrations/migrateReservedShards": typeof migrations_migrateReservedShards;
   "migrations/migrateToConvexWidgetIds": typeof migrations_migrateToConvexWidgetIds;
   "migrations/migrateWidgetsToIndividualDocs": typeof migrations_migrateWidgetsToIndividualDocs;
+  "migrations/runMigration": typeof migrations_runMigration;
   migrations: typeof migrations;
   noteMutations: typeof noteMutations;
   noteQueries: typeof noteQueries;

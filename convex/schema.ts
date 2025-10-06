@@ -156,8 +156,8 @@ export default defineSchema({
     )),
     
     // 🔄 MIGRATION TRACKING: Temporary fields for migration
-    _migrated: v.optional(v.boolean()),  // Track migration status
-    _migration_verified: v.optional(v.boolean()),  // Verify data integrity
+    migrated: v.optional(v.boolean()),  // Track migration status
+    migrationVerified: v.optional(v.boolean()),  // Verify data integrity
   })
   .index("by_user", ["userId"])
   .index("by_creation", ["createdAt"])

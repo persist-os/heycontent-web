@@ -25,7 +25,7 @@ export const useDialogueStore = create<DialogueStore>()(
         // Initial state
         messages: [],
         isLoading: false,
-        sessionId: `session-${Date.now()}`,
+        sessionId: null,  // ✅ Start with null - Convex will create real ID
         conversationId: undefined,
         error: undefined,
         currentStatus: undefined,
@@ -213,7 +213,7 @@ export const useDialogueStore = create<DialogueStore>()(
         startNewConversation: () => {
             set({
                 messages: [],
-                sessionId: `session-${Date.now()}`,
+                sessionId: null,  // ✅ Clear session - new conversation will get Convex ID
                 conversationId: undefined,
                 error: undefined,
                 currentStatus: undefined
@@ -293,7 +293,7 @@ export const useDialogueStore = create<DialogueStore>()(
         resetForWidget: () => {
             set({
                 messages: [],
-                sessionId: `session-${Date.now()}`,
+                sessionId: null,  // ✅ Clear session - new conversation will get Convex ID
                 error: undefined,
                 currentStatus: undefined,
                 quotedContent: "",

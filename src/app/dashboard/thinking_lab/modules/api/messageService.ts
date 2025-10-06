@@ -133,9 +133,10 @@ export async function transmitMessageWithContext(params: MessageTransmissionRequ
     onStatusUpdate?.('Generating response...');
     
     // Lab endpoint returns the response directly (not wrapped in success/data)
+    // ✅ Don't generate fake session IDs - backend returns real Convex ID
     const result = {
       response_content: data.response_content || 'No response received',
-      session_identifier: data.session_identifier || `session-${Date.now()}`,
+      session_identifier: data.session_identifier || null,  // ✅ Use null, not fake ID
       user_input: data.user_input || content,
       suggestions: data.suggestions || [],
       metadata: data.metadata || {}

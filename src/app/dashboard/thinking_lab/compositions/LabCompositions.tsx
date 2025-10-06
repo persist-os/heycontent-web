@@ -153,7 +153,7 @@ const NotepadPanel = React.memo<{
         fromChat={true}
         canNavigateBack={true}
         onBack={() => {}}
-        sessionId={sessionId || "session-1"}
+        sessionId={sessionId || undefined}  // ✅ Use undefined instead of fake "session-1"
         panelState={isFullScreen ? "notepad-full" : "split"}
       />
     </div>
