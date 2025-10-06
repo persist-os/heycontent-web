@@ -1277,9 +1277,9 @@ export default defineSchema({
     
     // Trigger thresholds (configurable)
     triggers: v.object({
-      chat_messages: v.number(),        // Default: 25
-      smart_notes: v.number(),          // Default: 10
-      crystal_formations: v.number(),   // Default: 5
+      chat_messages: v.number(),        // DEPRECATED: MAB system controls triggering
+      smart_notes: v.number(),          // DEPRECATED: MAB system controls triggering
+      crystal_formations: v.number(),   // DEPRECATED: MAB system controls triggering
       days_since_last: v.number(),      // Default: 7
     }),
     
