@@ -120,9 +120,6 @@ const nextConfig = {
     ],
   },
   
-  // Optimize build output
-  swcMinify: true, // Use SWC for faster minification
-  
   eslint: {
     ignoreDuringBuilds: true,
   },
