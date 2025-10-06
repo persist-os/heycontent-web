@@ -59,7 +59,7 @@ export const createConversation = mutation({
 export const addMessageToConversation = mutation({
 args: {
     userId: v.string(),
-    conversationId: v.id("conversations"),
+    conversationId: v.string(),
     message: v.object({
       content: v.string(),
       role: v.union(v.literal("user"), v.literal("assistant")),
@@ -77,9 +77,21 @@ args: {
     }),
 },
 handler: async (ctx, args) => {
-    const conversation = await ctx.db.get(args.conversationId);
-    if (!conversation || conversation.userId !== args.userId) {
-      throw new Error("Conversation not found or access denied");
+    const doc = await ctx.db.get(args.conversationId as any);
+    if (!doc) {
+      throw new Error("Conversation not found");
+    }
+
+    // Type check to ensure it's a conversation document
+    if (!('userId' in doc) || !('messages' in doc)) {
+      throw new Error("Invalid document type - not a conversation");
+    }
+
+    const conversation = doc as any; // Type assertion after validation
+
+    // Verify ownership
+    if (conversation.userId !== args.userId) {
+      throw new Error("Unauthorized access to conversation");
     }
 
     const now = Date.now();
@@ -89,7 +101,7 @@ handler: async (ctx, args) => {
     
     // 1. Write to NEW messages table
     await ctx.db.insert("messages", {
-      conversationId: args.conversationId,
+      conversationId: args.conversationId as any,
       userId: args.userId,
       content: args.message.content,
       role: args.message.role,
@@ -105,7 +117,7 @@ handler: async (ctx, args) => {
     // 2. Write to LEGACY messages array (for backward compatibility during migration)
     const updatedMessages = [...(conversation.messages || []), args.message];
     
-    await ctx.db.patch(args.conversationId, {
+    await ctx.db.patch(args.conversationId as any, {
       messages: updatedMessages,
       messageCount: sequence + 1,
       lastMessageAt: args.message.timestamp,
