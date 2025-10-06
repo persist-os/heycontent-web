@@ -14,20 +14,46 @@ export class ChatGPTImportService {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch('/api/chatgpt-import/upload', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: formData,
-    });
+    // Get backend URL - upload directly to avoid Vercel function size limits
+    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://backend.hicontent.co';
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Upload failed');
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/v1/chatgpt/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ 
+          error: 'Upload failed', 
+          detail: `HTTP ${response.status}` 
+        }));
+        
+        // Provide user-friendly error messages based on status code
+        if (response.status === 502) {
+          throw new Error('Could not connect to backend service. Please try again later or contact support.');
+        } else if (response.status === 504) {
+          throw new Error('Upload timed out. Please check your connection and try again with a smaller file.');
+        } else if (response.status === 500 && error.detail?.includes('Backend URL not configured')) {
+          throw new Error('Service configuration error. Please contact support.');
+        } else {
+          throw new Error(error.detail || error.error || 'Upload failed');
+        }
+      }
+
+      return response.json();
+    } catch (error: any) {
+      // Handle network errors (when fetch itself fails)
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Network error: Could not reach upload service. Please check your internet connection and try again.');
+      }
+      
+      // Re-throw errors we've already formatted
+      throw error;
     }
-
-    return response.json();
   }
 
   /**

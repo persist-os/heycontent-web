@@ -43,8 +43,6 @@ import type * as formationQueries from "../formationQueries.js";
 import type * as friendshipMutations from "../friendshipMutations.js";
 import type * as friendshipQueries from "../friendshipQueries.js";
 import type * as http from "../http.js";
-import type * as httpActions_index from "../httpActions/index.js";
-import type * as httpActions_notes_notes from "../httpActions/notes/notes.js";
 import type * as intelligenceActions from "../intelligenceActions.js";
 import type * as intelligenceBandit from "../intelligenceBandit.js";
 import type * as intelligenceConfig from "../intelligenceConfig.js";
@@ -139,8 +137,6 @@ declare const fullApi: ApiFromModules<{
   friendshipMutations: typeof friendshipMutations;
   friendshipQueries: typeof friendshipQueries;
   http: typeof http;
-  "httpActions/index": typeof httpActions_index;
-  "httpActions/notes/notes": typeof httpActions_notes_notes;
   intelligenceActions: typeof intelligenceActions;
   intelligenceBandit: typeof intelligenceBandit;
   intelligenceConfig: typeof intelligenceConfig;

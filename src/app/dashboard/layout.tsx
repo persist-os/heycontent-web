@@ -14,6 +14,8 @@ import UpgradeModal from '@/app/settings/tabs/subscription/upgrade-modal';
 import { useContentContextActions } from '@/store/content-context-store';
 import { UsernameRequiredModal } from '@/components/auth/UsernameRequiredModal';
 import { useUsernameRequired } from '@/hooks/useUsernameRequired';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 
 // Pages that don't require a subscription
 const PUBLIC_PATHS = [
@@ -40,6 +42,12 @@ export default function DashboardLayout({
   
   // Track user changes to clear context on logout/login
   const previousUserRef = useRef<string | null>(null);
+  
+  // Get usage summary directly from Convex
+  const usageSummary = useQuery(
+    api.usageEvents.getUsageSummary,
+    firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
+  );
   
   // Check if current path is public or doesn't require a subscription
   const isPublicPath = useMemo(() => {
@@ -114,34 +122,17 @@ export default function DashboardLayout({
       return;
     }
     
-    // If backend signals free-tier exceeded, lock to subscription page
-    const controller = new AbortController();
-    (async () => {
-      try {
-        const apiKey = await getApiKey();
-        if (!apiKey) return;
-        // Lightweight ping to backend usage summary to detect headers/errors
-        const resp = await fetch('/api/subscription/usage', {
-          method: 'GET',
-          headers: { 'Authorization': `Bearer ${apiKey}` },
-          signal: controller.signal,
-        });
-        if (resp.status === 402) {
-          // Check if it's a subscription required error
-          if (resp.headers.get('X-Subscription-Required') === 'true') {
-            if (!showSubscriptionRequired) {
-              setShowSubscriptionRequired(true);
-            }
-            return;
-          }
+    // Check if free-tier is exceeded using Convex query
+    if (usageSummary) {
+      const { total, included } = usageSummary;
+      if (included && total >= included) {
+        if (!showSubscriptionRequired) {
+          setShowSubscriptionRequired(true);
         }
-      } catch (_) {
-        // Ignore errors; don't block dashboard
+        return;
       }
-    })();
-
-    return () => controller.abort();
-  }, [isPublicPath, isSubscriptionLoading, isSubscribed, showSubscriptionRequired, pathname, router]);
+    }
+  }, [isPublicPath, isSubscriptionLoading, isSubscribed, showSubscriptionRequired, pathname, router, usageSummary]);
 
   // Global fetch interceptor for subscription required errors
   useEffect(() => {
