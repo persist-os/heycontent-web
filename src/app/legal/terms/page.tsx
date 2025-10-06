@@ -1,5 +1,31 @@
 import React from 'react'
 import Link from 'next/link'
+import { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Terms of Service - HeyContext',
+  description: 'HeyContext Terms of Service. Legal terms governing your use of our AI-powered memory platform. Privacy-first, user-focused terms for a transparent relationship.',
+  keywords: [
+    'HeyContext terms',
+    'terms of service',
+    'user agreement',
+    'legal terms',
+    'service agreement'
+  ],
+  openGraph: {
+    title: 'Terms of Service - HeyContext',
+    description: 'Legal terms governing your use of HeyContext AI memory platform.',
+    type: 'website',
+    url: 'https://heycontext.ai/legal/terms',
+  },
+  alternates: {
+    canonical: 'https://heycontext.ai/legal/terms',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
 
 export default function Terms() {
   return (
