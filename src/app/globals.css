@@ -567,18 +567,18 @@
   .snap-y {
     scroll-snap-type: y proximity;
   }
-  
+
   /* Better touch targets */
   .touch-manipulation {
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
   }
-  
+
   /* Smooth momentum scrolling on iOS */
   * {
     -webkit-overflow-scrolling: touch;
   }
-  
+
   /* Prevent zoom on inputs */
   body input[type="text"],
   body input[type="email"],
@@ -586,43 +586,43 @@
   body textarea {
     font-size: 16px;
   }
-  
+
   /* Enhanced button feedback */
   button:active,
   .active\:scale-95:active {
     transform: scale(0.95);
     transition: transform 0.1s ease;
   }
-  
+
   /* Better hover states for touch */
   @media (hover: none) and (pointer: coarse) {
     .hover\:scale-105:hover {
       transform: none;
     }
-    
+
     .hover\:bg-blue-50\/30:hover {
       background-color: rgba(239, 246, 255, 0.3);
     }
-    
+
     .hover\:bg-slate-50\/50:hover {
       background-color: rgba(248, 250, 252, 0.5);
     }
   }
-  
+
   /* Improved scroll indicators */
   ::-webkit-scrollbar {
     width: 3px;
   }
-  
+
   ::-webkit-scrollbar-track {
     background: transparent;
   }
-  
+
   ::-webkit-scrollbar-thumb {
     background: rgba(148, 163, 184, 0.3);
     border-radius: 3px;
   }
-  
+
   ::-webkit-scrollbar-thumb:hover {
     background: rgba(148, 163, 184, 0.5);
   }
@@ -637,7 +637,7 @@
   .animate-float-slow {
     animation: none;
   }
-  
+
   .transition-all,
   .transition-transform,
   .transition-colors,

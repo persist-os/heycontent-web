@@ -3629,5 +3629,190 @@ app.post("/api/contentSharing/revoke", async (c) => {
   }
 });
 
+// ============================================================================
+// WEBHOOK EVENT TRACKING ROUTES
+// ============================================================================
+
+/**
+ * Log a webhook event to the database
+ */
+app.post("/api/webhookEvents/log", async (c) => {
+  try {
+    const ctx = c.env;
+    const body = await c.req.json();
+    
+    const result = await ctx.runMutation(api.webhookEvents.logWebhookEvent, {
+      eventId: body.eventId,
+      eventType: body.eventType,
+      eventData: body.eventData,
+      apiVersion: body.apiVersion,
+      userId: body.userId,
+      subscriptionId: body.subscriptionId,
+      customerId: body.customerId,
+      invoiceId: body.invoiceId,
+      ipAddress: body.ipAddress,
+      userAgent: body.userAgent,
+    });
+    
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[WEBHOOK_LOG] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to log webhook event"
+    }, 500);
+  }
+});
+
+/**
+ * Update webhook event status
+ */
+app.post("/api/webhookEvents/updateStatus", async (c) => {
+  try {
+    const ctx = c.env;
+    const body = await c.req.json();
+    
+    const result = await ctx.runMutation(api.webhookEvents.updateWebhookStatus, {
+      eventId: body.eventId,
+      status: body.status,
+      error: body.error,
+      errorStack: body.errorStack,
+      processingDuration: body.processingDuration,
+      userId: body.userId,
+      subscriptionId: body.subscriptionId,
+      customerId: body.customerId,
+      invoiceId: body.invoiceId,
+    });
+    
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[WEBHOOK_STATUS] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to update webhook status"
+    }, 500);
+  }
+});
+
+/**
+ * Get webhook history for a user
+ */
+app.get("/api/webhookEvents/history/:userId", async (c) => {
+  try {
+    const ctx = c.env;
+    const userId = c.req.param("userId");
+    const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : undefined;
+    const eventType = c.req.query("eventType");
+    
+    const events = await ctx.runQuery(api.webhookEvents.getWebhookHistory, {
+      userId,
+      limit,
+      eventType,
+    });
+    
+    return c.json(events);
+  } catch (error: any) {
+    console.error("[WEBHOOK_HISTORY] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to fetch webhook history"
+    }, 500);
+  }
+});
+
+/**
+ * Get failed webhooks
+ */
+app.get("/api/webhookEvents/failed", async (c) => {
+  try {
+    const ctx = c.env;
+    const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : undefined;
+    const since = c.req.query("since") ? parseInt(c.req.query("since")!) : undefined;
+    
+    const events = await ctx.runQuery(api.webhookEvents.getFailedWebhooks, {
+      limit,
+      since,
+    });
+    
+    return c.json(events);
+  } catch (error: any) {
+    console.error("[WEBHOOK_FAILED] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to fetch failed webhooks"
+    }, 500);
+  }
+});
+
+/**
+ * Get webhook statistics
+ */
+app.get("/api/webhookEvents/stats", async (c) => {
+  try {
+    const ctx = c.env;
+    const since = c.req.query("since") ? parseInt(c.req.query("since")!) : undefined;
+    const eventType = c.req.query("eventType");
+    
+    const stats = await ctx.runQuery(api.webhookEvents.getWebhookStats, {
+      since,
+      eventType,
+    });
+    
+    return c.json(stats);
+  } catch (error: any) {
+    console.error("[WEBHOOK_STATS] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to fetch webhook statistics"
+    }, 500);
+  }
+});
+
+/**
+ * Get webhooks for a subscription
+ */
+app.get("/api/webhookEvents/subscription/:subscriptionId", async (c) => {
+  try {
+    const ctx = c.env;
+    const subscriptionId = c.req.param("subscriptionId");
+    const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : undefined;
+    
+    const events = await ctx.runQuery(api.webhookEvents.getSubscriptionWebhooks, {
+      subscriptionId,
+      limit,
+    });
+    
+    return c.json(events);
+  } catch (error: any) {
+    console.error("[WEBHOOK_SUBSCRIPTION] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to fetch subscription webhooks"
+    }, 500);
+  }
+});
+
+/**
+ * Retry a failed webhook
+ */
+app.post("/api/webhookEvents/retry", async (c) => {
+  try {
+    const ctx = c.env;
+    const body = await c.req.json();
+    
+    const result = await ctx.runMutation(api.webhookEvents.retryFailedWebhook, {
+      eventId: body.eventId,
+    });
+    
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[WEBHOOK_RETRY] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to retry webhook"
+    }, 500);
+  }
+});
+
 const router = new HttpRouterWithHono(app);
 export default router;
