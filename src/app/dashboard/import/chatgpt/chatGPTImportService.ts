@@ -3,48 +3,82 @@ import { ImportStatus, UploadResponse } from './chatGPTImportTypes';
 
 export class ChatGPTImportService {
   /**
-   * Upload a ChatGPT export zip file
+   * Upload a ChatGPT export zip file using signed URL (bypasses backend size limits)
+   * 
+   * Flow:
+   * 1. Get signed URL from backend
+   * 2. Upload file directly to GCS
+   * 3. Confirm upload with backend to trigger processing
    */
-  static async uploadFile(file: File): Promise<UploadResponse> {
+  static async uploadFile(file: File, onProgress?: (progress: number) => void): Promise<UploadResponse> {
     const apiKey = await getApiKey();
     if (!apiKey) {
       throw new Error('Not authenticated');
     }
 
-    const formData = new FormData();
-    formData.append('file', file);
-
-    // Get backend URL - upload directly to avoid Vercel function size limits
     const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://backend.hicontent.co';
 
     try {
-      const response = await fetch(`${BACKEND_URL}/api/v1/chatgpt/upload`, {
+      // Step 1: Get signed upload URL
+      onProgress?.(10);
+      const urlResponse = await fetch(`${BACKEND_URL}/api/v1/chatgpt/upload-url`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
         },
-        body: formData,
       });
 
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ 
-          error: 'Upload failed', 
-          detail: `HTTP ${response.status}` 
+      if (!urlResponse.ok) {
+        const error = await urlResponse.json().catch(() => ({ 
+          error: 'Failed to get upload URL', 
+          detail: `HTTP ${urlResponse.status}` 
         }));
-        
-        // Provide user-friendly error messages based on status code
-        if (response.status === 502) {
-          throw new Error('Could not connect to backend service. Please try again later or contact support.');
-        } else if (response.status === 504) {
-          throw new Error('Upload timed out. Please check your connection and try again with a smaller file.');
-        } else if (response.status === 500 && error.detail?.includes('Backend URL not configured')) {
-          throw new Error('Service configuration error. Please contact support.');
-        } else {
-          throw new Error(error.detail || error.error || 'Upload failed');
-        }
+        throw new Error(error.detail || error.error || 'Failed to get upload URL');
       }
 
-      return response.json();
+      const { upload_url, file_path } = await urlResponse.json();
+
+      // Step 2: Upload file directly to GCS using signed URL
+      onProgress?.(20);
+      const uploadResponse = await fetch(upload_url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/zip',
+        },
+        body: file,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error(`Upload to GCS failed: ${uploadResponse.status} ${uploadResponse.statusText}`);
+      }
+
+      onProgress?.(80);
+
+      // Step 3: Confirm upload and trigger processing
+      const confirmResponse = await fetch(`${BACKEND_URL}/api/v1/chatgpt/confirm-upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          file_path: file_path,
+          filename: file.name,
+        }),
+      });
+
+      if (!confirmResponse.ok) {
+        const error = await confirmResponse.json().catch(() => ({ 
+          error: 'Upload confirmation failed', 
+          detail: `HTTP ${confirmResponse.status}` 
+        }));
+        throw new Error(error.detail || error.error || 'Upload confirmation failed');
+      }
+
+      onProgress?.(100);
+      return confirmResponse.json();
+
     } catch (error: any) {
       // Handle network errors (when fetch itself fails)
       if (error instanceof TypeError && error.message.includes('fetch')) {
