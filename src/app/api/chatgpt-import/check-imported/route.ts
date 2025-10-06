@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
-
 export async function GET(request: NextRequest) {
   try {
     // Get API key from Authorization header
@@ -12,26 +10,67 @@ export async function GET(request: NextRequest) {
 
     const apiKey = authHeader.substring(7);
     
-    // Forward to backend to check if user has imported
-    const response = await fetch(`${BACKEND_URL}/api/v1/chatgpt/check-imported`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-      },
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      return NextResponse.json(error, { status: response.status });
+    // Validate backend URL exists
+    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+    if (!BACKEND_URL) {
+      console.error('[chatgpt-import/check-imported] CRITICAL: NEXT_PUBLIC_BACKEND_URL not set!');
+      return NextResponse.json(
+        { error: 'Configuration error', detail: 'Backend URL not configured' }, 
+        { status: 500 }
+      );
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    const backendEndpoint = `${BACKEND_URL}/api/v1/chatgpt/check-imported`;
+    
+    // Add timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    try {
+      // Forward to backend to check if user has imported
+      const response = await fetch(backendEndpoint, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
 
-  } catch (error) {
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+        return NextResponse.json(error, { status: response.status });
+      }
+
+      const data = await response.json();
+      return NextResponse.json(data);
+
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId);
+      
+      if (fetchError.name === 'AbortError') {
+        return NextResponse.json(
+          { error: 'Request timeout' }, 
+          { status: 504 }
+        );
+      }
+      
+      if (fetchError instanceof TypeError) {
+        console.error('[chatgpt-import/check-imported] Network error:', fetchError.message);
+        return NextResponse.json(
+          { error: 'Backend connection failed' }, 
+          { status: 502 }
+        );
+      }
+      
+      throw fetchError;
+    }
+
+  } catch (error: any) {
     console.error('[chatgpt-import/check-imported] Error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', detail: String(error) },
+      { error: 'Internal server error', detail: error.message || String(error) },
       { status: 500 }
     );
   }
