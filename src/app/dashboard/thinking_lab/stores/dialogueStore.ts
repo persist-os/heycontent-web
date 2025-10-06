@@ -91,11 +91,23 @@ export const useDialogueStore = create<DialogueStore>()(
                 // Determine conversation type based on context
                 const conversationType = widgetOutputId ? 'widget_prompt' : 'general'
 
+                // ATOMIC PATTERN: Use conversationId (Convex ID) if available, null for first message
+                const isFirstMessage = messages.length === 0
+                const actualSessionId = isFirstMessage ? null : (conversationId || sessionId)
+
+                console.log('[DialogueStore] Message context:', {
+                    isFirstMessage,
+                    conversationId,
+                    sessionId,
+                    actualSessionId,
+                    messageCount: messages.length
+                })
+
                 // Prepare request parameters
                 const requestParams: MessageTransmissionRequest = {
                     content,
-                    isFirstMessage: messages.length === 0,
-                    sessionIdentifier: sessionId,
+                    isFirstMessage,
+                    sessionIdentifier: actualSessionId,
                     workspaceContext: conversationId ? { contentId: conversationId } : null,
                     notepadContext, // Include notepad context
                     fileAttachments,
@@ -145,14 +157,24 @@ export const useDialogueStore = create<DialogueStore>()(
                 }
 
                 // Replace typing message with real response
+                // Backend returns the Convex conversation ID as session_identifier
+                const convexConversationId = response.session_identifier
+                
+                console.log('[DialogueStore] Response received:', {
+                    session_identifier: response.session_identifier,
+                    previousConversationId: get().conversationId,
+                    previousSessionId: get().sessionId
+                })
+                
                 set(state => ({
                     messages: state.messages.map(msg => 
                         msg.status === 'typing' ? assistantMessage : msg
                     ),
                     isLoading: false,
                     currentStatus: undefined,
-                    sessionId: response.session_identifier || state.sessionId,
-                    conversationId: response.session_identifier || state.conversationId
+                    conversationId: convexConversationId || state.conversationId,
+                    // Keep sessionId as fallback but conversationId is the source of truth
+                    sessionId: convexConversationId || state.sessionId
                 }))
 
             } catch (error) {
