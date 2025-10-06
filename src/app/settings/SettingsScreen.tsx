@@ -150,7 +150,7 @@ const SettingsScreen = () => {
               { id: 'account', label: 'Account', description: 'Profile and personal information' },
               { id: 'friends', label: 'Friends', description: 'Manage friends and sharing' },
               { id: 'subscription', label: 'Subscription', description: 'Billing and plan details' },
-              // { id: 'imports', label: 'Imports', description: 'Import external data' },
+              { id: 'imports', label: 'Imports', description: 'Import external data' },
               { id: 'data', label: 'Privacy', description: 'Security and data management' }
             ].map((tab) => (
               <button
@@ -205,10 +205,9 @@ const SettingsScreen = () => {
             </div>
           )}
 
-          {/* TEMPORARILY HIDDEN - Import Tab */}
-          {/* {activeTab === 'imports' && (
+          {activeTab === 'imports' && (
             <div className="space-y-8">
-              {/* Imports Section *}
+              {/* Imports Section */}
               <div className="space-y-6">
                 <div className="space-y-2">
                   <h2 className="text-2xl font-semibold">Import External Data</h2>
@@ -217,7 +216,7 @@ const SettingsScreen = () => {
                   </p>
                 </div>
 
-                {/* ChatGPT Import Card *}
+                {/* ChatGPT Import Card */}
                 <div className="border border-border rounded-lg p-6 hover:border-primary/50 transition-colors">
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-4">
@@ -253,7 +252,7 @@ const SettingsScreen = () => {
                   </div>
                 </div>
 
-                {/* Coming Soon - Other Imports *}
+                {/* Coming Soon - Other Imports */}
                 <div className="border border-dashed border-border rounded-lg p-6 opacity-60">
                   <div className="flex items-center justify-between">
                     <div className="space-y-2">
@@ -266,7 +265,7 @@ const SettingsScreen = () => {
                 </div>
               </div>
             </div>
-          )} */}
+          )}
 
           {activeTab === 'data' && (
             <div className="space-y-8">
