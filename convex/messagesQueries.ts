@@ -123,7 +123,7 @@ export const isConversationMigrated = query({
   },
   handler: async (ctx, args) => {
     const conversation = await ctx.db.get(args.conversationId);
-    return conversation?._migrated || false;
+    return conversation?.migrated || false;
   },
 });
 
