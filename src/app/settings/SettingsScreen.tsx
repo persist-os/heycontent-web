@@ -216,8 +216,8 @@ const SettingsScreen = () => {
                   </p>
                 </div>
 
-                {/* ChatGPT Import Card */}
-                <div className="border border-border rounded-lg p-6 hover:border-primary/50 transition-colors">
+                {/* ChatGPT Import Card - COMMENTED OUT */}
+                {/* <div className="border border-border rounded-lg p-6 hover:border-primary/50 transition-colors">
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-4">
                       <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/20">
@@ -250,7 +250,7 @@ const SettingsScreen = () => {
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Coming Soon - Other Imports */}
                 <div className="border border-dashed border-border rounded-lg p-6 opacity-60">
