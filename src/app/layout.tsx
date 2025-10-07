@@ -186,11 +186,6 @@ export default async function RootLayout({
       price: '0',
       priceCurrency: 'USD'
     },
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: '4.8',
-      ratingCount: '100'
-    },
     description: siteDescription
   }
 

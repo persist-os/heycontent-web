@@ -78,14 +78,22 @@ export function HeroSection() {
             <Logo className="h-6 sm:h-8 text-slate-800 dark:text-slate-200" />
           </div>
           
-          <button 
-            onClick={() => router.push('/auth/login')}
-            onTouchStart={() => setIsButtonPressed(true)}
-            onTouchEnd={() => setIsButtonPressed(false)}
-            className={`group px-4 sm:px-6 lg:px-8 py-2 sm:py-3 bg-gradient-to-r from-slate-900 to-slate-800 dark:from-slate-100 dark:to-slate-200 text-slate-50 dark:text-slate-900 rounded-full text-xs sm:text-sm font-medium hover:from-slate-800 hover:to-slate-700 dark:hover:from-slate-200 dark:hover:to-slate-300 transition-all duration-300 hover:scale-105 active:scale-95 hover:shadow-xl hover:shadow-slate-900/20 ${isButtonPressed ? 'scale-95' : ''} ${isMobile ? 'min-h-[44px] touch-manipulation' : ''}`}
-          >
-            <span className="group-hover:tracking-wide transition-all duration-300">Sign in</span>
-          </button>
+          <div className="flex items-center gap-4 sm:gap-6">
+            <button 
+              onClick={() => router.push('/pricing')}
+              className="text-sm sm:text-base text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors font-light"
+            >
+              Pricing
+            </button>
+            <button 
+              onClick={() => router.push('/auth/login')}
+              onTouchStart={() => setIsButtonPressed(true)}
+              onTouchEnd={() => setIsButtonPressed(false)}
+              className={`group px-4 sm:px-6 lg:px-8 py-2 sm:py-3 bg-gradient-to-r from-slate-900 to-slate-800 dark:from-slate-100 dark:to-slate-200 text-slate-50 dark:text-slate-900 rounded-full text-xs sm:text-sm font-medium hover:from-slate-800 hover:to-slate-700 dark:hover:from-slate-200 dark:hover:to-slate-300 transition-all duration-300 hover:scale-105 active:scale-95 hover:shadow-xl hover:shadow-slate-900/20 ${isButtonPressed ? 'scale-95' : ''} ${isMobile ? 'min-h-[44px] touch-manipulation' : ''}`}
+            >
+              <span className="group-hover:tracking-wide transition-all duration-300">Sign in</span>
+            </button>
+          </div>
         </div>
       </nav>
 
