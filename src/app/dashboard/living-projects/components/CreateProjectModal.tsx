@@ -1,165 +1,312 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { FileText, MessageSquare, Plus, X } from 'lucide-react'
+import { ContentAttachmentPanel } from '../[projectId]/widgets/[widgetId]/components/ContentAttachmentPanel'
 
 interface CreateProjectModalProps {
   isOpen: boolean
   onClose: () => void
-  onCreateProject: (name: string, description?: string) => void
+  onCreateProject: (name: string, description?: string, noteIds?: string[], conversationIds?: string[], crystalIds?: string[], shardIds?: string[]) => Promise<string>
+  userId: string
+  isCreating?: boolean
+  defaultName?: string
 }
 
-export function CreateProjectModal({ isOpen, onClose, onCreateProject }: CreateProjectModalProps) {
+export function CreateProjectModal({ 
+  isOpen, 
+  onClose, 
+  onCreateProject, 
+  userId,
+  isCreating: externalIsCreating,
+  defaultName 
+}: CreateProjectModalProps) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [internalIsLoading, setInternalIsLoading] = useState(false)
+  const [showContentSelector, setShowContentSelector] = useState(false)
+  const [attachedNoteIds, setAttachedNoteIds] = useState<string[]>([])
+  const [attachedConversationIds, setAttachedConversationIds] = useState<string[]>([])
+  const [attachedCrystalIds, setAttachedCrystalIds] = useState<string[]>([])
+  const [attachedShardIds, setAttachedShardIds] = useState<string[]>([])
+
+  // Use external isCreating if provided, otherwise use internal state
+  const isLoading = externalIsCreating !== undefined ? externalIsCreating : internalIsLoading
+
+  // Set default name when modal opens with a default name
+  useEffect(() => {
+    if (isOpen && defaultName) {
+      setName(defaultName)
+    }
+  }, [isOpen, defaultName])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) return
 
-    setIsLoading(true)
+    if (externalIsCreating === undefined) {
+      setInternalIsLoading(true)
+    }
+    
     try {
-      onCreateProject(name.trim(), description.trim() || undefined)
+      // Create project with all attached content
+      await onCreateProject(
+        name.trim(), 
+        description.trim() || undefined,
+        attachedNoteIds.length > 0 ? attachedNoteIds : undefined,
+        attachedConversationIds.length > 0 ? attachedConversationIds : undefined,
+        attachedCrystalIds.length > 0 ? attachedCrystalIds : undefined,
+        attachedShardIds.length > 0 ? attachedShardIds : undefined
+      )
+      
       // Reset form
       setName('')
       setDescription('')
+      setAttachedNoteIds([])
+      setAttachedConversationIds([])
+      setAttachedCrystalIds([])
+      setAttachedShardIds([])
       onClose()
     } catch (error) {
       console.error('Failed to create project:', error)
     } finally {
-      setIsLoading(false)
+      if (externalIsCreating === undefined) {
+        setInternalIsLoading(false)
+      }
     }
   }
 
   const handleClose = () => {
     setName('')
     setDescription('')
+    setAttachedNoteIds([])
+    setAttachedConversationIds([])
+    setAttachedCrystalIds([])
+    setAttachedShardIds([])
+    setShowContentSelector(false)
     onClose()
   }
 
+  const removeNote = (noteId: string) => {
+    setAttachedNoteIds(prev => prev.filter(id => id !== noteId))
+  }
+
+  const removeConversation = (convId: string) => {
+    setAttachedConversationIds(prev => prev.filter(id => id !== convId))
+  }
+  
+  const removeCrystal = (crystalId: string) => {
+    setAttachedCrystalIds(prev => prev.filter(id => id !== crystalId))
+  }
+  
+  const removeShard = (shardId: string) => {
+    setAttachedShardIds(prev => prev.filter(id => id !== shardId))
+  }
+  
+  const totalAttached = attachedNoteIds.length + attachedConversationIds.length + attachedCrystalIds.length + attachedShardIds.length
+
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg border-border/30">
-        {/* Asymmetric gradient line at top */}
-        <div className="h-px bg-gradient-to-r from-blue-400/60 via-transparent to-transparent w-3/4 mb-8" />
-        
-        <DialogHeader className="pb-8">
-          <div className="space-y-6">
-            {/* Asymmetric header layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-end">
-              <div className="lg:col-span-3 space-y-3">
-                <div className="flex items-baseline gap-4">
-                  <DialogTitle className="text-4xl font-light tracking-tight text-foreground">
-                    Living
-                  </DialogTitle>
-                  <div className="h-px bg-border/40 flex-1 mb-2" />
-                </div>
-                <h2 className="text-2xl font-medium text-muted-foreground ml-6">
-                  project
-                </h2>
+    <>
+      <Dialog open={isOpen && !showContentSelector} onOpenChange={handleClose}>
+        <DialogContent className="sm:max-w-lg border-border/30">
+          {/* Gradient line at top */}
+          <div className="h-px bg-gradient-to-r from-blue-400/60 via-transparent to-transparent w-3/4 mb-8" />
+          
+          <DialogHeader className="pb-8">
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <DialogTitle className="text-3xl font-light tracking-tight text-foreground">
+                  {defaultName ? 'New project' : 'Living project'}
+                </DialogTitle>
+                
+                <div className="h-px bg-gradient-to-r from-transparent via-border/50 to-transparent w-2/3" />
               </div>
-              <div className="lg:col-span-2">
-                <div className="text-xs text-muted-foreground/60 leading-relaxed">
-                  Evolves through conversation
-                </div>
+              
+              <DialogDescription className="text-muted-foreground/80 leading-relaxed text-base ml-1">
+                {defaultName 
+                  ? 'Transform your selected note into the foundation of a new project workspace.'
+                  : 'Name your project and give it some initial context. It will evolve through discovery conversations.'
+                }
+              </DialogDescription>
+            </div>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <Label htmlFor="project-name" className="text-sm font-medium text-foreground/90">
+                  Project name
+                </Label>
+                <Input
+                  id="project-name"
+                  placeholder={defaultName || "Content Strategy Q1, Personal Blog, Creative Workshop..."}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="text-base py-3 border-border/50 focus:border-blue-400/60 transition-colors duration-300"
+                  autoFocus
+                  maxLength={100}
+                  disabled={isLoading}
+                />
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="project-description" className="text-sm font-medium text-foreground/90">
+                  {defaultName ? 'Brief context' : 'Initial direction'}
+                  <span className="text-muted-foreground/60 ml-2 font-normal">optional</span>
+                </Label>
+                <Textarea
+                  id="project-description"
+                  placeholder={defaultName ? "A few words about what you're building..." : "What are you hoping to build or explore together..."}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="text-base min-h-[90px] resize-none border-border/50 focus:border-blue-400/60 transition-colors duration-300"
+                  maxLength={500}
+                  disabled={isLoading}
+                />
+                {description.length > 0 && (
+                  <div className="text-xs text-muted-foreground/60 text-right">
+                    {description.length}/500
+                  </div>
+                )}
               </div>
             </div>
-            
-            <DialogDescription className="text-muted-foreground/80 leading-relaxed text-base ml-1 mt-6">
-              Name your project and give it some initial context. Through discovery conversations, 
-              it will develop its own intelligence and custom interface.
-            </DialogDescription>
-          </div>
-        </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <div className="space-y-6">
-            <div className="space-y-3">
-              <Label htmlFor="project-name" className="text-sm font-medium text-foreground/90">
-                What should we call it?
-              </Label>
-              <Input
-                id="project-name"
-                placeholder="Content Strategy Q1, Personal Blog, Creative Workshop..."
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="text-base py-3 border-border/50 focus:border-blue-400/60 transition-colors duration-300"
-                autoFocus
-                maxLength={100}
-              />
-            </div>
+            {/* Attach content section */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium text-foreground/90">
+                  Attach content
+                  <span className="text-muted-foreground/60 ml-2 font-normal">optional</span>
+                </Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowContentSelector(true)}
+                  className="text-xs gap-2 border-border/50 hover:border-blue-400/60 transition-colors duration-300"
+                  disabled={isLoading}
+                >
+                  <Plus className="w-3 h-3" />
+                  Add content
+                </Button>
+              </div>
 
-            <div className="space-y-3">
-              <Label htmlFor="project-description" className="text-sm font-medium text-foreground/90">
-                Initial direction
-                <span className="text-muted-foreground/60 ml-2 font-normal">optional</span>
-              </Label>
-              <Textarea
-                id="project-description"
-                placeholder="What are you hoping to build or explore together..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="text-base min-h-[90px] resize-none border-border/50 focus:border-blue-400/60 transition-colors duration-300"
-                maxLength={500}
-              />
-              {description.length > 0 && (
-                <div className="text-xs text-muted-foreground/60 text-right">
-                  {description.length}/500
+              {totalAttached > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {attachedNoteIds.map((noteId) => (
+                    <div key={noteId} className="flex items-center gap-1.5 px-2 py-1 bg-blue-400/10 border border-blue-400/30 rounded text-xs text-foreground/80">
+                      <FileText className="w-3 h-3" />
+                      <span>Note</span>
+                      <button
+                        type="button"
+                        onClick={() => removeNote(noteId)}
+                        className="ml-1 hover:text-destructive transition-colors"
+                        aria-label="Remove note"
+                        title="Remove note"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                  {attachedConversationIds.map((convId) => (
+                    <div key={convId} className="flex items-center gap-1.5 px-2 py-1 bg-amber-400/10 border border-amber-400/30 rounded text-xs text-foreground/80">
+                      <MessageSquare className="w-3 h-3" />
+                      <span>Conversation</span>
+                      <button
+                        type="button"
+                        onClick={() => removeConversation(convId)}
+                        className="ml-1 hover:text-destructive transition-colors"
+                        aria-label="Remove conversation"
+                        title="Remove conversation"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                  {attachedCrystalIds.map((crystalId) => (
+                    <div key={crystalId} className="flex items-center gap-1.5 px-2 py-1 bg-purple-400/10 border border-purple-400/30 rounded text-xs text-foreground/80">
+                      <span>💎</span>
+                      <span>Crystal</span>
+                      <button
+                        type="button"
+                        onClick={() => removeCrystal(crystalId)}
+                        className="ml-1 hover:text-destructive transition-colors"
+                        aria-label="Remove crystal"
+                        title="Remove crystal"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                  {attachedShardIds.map((shardId) => (
+                    <div key={shardId} className="flex items-center gap-1.5 px-2 py-1 bg-cyan-400/10 border border-cyan-400/30 rounded text-xs text-foreground/80">
+                      <span>✨</span>
+                      <span>Shard</span>
+                      <button
+                        type="button"
+                        onClick={() => removeShard(shardId)}
+                        className="ml-1 hover:text-destructive transition-colors"
+                        aria-label="Remove shard"
+                        title="Remove shard"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
-          </div>
 
-          {/* Content block with subtle border */}
-          <div className="bg-muted/20 p-6 rounded border-l-2 border-blue-400/60">
-            <div className="text-xs text-muted-foreground/70 space-y-3">
-              <div className="flex items-start gap-3">
-                <div className="w-1 h-1 rounded-full bg-blue-400/60 mt-2 flex-shrink-0" />
-                <p className="leading-relaxed">
-                  <span className="font-medium text-foreground/80">Discovery phase:</span> We'll have a conversation to understand your goals, working style, and what success looks like
-                </p>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-1 h-1 rounded-full bg-amber-400/60 mt-2 flex-shrink-0" />
-                <p className="leading-relaxed">
-                  <span className="font-medium text-foreground/80">Evolution:</span> Your project develops its own intelligence, custom tools, and interface based on how you work
-                </p>
-              </div>
+            <div className="flex gap-4 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleClose}
+                className="flex-1 py-3 text-base border-border/50 hover:border-border hover:bg-muted/30 transition-all duration-300"
+                disabled={isLoading}
+              >
+                {defaultName ? 'Not now' : 'Maybe later'}
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1 py-3 text-base bg-foreground text-background hover:bg-foreground/90 hover:scale-[1.02] transition-all duration-300"
+                disabled={!name.trim() || isLoading}
+              >
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin" />
+                    <span>Creating...</span>
+                  </div>
+                ) : (
+                  defaultName ? 'Create project' : 'Begin discovery'
+                )}
+              </Button>
             </div>
-          </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-          <div className="flex gap-4 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              className="flex-1 py-3 text-base border-border/50 hover:border-border hover:bg-muted/30 transition-all duration-300"
-              disabled={isLoading}
-            >
-              Maybe later
-            </Button>
-            <Button
-              type="submit"
-              className="flex-1 py-3 text-base bg-foreground text-background hover:bg-foreground/90 hover:scale-[1.02] transition-all duration-300"
-              disabled={!name.trim() || isLoading}
-            >
-              {isLoading ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin" />
-                  <span>Creating...</span>
-                </div>
-              ) : (
-                'Begin discovery'
-              )}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+      {/* Content Attachment Panel in Selection Mode */}
+      <ContentAttachmentPanel
+        isOpen={showContentSelector}
+        onClose={() => setShowContentSelector(false)}
+        userId={userId}
+        attachedNoteIds={attachedNoteIds}
+        attachedConversationIds={attachedConversationIds}
+        attachedCrystalIds={attachedCrystalIds}
+        attachedShardIds={attachedShardIds}
+        onAttachmentsChange={(noteIds, convIds, crystalIds, shardIds) => {
+          setAttachedNoteIds(noteIds)
+          setAttachedConversationIds(convIds)
+          setAttachedCrystalIds(crystalIds)
+          setAttachedShardIds(shardIds)
+        }}
+      />
+    </>
   )
 }

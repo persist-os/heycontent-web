@@ -6,13 +6,13 @@ import { Note } from '../types';
 
 interface UseNotesTreeDragDropProps {
   updateNote: (noteId: string, updates: Partial<Note>) => Promise<void>;
-  addItemToProject: (projectId: any, itemType: string, itemId: string) => Promise<boolean>;
+  addContentToProject: (projectId: any, contentType: string, contentId: string) => Promise<boolean>;
   moveNoteToFolder: (noteId: any, folderId: any) => Promise<void>;
 }
 
 export function useNotesTreeDragDrop({
   updateNote,
-  addItemToProject,
+  addContentToProject,
   moveNoteToFolder
 }: UseNotesTreeDragDropProps) {
   const [draggedNote, setDraggedNote] = useState<Note | null>(null);
@@ -69,7 +69,7 @@ export function useNotesTreeDragDrop({
         case 'project':
           // Add note to project
           if (dropData?.projectId) {
-            await addItemToProject(dropData.projectId, 'note', String(note._id));
+            await addContentToProject(dropData.projectId, 'note', String(note._id));
           }
           break;
           
@@ -106,7 +106,7 @@ export function useNotesTreeDragDrop({
     } catch (error) {
       console.error('Failed to move note:', error);
     }
-  }, [updateNote, addItemToProject, moveNoteToFolder]);
+  }, [updateNote, addContentToProject, moveNoteToFolder]);
 
   return {
     sensors,

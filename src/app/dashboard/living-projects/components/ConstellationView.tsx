@@ -5,11 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/app/context/auth-context'
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
-
-// TODO: Replace sample data dependencies with real backend queries
-// TODO: Implement real-time constellation updates via Convex subscriptions
-// TODO: Add constellation state persistence and restoration
-// TODO: Implement collaborative constellation viewing and editing
+import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { Button } from '@/components/ui/button'
 import { CreateProjectModal } from './CreateProjectModal'
 import { ProjectStar } from './ProjectStar'
@@ -34,15 +30,27 @@ export function ConstellationView() {
   const { firebaseUser } = useAuth()
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [highlightedProject, setHighlightedProject] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
   const [viewportSize, setViewportSize] = useState({
     width: typeof window !== 'undefined' ? window.innerWidth : 1200,
     height: typeof window !== 'undefined' ? window.innerHeight : 800
   })
 
+  // Get current user ID
+  useEffect(() => {
+    const fetchUserId = async () => {
+      const id = await getCurrentUserId()
+      setUserId(id)
+    }
+    if (firebaseUser) {
+      fetchUserId()
+    }
+  }, [firebaseUser])
+
   // Fetch user's projects
   const projects = useQuery(
     api.projectsQueries.getByUser,
-    firebaseUser?.uid ? { userId: firebaseUser.uid } : 'skip'
+    userId ? { userId } : 'skip'
   ) as Project[] | undefined
 
   // Generate constellation layout
@@ -115,13 +123,25 @@ export function ConstellationView() {
   }, [layout.positions, transform, viewportSize])
 
   // Handle creating a new project
-  const handleCreateProject = useCallback((name: string, description?: string) => {
+  const handleCreateProject = useCallback(async (
+    name: string, 
+    description?: string,
+    noteIds?: string[],
+    conversationIds?: string[],
+    crystalIds?: string[],
+    shardIds?: string[]
+  ): Promise<string> => {
     const params = new URLSearchParams({
       mode: 'create',
       name,
-      ...(description && { description })
+      ...(description && { description }),
+      ...(noteIds && noteIds.length > 0 && { noteIds: noteIds.join(',') }),
+      ...(conversationIds && conversationIds.length > 0 && { conversationIds: conversationIds.join(',') }),
+      ...(crystalIds && crystalIds.length > 0 && { crystalIds: crystalIds.join(',') }),
+      ...(shardIds && shardIds.length > 0 && { shardIds: shardIds.join(',') })
     })
     router.push(`/dashboard/living-projects/project-discovery?${params}`)
+    return 'temp-id' // Return temp ID since we're navigating away
   }, [router])
 
   // Handle clicking on a project
@@ -186,6 +206,7 @@ export function ConstellationView() {
           isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
           onCreateProject={handleCreateProject}
+          userId={userId || ''}
         />
       </div>
     )
@@ -334,6 +355,7 @@ export function ConstellationView() {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onCreateProject={handleCreateProject}
+        userId={userId || ''}
       />
 
       {/* Keyboard shortcuts hint */}

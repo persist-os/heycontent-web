@@ -26,7 +26,14 @@ export function useProjects(userId: string | undefined) {
   const addMultipleContentMutation = useMutation(api.projectsMutations.addMultipleContent);
 
   // Create project
-  const createProject = useCallback(async (name: string, description?: string) => {
+  const createProject = useCallback(async (
+    name: string, 
+    description?: string,
+    noteIds?: string[],
+    conversationIds?: string[],
+    crystalIds?: string[],
+    shardIds?: string[]
+  ) => {
     if (!userId) {
       toast.error('User not authenticated');
       return null;
@@ -38,6 +45,10 @@ export function useProjects(userId: string | undefined) {
         userId,
         name,
         description,
+        noteIds,
+        conversationIds,
+        crystalIds,
+        shardIds,
       });
       
       toast.success('Project created successfully');
