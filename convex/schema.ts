@@ -1097,7 +1097,8 @@ export default defineSchema({
         v.literal("value_system"),           // Core beliefs and values
         v.literal("contextual_adaptation"),  // How they adapt to different situations
         v.literal("growth_trajectory"),      // How they're evolving over time
-        v.literal("contradiction_resolution") // How they handle internal conflicts
+        v.literal("contradiction_resolution"), // How they handle internal conflicts
+        v.literal("project_seed")            // 🌱 AI-native emergent project domain cluster
     ),
     dimension: v.string(),                  // REQUIRED: Primary identity dimension
     
@@ -1134,7 +1135,7 @@ export default defineSchema({
     // === EVOLUTION TRACKING (FLEXIBLE) ===
     evolution_history: v.optional(v.array(v.object({
       timestamp: v.number(),
-      change_type: v.union(v.literal("strengthened"), v.literal("weakened"), v.literal("refined"), v.literal("contradicted"), v.literal("created")),
+      change_type: v.union(v.literal("strengthened"), v.literal("weakened"), v.literal("refined"), v.literal("contradicted"), v.literal("created"), v.literal("merged_at_limit")),
       description: v.string(),
       triggering_shard_id: v.string() // Relaxed validation for temp IDs
     }))),
@@ -1159,6 +1160,20 @@ export default defineSchema({
     // === ARCHIVAL FIELDS (FOR CAPACITY MANAGEMENT) ===
     archived: v.optional(v.boolean()),      // Optional: Whether this crystal has been archived
     archived_at: v.optional(v.number()),    // Optional: When this crystal was archived
+    
+    // === PROJECT SEED SPECIFIC FIELDS (AI-NATIVE EMERGENCE) ===
+    // These fields only apply when crystal_type="project_seed"
+    suggested_project_name: v.optional(v.string()),
+    suggested_project_description: v.optional(v.string()),
+    suggested_domain: v.optional(v.string()),
+    suggested_complexity: v.optional(v.number()),
+    suggested_time_horizon: v.optional(v.string()),
+    related_note_ids: v.optional(v.array(v.string())),
+    related_conversation_ids: v.optional(v.array(v.string())),
+    auto_promoted: v.optional(v.boolean()),
+    promoted_to_project_id: v.optional(v.string()),
+    promotedToProjectId: v.optional(v.string()), // Alias for promoted_to_project_id
+    confidence_at_promotion: v.optional(v.number()),
   })
 
       .index("by_user", ["userId"])

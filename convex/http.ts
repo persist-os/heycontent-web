@@ -1100,13 +1100,17 @@ app.post("/api/projects/updateProject", async (c) => {
 // Create project
 app.post("/api/projects/create", async (c) => {
   const ctx = c.env;
-  const { userId, name, description } = await c.req.json();
+  const { userId, name, description, noteIds, conversationIds, crystalIds, shardIds } = await c.req.json();
   
   try {
     const projectId = await ctx.runMutation(api.projectsMutations.createProject, {
       userId,
       name,
-      description
+      description,
+      noteIds,
+      conversationIds,
+      crystalIds,
+      shardIds
     });
     return c.json({ success: true, projectId });
   } catch (error: any) {

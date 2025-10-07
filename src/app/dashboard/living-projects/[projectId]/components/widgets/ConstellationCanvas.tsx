@@ -15,30 +15,39 @@ import { ConstellationControls } from '../../../components/ConstellationControls
 import { ConstellationMinimap } from '../../../components/ConstellationMinimap'
 import { useWidgetLayout } from '../hooks/useWidgetLayout'
 import { FloatingWidgetCard } from './FloatingWidgetCard'
+import { ContentAttachmentPanel } from '@/app/dashboard/living-projects/components/ContentAttachmentPanel'
+import { ProjectFingerprint } from './ProjectFingerprint'
 
 interface ConstellationCanvasProps {
   widgets: WidgetConfig[]
+  userId: string | null
+  projectId: string
   onWidgetClick: (widget: WidgetConfig) => void
   onWidgetHover: (widgetId: string | null) => void
   highlightedWidget: string | null
   showWidgetPanel: boolean
   onWidgetRun?: (widgetId: string) => void
   runningWidgetId?: string | null
+  selectedWidget?: WidgetConfig | null
 }
 
 export function ConstellationCanvas({
   widgets,
+  userId,
+  projectId,
   onWidgetClick,
   onWidgetHover,
   highlightedWidget,
   showWidgetPanel,
   onWidgetRun,
-  runningWidgetId
+  runningWidgetId,
+  selectedWidget
 }: ConstellationCanvasProps) {
   const [viewportSize, setViewportSize] = useState({
     width: typeof window !== 'undefined' ? window.innerWidth : 1200,
     height: typeof window !== 'undefined' ? window.innerHeight : 800
   })
+  const [showContentPanel, setShowContentPanel] = useState(false)
   
   // Generate constellation layout
   const layout = useWidgetLayout(widgets)
@@ -177,30 +186,14 @@ export function ConstellationCanvas({
         </div>
       </div>
 
-      {/* Navigation Controls */}
-      <ConstellationControls
-        scale={transform.scale}
-        onZoomIn={zoomIn}
-        onZoomOut={zoomOut}
-        onReset={resetView}
-        className="absolute bottom-6 left-6 z-10"
-      />
+      {/* Project Fingerprint - Top Left */}
+      <div className="absolute top-4 left-4 z-10 pointer-events-auto max-w-2xl">
+        <ProjectFingerprint projectId={projectId} />
+      </div>
 
-      {/* Minimap */}
-      <ConstellationMinimap
-        positions={layout.positions}
-        canvasWidth={layout.canvasWidth}
-        canvasHeight={layout.canvasHeight}
-        viewportWidth={viewportSize.width}
-        viewportHeight={viewportSize.height}
-        currentTransform={transform}
-        onViewportClick={handleMinimapClick}
-        className="absolute bottom-6 right-6 z-10"
-      />
-
-      {/* Stats Overlay */}
-      <div className="absolute top-6 right-6 left-1/2 z-10 pointer-events-none">
-        <div className="bg-background/60 backdrop-blur-sm border border-border/30 rounded-lg px-4 py-2 shadow-sm max-w-xs">
+      {/* Stats Overlay - Top Right */}
+      <div className="absolute top-4 right-4 z-10 pointer-events-none">
+        <div className="bg-background/60 backdrop-blur-sm border border-border/30 rounded-lg px-4 py-2 shadow-sm">
           <div className="flex items-center gap-4 text-xs text-muted-foreground/70">
             <span>Active: {widgets.filter(w => w.priority > 7).length}</span>
             <span>•</span>
@@ -209,15 +202,50 @@ export function ConstellationCanvas({
         </div>
       </div>
 
-      {/* Keyboard shortcuts hint */}
+      {/* Navigation Controls - Bottom Left */}
+      <ConstellationControls
+        scale={transform.scale}
+        onZoomIn={zoomIn}
+        onZoomOut={zoomOut}
+        onReset={resetView}
+        className="absolute bottom-4 left-4 z-10"
+      />
+
+      {/* Minimap - Bottom Right */}
+      <ConstellationMinimap
+        positions={layout.positions}
+        canvasWidth={layout.canvasWidth}
+        canvasHeight={layout.canvasHeight}
+        viewportWidth={viewportSize.width}
+        viewportHeight={viewportSize.height}
+        currentTransform={transform}
+        onViewportClick={handleMinimapClick}
+        className="absolute bottom-4 right-4 z-10"
+      />
+
+      {/* Keyboard shortcuts hint - Center Bottom, Above Controls */}
       {transform.scale < 0.6 && (
-        <div className="absolute bottom-6 left-1/2 z-10 pointer-events-none" style={{ transform: 'translateX(-50%)' }}>
+        <div className="absolute bottom-20 left-1/2 z-10 pointer-events-none" style={{ transform: 'translateX(-50%)' }}>
           <div className="bg-background/80 backdrop-blur-sm border border-border/50 rounded-lg px-4 py-2 shadow-lg">
             <div className="text-xs text-muted-foreground/70 text-center">
               Drag to explore • Scroll to zoom • Click widgets to interact
             </div>
           </div>
         </div>
+      )}
+
+      {/* Content Attachment Panel for Selected Widget */}
+      {selectedWidget && userId && showContentPanel && (
+        <ContentAttachmentPanel
+          widgetId={selectedWidget._id}
+          userId={userId}
+          isOpen={showContentPanel}
+          onClose={() => setShowContentPanel(false)}
+          attachedNoteIds={(selectedWidget as any).noteIds || []}
+          attachedConversationIds={(selectedWidget as any).conversationIds || []}
+          attachedCrystalIds={(selectedWidget as any).crystalIds || []}
+          attachedShardIds={(selectedWidget as any).shardIds || []}
+        />
       )}
     </div>
   )

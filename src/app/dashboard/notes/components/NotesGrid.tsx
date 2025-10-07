@@ -3,7 +3,7 @@ import { Note, NoteType } from '../types';
 import { NoteCard } from './cards/NoteCard';
 import { EmailCard } from './cards/EmailCard';
 import { ProjectCard } from './projects/ProjectCard';
-import { CreateProjectModal } from './projects/CreateProjectModal';
+import { CreateProjectModal } from '../../living-projects/components/CreateProjectModal';
 import { ShareContentModal } from '@/components/sharing/ShareContentModal';
 import { Plus, Search, Folder, X, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -106,7 +106,7 @@ export function NotesGrid({
     isCreating: isCreatingProject,
     createProject,
     deleteProject,
-    addItemToProject
+    addContentToProject
   } = useProjects(firebaseUser?.uid);
 
   // Configure sensors for drag and drop
@@ -144,16 +144,32 @@ export function NotesGrid({
     }
   };
 
-  const handleCreateProject = async (name: string, description?: string) => {
-    const projectId = await createProject(name, description);
-    
-    // If we have a pending note to add to this project, add it now
-    if (pendingProjectNote && projectId) {
-      await addItemToProject(projectId, 'note', String(pendingProjectNote.note._id));
+  const handleCreateProject = async (
+    name: string, 
+    description?: string,
+    noteIds?: string[],
+    conversationIds?: string[],
+    crystalIds?: string[],
+    shardIds?: string[]
+  ): Promise<string> => {
+    // Include pending note if exists
+    const allNoteIds = [...(noteIds || [])];
+    if (pendingProjectNote) {
+      allNoteIds.push(String(pendingProjectNote.note._id));
       setPendingProjectNote(null);
     }
     
-    return projectId;
+    // Pass all content arrays directly to createProject mutation
+    const projectId = await createProject(
+      name, 
+      description, 
+      allNoteIds.length > 0 ? allNoteIds : undefined,
+      conversationIds,
+      crystalIds,
+      shardIds
+    );
+    
+    return projectId as string;
   };
 
   const handleEditProject = (project: any) => {
@@ -239,7 +255,7 @@ export function NotesGrid({
       const projectId = over.id as any; // Cast to handle Convex ID type
       
       try {
-        await addItemToProject(projectId, 'note', String(note._id));
+        await addContentToProject(projectId, 'note', String(note._id));
       } catch (error) {
         console.error('Failed to add note to project:', error);
       }
@@ -640,6 +656,7 @@ export function NotesGrid({
             setPendingProjectNote(null);
           }}
           onCreateProject={handleCreateProject}
+          userId={firebaseUser?.uid || ''}
           isCreating={isCreatingProject}
           defaultName={pendingProjectNote?.projectName}
         />
