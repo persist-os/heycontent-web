@@ -1,0 +1,38 @@
+# robots.txt for HeyContext
+# Allow all search engines to index the site
+
+User-agent: *
+Allow: /
+
+# Allow all static assets
+Allow: /*.js$
+Allow: /*.css$
+Allow: /*.png$
+Allow: /*.jpg$
+Allow: /*.svg$
+Allow: /*.webp$
+
+# Disallow admin and private routes
+Disallow: /api/
+Disallow: /admin/
+Disallow: /dashboard/
+
+# Disallow authentication pages (already indexed users don't need these)
+Disallow: /auth/
+Disallow: /settings/
+
+# Allow important public pages
+Allow: /about
+Allow: /legal/
+
+# Sitemap location
+Sitemap: https://heycontext.ai/sitemap.xml
+Sitemap: https://www.heycontext.ai/sitemap.xml
+
+# Crawl-delay for specific bots (optional, helps manage server load)
+User-agent: Googlebot
+Crawl-delay: 0
+
+User-agent: Bingbot
+Crawl-delay: 1
+

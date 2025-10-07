@@ -31,6 +31,14 @@ const Footer = () => (
         <div>
           <h4 className="text-slate-100 font-medium mb-4 sm:mb-6 text-xs sm:text-sm uppercase tracking-wide">Support</h4>
           <div className="space-y-3 sm:space-y-4">
+            <a 
+              href="https://discord.gg/PgfZpFeVHW" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="block text-sm sm:text-base text-slate-400 hover:text-slate-200 active:text-slate-100 transition-colors font-light touch-manipulation"
+            >
+              Community
+            </a>
             <a href="mailto:hello@heycontext.ai" className="block text-sm sm:text-base text-slate-400 hover:text-slate-200 active:text-slate-100 transition-colors font-light touch-manipulation">
               Contact
             </a>

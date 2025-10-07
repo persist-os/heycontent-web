@@ -1,16 +1,22 @@
 /**
  * Intelligence Configuration - Default settings and constants
- * 
- * Defines default trigger thresholds and analysis preferences for the
- * crystal intelligence system. These can be overridden per-user.
+ *
+ * ⚠️  IMPORTANT: Intelligence triggering is now handled by Multi-Armed Bandit (MAB) system
+ * The MAB system uses Thompson Sampling with 7 adaptive trigger strategies to learn
+ * optimal timing for intelligence analysis based on user behavior patterns.
+ *
+ * Legacy thresholds below are kept for backwards compatibility but are NOT used for triggering.
+ * The MAB system measures semantic drift and user activity to make intelligent decisions.
  */
 
 export const DEFAULT_INTELLIGENCE_CONFIG = {
+  // NOTE: Intelligence triggering is now handled by Multi-Armed Bandit (MAB) system
+  // These legacy thresholds are kept for backwards compatibility but are not used for triggering
   triggers: {
-    chat_messages: 25,        // Trigger analysis after 25 chat messages
-    smart_notes: 10,          // Trigger after 10 smart notes generated
-    crystal_formations: 5,    // Trigger after 5 new crystals formed
-    days_since_last: 7,       // Fallback: trigger if 7+ days since last analysis
+    chat_messages: 25,        // DEPRECATED: MAB system now controls triggering
+    smart_notes: 10,          // DEPRECATED: MAB system now controls triggering
+    crystal_formations: 5,    // DEPRECATED: MAB system now controls triggering
+    days_since_last: 7,       // DEPRECATED: MAB system now controls triggering
   },
   preferences: {
     analysis_depth: "standard" as "fast" | "standard" | "deep",

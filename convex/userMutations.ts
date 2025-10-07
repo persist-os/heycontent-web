@@ -119,9 +119,9 @@ export const create_user = mutation(async ({ db }, { name, email, image, userId,
     await db.insert("intelligence_config", {
       userId,
       triggers: {
-        chat_messages: 25,
-        smart_notes: 10,
-        crystal_formations: 5,
+        chat_messages: 25,        // DEPRECATED: MAB system controls triggering
+        smart_notes: 10,          // DEPRECATED: MAB system controls triggering
+        crystal_formations: 5,    // DEPRECATED: MAB system controls triggering
         days_since_last: 7,
       },
       preferences: {

@@ -1277,9 +1277,9 @@ export default defineSchema({
     
     // Trigger thresholds (configurable)
     triggers: v.object({
-      chat_messages: v.number(),        // Default: 25
-      smart_notes: v.number(),          // Default: 10
-      crystal_formations: v.number(),   // Default: 5
+      chat_messages: v.number(),        // DEPRECATED: MAB system controls triggering
+      smart_notes: v.number(),          // DEPRECATED: MAB system controls triggering
+      crystal_formations: v.number(),   // DEPRECATED: MAB system controls triggering
       days_since_last: v.number(),      // Default: 7
     }),
     
@@ -1687,5 +1687,49 @@ export default defineSchema({
   .index("by_user_agent", ["userId", "agentType"])
   .index("by_conversation", ["conversationId"])
   .index("by_decision_time", ["decisionAt"]),
+
+  // Stripe Webhook Events Tracking
+  webhook_events: defineTable({
+    // Event Identification
+    eventId: v.string(),              // Stripe event ID (e.g., evt_xxx)
+    eventType: v.string(),            // Event type (e.g., customer.subscription.created)
+    apiVersion: v.optional(v.string()), // Stripe API version
+    
+    // Event Data
+    eventData: v.any(),               // Full event data from Stripe
+    
+    // Processing Status
+    status: v.union(
+      v.literal("pending"),
+      v.literal("processing"),
+      v.literal("completed"),
+      v.literal("failed")
+    ),
+    processedAt: v.optional(v.number()), // Timestamp when processed
+    processingDuration: v.optional(v.number()), // Processing time in ms
+    
+    // Error Tracking
+    error: v.optional(v.string()),       // Error message if failed
+    errorStack: v.optional(v.string()),  // Full error stack trace
+    attemptCount: v.number(),            // Number of processing attempts
+    
+    // Related Entities
+    userId: v.optional(v.string()),        // User ID if resolved
+    subscriptionId: v.optional(v.string()), // Stripe subscription ID if applicable
+    customerId: v.optional(v.string()),    // Stripe customer ID if applicable
+    invoiceId: v.optional(v.string()),     // Stripe invoice ID if applicable
+    
+    // Metadata
+    receivedAt: v.number(),           // When webhook was received
+    ipAddress: v.optional(v.string()), // Source IP for security
+    userAgent: v.optional(v.string()), // Stripe's user agent
+  })
+  .index("by_event_id", ["eventId"])
+  .index("by_event_type", ["eventType"])
+  .index("by_status", ["status"])
+  .index("by_user", ["userId"])
+  .index("by_subscription", ["subscriptionId"])
+  .index("by_received_at", ["receivedAt"])
+  .index("by_event_type_status", ["eventType", "status"]),
 });
 

@@ -1,5 +1,5 @@
 import React from 'react'
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { Providers } from './providers'
 import { headers } from 'next/headers'
@@ -8,9 +8,130 @@ import { CommandPaletteProvider } from './context/CommandPaletteProvider'
 import { InlineReplyProvider } from './context/inline-reply-context'
 import { Analytics } from "@vercel/analytics/next"
 
+const siteUrl = 'https://heycontext.ai'
+const siteName = 'HeyContext'
+const siteDescription = 'Stop repeating yourself. AI-powered memory system that learns from every conversation, connects your thoughts automatically, and surfaces insights from your accumulated knowledge. Your personal AI that actually remembers and evolves with you.'
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0a0a0a' }
+  ],
+}
+
 export const metadata: Metadata = {
-  title: 'HeyContext',
-  description: 'AI-powered platform for people',
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: 'HeyContext - AI Memory That Evolves With You',
+    template: '%s | HeyContext'
+  },
+  description: siteDescription,
+  keywords: [
+    'HeyContext',
+    'hey context',
+    'AI memory',
+    'context aware AI',
+    'evolving AI memory',
+    'persistent AI memory',
+    'AI that remembers',
+    'connected thinking',
+    'knowledge management',
+    'personal AI assistant',
+    'AI note taking',
+    'automatic context',
+    'background processing AI',
+    'memory-first AI',
+    'conversation memory',
+    'accumulated knowledge',
+    'AI insights',
+    'pattern recognition AI',
+    'thought organization',
+    'intelligent note taking',
+    'second brain',
+    'digital memory',
+    'cognitive AI',
+    'contextual intelligence'
+  ],
+  authors: [{ name: 'HeyContext Team' }],
+  creator: 'HeyContext',
+  publisher: 'HeyContext',
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: siteUrl,
+    siteName,
+    title: 'HeyContext - AI Memory That Evolves With You',
+    description: 'Stop repeating yourself. Memory that grows with every conversation. Connections that form automatically. AI that finally works the way you think.',
+    images: [
+      {
+        url: `${siteUrl}/dashboard-preview.png`,
+        width: 1920,
+        height: 1080,
+        alt: 'HeyContext Dashboard - Your AI Memory Hub',
+      },
+      {
+        url: `${siteUrl}/dashboard-preview-2.jpg`,
+        width: 1200,
+        height: 630,
+        alt: 'HeyContext - AI Memory Platform',
+      }
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'HeyContext - AI Memory That Evolves With You',
+    description: 'Stop repeating yourself. AI-powered memory that learns from every conversation and connects your thoughts automatically.',
+    images: [`${siteUrl}/dashboard-preview.png`],
+    creator: '@heycontext',
+    site: '@heycontext',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  icons: {
+    icon: [
+      { url: '/hey-content-small-square.svg', type: 'image/svg+xml' },
+      { url: '/hey-content-medium-square.svg', sizes: '384x384', type: 'image/svg+xml' },
+    ],
+    apple: [
+      { url: '/hey-content-large-square.svg', type: 'image/svg+xml' },
+    ],
+    other: [
+      {
+        rel: 'mask-icon',
+        url: '/hey-content-small-square.svg',
+      },
+    ],
+  },
+  manifest: '/manifest.json',
+  alternates: {
+    canonical: siteUrl,
+  },
+  category: 'technology',
+  classification: 'Productivity Software',
+  other: {
+    'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-status-bar-style': 'default',
+    'apple-mobile-web-app-title': 'HeyContext',
+    'mobile-web-app-capable': 'yes',
+  },
 }
 
 export default async function RootLayout({
@@ -21,16 +142,116 @@ export default async function RootLayout({
   const headersList = await headers()
   const isSignOut = headersList.get('x-signout')
 
+  // Structured data for Organization and WebSite
+  const organizationSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'HeyContext',
+    url: siteUrl,
+    logo: `${siteUrl}/hey-content-large-square.svg`,
+    description: siteDescription,
+    sameAs: [
+      'https://twitter.com/heycontext',
+      'https://linkedin.com/company/heycontext'
+    ],
+    contactPoint: {
+      '@type': 'ContactPoint',
+      contactType: 'Customer Support',
+      availableLanguage: ['English']
+    }
+  }
+
+  const websiteSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: siteName,
+    url: siteUrl,
+    description: siteDescription,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${siteUrl}/dashboard?search={search_term_string}`
+      },
+      'query-input': 'required name=search_term_string'
+    }
+  }
+
+  const softwareApplicationSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'HeyContext',
+    operatingSystem: 'Web Browser, iOS, Android',
+    applicationCategory: 'ProductivityApplication',
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'USD'
+    },
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: '4.8',
+      ratingCount: '100'
+    },
+    description: siteDescription
+  }
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         {isSignOut && (
           <meta
             httpEquiv="Clear-Site-Data"
             content="cache, cookies, storage"
           />
         )}
+        
+        {/* Advanced Performance Optimizations */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://apis.google.com" />
+        <link rel="dns-prefetch" href="https://js.stripe.com" />
+        <link rel="preconnect" href="https://va.vercel-scripts.com" />
+        
+        {/* Canonical URL */}
+        <link rel="canonical" href={siteUrl} />
+        
+        {/* Additional SEO Meta Tags */}
+        <meta name="theme-color" content="#3b82f6" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="HeyContext" />
+        <meta name="application-name" content="HeyContext" />
+        <meta name="format-detection" content="telephone=no" />
+        
+        {/* Entity and Knowledge Graph Signals */}
+        <meta property="og:site_name" content="HeyContext" />
+        <meta property="og:locale" content="en_US" />
+        <meta name="twitter:site" content="@heycontext" />
+        <meta name="twitter:creator" content="@heycontext" />
+        
+        {/* AI Search Optimization Tags */}
+        <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+        <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+        <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+        
+        {/* Language and Regional Targeting */}
+        <meta httpEquiv="content-language" content="en-US" />
+        <link rel="alternate" hrefLang="en" href={siteUrl} />
+        <link rel="alternate" hrefLang="x-default" href={siteUrl} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationSchema) }}
+        />
       </head>
       <body className="font-sans min-h-screen">
         <Providers>

@@ -1,5 +1,33 @@
 import React from 'react'
 import Link from 'next/link'
+import { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy - HeyContext',
+  description: 'HeyContext Privacy Policy. We never sell your data, use it for advertising, or share it with third parties. Zero data sharing, zero external access, zero compromise on your personal privacy.',
+  keywords: [
+    'HeyContext privacy',
+    'data privacy',
+    'secure AI',
+    'private conversations',
+    'data protection',
+    'GDPR compliance',
+    'privacy policy'
+  ],
+  openGraph: {
+    title: 'Privacy Policy - HeyContext',
+    description: 'Learn how HeyContext protects your privacy. We never sell your data or use it for advertising.',
+    type: 'website',
+    url: 'https://heycontext.ai/legal/privacy',
+  },
+  alternates: {
+    canonical: 'https://heycontext.ai/legal/privacy',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
 
 export default function Privacy() {
   return (

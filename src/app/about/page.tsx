@@ -1,5 +1,35 @@
 import React from 'react';
 import Link from 'next/link';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'About HeyContext - AI Memory That Remembers You Privately',
+  description: 'Learn about HeyContext, the AI-powered platform that remembers you privately. Thoughtfully designed intelligence that learns from every conversation, builds understanding over time, and keeps everything completely yours.',
+  keywords: [
+    'about HeyContext',
+    'AI memory platform',
+    'private AI assistant',
+    'personal AI that learns',
+    'conversational AI',
+    'secure AI platform',
+    'privacy-first AI',
+    'intelligent memory system'
+  ],
+  openGraph: {
+    title: 'About HeyContext - AI Memory That Remembers You Privately',
+    description: 'Discover how HeyContext creates a private space for thinking where your thoughts are connected across time, never lost, and always yours.',
+    type: 'website',
+    url: 'https://heycontext.ai/about',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'About HeyContext - AI Memory That Remembers You Privately',
+    description: 'Discover how HeyContext creates a private space for thinking where your thoughts are connected across time.',
+  },
+  alternates: {
+    canonical: 'https://heycontext.ai/about',
+  },
+};
 
 export default function About() {
   return (

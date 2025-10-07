@@ -1,5 +1,32 @@
 import React from 'react'
 import Link from 'next/link'
+import { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Security & Cookie Policy - HeyContext',
+  description: 'Learn about HeyContext security measures and cookie policy. We use minimal tracking, prioritize your data protection, and maintain transparent security practices.',
+  keywords: [
+    'HeyContext security',
+    'data security',
+    'cookie policy',
+    'data protection',
+    'secure AI platform',
+    'privacy controls'
+  ],
+  openGraph: {
+    title: 'Security & Cookie Policy - HeyContext',
+    description: 'Transparent security practices and minimal cookie usage for your privacy.',
+    type: 'website',
+    url: 'https://heycontext.ai/legal/security',
+  },
+  alternates: {
+    canonical: 'https://heycontext.ai/legal/security',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
 
 export default function Security() {
   return (
