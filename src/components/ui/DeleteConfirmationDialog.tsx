@@ -43,7 +43,7 @@ export const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> =
           <AlertDialogAction
             onClick={onConfirm}
             disabled={isLoading}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            className="bg-destructive text-white hover:bg-destructive/90 dark:text-white"
           >
             {isLoading ? 'Deleting...' : confirmText}
           </AlertDialogAction>

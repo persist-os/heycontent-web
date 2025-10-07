@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Logo } from '@/components/ui/logo'
 import {
-  Users, Settings, FileText, LogOut, BarChart3, Menu, X, MessageSquare, Clock, Handshake, Trash2, Shield, Zap, Search, ArrowRight, Sparkles, Command, Gem
+  Users, Settings, FileText, LogOut, BarChart3, Menu, X, MessageSquare, Clock, Handshake, Trash2, Shield, Zap, Search, ArrowRight, Sparkles, Command, Gem, MoreHorizontal
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { useSidebar } from '@/app/context/sidebar-context'
@@ -89,6 +89,7 @@ export const DashboardNav = memo(function DashboardNav() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [showChatMenu, setShowChatMenu] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   
 
@@ -167,6 +168,20 @@ export const DashboardNav = memo(function DashboardNav() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isExpanded, setIsExpanded]);
+
+  // Close chat menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (showChatMenu) {
+        setShowChatMenu(null);
+      }
+    };
+
+    if (showChatMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showChatMenu]);
 
   const handleDeleteChat = useCallback(async (chatId: string) => {
     setIsDeleting(true);
@@ -312,8 +327,9 @@ export const DashboardNav = memo(function DashboardNav() {
                   title="Settings"
                   aria-label="Settings"
                 >
-                  <Settings className="w-4 h-4 text-muted-foreground/60" />
+                  <Settings className="w-4 h-4 text-foreground" />
                 </button>
+                <ThemeToggle />
                 <div className="px-2 py-1 bg-muted/20 rounded-lg">
                   <span className="text-xs font-mono text-muted-foreground/60">⌘K</span>
                 </div>
@@ -323,7 +339,7 @@ export const DashboardNav = memo(function DashboardNav() {
                   title="Close command palette"
                   aria-label="Close command palette"
                 >
-                  <X className="w-4 h-4 text-muted-foreground/60" />
+                  <X className="w-4 h-4 text-foreground" />
                 </button>
               </div>
             </div>
@@ -437,26 +453,43 @@ export const DashboardNav = memo(function DashboardNav() {
                           </p>
                         </div>
                       </button>
-                      <button
-                        onClick={(e) => openDeleteDialog(chat.id, e)}
-                        className="opacity-0 group-hover:opacity-100 p-2 hover:bg-destructive/10 rounded-lg transition-all text-destructive/60 hover:text-destructive"
-                        title="Delete chat"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
+                      <div className="relative">
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setShowChatMenu(showChatMenu === chat.id ? null : chat.id);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-2 hover:bg-muted/30 rounded-lg transition-all"
+                          title="More options"
+                        >
+                          <MoreHorizontal className="w-4 h-4 text-foreground" />
+                        </button>
+                        {showChatMenu === chat.id && (
+                          <div className="absolute right-0 top-full mt-1 w-36 bg-background border border-border/40 rounded-lg shadow-lg z-50">
+                            <div className="py-1">
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setShowChatMenu(null);
+                                  openDeleteDialog(chat.id, e);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors flex items-center gap-2"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                Delete chat
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Theme */}
-            <div className="p-6 border-t border-border/20 bg-muted/10">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-light text-muted-foreground/70">Theme</span>
-                <ThemeToggle />
-              </div>
-            </div>
 
             {/* Empty State */}
             {filteredNavItems.length === 0 && filteredChats.length === 0 && searchQuery.trim() && (
