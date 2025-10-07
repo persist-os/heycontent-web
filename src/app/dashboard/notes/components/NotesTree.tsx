@@ -9,7 +9,7 @@ import { useNotes } from '@/app/context/notes-context';
 import { useProjects } from '../hooks/useProjects';
 import { useFolders } from '../hooks/useFolders';
 import { useAuth } from '@/app/context/auth-context';
-import { CreateProjectModal } from './projects/CreateProjectModal';
+import { CreateProjectModal } from '../../living-projects/components/CreateProjectModal';
 import { CreateFolderModal } from './folders/CreateFolderModal';
 import { NotesTreeProps, FilterType } from './NotesTree.types';
 import { NotesTreeHeader } from './NotesTreeHeader';
@@ -43,7 +43,7 @@ export function NotesTree({
     projects: hookProjects, 
     createProject, 
     isCreating: isCreatingProject,
-    addItemToProject,
+    addContentToProject,
   } = useProjects(firebaseUser?.uid);
 
   const {
@@ -81,7 +81,7 @@ export function NotesTree({
     handleDragEnd,
   } = useNotesTreeDragDrop({
     updateNote: updateNoteWrapper,
-    addItemToProject,
+    addContentToProject,
     moveNoteToFolder
   });
 
@@ -113,9 +113,25 @@ export function NotesTree({
     }
   }, [createNote, router, selectedFilter]);
 
-  const handleCreateProject = useCallback(async (name: string, description?: string) => {
-    const projectId = await createProject(name, description);
-    return projectId;
+  const handleCreateProject = useCallback(async (
+    name: string, 
+    description?: string,
+    noteIds?: string[],
+    conversationIds?: string[],
+    crystalIds?: string[],
+    shardIds?: string[]
+  ): Promise<string> => {
+    // Pass all content arrays directly to createProject mutation
+    const projectId = await createProject(
+      name, 
+      description,
+      noteIds,
+      conversationIds,
+      crystalIds,
+      shardIds
+    );
+    
+    return projectId as string;
   }, [createProject]);
 
   const handleCreateFolder = useCallback(async (name: string, description?: string, parentFolderId?: any, color?: string) => {
@@ -228,6 +244,7 @@ export function NotesTree({
           isOpen={showCreateProjectModal}
           onClose={() => setShowCreateProjectModal(false)}
           onCreateProject={handleCreateProject}
+          userId={firebaseUser?.uid || ''}
           isCreating={isCreatingProject}
         />
 

@@ -21,6 +21,10 @@ export const createProject = mutation({
     userId: v.string(),
     name: v.string(),
     description: v.optional(v.string()),
+    noteIds: v.optional(v.array(v.string())),
+    conversationIds: v.optional(v.array(v.string())),
+    crystalIds: v.optional(v.array(v.string())),
+    shardIds: v.optional(v.array(v.string())),
   },
   returns: v.id("projects"),
   handler: async (ctx, args) => {
@@ -53,11 +57,11 @@ export const createProject = mutation({
         name: sanitizedName,
         description: sanitizedDescription,
         
-        // Initialize content arrays as empty
-        noteIds: [],
-        conversationIds: [],
-        crystalIds: [],
-        shardIds: [],
+        // Initialize content arrays with provided content or empty
+        noteIds: args.noteIds || [],
+        conversationIds: args.conversationIds || [],
+        crystalIds: args.crystalIds || [],
+        shardIds: args.shardIds || [],
         analysisIds: [],
         
         // No fingerprint initially - created during discovery

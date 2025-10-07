@@ -20,7 +20,7 @@ import type { WidgetConfig } from '@/types/projectWidgets'
 import type { WidgetOutput } from './types'
 import { WidgetHeader } from './components/WidgetHeader'
 import { WidgetOutputCard } from './components/WidgetOutputCard'
-import { WidgetAttachmentPanel } from './components/WidgetAttachmentPanel'
+import { ContentAttachmentPanel } from './components/ContentAttachmentPanel'
 import { ConnectedContentSection } from './components/ConnectedContentSection'
 import { launchThinkingLabWithOutput } from '@/app/dashboard/living-projects/utils/thinkingLabLauncher'
 
@@ -247,7 +247,7 @@ export default function WidgetDashboardPage() {
 
       {/* Attachment Panel */}
       {showAttachmentPanel && (
-        <WidgetAttachmentPanel
+        <ContentAttachmentPanel
           widgetId={widgetId}
           userId={userId}
           isOpen={showAttachmentPanel}

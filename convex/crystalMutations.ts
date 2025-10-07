@@ -159,7 +159,7 @@ const crystalUpdateValidator = v.object({
     // Evolution tracking (can be updated)
     evolution_history: v.optional(v.array(v.object({
         timestamp: v.number(),
-        change_type: v.union(v.literal("strengthened"), v.literal("weakened"), v.literal("refined"), v.literal("contradicted"), v.literal("created")),
+        change_type: v.union(v.literal("strengthened"), v.literal("weakened"), v.literal("refined"), v.literal("contradicted"), v.literal("created"), v.literal("merged_at_limit")),
         description: v.string(),
         triggering_shard_id: v.string() // Relaxed validation for temp IDs
     }))),

@@ -18,6 +18,7 @@ import {
   OverviewView,
   CrystalsView,
   ShardsView,
+  ProjectSeedsView,
   InsightsSkeleton,
   CrystalSystemExplanation,
   SystemDebugInfo,
@@ -264,6 +265,10 @@ export default function CrystalsPage() {
 
           {activeView === 'shards' && (
             <ShardsView recentShards={recentShards} />
+          )}
+
+          {activeView === 'project_seeds' && (
+            <ProjectSeedsView />
           )}
         </div>
 
