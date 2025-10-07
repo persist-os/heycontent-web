@@ -107,20 +107,18 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: '/hey-content-small-square.svg', type: 'image/svg+xml' },
-      { url: '/hey-content-medium-square.svg', sizes: '384x384', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: '48x48' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon-96x96.png', sizes: '96x96', type: 'image/png' },
     ],
     apple: [
-      { url: '/hey-content-large-square.svg', type: 'image/svg+xml' },
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
     ],
-    other: [
-      {
-        rel: 'mask-icon',
-        url: '/hey-content-small-square.svg',
-      },
+    shortcut: [
+      { url: '/favicon.ico' }
     ],
   },
-  manifest: '/manifest.json',
+  manifest: '/site.webmanifest',
   alternates: {
     canonical: siteUrl,
   },
