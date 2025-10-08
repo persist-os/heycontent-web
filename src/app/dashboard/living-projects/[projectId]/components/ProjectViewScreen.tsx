@@ -241,7 +241,7 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
                       className="w-full px-3 py-2 text-left text-sm hover:bg-muted/50 flex items-center gap-2 transition-colors"
                     >
                       <Edit3 className="w-4 h-4" />
-                      Edit fingerprint
+                      Resume Discovery
                     </button>
                     <button
                       onClick={() => {
