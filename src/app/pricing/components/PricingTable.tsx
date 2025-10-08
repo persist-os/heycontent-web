@@ -15,7 +15,7 @@ export function PricingTable() {
       annualPrice: undefined,
       description: '50 API calls',
       features: [
-        '50 API calls/month',
+        '50 API calls',
         '~10 chat conversations',
         '~25 smart notes',
         'Full Crystal & Shard system',

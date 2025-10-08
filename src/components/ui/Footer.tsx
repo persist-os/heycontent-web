@@ -19,6 +19,9 @@ const Footer = () => (
             <Link href="/pricing" className="block text-sm sm:text-base text-slate-400 hover:text-slate-200 active:text-slate-100 transition-colors font-light touch-manipulation">
               Pricing
             </Link>
+            <Link href="/compare" className="block text-sm sm:text-base text-slate-400 hover:text-slate-200 active:text-slate-100 transition-colors font-light touch-manipulation">
+              Compare
+            </Link>
             <Link href="/about" className="block text-sm sm:text-base text-slate-400 hover:text-slate-200 active:text-slate-100 transition-colors font-light touch-manipulation">
               About
             </Link>
