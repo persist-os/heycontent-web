@@ -45,7 +45,7 @@ const Footer = () => (
             >
               Community
             </a>
-            <a href="mailto:hello@heycontext.ai" className="block text-sm sm:text-base text-slate-400 hover:text-slate-200 active:text-slate-100 transition-colors font-light touch-manipulation">
+            <a href="mailto:hello@heycontext.co" className="block text-sm sm:text-base text-slate-400 hover:text-slate-200 active:text-slate-100 transition-colors font-light touch-manipulation">
               Contact
             </a>
             <Link href="/legal/terms" className="block text-sm sm:text-base text-slate-400 hover:text-slate-200 active:text-slate-100 transition-colors font-light touch-manipulation">

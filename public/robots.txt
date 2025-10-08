@@ -26,8 +26,8 @@ Allow: /about
 Allow: /legal/
 
 # Sitemap location
-Sitemap: https://heycontext.ai/sitemap.xml
-Sitemap: https://www.heycontext.ai/sitemap.xml
+Sitemap: https://heycontext.co/sitemap.xml
+Sitemap: https://www.heycontext.co/sitemap.xml
 
 # Crawl-delay for specific bots (optional, helps manage server load)
 User-agent: Googlebot
