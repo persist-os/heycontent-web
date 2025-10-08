@@ -197,13 +197,6 @@ const aggregateRatingJsonLd = {
       "name": "HeyContext"
     }
   },
-  "aggregateRating": {
-    "@type": "AggregateRating",
-    "ratingValue": "4.8",
-    "reviewCount": "127",
-    "bestRating": "5",
-    "worstRating": "1"
-  }
 };
 
 export default function LandingPage() {
