@@ -1,9 +1,9 @@
 // Centralized metadata configuration for HeyContext
 export const siteConfig = {
   name: 'HeyContext',
-  url: 'https://heycontext.ai',
+  url: 'https://heycontext.co',
   description: 'Stop repeating yourself. AI-powered memory system that learns from every conversation, connects your thoughts automatically, and surfaces insights from your accumulated knowledge. Your personal AI that actually remembers and evolves with you.',
-  ogImage: 'https://heycontext.ai/dashboard-preview.png',
+  ogImage: 'https://heycontext.co/dashboard-preview.png',
   twitterHandle: '@heycontext',
   
   keywords: [

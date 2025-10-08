@@ -16,10 +16,10 @@ export const metadata: Metadata = {
     title: 'Terms of Service - HeyContext',
     description: 'Legal terms governing your use of HeyContext AI memory platform.',
     type: 'website',
-    url: 'https://heycontext.ai/legal/terms',
+    url: 'https://heycontext.co/legal/terms',
   },
   alternates: {
-    canonical: 'https://heycontext.ai/legal/terms',
+    canonical: 'https://heycontext.co/legal/terms',
   },
   robots: {
     index: true,
@@ -58,7 +58,7 @@ export default function Terms() {
         <section className="space-y-6">
           <h2 className="text-3xl font-medium text-foreground border-b border-border pb-3">Agreement to Our Legal Terms</h2>
           <p>
-            These Terms of Service ("Terms") constitute a legally binding agreement made between you, whether personally or on behalf of an entity ("you"), and Divertissement AI, Inc. ("Company," "we," "us," or "our"), concerning your access to and use of the HeyContext website (<a href="https://www.heycontext.ai" className="text-blue-600 dark:text-blue-400 hover:underline">https://www.heycontext.ai</a>) and any related products and services that refer or link to these Terms (collectively, the "Services").
+            These Terms of Service ("Terms") constitute a legally binding agreement made between you, whether personally or on behalf of an entity ("you"), and Divertissement AI, Inc. ("Company," "we," "us," or "our"), concerning your access to and use of the HeyContext website (<a href="https://www.heycontext.co" className="text-blue-600 dark:text-blue-400 hover:underline">https://www.heycontext.co</a>) and any related products and services that refer or link to these Terms (collectively, the "Services").
           </p>
           <p>
             By accessing or using the Services, you agree that you have read, understood, and agree to be bound by all of these Terms. IF YOU DO NOT AGREE WITH ALL OF THESE TERMS, THEN YOU ARE EXPRESSLY PROHIBITED FROM USING THE SERVICES AND YOU MUST DISCONTINUE USE IMMEDIATELY.

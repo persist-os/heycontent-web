@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     title: 'About HeyContext - AI Memory That Remembers You Privately',
     description: 'Discover how HeyContext creates a private space for thinking where your thoughts are connected across time, never lost, and always yours.',
     type: 'website',
-    url: 'https://heycontext.ai/about',
+    url: 'https://heycontext.co/about',
   },
   twitter: {
     card: 'summary_large_image',
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     description: 'Discover how HeyContext creates a private space for thinking where your thoughts are connected across time.',
   },
   alternates: {
-    canonical: 'https://heycontext.ai/about',
+    canonical: 'https://heycontext.co/about',
   },
 };
 
