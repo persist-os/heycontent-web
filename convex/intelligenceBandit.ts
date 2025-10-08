@@ -28,7 +28,8 @@ export const initializeArms = mutation({
     arms: v.array(v.object({
       arm_id: v.string(),
       arm_name: v.string(),
-      description: v.string(),
+      description: v.optional(v.string()),
+      params: v.optional(v.any()),  // NEW - arm-specific parameters
     })),
   },
   handler: async (ctx, { userId, arms }) => {
@@ -53,6 +54,8 @@ export const initializeArms = mutation({
         userId,
         armId: arm.arm_id,
         armName: arm.arm_name,
+        description: arm.description,  // NEW - store description
+        params: arm.params,  // NEW - store arm parameters
         alpha: 1.0,  // Optimistic prior
         beta: 1.0,   // Optimistic prior
         total_pulls: 0,

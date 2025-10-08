@@ -313,6 +313,83 @@ export const completeDiscovery = mutation({
 // ============================================================================
 
 /**
+ * Update fingerprint fields directly (user editing)
+ * Used by: Frontend when user manually edits fingerprint fields
+ */
+export const updateFields = mutation({
+  args: {
+    fingerprintId: v.id("project_fingerprints"),
+    userId: v.string(),
+    updates: v.object({
+      name: v.optional(v.string()),
+      description: v.optional(v.string()),
+      domain: v.optional(v.string()),
+      core_intention: v.optional(v.string()),
+      success_vision: v.optional(v.string()),
+      value_creation: v.optional(v.string()),
+      tangible_deliverables: v.optional(v.array(v.string())),
+      personal_growth: v.optional(v.array(v.string())),
+      intangible_benefits: v.optional(v.array(v.string())),
+      primary_pattern: v.optional(v.string()),
+      working_style: v.optional(v.array(v.string())),
+      collaboration_style: v.optional(v.string()),
+      decision_making: v.optional(v.string()),
+      energy_patterns: v.optional(v.string()),
+      time_horizon: v.optional(v.string()),
+      natural_rhythm: v.optional(v.string()),
+      flexibility_preference: v.optional(v.string()),
+      measurement_approach: v.optional(v.string()),
+      feedback_frequency: v.optional(v.string()),
+      cognitive_load_preference: v.optional(v.string()),
+      information_density: v.optional(v.string()),
+      motivation_style: v.optional(v.array(v.string())),
+      complexity_level: v.optional(v.number()),
+      learning_sensitivity: v.optional(v.number()),
+      sharing_intention: v.optional(v.string()),
+    }),
+  },
+  handler: async (ctx, { fingerprintId, userId, updates }) => {
+    const fingerprint = await ctx.db.get(fingerprintId);
+    
+    if (!fingerprint) {
+      throw new Error("Fingerprint not found");
+    }
+    
+    // Verify user owns this fingerprint
+    if (fingerprint.userId !== userId) {
+      throw new Error("Access denied: You don't own this fingerprint");
+    }
+
+    const now = Date.now();
+    
+    // Apply updates
+    await ctx.db.patch(fingerprintId, {
+      ...updates,
+      last_evolution: now,
+    });
+
+    // Record user edit in evolution history
+    await ctx.db.insert("fingerprint_evolution_history", {
+      fingerprintId,
+      userId: fingerprint.userId,
+      projectId: fingerprint.projectId,
+      timestamp: now,
+      evolution_trigger: "user_edit",
+      changes_made: updates,
+      reasoning: "Manual user edit via fingerprint editor",
+      confidence_score: 1.0, // User edits have full confidence
+      learning_captured: `User updated ${Object.keys(updates).length} fields`,
+    });
+
+    return {
+      success: true,
+      fingerprintId,
+      fields_updated: Object.keys(updates),
+    };
+  },
+});
+
+/**
  * Update fingerprint status
  * Used by: Status changes, archiving, etc.
  */
