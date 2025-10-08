@@ -8,36 +8,36 @@ import { Button } from '../../../components/ui/button';
 export const revalidate = 604800;
 
 export const metadata: Metadata = {
-  title: 'HeyContext vs ChatGPT: Which AI Has Better Memory? (2025 Comparison)',
-  description: 'Detailed comparison of HeyContext vs ChatGPT. Learn which AI memory system is better for persistent context, evolving understanding, and long-term projects. Side-by-side feature comparison.',
+  title: 'HeyContext vs Claude: Persistent Memory vs Context Window (2025)',
+  description: 'Detailed comparison of HeyContext vs Claude AI. Compare permanent memory that evolves vs 200K token context window. Which is better for long-term projects?',
   keywords: [
-    'HeyContext vs ChatGPT',
-    'ChatGPT alternative',
-    'AI with persistent memory',
-    'ChatGPT memory limitations',
-    'best AI memory system',
-    'AI that remembers everything',
-    'ChatGPT vs HeyContext',
-    'persistent AI memory',
-    'ChatGPT memory features',
-    'AI assistant comparison'
+    'HeyContext vs Claude',
+    'Claude alternative',
+    'Claude AI comparison',
+    'persistent memory vs context window',
+    'Claude 200k tokens',
+    'best AI for long-term projects',
+    'AI memory system',
+    'Claude vs HeyContext',
+    'AI that remembers',
+    'context window vs memory'
   ],
   openGraph: {
-    title: 'HeyContext vs ChatGPT: Complete Comparison 2025',
-    description: 'Which AI memory system is better? Compare features, pricing, and capabilities.',
+    title: 'HeyContext vs Claude: Memory vs Context Window 2025',
+    description: 'Compare persistent AI memory vs large context windows. Which approach is better for your needs?',
     type: 'article',
-    url: `${siteConfig.url}/compare/heycontext-vs-chatgpt`,
+    url: `${siteConfig.url}/compare/heycontext-vs-claude`,
   },
   alternates: {
-    canonical: `${siteConfig.url}/compare/heycontext-vs-chatgpt`,
+    canonical: `${siteConfig.url}/compare/heycontext-vs-claude`,
   },
 };
 
 const comparisonJsonLd = {
   "@context": "https://schema.org",
   "@type": "Article",
-  "headline": "HeyContext vs ChatGPT: Complete AI Memory Comparison",
-  "description": "Comprehensive comparison of HeyContext and ChatGPT memory systems",
+  "headline": "HeyContext vs Claude: Complete AI Comparison",
+  "description": "Comprehensive comparison of HeyContext and Claude AI memory approaches",
   "author": {
     "@type": "Organization",
     "name": "HeyContext"
@@ -55,68 +55,68 @@ const comparisonJsonLd = {
 
 const features = [
   {
-    feature: 'Persistent Memory',
-    heycontext: 'Evolves indefinitely across all conversations',
-    chatgpt: 'Stores explicit facts, requires manual prompts',
+    feature: 'Memory Type',
+    heycontext: 'Permanent, evolving memory',
+    claude: 'Large working memory (200K tokens)',
+  },
+  {
+    feature: 'Memory Persistence',
+    heycontext: 'Never expires, builds over time',
+    claude: 'Chat-based, resets between conversations',
   },
   {
     feature: 'Background Processing',
     heycontext: 'Continuous insight extraction',
-    chatgpt: 'Only responds when prompted',
+    claude: 'Only responds when prompted',
   },
   {
-    feature: 'Context Learning',
-    heycontext: 'Automatic from every interaction',
-    chatgpt: 'Manual "remember this" prompts',
+    feature: 'Cross-Project Learning',
+    heycontext: 'All projects inform each other',
+    claude: 'Isolated per project',
   },
   {
-    feature: 'Cross-Conversation Insights',
-    heycontext: 'All conversations inform each other',
-    chatgpt: 'Basic memory recall, no active insights',
+    feature: 'Context Approach',
+    heycontext: 'Long-term memory',
+    claude: 'Large short-term memory',
+  },
+  {
+    feature: 'Document Analysis',
+    heycontext: 'Good with integrated notes',
+    claude: 'Exceptional with large documents',
+  },
+  {
+    feature: 'Context Window',
+    heycontext: 'Standard (128k tokens)',
+    claude: '200K tokens (industry leading)',
   },
   {
     feature: 'Integrated Notes',
     heycontext: 'Unified with conversations',
-    chatgpt: 'Separate tools required',
+    claude: 'Upload per project',
   },
   {
     feature: 'Living Projects',
     heycontext: 'Evolving with ambient insights',
-    chatgpt: 'Basic file uploads',
+    claude: 'Project folders with documents',
   },
   {
-    feature: 'Memory Architecture',
-    heycontext: 'Multi-dimensional clusters',
-    chatgpt: 'Simple fact storage',
-  },
-  {
-    feature: 'General AI',
-    heycontext: 'GPT-4 powered',
-    chatgpt: 'GPT-4 powered',
+    feature: 'Safety Focus',
+    heycontext: 'Privacy-focused',
+    claude: 'Exceptional safety measures',
   },
   {
     feature: 'Web Browsing',
     heycontext: 'Coming soon',
-    chatgpt: 'Real-time search',
-  },
-  {
-    feature: 'Image Generation',
-    heycontext: 'Coming soon',
-    chatgpt: 'DALL-E 3 built-in',
-  },
-  {
-    feature: 'Code Execution',
-    heycontext: 'Coming soon',
-    chatgpt: 'Python interpreter',
+    claude: 'Available (web search)',
   },
   {
     feature: 'Starting Price',
     heycontext: 'Free → $10 → $25/mo',
-    chatgpt: 'Free → $20/mo',
+    claude: 'Free → $20/mo',
   },
 ];
 
-export default function HeyContextVsChatGPT() {
+export default function HeyContextVsClaude() {
   return (
     <>
       <script
@@ -125,26 +125,26 @@ export default function HeyContextVsChatGPT() {
       />
       
       <div className="max-w-6xl mx-auto px-6 py-16">
-        {/* Breadcrumb - subtle, text-only */}
+        {/* Breadcrumb */}
         <nav className="mb-12 flex items-center text-sm text-muted-foreground font-light">
           <Link href="/" className="hover:text-foreground transition-colors duration-300">Home</Link>
           <span className="mx-3 text-muted-foreground/40">/</span>
           <Link href="/compare" className="hover:text-foreground transition-colors duration-300">Compare</Link>
           <span className="mx-3 text-muted-foreground/40">/</span>
-          <span className="text-foreground font-medium">HeyContext vs ChatGPT</span>
+          <span className="text-foreground font-medium">HeyContext vs Claude</span>
         </nav>
 
-        {/* Hero - asymmetric with subtle line */}
+        {/* Hero */}
         <header className="mb-24">
           <div className="flex items-center gap-8 mb-6">
             <h1 className="text-5xl sm:text-6xl font-light tracking-tight">
-              HeyContext vs ChatGPT
+              HeyContext vs Claude
             </h1>
             <div className="hidden md:block flex-1 h-px bg-gradient-to-r from-border/60 to-transparent" />
           </div>
           <div className="ml-0 md:ml-12 space-y-4">
             <h2 className="text-2xl font-medium text-muted-foreground">
-              Persistent memory vs conversational AI
+              Permanent memory vs large context window
             </h2>
             <p className="text-sm text-muted-foreground/60 font-light">
               Updated {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
@@ -152,52 +152,54 @@ export default function HeyContextVsChatGPT() {
           </div>
         </header>
 
-        {/* Quick Answer - subtle, elegant */}
-        <section className="mb-20 border-l-2 border-blue-400/30 pl-8">
+        {/* Quick Answer */}
+        <section className="mb-20 border-l-2 border-purple-400/30 pl-8">
           <h2 className="text-lg font-light text-muted-foreground mb-6 tracking-wide uppercase">
             Quick Answer
           </h2>
           <div className="space-y-6 text-lg leading-relaxed">
             <p>
-              <span className="font-medium text-foreground">ChatGPT</span>
-              <span className="text-muted-foreground"> is an excellent general-purpose AI for one-off questions, content generation, and varied tasks. It's like having a knowledgeable assistant you can ask anything.</span>
+              <span className="font-medium text-foreground">Claude</span>
+              <span className="text-muted-foreground"> by Anthropic offers an exceptional 200K token context window and project-based organization. It excels at analyzing large documents and maintaining context within a single conversation or project.</span>
             </p>
             <p>
               <span className="font-medium text-foreground">HeyContext</span>
-              <span className="text-muted-foreground"> is purpose-built for users who need an AI that </span>
-              <em className="font-medium text-foreground">remembers and learns</em>
-              <span className="text-muted-foreground"> from every interaction. If you're tired of repeating yourself or want an AI that builds deep understanding over time, HeyContext is designed specifically for that.</span>
+              <span className="text-muted-foreground"> takes a fundamentally different approach: instead of a large </span>
+              <em className="font-medium text-foreground">working memory</em>
+              <span className="text-muted-foreground">, it provides permanent </span>
+              <em className="font-medium text-foreground">long-term memory</em>
+              <span className="text-muted-foreground"> that builds understanding across all conversations and never expires.</span>
             </p>
           </div>
           
-          {/* Decision framework - clean text layout */}
+          {/* Decision framework */}
           <div className="mt-12 grid md:grid-cols-2 gap-12">
             <div className="space-y-4">
               <h3 className="text-sm font-medium tracking-wide text-muted-foreground">
                 Choose HeyContext for
               </h3>
               <div className="space-y-3 text-base">
-                <p className="text-foreground">Long-term projects</p>
-                <p className="text-foreground">Tired of repeating context</p>
-                <p className="text-foreground">AI that learns from all interactions</p>
-                <p className="text-foreground">Notes + conversations unified</p>
+                <p className="text-foreground">Memory that persists indefinitely</p>
+                <p className="text-foreground">Learning across all conversations</p>
+                <p className="text-foreground">Background insight extraction</p>
+                <p className="text-foreground">Evolving understanding over time</p>
               </div>
             </div>
             <div className="space-y-4">
               <h3 className="text-sm font-medium tracking-wide text-muted-foreground">
-                Choose ChatGPT for
+                Choose Claude for
               </h3>
               <div className="space-y-3 text-base">
-                <p className="text-foreground">General-purpose AI</p>
-                <p className="text-foreground">Web browsing & image generation</p>
-                <p className="text-foreground">Context persistence isn't critical</p>
-                <p className="text-foreground">One-off interactions</p>
+                <p className="text-foreground">Analyzing very large documents</p>
+                <p className="text-foreground">Single-session deep work</p>
+                <p className="text-foreground">Safety-critical applications</p>
+                <p className="text-foreground">Project-based organization</p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Key Difference - editorial layout */}
+        {/* Key Difference */}
         <section className="mb-24">
           <div className="mb-12">
             <h2 className="text-3xl font-light tracking-tight mb-2">The Fundamental Difference</h2>
@@ -207,33 +209,33 @@ export default function HeyContextVsChatGPT() {
           <div className="grid md:grid-cols-2 gap-16">
             <div className="space-y-6">
               <div className="h-px w-16 bg-gradient-to-r from-purple-400/60 to-transparent" />
-              <h3 className="text-2xl font-medium">HeyContext: Active Memory</h3>
+              <h3 className="text-2xl font-medium">HeyContext: Long-Term Memory</h3>
               <p className="text-muted-foreground leading-relaxed">
-                Memory that <span className="font-medium text-foreground">actively processes and evolves</span>. Every conversation, note, and interaction feeds into a growing understanding of your work, goals, and thinking patterns.
+                Memory that <span className="font-medium text-foreground">persists permanently and evolves</span>. Every conversation builds understanding that carries forward indefinitely. Context never expires or resets.
               </p>
               <div className="space-y-3 text-sm pt-4">
-                <p className="text-foreground">Insights extracted automatically in the background</p>
-                <p className="text-foreground">Context that evolves along with you</p>
-                <p className="text-foreground">Connections form between old and new knowledge</p>
+                <p className="text-foreground">Memory builds across months and years</p>
+                <p className="text-foreground">Insights extracted automatically</p>
+                <p className="text-foreground">All conversations inform each other</p>
               </div>
             </div>
             
             <div className="space-y-6 md:mt-12">
-              <div className="h-px w-16 bg-gradient-to-r from-slate-400/60 to-transparent" />
-              <h3 className="text-2xl font-medium">ChatGPT: Conversational Memory</h3>
+              <div className="h-px w-16 bg-gradient-to-r from-orange-400/60 to-transparent" />
+              <h3 className="text-2xl font-medium">Claude: Large Working Memory</h3>
               <p className="text-muted-foreground leading-relaxed">
-                Memory that <span className="font-medium text-foreground">stores what you explicitly tell it</span>. Great for individual conversations, but context doesn't carry over automatically between sessions.
+                A <span className="font-medium text-foreground">massive 200K token context window</span> lets you work with huge amounts of information in a single session. Perfect for analyzing large documents or maintaining context in long conversations.
               </p>
               <div className="space-y-3 text-sm pt-4 text-muted-foreground">
-              <p>Basic memory recall, no context evolution</p>
-              <p>Requires manual "remember this" prompts</p>
-              <p>No automatic insight extraction</p>
+                <p>Context persists within project only</p>
+                <p>Resets when switching projects</p>
+                <p>No background processing between sessions</p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Feature Comparison - clean table */}
+        {/* Feature Comparison */}
         <section className="mb-24">
           <div className="mb-12">
             <h2 className="text-3xl font-light tracking-tight mb-2">Feature-by-Feature</h2>
@@ -246,7 +248,7 @@ export default function HeyContextVsChatGPT() {
               <div className="grid grid-cols-[2fr_3fr_3fr] gap-8 pb-4 border-b border-border/40">
                 <div className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Feature</div>
                 <div className="text-xs font-medium tracking-wide text-muted-foreground uppercase">HeyContext</div>
-                <div className="text-xs font-medium tracking-wide text-muted-foreground uppercase">ChatGPT</div>
+                <div className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Claude</div>
               </div>
               
               {/* Table rows */}
@@ -255,7 +257,7 @@ export default function HeyContextVsChatGPT() {
                   <div key={idx} className="grid grid-cols-[2fr_3fr_3fr] gap-8 py-6 hover:bg-muted/20 transition-colors duration-300">
                     <div className="text-sm font-medium text-foreground">{row.feature}</div>
                     <div className="text-sm text-muted-foreground leading-relaxed">{row.heycontext}</div>
-                    <div className="text-sm text-muted-foreground leading-relaxed">{row.chatgpt}</div>
+                    <div className="text-sm text-muted-foreground leading-relaxed">{row.claude}</div>
                   </div>
                 ))}
               </div>
@@ -263,7 +265,7 @@ export default function HeyContextVsChatGPT() {
           </div>
         </section>
 
-        {/* Pricing Comparison - simplified */}
+        {/* Pricing Comparison */}
         <section className="mb-24">
           <div className="mb-12">
             <h2 className="text-3xl font-light tracking-tight mb-2">Pricing</h2>
@@ -293,29 +295,24 @@ export default function HeyContextVsChatGPT() {
             </div>
             
             <div className="space-y-8 md:mt-12">
-              <h3 className="text-xl font-medium">ChatGPT</h3>
+              <h3 className="text-xl font-medium">Claude</h3>
               <div className="space-y-6">
                 <div className="pb-6 border-b border-border/20">
                   <p className="text-3xl font-light mb-2">Free</p>
-                  <p className="text-sm text-muted-foreground mb-4">GPT-3.5 access</p>
-                  <p className="text-sm text-foreground">Basic AI capabilities</p>
-                </div>
-                <div className="pb-6 border-b border-border/20">
-                  <p className="text-3xl font-light mb-2">$20<span className="text-lg text-muted-foreground">/mo</span></p>
-                  <p className="text-sm text-muted-foreground mb-4">ChatGPT Plus</p>
-                  <p className="text-sm text-foreground">GPT-4 · Web browsing · DALL-E · Priority access</p>
+                  <p className="text-sm text-muted-foreground mb-4">Claude Sonnet 4 access</p>
+                  <p className="text-sm text-foreground">Limited usage · 200K context window</p>
                 </div>
                 <div>
-                  <p className="text-3xl font-light mb-2">$25<span className="text-lg text-muted-foreground">/user/mo</span></p>
-                  <p className="text-sm text-muted-foreground mb-4">ChatGPT Team</p>
-                  <p className="text-sm text-foreground">Everything in Plus · Team workspace · Admin controls</p>
+                  <p className="text-3xl font-light mb-2">$20<span className="text-lg text-muted-foreground">/mo</span></p>
+                  <p className="text-sm text-muted-foreground mb-4">Claude Pro</p>
+                  <p className="text-sm text-foreground">5x usage limit · Claude Opus 4 access · Priority access · Early features</p>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Use Cases - elegant text layout */}
+        {/* Use Cases */}
         <section className="mb-24">
           <div className="mb-12">
             <h2 className="text-3xl font-light tracking-tight mb-2">Which Should You Choose?</h2>
@@ -328,58 +325,58 @@ export default function HeyContextVsChatGPT() {
               <h3 className="text-xl font-medium">Choose HeyContext</h3>
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <p className="font-medium text-foreground">Long-term Projects</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">Working on things that span weeks or months</p>
-                </div>
-                <div className="space-y-2">
                   <p className="font-medium text-foreground">Building Context Over Time</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">Want AI that learns from every interaction</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">Projects spanning weeks, months, or years</p>
                 </div>
                 <div className="space-y-2">
-                  <p className="font-medium text-foreground">Integrated Notes + AI</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">Need notes and conversations in one system</p>
+                  <p className="font-medium text-foreground">Cross-Project Learning</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">Want insights from all your work to inform new projects</p>
                 </div>
                 <div className="space-y-2">
-                  <p className="font-medium text-foreground">Tired of Repeating Yourself</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">Want AI that remembers without being told</p>
+                  <p className="font-medium text-foreground">Automatic Memory Building</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">Don't want to manually maintain context</p>
                 </div>
                 <div className="space-y-2">
                   <p className="font-medium text-foreground">Background Insights</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">Want AI to work on your behalf passively</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">Want AI processing happening passively</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="font-medium text-foreground">Better Value at Scale</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">$10/mo vs $20/mo for ongoing use</p>
                 </div>
               </div>
             </div>
             
             <div className="space-y-8 md:mt-12">
-              <div className="h-px w-12 bg-gradient-to-r from-blue-400/40 to-transparent" />
-              <h3 className="text-xl font-medium">Choose ChatGPT</h3>
+              <div className="h-px w-12 bg-gradient-to-r from-orange-400/40 to-transparent" />
+              <h3 className="text-xl font-medium">Choose Claude</h3>
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <p className="font-medium text-foreground">One-Off Questions</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">Quick answers to varied questions</p>
+                  <p className="font-medium text-foreground">Analyzing Large Documents</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">Working with 50+ page documents in single sessions</p>
                 </div>
                 <div className="space-y-2">
-                  <p className="font-medium text-foreground">Web Browsing Needed</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">Need real-time web search capabilities</p>
+                  <p className="font-medium text-foreground">Single-Session Deep Work</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">Need massive context within one conversation</p>
                 </div>
                 <div className="space-y-2">
-                  <p className="font-medium text-foreground">Image Generation</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">Built-in DALL-E for creating images</p>
+                  <p className="font-medium text-foreground">Safety-Critical Applications</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">Anthropic's exceptional safety measures</p>
                 </div>
                 <div className="space-y-2">
-                  <p className="font-medium text-foreground">Code Execution</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">Need to run Python code and analyze data</p>
+                  <p className="font-medium text-foreground">Project-Based Workflow</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">Prefer organizing work into separate projects</p>
                 </div>
                 <div className="space-y-2">
-                  <p className="font-medium text-foreground">General Purpose AI</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">Want versatile AI for any task</p>
+                  <p className="font-medium text-foreground">Long-Form Writing Analysis</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">Exceptional at analyzing and generating long content</p>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Real-World Scenarios - clean editorial */}
+        {/* Real-World Scenarios */}
         <section className="mb-24">
           <div className="mb-12">
             <h2 className="text-3xl font-light tracking-tight mb-2">Real-World Scenarios</h2>
@@ -388,59 +385,59 @@ export default function HeyContextVsChatGPT() {
           
           <div className="space-y-16">
             <div className="border-l-2 border-border/30 pl-8 space-y-4">
-              <h3 className="text-xl font-medium">Research & Writing Projects</h3>
+              <h3 className="text-xl font-medium">6-Month Product Development</h3>
               <p className="text-muted-foreground leading-relaxed">
-                You're writing a book that spans 6 months. Dozens of conversations, hundreds of notes, evolving ideas.
+                Building a product with evolving requirements, design decisions, and feature discussions spanning half a year.
               </p>
               <div className="grid md:grid-cols-2 gap-8 pt-4">
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-foreground">HeyContext</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">Every conversation and note feeds into growing understanding. AI automatically connects ideas across months of work.</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">Remembers every decision and why you made it. Context builds continuously. Old decisions inform new features automatically.</p>
                 </div>
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">ChatGPT</p>
-                  <p className="text-sm text-muted-foreground/70 leading-relaxed">Re-upload context and re-explain your book structure in each new conversation.</p>
+                  <p className="text-sm font-medium text-muted-foreground">Claude</p>
+                  <p className="text-sm text-muted-foreground/70 leading-relaxed">Excellent for deep analysis within each project session, but you'll need to re-upload context for new project phases.</p>
                 </div>
               </div>
             </div>
             
             <div className="border-l-2 border-border/30 pl-8 space-y-4">
-              <h3 className="text-xl font-medium">Product Development</h3>
+              <h3 className="text-xl font-medium">Analyzing a 100-Page Research Paper</h3>
               <p className="text-muted-foreground leading-relaxed">
-                Building a product over several months with evolving requirements and decisions.
-              </p>
-              <div className="grid md:grid-cols-2 gap-8 pt-4">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-foreground">HeyContext</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">AI remembers past decisions, feature discussions, and why you made certain choices. Context builds continuously.</p>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">ChatGPT</p>
-                  <p className="text-sm text-muted-foreground/70 leading-relaxed">Manually maintain context documents and re-share them in new conversations.</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="border-l-2 border-border/30 pl-8 space-y-4">
-              <h3 className="text-xl font-medium">Content Creation with Current Events</h3>
-              <p className="text-muted-foreground leading-relaxed">
-                Need to create a blog post right now with current web research.
+                Need to deeply analyze a very long document right now, with lots of back-and-forth discussion.
               </p>
               <div className="grid md:grid-cols-2 gap-8 pt-4">
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-muted-foreground">HeyContext</p>
-                  <p className="text-sm text-muted-foreground/70 leading-relaxed">No web browsing yet. You'll need to manually provide current information.</p>
+                  <p className="text-sm text-muted-foreground/70 leading-relaxed">128k context window is good but may require breaking very large documents into sections.</p>
                 </div>
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-foreground">ChatGPT</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">Built-in web browsing finds current information and generates content immediately.</p>
+                  <p className="text-sm font-medium text-foreground">Claude</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">200K token window handles entire document easily. Exceptional long-form analysis and comprehension.</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="border-l-2 border-border/30 pl-8 space-y-4">
+              <h3 className="text-xl font-medium">Multiple Interconnected Projects</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Working on 3 different projects where insights from one should inform the others.
+              </p>
+              <div className="grid md:grid-cols-2 gap-8 pt-4">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-foreground">HeyContext</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">All projects share memory. Patterns from Project A automatically inform Project B. Cross-project learning happens naturally.</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Claude</p>
+                  <p className="text-sm text-muted-foreground/70 leading-relaxed">Projects are isolated. You'll manually transfer context between project folders.</p>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* FAQ - minimal design */}
+        {/* FAQ */}
         <section className="mb-24">
           <div className="mb-12">
             <h2 className="text-3xl font-light tracking-tight mb-2">Questions</h2>
@@ -449,45 +446,45 @@ export default function HeyContextVsChatGPT() {
           
           <div className="space-y-8">
             <div className="border-b border-border/20 pb-8">
-              <h3 className="text-lg font-medium mb-3">Can I use both HeyContext and ChatGPT?</h3>
+              <h3 className="text-lg font-medium mb-3">Can I use both HeyContext and Claude?</h3>
               <p className="text-muted-foreground leading-relaxed">
-                Absolutely. Many users use ChatGPT for quick questions and one-off tasks, while using HeyContext for long-term projects and persistent memory needs. They complement each other well.
+                Absolutely. Many users use Claude for single-session document analysis and deep dives, while using HeyContext for long-term memory and cross-project learning. They complement each other well.
               </p>
             </div>
             <div className="border-b border-border/20 pb-8">
-              <h3 className="text-lg font-medium mb-3">Does HeyContext have web browsing like ChatGPT?</h3>
+              <h3 className="text-lg font-medium mb-3">What does "200K tokens" actually mean?</h3>
               <p className="text-muted-foreground leading-relaxed">
-                Not currently, but it's on the roadmap. HeyContext focuses on persistent memory and understanding rather than real-time information retrieval.
+                200K tokens is roughly 150,000 words or about 500 pages of text. It's the amount of information Claude can hold in its "working memory" during a single conversation. HeyContext has a smaller working memory (128k tokens) but permanent long-term memory.
               </p>
             </div>
             <div className="border-b border-border/20 pb-8">
-              <h3 className="text-lg font-medium mb-3">Which is more cost-effective?</h3>
+              <h3 className="text-lg font-medium mb-3">Which is better for research projects?</h3>
               <p className="text-muted-foreground leading-relaxed">
-                HeyContext starts at $10/month vs ChatGPT Plus at $20/month. For basic AI + persistent memory, HeyContext is more affordable. ChatGPT Plus includes web browsing and image generation, which adds value if you need those features.
+                It depends. Claude excels at analyzing large documents in single sessions. HeyContext excels at building understanding over weeks/months of research. For ongoing research where context builds over time, HeyContext is better. For one-time deep document analysis, Claude shines.
               </p>
             </div>
             <div className="border-b border-border/20 pb-8">
-              <h3 className="text-lg font-medium mb-3">How is HeyContext's memory different from ChatGPT's memory feature?</h3>
+              <h3 className="text-lg font-medium mb-3">Does HeyContext's memory work across projects like Claude's projects?</h3>
               <p className="text-muted-foreground leading-relaxed">
-                ChatGPT's memory stores what you explicitly tell it to remember. HeyContext automatically extracts insights from every interaction, processes them in the background, and builds evolving understanding without manual prompts.
+                Yes, but even better. While Claude isolates across conversations, HeyContext's memory spans all your work. Insights from one project automatically inform others. Think of it as one unified memory rather than separate project folders.
               </p>
             </div>
             <div className="border-b border-border/20 pb-8">
-              <h3 className="text-lg font-medium mb-3">Can I migrate my ChatGPT conversations to HeyContext?</h3>
+              <h3 className="text-lg font-medium mb-3">Can I migrate from Claude to HeyContext?</h3>
               <p className="text-muted-foreground leading-relaxed">
-                You can export your ChatGPT conversations and import them into HeyContext. There is a guide in our settings to help you with the process. The AI will process them and build understanding from your past interactions.
+                Not currently, but we are working on it. It is on our roadmap. You can export your Claude conversations and import them into HeyContext. The AI will process them and build understanding from your past interactions. There's a guide in settings to help with the process.
               </p>
             </div>
           </div>
         </section>
 
-        {/* CTA - subtle and elegant */}
+        {/* CTA */}
         <section className="mt-24 mb-16">
           <div className="text-center space-y-8 max-w-2xl mx-auto">
             <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
             <h2 className="text-3xl font-light tracking-tight">Try HeyContext Free</h2>
             <p className="text-lg text-muted-foreground leading-relaxed">
-              Experience AI memory that actually evolves. No credit card required.
+              Experience memory that never expires. No credit card required.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <Link href="/auth/register">

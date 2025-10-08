@@ -126,6 +126,71 @@ export default function ComparePage() {
           </p>
         </header>
 
+        {/* Individual Comparisons */}
+        <section className="mb-16">
+          <h2 className="text-2xl font-light text-muted-foreground mb-8 tracking-wide uppercase">
+            Detailed Comparisons
+          </h2>
+          <div className="grid md:grid-cols-2 gap-6">
+            <Link 
+              href="/compare/heycontext-vs-chatgpt"
+              className="group p-6 border border-border/40 rounded-lg hover:border-border transition-all duration-300 hover:shadow-sm"
+            >
+              <h3 className="text-xl font-medium mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                HeyContext vs ChatGPT
+              </h3>
+              <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+                Persistent memory vs conversational AI. Compare evolving understanding with one-off interactions.
+              </p>
+              <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                Read detailed comparison →
+              </span>
+            </Link>
+
+            <Link 
+              href="/compare/heycontext-vs-claude"
+              className="group p-6 border border-border/40 rounded-lg hover:border-border transition-all duration-300 hover:shadow-sm"
+            >
+              <h3 className="text-xl font-medium mb-2 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                HeyContext vs Claude
+              </h3>
+              <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+                Permanent memory vs large context window. Long-term learning versus massive short-term capacity.
+              </p>
+              <span className="text-sm font-medium text-purple-600 dark:text-purple-400">
+                Read detailed comparison →
+              </span>
+            </Link>
+
+            <Link 
+              href="/compare/heycontext-vs-notion-ai"
+              className="group p-6 border border-border/40 rounded-lg hover:border-border transition-all duration-300 hover:shadow-sm"
+            >
+              <h3 className="text-xl font-medium mb-2 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
+                HeyContext vs Notion AI
+              </h3>
+              <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+                AI-first memory vs workspace AI. Conversational intelligence versus document assistance.
+              </p>
+              <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                Coming soon →
+              </span>
+            </Link>
+
+            <div className="p-6 border border-border/20 rounded-lg bg-muted/20">
+              <h3 className="text-xl font-medium mb-2 text-muted-foreground">
+                More Comparisons
+              </h3>
+              <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+                Comparisons with Mem, Obsidian, and other AI tools coming soon.
+              </p>
+              <span className="text-sm font-medium text-muted-foreground">
+                In development
+              </span>
+            </div>
+          </div>
+        </section>
+
         {/* Quick Answer for AI Search */}
         <section className="mb-12 p-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-500">
           <h2 className="text-2xl font-semibold mb-4">Quick Answer</h2>
@@ -166,7 +231,15 @@ export default function ComparePage() {
         {/* Detailed Comparisons */}
         <section className="space-y-12">
           <div>
-            <h2 className="text-3xl font-medium mb-6">HeyContext vs ChatGPT: Which is Better?</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-3xl font-medium">HeyContext vs ChatGPT: Which is Better?</h2>
+              <Link 
+                href="/compare/heycontext-vs-chatgpt"
+                className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                Full comparison →
+              </Link>
+            </div>
             <div className="space-y-4 text-lg leading-relaxed">
               <p>
                 <strong>ChatGPT</strong> is excellent for general-purpose AI tasks, one-off questions, and content generation. It offers broad knowledge and strong reasoning capabilities. However, ChatGPT's memory is limited to individual conversations and custom instructions.
@@ -184,7 +257,15 @@ export default function ComparePage() {
           </div>
 
           <div>
-            <h2 className="text-3xl font-medium mb-6">HeyContext vs Claude: Context Window vs Context Memory</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-3xl font-medium">HeyContext vs Claude: Context Window vs Context Memory</h2>
+              <Link 
+                href="/compare/heycontext-vs-claude"
+                className="text-sm font-medium text-purple-600 dark:text-purple-400 hover:underline"
+              >
+                Full comparison →
+              </Link>
+            </div>
             <div className="space-y-4 text-lg leading-relaxed">
               <p>
                 <strong>Claude</strong> by Anthropic offers exceptional context windows (up to 200K tokens) and project-based organization. It's particularly strong at analyzing large documents and maintaining context within a single project.
