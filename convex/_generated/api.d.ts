@@ -69,6 +69,8 @@ import type * as priceConfig from "../priceConfig.js";
 import type * as projectFingerprintMutations from "../projectFingerprintMutations.js";
 import type * as projectFingerprintQueries from "../projectFingerprintQueries.js";
 import type * as projectSeedQueries from "../projectSeedQueries.js";
+import type * as projectSeedsMutations from "../projectSeedsMutations.js";
+import type * as projectSeedsQueries from "../projectSeedsQueries.js";
 import type * as projectWidgetsMutations from "../projectWidgetsMutations.js";
 import type * as projectWidgetsQueries from "../projectWidgetsQueries.js";
 import type * as projectsMutations from "../projectsMutations.js";
@@ -165,6 +167,8 @@ declare const fullApi: ApiFromModules<{
   projectFingerprintMutations: typeof projectFingerprintMutations;
   projectFingerprintQueries: typeof projectFingerprintQueries;
   projectSeedQueries: typeof projectSeedQueries;
+  projectSeedsMutations: typeof projectSeedsMutations;
+  projectSeedsQueries: typeof projectSeedsQueries;
   projectWidgetsMutations: typeof projectWidgetsMutations;
   projectWidgetsQueries: typeof projectWidgetsQueries;
   projectsMutations: typeof projectsMutations;

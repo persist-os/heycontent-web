@@ -43,6 +43,7 @@ export function middleware(request: NextRequest) {
     "https://combative-lark-727.convex.cloud",
     "wss://combative-lark-727.convex.cloud",
     "https://backend.hicontent.co",
+    "http://backend.hicontent.co",
     "https://content-backend-216038426364.us-central1.run.app",
     "https://content-backend-216038426364.us-east1.run.app",
     "https://content-backend-216038426364.us-west1.run.app",
