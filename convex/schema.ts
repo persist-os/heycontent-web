@@ -546,7 +546,7 @@ export default defineSchema({
 
     // AI-Discovered Project Nature (flattened for AI searchability)
     domain: v.optional(v.any()), // "academic", "creative", "business", "skill_development"
-    complexity_level: v.optional(v.any()), // 1-10 scale
+    complexity_level: v.optional(v.number()), // 1-10 scale
     collaboration_style: v.optional(v.any()), // "solo", "small_team", "large_group", "community"
     time_horizon: v.optional(v.any()), // "sprint", "project", "journey", "lifestyle"
 
@@ -580,7 +580,7 @@ export default defineSchema({
     feedback_frequency: v.optional(v.any()), // How often user wants check-ins
 
     // Evolution Intelligence
-    learning_sensitivity: v.optional(v.any()), // How quickly to adapt (1-10)
+    learning_sensitivity: v.optional(v.number()), // How quickly to adapt (1-10)
     change_triggers: v.optional(v.any()),
     stability_zones: v.optional(v.any()), // What should rarely change
     growth_edges: v.optional(v.any()), // What should evolve actively
@@ -1097,8 +1097,7 @@ export default defineSchema({
         v.literal("value_system"),           // Core beliefs and values
         v.literal("contextual_adaptation"),  // How they adapt to different situations
         v.literal("growth_trajectory"),      // How they're evolving over time
-        v.literal("contradiction_resolution"), // How they handle internal conflicts
-        v.literal("project_seed")            // 🌱 AI-native emergent project domain cluster
+        v.literal("contradiction_resolution") // How they handle internal conflicts
     ),
     dimension: v.string(),                  // REQUIRED: Primary identity dimension
     
@@ -1155,25 +1154,16 @@ export default defineSchema({
     createdAt: v.number(),                  // REQUIRED: Creation timestamp
     updatedAt: v.number(),                  // REQUIRED: Last update timestamp
     next_review_due: v.optional(v.number()), // Optional: When this crystal should be reviewed/updated
-    review_priority: v.optional(v.string()), // Flexible string field for review priority
+      review_priority: v.optional(v.string()), // Flexible string field for review priority
+    auto_promoted: v.optional(v.boolean()), // Optional: Whether this crystal was auto-promoted
+    
+      related_conversation_ids: v.optional(v.array(v.string())), // Optional: Related conversation IDs
+    
+    related_note_ids: v.optional(v.array(v.string())), // Optional: Related note IDs
     
     // === ARCHIVAL FIELDS (FOR CAPACITY MANAGEMENT) ===
     archived: v.optional(v.boolean()),      // Optional: Whether this crystal has been archived
     archived_at: v.optional(v.number()),    // Optional: When this crystal was archived
-    
-    // === PROJECT SEED SPECIFIC FIELDS (AI-NATIVE EMERGENCE) ===
-    // These fields only apply when crystal_type="project_seed"
-    suggested_project_name: v.optional(v.string()),
-    suggested_project_description: v.optional(v.string()),
-    suggested_domain: v.optional(v.string()),
-    suggested_complexity: v.optional(v.number()),
-    suggested_time_horizon: v.optional(v.string()),
-    related_note_ids: v.optional(v.array(v.string())),
-    related_conversation_ids: v.optional(v.array(v.string())),
-    auto_promoted: v.optional(v.boolean()),
-    promoted_to_project_id: v.optional(v.string()),
-    promotedToProjectId: v.optional(v.string()), // Alias for promoted_to_project_id
-    confidence_at_promotion: v.optional(v.number()),
   })
 
       .index("by_user", ["userId"])
@@ -1186,6 +1176,58 @@ export default defineSchema({
     .index("by_user_project", ["userId", "projectId"])
     .index("by_widget", ["widgetId"]),
     
+    
+    // === PROJECT SEEDS TABLE (CODE-BASED DETECTION) ===
+    // Separate table for project seeds detected via code analysis
+    // Seeds are potential projects identified from shard patterns
+    projectSeeds: defineTable({
+      // === CORE IDENTIFICATION ===
+      userId: v.string(),
+      seedId: v.string(),  // Unique identifier
+      
+      // === SEED DEFINITION ===
+      name: v.string(),  // Generated from keywords
+      description: v.string(),  // Core insight about the seed
+      
+      // === DETECTION METADATA ===
+      detectedAt: v.number(),  // When detected
+      detectionMethod: v.literal("code_based"),  // Always code-based
+      confidence: v.number(),  // 0-1 confidence score
+      
+      // === SOURCE DATA ===
+      sourceShardIds: v.array(v.string()),  // Shards that formed this seed
+      keywords: v.array(v.string()),  // Extracted keywords
+      dimension: v.string(),  // Primary dimension from shards
+      
+      // === PROJECT SUGGESTION ===
+      suggestedProjectName: v.string(),
+      suggestedProjectDescription: v.string(),
+      suggestedDomain: v.string(),  // academic, creative, business, skill_development, etc.
+      suggestedComplexity: v.number(),  // 0-10
+      suggestedTimeHorizon: v.string(),  // sprint, project, journey, lifestyle
+      
+      // === RELATED CONTENT ===
+      relatedNoteIds: v.array(v.string()),
+      relatedConversationIds: v.array(v.string()),
+      
+      // === QUALITY METRICS ===
+      shardCount: v.number(),  // Number of shards
+      evidenceStrength: v.string(),  // weak, moderate, strong
+      
+      // === LIFECYCLE ===
+      promoted: v.boolean(),  // Whether promoted to project
+      promotedAt: v.optional(v.number()),  // When promoted
+      promotedToProjectId: v.optional(v.id("projects")),  // Project created from this seed
+      confidenceAtPromotion: v.optional(v.number()),  // Confidence when promoted
+      
+      // === TIMESTAMPS ===
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .index("by_user", ["userId"])
+      .index("by_confidence", ["userId", "confidence"])
+      .index("by_promoted", ["userId", "promoted"])
+      .index("by_detected", ["userId", "detectedAt"]),
     
     crystal_formation_runs: defineTable({
       userId: v.string(),
@@ -1548,6 +1590,10 @@ export default defineSchema({
     userId: v.string(),
     armId: v.string(),
     armName: v.string(),
+    description: v.optional(v.string()),  // NEW - arm description
+    
+    // NEW - Strategy parameters (e.g., threshold values, min_shards)
+    params: v.optional(v.any()),  // Flexible storage for arm-specific parameters
     
     // Thompson Sampling parameters (Beta distribution)
     alpha: v.number(),

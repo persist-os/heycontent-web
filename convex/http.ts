@@ -27,6 +27,7 @@ app.use('*', async (c, next) => {
   let domain = 'unknown';
   if (path.includes('/notes')) domain = 'notes';
   else if (path.includes('/users')) domain = 'users';
+  else if (path.includes('/projectSeeds')) domain = 'project_seeds';
   else if (path.includes('/projects')) domain = 'projects';
   else if (path.includes('/widgets')) domain = 'widgets';
   else if (path.includes('/crystal')) domain = 'crystal';
@@ -3814,6 +3815,213 @@ app.post("/api/webhookEvents/retry", async (c) => {
     return c.json({ 
       success: false,
       error: error.message || "Failed to retry webhook"
+    }, 500);
+  }
+});
+
+// ============================================================================
+// PROJECT SEEDS - Code-based seed detection
+// ============================================================================
+
+/**
+ * List project seeds for a user
+ */
+app.post("/api/projectSeeds/list", async (c) => {
+  try {
+    const ctx = c.env;
+    const body = await c.req.json();
+    
+    const seeds = await ctx.runQuery(api.projectSeedsQueries.listProjectSeeds, {
+      userId: body.userId,
+      minConfidence: body.minConfidence,
+      includePromoted: body.includePromoted ?? false,
+      limit: body.limit,
+    });
+    
+    return c.json({ success: true, data: seeds });
+  } catch (error: any) {
+    console.error("[PROJECT_SEEDS_LIST] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to list project seeds"
+    }, 500);
+  }
+});
+
+/**
+ * Get a specific project seed
+ */
+app.post("/api/projectSeeds/get", async (c) => {
+  try {
+    const ctx = c.env;
+    const body = await c.req.json();
+    
+    const seed = await ctx.runQuery(api.projectSeedsQueries.getProjectSeed, {
+      seedId: body.seedId as Id<"projectSeeds">,
+    });
+    
+    if (!seed) {
+      return c.json({ success: false, error: "Seed not found" }, 404);
+    }
+    
+    return c.json({ success: true, data: seed });
+  } catch (error: any) {
+    console.error("[PROJECT_SEEDS_GET] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get project seed"
+    }, 500);
+  }
+});
+
+/**
+ * Get seeds ready for promotion
+ */
+app.post("/api/projectSeeds/readyForPromotion", async (c) => {
+  try {
+    const ctx = c.env;
+    const body = await c.req.json();
+    
+    const seeds = await ctx.runQuery(api.projectSeedsQueries.getSeedsReadyForPromotion, {
+      userId: body.userId,
+      confidenceThreshold: body.confidenceThreshold,
+    });
+    
+    return c.json({ success: true, data: seeds });
+  } catch (error: any) {
+    console.error("[PROJECT_SEEDS_READY] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get seeds ready for promotion"
+    }, 500);
+  }
+});
+
+/**
+ * Get seed statistics
+ */
+app.post("/api/projectSeeds/statistics", async (c) => {
+  try {
+    const ctx = c.env;
+    const body = await c.req.json();
+    
+    const stats = await ctx.runQuery(api.projectSeedsQueries.getSeedStatistics, {
+      userId: body.userId,
+    });
+    
+    return c.json({ success: true, data: stats });
+  } catch (error: any) {
+    console.error("[PROJECT_SEEDS_STATS] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get seed statistics"
+    }, 500);
+  }
+});
+
+/**
+ * Create a new project seed
+ */
+app.post("/api/projectSeeds/create", async (c) => {
+  try {
+    const ctx = c.env;
+    const body = await c.req.json();
+    
+    const seedId = await ctx.runMutation(api.projectSeedsMutations.createProjectSeed, {
+      userId: body.userId,
+      seedId: body.seedId,
+      name: body.name,
+      description: body.description,
+      confidence: body.confidence,
+      sourceShardIds: body.sourceShardIds,
+      keywords: body.keywords,
+      dimension: body.dimension,
+      suggestedProjectName: body.suggestedProjectName,
+      suggestedProjectDescription: body.suggestedProjectDescription,
+      suggestedDomain: body.suggestedDomain,
+      suggestedComplexity: body.suggestedComplexity,
+      suggestedTimeHorizon: body.suggestedTimeHorizon,
+      relatedNoteIds: body.relatedNoteIds,
+      relatedConversationIds: body.relatedConversationIds,
+      shardCount: body.shardCount,
+      evidenceStrength: body.evidenceStrength,
+    });
+    
+    return c.json({ success: true, data: { seedId } });
+  } catch (error: any) {
+    console.error("[PROJECT_SEEDS_CREATE] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to create project seed"
+    }, 500);
+  }
+});
+
+/**
+ * Update a project seed
+ */
+app.post("/api/projectSeeds/update", async (c) => {
+  try {
+    const ctx = c.env;
+    const body = await c.req.json();
+    
+    const seedId = await ctx.runMutation(api.projectSeedsMutations.updateProjectSeed, {
+      seedId: body.seedId as Id<"projectSeeds">,
+      updates: body.updates,
+    });
+    
+    return c.json({ success: true, data: { seedId } });
+  } catch (error: any) {
+    console.error("[PROJECT_SEEDS_UPDATE] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to update project seed"
+    }, 500);
+  }
+});
+
+/**
+ * Promote a seed to project
+ */
+app.post("/api/projectSeeds/promote", async (c) => {
+  try {
+    const ctx = c.env;
+    const body = await c.req.json();
+    
+    const seedId = await ctx.runMutation(api.projectSeedsMutations.promoteSeed, {
+      seedId: body.seedId as Id<"projectSeeds">,
+      projectId: body.projectId as Id<"projects">,
+      confidenceAtPromotion: body.confidenceAtPromotion,
+    });
+    
+    return c.json({ success: true, data: { seedId } });
+  } catch (error: any) {
+    console.error("[PROJECT_SEEDS_PROMOTE] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to promote seed"
+    }, 500);
+  }
+});
+
+/**
+ * Delete a project seed
+ */
+app.post("/api/projectSeeds/delete", async (c) => {
+  try {
+    const ctx = c.env;
+    const body = await c.req.json();
+    
+    await ctx.runMutation(api.projectSeedsMutations.deleteProjectSeed, {
+      seedId: body.seedId as Id<"projectSeeds">,
+    });
+    
+    return c.json({ success: true });
+  } catch (error: any) {
+    console.error("[PROJECT_SEEDS_DELETE] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to delete seed"
     }, 500);
   }
 });

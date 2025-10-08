@@ -17,12 +17,13 @@ interface ProjectSeedCardProps {
 const ProjectSeedCard: React.FC<ProjectSeedCardProps> = ({ seed }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedSeed, setEditedSeed] = useState({
-    suggested_project_name: seed.suggested_project_name || '',
-    suggested_project_description: seed.suggested_project_description || '',
+    suggestedProjectName: seed.suggestedProjectName || '',
+    suggestedProjectDescription: seed.suggestedProjectDescription || '',
   });
   
-  // Convex mutation for seed operations
-  const batchMutateCrystalData = useMutation(api.crystalMutations.batchMutateCrystalData);
+  // Convex mutations for seed operations
+  const updateProjectSeed = useMutation(api.projectSeedsMutations.updateProjectSeed);
+  const deleteProjectSeed = useMutation(api.projectSeedsMutations.deleteProjectSeed);
   
   const handleDelete = async () => {
     if (!confirm('Are you sure you want to delete this project seed? This action cannot be undone.')) {
@@ -30,19 +31,8 @@ const ProjectSeedCard: React.FC<ProjectSeedCardProps> = ({ seed }) => {
     }
 
     try {
-      const result = await batchMutateCrystalData({
-        table: "crystals",
-        operations: [{
-          type: "delete",
-          id: seed._id
-        }]
-      });
-
-      if (result.success) {
-        toast.success('Project seed deleted successfully');
-      } else {
-        toast.error('Failed to delete project seed');
-      }
+      await deleteProjectSeed({ seedId: seed._id });
+      toast.success('Project seed deleted successfully');
     } catch (error) {
       console.error('Error deleting project seed:', error);
       toast.error('Failed to delete project seed');
@@ -51,27 +41,15 @@ const ProjectSeedCard: React.FC<ProjectSeedCardProps> = ({ seed }) => {
 
   const handleSave = async () => {
     try {
-      const updateData = {
-        suggested_project_name: editedSeed.suggested_project_name,
-        suggested_project_description: editedSeed.suggested_project_description,
-        updatedAt: Date.now()
-      };
-
-      const result = await batchMutateCrystalData({
-        table: "crystals",
-        operations: [{
-          type: "update",
-          id: seed._id,
-          data: updateData
-        }]
+      await updateProjectSeed({
+        seedId: seed._id,
+        updates: {
+          suggestedProjectName: editedSeed.suggestedProjectName,
+          suggestedProjectDescription: editedSeed.suggestedProjectDescription,
+        }
       });
-
-      if (result.success) {
-        toast.success('Project seed updated successfully');
-        setIsEditing(false);
-      } else {
-        toast.error('Failed to update project seed');
-      }
+      toast.success('Project seed updated successfully');
+      setIsEditing(false);
     } catch (error) {
       console.error('Error updating project seed:', error);
       toast.error('Failed to update project seed');
@@ -80,8 +58,8 @@ const ProjectSeedCard: React.FC<ProjectSeedCardProps> = ({ seed }) => {
 
   const handleCancel = () => {
     setEditedSeed({
-      suggested_project_name: seed.suggested_project_name || '',
-      suggested_project_description: seed.suggested_project_description || '',
+      suggestedProjectName: seed.suggestedProjectName || '',
+      suggestedProjectDescription: seed.suggestedProjectDescription || '',
     });
     setIsEditing(false);
   };
@@ -107,19 +85,21 @@ const ProjectSeedCard: React.FC<ProjectSeedCardProps> = ({ seed }) => {
     return date.toLocaleDateString();
   };
 
-  const getConfidenceColor = (confidence: string) => {
-    switch (confidence) {
-      case 'very_high':
-      case 'high':
-        return 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800';
-      case 'moderate':
-        return 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800';
-      case 'developing':
-      case 'low':
-        return 'text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-950/30 border-gray-200 dark:border-gray-800';
-      default:
-        return 'text-muted-foreground bg-muted/30 border-border';
+  const getConfidenceColor = (confidence: number) => {
+    if (confidence >= 0.8) {
+      return 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800';
+    } else if (confidence >= 0.6) {
+      return 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800';
+    } else {
+      return 'text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-950/30 border-gray-200 dark:border-gray-800';
     }
+  };
+
+  const formatConfidence = (confidence: number) => {
+    if (confidence >= 0.8) return 'Very High';
+    if (confidence >= 0.7) return 'High';
+    if (confidence >= 0.5) return 'Moderate';
+    return 'Developing';
   };
 
   const getComplexityColor = (complexity: string) => {
@@ -148,15 +128,15 @@ const ProjectSeedCard: React.FC<ProjectSeedCardProps> = ({ seed }) => {
     }
   };
 
-  const isPromoted = seed.auto_promoted || seed.promoted_to_project_id;
+  const isPromoted = seed.promoted;
 
   return (
     <div className="border border-border/50 rounded-2xl overflow-hidden bg-background/50 backdrop-blur-sm hover:border-border/60 transition-all duration-300">
       {/* Status line at top - green for high confidence seeds */}
       <div className={`h-px w-full ${
-        seed.confidence_score === 'high' || seed.confidence_score === 'very_high'
+        seed.confidence >= 0.7
           ? 'bg-gradient-to-r from-transparent via-emerald-400/60 to-transparent'
-          : seed.confidence_score === 'moderate'
+          : seed.confidence >= 0.5
           ? 'bg-gradient-to-r from-transparent via-amber-400/60 to-transparent'
           : 'bg-gradient-to-r from-transparent via-muted-foreground/30 to-transparent'
       }`} />
@@ -169,32 +149,32 @@ const ProjectSeedCard: React.FC<ProjectSeedCardProps> = ({ seed }) => {
               {isEditing ? (
                 <input
                   type="text"
-                  value={editedSeed.suggested_project_name}
-                  onChange={(e) => setEditedSeed({...editedSeed, suggested_project_name: e.target.value})}
+                  value={editedSeed.suggestedProjectName}
+                  onChange={(e) => setEditedSeed({...editedSeed, suggestedProjectName: e.target.value})}
                   className="text-lg font-medium text-foreground leading-tight bg-muted/20 px-3 py-2 rounded-lg border border-border/50 focus:border-border focus:outline-none w-full"
                   placeholder="Project name..."
                 />
               ) : (
                 <h4 className="text-lg font-medium text-foreground leading-tight flex items-center gap-2">
                   <Sprout className="w-5 h-5 text-emerald-500" />
-                  {seed.suggested_project_name || seed.name}
+                  {seed.suggestedProjectName || seed.name}
                 </h4>
               )}
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span className="px-2 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full font-medium">
                   Project Seed
                 </span>
-                {seed.suggested_domain && (
+                {seed.suggestedDomain && (
                   <>
                     <span>•</span>
-                    <span>{seed.suggested_domain}</span>
+                    <span>{seed.suggestedDomain}</span>
                   </>
                 )}
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              <span className={`text-xs px-2 py-1 rounded-full border ${getConfidenceColor(seed.confidence_score)}`}>
-                {seed.confidence_score?.replace('_', ' ')}
+              <span className={`text-xs px-2 py-1 rounded-full border ${getConfidenceColor(seed.confidence)}`}>
+                {formatConfidence(seed.confidence)}
               </span>
               
               {/* Promoted Badge */}
@@ -250,30 +230,35 @@ const ProjectSeedCard: React.FC<ProjectSeedCardProps> = ({ seed }) => {
           
           {isEditing ? (
             <textarea
-              value={editedSeed.suggested_project_description}
-              onChange={(e) => setEditedSeed({...editedSeed, suggested_project_description: e.target.value})}
+              value={editedSeed.suggestedProjectDescription}
+              onChange={(e) => setEditedSeed({...editedSeed, suggestedProjectDescription: e.target.value})}
               className="w-full text-muted-foreground leading-relaxed text-sm bg-muted/20 p-3 rounded-lg border border-border/50 focus:border-border focus:outline-none resize-none"
               rows={3}
               placeholder="Project description..."
             />
           ) : (
             <p className="text-muted-foreground leading-relaxed text-sm">
-              {seed.suggested_project_description || seed.description}
+              {seed.suggestedProjectDescription || seed.description}
             </p>
           )}
         </div>
 
         {/* Project Metadata */}
         <div className="flex items-center flex-wrap gap-2">
-          {seed.suggested_complexity && (
-            <span className={`text-xs px-2 py-1 rounded-full ${getComplexityColor(seed.suggested_complexity)}`}>
-              {seed.suggested_complexity} complexity
+          {seed.suggestedComplexity !== undefined && (
+            <span className={`text-xs px-2 py-1 rounded-full ${getComplexityColor(String(seed.suggestedComplexity))}`}>
+              Complexity: {seed.suggestedComplexity}/10
             </span>
           )}
-          {seed.suggested_time_horizon && (
+          {seed.suggestedTimeHorizon && (
             <span className="text-xs px-2 py-1 rounded-full bg-muted/50 text-foreground flex items-center gap-1">
-              {getTimeHorizonIcon(seed.suggested_time_horizon)}
-              {seed.suggested_time_horizon.replace('_', ' ')}
+              {getTimeHorizonIcon(seed.suggestedTimeHorizon)}
+              {seed.suggestedTimeHorizon.replace('_', ' ')}
+            </span>
+          )}
+          {seed.evidenceStrength && (
+            <span className="text-xs px-2 py-1 rounded-full bg-muted/50 text-foreground">
+              {seed.evidenceStrength} evidence
             </span>
           )}
         </div>
@@ -281,23 +266,23 @@ const ProjectSeedCard: React.FC<ProjectSeedCardProps> = ({ seed }) => {
         {/* Content Stats */}
         <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/30">
           <div className="flex items-center gap-4">
-            {seed.related_note_ids && seed.related_note_ids.length > 0 && (
-              <span>{seed.related_note_ids.length} related notes</span>
+            {seed.relatedNoteIds && seed.relatedNoteIds.length > 0 && (
+              <span>{seed.relatedNoteIds.length} related notes</span>
             )}
-            {seed.related_conversation_ids && seed.related_conversation_ids.length > 0 && (
-              <span>{seed.related_conversation_ids.length} conversations</span>
+            {seed.relatedConversationIds && seed.relatedConversationIds.length > 0 && (
+              <span>{seed.relatedConversationIds.length} conversations</span>
             )}
-            {seed.observation_count > 0 && (
-              <span>{seed.observation_count} observations</span>
+            {seed.shardCount > 0 && (
+              <span>{seed.shardCount} shards</span>
             )}
           </div>
           <div className="flex items-center gap-2">
-            {seed._creationTime && (
-              <span>{formatTimestamp(seed._creationTime)}</span>
+            {seed.detectedAt && (
+              <span>{formatTimestamp(seed.detectedAt)}</span>
             )}
-            {isPromoted && seed.promoted_to_project_id && (
+            {isPromoted && seed.promotedToProjectId && (
               <a
-                href={`/dashboard/projects/${seed.promoted_to_project_id}`}
+                href={`/dashboard/projects/${seed.promotedToProjectId}`}
                 className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1"
                 title="View promoted project"
               >
@@ -309,13 +294,13 @@ const ProjectSeedCard: React.FC<ProjectSeedCardProps> = ({ seed }) => {
         </div>
 
         {/* Promotion Info */}
-        {isPromoted && seed.confidence_at_promotion && (
+        {isPromoted && seed.confidenceAtPromotion && (
           <div className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-950/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
             <div className="font-medium text-blue-700 dark:text-blue-300 mb-1">
               Auto-promoted to project
             </div>
             <div>
-              Confidence at promotion: {seed.confidence_at_promotion}
+              Confidence at promotion: {formatConfidence(seed.confidenceAtPromotion)}
             </div>
           </div>
         )}
@@ -344,9 +329,9 @@ export const ProjectSeedsView: React.FC<ProjectSeedsViewProps> = ({ recentSeeds 
     fetchUserId();
   }, []);
   
-  // Query project seeds (crystals with type = project_seed)
+  // Query project seeds from dedicated projectSeeds table
   const projectSeeds = useQuery(
-    api.projectSeedQueries.getProjectSeeds,
+    api.projectSeedsQueries.listProjectSeeds,
     userId ? {
       userId,
       includePromoted: true,
@@ -359,8 +344,8 @@ export const ProjectSeedsView: React.FC<ProjectSeedsViewProps> = ({ recentSeeds 
   const isLoading = isLoadingUserId || (!userId || projectSeeds === undefined);
   
   // Separate promoted and active seeds
-  const activeSeeds = displaySeeds.filter((seed: any) => !seed.auto_promoted && !seed.promoted_to_project_id);
-  const promotedSeeds = displaySeeds.filter((seed: any) => seed.auto_promoted || seed.promoted_to_project_id);
+  const activeSeeds = displaySeeds.filter((seed: any) => !seed.promoted);
+  const promotedSeeds = displaySeeds.filter((seed: any) => seed.promoted);
 
   return (
     <div className="space-y-6">
