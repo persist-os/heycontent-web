@@ -68,6 +68,7 @@ import type * as paginatedQueries from "../paginatedQueries.js";
 import type * as platformRouter from "../platformRouter.js";
 import type * as presence from "../presence.js";
 import type * as priceConfig from "../priceConfig.js";
+import type * as projectContentQueries from "../projectContentQueries.js";
 import type * as projectFingerprintMutations from "../projectFingerprintMutations.js";
 import type * as projectFingerprintQueries from "../projectFingerprintQueries.js";
 import type * as projectWidgetsMutations from "../projectWidgetsMutations.js";
@@ -167,6 +168,7 @@ declare const fullApi: ApiFromModules<{
   platformRouter: typeof platformRouter;
   presence: typeof presence;
   priceConfig: typeof priceConfig;
+  projectContentQueries: typeof projectContentQueries;
   projectFingerprintMutations: typeof projectFingerprintMutations;
   projectFingerprintQueries: typeof projectFingerprintQueries;
   projectWidgetsMutations: typeof projectWidgetsMutations;

@@ -295,18 +295,44 @@ export default defineSchema({
   .index("by_note_user", ["noteId", "sharedWithUserId"]),
 
   // Projects
+  // ============================================================================
+  // PROJECT CONTENT MANAGEMENT SYSTEM
+  // ============================================================================
+  // Projects serve as containers for all user-generated content including notes,
+  // conversations, crystals, and shards. The content ID arrays enable efficient
+  // batch fetching and filtering for the Project Content Display feature.
+  // 
+  // Content Relationships:
+  // - noteIds: Array of note document IDs attached to this project
+  // - conversationIds: Array of conversation document IDs attached to this project  
+  // - crystalIds: Array of crystal_id strings (not Convex IDs) attached to this project
+  // - shardIds: Array of crystal_shards document IDs attached to this project
+  // - analysisIds: Array of analysis document IDs (legacy, may be deprecated)
+  //
+  // Indexing Strategy:
+  // - by_user: Primary access pattern for user's projects
+  // - by_fingerprint: Links projects to their AI intelligence fingerprints
+  // - by_creation: Chronological ordering for project lists
+  // ============================================================================
   projects: defineTable({
     userId: v.string(),
     name: v.string(),
     description: v.optional(v.string()),
-    noteIds: v.optional(v.array(v.string())),
-    conversationIds: v.optional(v.array(v.string())),
-    analysisIds: v.optional(v.array(v.string())),
+    
+    // Content ID Arrays - Enable efficient batch content fetching
+    noteIds: v.optional(v.array(v.string())),           // Note document IDs
+    conversationIds: v.optional(v.array(v.string())),   // Conversation document IDs  
+    analysisIds: v.optional(v.array(v.string())),       // Analysis document IDs (legacy)
+    crystalIds: v.optional(v.array(v.string())),        // Crystal ID strings (not Convex IDs)
+    shardIds: v.optional(v.array(v.string())),          // Crystal shard document IDs
+    
+    // AI Intelligence Integration
     fingerprintId: v.optional(v.id("project_fingerprints")), // Links to project fingerprint
+    
+    // Timestamps
     createdAt: v.number(),
     updatedAt: v.number(),
-    crystalIds: v.optional(v.array(v.string())),
-    shardIds: v.optional(v.array(v.string())),
+    
     // ⚠️ DEPRECATED: Social media integrations removed - use crystal system for content insights
   })
   .index("by_user", ["userId"])
