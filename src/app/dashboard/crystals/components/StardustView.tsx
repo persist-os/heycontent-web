@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Sparkles, TrendingUp, Calendar, Zap, Edit3, Trash2, Save, X, CheckCircle2, ExternalLink } from 'lucide-react';
+import { Sparkles, TrendingUp, Calendar, Zap, Edit3, Trash2, Save, X, CheckCircle2, ExternalLink, ChevronDown, ChevronUp, FileText } from 'lucide-react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
@@ -12,14 +12,141 @@ interface StardustViewProps {
 
 interface StardustCardProps {
   stardust: any;
+  userId: string;
 }
 
-const StardustCard: React.FC<StardustCardProps> = ({ stardust }) => {
+interface ShardItemProps {
+  shard: any;
+}
+
+const ShardItem: React.FC<ShardItemProps> = ({ shard }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  const getConfidenceBadgeColor = (confidence?: string) => {
+    switch (confidence) {
+      case 'high':
+        return 'bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-300';
+      case 'medium':
+        return 'bg-yellow-100 dark:bg-yellow-950/30 text-yellow-700 dark:text-yellow-300';
+      case 'low':
+        return 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300';
+      default:
+        return 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300';
+    }
+  };
+
+  return (
+    <div className="border border-border/30 rounded-lg p-3 space-y-2 bg-background/30">
+      {/* Shard Header - Always Visible */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 space-y-1">
+          {shard.exact_quote && (
+            <p className="text-sm text-foreground/90 italic">
+              "{shard.exact_quote.length > 150 && !isExpanded 
+                ? `${shard.exact_quote.substring(0, 150)}...` 
+                : shard.exact_quote}"
+            </p>
+          )}
+          {shard.what_it_reveals && (
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium">Reveals:</span> {
+                shard.what_it_reveals.length > 100 && !isExpanded
+                  ? `${shard.what_it_reveals.substring(0, 100)}...`
+                  : shard.what_it_reveals
+              }
+            </p>
+          )}
+        </div>
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="p-1 hover:bg-muted rounded transition-colors flex-shrink-0"
+          title={isExpanded ? "Show less" : "Show more"}
+        >
+          {isExpanded ? (
+            <ChevronUp className="w-4 h-4 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          )}
+        </button>
+      </div>
+
+      {/* Shard Tags - Always Visible */}
+      <div className="flex items-center flex-wrap gap-1.5">
+        {shard.dimension && (
+          <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-950/30 text-violet-700 dark:text-violet-300">
+            {shard.dimension}
+          </span>
+        )}
+        {shard.confidence_level && (
+          <span className={`text-xs px-2 py-0.5 rounded-full ${getConfidenceBadgeColor(shard.confidence_level)}`}>
+            {shard.confidence_level}
+          </span>
+        )}
+        {shard.source_type && (
+          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300">
+            {shard.source_type}
+          </span>
+        )}
+        {shard.emotional_weight && shard.emotional_weight !== 'neutral' && (
+          <span className="text-xs px-2 py-0.5 rounded-full bg-pink-100 dark:bg-pink-950/30 text-pink-700 dark:text-pink-300">
+            {shard.emotional_weight} emotion
+          </span>
+        )}
+      </div>
+
+      {/* Expanded Details */}
+      {isExpanded && (
+        <div className="space-y-2 pt-2 border-t border-border/20">
+          {shard.situation_context && (
+            <div className="text-xs">
+              <span className="font-medium text-foreground">Context:</span>
+              <p className="text-muted-foreground mt-0.5">{shard.situation_context}</p>
+            </div>
+          )}
+          {shard.why_significant && (
+            <div className="text-xs">
+              <span className="font-medium text-foreground">Why Significant:</span>
+              <p className="text-muted-foreground mt-0.5">{shard.why_significant}</p>
+            </div>
+          )}
+          <div className="flex items-center flex-wrap gap-2 text-xs text-muted-foreground pt-1">
+            {shard.extraction_method && (
+              <span className="flex items-center gap-1">
+                <span className="font-medium">Method:</span> {shard.extraction_method}
+              </span>
+            )}
+            {shard.linguistic_intensity && (
+              <span className="flex items-center gap-1">
+                <span className="font-medium">Intensity:</span> {shard.linguistic_intensity}
+              </span>
+            )}
+            {shard.specificity && (
+              <span className="flex items-center gap-1">
+                <span className="font-medium">Specificity:</span> {shard.specificity}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const StardustCard: React.FC<StardustCardProps> = ({ stardust, userId }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [shardsExpanded, setShardsExpanded] = useState(false);
   const [editedStardust, setEditedStardust] = useState({
     suggestedProjectName: stardust.suggestedProjectName || '',
     suggestedProjectDescription: stardust.suggestedProjectDescription || '',
   });
+  
+  // Fetch source shards
+  const sourceShards = useQuery(
+    api.crystalQueries.getShardsByIds,
+    stardust.sourceShardIds && stardust.sourceShardIds.length > 0 && userId
+      ? { userId, shardIds: stardust.sourceShardIds }
+      : "skip"
+  );
   
   // Convex mutations for stardust operations (to be implemented)
   // const updateStardust = useMutation(api.stardustMutations.updateStardust);
@@ -298,7 +425,18 @@ const StardustCard: React.FC<StardustCardProps> = ({ stardust }) => {
               <span>{stardust.relatedConversationIds.length} conversations</span>
             )}
             {stardust.shardCount > 0 && (
-              <span>{stardust.shardCount} shards</span>
+              <button
+                onClick={() => setShardsExpanded(!shardsExpanded)}
+                className="hover:text-foreground transition-colors flex items-center gap-1"
+              >
+                <FileText className="w-3 h-3" />
+                {stardust.shardCount} shards
+                {shardsExpanded ? (
+                  <ChevronUp className="w-3 h-3" />
+                ) : (
+                  <ChevronDown className="w-3 h-3" />
+                )}
+              </button>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -317,6 +455,47 @@ const StardustCard: React.FC<StardustCardProps> = ({ stardust }) => {
             )}
           </div>
         </div>
+
+        {/* Source Shards Section */}
+        {shardsExpanded && stardust.shardCount > 0 && (
+          <div className="space-y-3 pt-3 border-t border-border/30">
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-violet-500" />
+              <h5 className="text-sm font-medium text-foreground">Source Shards</h5>
+              {sourceShards && (
+                <span className="text-xs text-muted-foreground">
+                  ({sourceShards.length} of {stardust.shardCount})
+                </span>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              {sourceShards === undefined ? (
+                // Loading state
+                <div className="space-y-2">
+                  {[...Array(Math.min(3, stardust.shardCount))].map((_, i) => (
+                    <div key={i} className="border border-border/30 rounded-lg p-3 space-y-2">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-3 w-3/4" />
+                      <div className="flex gap-2">
+                        <Skeleton className="h-5 w-16" />
+                        <Skeleton className="h-5 w-20" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : sourceShards.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic">
+                  No shards available or unable to load shards.
+                </p>
+              ) : (
+                sourceShards.map((shard) => (
+                  <ShardItem key={shard._id} shard={shard} />
+                ))
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Promotion Info */}
         {isPromoted && stardust.confidenceAtPromotion && (
@@ -422,7 +601,7 @@ export const StardustView: React.FC<StardustViewProps> = ({ recentStardust }) =>
               </div>
               <div className="space-y-6">
                 {activeStardust.map((s: any) => (
-                  <StardustCard key={s._id} stardust={s} />
+                  <StardustCard key={s._id} stardust={s} userId={userId || ''} />
                 ))}
               </div>
             </div>
@@ -439,7 +618,7 @@ export const StardustView: React.FC<StardustViewProps> = ({ recentStardust }) =>
               </div>
               <div className="space-y-6">
                 {promotedStardust.map((s: any) => (
-                  <StardustCard key={s._id} stardust={s} />
+                  <StardustCard key={s._id} stardust={s} userId={userId || ''} />
                 ))}
               </div>
             </div>
