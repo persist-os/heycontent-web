@@ -15,7 +15,11 @@ import {
   ArrowUpRight, 
   UserCheck, 
   Edit3,
-  Eye
+  Eye,
+  Clock,
+  Hash,
+  FolderOpen,
+  NotebookPen
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -334,10 +338,22 @@ export function TreeNodeRenderer({
             ) : (
               <div className="w-4" />
             )}
-            {node.id === 'shared' ? (
+            {node.id === 'recent' ? (
+              <Clock className="w-5 h-5 text-orange-500/70 transition-colors" />
+            ) : node.id === 'tags' ? (
+              <Hash className="w-5 h-5 text-purple-500/70 transition-colors" />
+            ) : node.id === 'important' ? (
+              <Star className="w-5 h-5 text-amber-500/70 transition-colors" />
+            ) : node.id === 'projects' ? (
+              <FolderOpen className="w-5 h-5 text-blue-500/70 transition-colors" />
+            ) : node.id === 'shared' ? (
               <Users className="w-5 h-5 text-blue-500/70 transition-colors" />
             ) : node.id === 'my-shared' ? (
               <Share2 className="w-5 h-5 text-green-500/70 transition-colors" />
+            ) : node.id === 'user-folders' ? (
+              <Folder className="w-5 h-5 text-indigo-500/70 transition-colors" />
+            ) : node.id === 'all' ? (
+              <NotebookPen className="w-5 h-5 text-slate-500/70 transition-colors" />
             ) : (
               <Folder className={cn(
                 "w-5 h-5 transition-colors",

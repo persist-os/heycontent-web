@@ -34,6 +34,7 @@ export function useNotepadState({
   // State management - SIMPLIFIED to remove cascading re-renders
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [content, setContent] = useState('')
+  const [title, setTitle] = useState('Untitled Note') // Add local title state for new notes
   const [refinementPreview, setRefinementPreview] = useState<string | null>(null)
   const [isRefining, setIsRefining] = useState(false)
   
@@ -83,7 +84,7 @@ export function useNotepadState({
         _id: currentNoteId || 'temp',
         _creationTime: Date.now(),
         userId: firebaseUser?.uid || '',
-        title: 'Untitled Note',
+        title: title, // Use local title state
         content: content,
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -92,7 +93,7 @@ export function useNotepadState({
         isTemporary: isNewNote
       }
     }
-  }, [existingNote, isNewNote, content, currentNoteId, firebaseUser?.uid])
+  }, [existingNote, isNewNote, content, title, currentNoteId, firebaseUser?.uid])
 
   // Initialize content from existing note only when note actually loads
   useEffect(() => {
@@ -102,6 +103,15 @@ export function useNotepadState({
     // REMOVED: Premature content clearing that caused erratic behavior
     // Only set content when we actually have note data, never clear preemptively
   }, [existingNote?._id]) // Simplified dependencies - only re-run when note ID changes
+
+  // Initialize title from existing note
+  useEffect(() => {
+    if (existingNote && existingNote.title !== undefined) {
+      setTitle(existingNote.title)
+    } else if (isNewNote) {
+      setTitle('Untitled Note')
+    }
+  }, [existingNote?.title, isNewNote])
 
   // Sync note title to notepad store for cross-component access
   useEffect(() => {
@@ -162,9 +172,10 @@ export function useNotepadState({
     setIsNewNote,
     setCurrentNoteId,
     setContent,
+    setTitle,
     setRefinementPreview,
     setIsRefining
-  }), [setIsEditingTitle, setIsNewNote, setCurrentNoteId, setContent, setRefinementPreview, setIsRefining])
+  }), [setIsEditingTitle, setIsNewNote, setCurrentNoteId, setContent, setTitle, setRefinementPreview, setIsRefining])
 
   // FIXED: Memoize contextData to prevent handlers recreation
   const contextData = useMemo(() => ({

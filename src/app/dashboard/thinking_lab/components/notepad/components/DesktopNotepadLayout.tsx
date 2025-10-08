@@ -30,6 +30,7 @@ interface DesktopNotepadLayoutProps {
   onEditingTitleChange: (editing: boolean) => void
   onLinkNote?: (noteId: string) => void
   onShare?: () => void
+  onClose?: () => void
   isReadOnly?: boolean
   notePermission?: "owner" | "read" | "edit" | null
   panelState?: PanelState
@@ -54,6 +55,7 @@ export function DesktopNotepadLayout({
   onEditingTitleChange,
   onLinkNote,
   onShare,
+  onClose,
   isReadOnly = false,
   notePermission = null,
   panelState
@@ -83,6 +85,7 @@ export function DesktopNotepadLayout({
         onGenerateMetadata={noteHandlers.handleGenerateMetadata}
         onSaveNote={noteHandlers.handleSaveAsNote}
         onShare={onShare}
+        onClose={onClose}
         isReadOnly={isReadOnly}
         notePermission={notePermission}
         panelState={panelState}
