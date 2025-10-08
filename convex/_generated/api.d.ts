@@ -36,6 +36,8 @@ import type * as crystalMigration from "../crystalMigration.js";
 import type * as crystalMutations from "../crystalMutations.js";
 import type * as crystalQueries from "../crystalQueries.js";
 import type * as feedback from "../feedback.js";
+import type * as fingerprintSignalsMutations from "../fingerprintSignalsMutations.js";
+import type * as fingerprintSignalsQueries from "../fingerprintSignalsQueries.js";
 import type * as folderMutations from "../folderMutations.js";
 import type * as folderQueries from "../folderQueries.js";
 import type * as formationMutations from "../formationMutations.js";
@@ -134,6 +136,8 @@ declare const fullApi: ApiFromModules<{
   crystalMutations: typeof crystalMutations;
   crystalQueries: typeof crystalQueries;
   feedback: typeof feedback;
+  fingerprintSignalsMutations: typeof fingerprintSignalsMutations;
+  fingerprintSignalsQueries: typeof fingerprintSignalsQueries;
   folderMutations: typeof folderMutations;
   folderQueries: typeof folderQueries;
   formationMutations: typeof formationMutations;

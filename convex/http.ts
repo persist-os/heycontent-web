@@ -30,6 +30,8 @@ app.use('*', async (c, next) => {
   else if (path.includes('/projectSeeds')) domain = 'project_seeds';
   else if (path.includes('/projects')) domain = 'projects';
   else if (path.includes('/widgets')) domain = 'widgets';
+  else if (path.includes('/fingerprintSignals')) domain = 'fingerprint_signals';
+  else if (path.includes('/project-fingerprint')) domain = 'fingerprint';
   else if (path.includes('/crystal')) domain = 'crystal';
   else if (path.includes('/contextEnrichmentBandit')) domain = 'context_mab';
   else if (path.includes('/intelligenceBandit') || path.includes('/intelligence')) domain = 'intelligence';
@@ -139,6 +141,32 @@ app.post("/api/users/:id/add_message_to_conversation", async (c) => {
     message: messageWithTimestamp,
   });
   return c.json(result);
+});
+
+// Batch fetch multiple conversations (for context enrichment)
+app.post("/api/chat/getMultiple", async (c) => {
+  const ctx = c.env;
+  
+  try {
+    const { conversationIds, userId } = await c.req.json();
+    
+    if (!userId) {
+      return c.json({ error: "Missing required field: userId" }, 400);
+    }
+    if (!conversationIds || !Array.isArray(conversationIds)) {
+      return c.json({ error: "Missing or invalid conversationIds array" }, 400);
+    }
+    
+    const conversations = await ctx.runQuery(api.chatQueries.getMultiple, { conversationIds, userId });
+    return c.json({ success: true, data: conversations });
+  } catch (error: any) {
+    console.error("Failed to get multiple conversations:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get multiple conversations",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
 });
 
 // ===== NEW MESSAGES TABLE ENDPOINTS (Dual-write system) =====
@@ -393,6 +421,32 @@ app.get("/api/users/:userId/notes", async (c) => {
         return c.json({ success: false, error: "Failed to get notes by user", details: error.data }, 500);
     }
     return c.json({ success: false, error: "Failed to get notes by user", message: error.message || "Internal Server Error" }, 500);
+  }
+});
+
+// Batch fetch multiple notes (for context enrichment)
+app.post("/api/notes/getMultiple", async (c) => {
+  const ctx = c.env;
+  
+  try {
+    const { noteIds, userId } = await c.req.json();
+    
+    if (!userId) {
+      return c.json({ error: "Missing required field: userId" }, 400);
+    }
+    if (!noteIds || !Array.isArray(noteIds)) {
+      return c.json({ error: "Missing or invalid noteIds array" }, 400);
+    }
+    
+    const notes = await ctx.runQuery(api.noteQueries.getMultiple, { noteIds, userId });
+    return c.json({ success: true, data: notes });
+  } catch (error: any) {
+    console.error("Failed to get multiple notes:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get multiple notes",
+      message: error.message || "Internal Server Error"
+    }, 500);
   }
 });
 
@@ -1762,6 +1816,37 @@ app.post("/api/crystal/query", async (c) => {
   }
 });
 
+// Batch fetch crystals by IDs (for context enrichment)
+app.post("/api/crystal/getBatch", async (c) => {
+  const ctx = c.env;
+  
+  try {
+    const { userId, crystalIds, includeShards, includeRelated } = await c.req.json();
+    
+    if (!userId) {
+      return c.json({ error: "Missing required field: userId" }, 400);
+    }
+    if (!crystalIds || !Array.isArray(crystalIds)) {
+      return c.json({ error: "Missing or invalid crystalIds array" }, 400);
+    }
+    
+    const result = await ctx.runQuery(api.crystalContextOptimized.getBatchCrystalData, { 
+      userId, 
+      crystalIds,
+      ...(includeShards !== undefined && { includeShards }),
+      ...(includeRelated !== undefined && { includeRelated })
+    });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Failed to get batch crystal data:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get batch crystal data",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
 // Single mutation endpoint that mirrors mutateCrystalData exactly
 app.post("/api/crystal/mutate", async (c) => {
   const ctx = c.env;
@@ -2942,6 +3027,139 @@ app.post("/api/project-fingerprint/batchUpdate", async (c) => {
     return c.json({ 
       success: false, 
       error: "Failed to batch update fields",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// FINGERPRINT EVOLUTION SIGNALS ROUTES - MAB-driven evolution tracking
+
+// Initialize signals for a fingerprint
+app.post("/api/fingerprintSignals/initialize", async (c) => {
+  try {
+    const { fingerprintId, projectId, userId } = await c.req.json();
+    const result = await c.env.runMutation(api.fingerprintSignalsMutations.initialize, {
+      fingerprintId,
+      projectId,
+      userId
+    });
+    return c.json(result);
+  } catch (error: any) {
+    console.error("Failed to initialize signals:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to initialize signals",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Increment signal counter
+app.post("/api/fingerprintSignals/increment", async (c) => {
+  try {
+    const { projectId, signalType, count } = await c.req.json();
+    const result = await c.env.runMutation(api.fingerprintSignalsMutations.increment, {
+      projectId,
+      signalType,
+      count
+    });
+    return c.json(result);
+  } catch (error: any) {
+    console.error("Failed to increment signal:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to increment signal",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Reset signals after evolution
+app.post("/api/fingerprintSignals/reset", async (c) => {
+  try {
+    const { fingerprintId } = await c.req.json();
+    const result = await c.env.runMutation(api.fingerprintSignalsMutations.reset, {
+      fingerprintId
+    });
+    return c.json(result);
+  } catch (error: any) {
+    console.error("Failed to reset signals:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to reset signals",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get signals for a fingerprint
+app.post("/api/fingerprintSignals/getByFingerprint", async (c) => {
+  try {
+    const { fingerprintId } = await c.req.json();
+    const signals = await c.env.runQuery(api.fingerprintSignalsQueries.getByFingerprint, {
+      fingerprintId
+    });
+    return c.json({ success: true, data: signals });
+  } catch (error: any) {
+    console.error("Failed to get signals:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get signals",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get signals for a project
+app.post("/api/fingerprintSignals/getByProject", async (c) => {
+  try {
+    const { projectId } = await c.req.json();
+    const signals = await c.env.runQuery(api.fingerprintSignalsQueries.getByProject, {
+      projectId
+    });
+    return c.json({ success: true, data: signals });
+  } catch (error: any) {
+    console.error("Failed to get signals:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get signals",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get high signal fingerprints for MAB processing
+app.post("/api/fingerprintSignals/getHighSignals", async (c) => {
+  try {
+    const { userId, threshold } = await c.req.json();
+    const signals = await c.env.runQuery(api.fingerprintSignalsQueries.getHighSignals, {
+      userId,
+      threshold
+    });
+    return c.json({ success: true, data: signals });
+  } catch (error: any) {
+    console.error("Failed to get high signals:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get high signals",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get all signals for a user
+app.post("/api/fingerprintSignals/getAllByUser", async (c) => {
+  try {
+    const { userId } = await c.req.json();
+    const signals = await c.env.runQuery(api.fingerprintSignalsQueries.getAllByUser, {
+      userId
+    });
+    return c.json({ success: true, data: signals });
+  } catch (error: any) {
+    console.error("Failed to get user signals:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get user signals",
       message: error.message || "Internal Server Error"
     }, 500);
   }
