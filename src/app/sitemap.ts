@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://heycontext.ai'
+  const baseUrl = 'https://heycontext.co'
   const currentDate = new Date()
 
   return [

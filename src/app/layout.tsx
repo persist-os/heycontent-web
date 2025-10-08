@@ -8,7 +8,7 @@ import { CommandPaletteProvider } from './context/CommandPaletteProvider'
 import { InlineReplyProvider } from './context/inline-reply-context'
 import { Analytics } from "@vercel/analytics/next"
 
-const siteUrl = 'https://heycontext.ai'
+const siteUrl = 'https://heycontext.co'
 const siteName = 'HeyContext'
 const siteDescription = 'Stop repeating yourself. AI-powered memory system that learns from every conversation, connects your thoughts automatically, and surfaces insights from your accumulated knowledge. Your personal AI that actually remembers and evolves with you.'
 
