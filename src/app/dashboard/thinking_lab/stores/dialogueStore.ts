@@ -141,7 +141,10 @@ export const useDialogueStore = create<DialogueStore>()(
                     responseKeys: response ? Object.keys(response) : [],
                     response_content: response?.response_content,
                     response_content_length: response?.response_content?.length,
-                    session_identifier: response?.session_identifier
+                    session_identifier: response?.session_identifier,
+                    suggestions: response?.suggestions,
+                    suggestionsCount: response?.suggestions?.length || 0,
+                    fullResponse: response
                 })
 
                 // Create assistant message from response
@@ -155,6 +158,13 @@ export const useDialogueStore = create<DialogueStore>()(
                     suggestions: response.suggestions || [],
                     metadata: response.suggestions ? { suggestions: response.suggestions } : undefined
                 }
+
+                console.log('[DialogueStore] Created assistant message with suggestions:', {
+                    messageId: assistantMessage.id,
+                    hasSuggestions: !!assistantMessage.suggestions,
+                    suggestionsCount: assistantMessage.suggestions?.length || 0,
+                    suggestions: assistantMessage.suggestions
+                })
 
                 // Replace typing message with real response
                 // Backend returns the Convex conversation ID as session_identifier
@@ -221,40 +231,13 @@ export const useDialogueStore = create<DialogueStore>()(
         },
 
         loadConversation: async (conversationId: string) => {
-            set({ isLoading: true, error: undefined })
-
-            try {
-                // Mock conversation loading
-                const mockMessages: Message[] = [
-                    {
-                        id: 'msg-1',
-                        content: 'Hello! This is a loaded conversation.',
-                        role: 'user',
-                        timestamp: (Date.now() - 10000).toString(),
-                        chat_response: 'Hello! This is a loaded conversation.'
-                    },
-                    {
-                        id: 'msg-2',
-                        content: 'Welcome back to this conversation!',
-                        role: 'assistant',
-                        timestamp: (Date.now() - 5000).toString(),
-                        chat_response: 'Welcome back to this conversation!'
-                    }
-                ]
-
-                set({
-                    messages: mockMessages,
-                    conversationId,
-                    isLoading: false
-                })
-
-            } catch (error) {
-                console.error('Failed to load conversation:', error)
-                set({
-                    isLoading: false,
-                    error: error instanceof Error ? error.message : 'Failed to load conversation'
-                })
-            }
+            // Note: Actual conversation loading is now handled directly via Convex useQuery
+            // in LabCompositions. This method is kept for backward compatibility.
+            console.log('[DialogueStore] loadConversation called (loading handled by Convex useQuery)')
+            set({ 
+                conversationId,
+                sessionId: conversationId
+            })
         },
 
         quoteMessage: (messageId: string) => {
