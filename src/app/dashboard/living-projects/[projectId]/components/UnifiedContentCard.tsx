@@ -178,7 +178,7 @@ export function UnifiedContentCard({
       // Navigate to appropriate content page based on type
       switch (content.type) {
         case 'note':
-          router.push(`/dashboard/notes/${content.id}`);
+          router.push(`/dashboard/thinking_lab?noteId=${content.id}`);
           break;
         case 'conversation':
           router.push(`/dashboard/thinking_lab?conversationId=${content.id}`);

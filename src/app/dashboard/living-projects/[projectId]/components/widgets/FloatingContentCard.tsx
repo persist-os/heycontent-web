@@ -154,7 +154,7 @@ export function FloatingContentCard({
       // Navigate to appropriate content page based on type
       switch (itemType) {
         case 'note':
-          router.push(`/dashboard/notes/${item._id || item._contentId}`);
+          router.push(`/dashboard/thinking_lab?noteId=${item._id || item._contentId}`);
           break;
         case 'conversation':
           router.push(`/dashboard/thinking_lab?conversationId=${item._id || item._contentId}`);

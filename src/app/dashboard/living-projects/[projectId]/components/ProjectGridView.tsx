@@ -245,7 +245,7 @@ export function ProjectGridView({
     try {
       switch (type) {
         case 'note':
-          router.push(`/dashboard/notes/${id}`)
+          router.push(`/dashboard/thinking_lab?noteId=${id}`)
           break
         case 'conversation':
           router.push(`/dashboard/thinking_lab?conversationId=${id}`)
