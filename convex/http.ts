@@ -2591,6 +2591,19 @@ app.post("/api/query/searchShardsForInlineWriting", async (c) => {
   }
 });
 
+app.post("/api/crystals/getShardsByIds", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runQuery(api.crystalQueries.getShardsByIds, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[GET SHARDS BY IDS] Error fetching shards:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 app.post("/api/shard-lifecycle/stats", async (c) => {
   const ctx = c.env;
   const requestBody = await c.req.json();
