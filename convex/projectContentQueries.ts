@@ -477,35 +477,90 @@ export const searchProjectContent = query({
   },
   returns: v.array(v.any()),
   handler: async (ctx, { projectId, userId, searchTerm, contentType = "all", limit = 20 }) => {
-    // Get all content first using internal query
-    const contentResult = await ctx.runQuery(api.projectContentQueries.getProjectContent, { 
-      projectId, 
-      userId, 
-      contentType, 
-      limit: 200 // Get more for searching
-    });
-
-    if (!searchTerm.trim()) {
-      return contentResult.items.slice(0, limit);
+    // Get project first to access content arrays
+    const project = await ctx.db.get(projectId);
+    if (!project || project.userId !== userId) {
+      return [];
     }
 
+    // Get content items for searching
+    const contentItems: any[] = [];
     const searchLower = searchTerm.toLowerCase();
-    
-    // Filter content based on search term
-    const filteredContent = contentResult.items.filter(item => {
-      const titleMatch = item.title?.toLowerCase().includes(searchLower);
-      const contentMatch = item.content?.toLowerCase().includes(searchLower);
-      const previewMatch = item.preview?.toLowerCase().includes(searchLower);
-      
-      // Search in metadata fields
-      const metadataMatch = Object.values(item.metadata).some(value => 
-        typeof value === 'string' && value.toLowerCase().includes(searchLower)
-      );
-      
-      return titleMatch || contentMatch || previewMatch || metadataMatch;
-    });
 
-    return filteredContent.slice(0, limit);
+    // Fetch and search notes
+    if ((contentType === 'all' || contentType === 'notes') && project.noteIds?.length > 0) {
+      for (const noteId of project.noteIds.slice(0, 20)) {
+        try {
+          const note = await ctx.db.get(noteId as any);
+          if (note && (
+            ((note as any).title || '').toLowerCase().includes(searchLower) ||
+            ((note as any).content || '').toLowerCase().includes(searchLower)
+          )) {
+            contentItems.push({ ...note, _contentType: 'note', _contentId: noteId });
+          }
+        } catch (error) {
+          console.warn(`Failed to search note ${noteId}:`, error);
+        }
+      }
+    }
+
+    // Fetch and search conversations
+    if ((contentType === 'all' || contentType === 'conversations') && project.conversationIds?.length > 0) {
+      for (const conversationId of project.conversationIds.slice(0, 20)) {
+        try {
+          const conversation = await ctx.db.get(conversationId as any);
+          if (conversation && (
+            ((conversation as any).title || '').toLowerCase().includes(searchLower) ||
+            ((conversation as any).messages?.[0]?.content || '').toLowerCase().includes(searchLower)
+          )) {
+            contentItems.push({ ...conversation, _contentType: 'conversation', _contentId: conversationId });
+          }
+        } catch (error) {
+          console.warn(`Failed to search conversation ${conversationId}:`, error);
+        }
+      }
+    }
+
+    // Fetch and search crystals
+    if ((contentType === 'all' || contentType === 'crystals') && project.crystalIds?.length > 0) {
+      for (const crystalId of project.crystalIds.slice(0, 15)) {
+        try {
+          const crystal = await ctx.db
+            .query("crystals")
+            .filter((q) => q.eq(q.field("crystal_id"), crystalId))
+            .first();
+          if (crystal && (
+            ((crystal as any).name || '').toLowerCase().includes(searchLower) ||
+            ((crystal as any).core_insight || '').toLowerCase().includes(searchLower) ||
+            ((crystal as any).supporting_quotes || '').toLowerCase().includes(searchLower)
+          )) {
+            contentItems.push({ ...crystal, _contentType: 'crystal', _contentId: crystalId });
+          }
+        } catch (error) {
+          console.warn(`Failed to search crystal ${crystalId}:`, error);
+        }
+      }
+    }
+
+    // Fetch and search shards
+    if ((contentType === 'all' || contentType === 'shards') && project.shardIds?.length > 0) {
+      for (const shardId of project.shardIds.slice(0, 15)) {
+        try {
+          const shard = await ctx.db.get(shardId as any);
+          if (shard && (
+            ((shard as any).dimension || '').toLowerCase().includes(searchLower) ||
+            ((shard as any).exact_quote || '').toLowerCase().includes(searchLower) ||
+            ((shard as any).what_it_reveals || '').toLowerCase().includes(searchLower)
+          )) {
+            contentItems.push({ ...shard, _contentType: 'shard', _contentId: shardId });
+          }
+        } catch (error) {
+          console.warn(`Failed to search shard ${shardId}:`, error);
+        }
+      }
+    }
+
+    return contentItems.slice(0, limit);
   }
 });
 

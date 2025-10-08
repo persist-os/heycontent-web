@@ -1,349 +1,474 @@
-/**
- * Project View Screen Component
- * 
- * Main project detail view with constellation display and integrated content section.
- * Integrates ProjectContentSection for displaying all attached content.
- */
+'use client'
 
-"use client";
-
-import React, { useState, useEffect } from 'react';
-import { useQuery } from 'convex/react';
-import { useRouter } from 'next/navigation';
-import { api } from '@/convex/_generated/api';
-import { Id } from '@/convex/_generated/dataModel';
-import { useAuth } from '@/app/context/auth-context';
-import { cn } from '@/lib/utils';
+import React, { useState, useRef, useEffect } from 'react'
+import { useQuery } from 'convex/react'
+import { useRouter } from 'next/navigation'
+import { getCurrentUserId } from '@/app/lib/api-helpers'
+import { api } from '@/convex/_generated/api'
+import { useProjectFingerprint } from '@/app/dashboard/living-projects/hooks/useProjectFingerprint'
 import { 
   ArrowLeft,
-  Settings,
-  Share2,
-  MoreVertical,
-  Star,
-  MessageCircle,
-  FileText,
-  Sparkles,
-  Gem,
-  Activity,
-  Users,
-  Calendar,
-  Target,
-  TrendingUp
-} from 'lucide-react';
-import { motion } from 'framer-motion';
-import { ProjectContentSection } from './ProjectContentSection';
-import { ProjectFingerprint } from './widgets/ProjectFingerprint';
+  MoreHorizontal,
+  Edit3,
+  RefreshCw,
+  Trash2,
+  LayoutGrid,
+  List,
+  FileText
+} from 'lucide-react'
+import { ConstellationTransition } from '@/app/dashboard/living-projects/components/widgets/ConstellationTransition'
+import { DeleteProjectModal } from './DeleteProjectModal'
+import { WidgetConfig } from '@/types/projectWidgets'
+import { useWidgetGeneration } from './hooks/useWidgetGeneration'
+import { useProjectActions } from './hooks/useProjectActions'
+import { WidgetDetailsPanel } from './widgets/WidgetDetailsPanel'
+import { WidgetGenerationLoader } from './widgets/WidgetGenerationLoader'
+import { ConstellationCanvas } from './widgets/ConstellationCanvas'
+import { formatDistanceToNow } from './utils/dateFormatting'
+import { useWidgetRunner } from '@/app/dashboard/living-projects/hooks/useWidgetRunner'
+import { ContentAttachmentPanel } from '@/app/dashboard/living-projects/components/ContentAttachmentPanel'
+import { ProjectContentSection } from './ProjectContentSection'
+import { ProjectGridView } from './ProjectGridView'
+import { motion } from 'framer-motion'
+import { cn } from '@/lib/utils'
 
 interface ProjectViewScreenProps {
-  projectId: string;
-  className?: string;
+  projectId: string
 }
 
-export function ProjectViewScreen({ projectId, className = '' }: ProjectViewScreenProps) {
-  const router = useRouter();
-  const { firebaseUser } = useAuth();
-  const [userId, setUserId] = useState<string | null>(null);
-  const [isContentSectionOpen, setIsContentSectionOpen] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
+type ViewMode = "constellation" | "grid";
 
-  // Get current user ID
+export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
+  const [userId, setUserId] = useState<string | null>(null)
+  const [showTransition, setShowTransition] = useState(false)
+  const [highlightedWidget, setHighlightedWidget] = useState<string | null>(null)
+  const [selectedWidget, setSelectedWidget] = useState<WidgetConfig | null>(null)
+  const [showWidgetPanel, setShowWidgetPanel] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [showProjectContentPanel, setShowProjectContentPanel] = useState(false)
+  const [viewMode, setViewMode] = useState<ViewMode>("constellation")
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // Get user ID on component mount
   useEffect(() => {
-    const fetchUserId = async () => {
-      if (firebaseUser?.uid) {
-        setUserId(firebaseUser.uid);
+    const getUserId = async () => {
+      try {
+        const id = await getCurrentUserId()
+        setUserId(id)
+      } catch (error) {
+        console.error('Failed to get user ID:', error)
       }
-    };
-    fetchUserId();
-  }, [firebaseUser]);
+    }
+    getUserId()
+  }, [])
 
-  // Fetch project data
+  // Data fetching
   const project = useQuery(
     api.projectsQueries.getById,
-    userId && projectId ? { 
-      projectId: projectId as Id<"projects">, 
-      userId 
-    } : "skip"
-  );
+    projectId && userId ? { 
+      projectId: projectId as any,
+      userId: userId,
+      includeContent: true // Include content items for constellation view
+    } : 'skip'
+  )
 
-  // Fetch project statistics
-  const projectStats = useQuery(
-    api.projectsQueries.getStats,
-    projectId ? { projectId: projectId as Id<"projects"> } : "skip"
-  );
+  const projectWidgets = useQuery(
+    api.projectWidgetsQueries.getProjectWidgetsByProject,
+    projectId ? { projectId: projectId as any } : 'skip'
+  )
 
-  // Handle navigation back
-  const handleBack = () => {
-    router.push('/dashboard/living-projects');
+  const { fingerprint: currentFingerprint } = useProjectFingerprint(projectId as any)
+  
+  // Business logic hooks
+  const { isGenerating, regenerateWidgets } = useWidgetGeneration({
+    projectId,
+    currentFingerprint,
+    hasWidgets: !!projectWidgets?.widgets?.length
+  })
+
+  const { editFingerprint, goBack, deleteProjectAction } = useProjectActions(projectId)
+
+  // Handle content opening
+  const handleContentOpen = (id: string, type: string) => {
+    console.log('Opening content:', { id, type });
+    // Additional handling can be added here if needed
   };
 
-  // Handle content section toggle
-  const handleContentSectionToggle = () => {
-    setIsContentSectionOpen(!isContentSectionOpen);
-  };
-
-  // Handle menu actions
-  const handleMenuAction = (action: string) => {
-    setShowMenu(false);
-    switch (action) {
-      case 'settings':
-        // Navigate to project settings
-        console.log('Navigate to project settings');
-        break;
-      case 'share':
-        // Open share modal
-        console.log('Open share modal');
-        break;
-      case 'export':
-        // Export project data
-        console.log('Export project data');
-        break;
-      case 'archive':
-        // Archive project
-        console.log('Archive project');
-        break;
+  // Handle layout reset
+  const handleLayoutReset = async () => {
+    if (!userId) return;
+    
+    try {
+      // Clear the stored layout
+      await fetch('/api/convex', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'runMutation',
+          name: 'projectsMutations:clearConstellationLayout',
+          args: { projectId, userId }
+        })
+      });
+      
+      console.log('Layout reset successfully');
+    } catch (error) {
+      console.error('Failed to reset layout:', error);
     }
   };
 
-  // Loading state
-  if (!project || !userId) {
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="animate-pulse">
-            <div className="h-8 bg-muted/20 rounded w-1/4 mb-6"></div>
-            <div className="h-64 bg-muted/20 rounded mb-8"></div>
-            <div className="h-32 bg-muted/20 rounded"></div>
-          </div>
-        </div>
-      </div>
-    );
+  // Widget runner hook
+  const router = useRouter()
+  const { executeWidget, isRunning: isWidgetRunning, lastResult } = useWidgetRunner()
+  const [runningWidgetId, setRunningWidgetId] = useState<string | null>(null)
+
+  // Event handlers
+  const handleWidgetClick = (widget: WidgetConfig) => {
+    setSelectedWidget(widget)
+    setShowWidgetPanel(true)
   }
 
-  // Error state
+  const handleWidgetHover = (widgetId: string | null) => {
+    setHighlightedWidget(widgetId)
+  }
+
+  const handleWidgetRun = async (widgetId: string) => {
+    try {
+      setRunningWidgetId(widgetId)
+      
+      // Find widget by Convex ID
+      const widget = projectWidgets?.widgets.find(
+        (w: any) => w._id === widgetId  // ✅ Use Convex ID (_id)
+      ) as WidgetConfig | undefined
+      
+      if (!widget) {
+        console.error('Widget not found:', widgetId)
+        return
+      }
+
+      const result = await executeWidget({
+        widgetId,  // ✅ Already Convex ID from FloatingWidgetCard
+        projectId
+      })
+
+      if (result) {
+        // Success! Open the details panel to show the output
+        console.log('Widget executed successfully:', result)
+        
+        // Set selected widget and open panel
+        setSelectedWidget(widget)
+        setShowWidgetPanel(true)
+      }
+    } catch (error) {
+      console.error('Failed to run widget:', error)
+    } finally {
+      setRunningWidgetId(null)
+    }
+  }
+
+  const handleDeleteProject = async () => {
+    try {
+      setIsDeleting(true)
+      await deleteProjectAction()
+    } catch (error) {
+      console.error('Failed to delete project:', error)
+      alert('Failed to delete project. Please try again.')
+    } finally {
+      setIsDeleting(false)
+      setShowDeleteModal(false)
+    }
+  }
+
+  // Handle view mode toggle
+  const handleViewModeToggle = (mode: ViewMode) => {
+    setViewMode(mode)
+  }
+
   if (!project) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-foreground mb-4">Project Not Found</h1>
-          <p className="text-muted-foreground mb-6">
-            The project you're looking for doesn't exist or you don't have access to it.
-          </p>
-          <button
-            onClick={handleBack}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-accent-foreground rounded-lg hover:bg-accent/90 transition-colors"
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-6 py-8">
+          <button 
+            onClick={goBack}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2 mb-6"
+            title="Go back"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Projects
+            Back
           </button>
+          
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center space-y-4">
+              <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-pulse mx-auto" />
+              <h2 className="text-xl font-light text-foreground">Loading project</h2>
+              <p className="text-muted-foreground/60 text-sm">Preparing your project intelligence...</p>
+            </div>
+          </div>
         </div>
       </div>
-    );
+    )
   }
 
+  const lastEvolution = currentFingerprint?.last_evolution 
+    ? formatDistanceToNow(new Date(currentFingerprint.last_evolution), { addSuffix: true })
+    : 'Never'
+
   return (
-    <div className={cn("min-h-screen bg-background", className)}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <>
+      {/* Main container */}
+      <div className="min-h-screen bg-background">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={handleBack}
-                className="p-2 rounded-lg hover:bg-muted/50 transition-colors"
-                aria-label="Back to projects"
+        <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-sm border-b border-border/30">
+          <div className="max-w-6xl mx-auto px-6 py-6">
+            <div className="flex items-center justify-between">
+              {/* Back button */}
+              <button 
+                onClick={goBack}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
+                title="Back to projects"
               >
-                <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+                <ArrowLeft className="w-4 h-4" />
+                Back to projects
               </button>
-              
-              <div>
-                <h1 className="text-3xl font-bold text-foreground mb-2">
-                  {project.name}
+
+              {/* Project info */}
+              <div className="flex-1 text-center px-8">
+                <h1 className="text-2xl font-medium text-foreground mb-1">
+                  {project?.name || 'Project Dashboard'}
                 </h1>
-                {project.description && (
-                  <p className="text-muted-foreground text-lg">
-                    {project.description}
-                  </p>
-                )}
+                <p className="text-sm text-muted-foreground/70">
+                  {project?.description || 'AI-powered project management and insights'}
+                </p>
+                <div className="text-xs text-muted-foreground/60 mt-2">
+                  {isGenerating ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                      Generating widgets...
+                    </span>
+                  ) : (
+                    `Active: ${projectWidgets?.widgets?.length || 0} widgets • ${projectWidgets?.categories?.length || 0} categories`
+                  )}
+                </div>
               </div>
-            </div>
 
-            <div className="flex items-center gap-2">
-              {/* Content Section Toggle */}
-              <button
-                onClick={handleContentSectionToggle}
-                className={cn(
-                  "px-4 py-2 rounded-lg transition-colors flex items-center gap-2",
-                  isContentSectionOpen 
-                    ? "bg-accent text-accent-foreground" 
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                )}
-              >
-                <FileText className="w-4 h-4" />
-                Content
-                {projectStats && (
-                  <span className="ml-1 text-xs bg-background/20 px-2 py-0.5 rounded-full">
-                    {projectStats.stats.total}
-                  </span>
-                )}
-              </button>
-
-              {/* Menu */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowMenu(!showMenu)}
-                  className="p-2 rounded-lg hover:bg-muted/50 transition-colors"
-                  aria-label="Project menu"
-                >
-                  <MoreVertical className="w-5 h-5 text-muted-foreground" />
-                </button>
-
-                {showMenu && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="absolute right-0 top-10 bg-background border border-border rounded-lg shadow-lg py-1 z-10 min-w-[160px]"
+              {/* View Mode Toggle and Menu */}
+              <div className="flex items-center gap-3">
+                {/* View Mode Toggle */}
+                <div className="flex items-center bg-muted/20 rounded-lg p-1">
+                  <button
+                    onClick={() => handleViewModeToggle("constellation")}
+                    className={cn(
+                      "px-3 py-2 rounded-md transition-colors flex items-center gap-2 text-sm",
+                      viewMode === "constellation"
+                        ? "bg-background text-foreground shadow-sm" 
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
                   >
-                    <button
-                      onClick={() => handleMenuAction('settings')}
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-muted/50 flex items-center gap-2"
-                    >
-                      <Settings className="w-4 h-4" />
-                      Settings
-                    </button>
-                    <button
-                      onClick={() => handleMenuAction('share')}
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-muted/50 flex items-center gap-2"
-                    >
-                      <Share2 className="w-4 h-4" />
-                      Share
-                    </button>
-                    <button
-                      onClick={() => handleMenuAction('export')}
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-muted/50 flex items-center gap-2"
-                    >
-                      <FileText className="w-4 h-4" />
-                      Export
-                    </button>
-                    <button
-                      onClick={() => handleMenuAction('archive')}
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-muted/50 flex items-center gap-2 text-red-600"
-                    >
-                      <Star className="w-4 h-4" />
-                      Archive
-                    </button>
-                  </motion.div>
-                )}
+                    <LayoutGrid className="w-4 h-4" />
+                    Constellation
+                  </button>
+                  <button
+                    onClick={() => handleViewModeToggle("grid")}
+                    className={cn(
+                      "px-3 py-2 rounded-md transition-colors flex items-center gap-2 text-sm",
+                      viewMode === "grid"
+                        ? "bg-background text-foreground shadow-sm" 
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <List className="w-4 h-4" />
+                    Grid View
+                    {project && (
+                      <span className="ml-1 text-xs bg-muted/50 px-2 py-0.5 rounded-full">
+                        {(projectWidgets?.widgets?.length || 0) + ((project as any)?.contentItems?.length || 0)}
+                      </span>
+                    )}
+                  </button>
+                </div>
+
+                {/* Menu */}
+                <div className="relative" ref={menuRef}>
+                  <button
+                    onClick={() => setShowMenu(!showMenu)}
+                    className="p-2 hover:bg-muted/50 rounded-md transition-colors"
+                    title="More options"
+                  >
+                    <MoreHorizontal className="w-5 h-5 text-muted-foreground" />
+                  </button>
+                  
+                  {showMenu && (
+                    <div className="absolute right-0 top-12 bg-background border border-border rounded-md shadow-lg z-30 min-w-[200px]">
+                      <button
+                        onClick={() => {
+                          setShowMenu(false)
+                          setShowProjectContentPanel(true)
+                        }}
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-muted/50 flex items-center gap-2 transition-colors"
+                      >
+                        <FileText className="w-4 h-4" />
+                        Manage content
+                      </button>
+                      <div className="border-t border-border/20 my-1" />
+                      <button
+                        onClick={() => {
+                          setShowMenu(false)
+                          editFingerprint()
+                        }}
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-muted/50 flex items-center gap-2 transition-colors"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                        Resume Discovery
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false)
+                          regenerateWidgets()
+                        }}
+                        disabled={isGenerating}
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-muted/50 flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        {isGenerating ? 'Generating...' : 'Regenerate widgets'}
+                      </button>
+                      <div className="border-t border-border/20 my-1" />
+                      <button
+                        onClick={() => {
+                          setShowMenu(false)
+                          setShowDeleteModal(true)
+                        }}
+                        className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 flex items-center gap-2 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Delete project
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
 
-        {/* Project Stats */}
-        {projectStats && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"
-          >
-            <div className="bg-muted/20 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-foreground">
-                    {projectStats.stats.notes}
+        {/* Content */}
+        <div className="relative">
+          {viewMode === "constellation" && (
+            <>
+              {isGenerating ? (
+                <WidgetGenerationLoader />
+              ) : currentFingerprint ? (
+                <ConstellationCanvas
+                  widgets={(projectWidgets?.widgets || []) as WidgetConfig[]}
+                  userId={userId}
+                  projectId={projectId}
+                  onWidgetClick={handleWidgetClick}
+                  onWidgetHover={handleWidgetHover}
+                  highlightedWidget={highlightedWidget}
+                  showWidgetPanel={showWidgetPanel}
+                  onWidgetRun={handleWidgetRun}
+                  runningWidgetId={runningWidgetId}
+                  selectedWidget={selectedWidget}
+                  contentItems={(project as any)?.contentItems || []}
+                  storedLayout={(project as any)?.constellationLayout}
+                  onContentOpen={handleContentOpen}
+                  onLayoutReset={handleLayoutReset}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-64">
+                  <div className="text-center">
+                    <div className="text-muted-foreground mb-2">No fingerprint available</div>
+                    <div className="text-sm text-muted-foreground">Please complete the project discovery process</div>
                   </div>
-                  <div className="text-sm text-muted-foreground">Notes</div>
                 </div>
-              </div>
-            </div>
+              )}
+            </>
+          )}
 
-            <div className="bg-muted/20 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-950/20 flex items-center justify-center">
-                  <MessageCircle className="w-5 h-5 text-green-600" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-foreground">
-                    {projectStats.stats.conversations}
+          {viewMode === "grid" && (
+            <div className="max-w-7xl mx-auto px-6 py-8">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-8"
+              >
+                <div className="bg-gradient-to-br from-background to-muted/10 rounded-lg border border-border">
+                  <div className="p-6 border-b border-border">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-xl font-semibold text-foreground">Project Items</h2>
+                        <p className="text-sm text-muted-foreground">
+                          All your widgets, notes, conversations, crystals, and shards in a structured view
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleViewModeToggle("constellation")}
+                        className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-2"
+                      >
+                        <LayoutGrid className="w-4 h-4" />
+                        Back to Constellation
+                      </button>
+                    </div>
                   </div>
-                  <div className="text-sm text-muted-foreground">Conversations</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-muted/20 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-950/20 flex items-center justify-center">
-                  <Gem className="w-5 h-5 text-purple-600" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-foreground">
-                    {projectStats.stats.crystals}
+                  <div className="p-6">
+                    {userId && (
+                      <ProjectGridView
+                        projectId={projectId}
+                        userId={userId}
+                        widgets={projectWidgets?.widgets || []}
+                        contentItems={(project as any)?.contentItems || []}
+                        onWidgetClick={handleWidgetClick}
+                        onWidgetRun={handleWidgetRun}
+                        runningWidgetId={runningWidgetId}
+                        onContentOpen={handleContentOpen}
+                      />
+                    )}
                   </div>
-                  <div className="text-sm text-muted-foreground">Crystals</div>
                 </div>
-              </div>
+              </motion.div>
             </div>
+          )}
 
-            <div className="bg-muted/20 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-950/20 flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-amber-600" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-foreground">
-                    {projectStats.stats.shards}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Shards</div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Project Intelligence (Fingerprint) */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="mb-8"
-        >
-          <ProjectFingerprint 
-            projectId={projectId as Id<"projects">} 
-            className="w-full"
+          {/* Transition overlay */}
+          <ConstellationTransition
+            isActive={showTransition}
+            onComplete={() => setShowTransition(false)}
+            duration={3000}
           />
-        </motion.div>
-
-        {/* Project Content Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <ProjectContentSection
-            projectId={projectId}
-            userId={userId}
-            isOpen={isContentSectionOpen}
-            onToggle={handleContentSectionToggle}
-          />
-        </motion.div>
+        </div>
       </div>
 
-      {/* Click outside to close menu */}
-      {showMenu && (
-        <div
-          className="fixed inset-0 z-0"
-          onClick={() => setShowMenu(false)}
+      {/* Modals */}
+      <DeleteProjectModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteProject}
+        projectName={project?.name || 'Project'}
+        isDeleting={isDeleting}
+      />
+
+      <WidgetDetailsPanel
+        widget={selectedWidget}
+        isOpen={showWidgetPanel}
+        onClose={() => {
+          setShowWidgetPanel(false)
+          setSelectedWidget(null)
+        }}
+        projectId={projectId}
+      />
+
+      {/* Project Content Management Panel */}
+      {userId && project && (
+        <ContentAttachmentPanel
+          projectId={projectId as any}
+          userId={userId}
+          isOpen={showProjectContentPanel}
+          onClose={() => setShowProjectContentPanel(false)}
+          attachedNoteIds={project.noteIds || []}
+          attachedConversationIds={project.conversationIds || []}
+          attachedCrystalIds={project.crystalIds || []}
+          attachedShardIds={project.shardIds || []}
         />
       )}
-    </div>
-  );
+    </>
+  )
 }

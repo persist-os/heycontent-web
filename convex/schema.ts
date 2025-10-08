@@ -326,12 +326,34 @@ export default defineSchema({
     crystalIds: v.optional(v.array(v.string())),        // Crystal ID strings (not Convex IDs)
     shardIds: v.optional(v.array(v.string())),          // Crystal shard document IDs
     
-    // AI Intelligence Integration
-    fingerprintId: v.optional(v.id("project_fingerprints")), // Links to project fingerprint
-    
-    // Timestamps
-    createdAt: v.number(),
-    updatedAt: v.number(),
+        // AI Intelligence Integration
+        fingerprintId: v.optional(v.id("project_fingerprints")), // Links to project fingerprint
+        
+        // Constellation Layout Cache (recalculated manually)
+        constellationLayout: v.optional(v.object({
+          version: v.number(), // Layout algorithm version
+          calculatedAt: v.number(),
+          items: v.array(v.object({
+            itemId: v.string(),
+            itemType: v.union(
+              v.literal("widget"),
+              v.literal("note"), 
+              v.literal("conversation"),
+              v.literal("crystal"),
+              v.literal("shard")
+            ),
+            x: v.number(),
+            y: v.number(),
+            size: v.string(),
+            importance: v.number(),
+          })),
+          canvasWidth: v.number(),
+          canvasHeight: v.number(),
+        })),
+        
+        // Timestamps
+        createdAt: v.number(),
+        updatedAt: v.number(),
     
     // ⚠️ DEPRECATED: Social media integrations removed - use crystal system for content insights
   })

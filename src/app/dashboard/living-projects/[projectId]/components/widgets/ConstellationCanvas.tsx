@@ -15,6 +15,7 @@ import { ConstellationControls } from '../../../components/ConstellationControls
 import { ConstellationMinimap } from '../../../components/ConstellationMinimap'
 import { useWidgetLayout } from '../hooks/useWidgetLayout'
 import { FloatingWidgetCard } from './FloatingWidgetCard'
+import { FloatingContentCard } from './FloatingContentCard'
 import { ContentAttachmentPanel } from '@/app/dashboard/living-projects/components/ContentAttachmentPanel'
 import { ProjectFingerprint } from './ProjectFingerprint'
 
@@ -29,6 +30,10 @@ interface ConstellationCanvasProps {
   onWidgetRun?: (widgetId: string) => void
   runningWidgetId?: string | null
   selectedWidget?: WidgetConfig | null
+  contentItems?: any[]
+  storedLayout?: any
+  onContentOpen?: (id: string, type: string) => void
+  onLayoutReset?: () => void
 }
 
 export function ConstellationCanvas({
@@ -41,7 +46,11 @@ export function ConstellationCanvas({
   showWidgetPanel,
   onWidgetRun,
   runningWidgetId,
-  selectedWidget
+  selectedWidget,
+  contentItems,
+  storedLayout,
+  onContentOpen,
+  onLayoutReset
 }: ConstellationCanvasProps) {
   const [viewportSize, setViewportSize] = useState({
     width: typeof window !== 'undefined' ? window.innerWidth : 1200,
@@ -50,7 +59,7 @@ export function ConstellationCanvas({
   const [showContentPanel, setShowContentPanel] = useState(false)
   
   // Generate constellation layout
-  const layout = useWidgetLayout(widgets)
+  const layout = useWidgetLayout(widgets, contentItems, storedLayout)
 
   // Pan and zoom functionality
   const {
@@ -175,6 +184,31 @@ export function ConstellationCanvas({
             )
           })}
 
+          {/* Floating Content Cards - Virtual Rendering */}
+          {layout.positions
+            .filter(position => position.type && position.type !== 'widget')
+            .map(position => {
+              const contentItem = contentItems?.find(item => 
+                (item._contentId || item._id) === position.id
+              )
+              if (!contentItem) return null
+
+              return (
+                <FloatingContentCard
+                  key={position.id}
+                  item={contentItem}
+                  itemType={position.type!}
+                  x={position.x}
+                  y={position.y}
+                  size={position.size}
+                  importance={position.importance}
+                  isHighlighted={highlightedWidget === position.id}
+                  scale={transform.scale}
+                  onOpen={onContentOpen || (() => {})}
+                />
+              )
+            })}
+
           {/* Canvas bounds indicator */}
           <div
             className="absolute inset-0 border border-border/10 rounded-lg pointer-events-none"
@@ -210,6 +244,19 @@ export function ConstellationCanvas({
         onReset={resetView}
         className="absolute bottom-4 left-4 z-10"
       />
+
+      {/* Layout Reset Button */}
+      {onLayoutReset && (
+        <div className="absolute bottom-4 left-64 z-10">
+          <button
+            onClick={onLayoutReset}
+            className="px-3 py-2 text-xs bg-background/80 backdrop-blur-sm border border-border/30 rounded-lg hover:bg-background/90 transition-colors"
+            title="Reset layout"
+          >
+            Reset Layout
+          </button>
+        </div>
+      )}
 
       {/* Minimap - Bottom Right */}
       <ConstellationMinimap
