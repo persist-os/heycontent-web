@@ -173,7 +173,7 @@ export default function ComparePage() {
                 AI-first memory vs workspace AI. Conversational intelligence versus document assistance.
               </p>
               <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                Coming soon →
+                Read detailed comparison →
               </span>
             </Link>
 
@@ -280,7 +280,15 @@ export default function ComparePage() {
           </div>
 
           <div>
-            <h2 className="text-3xl font-medium mb-6">HeyContext vs Notion AI: Notes vs Conversations</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-3xl font-medium">HeyContext vs Notion AI: Notes vs Conversations</h2>
+              <Link 
+                href="/compare/heycontext-vs-notion-ai"
+                className="text-sm font-medium text-green-600 dark:text-green-400 hover:underline"
+              >
+                Full comparison →
+              </Link>
+            </div>
             <div className="space-y-4 text-lg leading-relaxed">
               <p>
                 <strong>Notion AI</strong> is a powerful addition to Notion's workspace, helping you write, summarize, and organize within your existing notes and databases.
