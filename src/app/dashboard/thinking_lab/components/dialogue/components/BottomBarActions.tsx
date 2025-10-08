@@ -8,6 +8,8 @@ interface BottomBarActionsProps {
 }
 
 export const BottomBarActions: React.FC<BottomBarActionsProps> = ({ onActionClick, onInputPopulate, isFullScreen = false }) => {
+  return null; // Hide the blue buttons as requested
+  
   return (
     <>
       <style dangerouslySetInnerHTML={{

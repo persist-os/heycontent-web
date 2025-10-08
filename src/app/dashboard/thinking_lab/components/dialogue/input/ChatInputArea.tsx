@@ -90,25 +90,6 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
 
         {/* Chat input area - always show */}
         <div className="px-2 sm:px-3 pt-1 pb-2">
-          {/* Chat controls - positioned above input for visibility */}
-          <div className="flex items-center justify-end gap-3 pb-3 px-2">
-            {/* Notepad Inclusion Control */}
-            <button
-              onClick={() => onToggleNotepadInMessages?.(!includeNotepadInMessages)}
-              title={includeNotepadInMessages 
-                ? 'Notes are included in messages - AI can see your notepad content'
-                : 'Include notepad content in messages for AI reference'
-              }
-              className={`px-3 py-1.5 text-xs font-light transition-colors duration-300 border-b ${
-                includeNotepadInMessages 
-                  ? 'text-foreground border-current' 
-                  : 'text-muted-foreground border-transparent hover:text-foreground hover:border-current'
-              }`}
-            >
-              Notepad {includeNotepadInMessages ? 'on' : 'off'}
-            </button>
-          </div>
-          
           <ChatInput
             inputRef={inputRef}
             onSend={handleSendMessage}
@@ -137,6 +118,8 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
             currentTab={currentTab}
             isMobile={isMobile}
             activeTab={activeTab}
+            includeNotepadInMessages={includeNotepadInMessages}
+            onToggleNotepadInMessages={onToggleNotepadInMessages}
           />
         </div>
       </div>

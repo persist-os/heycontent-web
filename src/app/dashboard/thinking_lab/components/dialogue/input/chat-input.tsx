@@ -3,7 +3,7 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { UnifiedContentSelector } from '@/components/ui/UnifiedContentSelector';
 import { useTheme } from 'next-themes';
-import { Send, Loader2, MessageSquare, FileText, Search, Paperclip, X } from 'lucide-react'
+import { Send, Loader2, MessageSquare, FileText, Search, Paperclip, X, FileText as NotepadIcon } from 'lucide-react'
 import { getCurrentUserId, getCurrentUserIdSync, waitForAuthReady } from '@/app/lib/api-helpers'
 import { AuthenticationError } from '@/app/lib/errors'
 import { useQuery } from 'convex/react'
@@ -32,6 +32,8 @@ interface ChatInputProps {
   currentTab?: string
   isMobile?: boolean
   activeTab?: 'chat' | 'notes'
+  includeNotepadInMessages?: boolean
+  onToggleNotepadInMessages?: (enabled: boolean) => void
 }
 
 const placeholders = [
@@ -68,7 +70,9 @@ export function ChatInput({
   disabled = false,
   currentTab = 'all',
   isMobile = false,
-  activeTab = 'chat'
+  activeTab = 'chat',
+  includeNotepadInMessages = false,
+  onToggleNotepadInMessages
 }: ChatInputProps) {
   const [input, setInput] = useState('')
   const [placeholder, setPlaceholder] = useState(placeholders[0])
@@ -560,10 +564,10 @@ export function ChatInput({
                         <div className="absolute top-1 right-1">
                           <button
                             onClick={() => removeFileAttachment(index)}
-                            className="bg-black/50 text-white hover:bg-black/70 p-1 rounded-full transition-colors"
+                            className="bg-black/50 text-white hover:bg-black/70 w-11 h-11 rounded-full transition-colors flex items-center justify-center"
                             aria-label="Remove file"
                           >
-                            <X className="w-3 h-3" />
+                            <X className="w-5 h-5" />
                           </button>
                         </div>
                       </div>
@@ -590,10 +594,10 @@ export function ChatInput({
                         <div className="absolute top-1 right-1">
                           <button
                             onClick={() => removeFileAttachment(index)}
-                            className="bg-black/50 text-white hover:bg-black/70 p-1 rounded-full transition-colors"
+                            className="bg-black/50 text-white hover:bg-black/70 w-11 h-11 rounded-full transition-colors flex items-center justify-center"
                             aria-label="Remove file"
                           >
-                            <X className="w-3 h-3" />
+                            <X className="w-5 h-5" />
                           </button>
                         </div>
                       </div>
@@ -611,10 +615,10 @@ export function ChatInput({
                         </span>
                         <button
                           onClick={() => removeFileAttachment(index)}
-                          className="text-muted-foreground hover:text-foreground p-0.5 rounded transition-colors"
+                          className="text-muted-foreground hover:text-foreground w-11 h-11 rounded transition-colors flex items-center justify-center"
                           aria-label="Remove file"
                         >
-                          <X className="w-3 h-3" />
+                          <X className="w-5 h-5" />
                         </button>
                       </div>
                     )}
@@ -685,35 +689,61 @@ export function ChatInput({
                 )}
                 
                 {/* File attachment button */}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isLoading || disabled || isUploading}
-                  className="p-1.5 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  aria-label="Attach files"
-                >
-                  {isUploading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Paperclip className="w-4 h-4" />
-                  )}
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isLoading || disabled || isUploading}
+                    className="w-11 h-11 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Attach files"
+                  >
+                    {isUploading ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Paperclip className="w-5 h-5" />
+                    )}
+                  </button>
+                
+                {/* Notepad toggle button */}
+                {onToggleNotepadInMessages && (
+                  <button
+                    type="button"
+                    onClick={() => onToggleNotepadInMessages(!includeNotepadInMessages)}
+                    disabled={isLoading || disabled}
+                    className={`w-11 h-11 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed relative ${
+                      includeNotepadInMessages 
+                        ? 'text-foreground' 
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                    title={includeNotepadInMessages 
+                      ? 'Notepad included in messages - Click to exclude'
+                      : 'Notepad excluded from messages - Click to include'
+                    }
+                  >
+                    <NotepadIcon className={`w-5 h-5 ${!includeNotepadInMessages ? 'opacity-50' : ''}`} />
+                    {/* Cross-out indicator when notepad is off */}
+                    {!includeNotepadInMessages && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-sm font-bold text-muted-foreground/80">/</span>
+                      </div>
+                    )}
+                  </button>
+                )}
                 
                 {/* Send button */}
                 <button
                   type="submit"
                   aria-label="Send message"
                   disabled={isLoading || (!currentInput.trim() && fileAttachments.length === 0) || isAtLimit || disabled}
-                  className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-200
-                    ${isLoading || (!currentInput.trim() && fileAttachments.length === 0) || isAtLimit || disabled 
-                      ? 'bg-muted text-muted-foreground cursor-not-allowed' 
-                      : `${accentBg} text-white ${accentBgHover} shadow-sm hover:shadow-md hover:scale-105 active:scale-95`
-                    }`}
+                  className={`w-11 h-11 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                    isLoading || (!currentInput.trim() && fileAttachments.length === 0) || isAtLimit || disabled
+                      ? 'text-muted-foreground cursor-not-allowed' 
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
                 >
                   {isLoading ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
-                    <Send className="w-3.5 h-3.5" />
+                    <Send className="w-5 h-5" />
                   )}
                 </button>
               </div>

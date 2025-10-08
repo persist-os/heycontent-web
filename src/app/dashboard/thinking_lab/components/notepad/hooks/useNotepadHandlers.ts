@@ -107,11 +107,26 @@ export function useNotepadHandlers({
   }, [])
 
   // Note update function
+  // Handle note updates with support for new notes
   const handleNoteUpdate = useCallback(async (noteId: string | Id<"notes">, updates: NoteUpdate): Promise<Note | null> => {
     if (isNewNote || !existingNote) {
-      // For new notes, just update local state - this will be reflected when note is created
+      // For new notes, update local state instead of database
+      // This allows title editing to work before the note is saved
       console.log('📝 [MarkdownNotepad] Updating local note state for new note:', updates)
-      return note
+      
+      // Update local state for new notes
+      if (updates.title !== undefined) {
+        setters.setTitle(updates.title)
+      }
+      
+      // Return the updated note object
+      const updatedNote = {
+        ...note,
+        ...updates,
+        updatedAt: Date.now()
+      }
+      
+      return updatedNote as Note
     }
     
     // For existing notes, use the notes context update mechanism
@@ -124,7 +139,7 @@ export function useNotepadHandlers({
       console.error('❌ [MarkdownNotepad] Failed to update note:', error)
       return null
     }
-  }, [isNewNote, existingNote, note, updateNote])
+  }, [isNewNote, existingNote, note, updateNote, setters])
 
   // Create or save note function with auto-save coordination
   const handleSaveAsNote = useCallback(async (): Promise<string | null> => {
@@ -149,9 +164,10 @@ export function useNotepadHandlers({
       });
       
       // Create new note with conversation link and context
+      console.log('📝 [MarkdownNotepad] Creating note with title:', note.title, 'trimmed:', note.title?.trim())
       const newNoteId = await createNote(content.trim(), {
         redirect: false,
-        customTitle: note.title !== 'Untitled Note' ? note.title : undefined,
+        customTitle: note.title && note.title.trim() && note.title.trim() !== 'Untitled Note' ? note.title.trim() : undefined,
         customType: note.type,
         sourceConversationId: sessionId || undefined,
         // Pass context from container
@@ -319,10 +335,11 @@ export function useNotepadHandlers({
     setCurrentNoteId(null)
     setIsNewNote(true)
     setContent('')
+    setters.setTitle('Untitled Note')
     lexicalEditorRef.current?.clear()
     
     console.log('✨ [MarkdownNotepad] Created new note')
-  }, [setCurrentNoteId, setIsNewNote, setContent, lexicalEditorRef])
+  }, [setCurrentNoteId, setIsNewNote, setContent, setters, lexicalEditorRef])
 
   // Content state changes with debounced auto-save (defensive)
   const handleContentChange = useCallback((newContent: string) => {

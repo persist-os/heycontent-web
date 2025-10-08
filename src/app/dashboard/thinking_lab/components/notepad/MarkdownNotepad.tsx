@@ -196,6 +196,7 @@ export const MarkdownNotepad = forwardRef<MarkdownNotepadRef, MarkdownNotepadPro
         onEditingTitleChange={setIsEditingTitle}
         onLinkNote={onLinkNote}
         onShare={handleShare}
+        onClose={onClose}
         isReadOnly={isReadOnly}
         notePermission={notePermission}
         panelState={panelState}

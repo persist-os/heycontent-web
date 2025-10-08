@@ -139,7 +139,7 @@ export function AutomaticEmbeddingStatus() {
             <TrendingUp className="w-5 h-5" />
             Your Content Library
           </CardTitle>
-          <Badge variant="default" className="bg-green-500">
+          <Badge variant="default" className="bg-green-500 hover:bg-green-500">
             <CheckCircle className="w-3 h-3 mr-1" />
             Active
           </Badge>
