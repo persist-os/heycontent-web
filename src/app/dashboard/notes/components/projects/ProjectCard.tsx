@@ -41,7 +41,7 @@ export function ProjectCard({ project, onEdit, onDelete, onShare, dragOverProjec
   };
 
   const handleCardClick = () => {
-    router.push(`/dashboard/notes/projects/${project._id}`);
+    router.push(`/dashboard/living-projects/${project._id}`);
   };
 
   const itemCount = 
