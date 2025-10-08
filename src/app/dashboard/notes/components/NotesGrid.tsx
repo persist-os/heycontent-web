@@ -174,7 +174,7 @@ export function NotesGrid({
 
   const handleEditProject = (project: any) => {
     // Navigate to the project detail page for editing
-    window.location.href = `/dashboard/notes/projects/${project._id}`;
+    window.location.href = `/dashboard/living-projects/${project._id}`;
   };
 
   const handleTagFilter = (tag: string) => {

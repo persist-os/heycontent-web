@@ -206,7 +206,7 @@ export function TreeNodeRenderer({
             )}
             onClick={() => {
               if (node.project) {
-                router.push(`/dashboard/notes/projects/${node.project._id}`);
+                router.push(`/dashboard/living-projects/${node.project._id}`);
               }
             }}
           >
