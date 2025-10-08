@@ -27,6 +27,7 @@ app.use('*', async (c, next) => {
   let domain = 'unknown';
   if (path.includes('/notes')) domain = 'notes';
   else if (path.includes('/users')) domain = 'users';
+  else if (path.includes('/stardust')) domain = 'stardust';
   else if (path.includes('/projectSeeds')) domain = 'project_seeds';
   else if (path.includes('/projects')) domain = 'projects';
   else if (path.includes('/widgets')) domain = 'widgets';
@@ -4038,211 +4039,351 @@ app.post("/api/webhookEvents/retry", async (c) => {
 });
 
 // ============================================================================
-// PROJECT SEEDS - Code-based seed detection
+// STARDUST ROUTES - Parallel Species ("What You Do")
 // ============================================================================
+// Stardust represents concrete project potentials that evolve into star organisms
+// Parallel species to Crystals: Crystals = "Who You Are", Stardust = "What You Do"
+// Code-based detection (zero LLM cost), flows through crystal dam alongside shards
 
 /**
- * List project seeds for a user
+ * List stardust for a user
  */
-app.post("/api/projectSeeds/list", async (c) => {
+app.post("/api/stardust/list", async (c) => {
   try {
     const ctx = c.env;
     const body = await c.req.json();
     
-    const seeds = await ctx.runQuery(api.projectSeedsQueries.listProjectSeeds, {
+    const stardust = await ctx.runQuery(api.stardustQueries.listStardust, {
       userId: body.userId,
       minConfidence: body.minConfidence,
       includePromoted: body.includePromoted ?? false,
       limit: body.limit,
     });
     
-    return c.json({ success: true, data: seeds });
+    return c.json({ success: true, data: stardust });
   } catch (error: any) {
-    console.error("[PROJECT_SEEDS_LIST] Error:", error);
+    console.error("[STARDUST_LIST] Error:", error);
     return c.json({ 
       success: false,
-      error: error.message || "Failed to list project seeds"
+      error: error.message || "Failed to list stardust"
     }, 500);
   }
 });
 
+
 /**
- * Get a specific project seed
+ * Get a specific stardust by ID
  */
-app.post("/api/projectSeeds/get", async (c) => {
+app.post("/api/stardust/get", async (c) => {
   try {
     const ctx = c.env;
     const body = await c.req.json();
     
-    const seed = await ctx.runQuery(api.projectSeedsQueries.getProjectSeed, {
-      seedId: body.seedId as Id<"projectSeeds">,
+    const stardust = await ctx.runQuery(api.stardustQueries.getStardust, {
+      stardustId: body.stardustId as Id<"stardust">,
     });
     
-    if (!seed) {
-      return c.json({ success: false, error: "Seed not found" }, 404);
+    if (!stardust) {
+      return c.json({ 
+        success: false,
+        error: "Stardust not found"
+      }, 404);
     }
     
-    return c.json({ success: true, data: seed });
+    return c.json({ success: true, data: stardust });
   } catch (error: any) {
-    console.error("[PROJECT_SEEDS_GET] Error:", error);
+    console.error("[STARDUST_GET] Error:", error);
     return c.json({ 
       success: false,
-      error: error.message || "Failed to get project seed"
+      error: error.message || "Failed to get stardust"
     }, 500);
   }
 });
 
+
 /**
- * Get seeds ready for promotion
+ * Get stardust ready for promotion
  */
-app.post("/api/projectSeeds/readyForPromotion", async (c) => {
+app.post("/api/stardust/readyForPromotion", async (c) => {
   try {
     const ctx = c.env;
     const body = await c.req.json();
     
-    const seeds = await ctx.runQuery(api.projectSeedsQueries.getSeedsReadyForPromotion, {
+    const stardust = await ctx.runQuery(api.stardustQueries.getStardustReadyForPromotion, {
       userId: body.userId,
       confidenceThreshold: body.confidenceThreshold,
     });
     
-    return c.json({ success: true, data: seeds });
+    return c.json({ success: true, data: stardust });
   } catch (error: any) {
-    console.error("[PROJECT_SEEDS_READY] Error:", error);
+    console.error("[STARDUST_READY_FOR_PROMOTION] Error:", error);
     return c.json({ 
       success: false,
-      error: error.message || "Failed to get seeds ready for promotion"
+      error: error.message || "Failed to get stardust ready for promotion"
     }, 500);
   }
 });
 
+
 /**
- * Get seed statistics
+ * Get stardust statistics
  */
-app.post("/api/projectSeeds/statistics", async (c) => {
+app.post("/api/stardust/statistics", async (c) => {
   try {
     const ctx = c.env;
     const body = await c.req.json();
     
-    const stats = await ctx.runQuery(api.projectSeedsQueries.getSeedStatistics, {
+    const stats = await ctx.runQuery(api.stardustQueries.getStardustStatistics, {
       userId: body.userId,
     });
     
     return c.json({ success: true, data: stats });
   } catch (error: any) {
-    console.error("[PROJECT_SEEDS_STATS] Error:", error);
+    console.error("[STARDUST_STATISTICS] Error:", error);
     return c.json({ 
       success: false,
-      error: error.message || "Failed to get seed statistics"
+      error: error.message || "Failed to get stardust statistics"
     }, 500);
   }
 });
 
+
 /**
- * Create a new project seed
+ * Create a new stardust
  */
-app.post("/api/projectSeeds/create", async (c) => {
+app.post("/api/stardust/create", async (c) => {
   try {
     const ctx = c.env;
     const body = await c.req.json();
     
-    const seedId = await ctx.runMutation(api.projectSeedsMutations.createProjectSeed, {
+    const stardustId = await ctx.runMutation(api.stardustMutations.createStardust, {
       userId: body.userId,
-      seedId: body.seedId,
+      stardustId: body.stardustId,
       name: body.name,
       description: body.description,
       confidence: body.confidence,
-      sourceShardIds: body.sourceShardIds,
-      keywords: body.keywords,
+      sourceShardIds: body.sourceShardIds || [],
+      keywords: body.keywords || [],
       dimension: body.dimension,
       suggestedProjectName: body.suggestedProjectName,
       suggestedProjectDescription: body.suggestedProjectDescription,
       suggestedDomain: body.suggestedDomain,
       suggestedComplexity: body.suggestedComplexity,
       suggestedTimeHorizon: body.suggestedTimeHorizon,
-      relatedNoteIds: body.relatedNoteIds,
-      relatedConversationIds: body.relatedConversationIds,
+      relatedNoteIds: body.relatedNoteIds || [],
+      relatedConversationIds: body.relatedConversationIds || [],
       shardCount: body.shardCount,
       evidenceStrength: body.evidenceStrength,
+      lifecycleStage: body.lifecycleStage,
+      health: body.health,
+      energy: body.energy,
+      detectionMethod: body.detectionMethod,
     });
     
-    return c.json({ success: true, data: { seedId } });
+    return c.json({ success: true, data: { stardustId } });
   } catch (error: any) {
-    console.error("[PROJECT_SEEDS_CREATE] Error:", error);
+    console.error("[STARDUST_CREATE] Error:", error);
     return c.json({ 
       success: false,
-      error: error.message || "Failed to create project seed"
+      error: error.message || "Failed to create stardust"
     }, 500);
   }
 });
 
+
 /**
- * Update a project seed
+ * Update a stardust
  */
-app.post("/api/projectSeeds/update", async (c) => {
+app.post("/api/stardust/update", async (c) => {
   try {
     const ctx = c.env;
     const body = await c.req.json();
     
-    const seedId = await ctx.runMutation(api.projectSeedsMutations.updateProjectSeed, {
-      seedId: body.seedId as Id<"projectSeeds">,
+    const stardustId = await ctx.runMutation(api.stardustMutations.updateStardust, {
+      stardustId: body.stardustId as Id<"stardust">,
       updates: body.updates,
     });
     
-    return c.json({ success: true, data: { seedId } });
+    return c.json({ success: true, data: { stardustId } });
   } catch (error: any) {
-    console.error("[PROJECT_SEEDS_UPDATE] Error:", error);
+    console.error("[STARDUST_UPDATE] Error:", error);
     return c.json({ 
       success: false,
-      error: error.message || "Failed to update project seed"
+      error: error.message || "Failed to update stardust"
     }, 500);
   }
 });
 
+
 /**
- * Promote a seed to project
+ * Promote a stardust to project
  */
-app.post("/api/projectSeeds/promote", async (c) => {
+app.post("/api/stardust/promote", async (c) => {
   try {
     const ctx = c.env;
     const body = await c.req.json();
     
-    const seedId = await ctx.runMutation(api.projectSeedsMutations.promoteSeed, {
-      seedId: body.seedId as Id<"projectSeeds">,
+    const stardustId = await ctx.runMutation(api.stardustMutations.promoteStardust, {
+      stardustId: body.stardustId as Id<"stardust">,
       projectId: body.projectId as Id<"projects">,
       confidenceAtPromotion: body.confidenceAtPromotion,
     });
     
-    return c.json({ success: true, data: { seedId } });
+    return c.json({ success: true, data: { stardustId } });
   } catch (error: any) {
-    console.error("[PROJECT_SEEDS_PROMOTE] Error:", error);
+    console.error("[STARDUST_PROMOTE] Error:", error);
     return c.json({ 
       success: false,
-      error: error.message || "Failed to promote seed"
+      error: error.message || "Failed to promote stardust"
     }, 500);
   }
 });
 
+
 /**
- * Delete a project seed
+ * Delete a stardust
  */
-app.post("/api/projectSeeds/delete", async (c) => {
+app.post("/api/stardust/delete", async (c) => {
   try {
     const ctx = c.env;
     const body = await c.req.json();
     
-    await ctx.runMutation(api.projectSeedsMutations.deleteProjectSeed, {
-      seedId: body.seedId as Id<"projectSeeds">,
+    await ctx.runMutation(api.stardustMutations.deleteStardust, {
+      stardustId: body.stardustId as Id<"stardust">,
     });
     
     return c.json({ success: true });
   } catch (error: any) {
-    console.error("[PROJECT_SEEDS_DELETE] Error:", error);
+    console.error("[STARDUST_DELETE] Error:", error);
     return c.json({ 
       success: false,
-      error: error.message || "Failed to delete seed"
+      error: error.message || "Failed to delete stardust"
     }, 500);
   }
 });
+
+
+/**
+ * Get stardust by lifecycle stage
+ */
+app.post("/api/stardust/byLifecycleStage", async (c) => {
+  try {
+    const ctx = c.env;
+    const body = await c.req.json();
+    
+    const stardust = await ctx.runQuery(api.stardustQueries.getStardustByLifecycleStage, {
+      userId: body.userId,
+      lifecycleStage: body.lifecycleStage,
+    });
+    
+    return c.json({ success: true, data: stardust });
+  } catch (error: any) {
+    console.error("[STARDUST_BY_LIFECYCLE] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get stardust by lifecycle stage"
+    }, 500);
+  }
+});
+
+
+/**
+ * Get stardust by domain
+ */
+app.post("/api/stardust/byDomain", async (c) => {
+  try {
+    const ctx = c.env;
+    const body = await c.req.json();
+    
+    const stardust = await ctx.runQuery(api.stardustQueries.getStardustByDomain, {
+      userId: body.userId,
+      domain: body.domain,
+    });
+    
+    return c.json({ success: true, data: stardust });
+  } catch (error: any) {
+    console.error("[STARDUST_BY_DOMAIN] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get stardust by domain"
+    }, 500);
+  }
+});
+
+
+/**
+ * Batch create stardust
+ */
+app.post("/api/stardust/batchCreate", async (c) => {
+  try {
+    const ctx = c.env;
+    const body = await c.req.json();
+    
+    const stardustIds = await ctx.runMutation(api.stardustMutations.batchCreateStardust, {
+      stardustList: body.stardustList,
+    });
+    
+    return c.json({ success: true, data: { stardustIds } });
+  } catch (error: any) {
+    console.error("[STARDUST_BATCH_CREATE] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to batch create stardust"
+    }, 500);
+  }
+});
+
+
+/**
+ * Evolve stardust lifecycle
+ */
+app.post("/api/stardust/evolveLifecycle", async (c) => {
+  try {
+    const ctx = c.env;
+    const body = await c.req.json();
+    
+    const stardustId = await ctx.runMutation(api.stardustMutations.evolveStardustLifecycle, {
+      stardustId: body.stardustId as Id<"stardust">,
+      newStage: body.newStage,
+      healthDelta: body.healthDelta,
+      energyDelta: body.energyDelta,
+    });
+    
+    return c.json({ success: true, data: { stardustId } });
+  } catch (error: any) {
+    console.error("[STARDUST_EVOLVE_LIFECYCLE] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to evolve stardust lifecycle"
+    }, 500);
+  }
+});
+
+
+/**
+ * Create symbiotic pair between stardust and crystal
+ */
+app.post("/api/stardust/createSymbioticPair", async (c) => {
+  try {
+    const ctx = c.env;
+    const body = await c.req.json();
+    
+    const stardustId = await ctx.runMutation(api.stardustMutations.createSymbioticPair, {
+      stardustId: body.stardustId as Id<"stardust">,
+      crystalId: body.crystalId,
+      pairDescription: body.pairDescription,
+    });
+    
+    return c.json({ success: true, data: { stardustId } });
+  } catch (error: any) {
+    console.error("[STARDUST_CREATE_SYMBIOTIC_PAIR] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to create symbiotic pair"
+    }, 500);
+  }
+});
+
 
 const router = new HttpRouterWithHono(app);
 export default router;

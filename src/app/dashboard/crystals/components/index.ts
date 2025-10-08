@@ -23,7 +23,7 @@ export { ShardCard } from './ShardCard';
 export { OverviewView } from './OverviewView';
 export { CrystalsView } from './CrystalsView';
 export { ShardsView } from './ShardsView';
-export { ProjectSeedsView } from './ProjectSeedsView';
+export { StardustView } from './StardustView';
 
 // Navigation and layout
 export { InsightsNavigation } from './InsightsNavigation';

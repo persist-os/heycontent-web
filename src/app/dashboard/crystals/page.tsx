@@ -18,7 +18,7 @@ import {
   OverviewView,
   CrystalsView,
   ShardsView,
-  ProjectSeedsView,
+  StardustView,
   InsightsSkeleton,
   CrystalSystemExplanation,
   SystemDebugInfo,
@@ -29,7 +29,7 @@ import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { toast } from 'sonner';
 import { getApiKey } from '@/app/lib/api-helpers';
-import { ChevronDown, ChevronUp, Activity, Gem } from 'lucide-react';
+import { ChevronDown, ChevronUp, Activity } from 'lucide-react';
 
 export default function CrystalsPage() {
   const [activeView, setActiveView] = useState<ViewType>('overview');
@@ -186,14 +186,9 @@ export default function CrystalsPage() {
         
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-              <Gem className="w-6 h-6 text-primary/70" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-light tracking-tight text-foreground">Crystals</h1>
-              <p className="text-muted-foreground font-light">Insights from your content</p>
-            </div>
+          <div>
+            <h1 className="text-3xl font-light tracking-tight text-foreground">Crystals</h1>
+            <p className="text-muted-foreground font-light">Insights from your content</p>
           </div>
 
           {/* Quick Stats */}
@@ -267,8 +262,8 @@ export default function CrystalsPage() {
             <ShardsView recentShards={recentShards} />
           )}
 
-          {activeView === 'project_seeds' && (
-            <ProjectSeedsView />
+          {activeView === 'stardust' && (
+            <StardustView />
           )}
         </div>
 

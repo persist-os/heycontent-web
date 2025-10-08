@@ -11,7 +11,7 @@ export const InsightsNavigation: React.FC<InsightsNavigationProps> = ({ activeVi
     { id: 'overview' as const, label: 'Overview', description: 'Summary and recent activity' },
     { id: 'crystals' as const, label: 'Crystals', description: 'Consolidated insights' },
     { id: 'shards' as const, label: 'Shards', description: 'Raw observations' },
-    { id: 'project_seeds' as const, label: 'Project Seeds', description: 'Emergent project opportunities' }
+    { id: 'stardust' as const, label: 'Stardust', description: 'Project potentials and star organisms' }
   ];
 
   return (

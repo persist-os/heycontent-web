@@ -51,4 +51,4 @@ export interface FormationEligibility {
   daysSinceLastRun: number;
 }
 
-export type ViewType = 'overview' | 'crystals' | 'shards' | 'project_seeds';
+export type ViewType = 'overview' | 'crystals' | 'shards' | 'stardust';

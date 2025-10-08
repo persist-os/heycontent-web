@@ -32,6 +32,7 @@ export function QuickNoteForm({
   const [isSaving, setIsSaving] = useState(false);
   
   const createNoteConvex = useMutation(api.noteMutations.createNote);
+  const addContentToProject = useMutation(api.projectsMutations.addContent);
 
   const handleSave = async () => {
     if (!pasteContent.trim()) {
@@ -47,6 +48,8 @@ export function QuickNoteForm({
     setIsSaving(true);
     try {
       // Step 1: Create the note in Convex
+      // For widgets: widgetId is stored on the note, which automatically "attaches" it
+      // For projects: projectId is stored on the note, but we also need to add to project's noteIds array
       const newNote = await createNoteConvex({
         userId,
         content: pasteContent.trim(),
@@ -60,7 +63,26 @@ export function QuickNoteForm({
         throw new Error('Failed to create note');
       }
 
-      // Step 2: Generate metadata via backend
+      // Step 2: If this is for a project, add the note to the project's noteIds array
+      // Note: For widgets, the widgetId field on the note is sufficient for attachment
+      // For projects, we need to explicitly add to the project's noteIds array
+      if (projectId) {
+        try {
+          await addContentToProject({
+            projectId,
+            userId,
+            contentType: 'note',
+            contentId: newNote._id,
+          });
+        } catch (error) {
+          console.error('Failed to add note to project:', error);
+          // Don't fail the entire operation if project attachment fails
+          // The note is still created and attached to the widget (if widgetId exists)
+          console.warn('Note created but failed to attach to project');
+        }
+      }
+
+      // Step 3: Generate metadata via backend
       const apiKey = await getApiKey();
       if (!apiKey) {
         throw new Error('Authentication required');
@@ -82,8 +104,14 @@ export function QuickNoteForm({
         console.warn('Metadata generation failed, but note was created');
       }
 
-      const contextType = widgetId ? 'widget' : 'project';
-      toast.success(`Note created and attached to ${contextType}!`);
+      // Show appropriate success message based on context
+      let successMessage = 'Note created successfully!';
+      if (widgetId) {
+        successMessage = 'Note created and attached to widget!';
+      } else if (projectId) {
+        successMessage = 'Note created and attached to project!';
+      }
+      toast.success(successMessage);
       
       // Reset form
       setPasteContent('');

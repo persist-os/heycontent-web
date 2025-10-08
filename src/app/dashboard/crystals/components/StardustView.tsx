@@ -1,65 +1,65 @@
 import React, { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Sprout, TrendingUp, Calendar, Zap, Edit3, Trash2, Save, X, CheckCircle2, ExternalLink } from 'lucide-react';
+import { Sparkles, TrendingUp, Calendar, Zap, Edit3, Trash2, Save, X, CheckCircle2, ExternalLink } from 'lucide-react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { toast } from 'sonner';
 
-interface ProjectSeedsViewProps {
-  recentSeeds?: any[]; // Legacy prop for fallback
+interface StardustViewProps {
+  recentStardust?: any[]; // Legacy prop for fallback
 }
 
-interface ProjectSeedCardProps {
-  seed: any;
+interface StardustCardProps {
+  stardust: any;
 }
 
-const ProjectSeedCard: React.FC<ProjectSeedCardProps> = ({ seed }) => {
+const StardustCard: React.FC<StardustCardProps> = ({ stardust }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [editedSeed, setEditedSeed] = useState({
-    suggestedProjectName: seed.suggestedProjectName || '',
-    suggestedProjectDescription: seed.suggestedProjectDescription || '',
+  const [editedStardust, setEditedStardust] = useState({
+    suggestedProjectName: stardust.suggestedProjectName || '',
+    suggestedProjectDescription: stardust.suggestedProjectDescription || '',
   });
   
-  // Convex mutations for seed operations
-  const updateProjectSeed = useMutation(api.projectSeedsMutations.updateProjectSeed);
-  const deleteProjectSeed = useMutation(api.projectSeedsMutations.deleteProjectSeed);
+  // Convex mutations for stardust operations (to be implemented)
+  // const updateStardust = useMutation(api.stardustMutations.updateStardust);
+  // const deleteStardust = useMutation(api.stardustMutations.deleteStardust);
   
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this project seed? This action cannot be undone.')) {
+    if (!confirm('Are you sure you want to delete this stardust? This action cannot be undone.')) {
       return;
     }
 
     try {
-      await deleteProjectSeed({ seedId: seed._id });
-      toast.success('Project seed deleted successfully');
+      // await deleteStardust({ stardustId: stardust._id });
+      toast.success('Stardust deleted successfully');
     } catch (error) {
-      console.error('Error deleting project seed:', error);
-      toast.error('Failed to delete project seed');
+      console.error('Error deleting stardust:', error);
+      toast.error('Failed to delete stardust');
     }
   };
 
   const handleSave = async () => {
     try {
-      await updateProjectSeed({
-        seedId: seed._id,
-        updates: {
-          suggestedProjectName: editedSeed.suggestedProjectName,
-          suggestedProjectDescription: editedSeed.suggestedProjectDescription,
-        }
-      });
-      toast.success('Project seed updated successfully');
+      // await updateStardust({
+      //   stardustId: stardust._id,
+      //   updates: {
+      //     suggestedProjectName: editedStardust.suggestedProjectName,
+      //     suggestedProjectDescription: editedStardust.suggestedProjectDescription,
+      //   }
+      // });
+      toast.success('Stardust updated successfully');
       setIsEditing(false);
     } catch (error) {
-      console.error('Error updating project seed:', error);
-      toast.error('Failed to update project seed');
+      console.error('Error updating stardust:', error);
+      toast.error('Failed to update stardust');
     }
   };
 
   const handleCancel = () => {
-    setEditedSeed({
-      suggestedProjectName: seed.suggestedProjectName || '',
-      suggestedProjectDescription: seed.suggestedProjectDescription || '',
+    setEditedStardust({
+      suggestedProjectName: stardust.suggestedProjectName || '',
+      suggestedProjectDescription: stardust.suggestedProjectDescription || '',
     });
     setIsEditing(false);
   };
@@ -87,7 +87,7 @@ const ProjectSeedCard: React.FC<ProjectSeedCardProps> = ({ seed }) => {
 
   const getConfidenceColor = (confidence: number) => {
     if (confidence >= 0.8) {
-      return 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800';
+      return 'text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800';
     } else if (confidence >= 0.6) {
       return 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800';
     } else {
@@ -128,15 +128,32 @@ const ProjectSeedCard: React.FC<ProjectSeedCardProps> = ({ seed }) => {
     }
   };
 
-  const isPromoted = seed.promoted;
+  const getLifecycleStageColor = (stage: string) => {
+    switch (stage) {
+      case 'embryo':
+        return 'bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300';
+      case 'juvenile':
+        return 'bg-cyan-100 dark:bg-cyan-950/30 text-cyan-700 dark:text-cyan-300';
+      case 'mature':
+        return 'bg-violet-100 dark:bg-violet-950/30 text-violet-700 dark:text-violet-300';
+      case 'elder':
+        return 'bg-purple-100 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300';
+      case 'transcendent':
+        return 'bg-pink-100 dark:bg-pink-950/30 text-pink-700 dark:text-pink-300';
+      default:
+        return 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300';
+    }
+  };
+
+  const isPromoted = stardust.promoted;
 
   return (
     <div className="border border-border/50 rounded-2xl overflow-hidden bg-background/50 backdrop-blur-sm hover:border-border/60 transition-all duration-300">
-      {/* Status line at top - green for high confidence seeds */}
+      {/* Status line at top - violet for high confidence stardust */}
       <div className={`h-px w-full ${
-        seed.confidence >= 0.7
-          ? 'bg-gradient-to-r from-transparent via-emerald-400/60 to-transparent'
-          : seed.confidence >= 0.5
+        stardust.confidence >= 0.7
+          ? 'bg-gradient-to-r from-transparent via-violet-400/60 to-transparent'
+          : stardust.confidence >= 0.5
           ? 'bg-gradient-to-r from-transparent via-amber-400/60 to-transparent'
           : 'bg-gradient-to-r from-transparent via-muted-foreground/30 to-transparent'
       }`} />
@@ -149,32 +166,40 @@ const ProjectSeedCard: React.FC<ProjectSeedCardProps> = ({ seed }) => {
               {isEditing ? (
                 <input
                   type="text"
-                  value={editedSeed.suggestedProjectName}
-                  onChange={(e) => setEditedSeed({...editedSeed, suggestedProjectName: e.target.value})}
+                  value={editedStardust.suggestedProjectName}
+                  onChange={(e) => setEditedStardust({...editedStardust, suggestedProjectName: e.target.value})}
                   className="text-lg font-medium text-foreground leading-tight bg-muted/20 px-3 py-2 rounded-lg border border-border/50 focus:border-border focus:outline-none w-full"
                   placeholder="Project name..."
                 />
               ) : (
                 <h4 className="text-lg font-medium text-foreground leading-tight flex items-center gap-2">
-                  <Sprout className="w-5 h-5 text-emerald-500" />
-                  {seed.suggestedProjectName || seed.name}
+                  <Sparkles className="w-5 h-5 text-violet-500" />
+                  {stardust.suggestedProjectName || stardust.name}
                 </h4>
               )}
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="px-2 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full font-medium">
-                  Project Seed
+              <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                <span className="px-2 py-1 bg-violet-500/10 text-violet-600 dark:text-violet-400 rounded-full font-medium">
+                  Stardust
                 </span>
-                {seed.suggestedDomain && (
+                {stardust.lifecycleStage && (
                   <>
                     <span>•</span>
-                    <span>{seed.suggestedDomain}</span>
+                    <span className={`px-2 py-1 rounded-full text-xs ${getLifecycleStageColor(stardust.lifecycleStage)}`}>
+                      {stardust.lifecycleStage}
+                    </span>
+                  </>
+                )}
+                {stardust.suggestedDomain && (
+                  <>
+                    <span>•</span>
+                    <span>{stardust.suggestedDomain}</span>
                   </>
                 )}
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              <span className={`text-xs px-2 py-1 rounded-full border ${getConfidenceColor(seed.confidence)}`}>
-                {formatConfidence(seed.confidence)}
+              <span className={`text-xs px-2 py-1 rounded-full border ${getConfidenceColor(stardust.confidence)}`}>
+                {formatConfidence(stardust.confidence)}
               </span>
               
               {/* Promoted Badge */}
@@ -210,14 +235,14 @@ const ProjectSeedCard: React.FC<ProjectSeedCardProps> = ({ seed }) => {
                       <button
                         onClick={() => setIsEditing(true)}
                         className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
-                        title="Edit seed"
+                        title="Edit stardust"
                       >
                         <Edit3 className="h-3.5 w-3.5" />
                       </button>
                       <button
                         onClick={handleDelete}
                         className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                        title="Delete seed"
+                        title="Delete stardust"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -230,35 +255,35 @@ const ProjectSeedCard: React.FC<ProjectSeedCardProps> = ({ seed }) => {
           
           {isEditing ? (
             <textarea
-              value={editedSeed.suggestedProjectDescription}
-              onChange={(e) => setEditedSeed({...editedSeed, suggestedProjectDescription: e.target.value})}
+              value={editedStardust.suggestedProjectDescription}
+              onChange={(e) => setEditedStardust({...editedStardust, suggestedProjectDescription: e.target.value})}
               className="w-full text-muted-foreground leading-relaxed text-sm bg-muted/20 p-3 rounded-lg border border-border/50 focus:border-border focus:outline-none resize-none"
               rows={3}
               placeholder="Project description..."
             />
           ) : (
             <p className="text-muted-foreground leading-relaxed text-sm">
-              {seed.suggestedProjectDescription || seed.description}
+              {stardust.suggestedProjectDescription || stardust.description}
             </p>
           )}
         </div>
 
         {/* Project Metadata */}
         <div className="flex items-center flex-wrap gap-2">
-          {seed.suggestedComplexity !== undefined && (
-            <span className={`text-xs px-2 py-1 rounded-full ${getComplexityColor(String(seed.suggestedComplexity))}`}>
-              Complexity: {seed.suggestedComplexity}/10
+          {stardust.suggestedComplexity !== undefined && (
+            <span className={`text-xs px-2 py-1 rounded-full ${getComplexityColor(String(stardust.suggestedComplexity))}`}>
+              Complexity: {stardust.suggestedComplexity}/10
             </span>
           )}
-          {seed.suggestedTimeHorizon && (
+          {stardust.suggestedTimeHorizon && (
             <span className="text-xs px-2 py-1 rounded-full bg-muted/50 text-foreground flex items-center gap-1">
-              {getTimeHorizonIcon(seed.suggestedTimeHorizon)}
-              {seed.suggestedTimeHorizon.replace('_', ' ')}
+              {getTimeHorizonIcon(stardust.suggestedTimeHorizon)}
+              {stardust.suggestedTimeHorizon.replace('_', ' ')}
             </span>
           )}
-          {seed.evidenceStrength && (
+          {stardust.evidenceStrength && (
             <span className="text-xs px-2 py-1 rounded-full bg-muted/50 text-foreground">
-              {seed.evidenceStrength} evidence
+              {stardust.evidenceStrength} evidence
             </span>
           )}
         </div>
@@ -266,23 +291,23 @@ const ProjectSeedCard: React.FC<ProjectSeedCardProps> = ({ seed }) => {
         {/* Content Stats */}
         <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/30">
           <div className="flex items-center gap-4">
-            {seed.relatedNoteIds && seed.relatedNoteIds.length > 0 && (
-              <span>{seed.relatedNoteIds.length} related notes</span>
+            {stardust.relatedNoteIds && stardust.relatedNoteIds.length > 0 && (
+              <span>{stardust.relatedNoteIds.length} related notes</span>
             )}
-            {seed.relatedConversationIds && seed.relatedConversationIds.length > 0 && (
-              <span>{seed.relatedConversationIds.length} conversations</span>
+            {stardust.relatedConversationIds && stardust.relatedConversationIds.length > 0 && (
+              <span>{stardust.relatedConversationIds.length} conversations</span>
             )}
-            {seed.shardCount > 0 && (
-              <span>{seed.shardCount} shards</span>
+            {stardust.shardCount > 0 && (
+              <span>{stardust.shardCount} shards</span>
             )}
           </div>
           <div className="flex items-center gap-2">
-            {seed.detectedAt && (
-              <span>{formatTimestamp(seed.detectedAt)}</span>
+            {stardust.detectedAt && (
+              <span>{formatTimestamp(stardust.detectedAt)}</span>
             )}
-            {isPromoted && seed.promotedToProjectId && (
+            {isPromoted && stardust.promotedToProjectId && (
               <a
-                href={`/dashboard/projects/${seed.promotedToProjectId}`}
+                href={`/dashboard/projects/${stardust.promotedToProjectId}`}
                 className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1"
                 title="View promoted project"
               >
@@ -294,13 +319,13 @@ const ProjectSeedCard: React.FC<ProjectSeedCardProps> = ({ seed }) => {
         </div>
 
         {/* Promotion Info */}
-        {isPromoted && seed.confidenceAtPromotion && (
+        {isPromoted && stardust.confidenceAtPromotion && (
           <div className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-950/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
             <div className="font-medium text-blue-700 dark:text-blue-300 mb-1">
               Auto-promoted to project
             </div>
             <div>
-              Confidence at promotion: {formatConfidence(seed.confidenceAtPromotion)}
+              Confidence at promotion: {formatConfidence(stardust.confidenceAtPromotion)}
             </div>
           </div>
         )}
@@ -309,7 +334,7 @@ const ProjectSeedCard: React.FC<ProjectSeedCardProps> = ({ seed }) => {
   );
 };
 
-export const ProjectSeedsView: React.FC<ProjectSeedsViewProps> = ({ recentSeeds }) => {
+export const StardustView: React.FC<StardustViewProps> = ({ recentStardust }) => {
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoadingUserId, setIsLoadingUserId] = useState(true);
 
@@ -329,9 +354,9 @@ export const ProjectSeedsView: React.FC<ProjectSeedsViewProps> = ({ recentSeeds 
     fetchUserId();
   }, []);
   
-  // Query project seeds from dedicated projectSeeds table
-  const projectSeeds = useQuery(
-    api.projectSeedsQueries.listProjectSeeds,
+  // Query stardust from dedicated stardust table
+  const stardustData = useQuery(
+    api.stardustQueries.listStardust,
     userId ? {
       userId,
       includePromoted: true,
@@ -340,26 +365,25 @@ export const ProjectSeedsView: React.FC<ProjectSeedsViewProps> = ({ recentSeeds 
   );
   
   // Use direct data or fallback to legacy prop
-  const displaySeeds = projectSeeds || recentSeeds || [];
-  const isLoading = isLoadingUserId || (!userId || projectSeeds === undefined);
+  const displayStardust = stardustData || recentStardust || [];
+  const isLoading = isLoadingUserId || (!userId || stardustData === undefined);
   
-  // Separate promoted and active seeds
-  const activeSeeds = displaySeeds.filter((seed: any) => !seed.promoted);
-  const promotedSeeds = displaySeeds.filter((seed: any) => seed.promoted);
+  // Separate promoted and active stardust
+  const activeStardust = displayStardust.filter((s: any) => !s.promoted);
+  const promotedStardust = displayStardust.filter((s: any) => s.promoted);
 
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h3 className="text-2xl font-light tracking-tight text-foreground flex items-center gap-2">
-          <Sprout className="w-6 h-6 text-emerald-500" />
-          Project Seeds
+        <h3 className="text-2xl font-light tracking-tight text-foreground">
+          Stardust
         </h3>
         <p className="text-muted-foreground leading-relaxed">
-          Emergent project opportunities detected from your content patterns
-          {displaySeeds.length > 0 && (
+          Project potentials that evolve into star organisms
+          {displayStardust.length > 0 && (
             <span className="ml-2 text-sm">
-              • {activeSeeds.length} active seed{activeSeeds.length !== 1 ? 's' : ''}
-              {promotedSeeds.length > 0 && ` • ${promotedSeeds.length} promoted`}
+              • {activeStardust.length} active stardust
+              {promotedStardust.length > 0 && ` • ${promotedStardust.length} promoted`}
             </span>
           )}
         </p>
@@ -385,27 +409,27 @@ export const ProjectSeedsView: React.FC<ProjectSeedsViewProps> = ({ recentSeeds 
             </div>
           ))}
         </div>
-      ) : displaySeeds.length > 0 ? (
+      ) : displayStardust.length > 0 ? (
         <div className="space-y-8">
-          {/* Active Seeds */}
-          {activeSeeds.length > 0 && (
+          {/* Active Stardust */}
+          {activeStardust.length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                  Active Seeds
+                  Active Stardust
                 </h4>
                 <div className="h-px flex-1 bg-border/30" />
               </div>
               <div className="space-y-6">
-                {activeSeeds.map((seed: any) => (
-                  <ProjectSeedCard key={seed._id} seed={seed} />
+                {activeStardust.map((s: any) => (
+                  <StardustCard key={s._id} stardust={s} />
                 ))}
               </div>
             </div>
           )}
           
-          {/* Promoted Seeds */}
-          {promotedSeeds.length > 0 && (
+          {/* Promoted Stardust */}
+          {promotedStardust.length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
@@ -414,8 +438,8 @@ export const ProjectSeedsView: React.FC<ProjectSeedsViewProps> = ({ recentSeeds 
                 <div className="h-px flex-1 bg-border/30" />
               </div>
               <div className="space-y-6">
-                {promotedSeeds.map((seed: any) => (
-                  <ProjectSeedCard key={seed._id} seed={seed} />
+                {promotedStardust.map((s: any) => (
+                  <StardustCard key={s._id} stardust={s} />
                 ))}
               </div>
             </div>
@@ -423,12 +447,13 @@ export const ProjectSeedsView: React.FC<ProjectSeedsViewProps> = ({ recentSeeds 
         </div>
       ) : (
         <div className="text-center py-12 space-y-3">
-          <Sprout className="w-12 h-12 text-muted-foreground/40 mx-auto" />
+          <Sparkles className="w-12 h-12 text-muted-foreground/40 mx-auto" />
           <p className="text-muted-foreground">
-            No project seeds detected yet. Continue adding content and the system will identify potential projects automatically!
+            No stardust detected yet. Continue adding content and the system will identify project potentials automatically!
           </p>
         </div>
       )}
     </div>
   );
 };
+

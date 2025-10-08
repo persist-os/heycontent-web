@@ -1176,58 +1176,84 @@ export default defineSchema({
     .index("by_user_project", ["userId", "projectId"])
     .index("by_widget", ["widgetId"]),
     
-    
-    // === PROJECT SEEDS TABLE (CODE-BASED DETECTION) ===
-    // Separate table for project seeds detected via code analysis
-    // Seeds are potential projects identified from shard patterns
-    projectSeeds: defineTable({
+    // === STARDUST TABLE (PARALLEL SPECIES: "WHAT YOU DO") ===
+    // Stardust represents concrete project potentials that evolve into star organisms
+    // Parallel species to Crystals: Crystals = "Who You Are", Stardust = "What You Do"
+    // Code-based detection (zero LLM cost), flows through crystal dam alongside shards
+    stardust: defineTable({
       // === CORE IDENTIFICATION ===
       userId: v.string(),
-      seedId: v.string(),  // Unique identifier
+      stardustId: v.string(),  // Unique stardust identifier
       
-      // === SEED DEFINITION ===
+      // === STARDUST DEFINITION ===
       name: v.string(),  // Generated from keywords
-      description: v.string(),  // Core insight about the seed
+      description: v.string(),  // Core insight about this potential
+      keywords: v.array(v.string()),  // Key terms defining this stardust
+      dimension: v.string(),  // Primary dimension (inherited from shards)
       
       // === DETECTION METADATA ===
-      detectedAt: v.number(),  // When detected
-      detectionMethod: v.literal("code_based"),  // Always code-based
-      confidence: v.number(),  // 0-1 confidence score
+      detectedAt: v.number(),  // Unix timestamp when detected
+      detectionMethod: v.string(),  // Detection algorithm used (default: "code_based")
+      confidence: v.number(),  // Detection confidence (0-1)
+      evidenceStrength: v.union(
+        v.literal("weak"),
+        v.literal("moderate"),
+        v.literal("strong")
+      ),
       
-      // === SOURCE DATA ===
-      sourceShardIds: v.array(v.string()),  // Shards that formed this seed
-      keywords: v.array(v.string()),  // Extracted keywords
-      dimension: v.string(),  // Primary dimension from shards
+      // === SOURCE TRACKING ===
+      sourceShardIds: v.array(v.string()),  // Shards that formed this stardust
+      shardCount: v.number(),  // Number of shards
+      relatedNoteIds: v.array(v.string()),  // Notes contributing to this stardust
+      relatedConversationIds: v.array(v.string()),  // Conversations contributing
       
-      // === PROJECT SUGGESTION ===
+      // === LIFECYCLE STAGE ===
+      lifecycleStage: v.union(
+        v.literal("embryo"),      // Just detected from content patterns
+        v.literal("juvenile"),    // Gaining evidence and definition
+        v.literal("mature"),      // Ready for promotion to project
+        v.literal("elder"),       // Long-standing potential
+        v.literal("transcendent") // Achieved project status (promoted)
+      ),
+      health: v.number(),  // Organism health (0-1)
+      energy: v.number(),  // Energy level for evolution
+      
+      // === PROJECT SUGGESTIONS (FOR PROMOTION) ===
       suggestedProjectName: v.string(),
       suggestedProjectDescription: v.string(),
-      suggestedDomain: v.string(),  // academic, creative, business, skill_development, etc.
-      suggestedComplexity: v.number(),  // 0-10
-      suggestedTimeHorizon: v.string(),  // sprint, project, journey, lifestyle
+      suggestedDomain: v.union(
+        v.literal("academic"),
+        v.literal("creative"),
+        v.literal("business"),
+        v.literal("skill_development"),
+        v.literal("personal"),
+        v.literal("technical"),
+        v.literal("unknown")
+      ),
+      suggestedComplexity: v.number(),  // Complexity (0-10)
+      suggestedTimeHorizon: v.string(),  // Time horizon estimate
       
-      // === RELATED CONTENT ===
-      relatedNoteIds: v.array(v.string()),
-      relatedConversationIds: v.array(v.string()),
-      
-      // === QUALITY METRICS ===
-      shardCount: v.number(),  // Number of shards
-      evidenceStrength: v.string(),  // weak, moderate, strong
-      
-      // === LIFECYCLE ===
-      promoted: v.boolean(),  // Whether promoted to project
+      // === PROMOTION TRACKING ===
+      promoted: v.boolean(),  // Has been promoted to star organism/project
       promotedAt: v.optional(v.number()),  // When promoted
-      promotedToProjectId: v.optional(v.id("projects")),  // Project created from this seed
+      promotedToProjectId: v.optional(v.id("projects")),  // Project ID created from this
       confidenceAtPromotion: v.optional(v.number()),  // Confidence when promoted
       
-      // === TIMESTAMPS ===
+      // === TEMPORAL METADATA ===
       createdAt: v.number(),
       updatedAt: v.number(),
+      lastEvolution: v.optional(v.number()),  // Last lifecycle evolution
+      
+      // === SYMBIOTIC RELATIONSHIPS (FUTURE) ===
+      relatedCrystalIds: v.array(v.string()),  // Crystals providing wisdom to this star
+      symbioticPairs: v.array(v.string()),  // Star-crystal symbiotic relationships
     })
       .index("by_user", ["userId"])
       .index("by_confidence", ["userId", "confidence"])
       .index("by_promoted", ["userId", "promoted"])
-      .index("by_detected", ["userId", "detectedAt"]),
+      .index("by_detected", ["userId", "detectedAt"])
+      .index("by_lifecycle", ["userId", "lifecycleStage"])
+      .index("by_domain", ["userId", "suggestedDomain"]),
     
     crystal_formation_runs: defineTable({
       userId: v.string(),
