@@ -42,7 +42,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
   return (
     <Card
       className={cn(
-        'flex flex-col transition-all duration-300 ease-out',
+        'group flex flex-col transition-all duration-300 ease-out',
         height,
         'bg-card/40 border-border/50 hover:border-border',
         isClickable && [
@@ -65,7 +65,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
       <div className="p-4 flex flex-col h-full">
         {/* Title */}
         <h3 className={cn(
-          'font-medium text-foreground hover:text-primary leading-tight transition-colors duration-300 line-clamp-2 flex-shrink-0',
+          'font-medium text-foreground group-hover:text-primary leading-tight transition-colors duration-300 line-clamp-2 flex-shrink-0',
           variant === 'compact' ? 'text-sm mb-2' : 'text-sm sm:text-base mb-2'
         )}>
           {title}

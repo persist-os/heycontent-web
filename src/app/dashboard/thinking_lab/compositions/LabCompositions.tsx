@@ -8,7 +8,7 @@
  */
 
 import React from 'react'
-import { Columns2 } from 'lucide-react'
+import { Columns2, PanelRight, ChevronLeft } from 'lucide-react'
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { useDialogueStore } from '../stores/dialogueStore'
@@ -32,7 +32,9 @@ const ChatPanel = React.memo<{
   onInputPopulate: (text: string) => void
   onQuoteToNotepad: (text: string) => void
   widgetOutputId?: string
-}>(({ onInputPopulate, onQuoteToNotepad, widgetOutputId }) => {
+  isFullScreen?: boolean
+  onRestoreNotepad?: () => void
+}>(({ onInputPopulate, onQuoteToNotepad, widgetOutputId, isFullScreen, onRestoreNotepad }) => {
   const { messages, sendMessage, startNewConversation } = useDialogueStore()
   const authData = useOptimizedAuth()
   
@@ -55,14 +57,26 @@ const ChatPanel = React.memo<{
     <div className="flex flex-col h-full bg-background overflow-hidden">
       {messages.length > 0 ? (
         <>
-          {/* Header with New Conversation Button - prevents overlap with dashboard nav */}
-          <div className="flex justify-center items-center h-24 border-b border-border/20 flex-shrink-0">
+          {/* Header with New Conversation Button and Restore Notepad Button */}
+          <div className="flex justify-between items-center h-24 border-b border-border/20 flex-shrink-0 px-6">
             <button
               onClick={startNewConversation}
               className="text-sm font-light text-muted-foreground hover:text-foreground transition-colors duration-300 border-b border-transparent hover:border-current pb-1"
             >
               New conversation
             </button>
+            
+            {/* Restore Notepad Button - only show when in full screen */}
+            {isFullScreen && onRestoreNotepad && (
+              <button
+                onClick={onRestoreNotepad}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/30 rounded-lg transition-colors duration-200"
+                title="Restore notepad"
+              >
+                <PanelRight className="w-4 h-4" />
+                Restore notepad
+              </button>
+            )}
           </div>
 
           {/* Messages Area - takes remaining space */}
@@ -135,7 +149,8 @@ const NotepadPanel = React.memo<{
   quotedContent: string
   onClearQuoted: () => void
   isFullScreen: boolean
-}>(({ noteId, quotedContent, onClearQuoted, isFullScreen }) => {
+  onClose?: () => void
+}>(({ noteId, quotedContent, onClearQuoted, isFullScreen, onClose }) => {
   const { sessionId } = useDialogueStore()
 
   return (
@@ -155,6 +170,7 @@ const NotepadPanel = React.memo<{
         onBack={() => {}}
         sessionId={sessionId || undefined}  // ✅ Use undefined instead of fake "session-1"
         panelState={isFullScreen ? "notepad-full" : "split"}
+        onClose={onClose}
       />
     </div>
   )
@@ -326,10 +342,31 @@ export function FullThinkingLab({
   const isNotepadFullScreen = resizable.state.splitRatio === 0.0
   const isFullScreen = isChatFullScreen || isNotepadFullScreen
 
+  // Handle notepad collapse - snap to full chat screen (like dragging all the way right)
+  const handleNotepadClose = React.useCallback(() => {
+    resizable.actions.snapToLeft() // This will make chat full screen
+  }, [resizable.actions])
+
+  // Handle notepad expand - restore to split view
+  const handleNotepadExpand = React.useCallback(() => {
+    resizable.actions.snapToSplit() // This will restore to 50/50 split
+  }, [resizable.actions])
+
   return (
     <div className={`h-screen flex flex-col bg-background overflow-hidden ${className} relative`}>
       {/* Context Indicator - shows when in project/widget container */}
       <ContextIndicator />
+      
+      {/* Floating Restore Notepad Button - appears when chat is full screen */}
+      {isChatFullScreen && (
+        <button
+          onClick={handleNotepadExpand}
+          className="fixed top-1/2 right-4 transform -translate-y-1/2 z-50 p-2 bg-background border border-border/50 rounded-full shadow-lg hover:shadow-xl hover:bg-muted/30 transition-all duration-200 group"
+          title="Restore notepad"
+        >
+          <ChevronLeft className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+        </button>
+      )}
       
       {/* Resizable Split Panes */}
       <div ref={resizable.containerRef} className="flex flex-1 overflow-hidden">
@@ -340,6 +377,8 @@ export function FullThinkingLab({
               onInputPopulate={handleInputPopulate}
               onQuoteToNotepad={setQuotedContent}
               widgetOutputId={widgetOutputId}
+              isFullScreen={isChatFullScreen}
+              onRestoreNotepad={handleNotepadExpand}
             />
           </div>
           
@@ -364,6 +403,7 @@ export function FullThinkingLab({
             quotedContent={quotedContent}
             onClearQuoted={clearQuotedContent}
             isFullScreen={isNotepadFullScreen}
+            onClose={handleNotepadClose}
           />
         </div>
       </div>

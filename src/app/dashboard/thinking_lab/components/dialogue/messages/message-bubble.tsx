@@ -95,7 +95,7 @@ export function MessageBubble({
       )}
 
       {/* Message container - keeping original styling */}
-      <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-1`}>
+      <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-1 group`}>
         <div className={`max-w-full sm:max-w-[95%] w-full`}>
           <div
             id={`message-${message.id}`}
@@ -104,7 +104,7 @@ export function MessageBubble({
                 ? 'rounded-2xl px-5 sm:px-7 py-2 sm:py-3 bg-primary text-primary-foreground dark:text-black [&_*]:!text-primary-foreground dark:[&_*]:!text-black mr-1 sm:mr-2' 
                 : 'px-0 py-1 text-foreground'
               }
-              relative group w-full min-w-0
+              relative w-full min-w-0
             `}
             style={{ userSelect: 'text' }}
           >
@@ -136,29 +136,30 @@ export function MessageBubble({
                   />
                 )}
 
-                {/* Action buttons - fixed bottom right */}
-                <div className="absolute bottom-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" style={{ userSelect: 'none' }}>
-                  <CopyButton 
-                    text={message.content}
-                    className="w-6 h-6 p-1 hover:bg-background/80 rounded"
-                    size="sm"
-                  />
-                  
-                  {/* Quote full message button */}
-                  {notepadOpen && onQuoteToNotepad && (
-                    <button
-                      onClick={() => onQuoteToNotepad(message.content)}
-                      className="w-6 h-6 p-1 hover:bg-background/80 rounded opacity-70 hover:opacity-100 flex items-center justify-center"
-                      title="Send full message to notepad"
-                    >
-                      <Quote className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
               </>
             )}
           </div>
         </div>
+      </div>
+      
+      {/* Action buttons below message - ChatGPT style */}
+      <div className={`flex items-center gap-1 mt-2 opacity-100 transition-opacity ${isUser ? 'justify-end' : 'justify-start'}`} style={{ userSelect: 'none' }}>
+        <CopyButton 
+          text={message.content}
+          className="!w-8 !h-8 !p-2 hover:bg-background/80 rounded flex items-center justify-center"
+          size="lg"
+        />
+        
+        {/* Quote full message button */}
+        {notepadOpen && onQuoteToNotepad && (
+          <button
+            onClick={() => onQuoteToNotepad(message.content)}
+            className="w-8 h-8 p-2 hover:bg-background/80 rounded opacity-70 hover:opacity-100 flex items-center justify-center"
+            title="Send full message to notepad"
+          >
+            <Quote className="w-5 h-5" />
+          </button>
+        )}
       </div>
     </div>
   )

@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { X } from 'lucide-react'
 import { NoteMeta } from '../../../../notes/components/NoteMeta'
 import { NoteSelector } from './NoteSelector'
 import { SimpleTypeSelector } from './SimpleTypeSelector'
@@ -28,6 +29,7 @@ interface NotepadHeaderProps {
   onGenerateMetadata: () => void
   onSaveNote: () => void
   onShare?: () => void
+  onClose?: () => void
   isReadOnly?: boolean
   notePermission?: "owner" | "read" | "edit" | null
   panelState?: PanelState
@@ -50,6 +52,7 @@ export function NotepadHeader({
   onGenerateMetadata,
   onSaveNote,
   onShare,
+  onClose,
   isReadOnly = false,
   notePermission = null,
   panelState
@@ -69,7 +72,18 @@ export function NotepadHeader({
   const controlsMarginTop = isMobile ? "mt-3" : "mt-4 lg:mt-5"
 
   return (
-    <div className={`${containerPadding} border-b border-border/30 bg-background/95`}>
+    <div className={`${containerPadding} border-b border-border/30 bg-background/95 relative`}>
+      {/* Collapse Button - Top Right with better spacing */}
+      {onClose && (
+        <button
+          onClick={onClose}
+          className="absolute top-6 right-6 p-2 text-muted-foreground hover:text-foreground hover:bg-muted/30 rounded transition-colors duration-200 z-10"
+          title="Collapse notepad"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      )}
+      
       {/* Note Metadata Section */}
       <div className={metaSpacing}>
         <NoteMeta
