@@ -134,3 +134,41 @@ export const getConversationsByProjectId = query({
   },
 });
 
+/**
+ * Get multiple conversations by their IDs (batch fetch for context enrichment)
+ * @param conversationIds - Array of conversation IDs to fetch
+ * @param userId - The user ID for authorization
+ */
+export const getMultiple = query({
+  args: {
+    conversationIds: v.array(v.id("conversations")),
+    userId: v.string(),
+  },
+  handler: async (ctx, { conversationIds, userId }) => {
+    try {
+      // Fetch all conversations in parallel
+      const conversationPromises = conversationIds.map(conversationId => 
+        ctx.db.get(conversationId)
+      );
+      const conversations = await Promise.all(conversationPromises);
+      
+      // Filter out null values and check authorization
+      const authorizedConversations = conversations.filter(conversation => {
+        if (!conversation) return false;
+        
+        // Check if user owns the conversation
+        if (conversation.userId === userId) {
+          return true;
+        }
+        
+        return false;
+      });
+      
+      return authorizedConversations;
+    } catch (error) {
+      console.error('Error fetching multiple conversations:', error);
+      return [];
+    }
+  },
+});
+

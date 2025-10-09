@@ -43,6 +43,9 @@ async function getProjectByIdHandler(
     // Intelligence
     fingerprintId: project.fingerprintId,
     
+    // Constellation Layout
+    constellationLayout: project.constellationLayout || null,
+    
     // Metadata
     createdAt: project.createdAt,
     updatedAt: project.updatedAt,
@@ -53,19 +56,135 @@ async function getProjectByIdHandler(
  * Retrieve project by ID with ownership validation
  * 
  * Returns complete project data including all content arrays and computed
- * counts. Returns null if project doesn't exist or user doesn't own it.
+ * counts. Optionally includes attached content items for constellation display.
+ * Returns null if project doesn't exist or user doesn't own it.
  * 
  * @param projectId - Project ID to retrieve
  * @param userId - User ID for ownership validation
- * @returns Project data or null if not found/unauthorized
+ * @param includeContent - Whether to fetch attached content items (default: false)
+ * @returns Project data with optional content items or null if not found/unauthorized
  */
 export const getById = query({
   args: { 
     projectId: v.id("projects"),
-    userId: v.string()
+    userId: v.string(),
+    includeContent: v.optional(v.boolean())
   },
-  handler: async (ctx, { projectId, userId }) => {
-    return await getProjectByIdHandler(ctx, projectId, userId);
+  handler: async (ctx, { projectId, userId, includeContent = false }) => {
+    const projectData = await getProjectByIdHandler(ctx, projectId, userId);
+    if (!projectData) return null;
+
+    if (!includeContent) {
+      return projectData;
+    }
+
+    // Fetch attached content items with 60-item cap
+    const contentItems: any[] = [];
+    let totalFetched = 0;
+    const maxItems = 60;
+
+    // Priority order: widgets → notes → conversations → crystals → shards
+    // (Widgets are handled separately, so start with notes)
+
+    // Fetch notes (up to 20)
+    const noteLimit = Math.min(20, maxItems - totalFetched);
+    if (noteLimit > 0 && projectData.noteIds.length > 0) {
+      const noteIds = projectData.noteIds.slice(0, noteLimit);
+      console.log('Fetching notes with IDs:', noteIds);
+      for (const noteId of noteIds) {
+        try {
+          const note = await ctx.db.get(noteId as any);
+          console.log(`Note ${noteId} found:`, !!note);
+          if (note) {
+            contentItems.push({
+              ...note,
+              _contentType: 'note' as const,
+              _contentId: noteId
+            });
+            totalFetched++;
+          }
+        } catch (error) {
+          console.warn(`Failed to fetch note ${noteId}:`, error);
+        }
+      }
+    }
+
+    // Fetch conversations (up to 20)
+    const conversationLimit = Math.min(20, maxItems - totalFetched);
+    if (conversationLimit > 0 && projectData.conversationIds.length > 0) {
+      const conversationIds = projectData.conversationIds.slice(0, conversationLimit);
+      console.log('Fetching conversations with IDs:', conversationIds);
+      for (const conversationId of conversationIds) {
+        try {
+          const conversation = await ctx.db.get(conversationId as any);
+          console.log(`Conversation ${conversationId} found:`, !!conversation);
+          if (conversation) {
+            contentItems.push({
+              ...conversation,
+              _contentType: 'conversation' as const,
+              _contentId: conversationId
+            });
+            totalFetched++;
+          }
+        } catch (error) {
+          console.warn(`Failed to fetch conversation ${conversationId}:`, error);
+        }
+      }
+    }
+
+    // Fetch crystals (up to 15)
+    const crystalLimit = Math.min(15, maxItems - totalFetched);
+    if (crystalLimit > 0 && projectData.crystalIds.length > 0) {
+      const crystalIds = projectData.crystalIds.slice(0, crystalLimit);
+      console.log('Fetching crystals with IDs:', crystalIds);
+      for (const crystalId of crystalIds) {
+        try {
+          // Crystals use Convex document IDs, same as other content types
+          const crystal = await ctx.db.get(crystalId as any);
+          console.log(`Crystal ${crystalId} found:`, !!crystal);
+          if (crystal) {
+            contentItems.push({
+              ...crystal,
+              _contentType: 'crystal' as const,
+              _contentId: crystalId
+            });
+            totalFetched++;
+          }
+        } catch (error) {
+          console.warn(`Failed to fetch crystal ${crystalId}:`, error);
+        }
+      }
+    }
+
+    // Fetch shards (up to 15)
+    const shardLimit = Math.min(15, maxItems - totalFetched);
+    if (shardLimit > 0 && projectData.shardIds.length > 0) {
+      const shardIds = projectData.shardIds.slice(0, shardLimit);
+      console.log('Fetching shards with IDs:', shardIds);
+      for (const shardId of shardIds) {
+        try {
+          const shard = await ctx.db.get(shardId as any);
+          console.log(`Shard ${shardId} found:`, !!shard);
+          if (shard) {
+            contentItems.push({
+              ...shard,
+              _contentType: 'shard' as const,
+              _contentId: shardId
+            });
+            totalFetched++;
+          }
+        } catch (error) {
+          console.warn(`Failed to fetch shard ${shardId}:`, error);
+        }
+      }
+    }
+
+    console.log(`Total content items fetched: ${contentItems.length}`, contentItems.map(item => ({ type: item._contentType, id: item._contentId })));
+    
+    return {
+      ...projectData,
+      contentItems
+    };
   },
 });
 

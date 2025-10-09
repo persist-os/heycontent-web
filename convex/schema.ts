@@ -295,18 +295,66 @@ export default defineSchema({
   .index("by_note_user", ["noteId", "sharedWithUserId"]),
 
   // Projects
+  // ============================================================================
+  // PROJECT CONTENT MANAGEMENT SYSTEM
+  // ============================================================================
+  // Projects serve as containers for all user-generated content including notes,
+  // conversations, crystals, and shards. The content ID arrays enable efficient
+  // batch fetching and filtering for the Project Content Display feature.
+  // 
+  // Content Relationships:
+  // - noteIds: Array of note document IDs attached to this project
+  // - conversationIds: Array of conversation document IDs attached to this project  
+  // - crystalIds: Array of crystal_id strings (not Convex IDs) attached to this project
+  // - shardIds: Array of crystal_shards document IDs attached to this project
+  // - analysisIds: Array of analysis document IDs (legacy, may be deprecated)
+  //
+  // Indexing Strategy:
+  // - by_user: Primary access pattern for user's projects
+  // - by_fingerprint: Links projects to their AI intelligence fingerprints
+  // - by_creation: Chronological ordering for project lists
+  // ============================================================================
   projects: defineTable({
     userId: v.string(),
     name: v.string(),
     description: v.optional(v.string()),
-    noteIds: v.optional(v.array(v.string())),
-    conversationIds: v.optional(v.array(v.string())),
-    analysisIds: v.optional(v.array(v.string())),
-    fingerprintId: v.optional(v.id("project_fingerprints")), // Links to project fingerprint
-    createdAt: v.number(),
-    updatedAt: v.number(),
-    crystalIds: v.optional(v.array(v.string())),
-    shardIds: v.optional(v.array(v.string())),
+    
+    // Content ID Arrays - Enable efficient batch content fetching
+    noteIds: v.optional(v.array(v.string())),           // Note document IDs
+    conversationIds: v.optional(v.array(v.string())),   // Conversation document IDs  
+    analysisIds: v.optional(v.array(v.string())),       // Analysis document IDs (legacy)
+    crystalIds: v.optional(v.array(v.string())),        // Crystal ID strings (not Convex IDs)
+    shardIds: v.optional(v.array(v.string())),          // Crystal shard document IDs
+    
+        // AI Intelligence Integration
+        fingerprintId: v.optional(v.id("project_fingerprints")), // Links to project fingerprint
+        
+        // Constellation Layout Cache (recalculated manually)
+        constellationLayout: v.optional(v.object({
+          version: v.number(), // Layout algorithm version
+          calculatedAt: v.number(),
+          items: v.array(v.object({
+            itemId: v.string(),
+            itemType: v.union(
+              v.literal("widget"),
+              v.literal("note"), 
+              v.literal("conversation"),
+              v.literal("crystal"),
+              v.literal("shard")
+            ),
+            x: v.number(),
+            y: v.number(),
+            size: v.string(),
+            importance: v.number(),
+          })),
+          canvasWidth: v.number(),
+          canvasHeight: v.number(),
+        })),
+        
+        // Timestamps
+        createdAt: v.number(),
+        updatedAt: v.number(),
+    
     // ⚠️ DEPRECATED: Social media integrations removed - use crystal system for content insights
   })
   .index("by_user", ["userId"])
@@ -1176,58 +1224,84 @@ export default defineSchema({
     .index("by_user_project", ["userId", "projectId"])
     .index("by_widget", ["widgetId"]),
     
-    
-    // === PROJECT SEEDS TABLE (CODE-BASED DETECTION) ===
-    // Separate table for project seeds detected via code analysis
-    // Seeds are potential projects identified from shard patterns
-    projectSeeds: defineTable({
+    // === STARDUST TABLE (PARALLEL SPECIES: "WHAT YOU DO") ===
+    // Stardust represents concrete project potentials that evolve into star organisms
+    // Parallel species to Crystals: Crystals = "Who You Are", Stardust = "What You Do"
+    // Code-based detection (zero LLM cost), flows through crystal dam alongside shards
+    stardust: defineTable({
       // === CORE IDENTIFICATION ===
       userId: v.string(),
-      seedId: v.string(),  // Unique identifier
+      stardustId: v.string(),  // Unique stardust identifier
       
-      // === SEED DEFINITION ===
+      // === STARDUST DEFINITION ===
       name: v.string(),  // Generated from keywords
-      description: v.string(),  // Core insight about the seed
+      description: v.string(),  // Core insight about this potential
+      keywords: v.array(v.string()),  // Key terms defining this stardust
+      dimension: v.string(),  // Primary dimension (inherited from shards)
       
       // === DETECTION METADATA ===
-      detectedAt: v.number(),  // When detected
-      detectionMethod: v.literal("code_based"),  // Always code-based
-      confidence: v.number(),  // 0-1 confidence score
+      detectedAt: v.number(),  // Unix timestamp when detected
+      detectionMethod: v.string(),  // Detection algorithm used (default: "code_based")
+      confidence: v.number(),  // Detection confidence (0-1)
+      evidenceStrength: v.union(
+        v.literal("weak"),
+        v.literal("moderate"),
+        v.literal("strong")
+      ),
       
-      // === SOURCE DATA ===
-      sourceShardIds: v.array(v.string()),  // Shards that formed this seed
-      keywords: v.array(v.string()),  // Extracted keywords
-      dimension: v.string(),  // Primary dimension from shards
+      // === SOURCE TRACKING ===
+      sourceShardIds: v.array(v.string()),  // Shards that formed this stardust
+      shardCount: v.number(),  // Number of shards
+      relatedNoteIds: v.array(v.string()),  // Notes contributing to this stardust
+      relatedConversationIds: v.array(v.string()),  // Conversations contributing
       
-      // === PROJECT SUGGESTION ===
+      // === LIFECYCLE STAGE ===
+      lifecycleStage: v.union(
+        v.literal("embryo"),      // Just detected from content patterns
+        v.literal("juvenile"),    // Gaining evidence and definition
+        v.literal("mature"),      // Ready for promotion to project
+        v.literal("elder"),       // Long-standing potential
+        v.literal("transcendent") // Achieved project status (promoted)
+      ),
+      health: v.number(),  // Organism health (0-1)
+      energy: v.number(),  // Energy level for evolution
+      
+      // === PROJECT SUGGESTIONS (FOR PROMOTION) ===
       suggestedProjectName: v.string(),
       suggestedProjectDescription: v.string(),
-      suggestedDomain: v.string(),  // academic, creative, business, skill_development, etc.
-      suggestedComplexity: v.number(),  // 0-10
-      suggestedTimeHorizon: v.string(),  // sprint, project, journey, lifestyle
+      suggestedDomain: v.union(
+        v.literal("academic"),
+        v.literal("creative"),
+        v.literal("business"),
+        v.literal("skill_development"),
+        v.literal("personal"),
+        v.literal("technical"),
+        v.literal("unknown")
+      ),
+      suggestedComplexity: v.number(),  // Complexity (0-10)
+      suggestedTimeHorizon: v.string(),  // Time horizon estimate
       
-      // === RELATED CONTENT ===
-      relatedNoteIds: v.array(v.string()),
-      relatedConversationIds: v.array(v.string()),
-      
-      // === QUALITY METRICS ===
-      shardCount: v.number(),  // Number of shards
-      evidenceStrength: v.string(),  // weak, moderate, strong
-      
-      // === LIFECYCLE ===
-      promoted: v.boolean(),  // Whether promoted to project
+      // === PROMOTION TRACKING ===
+      promoted: v.boolean(),  // Has been promoted to star organism/project
       promotedAt: v.optional(v.number()),  // When promoted
-      promotedToProjectId: v.optional(v.id("projects")),  // Project created from this seed
+      promotedToProjectId: v.optional(v.id("projects")),  // Project ID created from this
       confidenceAtPromotion: v.optional(v.number()),  // Confidence when promoted
       
-      // === TIMESTAMPS ===
+      // === TEMPORAL METADATA ===
       createdAt: v.number(),
       updatedAt: v.number(),
+      lastEvolution: v.optional(v.number()),  // Last lifecycle evolution
+      
+      // === SYMBIOTIC RELATIONSHIPS (FUTURE) ===
+      relatedCrystalIds: v.array(v.string()),  // Crystals providing wisdom to this star
+      symbioticPairs: v.array(v.string()),  // Star-crystal symbiotic relationships
     })
       .index("by_user", ["userId"])
       .index("by_confidence", ["userId", "confidence"])
       .index("by_promoted", ["userId", "promoted"])
-      .index("by_detected", ["userId", "detectedAt"]),
+      .index("by_detected", ["userId", "detectedAt"])
+      .index("by_lifecycle", ["userId", "lifecycleStage"])
+      .index("by_domain", ["userId", "suggestedDomain"]),
     
     crystal_formation_runs: defineTable({
       userId: v.string(),
@@ -1792,5 +1866,234 @@ export default defineSchema({
   .index("by_subscription", ["subscriptionId"])
   .index("by_received_at", ["receivedAt"])
   .index("by_event_type_status", ["eventType", "status"]),
+
+  // ============================================================================
+  // FINGERPRINT EVOLUTION SIGNALS - Track project activity for MAB-driven evolution
+  // ============================================================================
+  fingerprint_evolution_signals: defineTable({
+    // Foreign keys
+    fingerprintId: v.id("project_fingerprints"),
+    projectId: v.id("projects"),
+    userId: v.string(),
+    
+    // Signal counters (reset after each evolution)
+    notes_added: v.number(),
+    notes_modified: v.number(),
+    crystals_added: v.number(),
+    shards_added: v.number(),
+    widgets_updated: v.number(),
+    widgets_executed: v.number(),
+    manual_edits: v.number(),
+    
+    // Timestamps
+    last_evolution_at: v.number(),
+    last_signal_update_at: v.number(),
+    
+    // Computed scores (0-1, cached for performance)
+    content_accumulation_score: v.number(),
+    content_modification_score: v.number(),
+    activity_intensity_score: v.number(),
+    time_decay_factor: v.number(),
+    evolution_signal_score: v.number(),  // Combined score
+    
+    // Metadata
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_fingerprint", ["fingerprintId"])
+  .index("by_project", ["projectId"])
+  .index("by_user", ["userId"])
+  .index("by_signal_score", ["evolution_signal_score"]),
+
+  // ============================================================================
+  // Briefing Room - Living Intelligence Briefing System
+  // ============================================================================
+  
+  /**
+   * Briefing Events - Autonomous briefing agents
+   * 
+   * Each event is a living entity with state, relationships, and behavior.
+   * Not just notifications - these are agent ambassadors from the AI civilization.
+   */
+  briefing_events: defineTable({
+    // Identity
+    userId: v.string(),
+    type: v.string(), // Event type (e.g., "crystal_formation", "widget_complete", "dream_report")
+    category: v.union(
+      v.literal("crystal"),
+      v.literal("widget"),
+      v.literal("collaboration"),
+      v.literal("dream"),
+      v.literal("system")
+    ),
+    
+    // Priority & Urgency
+    priority: v.union(
+      v.literal("critical"),
+      v.literal("high"),
+      v.literal("medium"),
+      v.literal("low")
+    ),
+    urgencyLevel: v.number(), // 0-1, escalates over time
+    
+    // Temporal Awareness
+    timestamp: v.number(),
+    lastPresented: v.optional(v.number()),
+    timeWaiting: v.number(), // Calculated field, updated regularly
+    
+    // Event Data (category-specific)
+    data: v.any(), // Flexible structure for different event types
+    
+    // State Machine
+    state: v.union(
+      v.literal("forming"),
+      v.literal("waiting"),
+      v.literal("requesting"),
+      v.literal("presenting"),
+      v.literal("acknowledged"),
+      v.literal("dormant"),
+      v.literal("archived")
+    ),
+    stateHistory: v.array(v.object({
+      from: v.string(),
+      to: v.string(),
+      timestamp: v.number(),
+      trigger: v.string()
+    })),
+    
+    // Spatial Position
+    position: v.object({
+      x: v.number(),
+      y: v.number(),
+      z: v.number()
+    }),
+    spatialPriority: v.number(),
+    
+    // Relationships
+    relatedBriefings: v.array(v.string()), // IDs of related events
+    clusterId: v.optional(v.string()),
+    
+    // User Interaction
+    viewed: v.boolean(),
+    viewedAt: v.optional(v.number()),
+    archived: v.boolean(),
+    starred: v.boolean(),
+    userRating: v.optional(v.union(
+      v.literal("helpful"),
+      v.literal("not_helpful"),
+      v.literal("irrelevant")
+    )),
+    actionsTaken: v.array(v.string()),
+    
+    // AI Context
+    aiContext: v.optional(v.object({
+      relatedCrystals: v.array(v.string()),
+      relatedProjects: v.array(v.string()),
+      relatedWidgets: v.array(v.string()),
+      generatedSuggestions: v.array(v.string())
+    })),
+    
+    // Metadata
+    metadata: v.object({
+      source: v.string(),
+      version: v.string(),
+      processingTime: v.optional(v.number())
+    }),
+    
+    createdAt: v.number(),
+    updatedAt: v.number()
+  })
+    .index("by_user_timestamp", ["userId", "timestamp"])
+    .index("by_user_viewed", ["userId", "viewed"])
+    .index("by_user_category", ["userId", "category"])
+    .index("by_user_priority", ["userId", "priority"])
+    .index("by_user_state", ["userId", "state"])
+    .index("by_timestamp", ["timestamp"])
+    .index("by_state", ["state"])
+    .index("by_cluster", ["clusterId"]),
+
+  /**
+   * Briefing Preferences - User preferences for briefing room
+   */
+  briefing_preferences: defineTable({
+    userId: v.string(),
+    
+    // Category Filters
+    enabledCategories: v.object({
+      crystal: v.boolean(),
+      widget: v.boolean(),
+      collaboration: v.boolean(),
+      dream: v.boolean(),
+      system: v.boolean()
+    }),
+    
+    // Priority Filter
+    minimumPriority: v.union(
+      v.literal("critical"),
+      v.literal("high"),
+      v.literal("medium"),
+      v.literal("low")
+    ),
+    
+    // Display Preferences
+    maxBriefersVisible: v.number(),
+    animationsEnabled: v.boolean(),
+    soundEnabled: v.boolean(),
+    
+    // Notification Channels
+    notificationChannels: v.object({
+      inApp: v.boolean(),
+      email: v.boolean(),
+      push: v.boolean()
+    }),
+    
+    // Digest Preferences
+    dailyDigest: v.boolean(),
+    digestTime: v.string(), // e.g., "08:00"
+    weeklyReport: v.boolean(),
+    
+    // Dream Reports
+    enableDreamReports: v.boolean(),
+    dreamReportFrequency: v.union(
+      v.literal("nightly"),
+      v.literal("weekly"),
+      v.literal("never")
+    ),
+    
+    // AI Summarization
+    aiSummarization: v.boolean(),
+    summaryDepth: v.union(
+      v.literal("brief"),
+      v.literal("standard"),
+      v.literal("detailed")
+    ),
+    
+    createdAt: v.number(),
+    updatedAt: v.number()
+  })
+    .index("by_userId", ["userId"]),
+
+  /**
+   * Briefing Clusters - Groups of related briefings
+   */
+  briefing_clusters: defineTable({
+    userId: v.string(),
+    brieferIds: v.array(v.string()),
+    centerPosition: v.object({
+      x: v.number(),
+      y: v.number(),
+      z: v.number()
+    }),
+    reason: v.string(), // Why they clustered
+    confidence: v.number(), // How confident clustering algorithm is
+    formed: v.number(),
+    dissolved: v.optional(v.number()),
+    active: v.boolean(),
+    
+    createdAt: v.number(),
+    updatedAt: v.number()
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_active", ["userId", "active"]),
 });
 

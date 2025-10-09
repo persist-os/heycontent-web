@@ -6,6 +6,7 @@ interface Connection {
   from: string
   to: string
   strength: number
+  type?: 'widget-widget' | 'content-widget' | 'content-content'
 }
 
 interface ProjectPosition {
@@ -177,10 +178,41 @@ export function ConnectionLines({
         const isHighlighted = highlightedProject && 
           (connection.from === highlightedProject || connection.to === highlightedProject)
         
-        // Use different colors based on connection strength and theme
-        const strokeColor = isHighlighted 
-          ? 'text-blue-400 dark:text-blue-300'
-          : 'text-blue-400/60 dark:text-blue-300/40'
+        // Use different colors and styles based on connection type and strength
+        const getConnectionStyle = (connection: Connection, isHighlighted: boolean) => {
+          const baseColor = isHighlighted 
+            ? 'text-blue-400 dark:text-blue-300'
+            : 'text-blue-400/60 dark:text-blue-300/40'
+
+          switch (connection.type) {
+            case 'widget-widget':
+              return {
+                color: baseColor,
+                dashArray: `${2 + connection.strength * 4} ${4 + connection.strength * 2}`,
+                opacity: opacity
+              }
+            case 'content-widget':
+              return {
+                color: 'text-purple-400/60 dark:text-purple-300/40',
+                dashArray: '4 6', // Dotted style
+                opacity: opacity * 0.8
+              }
+            case 'content-content':
+              return {
+                color: 'text-green-400/60 dark:text-green-300/40',
+                dashArray: '2 8', // Longer dashes
+                opacity: opacity * 0.6
+              }
+            default:
+              return {
+                color: baseColor,
+                dashArray: `${2 + connection.strength * 4} ${4 + connection.strength * 2}`,
+                opacity: opacity
+              }
+          }
+        }
+
+        const connectionStyle = getConnectionStyle(connection, isHighlighted)
 
         return (
           <g key={`${connection.from}-${connection.to}`}>
@@ -190,9 +222,9 @@ export function ConnectionLines({
               fill="none"
               stroke="url(#connectionGradient)"
               strokeWidth={strokeWidth}
-              strokeDasharray={`${2 + connection.strength * 4} ${4 + connection.strength * 2}`}
-              opacity={opacity}
-              className={`transition-all duration-300 ${strokeColor}`}
+              strokeDasharray={connectionStyle.dashArray}
+              opacity={connectionStyle.opacity}
+              className={`transition-all duration-300 ${connectionStyle.color}`}
               style={{
                 filter: isHighlighted ? 'drop-shadow(0 0 2px currentColor)' : undefined
               }}
@@ -205,9 +237,9 @@ export function ConnectionLines({
                 fill="none"
                 stroke="url(#highlightGradient)"
                 strokeWidth={strokeWidth + 2}
-                strokeDasharray={`${2 + connection.strength * 4} ${4 + connection.strength * 2}`}
-                opacity={opacity * 0.5}
-                className={`transition-all duration-300 ${strokeColor}`}
+                strokeDasharray={connectionStyle.dashArray}
+                opacity={connectionStyle.opacity * 0.5}
+                className={`transition-all duration-300 ${connectionStyle.color}`}
                 style={{
                   filter: 'blur(2px)'
                 }}

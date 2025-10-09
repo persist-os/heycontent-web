@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { api } from "./_generated/api";
 
 /**
  * Optimized Projects Mutations
@@ -192,6 +193,27 @@ export const addContent = mutation({
       [field]: updatedIds,
       updatedAt: Date.now(),
     });
+    
+    // 🆕 INCREMENT FINGERPRINT SIGNALS
+    const signalTypeMap: Record<string, string> = {
+      note: "note_added",
+      crystal: "crystal_added",
+      shard: "shard_added",
+    };
+    
+    const signalType = signalTypeMap[contentType];
+    if (signalType) {
+      try {
+        await ctx.runMutation(api.fingerprintSignalsMutations.increment, {
+          projectId,
+          signalType: signalType as any,
+          count: 1,
+        });
+      } catch (error) {
+        // Don't fail the operation if signal increment fails
+        console.error("Failed to increment signal:", error);
+      }
+    }
     
     return { success: true, projectId, contentType, contentId };
   },
@@ -444,5 +466,94 @@ export const toggleArchive = mutation({
     });
     
     return { success: true, projectId, archived };
+  },
+});
+
+// ============================================================================
+// CONSTELLATION LAYOUT MANAGEMENT
+// ============================================================================
+
+/**
+ * Save constellation layout for a project
+ * Used by: Layout calculation and caching
+ */
+export const saveConstellationLayout = mutation({
+  args: {
+    projectId: v.id("projects"),
+    userId: v.string(),
+    layout: v.object({
+      version: v.number(),
+      calculatedAt: v.number(),
+      items: v.array(v.object({
+        itemId: v.string(),
+        itemType: v.union(
+          v.literal("widget"),
+          v.literal("note"), 
+          v.literal("conversation"),
+          v.literal("crystal"),
+          v.literal("shard")
+        ),
+        x: v.number(),
+        y: v.number(),
+        size: v.string(),
+        importance: v.number(),
+      })),
+      canvasWidth: v.number(),
+      canvasHeight: v.number(),
+    }),
+  },
+  handler: async (ctx, { projectId, userId, layout }) => {
+    // Validate project ownership
+    const project = await ctx.db.get(projectId);
+    if (!project) {
+      throw new Error("Project not found");
+    }
+    
+    if (project.userId !== userId) {
+      throw new Error("Access denied: You don't own this project");
+    }
+    
+    // Validate layout structure
+    if (!layout.items || !Array.isArray(layout.items)) {
+      throw new Error("Invalid layout structure");
+    }
+    
+    // Save the layout
+    await ctx.db.patch(projectId, {
+      constellationLayout: layout,
+      updatedAt: Date.now(),
+    });
+    
+    return { success: true, projectId, layoutVersion: layout.version };
+  },
+});
+
+/**
+ * Clear constellation layout for a project (manual reset)
+ * Used by: Layout reset functionality
+ */
+export const clearConstellationLayout = mutation({
+  args: {
+    projectId: v.id("projects"),
+    userId: v.string(),
+  },
+  handler: async (ctx, { projectId, userId }) => {
+    // Validate project ownership
+    const project = await ctx.db.get(projectId);
+    if (!project) {
+      throw new Error("Project not found");
+    }
+    
+    if (project.userId !== userId) {
+      throw new Error("Access denied: You don't own this project");
+    }
+    
+    // Clear the layout
+    await ctx.db.patch(projectId, {
+      constellationLayout: null,
+      updatedAt: Date.now(),
+    });
+    
+    return { success: true, projectId };
   },
 });

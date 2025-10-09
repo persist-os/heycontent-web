@@ -23,6 +23,7 @@ import { useOptimizedAuth } from '../components/notepad/hooks/useOptimizedAuth'
 import { useResizablePanes } from '../hooks/useResizablePanes'
 import { ContextIndicator } from '../components/ContextIndicator'
 import { useAutoScroll } from '../hooks/useAutoScroll'
+import type { Message } from '@/app/types/chat'
 
 // =============================================================================
 // PANEL COMPONENTS
@@ -35,7 +36,7 @@ const ChatPanel = React.memo<{
   isFullScreen?: boolean
   onRestoreNotepad?: () => void
 }>(({ onInputPopulate, onQuoteToNotepad, widgetOutputId, isFullScreen, onRestoreNotepad }) => {
-  const { messages, sendMessage, startNewConversation } = useDialogueStore()
+  const { messages, sendMessage, startNewConversation, isLoading, error } = useDialogueStore()
   const authData = useOptimizedAuth()
   
   // Auto-scroll when messages change
@@ -106,6 +107,31 @@ const ChatPanel = React.memo<{
             </div>
           </div>
         </>
+      ) : isLoading ? (
+        /* Loading state - show while conversation is being loaded */
+        <div className="h-full flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="text-sm text-muted-foreground">Loading conversation...</p>
+          </div>
+        </div>
+      ) : error ? (
+        /* Error state - show if conversation failed to load */
+        <div className="h-full flex items-center justify-center">
+          <div className="text-center space-y-4 max-w-md px-6">
+            <div className="text-red-500 text-4xl">⚠️</div>
+            <div>
+              <h3 className="text-lg font-medium text-foreground mb-2">Failed to load conversation</h3>
+              <p className="text-sm text-muted-foreground mb-4">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
+        </div>
       ) : (
         /* Empty state - show widget prompts or ambient insights */
         <div className="h-full flex flex-col">
@@ -157,7 +183,6 @@ const NotepadPanel = React.memo<{
     <div className="h-full bg-background">
       <MarkdownNotepad
         isOpen={true}
-        onClose={() => {}}
         quotedContent={quotedContent}
         onClearQuoted={onClearQuoted}
         width="100%"
@@ -168,7 +193,7 @@ const NotepadPanel = React.memo<{
         fromChat={true}
         canNavigateBack={true}
         onBack={() => {}}
-        sessionId={sessionId || undefined}  // ✅ Use undefined instead of fake "session-1"
+        sessionId={sessionId || undefined}
         panelState={isFullScreen ? "notepad-full" : "split"}
         onClose={onClose}
       />
@@ -280,6 +305,52 @@ export function FullThinkingLab({
     }
     getUserId()
   }, [])
+
+  // Fetch conversation from Convex when chatId is provided
+  const conversationData = useQuery(
+    api.chatQueries.getConversation,
+    chatId && userId && !widgetOutputId ? {
+      userId,
+      conversationId: chatId as any // Convex ID type
+    } : 'skip'
+  )
+
+  // Load conversation messages when data arrives
+  React.useEffect(() => {
+    if (conversationData && chatId && !widgetOutputId) {
+      console.log('[FullThinkingLab] Loading conversation from Convex:', {
+        conversationId: chatId,
+        messageCount: conversationData.messages?.length || 0
+      })
+
+      // IMPORTANT: Set conversationId FIRST so backend knows we're resuming
+      useDialogueStore.setState({
+        conversationId: chatId,
+        sessionId: chatId,
+      })
+
+      // Convert Convex messages to Message[] format
+      const messages: Message[] = (conversationData.messages || []).map((msg: any, index: number) => ({
+        id: `msg-${index}`,
+        content: msg.content,
+        role: msg.role as 'user' | 'assistant' | 'system',
+        timestamp: msg.timestamp ? new Date(msg.timestamp).getTime().toString() : Date.now().toString(),
+        chat_response: msg.content,
+        status: 'delivered' as const,
+        suggestions: [],
+        metadata: {}
+      }))
+
+      // Then load messages
+      useDialogueStore.setState({
+        messages,
+        isLoading: false,
+        error: undefined
+      })
+
+      console.log('[FullThinkingLab] Conversation resumed - conversationId set for backend:', chatId)
+    }
+  }, [conversationData, chatId, widgetOutputId])
 
   // Fetch widget output data to get opening message
   const widgetOutputData = useQuery(

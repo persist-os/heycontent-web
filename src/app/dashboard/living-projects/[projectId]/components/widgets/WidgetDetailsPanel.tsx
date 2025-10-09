@@ -7,8 +7,8 @@
 
 'use client'
 
-import React, { useEffect, useState } from 'react'
-import { X, Layers, Palette, Clock, Activity, Target, Calendar, Lightbulb, FileText, ExternalLink, Maximize2, Play, Loader2, Edit, Trash2 } from 'lucide-react'
+import React, { useEffect, useState, useRef, useCallback } from 'react'
+import { X, Layers, Palette, Clock, Activity, Target, Calendar, Lightbulb, FileText, ExternalLink, Maximize2, Play, Loader2, Edit, Trash2, GripVertical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -29,6 +29,8 @@ interface WidgetDetailsPanelProps {
   isOpen: boolean
   onClose: () => void
   projectId: string
+  width?: number
+  onWidthChange?: (width: number) => void
 }
 
 /**
@@ -38,11 +40,43 @@ export function WidgetDetailsPanel({
   widget, 
   isOpen, 
   onClose,
-  projectId
+  projectId,
+  width = 384, // Default 24rem (w-96)
+  onWidthChange
 }: WidgetDetailsPanelProps) {
   const router = useRouter()
   const [userId, setUserId] = useState<string | null>(null)
   const { executeWidget, isRunning } = useWidgetRunner()
+  const resizeRef = useRef<HTMLDivElement>(null)
+  const isResizing = useRef(false)
+  const startPos = useRef({ x: 0 })
+  const startWidth = useRef(384)
+
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    isResizing.current = true
+    startPos.current = { x: e.clientX }
+    startWidth.current = width
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!isResizing.current) return
+
+      const deltaX = startPos.current.x - moveEvent.clientX // Inverted for right-side resize
+      const newWidth = Math.max(320, Math.min(800, startWidth.current + deltaX))
+
+      onWidthChange?.(newWidth)
+    }
+
+    const handleMouseUp = () => {
+      isResizing.current = false
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+  }, [width, onWidthChange])
   
   // Edit dialog state
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
@@ -206,7 +240,11 @@ export function WidgetDetailsPanel({
   }
 
   return (
-    <div className="fixed inset-y-0 right-0 w-96 bg-background/95 backdrop-blur-sm border-l border-border/50 shadow-xl z-30 transform transition-transform duration-300 ease-out">
+    <div 
+      ref={resizeRef}
+      className="fixed inset-y-0 right-0 bg-background/95 backdrop-blur-sm border-l border-border/50 shadow-xl z-30 transform transition-transform duration-300 ease-out"
+      style={{ width: `${width}px` }}
+    >
       <div className="h-full flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border/30">
@@ -620,6 +658,17 @@ export function WidgetDetailsPanel({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Resize Handle */}
+      <div
+        onMouseDown={handleResizeStart}
+        className="absolute top-0 left-0 w-1 h-full cursor-ew-resize group z-50 hover:bg-border/50 transition-colors"
+        style={{ touchAction: 'none' }}
+      >
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors">
+          <GripVertical className="w-4 h-4 rotate-90" />
+        </div>
+      </div>
     </div>
   )
 }

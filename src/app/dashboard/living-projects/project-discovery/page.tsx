@@ -31,6 +31,12 @@ export default function ProjectDiscoveryPage() {
     if (mode === 'create' && !isCreating && !projectId) {
       const name = searchParams.get('name')
       const description = searchParams.get('description')
+      
+      // Parse content IDs from URL parameters
+      const noteIds = searchParams.get('noteIds')?.split(',').filter(id => id.trim()) || []
+      const conversationIds = searchParams.get('conversationIds')?.split(',').filter(id => id.trim()) || []
+      const crystalIds = searchParams.get('crystalIds')?.split(',').filter(id => id.trim()) || []
+      const shardIds = searchParams.get('shardIds')?.split(',').filter(id => id.trim()) || []
 
       if (!name) {
         setError('Project name is required')
@@ -45,7 +51,11 @@ export default function ProjectDiscoveryPage() {
           return createProject({ 
             userId, 
             name, 
-            description: description || undefined 
+            description: description || undefined,
+            noteIds: noteIds.length > 0 ? noteIds : undefined,
+            conversationIds: conversationIds.length > 0 ? conversationIds : undefined,
+            crystalIds: crystalIds.length > 0 ? crystalIds : undefined,
+            shardIds: shardIds.length > 0 ? shardIds : undefined
           })
         })
         .then(newProjectId => {

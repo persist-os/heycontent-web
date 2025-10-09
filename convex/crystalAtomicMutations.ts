@@ -20,6 +20,7 @@
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { publishCrystalFormationBriefing } from "./briefingRoomHelpers";
 
 /**
  * Atomically create a crystal and mark its shards as consumed.
@@ -97,6 +98,23 @@ export const createCrystalWithShardConsumption = mutation({
       }
 
       console.log(`✅ [ATOMIC] Crystal ${crystalId}: ${shardsMarked}/${shardIds.length} shards marked (${shardsFailed} failed)`);
+
+      // Publish briefing event for crystal formation
+      try {
+        await publishCrystalFormationBriefing(ctx, {
+          userId: crystalData.userId,
+          crystalId: crystalId,
+          crystalName: crystalData.name || "New Crystal",
+          crystalType: crystalData.crystal_type || "pattern",
+          confidenceScore: crystalData.confidence_score || "moderate",
+          coreInsight: crystalData.core_insight || crystalData.description || "New pattern crystallized",
+          shardCount: shardsMarked,
+        });
+        console.log(`📢 [BRIEFING] Published crystal formation briefing for ${crystalId}`);
+      } catch (briefingError) {
+        console.error(`⚠️ [BRIEFING] Failed to publish crystal briefing (non-critical):`, briefingError);
+        // Don't fail the mutation if briefing fails
+      }
 
       return {
         success: true,
