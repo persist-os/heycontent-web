@@ -15,15 +15,15 @@ import { useAdminAuth } from '@/app/lib/admin-auth'
 import { cn } from '@/lib/utils'
 
 const navItems = [
-  {
-    id: 'briefing-room',
-    label: 'Briefing Room',
-    description: 'Living intelligence command center',
-    icon: Radio,
-    href: '/dashboard/briefing_room',
-    dataAttr: 'data-briefing-room-link',
-    category: 'explore',
-  },
+  // {
+  //   id: 'briefing-room',
+  //   label: 'Briefing Room',
+  //   description: 'Living intelligence command center',
+  //   icon: Radio,
+  //   href: '/dashboard/briefing_room',
+  //   dataAttr: 'data-briefing-room-link',
+  //   category: 'explore',
+  // },
   {
     id: 'constellations',
     label: 'Constellations',
@@ -272,9 +272,9 @@ export const DashboardNav = memo(function DashboardNav() {
   // Memoize active item calculation
   const isItemActive = useCallback((item: typeof dynamicNavItems[0]) => {
     switch (item.id) {
-      case 'briefing-room':
-        // This tab is active for briefing room routes
-        return pathname.startsWith('/dashboard/briefing_room');
+      // case 'briefing-room':
+      //   // This tab is active for briefing room routes
+      //   return pathname.startsWith('/dashboard/briefing_room');
       case 'constellations':
         // This tab is active for constellation/living projects routes
         return pathname.startsWith('/dashboard/living-projects');
