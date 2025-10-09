@@ -1904,5 +1904,196 @@ export default defineSchema({
   .index("by_project", ["projectId"])
   .index("by_user", ["userId"])
   .index("by_signal_score", ["evolution_signal_score"]),
+
+  // ============================================================================
+  // Briefing Room - Living Intelligence Briefing System
+  // ============================================================================
+  
+  /**
+   * Briefing Events - Autonomous briefing agents
+   * 
+   * Each event is a living entity with state, relationships, and behavior.
+   * Not just notifications - these are agent ambassadors from the AI civilization.
+   */
+  briefing_events: defineTable({
+    // Identity
+    userId: v.string(),
+    type: v.string(), // Event type (e.g., "crystal_formation", "widget_complete", "dream_report")
+    category: v.union(
+      v.literal("crystal"),
+      v.literal("widget"),
+      v.literal("collaboration"),
+      v.literal("dream"),
+      v.literal("system")
+    ),
+    
+    // Priority & Urgency
+    priority: v.union(
+      v.literal("critical"),
+      v.literal("high"),
+      v.literal("medium"),
+      v.literal("low")
+    ),
+    urgencyLevel: v.number(), // 0-1, escalates over time
+    
+    // Temporal Awareness
+    timestamp: v.number(),
+    lastPresented: v.optional(v.number()),
+    timeWaiting: v.number(), // Calculated field, updated regularly
+    
+    // Event Data (category-specific)
+    data: v.any(), // Flexible structure for different event types
+    
+    // State Machine
+    state: v.union(
+      v.literal("forming"),
+      v.literal("waiting"),
+      v.literal("requesting"),
+      v.literal("presenting"),
+      v.literal("acknowledged"),
+      v.literal("dormant"),
+      v.literal("archived")
+    ),
+    stateHistory: v.array(v.object({
+      from: v.string(),
+      to: v.string(),
+      timestamp: v.number(),
+      trigger: v.string()
+    })),
+    
+    // Spatial Position
+    position: v.object({
+      x: v.number(),
+      y: v.number(),
+      z: v.number()
+    }),
+    spatialPriority: v.number(),
+    
+    // Relationships
+    relatedBriefings: v.array(v.string()), // IDs of related events
+    clusterId: v.optional(v.string()),
+    
+    // User Interaction
+    viewed: v.boolean(),
+    viewedAt: v.optional(v.number()),
+    archived: v.boolean(),
+    starred: v.boolean(),
+    userRating: v.optional(v.union(
+      v.literal("helpful"),
+      v.literal("not_helpful"),
+      v.literal("irrelevant")
+    )),
+    actionsTaken: v.array(v.string()),
+    
+    // AI Context
+    aiContext: v.optional(v.object({
+      relatedCrystals: v.array(v.string()),
+      relatedProjects: v.array(v.string()),
+      relatedWidgets: v.array(v.string()),
+      generatedSuggestions: v.array(v.string())
+    })),
+    
+    // Metadata
+    metadata: v.object({
+      source: v.string(),
+      version: v.string(),
+      processingTime: v.optional(v.number())
+    }),
+    
+    createdAt: v.number(),
+    updatedAt: v.number()
+  })
+    .index("by_user_timestamp", ["userId", "timestamp"])
+    .index("by_user_viewed", ["userId", "viewed"])
+    .index("by_user_category", ["userId", "category"])
+    .index("by_user_priority", ["userId", "priority"])
+    .index("by_user_state", ["userId", "state"])
+    .index("by_timestamp", ["timestamp"])
+    .index("by_state", ["state"])
+    .index("by_cluster", ["clusterId"]),
+
+  /**
+   * Briefing Preferences - User preferences for briefing room
+   */
+  briefing_preferences: defineTable({
+    userId: v.string(),
+    
+    // Category Filters
+    enabledCategories: v.object({
+      crystal: v.boolean(),
+      widget: v.boolean(),
+      collaboration: v.boolean(),
+      dream: v.boolean(),
+      system: v.boolean()
+    }),
+    
+    // Priority Filter
+    minimumPriority: v.union(
+      v.literal("critical"),
+      v.literal("high"),
+      v.literal("medium"),
+      v.literal("low")
+    ),
+    
+    // Display Preferences
+    maxBriefersVisible: v.number(),
+    animationsEnabled: v.boolean(),
+    soundEnabled: v.boolean(),
+    
+    // Notification Channels
+    notificationChannels: v.object({
+      inApp: v.boolean(),
+      email: v.boolean(),
+      push: v.boolean()
+    }),
+    
+    // Digest Preferences
+    dailyDigest: v.boolean(),
+    digestTime: v.string(), // e.g., "08:00"
+    weeklyReport: v.boolean(),
+    
+    // Dream Reports
+    enableDreamReports: v.boolean(),
+    dreamReportFrequency: v.union(
+      v.literal("nightly"),
+      v.literal("weekly"),
+      v.literal("never")
+    ),
+    
+    // AI Summarization
+    aiSummarization: v.boolean(),
+    summaryDepth: v.union(
+      v.literal("brief"),
+      v.literal("standard"),
+      v.literal("detailed")
+    ),
+    
+    createdAt: v.number(),
+    updatedAt: v.number()
+  })
+    .index("by_userId", ["userId"]),
+
+  /**
+   * Briefing Clusters - Groups of related briefings
+   */
+  briefing_clusters: defineTable({
+    userId: v.string(),
+    brieferIds: v.array(v.string()),
+    centerPosition: v.object({
+      x: v.number(),
+      y: v.number(),
+      z: v.number()
+    }),
+    reason: v.string(), // Why they clustered
+    confidence: v.number(), // How confident clustering algorithm is
+    formed: v.number(),
+    dissolved: v.optional(v.number()),
+    active: v.boolean(),
+    
+    createdAt: v.number(),
+    updatedAt: v.number()
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_active", ["userId", "active"]),
 });
 

@@ -19,6 +19,7 @@ import {
   CrystalsView,
   ShardsView,
   StardustView,
+  StarsView,
   InsightsSkeleton,
   CrystalSystemExplanation,
   SystemDebugInfo,
@@ -187,8 +188,8 @@ export default function CrystalsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-light tracking-tight text-foreground">Crystals</h1>
-            <p className="text-muted-foreground font-light">Insights from your content</p>
+            <h1 className="text-3xl font-light tracking-tight text-foreground">Cosmic Intelligence</h1>
+            <p className="text-muted-foreground font-light">Dual-species organisms: stars for what you do, crystals for who you are</p>
           </div>
 
           {/* Quick Stats */}
@@ -252,6 +253,10 @@ export default function CrystalsPage() {
               userId={userId}
               onViewChange={setActiveView}
             />
+          )}
+
+          {activeView === 'stars' && (
+            <StarsView userId={userId} />
           )}
 
           {activeView === 'crystals' && (

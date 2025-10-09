@@ -17,6 +17,7 @@ import { useWidgetLayout } from '../hooks/useWidgetLayout'
 import { FloatingWidgetCard } from './FloatingWidgetCard'
 import { FloatingContentCard } from './FloatingContentCard'
 import { ContentAttachmentPanel } from '@/app/dashboard/living-projects/components/ContentAttachmentPanel'
+import { ContentDetailsPanel } from './ContentDetailsPanel'
 import { ProjectFingerprint } from './ProjectFingerprint'
 
 interface ConstellationCanvasProps {
@@ -34,6 +35,7 @@ interface ConstellationCanvasProps {
   storedLayout?: any
   onContentOpen?: (id: string, type: string) => void
   onLayoutReset?: () => void
+  widgetPanelWidth?: number
 }
 
 export function ConstellationCanvas({
@@ -50,13 +52,27 @@ export function ConstellationCanvas({
   contentItems,
   storedLayout,
   onContentOpen,
-  onLayoutReset
+  onLayoutReset,
+  widgetPanelWidth = 384
 }: ConstellationCanvasProps) {
   const [viewportSize, setViewportSize] = useState({
     width: typeof window !== 'undefined' ? window.innerWidth : 1200,
     height: typeof window !== 'undefined' ? window.innerHeight : 800
   })
   const [showContentPanel, setShowContentPanel] = useState(false)
+  const [selectedContent, setSelectedContent] = useState<{ item: any; type: 'note' | 'conversation' | 'crystal' | 'shard' } | null>(null)
+  const [contentPanelWidth, setContentPanelWidth] = useState(448) // Default 28rem
+  
+  // Handle content card click
+  const handleContentOpen = useCallback((id: string, type: string) => {
+    const contentItem = contentItems?.find(item => 
+      (item._contentId || item._id) === id
+    )
+    if (contentItem) {
+      setSelectedContent({ item: contentItem, type: type as any })
+    }
+    onContentOpen?.(id, type)
+  }, [contentItems, onContentOpen])
   
   // Generate constellation layout
   const layout = useWidgetLayout(widgets, contentItems, storedLayout)
@@ -124,8 +140,14 @@ export function ConstellationCanvas({
     focusOnPoint(x, y)
   }, [focusOnPoint])
 
+  // Calculate total panel width
+  const totalPanelWidth = (showWidgetPanel ? widgetPanelWidth : 0) + (selectedContent ? contentPanelWidth : 0)
+  
   return (
-    <div className={`relative h-screen bg-gradient-to-br from-background via-background to-muted/20 overflow-hidden transition-all duration-300 ${showWidgetPanel ? 'w-[calc(100vw-24rem)]' : 'w-screen'}`}>
+    <div 
+      className="relative h-screen bg-gradient-to-br from-background via-background to-muted/20 overflow-hidden transition-all duration-300"
+      style={{ width: `calc(100vw - ${totalPanelWidth}px)` }}
+    >
       {/* Widget Constellation Canvas */}
       <div
         ref={containerRef}
@@ -197,14 +219,14 @@ export function ConstellationCanvas({
                 <FloatingContentCard
                   key={position.id}
                   item={contentItem}
-                  itemType={position.type!}
+                  itemType={position.type as 'note' | 'conversation' | 'crystal' | 'shard'}
                   x={position.x}
                   y={position.y}
                   size={position.size}
                   importance={position.importance}
-                  isHighlighted={highlightedWidget === position.id}
+                  isHighlighted={selectedContent?.item?._id === contentItem._id || highlightedWidget === position.id}
                   scale={transform.scale}
-                  onOpen={onContentOpen || (() => {})}
+                  onOpen={handleContentOpen}
                 />
               )
             })}
@@ -294,6 +316,17 @@ export function ConstellationCanvas({
           attachedShardIds={(selectedWidget as any).shardIds || []}
         />
       )}
+
+      {/* Content Details Panel for Selected Content */}
+      <ContentDetailsPanel
+        item={selectedContent?.item || null}
+        itemType={selectedContent?.type || null}
+        isOpen={!!selectedContent}
+        onClose={() => setSelectedContent(null)}
+        projectId={projectId}
+        width={contentPanelWidth}
+        onWidthChange={setContentPanelWidth}
+      />
     </div>
   )
 }

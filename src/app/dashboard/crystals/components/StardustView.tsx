@@ -22,9 +22,9 @@ const StardustCard: React.FC<StardustCardProps> = ({ stardust, userId }) => {
     suggestedProjectDescription: stardust.suggestedProjectDescription || '',
   });
   
-  // Convex mutations for stardust operations (to be implemented)
-  // const updateStardust = useMutation(api.stardustMutations.updateStardust);
-  // const deleteStardust = useMutation(api.stardustMutations.deleteStardust);
+  // Convex mutations for stardust operations
+  const updateStardust = useMutation(api.stardustMutations.updateStardust);
+  const deleteStardust = useMutation(api.stardustMutations.deleteStardust);
   
   const handleDelete = async () => {
     if (!confirm('Are you sure you want to delete this stardust? This action cannot be undone.')) {
@@ -32,7 +32,7 @@ const StardustCard: React.FC<StardustCardProps> = ({ stardust, userId }) => {
     }
 
     try {
-      // await deleteStardust({ stardustId: stardust._id });
+      await deleteStardust({ stardustId: stardust._id });
       toast.success('Stardust deleted successfully');
     } catch (error) {
       console.error('Error deleting stardust:', error);
@@ -42,13 +42,13 @@ const StardustCard: React.FC<StardustCardProps> = ({ stardust, userId }) => {
 
   const handleSave = async () => {
     try {
-      // await updateStardust({
-      //   stardustId: stardust._id,
-      //   updates: {
-      //     suggestedProjectName: editedStardust.suggestedProjectName,
-      //     suggestedProjectDescription: editedStardust.suggestedProjectDescription,
-      //   }
-      // });
+      await updateStardust({
+        stardustId: stardust._id,
+        updates: {
+          suggestedProjectName: editedStardust.suggestedProjectName,
+          suggestedProjectDescription: editedStardust.suggestedProjectDescription,
+        }
+      });
       toast.success('Stardust updated successfully');
       setIsEditing(false);
     } catch (error) {

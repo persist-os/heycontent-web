@@ -1,14 +1,15 @@
 /**
  * FLOATING CONTENT CARD COMPONENT
  * 
- * Polymorphic content card for constellation view supporting notes, conversations,
- * crystals, and shards. Smaller than widget cards with type-specific styling.
+ * Living intelligence cards for constellation view - notes, conversations,
+ * crystals, and shards represented as quantum states in the knowledge field.
+ * 
+ * Inspired by: Quantum learning states, temporal intelligence, holographic encoding
  */
 
 'use client'
 
 import React from 'react'
-import { useRouter } from 'next/navigation'
 import { 
   FileText, 
   MessageCircle, 
@@ -16,7 +17,14 @@ import {
   Sparkles,
   ExternalLink,
   Calendar,
-  User
+  Tag,
+  Zap,
+  Brain,
+  Clock,
+  TrendingUp,
+  AlertCircle,
+  Star,
+  Layers
 } from 'lucide-react'
 
 interface FloatingContentCardProps {
@@ -33,8 +41,7 @@ interface FloatingContentCardProps {
 }
 
 /**
- * Floating content card component for constellation view
- * Polymorphic component handling all content types with unified styling
+ * Floating content card - Living knowledge particles in the constellation
  */
 export function FloatingContentCard({
   item,
@@ -48,18 +55,16 @@ export function FloatingContentCard({
   onOpen,
   widgetId
 }: FloatingContentCardProps) {
-  const router = useRouter()
-
-  // Dynamic sizing based on zoom level (smaller than widgets)
+  // Dynamic sizing based on zoom level (larger for better visibility)
   const getCardDimensions = () => {
     const baseSizes = {
-      small: { width: 240, minHeight: 160 }, // Smaller than widgets
-      medium: { width: 280, minHeight: 200 },
-      large: { width: 320, minHeight: 240 }
+      small: { width: 320, minHeight: 220 },
+      medium: { width: 360, minHeight: 260 },
+      large: { width: 400, minHeight: 300 }
     }
     
     const baseSize = baseSizes[size] || baseSizes.medium
-    const zoomMultiplier = Math.max(0.85, scale * 0.85) // 0.85x multiplier for content cards
+    const zoomMultiplier = Math.max(0.85, scale * 0.85)
     
     return {
       width: baseSize.width * zoomMultiplier,
@@ -69,50 +74,74 @@ export function FloatingContentCard({
 
   const { width, minHeight } = getCardDimensions()
 
-  // Show different levels of detail based on zoom
-  const showPreview = scale > 0.8
-  const showMetadata = scale > 1.0
-  const showFullDetails = scale > 1.4
+  // Progressive detail revelation based on zoom (quantum observation)
+  const showPreview = scale > 0.7
+  const showMetadata = scale > 0.9
+  const showRichData = scale > 1.2
 
-  // Calculate opacity based on importance and scale
-  const baseOpacity = Math.max(0.6, (importance || 0.5) * 0.8) // Slightly more transparent than widgets
-  const scaleOpacity = Math.min(1, Math.max(0.5, scale || 1))
-  const finalOpacity = Math.max(0.1, Math.min(1, baseOpacity * scaleOpacity)) // Ensure valid opacity range
+  // Calculate opacity with quantum superposition effect
+  const baseOpacity = Math.max(0.65, (importance || 0.5) * 0.85)
+  const scaleOpacity = Math.min(1, Math.max(0.55, scale || 1))
+  const finalOpacity = Math.max(0.15, Math.min(1, baseOpacity * scaleOpacity))
 
-  // Get type-specific styling
+  // Type-specific quantum styling with consciousness themes
   const getTypeStyling = () => {
     switch (itemType) {
       case 'note':
         return {
           icon: FileText,
-          bgGradient: 'from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20',
-          borderColor: 'border-blue-200 dark:border-blue-800',
-          textColor: 'text-blue-700 dark:text-blue-300',
-          iconColor: 'text-blue-600'
+          // Knowledge crystallization - blue quantum field
+          bgGradient: 'from-blue-500/10 via-sky-400/5 to-cyan-500/10',
+          borderGradient: 'from-blue-400/40 via-sky-300/30 to-cyan-400/40',
+          glowColor: 'shadow-blue-500/20',
+          accentColor: 'bg-blue-500/20',
+          textColor: 'text-blue-900 dark:text-blue-100',
+          metaColor: 'text-blue-700/80 dark:text-blue-300/80',
+          iconColor: 'text-blue-600 dark:text-blue-400',
+          pulseColor: 'bg-blue-400',
+          quantum: 'knowledge'
         }
       case 'conversation':
         return {
           icon: MessageCircle,
-          bgGradient: 'from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20',
-          borderColor: 'border-green-200 dark:border-green-800',
-          textColor: 'text-green-700 dark:text-green-300',
-          iconColor: 'text-green-600'
+          // Temporal dialogue streams - emerald consciousness
+          bgGradient: 'from-emerald-500/10 via-green-400/5 to-teal-500/10',
+          borderGradient: 'from-emerald-400/40 via-green-300/30 to-teal-400/40',
+          glowColor: 'shadow-emerald-500/20',
+          accentColor: 'bg-emerald-500/20',
+          textColor: 'text-emerald-900 dark:text-emerald-100',
+          metaColor: 'text-emerald-700/80 dark:text-emerald-300/80',
+          iconColor: 'text-emerald-600 dark:text-emerald-400',
+          pulseColor: 'bg-emerald-400',
+          quantum: 'dialogue'
         }
       case 'crystal':
         return {
           icon: Gem,
-          bgGradient: 'from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20',
-          borderColor: 'border-purple-200 dark:border-purple-800',
-          textColor: 'text-purple-700 dark:text-purple-300',
-          iconColor: 'text-purple-600'
+          // Crystallized intelligence - violet consciousness
+          bgGradient: 'from-violet-500/10 via-purple-400/5 to-fuchsia-500/10',
+          borderGradient: 'from-violet-400/40 via-purple-300/30 to-fuchsia-400/40',
+          glowColor: 'shadow-violet-500/20',
+          accentColor: 'bg-violet-500/20',
+          textColor: 'text-violet-900 dark:text-violet-100',
+          metaColor: 'text-violet-700/80 dark:text-violet-300/80',
+          iconColor: 'text-violet-600 dark:text-violet-400',
+          pulseColor: 'bg-violet-400',
+          quantum: 'crystal'
         }
       case 'shard':
         return {
           icon: Sparkles,
-          bgGradient: 'from-amber-50 to-amber-100 dark:from-amber-950/20 dark:to-amber-900/20',
-          borderColor: 'border-amber-200 dark:border-amber-800',
-          textColor: 'text-amber-700 dark:text-amber-300',
-          iconColor: 'text-amber-600'
+          // Quantum fragments - amber energy
+          bgGradient: 'from-amber-500/10 via-orange-400/5 to-yellow-500/10',
+          borderGradient: 'from-amber-400/40 via-orange-300/30 to-yellow-400/40',
+          glowColor: 'shadow-amber-500/20',
+          accentColor: 'bg-amber-500/20',
+          textColor: 'text-amber-900 dark:text-amber-100',
+          metaColor: 'text-amber-700/80 dark:text-amber-300/80',
+          iconColor: 'text-amber-600 dark:text-amber-400',
+          pulseColor: 'bg-amber-400',
+          quantum: 'shard'
         }
     }
   }
@@ -120,23 +149,43 @@ export function FloatingContentCard({
   const styling = getTypeStyling()
   const Icon = styling.icon
 
-  // Get content preview based on type
-  const getContentPreview = () => {
+  // Extract rich metadata from content
+  const getRichContent = () => {
     switch (itemType) {
       case 'note':
         return {
           title: item.title || 'Untitled Note',
-          preview: item.content ? item.content.substring(0, 80) + '...' : 'No content'
+          preview: item.content?.substring(0, 120) || 'Empty note',
+          primaryMeta: item.type || 'note',
+          secondaryMeta: item.tags?.slice(0, 2).join(', ') || null,
+          indicator: item.important ? 'important' : null,
+          count: item.references?.length || 0,
+          temporal: item.updatedAt
         }
       case 'conversation':
         return {
-          title: item.title || 'Conversation',
-          preview: item.messages?.[0]?.content?.substring(0, 60) + '...' || 'No messages'
+          title: item.title || 'Thinking Session',
+          preview: item.messages?.[0]?.content?.substring(0, 100) || 'No messages yet',
+          primaryMeta: item.conversationType || 'general',
+          secondaryMeta: item.messageCount ? `${item.messageCount} exchanges` : null,
+          indicator: item.starred ? 'starred' : null,
+          count: item.messageCount || 0,
+          temporal: item.lastMessageAt || item.updatedAt
         }
       case 'crystal':
         return {
-          title: item.name || 'Crystal',
-          preview: item.core_insight?.substring(0, 70) + '...' || item.supporting_quote?.substring(0, 70) + '...' || 'No insight'
+          title: item.name || 'Unnamed Pattern',
+          preview: item.core_insight || item.detailed_analysis?.substring(0, 100) || 'Forming...',
+          primaryMeta: item.crystal_type || 'pattern',
+          secondaryMeta: item.dimension,
+          indicator: item.confidence_score || item.evidence_strength,
+          count: item.observation_count || item.usage_count || 0,
+          temporal: item.last_evolution || item.updatedAt,
+          quantum: {
+            stability: item.stability_trend,
+            evidence: item.evidence_strength,
+            consistency: item.consistency_rating
+          }
         }
       case 'shard':
         return {
@@ -176,52 +225,95 @@ export function FloatingContentCard({
 
   return (
     <div
-      className="absolute cursor-pointer group transition-all duration-300 ease-out will-change-transform"
+      className="absolute cursor-pointer group will-change-transform"
       style={{
         left: `${x - width/2}px`,
         top: `${y - minHeight/2}px`,
         width: `${width}px`,
         minHeight: `${minHeight}px`,
-        opacity: finalOpacity
+        opacity: finalOpacity,
+        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
       }}
       onClick={handleCardClick}
     >
-      {/* Main Card */}
+      {/* Quantum field container */}
       <div className={`
-        relative w-full rounded-lg border backdrop-blur-sm
-        transition-all duration-300 ease-out
-        hover:scale-[1.03] hover:z-10
+        relative w-full h-full rounded-xl backdrop-blur-md
+        transition-all duration-500 ease-out
+        hover:scale-[1.04] hover:z-20
         bg-gradient-to-br ${styling.bgGradient}
-        ${styling.borderColor}
-        ${isHighlighted ? 'ring-2 ring-blue-400/60 scale-[1.02]' : 'ring-1 ring-border/30'}
-      `} style={{ minHeight: `${minHeight}px` }}>
+        ${isHighlighted ? 'ring-2 ring-white/40 dark:ring-white/30 scale-[1.02]' : ''}
+        ${styling.glowColor} shadow-lg
+      `}>
         
-        {/* Widget link indicator */}
-        {widgetId && (
-          <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-background" 
-               title="Linked to widget" />
-        )}
+        {/* Animated gradient border */}
+        <div className={`
+          absolute inset-0 rounded-xl bg-gradient-to-br ${styling.borderGradient}
+          opacity-60 group-hover:opacity-100 transition-opacity duration-500
+        `} style={{ padding: '1.5px' }}>
+          <div className={`
+            w-full h-full rounded-xl bg-gradient-to-br ${styling.bgGradient}
+            backdrop-blur-md
+          `} />
+        </div>
 
-        {/* Content */}
-        <div className="relative p-3 h-full flex flex-col">
-          {/* Header */}
-          <div className="flex items-start gap-2 mb-2">
-            <div className={`p-1.5 rounded-md bg-background/50 ${styling.iconColor}`}>
-              <Icon className="w-3 h-3" />
+        {/* Quantum pulse indicator (top-right) */}
+        <div className="absolute -top-1 -right-1 flex items-center gap-1">
+          {widgetId && (
+            <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" 
+                 title="Linked to widget" />
+          )}
+          {content.indicator && (
+            <div className={`
+              px-2 py-0.5 rounded-full text-[9px] font-medium uppercase tracking-wider
+              ${styling.accentColor} ${styling.textColor}
+              border border-current/20
+            `}>
+              {content.indicator}
             </div>
+          )}
+        </div>
+
+        {/* Card content */}
+        <div className="relative p-4 h-full flex flex-col gap-3" style={{ zIndex: 1 }}>
+          
+          {/* Header with icon and title */}
+          <div className="flex items-start gap-3">
+            {/* Quantum icon container */}
+            <div className={`
+              relative p-2 rounded-lg ${styling.accentColor}
+              group-hover:scale-110 transition-transform duration-300
+            `}>
+              <Icon className={`w-4 h-4 ${styling.iconColor}`} />
+              {/* Subtle pulse animation */}
+              <div className={`
+                absolute inset-0 rounded-lg ${styling.pulseColor} opacity-0
+                group-hover:opacity-20 group-hover:animate-ping
+              `} />
+            </div>
+            
+            {/* Title and type */}
             <div className="flex-1 min-w-0">
-              <h3 className={`font-medium text-sm ${styling.textColor} truncate`}>
+              <h3 className={`
+                font-semibold text-sm leading-snug ${styling.textColor}
+                line-clamp-2 tracking-tight
+              `}>
                 {content.title}
               </h3>
-              {showMetadata && (
-                <div className="flex items-center gap-1 text-xs text-muted-foreground/70 mt-0.5">
-                  {itemType === 'conversation' && item.messageCount && (
-                    <span>{item.messageCount} messages</span>
-                  )}
-                  {item.createdAt && (
+              {showMetadata && content.primaryMeta && (
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className={`
+                    text-[10px] font-medium uppercase tracking-wider
+                    ${styling.metaColor}
+                  `}>
+                    {content.primaryMeta.replace(/_/g, ' ')}
+                  </span>
+                  {content.secondaryMeta && (
                     <>
-                      <Calendar className="w-2.5 h-2.5" />
-                      <span>{new Date(item.createdAt).toLocaleDateString()}</span>
+                      <span className={`text-[10px] ${styling.metaColor}`}>•</span>
+                      <span className={`text-[10px] ${styling.metaColor} truncate`}>
+                        {content.secondaryMeta}
+                      </span>
                     </>
                   )}
                 </div>
@@ -229,37 +321,91 @@ export function FloatingContentCard({
             </div>
           </div>
 
-          {/* Content Preview */}
+          {/* Content preview with better readability */}
           {showPreview && (
-            <div className="flex-1">
-              <p className={`text-xs ${styling.textColor}/80 leading-relaxed line-clamp-3`}>
+            <div className="flex-1 min-h-0">
+              <p className={`
+                text-xs leading-relaxed ${styling.textColor} opacity-90
+                line-clamp-${showRichData ? '4' : '3'}
+                font-normal
+              `}>
                 {content.preview}
               </p>
             </div>
           )}
 
-          {/* Footer */}
+          {/* Rich metadata footer */}
           {showMetadata && (
-            <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/20">
-              <div className="flex items-center gap-1">
-                <span className={`text-xs px-1.5 py-0.5 rounded ${styling.bgGradient} ${styling.textColor}`}>
-                  {itemType}
-                </span>
-                {itemType === 'crystal' && item.confidence && (
-                  <span className="text-xs text-muted-foreground">
-                    {Math.round(item.confidence * 100)}%
-                  </span>
+            <div className="flex items-center justify-between pt-2 border-t border-current/10">
+              {/* Left: Stats and indicators */}
+              <div className="flex items-center gap-2">
+                {content.count > 0 && (
+                  <div className={`
+                    flex items-center gap-1 px-1.5 py-0.5 rounded
+                    ${styling.accentColor}
+                  `}>
+                    <Layers className={`w-3 h-3 ${styling.iconColor}`} />
+                    <span className={`text-[10px] font-medium ${styling.textColor}`}>
+                      {content.count}
+                    </span>
+                  </div>
+                )}
+                
+                {/* Quantum state indicators for crystals/shards */}
+                {showRichData && content.quantum && (
+                  <div className="flex items-center gap-1">
+                    {content.quantum.stability && (
+                      <div title={`Stability: ${content.quantum.stability}`}>
+                        <TrendingUp className={`w-3 h-3 ${styling.iconColor} opacity-60`} />
+                      </div>
+                    )}
+                    {content.quantum.evidence && (
+                      <div title={`Evidence: ${content.quantum.evidence}`}>
+                        <Brain className={`w-3 h-3 ${styling.iconColor} opacity-60`} />
+                      </div>
+                    )}
+                    {content.quantum.intensity && (
+                      <div title={`Intensity: ${content.quantum.intensity}`}>
+                        <Zap className={`w-3 h-3 ${styling.iconColor} opacity-60`} />
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
-              <ExternalLink className="w-3 h-3 text-muted-foreground/50 group-hover:text-muted-foreground transition-colors" />
+
+              {/* Right: Temporal indicator */}
+              <div className="flex items-center gap-1.5">
+                {content.temporal && (
+                  <div className="flex items-center gap-1">
+                    <Clock className={`w-3 h-3 ${styling.iconColor} opacity-50`} />
+                    <span className={`text-[10px] ${styling.metaColor}`}>
+                      {formatTemporal(content.temporal)}
+                    </span>
+                  </div>
+                )}
+                <ExternalLink className={`
+                  w-3 h-3 ${styling.iconColor} opacity-0 
+                  group-hover:opacity-60 transition-opacity duration-300
+                `} />
+              </div>
             </div>
           )}
         </div>
 
-        {/* Subtle border glow effect */}
+        {/* Holographic interference pattern on hover */}
         <div className={`
-          absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300
-          bg-gradient-to-br from-white/5 via-transparent to-white/5
+          absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100
+          transition-opacity duration-500 pointer-events-none
+          bg-gradient-to-br from-white/5 via-transparent to-white/10
+        `} style={{
+          backgroundImage: 'radial-gradient(circle at 50% 50%, transparent 30%, rgba(255,255,255,0.03) 70%)'
+        }} />
+
+        {/* Quantum glow effect */}
+        <div className={`
+          absolute -inset-1 rounded-xl blur-xl ${styling.glowColor}
+          opacity-0 group-hover:opacity-30 transition-opacity duration-700
+          pointer-events-none -z-10
         `} />
       </div>
     </div>

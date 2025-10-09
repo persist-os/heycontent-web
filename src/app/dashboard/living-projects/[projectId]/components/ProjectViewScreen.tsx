@@ -49,6 +49,7 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [showProjectContentPanel, setShowProjectContentPanel] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>("constellation")
+  const [widgetPanelWidth, setWidgetPanelWidth] = useState(384) // Default 24rem
   const menuRef = useRef<HTMLDivElement>(null)
 
   // Get user ID on component mount
@@ -372,6 +373,7 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
                   storedLayout={(project as any)?.constellationLayout}
                   onContentOpen={handleContentOpen}
                   onLayoutReset={handleLayoutReset}
+                  widgetPanelWidth={widgetPanelWidth}
                 />
               ) : (
                 <div className="flex items-center justify-center h-64">
@@ -454,6 +456,8 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
           setSelectedWidget(null)
         }}
         projectId={projectId}
+        width={widgetPanelWidth}
+        onWidthChange={setWidgetPanelWidth}
       />
 
       {/* Project Content Management Panel */}

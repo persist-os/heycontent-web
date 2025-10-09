@@ -18,12 +18,14 @@ export { ConfidenceDistribution } from './ConfidenceDistribution';
 // Content components
 export { CrystalCard } from './CrystalCard';
 export { ShardCard } from './ShardCard';
+export { StarCard } from './StarCard';
 
 // View components
 export { OverviewView } from './OverviewView';
 export { CrystalsView } from './CrystalsView';
 export { ShardsView } from './ShardsView';
 export { StardustView } from './StardustView';
+export { StarsView } from './StarsView';
 
 // Navigation and layout
 export { InsightsNavigation } from './InsightsNavigation';
