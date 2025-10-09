@@ -15,7 +15,9 @@ import { ConstellationControls } from '../../../components/ConstellationControls
 import { ConstellationMinimap } from '../../../components/ConstellationMinimap'
 import { useWidgetLayout } from '../hooks/useWidgetLayout'
 import { FloatingWidgetCard } from './FloatingWidgetCard'
+import { FloatingContentCard } from './FloatingContentCard'
 import { ContentAttachmentPanel } from '@/app/dashboard/living-projects/components/ContentAttachmentPanel'
+import { ContentDetailsPanel } from './ContentDetailsPanel'
 import { ProjectFingerprint } from './ProjectFingerprint'
 
 interface ConstellationCanvasProps {
@@ -29,6 +31,11 @@ interface ConstellationCanvasProps {
   onWidgetRun?: (widgetId: string) => void
   runningWidgetId?: string | null
   selectedWidget?: WidgetConfig | null
+  contentItems?: any[]
+  storedLayout?: any
+  onContentOpen?: (id: string, type: string) => void
+  onLayoutReset?: () => void
+  widgetPanelWidth?: number
 }
 
 export function ConstellationCanvas({
@@ -41,16 +48,34 @@ export function ConstellationCanvas({
   showWidgetPanel,
   onWidgetRun,
   runningWidgetId,
-  selectedWidget
+  selectedWidget,
+  contentItems,
+  storedLayout,
+  onContentOpen,
+  onLayoutReset,
+  widgetPanelWidth = 384
 }: ConstellationCanvasProps) {
   const [viewportSize, setViewportSize] = useState({
     width: typeof window !== 'undefined' ? window.innerWidth : 1200,
     height: typeof window !== 'undefined' ? window.innerHeight : 800
   })
   const [showContentPanel, setShowContentPanel] = useState(false)
+  const [selectedContent, setSelectedContent] = useState<{ item: any; type: 'note' | 'conversation' | 'crystal' | 'shard' } | null>(null)
+  const [contentPanelWidth, setContentPanelWidth] = useState(448) // Default 28rem
+  
+  // Handle content card click
+  const handleContentOpen = useCallback((id: string, type: string) => {
+    const contentItem = contentItems?.find(item => 
+      (item._contentId || item._id) === id
+    )
+    if (contentItem) {
+      setSelectedContent({ item: contentItem, type: type as any })
+    }
+    onContentOpen?.(id, type)
+  }, [contentItems, onContentOpen])
   
   // Generate constellation layout
-  const layout = useWidgetLayout(widgets)
+  const layout = useWidgetLayout(widgets, contentItems, storedLayout)
 
   // Pan and zoom functionality
   const {
@@ -115,8 +140,14 @@ export function ConstellationCanvas({
     focusOnPoint(x, y)
   }, [focusOnPoint])
 
+  // Calculate total panel width
+  const totalPanelWidth = (showWidgetPanel ? widgetPanelWidth : 0) + (selectedContent ? contentPanelWidth : 0)
+  
   return (
-    <div className={`relative h-screen bg-gradient-to-br from-background via-background to-muted/20 overflow-hidden transition-all duration-300 ${showWidgetPanel ? 'w-[calc(100vw-24rem)]' : 'w-screen'}`}>
+    <div 
+      className="relative h-screen bg-gradient-to-br from-background via-background to-muted/20 overflow-hidden transition-all duration-300"
+      style={{ width: `calc(100vw - ${totalPanelWidth}px)` }}
+    >
       {/* Widget Constellation Canvas */}
       <div
         ref={containerRef}
@@ -175,6 +206,31 @@ export function ConstellationCanvas({
             )
           })}
 
+          {/* Floating Content Cards - Virtual Rendering */}
+          {layout.positions
+            .filter(position => position.type && position.type !== 'widget')
+            .map(position => {
+              const contentItem = contentItems?.find(item => 
+                (item._contentId || item._id) === position.id
+              )
+              if (!contentItem) return null
+
+              return (
+                <FloatingContentCard
+                  key={position.id}
+                  item={contentItem}
+                  itemType={position.type as 'note' | 'conversation' | 'crystal' | 'shard'}
+                  x={position.x}
+                  y={position.y}
+                  size={position.size}
+                  importance={position.importance}
+                  isHighlighted={selectedContent?.item?._id === contentItem._id || highlightedWidget === position.id}
+                  scale={transform.scale}
+                  onOpen={handleContentOpen}
+                />
+              )
+            })}
+
           {/* Canvas bounds indicator */}
           <div
             className="absolute inset-0 border border-border/10 rounded-lg pointer-events-none"
@@ -210,6 +266,19 @@ export function ConstellationCanvas({
         onReset={resetView}
         className="absolute bottom-4 left-4 z-10"
       />
+
+      {/* Layout Reset Button */}
+      {onLayoutReset && (
+        <div className="absolute bottom-4 left-64 z-10">
+          <button
+            onClick={onLayoutReset}
+            className="px-3 py-2 text-xs bg-background/80 backdrop-blur-sm border border-border/30 rounded-lg hover:bg-background/90 transition-colors"
+            title="Reset layout"
+          >
+            Reset Layout
+          </button>
+        </div>
+      )}
 
       {/* Minimap - Bottom Right */}
       <ConstellationMinimap
@@ -247,6 +316,17 @@ export function ConstellationCanvas({
           attachedShardIds={(selectedWidget as any).shardIds || []}
         />
       )}
+
+      {/* Content Details Panel for Selected Content */}
+      <ContentDetailsPanel
+        item={selectedContent?.item || null}
+        itemType={selectedContent?.type || null}
+        isOpen={!!selectedContent}
+        onClose={() => setSelectedContent(null)}
+        projectId={projectId}
+        width={contentPanelWidth}
+        onWidthChange={setContentPanelWidth}
+      />
     </div>
   )
 }

@@ -1,11 +1,19 @@
 'use client'
 
-import { FullThinkingLab } from './thinking_lab/compositions/LabCompositions'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 export default function DashboardPage() {
+  const router = useRouter()
+  
+  useEffect(() => {
+    // Redirect to Thinking Lab as the default dashboard view
+    router.replace('/dashboard/thinking_lab')
+  }, [router])
+  
   return (
-    <div className="h-screen w-full">
-      <FullThinkingLab className="h-full" />
+    <div className="h-screen w-full flex items-center justify-center">
+      <div className="text-muted-foreground">Loading...</div>
     </div>
   )
 } 

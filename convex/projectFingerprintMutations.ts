@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { api } from "./_generated/api";
 
 /**
  * Optimized Project Fingerprint Mutations
@@ -36,7 +37,7 @@ export const create = mutation({
 
     const now = Date.now();
     
-    return await ctx.db.insert("project_fingerprints", {
+    const fingerprintId = await ctx.db.insert("project_fingerprints", {
       projectId,
       userId,
       name,
@@ -117,6 +118,31 @@ export const create = mutation({
       intelligence_version: "1.0",
       status: "discovering",
     });
+    
+    // 🆕 Initialize evolution signals for MAB tracking
+    await ctx.db.insert("fingerprint_evolution_signals", {
+      fingerprintId,
+      projectId,
+      userId,
+      notes_added: 0,
+      notes_modified: 0,
+      crystals_added: 0,
+      shards_added: 0,
+      widgets_updated: 0,
+      widgets_executed: 0,
+      manual_edits: 0,
+      last_evolution_at: now,
+      last_signal_update_at: now,
+      content_accumulation_score: 0,
+      content_modification_score: 0,
+      activity_intensity_score: 0,
+      time_decay_factor: 0,
+      evolution_signal_score: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+    
+    return fingerprintId;
   },
 });
 
@@ -380,6 +406,17 @@ export const updateFields = mutation({
       confidence_score: 1.0, // User edits have full confidence
       learning_captured: `User updated ${Object.keys(updates).length} fields`,
     });
+
+    // 🆕 INCREMENT FINGERPRINT SIGNALS
+    try {
+      await ctx.runMutation(api.fingerprintSignalsMutations.increment, {
+        projectId: fingerprint.projectId,
+        signalType: "manual_edit",
+        count: Object.keys(updates).length, // Count number of fields edited
+      });
+    } catch (error) {
+      console.error("Failed to increment signal:", error);
+    }
 
     return {
       success: true,

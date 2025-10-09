@@ -1,12 +1,24 @@
 /**
  * WIDGET LAYOUT HOOK
  * 
- * Advanced constellation layout algorithm for widget positioning using
+ * Advanced constellation layout algorithm for widget and content positioning using
  * force-directed placement, clustering, and connection generation.
+ * Supports both widgets and content items with stored layout caching.
  */
 
 import React from 'react'
 import { WidgetConfig } from '@/types/projectWidgets'
+import { 
+  LayoutItem, 
+  LayoutPosition, 
+  LayoutConnection,
+  checkCollision,
+  findValidPosition,
+  calculateImportance,
+  clusterByEmbeddings,
+  generateClusterCenters,
+  calculateConnectionStrength
+} from '../../utils/layoutAlgorithm'
 
 export interface WidgetPosition {
   id: string
@@ -15,12 +27,29 @@ export interface WidgetPosition {
   size: 'small' | 'medium' | 'large'
   importance: number
   cluster?: number
+  type?: 'widget' | 'note' | 'conversation' | 'crystal' | 'shard'
 }
 
 export interface WidgetConnection {
   from: string
   to: string
   strength: number
+  type?: 'widget-widget' | 'content-widget' | 'content-content'
+}
+
+export interface StoredLayout {
+  version: number;
+  calculatedAt: number;
+  items: Array<{
+    itemId: string;
+    itemType: 'widget' | 'note' | 'conversation' | 'crystal' | 'shard';
+    x: number;
+    y: number;
+    size: string;
+    importance: number;
+  }>;
+  canvasWidth: number;
+  canvasHeight: number;
 }
 
 export interface WidgetLayoutResult {
@@ -28,180 +57,222 @@ export interface WidgetLayoutResult {
   canvasWidth: number
   canvasHeight: number
   connections: WidgetConnection[]
+  layoutVersion?: number
 }
 
 /**
- * Advanced constellation layout hook for widget positioning
+ * Advanced constellation layout hook for widget and content positioning
  * Uses force-directed algorithm with clustering and importance-based placement
+ * Supports both widgets and content items with stored layout caching
  */
-export function useWidgetLayout(widgets: WidgetConfig[]): WidgetLayoutResult {
+export function useWidgetLayout(
+  widgets: WidgetConfig[], 
+  contentItems?: any[], 
+  storedLayout?: StoredLayout | null
+): WidgetLayoutResult {
   return React.useMemo(() => {
     // Handle SSR - use default values when window is not available
     const isSSR = typeof window === 'undefined'
     const defaultWidth = isSSR ? 2400 : window.innerWidth * 3
     const defaultHeight = isSSR ? 1600 : window.innerHeight * 2.5
     
-    if (!widgets.length) {
+    const canvasWidth = Math.max(defaultWidth, 2400)
+    const canvasHeight = Math.max(defaultHeight, 1600)
+
+    // If we have a valid stored layout, use it
+    if (storedLayout && storedLayout.items && storedLayout.items.length > 0) {
+      const positions: WidgetPosition[] = storedLayout.items.map(item => ({
+        id: item.itemId,
+        x: item.x,
+        y: item.y,
+        size: item.size as 'small' | 'medium' | 'large',
+        importance: item.importance,
+        type: item.itemType
+      }));
+
+      // Generate connections from stored layout
+      const connections: WidgetConnection[] = [];
+      positions.forEach((pos1, i) => {
+        positions.slice(i + 1).forEach(pos2 => {
+          const distance = Math.sqrt(
+            Math.pow(pos1.x - pos2.x, 2) + Math.pow(pos1.y - pos2.y, 2)
+          );
+          if (distance < 400) {
+            const strength = Math.max(0.1, 1 - distance / 400);
+            const connectionType = pos1.type && pos2.type ? 
+              (pos1.type === 'widget' && pos2.type === 'widget' ? 'widget-widget' :
+               pos1.type !== 'widget' && pos2.type !== 'widget' ? 'content-content' : 'content-widget') :
+              undefined;
+            
+            connections.push({
+              from: pos1.id,
+              to: pos2.id,
+              strength,
+              type: connectionType
+            });
+          }
+        });
+      });
+
+      return {
+        positions,
+        canvasWidth: storedLayout.canvasWidth || canvasWidth,
+        canvasHeight: storedLayout.canvasHeight || canvasHeight,
+        connections,
+        layoutVersion: storedLayout.version
+      };
+    }
+
+    // No widgets or content to layout
+    if (!widgets.length && (!contentItems || !contentItems.length)) {
       return {
         positions: [],
-        canvasWidth: defaultWidth,
-        canvasHeight: defaultHeight,
+        canvasWidth,
+        canvasHeight,
         connections: []
       }
     }
 
-    const canvasWidth = Math.max(defaultWidth, 2400)
-    const canvasHeight = Math.max(defaultHeight, 1600)
+    // Convert widgets to layout items
+    const widgetItems: LayoutItem[] = widgets.map(widget => ({
+      id: widget._id,
+      type: 'widget' as const,
+      importance: calculateImportance({
+        id: widget._id,
+        type: 'widget',
+        importance: 0.3 + (widget.priority > 7 ? 0.4 : 0) + (widget.size === 'large' ? 0.2 : 0) + 0.3, // Widgets are always recent
+        size: widget.size as 'small' | 'medium' | 'large',
+        metadata: widget
+      }),
+      size: widget.size as 'small' | 'medium' | 'large',
+      metadata: widget
+    }));
 
-    // Calculate widget importance scores
-    const widgetsWithImportance = widgets.map(widget => {
-      const isHighPriority = widget.priority > 7
-      const isLarge = widget.size === 'large'
-      const isRecent = true // Widgets are always "current"
+    // Convert content items to layout items
+    const contentLayoutItems: LayoutItem[] = (contentItems || []).map((item: any) => {
+      const contentType = item._contentType || 'note';
+      const size = contentType === 'crystal' || contentType === 'shard' ? 'small' : 'medium';
+      
+      return {
+        id: item._contentId || item._id,
+        type: contentType,
+        importance: calculateImportance({
+          id: item._contentId || item._id,
+          type: contentType,
+          importance: 0.3,
+          size,
+          metadata: item
+        }),
+        size,
+        metadata: item
+      };
+    });
 
-      let importance = 0.3 // Base importance
-
-      if (isHighPriority) importance += 0.4
-      if (isLarge) importance += 0.2
-      if (isRecent) importance += 0.3
-
-      importance = Math.min(importance, 1)
-
-      return { ...widget, importance }
-    })
-
-    // Sort by importance for cluster generation
-    const sortedWidgets = [...widgetsWithImportance].sort((a, b) => b.importance - a.importance)
-
-    // Generate cluster centers for important widgets
-    const numClusters = Math.min(Math.ceil(widgets.length / 4), 6)
-    const clusterCenters: Array<{ x: number; y: number; radius: number }> = []
-
-    for (let i = 0; i < numClusters; i++) {
-      const angle = (i / numClusters) * Math.PI * 2
-      const distance = Math.min(canvasWidth, canvasHeight) * 0.3
-      const centerX = canvasWidth / 2 + Math.cos(angle) * distance
-      const centerY = canvasHeight / 2 + Math.sin(angle) * distance
-
-      // Add some randomness to break perfect symmetry
-      const randomOffsetX = (Math.random() - 0.5) * 150
-      const randomOffsetY = (Math.random() - 0.5) * 150
-
-      clusterCenters.push({
-        x: centerX + randomOffsetX,
-        y: centerY + randomOffsetY,
-        radius: 120 + Math.random() * 80
-      })
+    // Combine all items
+    const allItems = [...widgetItems, ...contentLayoutItems];
+    
+    if (!allItems.length) {
+      return {
+        positions: [],
+        canvasWidth,
+        canvasHeight,
+        connections: []
+      };
     }
 
-    // Position widgets using force-directed algorithm
-    const positions: WidgetPosition[] = []
-    const minDistance = 200 // Minimum distance between widgets
+    // Sort by importance for cluster generation
+    const sortedItems = [...allItems].sort((a, b) => b.importance - a.importance);
 
-    sortedWidgets.forEach((widget, index) => {
-      let bestPosition = { x: 0, y: 0 }
-      let bestScore = -Infinity
-      const maxAttempts = 40
+    // Generate cluster centers
+    const numClusters = Math.min(Math.ceil(allItems.length / 4), 6);
+    const clusterCenters = generateClusterCenters(sortedItems, numClusters, canvasWidth, canvasHeight);
 
-      // Try multiple positions and pick the best one
-      for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        let x: number, y: number
+    // Position items using force-directed algorithm
+    const positions: WidgetPosition[] = [];
+    const maxAttempts = 50;
 
-        if (index < clusterCenters.length) {
-          // Important widgets get cluster centers
-          const cluster = clusterCenters[index]
-          x = cluster.x + (Math.random() - 0.5) * cluster.radius
-          y = cluster.y + (Math.random() - 0.5) * cluster.radius
-        } else {
-          // Other widgets are placed near existing clusters
-          const nearestCluster = clusterCenters[Math.floor(Math.random() * clusterCenters.length)]
-          const angle = Math.random() * Math.PI * 2
-          const distance = nearestCluster.radius + Math.random() * 150
-          x = nearestCluster.x + Math.cos(angle) * distance
-          y = nearestCluster.y + Math.sin(angle) * distance
-        }
+    sortedItems.forEach((item, index) => {
+      let bestPosition = { x: 0, y: 0 };
+      let bestScore = -Infinity;
 
-        // Ensure position is within canvas bounds
-        x = Math.max(150, Math.min(canvasWidth - 150, x))
-        y = Math.max(120, Math.min(canvasHeight - 120, y))
+      // Try cluster center first for important items
+      if (index < numClusters) {
+        const center = clusterCenters[index];
+        const x = center.x + (Math.random() - 0.5) * center.radius;
+        const y = center.y + (Math.random() - 0.5) * center.radius;
 
-        // Check distance from other widgets
-        let validPosition = true
-        let score = 0
-
+        let hasCollision = false;
         for (const existingPos of positions) {
-          const distance = Math.sqrt(
-            Math.pow(x - existingPos.x, 2) + Math.pow(y - existingPos.y, 2)
-          )
-
-          if (distance < minDistance) {
-            validPosition = false
-            break
+          if (checkCollision({ x, y }, { x: existingPos.x, y: existingPos.y })) {
+            hasCollision = true;
+            break;
           }
-
-          // Prefer positions that create interesting visual patterns
-          score += Math.min(distance, 400) / 400
         }
 
-        if (validPosition && score > bestScore) {
-          bestScore = score
-          bestPosition = { x, y }
+        if (!hasCollision) {
+          bestPosition = { x, y };
+          bestScore = item.importance;
+        }
+      }
+
+      // If cluster center failed, try random positions
+      if (bestScore === -Infinity) {
+        const validPosition = findValidPosition(positions, {
+          id: item.id,
+          x: 0,
+          y: 0,
+          size: item.size,
+          importance: item.importance
+        }, maxAttempts, canvasWidth, canvasHeight);
+
+        if (validPosition) {
+          bestPosition = validPosition;
+        } else {
+          // Fallback to center if no valid position found
+          bestPosition = {
+            x: canvasWidth / 2 + (Math.random() - 0.5) * 200,
+            y: canvasHeight / 2 + (Math.random() - 0.5) * 200
+          };
         }
       }
 
       positions.push({
-        id: widget._id,  // ✅ Use Convex ID (_id)
+        id: item.id,
         x: bestPosition.x,
         y: bestPosition.y,
-        size: widget.size as 'small' | 'medium' | 'large',
-        importance: widget.importance,
-        cluster: Math.floor(index / Math.ceil(widgets.length / numClusters))
-      })
-    })
+        size: item.size,
+        importance: item.importance,
+        cluster: Math.floor(index / Math.ceil(allItems.length / numClusters)),
+        type: item.type
+      });
+    });
 
-    // Generate connections between related widgets
-    const connections: WidgetConnection[] = []
+    // Generate connections between related items
+    const connections: WidgetConnection[] = [];
 
     positions.forEach((pos1, i) => {
       positions.slice(i + 1).forEach(pos2 => {
-        const widget1 = widgetsWithImportance.find(w => w._id === pos1.id)!  // ✅ Use Convex ID (_id)
-        const widget2 = widgetsWithImportance.find(w => w._id === pos2.id)!  // ✅ Use Convex ID (_id)
+        const item1 = allItems.find(item => item.id === pos1.id)!;
+        const item2 = allItems.find(item => item.id === pos2.id)!;
 
-        let connectionStrength = 0
-
-        // Same cluster = stronger connection
-        if (pos1.cluster === pos2.cluster) {
-          connectionStrength += 0.3
-        }
-
-        // Same theme = related
-        if (widget1.theme === widget2.theme) {
-          connectionStrength += 0.2
-        }
-
-        // Similar priority = related
-        if (Math.abs(widget1.priority - widget2.priority) <= 2) {
-          connectionStrength += 0.2
-        }
-
-        // Distance-based connection (closer = more likely to connect)
-        const distance = Math.sqrt(
-          Math.pow(pos1.x - pos2.x, 2) + Math.pow(pos1.y - pos2.y, 2)
-        )
-        if (distance < 300) {
-          connectionStrength += 0.2 * (1 - distance / 300)
-        }
+        const strength = calculateConnectionStrength(pos1, pos2, item1, item2);
 
         // Only create connection if strength is above threshold
-        if (connectionStrength > 0.25) {
+        if (strength > 0.25) {
+          const connectionType = pos1.type && pos2.type ? 
+            (pos1.type === 'widget' && pos2.type === 'widget' ? 'widget-widget' :
+             pos1.type !== 'widget' && pos2.type !== 'widget' ? 'content-content' : 'content-widget') :
+            undefined;
+
           connections.push({
             from: pos1.id,
             to: pos2.id,
-            strength: Math.min(connectionStrength, 1)
-          })
+            strength: Math.min(strength, 1),
+            type: connectionType
+          });
         }
-      })
-    })
+      });
+    });
 
     return {
       positions,
@@ -209,5 +280,5 @@ export function useWidgetLayout(widgets: WidgetConfig[]): WidgetLayoutResult {
       canvasHeight,
       connections
     }
-  }, [widgets])
+  }, [widgets, contentItems, storedLayout])
 }

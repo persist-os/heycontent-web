@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Logo } from '@/components/ui/logo'
 import {
-  Users, Settings, FileText, LogOut, BarChart3, Menu, X, MessageSquare, Clock, Handshake, Trash2, Shield, Zap, Search, ArrowRight, Sparkles, Command, Gem, MoreHorizontal
+  Users, Settings, FileText, LogOut, BarChart3, Menu, X, MessageSquare, Clock, Handshake, Trash2, Shield, Zap, Search, ArrowRight, Sparkles, Command, Gem, MoreHorizontal, Radio
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { useSidebar } from '@/app/context/sidebar-context'
@@ -15,9 +15,18 @@ import { useAdminAuth } from '@/app/lib/admin-auth'
 import { cn } from '@/lib/utils'
 
 const navItems = [
+  // {
+  //   id: 'briefing-room',
+  //   label: 'Briefing Room',
+  //   description: 'Living intelligence command center',
+  //   icon: Radio,
+  //   href: '/dashboard/briefing_room',
+  //   dataAttr: 'data-briefing-room-link',
+  //   category: 'explore',
+  // },
   {
-    id: 'living-projects',
-    label: 'Living Projects',
+    id: 'constellations',
+    label: 'Constellations',
     description: 'Collaborative spaces that evolve',
     icon: Zap,
     href: '/dashboard/living-projects',
@@ -44,8 +53,8 @@ const navItems = [
   },
   {
     id: 'crystals',
-    label: 'Crystals',
-    description: 'Crystallized insights from your content',
+    label: 'Cosmic Intelligence',
+    description: 'Stars and crystals evolving from your world',
     icon: Gem,
     href: '/dashboard/crystals',
     dataAttr: 'data-crystals-link',
@@ -263,8 +272,11 @@ export const DashboardNav = memo(function DashboardNav() {
   // Memoize active item calculation
   const isItemActive = useCallback((item: typeof dynamicNavItems[0]) => {
     switch (item.id) {
-      case 'living-projects':
-        // This tab is active for living projects and project discovery routes
+      // case 'briefing-room':
+      //   // This tab is active for briefing room routes
+      //   return pathname.startsWith('/dashboard/briefing_room');
+      case 'constellations':
+        // This tab is active for constellation/living projects routes
         return pathname.startsWith('/dashboard/living-projects');
       case 'thinking-lab':
         // This tab is active for thinking lab routes

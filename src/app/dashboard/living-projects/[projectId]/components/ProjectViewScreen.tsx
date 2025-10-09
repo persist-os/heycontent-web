@@ -11,7 +11,10 @@ import {
   MoreHorizontal,
   Edit3,
   RefreshCw,
-  Trash2
+  Trash2,
+  LayoutGrid,
+  List,
+  FileText
 } from 'lucide-react'
 import { ConstellationTransition } from '@/app/dashboard/living-projects/components/widgets/ConstellationTransition'
 import { DeleteProjectModal } from './DeleteProjectModal'
@@ -24,10 +27,16 @@ import { ConstellationCanvas } from './widgets/ConstellationCanvas'
 import { formatDistanceToNow } from './utils/dateFormatting'
 import { useWidgetRunner } from '@/app/dashboard/living-projects/hooks/useWidgetRunner'
 import { ContentAttachmentPanel } from '@/app/dashboard/living-projects/components/ContentAttachmentPanel'
+import { ProjectContentSection } from './ProjectContentSection'
+import { ProjectGridView } from './ProjectGridView'
+import { motion } from 'framer-motion'
+import { cn } from '@/lib/utils'
 
 interface ProjectViewScreenProps {
   projectId: string
 }
+
+type ViewMode = "constellation" | "grid";
 
 export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   const [userId, setUserId] = useState<string | null>(null)
@@ -39,6 +48,8 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showProjectContentPanel, setShowProjectContentPanel] = useState(false)
+  const [viewMode, setViewMode] = useState<ViewMode>("constellation")
+  const [widgetPanelWidth, setWidgetPanelWidth] = useState(384) // Default 24rem
   const menuRef = useRef<HTMLDivElement>(null)
 
   // Get user ID on component mount
@@ -59,7 +70,8 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
     api.projectsQueries.getById,
     projectId && userId ? { 
       projectId: projectId as any,
-      userId: userId
+      userId: userId,
+      includeContent: true // Include content items for constellation view
     } : 'skip'
   )
 
@@ -78,6 +90,34 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   })
 
   const { editFingerprint, goBack, deleteProjectAction } = useProjectActions(projectId)
+
+  // Handle content opening
+  const handleContentOpen = (id: string, type: string) => {
+    console.log('Opening content:', { id, type });
+    // Additional handling can be added here if needed
+  };
+
+  // Handle layout reset
+  const handleLayoutReset = async () => {
+    if (!userId) return;
+    
+    try {
+      // Clear the stored layout
+      await fetch('/api/convex', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'runMutation',
+          name: 'projectsMutations:clearConstellationLayout',
+          args: { projectId, userId }
+        })
+      });
+      
+      console.log('Layout reset successfully');
+    } catch (error) {
+      console.error('Failed to reset layout:', error);
+    }
+  };
 
   // Widget runner hook
   const router = useRouter()
@@ -139,6 +179,11 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
       setIsDeleting(false)
       setShowDeleteModal(false)
     }
+  }
+
+  // Handle view mode toggle
+  const handleViewModeToggle = (mode: ViewMode) => {
+    setViewMode(mode)
   }
 
   if (!project) {
@@ -208,65 +253,99 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
                 </div>
               </div>
 
-              {/* Menu */}
-              <div className="relative" ref={menuRef}>
-                <button
-                  onClick={() => setShowMenu(!showMenu)}
-                  className="p-2 hover:bg-muted/50 rounded-md transition-colors"
-                  title="More options"
-                >
-                  <MoreHorizontal className="w-5 h-5 text-muted-foreground" />
-                </button>
-                
-                {showMenu && (
-                  <div className="absolute right-0 top-12 bg-background border border-border rounded-md shadow-lg z-30 min-w-[200px]">
-                    <button
-                      onClick={() => {
-                        setShowMenu(false)
-                        setShowProjectContentPanel(true)
-                      }}
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-muted/50 flex items-center gap-2 transition-colors"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      Manage content
-                    </button>
-                    <div className="border-t border-border/20 my-1" />
-                    <button
-                      onClick={() => {
-                        setShowMenu(false)
-                        editFingerprint()
-                      }}
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-muted/50 flex items-center gap-2 transition-colors"
-                    >
-                      <Edit3 className="w-4 h-4" />
-                      Resume Discovery
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowMenu(false)
-                        regenerateWidgets()
-                      }}
-                      disabled={isGenerating}
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-muted/50 flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                      {isGenerating ? 'Generating...' : 'Regenerate widgets'}
-                    </button>
-                    <div className="border-t border-border/20 my-1" />
-                    <button
-                      onClick={() => {
-                        setShowMenu(false)
-                        setShowDeleteModal(true)
-                      }}
-                      className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 flex items-center gap-2 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Delete project
-                    </button>
-                  </div>
-                )}
+              {/* View Mode Toggle and Menu */}
+              <div className="flex items-center gap-3">
+                {/* View Mode Toggle */}
+                <div className="flex items-center bg-muted/20 rounded-lg p-1">
+                  <button
+                    onClick={() => handleViewModeToggle("constellation")}
+                    className={cn(
+                      "px-3 py-2 rounded-md transition-colors flex items-center gap-2 text-sm",
+                      viewMode === "constellation"
+                        ? "bg-background text-foreground shadow-sm" 
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <LayoutGrid className="w-4 h-4" />
+                    Constellation
+                  </button>
+                  <button
+                    onClick={() => handleViewModeToggle("grid")}
+                    className={cn(
+                      "px-3 py-2 rounded-md transition-colors flex items-center gap-2 text-sm",
+                      viewMode === "grid"
+                        ? "bg-background text-foreground shadow-sm" 
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <List className="w-4 h-4" />
+                    Grid View
+                    {project && (
+                      <span className="ml-1 text-xs bg-muted/50 px-2 py-0.5 rounded-full">
+                        {(projectWidgets?.widgets?.length || 0) + ((project as any)?.contentItems?.length || 0)}
+                      </span>
+                    )}
+                  </button>
+                </div>
+
+                {/* Menu */}
+                <div className="relative" ref={menuRef}>
+                  <button
+                    onClick={() => setShowMenu(!showMenu)}
+                    className="p-2 hover:bg-muted/50 rounded-md transition-colors"
+                    title="More options"
+                  >
+                    <MoreHorizontal className="w-5 h-5 text-muted-foreground" />
+                  </button>
+                  
+                  {showMenu && (
+                    <div className="absolute right-0 top-12 bg-background border border-border rounded-md shadow-lg z-30 min-w-[200px]">
+                      <button
+                        onClick={() => {
+                          setShowMenu(false)
+                          setShowProjectContentPanel(true)
+                        }}
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-muted/50 flex items-center gap-2 transition-colors"
+                      >
+                        <FileText className="w-4 h-4" />
+                        Manage content
+                      </button>
+                      <div className="border-t border-border/20 my-1" />
+                      <button
+                        onClick={() => {
+                          setShowMenu(false)
+                          editFingerprint()
+                        }}
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-muted/50 flex items-center gap-2 transition-colors"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                        Resume Discovery
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false)
+                          regenerateWidgets()
+                        }}
+                        disabled={isGenerating}
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-muted/50 flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        {isGenerating ? 'Generating...' : 'Regenerate widgets'}
+                      </button>
+                      <div className="border-t border-border/20 my-1" />
+                      <button
+                        onClick={() => {
+                          setShowMenu(false)
+                          setShowDeleteModal(true)
+                        }}
+                        className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 flex items-center gap-2 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Delete project
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -274,27 +353,80 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
 
         {/* Content */}
         <div className="relative">
-          {isGenerating ? (
-            <WidgetGenerationLoader />
-          ) : currentFingerprint ? (
-            <ConstellationCanvas
-              widgets={(projectWidgets?.widgets || []) as WidgetConfig[]}
-              userId={userId}
-              projectId={projectId}
-              onWidgetClick={handleWidgetClick}
-              onWidgetHover={handleWidgetHover}
-              highlightedWidget={highlightedWidget}
-              showWidgetPanel={showWidgetPanel}
-              onWidgetRun={handleWidgetRun}
-              runningWidgetId={runningWidgetId}
-              selectedWidget={selectedWidget}
-            />
-          ) : (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <div className="text-muted-foreground mb-2">No fingerprint available</div>
-                <div className="text-sm text-muted-foreground">Please complete the project discovery process</div>
-              </div>
+          {viewMode === "constellation" && (
+            <>
+              {isGenerating ? (
+                <WidgetGenerationLoader />
+              ) : currentFingerprint ? (
+                <ConstellationCanvas
+                  widgets={(projectWidgets?.widgets || []) as WidgetConfig[]}
+                  userId={userId}
+                  projectId={projectId}
+                  onWidgetClick={handleWidgetClick}
+                  onWidgetHover={handleWidgetHover}
+                  highlightedWidget={highlightedWidget}
+                  showWidgetPanel={showWidgetPanel}
+                  onWidgetRun={handleWidgetRun}
+                  runningWidgetId={runningWidgetId}
+                  selectedWidget={selectedWidget}
+                  contentItems={(project as any)?.contentItems || []}
+                  storedLayout={(project as any)?.constellationLayout}
+                  onContentOpen={handleContentOpen}
+                  onLayoutReset={handleLayoutReset}
+                  widgetPanelWidth={widgetPanelWidth}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-64">
+                  <div className="text-center">
+                    <div className="text-muted-foreground mb-2">No fingerprint available</div>
+                    <div className="text-sm text-muted-foreground">Please complete the project discovery process</div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {viewMode === "grid" && (
+            <div className="max-w-7xl mx-auto px-6 py-8">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-8"
+              >
+                <div className="bg-gradient-to-br from-background to-muted/10 rounded-lg border border-border">
+                  <div className="p-6 border-b border-border">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-xl font-semibold text-foreground">Project Items</h2>
+                        <p className="text-sm text-muted-foreground">
+                          All your widgets, notes, conversations, crystals, and shards in a structured view
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleViewModeToggle("constellation")}
+                        className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-2"
+                      >
+                        <LayoutGrid className="w-4 h-4" />
+                        Back to Constellation
+                      </button>
+                    </div>
+                  </div>
+                  <div className="p-6">
+                    {userId && (
+                      <ProjectGridView
+                        projectId={projectId}
+                        userId={userId}
+                        widgets={projectWidgets?.widgets || []}
+                        contentItems={(project as any)?.contentItems || []}
+                        onWidgetClick={handleWidgetClick}
+                        onWidgetRun={handleWidgetRun}
+                        runningWidgetId={runningWidgetId}
+                        onContentOpen={handleContentOpen}
+                      />
+                    )}
+                  </div>
+                </div>
+              </motion.div>
             </div>
           )}
 
@@ -324,6 +456,8 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
           setSelectedWidget(null)
         }}
         projectId={projectId}
+        width={widgetPanelWidth}
+        onWidthChange={setWidgetPanelWidth}
       />
 
       {/* Project Content Management Panel */}

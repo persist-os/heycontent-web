@@ -287,3 +287,55 @@ export const getNotesByWidgetId = query({
     }
   },
 });
+
+/**
+ * Get multiple notes by their IDs (batch fetch for context enrichment)
+ * @param noteIds - Array of note IDs to fetch
+ * @param userId - The user ID for authorization
+ */
+export const getMultiple = query({
+  args: {
+    noteIds: v.array(v.id("notes")),
+    userId: v.string(),
+  },
+  handler: async (ctx, { noteIds, userId }) => {
+    try {
+      // Fetch all notes in parallel
+      const notePromises = noteIds.map(noteId => ctx.db.get(noteId));
+      const notes = await Promise.all(notePromises);
+      
+      // Filter out null values and check authorization
+      const authorizedNotes = await Promise.all(
+        notes.map(async (note) => {
+          if (!note) return null;
+          
+          // Check if user owns the note
+          if (note.userId === userId) {
+            return note;
+          }
+          
+          // Check if note is shared with user
+          const shareRecord = await ctx.db
+            .query("shared_notes")
+            .withIndex("by_note_user", (q) => 
+              q.eq("noteId", note._id).eq("sharedWithUserId", userId)
+            )
+            .filter((q) => q.eq(q.field("isActive"), true))
+            .unique();
+          
+          if (shareRecord) {
+            return note;
+          }
+          
+          return null;
+        })
+      );
+      
+      // Filter out nulls and return
+      return authorizedNotes.filter(note => note !== null);
+    } catch (error) {
+      console.error('Error fetching multiple notes:', error);
+      return [];
+    }
+  },
+});

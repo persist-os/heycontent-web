@@ -27,9 +27,12 @@ app.use('*', async (c, next) => {
   let domain = 'unknown';
   if (path.includes('/notes')) domain = 'notes';
   else if (path.includes('/users')) domain = 'users';
+  else if (path.includes('/stardust')) domain = 'stardust';
   else if (path.includes('/projectSeeds')) domain = 'project_seeds';
   else if (path.includes('/projects')) domain = 'projects';
   else if (path.includes('/widgets')) domain = 'widgets';
+  else if (path.includes('/fingerprintSignals')) domain = 'fingerprint_signals';
+  else if (path.includes('/project-fingerprint')) domain = 'fingerprint';
   else if (path.includes('/crystal')) domain = 'crystal';
   else if (path.includes('/contextEnrichmentBandit')) domain = 'context_mab';
   else if (path.includes('/intelligenceBandit') || path.includes('/intelligence')) domain = 'intelligence';
@@ -139,6 +142,32 @@ app.post("/api/users/:id/add_message_to_conversation", async (c) => {
     message: messageWithTimestamp,
   });
   return c.json(result);
+});
+
+// Batch fetch multiple conversations (for context enrichment)
+app.post("/api/chat/getMultiple", async (c) => {
+  const ctx = c.env;
+  
+  try {
+    const { conversationIds, userId } = await c.req.json();
+    
+    if (!userId) {
+      return c.json({ error: "Missing required field: userId" }, 400);
+    }
+    if (!conversationIds || !Array.isArray(conversationIds)) {
+      return c.json({ error: "Missing or invalid conversationIds array" }, 400);
+    }
+    
+    const conversations = await ctx.runQuery(api.chatQueries.getMultiple, { conversationIds, userId });
+    return c.json({ success: true, data: conversations });
+  } catch (error: any) {
+    console.error("Failed to get multiple conversations:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get multiple conversations",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
 });
 
 // ===== NEW MESSAGES TABLE ENDPOINTS (Dual-write system) =====
@@ -393,6 +422,32 @@ app.get("/api/users/:userId/notes", async (c) => {
         return c.json({ success: false, error: "Failed to get notes by user", details: error.data }, 500);
     }
     return c.json({ success: false, error: "Failed to get notes by user", message: error.message || "Internal Server Error" }, 500);
+  }
+});
+
+// Batch fetch multiple notes (for context enrichment)
+app.post("/api/notes/getMultiple", async (c) => {
+  const ctx = c.env;
+  
+  try {
+    const { noteIds, userId } = await c.req.json();
+    
+    if (!userId) {
+      return c.json({ error: "Missing required field: userId" }, 400);
+    }
+    if (!noteIds || !Array.isArray(noteIds)) {
+      return c.json({ error: "Missing or invalid noteIds array" }, 400);
+    }
+    
+    const notes = await ctx.runQuery(api.noteQueries.getMultiple, { noteIds, userId });
+    return c.json({ success: true, data: notes });
+  } catch (error: any) {
+    console.error("Failed to get multiple notes:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get multiple notes",
+      message: error.message || "Internal Server Error"
+    }, 500);
   }
 });
 
@@ -1762,6 +1817,37 @@ app.post("/api/crystal/query", async (c) => {
   }
 });
 
+// Batch fetch crystals by IDs (for context enrichment)
+app.post("/api/crystal/getBatch", async (c) => {
+  const ctx = c.env;
+  
+  try {
+    const { userId, crystalIds, includeShards, includeRelated } = await c.req.json();
+    
+    if (!userId) {
+      return c.json({ error: "Missing required field: userId" }, 400);
+    }
+    if (!crystalIds || !Array.isArray(crystalIds)) {
+      return c.json({ error: "Missing or invalid crystalIds array" }, 400);
+    }
+    
+    const result = await ctx.runQuery(api.crystalContextOptimized.getBatchCrystalData, { 
+      userId, 
+      crystalIds,
+      ...(includeShards !== undefined && { includeShards }),
+      ...(includeRelated !== undefined && { includeRelated })
+    });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Failed to get batch crystal data:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get batch crystal data",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
 // Single mutation endpoint that mirrors mutateCrystalData exactly
 app.post("/api/crystal/mutate", async (c) => {
   const ctx = c.env;
@@ -2505,6 +2591,19 @@ app.post("/api/query/searchShardsForInlineWriting", async (c) => {
   }
 });
 
+app.post("/api/crystals/getShardsByIds", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runQuery(api.crystalQueries.getShardsByIds, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[GET SHARDS BY IDS] Error fetching shards:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 app.post("/api/shard-lifecycle/stats", async (c) => {
   const ctx = c.env;
   const requestBody = await c.req.json();
@@ -2942,6 +3041,139 @@ app.post("/api/project-fingerprint/batchUpdate", async (c) => {
     return c.json({ 
       success: false, 
       error: "Failed to batch update fields",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// FINGERPRINT EVOLUTION SIGNALS ROUTES - MAB-driven evolution tracking
+
+// Initialize signals for a fingerprint
+app.post("/api/fingerprintSignals/initialize", async (c) => {
+  try {
+    const { fingerprintId, projectId, userId } = await c.req.json();
+    const result = await c.env.runMutation(api.fingerprintSignalsMutations.initialize, {
+      fingerprintId,
+      projectId,
+      userId
+    });
+    return c.json(result);
+  } catch (error: any) {
+    console.error("Failed to initialize signals:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to initialize signals",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Increment signal counter
+app.post("/api/fingerprintSignals/increment", async (c) => {
+  try {
+    const { projectId, signalType, count } = await c.req.json();
+    const result = await c.env.runMutation(api.fingerprintSignalsMutations.increment, {
+      projectId,
+      signalType,
+      count
+    });
+    return c.json(result);
+  } catch (error: any) {
+    console.error("Failed to increment signal:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to increment signal",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Reset signals after evolution
+app.post("/api/fingerprintSignals/reset", async (c) => {
+  try {
+    const { fingerprintId } = await c.req.json();
+    const result = await c.env.runMutation(api.fingerprintSignalsMutations.reset, {
+      fingerprintId
+    });
+    return c.json(result);
+  } catch (error: any) {
+    console.error("Failed to reset signals:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to reset signals",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get signals for a fingerprint
+app.post("/api/fingerprintSignals/getByFingerprint", async (c) => {
+  try {
+    const { fingerprintId } = await c.req.json();
+    const signals = await c.env.runQuery(api.fingerprintSignalsQueries.getByFingerprint, {
+      fingerprintId
+    });
+    return c.json({ success: true, data: signals });
+  } catch (error: any) {
+    console.error("Failed to get signals:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get signals",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get signals for a project
+app.post("/api/fingerprintSignals/getByProject", async (c) => {
+  try {
+    const { projectId } = await c.req.json();
+    const signals = await c.env.runQuery(api.fingerprintSignalsQueries.getByProject, {
+      projectId
+    });
+    return c.json({ success: true, data: signals });
+  } catch (error: any) {
+    console.error("Failed to get signals:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get signals",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get high signal fingerprints for MAB processing
+app.post("/api/fingerprintSignals/getHighSignals", async (c) => {
+  try {
+    const { userId, threshold } = await c.req.json();
+    const signals = await c.env.runQuery(api.fingerprintSignalsQueries.getHighSignals, {
+      userId,
+      threshold
+    });
+    return c.json({ success: true, data: signals });
+  } catch (error: any) {
+    console.error("Failed to get high signals:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get high signals",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get all signals for a user
+app.post("/api/fingerprintSignals/getAllByUser", async (c) => {
+  try {
+    const { userId } = await c.req.json();
+    const signals = await c.env.runQuery(api.fingerprintSignalsQueries.getAllByUser, {
+      userId
+    });
+    return c.json({ success: true, data: signals });
+  } catch (error: any) {
+    console.error("Failed to get user signals:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get user signals",
       message: error.message || "Internal Server Error"
     }, 500);
   }
@@ -3820,211 +4052,351 @@ app.post("/api/webhookEvents/retry", async (c) => {
 });
 
 // ============================================================================
-// PROJECT SEEDS - Code-based seed detection
+// STARDUST ROUTES - Parallel Species ("What You Do")
 // ============================================================================
+// Stardust represents concrete project potentials that evolve into star organisms
+// Parallel species to Crystals: Crystals = "Who You Are", Stardust = "What You Do"
+// Code-based detection (zero LLM cost), flows through crystal dam alongside shards
 
 /**
- * List project seeds for a user
+ * List stardust for a user
  */
-app.post("/api/projectSeeds/list", async (c) => {
+app.post("/api/stardust/list", async (c) => {
   try {
     const ctx = c.env;
     const body = await c.req.json();
     
-    const seeds = await ctx.runQuery(api.projectSeedsQueries.listProjectSeeds, {
+    const stardust = await ctx.runQuery(api.stardustQueries.listStardust, {
       userId: body.userId,
       minConfidence: body.minConfidence,
       includePromoted: body.includePromoted ?? false,
       limit: body.limit,
     });
     
-    return c.json({ success: true, data: seeds });
+    return c.json({ success: true, data: stardust });
   } catch (error: any) {
-    console.error("[PROJECT_SEEDS_LIST] Error:", error);
+    console.error("[STARDUST_LIST] Error:", error);
     return c.json({ 
       success: false,
-      error: error.message || "Failed to list project seeds"
+      error: error.message || "Failed to list stardust"
     }, 500);
   }
 });
 
+
 /**
- * Get a specific project seed
+ * Get a specific stardust by ID
  */
-app.post("/api/projectSeeds/get", async (c) => {
+app.post("/api/stardust/get", async (c) => {
   try {
     const ctx = c.env;
     const body = await c.req.json();
     
-    const seed = await ctx.runQuery(api.projectSeedsQueries.getProjectSeed, {
-      seedId: body.seedId as Id<"projectSeeds">,
+    const stardust = await ctx.runQuery(api.stardustQueries.getStardust, {
+      stardustId: body.stardustId as Id<"stardust">,
     });
     
-    if (!seed) {
-      return c.json({ success: false, error: "Seed not found" }, 404);
+    if (!stardust) {
+      return c.json({ 
+        success: false,
+        error: "Stardust not found"
+      }, 404);
     }
     
-    return c.json({ success: true, data: seed });
+    return c.json({ success: true, data: stardust });
   } catch (error: any) {
-    console.error("[PROJECT_SEEDS_GET] Error:", error);
+    console.error("[STARDUST_GET] Error:", error);
     return c.json({ 
       success: false,
-      error: error.message || "Failed to get project seed"
+      error: error.message || "Failed to get stardust"
     }, 500);
   }
 });
 
+
 /**
- * Get seeds ready for promotion
+ * Get stardust ready for promotion
  */
-app.post("/api/projectSeeds/readyForPromotion", async (c) => {
+app.post("/api/stardust/readyForPromotion", async (c) => {
   try {
     const ctx = c.env;
     const body = await c.req.json();
     
-    const seeds = await ctx.runQuery(api.projectSeedsQueries.getSeedsReadyForPromotion, {
+    const stardust = await ctx.runQuery(api.stardustQueries.getStardustReadyForPromotion, {
       userId: body.userId,
       confidenceThreshold: body.confidenceThreshold,
     });
     
-    return c.json({ success: true, data: seeds });
+    return c.json({ success: true, data: stardust });
   } catch (error: any) {
-    console.error("[PROJECT_SEEDS_READY] Error:", error);
+    console.error("[STARDUST_READY_FOR_PROMOTION] Error:", error);
     return c.json({ 
       success: false,
-      error: error.message || "Failed to get seeds ready for promotion"
+      error: error.message || "Failed to get stardust ready for promotion"
     }, 500);
   }
 });
 
+
 /**
- * Get seed statistics
+ * Get stardust statistics
  */
-app.post("/api/projectSeeds/statistics", async (c) => {
+app.post("/api/stardust/statistics", async (c) => {
   try {
     const ctx = c.env;
     const body = await c.req.json();
     
-    const stats = await ctx.runQuery(api.projectSeedsQueries.getSeedStatistics, {
+    const stats = await ctx.runQuery(api.stardustQueries.getStardustStatistics, {
       userId: body.userId,
     });
     
     return c.json({ success: true, data: stats });
   } catch (error: any) {
-    console.error("[PROJECT_SEEDS_STATS] Error:", error);
+    console.error("[STARDUST_STATISTICS] Error:", error);
     return c.json({ 
       success: false,
-      error: error.message || "Failed to get seed statistics"
+      error: error.message || "Failed to get stardust statistics"
     }, 500);
   }
 });
 
+
 /**
- * Create a new project seed
+ * Create a new stardust
  */
-app.post("/api/projectSeeds/create", async (c) => {
+app.post("/api/stardust/create", async (c) => {
   try {
     const ctx = c.env;
     const body = await c.req.json();
     
-    const seedId = await ctx.runMutation(api.projectSeedsMutations.createProjectSeed, {
+    const stardustId = await ctx.runMutation(api.stardustMutations.createStardust, {
       userId: body.userId,
-      seedId: body.seedId,
+      stardustId: body.stardustId,
       name: body.name,
       description: body.description,
       confidence: body.confidence,
-      sourceShardIds: body.sourceShardIds,
-      keywords: body.keywords,
+      sourceShardIds: body.sourceShardIds || [],
+      keywords: body.keywords || [],
       dimension: body.dimension,
       suggestedProjectName: body.suggestedProjectName,
       suggestedProjectDescription: body.suggestedProjectDescription,
       suggestedDomain: body.suggestedDomain,
       suggestedComplexity: body.suggestedComplexity,
       suggestedTimeHorizon: body.suggestedTimeHorizon,
-      relatedNoteIds: body.relatedNoteIds,
-      relatedConversationIds: body.relatedConversationIds,
+      relatedNoteIds: body.relatedNoteIds || [],
+      relatedConversationIds: body.relatedConversationIds || [],
       shardCount: body.shardCount,
       evidenceStrength: body.evidenceStrength,
+      lifecycleStage: body.lifecycleStage,
+      health: body.health,
+      energy: body.energy,
+      detectionMethod: body.detectionMethod,
     });
     
-    return c.json({ success: true, data: { seedId } });
+    return c.json({ success: true, data: { stardustId } });
   } catch (error: any) {
-    console.error("[PROJECT_SEEDS_CREATE] Error:", error);
+    console.error("[STARDUST_CREATE] Error:", error);
     return c.json({ 
       success: false,
-      error: error.message || "Failed to create project seed"
+      error: error.message || "Failed to create stardust"
     }, 500);
   }
 });
 
+
 /**
- * Update a project seed
+ * Update a stardust
  */
-app.post("/api/projectSeeds/update", async (c) => {
+app.post("/api/stardust/update", async (c) => {
   try {
     const ctx = c.env;
     const body = await c.req.json();
     
-    const seedId = await ctx.runMutation(api.projectSeedsMutations.updateProjectSeed, {
-      seedId: body.seedId as Id<"projectSeeds">,
+    const stardustId = await ctx.runMutation(api.stardustMutations.updateStardust, {
+      stardustId: body.stardustId as Id<"stardust">,
       updates: body.updates,
     });
     
-    return c.json({ success: true, data: { seedId } });
+    return c.json({ success: true, data: { stardustId } });
   } catch (error: any) {
-    console.error("[PROJECT_SEEDS_UPDATE] Error:", error);
+    console.error("[STARDUST_UPDATE] Error:", error);
     return c.json({ 
       success: false,
-      error: error.message || "Failed to update project seed"
+      error: error.message || "Failed to update stardust"
     }, 500);
   }
 });
 
+
 /**
- * Promote a seed to project
+ * Promote a stardust to project
  */
-app.post("/api/projectSeeds/promote", async (c) => {
+app.post("/api/stardust/promote", async (c) => {
   try {
     const ctx = c.env;
     const body = await c.req.json();
     
-    const seedId = await ctx.runMutation(api.projectSeedsMutations.promoteSeed, {
-      seedId: body.seedId as Id<"projectSeeds">,
+    const stardustId = await ctx.runMutation(api.stardustMutations.promoteStardust, {
+      stardustId: body.stardustId as Id<"stardust">,
       projectId: body.projectId as Id<"projects">,
       confidenceAtPromotion: body.confidenceAtPromotion,
     });
     
-    return c.json({ success: true, data: { seedId } });
+    return c.json({ success: true, data: { stardustId } });
   } catch (error: any) {
-    console.error("[PROJECT_SEEDS_PROMOTE] Error:", error);
+    console.error("[STARDUST_PROMOTE] Error:", error);
     return c.json({ 
       success: false,
-      error: error.message || "Failed to promote seed"
+      error: error.message || "Failed to promote stardust"
     }, 500);
   }
 });
 
+
 /**
- * Delete a project seed
+ * Delete a stardust
  */
-app.post("/api/projectSeeds/delete", async (c) => {
+app.post("/api/stardust/delete", async (c) => {
   try {
     const ctx = c.env;
     const body = await c.req.json();
     
-    await ctx.runMutation(api.projectSeedsMutations.deleteProjectSeed, {
-      seedId: body.seedId as Id<"projectSeeds">,
+    await ctx.runMutation(api.stardustMutations.deleteStardust, {
+      stardustId: body.stardustId as Id<"stardust">,
     });
     
     return c.json({ success: true });
   } catch (error: any) {
-    console.error("[PROJECT_SEEDS_DELETE] Error:", error);
+    console.error("[STARDUST_DELETE] Error:", error);
     return c.json({ 
       success: false,
-      error: error.message || "Failed to delete seed"
+      error: error.message || "Failed to delete stardust"
     }, 500);
   }
 });
+
+
+/**
+ * Get stardust by lifecycle stage
+ */
+app.post("/api/stardust/byLifecycleStage", async (c) => {
+  try {
+    const ctx = c.env;
+    const body = await c.req.json();
+    
+    const stardust = await ctx.runQuery(api.stardustQueries.getStardustByLifecycleStage, {
+      userId: body.userId,
+      lifecycleStage: body.lifecycleStage,
+    });
+    
+    return c.json({ success: true, data: stardust });
+  } catch (error: any) {
+    console.error("[STARDUST_BY_LIFECYCLE] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get stardust by lifecycle stage"
+    }, 500);
+  }
+});
+
+
+/**
+ * Get stardust by domain
+ */
+app.post("/api/stardust/byDomain", async (c) => {
+  try {
+    const ctx = c.env;
+    const body = await c.req.json();
+    
+    const stardust = await ctx.runQuery(api.stardustQueries.getStardustByDomain, {
+      userId: body.userId,
+      domain: body.domain,
+    });
+    
+    return c.json({ success: true, data: stardust });
+  } catch (error: any) {
+    console.error("[STARDUST_BY_DOMAIN] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get stardust by domain"
+    }, 500);
+  }
+});
+
+
+/**
+ * Batch create stardust
+ */
+app.post("/api/stardust/batchCreate", async (c) => {
+  try {
+    const ctx = c.env;
+    const body = await c.req.json();
+    
+    const stardustIds = await ctx.runMutation(api.stardustMutations.batchCreateStardust, {
+      stardustList: body.stardustList,
+    });
+    
+    return c.json({ success: true, data: { stardustIds } });
+  } catch (error: any) {
+    console.error("[STARDUST_BATCH_CREATE] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to batch create stardust"
+    }, 500);
+  }
+});
+
+
+/**
+ * Evolve stardust lifecycle
+ */
+app.post("/api/stardust/evolveLifecycle", async (c) => {
+  try {
+    const ctx = c.env;
+    const body = await c.req.json();
+    
+    const stardustId = await ctx.runMutation(api.stardustMutations.evolveStardustLifecycle, {
+      stardustId: body.stardustId as Id<"stardust">,
+      newStage: body.newStage,
+      healthDelta: body.healthDelta,
+      energyDelta: body.energyDelta,
+    });
+    
+    return c.json({ success: true, data: { stardustId } });
+  } catch (error: any) {
+    console.error("[STARDUST_EVOLVE_LIFECYCLE] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to evolve stardust lifecycle"
+    }, 500);
+  }
+});
+
+
+/**
+ * Create symbiotic pair between stardust and crystal
+ */
+app.post("/api/stardust/createSymbioticPair", async (c) => {
+  try {
+    const ctx = c.env;
+    const body = await c.req.json();
+    
+    const stardustId = await ctx.runMutation(api.stardustMutations.createSymbioticPair, {
+      stardustId: body.stardustId as Id<"stardust">,
+      crystalId: body.crystalId,
+      pairDescription: body.pairDescription,
+    });
+    
+    return c.json({ success: true, data: { stardustId } });
+  } catch (error: any) {
+    console.error("[STARDUST_CREATE_SYMBIOTIC_PAIR] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to create symbiotic pair"
+    }, 500);
+  }
+});
+
 
 const router = new HttpRouterWithHono(app);
 export default router;

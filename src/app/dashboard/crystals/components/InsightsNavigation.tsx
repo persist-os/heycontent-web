@@ -9,9 +9,10 @@ interface InsightsNavigationProps {
 export const InsightsNavigation: React.FC<InsightsNavigationProps> = ({ activeView, onViewChange }) => {
   const tabs = [
     { id: 'overview' as const, label: 'Overview', description: 'Summary and recent activity' },
-    { id: 'crystals' as const, label: 'Crystals', description: 'Consolidated insights' },
-    { id: 'shards' as const, label: 'Shards', description: 'Raw observations' },
-    { id: 'project_seeds' as const, label: 'Project Seeds', description: 'Emergent project opportunities' }
+    { id: 'crystals' as const, label: 'Crystals', description: 'Consciousness insights' },
+    { id: 'shards' as const, label: 'Shards', description: 'Memory fragments' },
+    { id: 'stardust' as const, label: 'Stardust', description: 'Emerging potentials' },
+    { id: 'stars' as const, label: 'Stars', description: 'Your project organisms' }
   ];
 
   return (
