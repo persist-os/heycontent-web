@@ -10,6 +10,7 @@ import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import type { Message } from '@/app/types/chat';
 import { uploadFile, formatFileSize, getFileTypeIcon, getFileDisplayUrl, type FileUploadResponse } from '@/lib/file-upload';
+import { track } from '@/lib/analytics';
 
 interface ChatInputProps {
   onSend: (message: string, fileAttachments?: FileUploadResponse[]) => void
@@ -358,6 +359,7 @@ export function ChatInput({
         processedMessage,
         fileAttachments: fileAttachments.length
       })
+      track('chat_message_sent', { message_length: processedMessage.length })
       onSend(processedMessage, fileAttachments.length > 0 ? fileAttachments : undefined)
       setCurrentInput('')
       setFileAttachments([])
@@ -387,6 +389,7 @@ export function ChatInput({
         
         // Convert truncated titles back to content IDs before sending
         const processedMessage = convertTitlesToContentIds(currentInput.trim())
+        track('chat_message_sent', { message_length: processedMessage.length })
         onSend(processedMessage, fileAttachments.length > 0 ? fileAttachments : undefined)
         setCurrentInput('')
         setFileAttachments([])

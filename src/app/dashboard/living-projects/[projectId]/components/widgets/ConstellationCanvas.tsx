@@ -17,8 +17,8 @@ import { useWidgetLayout } from '../hooks/useWidgetLayout'
 import { FloatingWidgetCard } from './FloatingWidgetCard'
 import { FloatingContentCard } from './FloatingContentCard'
 import { ContentAttachmentPanel } from '@/app/dashboard/living-projects/components/ContentAttachmentPanel'
-import { ContentDetailsPanel } from './ContentDetailsPanel'
 import { ProjectFingerprint } from './ProjectFingerprint'
+import { useAnalytics } from '@/hooks/useAnalytics'
 
 interface ConstellationCanvasProps {
   widgets: WidgetConfig[]
@@ -36,6 +36,8 @@ interface ConstellationCanvasProps {
   onContentOpen?: (id: string, type: string) => void
   onLayoutReset?: () => void
   widgetPanelWidth?: number
+  selectedContent?: { item: any; type: 'note' | 'conversation' | 'crystal' | 'shard' } | null
+  contentPanelWidth?: number
 }
 
 export function ConstellationCanvas({
@@ -53,26 +55,21 @@ export function ConstellationCanvas({
   storedLayout,
   onContentOpen,
   onLayoutReset,
-  widgetPanelWidth = 384
+  widgetPanelWidth = 384,
+  selectedContent,
+  contentPanelWidth = 448
 }: ConstellationCanvasProps) {
+  const { trackWidgetOpen } = useAnalytics()
   const [viewportSize, setViewportSize] = useState({
     width: typeof window !== 'undefined' ? window.innerWidth : 1200,
     height: typeof window !== 'undefined' ? window.innerHeight : 800
   })
-  const [showContentPanel, setShowContentPanel] = useState(false)
-  const [selectedContent, setSelectedContent] = useState<{ item: any; type: 'note' | 'conversation' | 'crystal' | 'shard' } | null>(null)
-  const [contentPanelWidth, setContentPanelWidth] = useState(448) // Default 28rem
+  const [showAttachmentPanel, setShowAttachmentPanel] = useState(false)
   
-  // Handle content card click
+  // Handle content card click - delegate to parent
   const handleContentOpen = useCallback((id: string, type: string) => {
-    const contentItem = contentItems?.find(item => 
-      (item._contentId || item._id) === id
-    )
-    if (contentItem) {
-      setSelectedContent({ item: contentItem, type: type as any })
-    }
     onContentOpen?.(id, type)
-  }, [contentItems, onContentOpen])
+  }, [onContentOpen])
   
   // Generate constellation layout
   const layout = useWidgetLayout(widgets, contentItems, storedLayout)
@@ -198,7 +195,10 @@ export function ConstellationCanvas({
                 importance={position.importance}
                 isHighlighted={highlightedWidget === position.id}
                 scale={transform.scale}
-                onClick={() => onWidgetClick(widget)}
+                onClick={() => {
+                  trackWidgetOpen(widget.widget_type)
+                  onWidgetClick(widget)
+                }}
                 onHover={onWidgetHover}
                 onRun={onWidgetRun}
                 isRunning={runningWidgetId === position.id}
@@ -304,29 +304,18 @@ export function ConstellationCanvas({
       )}
 
       {/* Content Attachment Panel for Selected Widget */}
-      {selectedWidget && userId && showContentPanel && (
+      {selectedWidget && userId && showAttachmentPanel && (
         <ContentAttachmentPanel
           widgetId={selectedWidget._id}
           userId={userId}
-          isOpen={showContentPanel}
-          onClose={() => setShowContentPanel(false)}
+          isOpen={showAttachmentPanel}
+          onClose={() => setShowAttachmentPanel(false)}
           attachedNoteIds={(selectedWidget as any).noteIds || []}
           attachedConversationIds={(selectedWidget as any).conversationIds || []}
           attachedCrystalIds={(selectedWidget as any).crystalIds || []}
           attachedShardIds={(selectedWidget as any).shardIds || []}
         />
       )}
-
-      {/* Content Details Panel for Selected Content */}
-      <ContentDetailsPanel
-        item={selectedContent?.item || null}
-        itemType={selectedContent?.type || null}
-        isOpen={!!selectedContent}
-        onClose={() => setSelectedContent(null)}
-        projectId={projectId}
-        width={contentPanelWidth}
-        onWidthChange={setContentPanelWidth}
-      />
     </div>
   )
 }

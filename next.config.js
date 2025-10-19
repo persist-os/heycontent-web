@@ -155,6 +155,23 @@ const nextConfig = {
     }
     return config;
   },
+
+  // PostHog rewrites for analytics ingestion (ad-blocker resistant path)
+  async rewrites() {
+    return [
+      {
+        source: '/_data/static/:path*',
+        destination: 'https://us-assets.i.posthog.com/static/:path*',
+      },
+      {
+        source: '/_data/:path*',
+        destination: 'https://us.i.posthog.com/:path*',
+      },
+    ];
+  },
+
+  // This is required to support PostHog trailing slash API requests
+  skipTrailingSlashRedirect: true,
 };
 
 export default {
