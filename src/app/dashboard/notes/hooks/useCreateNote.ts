@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useNotes } from '@/app/context/notes-context';
 import { getApiKey } from '@/app/lib/api-helpers';
+import { track } from '@/lib/analytics';
 
 export const useCreateNote = () => {
   const router = useRouter();
@@ -101,6 +102,7 @@ export const useCreateNote = () => {
       const success = !!noteObj && !!noteObj._id;
       const noteId = noteObj?._id;
       if (success && noteId) {
+        track('note_create');
         // Block duplicate metadata generation for this note
         console.log('🔍 [DEBUG] useCreateNote checking pending state:', {
           noteId,

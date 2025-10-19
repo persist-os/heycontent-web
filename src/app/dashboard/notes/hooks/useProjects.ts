@@ -6,6 +6,7 @@ import { api } from '@/convex/_generated/api';
 import { Project, ProjectUpdate, ContentType } from '../types/project';
 import { Id } from '@/convex/_generated/dataModel';
 import toast from 'react-hot-toast';
+import { track } from '@/lib/analytics';
 
 export function useProjects(userId: string | undefined) {
   const [isCreating, setIsCreating] = useState(false);
@@ -52,6 +53,7 @@ export function useProjects(userId: string | undefined) {
       });
       
       toast.success('Project created successfully');
+      track('project_create');
       return projectId;
     } catch (error) {
       console.error('Failed to create project:', error);
