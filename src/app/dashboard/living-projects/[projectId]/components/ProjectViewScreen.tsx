@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { api } from '@/convex/_generated/api'
 import { useProjectFingerprint } from '@/app/dashboard/living-projects/hooks/useProjectFingerprint'
+import { useAnalytics } from '@/hooks/useAnalytics'
 import { 
   ArrowLeft,
   MoreHorizontal,
@@ -22,6 +23,7 @@ import { WidgetConfig } from '@/types/projectWidgets'
 import { useWidgetGeneration } from './hooks/useWidgetGeneration'
 import { useProjectActions } from './hooks/useProjectActions'
 import { WidgetDetailsPanel } from './widgets/WidgetDetailsPanel'
+import { ContentDetailsPanel } from './widgets/ContentDetailsPanel'
 import { WidgetGenerationLoader } from './widgets/WidgetGenerationLoader'
 import { ConstellationCanvas } from './widgets/ConstellationCanvas'
 import { formatDistanceToNow } from './utils/dateFormatting'
@@ -39,6 +41,7 @@ interface ProjectViewScreenProps {
 type ViewMode = "constellation" | "grid";
 
 export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
+  const { trackProjectOpen } = useAnalytics()
   const [userId, setUserId] = useState<string | null>(null)
   const [showTransition, setShowTransition] = useState(false)
   const [highlightedWidget, setHighlightedWidget] = useState<string | null>(null)
@@ -50,7 +53,14 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   const [showProjectContentPanel, setShowProjectContentPanel] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>("constellation")
   const [widgetPanelWidth, setWidgetPanelWidth] = useState(384) // Default 24rem
+  const [selectedContent, setSelectedContent] = useState<{ item: any; type: 'note' | 'conversation' | 'crystal' | 'shard' } | null>(null)
+  const [contentPanelWidth, setContentPanelWidth] = useState(448) // Default 28rem
   const menuRef = useRef<HTMLDivElement>(null)
+
+  // Track project open
+  useEffect(() => {
+    if (projectId) trackProjectOpen(projectId)
+  }, [projectId, trackProjectOpen])
 
   // Get user ID on component mount
   useEffect(() => {
@@ -91,10 +101,19 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
 
   const { editFingerprint, goBack, deleteProjectAction } = useProjectActions(projectId)
 
-  // Handle content opening
+  // Handle content opening with mutual exclusion (closes widget panel)
   const handleContentOpen = (id: string, type: string) => {
-    console.log('Opening content:', { id, type });
-    // Additional handling can be added here if needed
+    const contentItem = (project as any)?.contentItems?.find((item: any) => 
+      (item._contentId || item._id) === id
+    )
+    if (contentItem) {
+      setSelectedContent({ item: contentItem, type: type as 'note' | 'conversation' | 'crystal' | 'shard' })
+      // Close widget panel if open (mutual exclusion)
+      if (showWidgetPanel) {
+        setShowWidgetPanel(false)
+        setSelectedWidget(null)
+      }
+    }
   };
 
   // Handle layout reset
@@ -124,10 +143,14 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   const { executeWidget, isRunning: isWidgetRunning, lastResult } = useWidgetRunner()
   const [runningWidgetId, setRunningWidgetId] = useState<string | null>(null)
 
-  // Event handlers
+  // Event handlers - with mutual exclusion (closes content panel)
   const handleWidgetClick = (widget: WidgetConfig) => {
     setSelectedWidget(widget)
     setShowWidgetPanel(true)
+    // Close content panel if open (mutual exclusion)
+    if (selectedContent) {
+      setSelectedContent(null)
+    }
   }
 
   const handleWidgetHover = (widgetId: string | null) => {
@@ -374,6 +397,8 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
                   onContentOpen={handleContentOpen}
                   onLayoutReset={handleLayoutReset}
                   widgetPanelWidth={widgetPanelWidth}
+                  selectedContent={selectedContent}
+                  contentPanelWidth={contentPanelWidth}
                 />
               ) : (
                 <div className="flex items-center justify-center h-64">
@@ -416,7 +441,7 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
                       <ProjectGridView
                         projectId={projectId}
                         userId={userId}
-                        widgets={projectWidgets?.widgets || []}
+                        widgets={(projectWidgets?.widgets || []) as WidgetConfig[]}
                         contentItems={(project as any)?.contentItems || []}
                         onWidgetClick={handleWidgetClick}
                         onWidgetRun={handleWidgetRun}
@@ -458,6 +483,16 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
         projectId={projectId}
         width={widgetPanelWidth}
         onWidthChange={setWidgetPanelWidth}
+      />
+
+      <ContentDetailsPanel
+        item={selectedContent?.item || null}
+        itemType={selectedContent?.type || null}
+        isOpen={!!selectedContent}
+        onClose={() => setSelectedContent(null)}
+        projectId={projectId}
+        width={contentPanelWidth}
+        onWidthChange={setContentPanelWidth}
       />
 
       {/* Project Content Management Panel */}

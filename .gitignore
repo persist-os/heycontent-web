@@ -68,3 +68,5 @@ JEST_MOCKING_ATTEMPTS.md
 
 firebase_key.json
 
+
+.env.local

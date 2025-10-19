@@ -195,34 +195,24 @@ export function FloatingContentCard({
     }
   }
 
-  const content = getContentPreview()
+  const content = getRichContent()
 
-  // Handle card click
-  const handleCardClick = async () => {
-    try {
-      // Navigate to appropriate content page based on type
-      switch (itemType) {
-        case 'note':
-          router.push(`/dashboard/thinking_lab?noteId=${item._id || item._contentId}`);
-          break;
-        case 'conversation':
-          router.push(`/dashboard/thinking_lab?conversationId=${item._id || item._contentId}`);
-          break;
-        case 'crystal':
-          router.push(`/dashboard/crystals?crystalId=${item.crystal_id || item._contentId}`);
-          break;
-        case 'shard':
-          router.push(`/dashboard/crystals?shardId=${item._id || item._contentId}`);
-          break;
-      }
-      
-      // Call the onOpen callback for any additional handling
-      onOpen(item._contentId || item._id, itemType);
-    } catch (error) {
-      console.error('Navigation error:', error);
-    }
+  // Handle card click - opens side panel for user control
+  const handleCardClick = () => {
+    onOpen(item._contentId || item._id, itemType);
   };
-
+   // Format temporal data for display
+   const formatTemporal = (timestamp: number) => {
+    if (!timestamp) return ''
+    const date = new Date(timestamp)
+    const now = Date.now()
+    const diff = now - timestamp
+    
+    // Show relative time for recent items
+    if (diff < 86400000) return 'Today' // < 24 hours
+    if (diff < 604800000) return `${Math.floor(diff / 86400000)}d ago` // < 7 days
+    return date.toLocaleDateString()
+  }
   return (
     <div
       className="absolute cursor-pointer group will-change-transform"
@@ -362,11 +352,6 @@ export function FloatingContentCard({
                     {content.quantum.evidence && (
                       <div title={`Evidence: ${content.quantum.evidence}`}>
                         <Brain className={`w-3 h-3 ${styling.iconColor} opacity-60`} />
-                      </div>
-                    )}
-                    {content.quantum.intensity && (
-                      <div title={`Intensity: ${content.quantum.intensity}`}>
-                        <Zap className={`w-3 h-3 ${styling.iconColor} opacity-60`} />
                       </div>
                     )}
                   </div>
