@@ -2497,6 +2497,19 @@ app.post("/api/contextEnrichmentBandit/initializeArms", async (c) => {
   }
 });
 
+app.post("/api/contextEnrichmentBandit/deleteUserArms", async (c) => {
+  const ctx = c.env;
+  const { userId, agentType } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.contextEnrichmentBandit.deleteUserArms, { userId, agentType });
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ContextMAB] Delete user arms error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 app.post("/api/contextEnrichmentBandit/createDecision", async (c) => {
   const ctx = c.env;
   const requestBody = await c.req.json();
