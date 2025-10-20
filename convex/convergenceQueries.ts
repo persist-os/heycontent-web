@@ -17,7 +17,8 @@ import { query } from "./_generated/server";
 import { v } from "convex/values";
 import { 
   configTypeValidator,
-  configStatusValidator 
+  configStatusValidator,
+  convergenceConfigValidator
 } from "./types/convergence";
 
 /**
@@ -38,7 +39,7 @@ const queryConfigsWithOptions = async (
   system_name: string,
   options: {
     useIndex?: string;
-    status?: "candidate" | "active" | "archived";
+    status?: string;
     rank?: number;
     limit?: number;
     orderBy?: "asc" | "desc";
@@ -126,7 +127,7 @@ export const getConfigs = query({
     rank: v.optional(v.number()),
     limit: v.optional(v.number()),
   },
-  returns: v.any(),
+  returns: v.union(v.array(convergenceConfigValidator), v.null()),
   handler: async (ctx, args) => {
     const { system_name, operation, status, rank, limit } = args;
     
@@ -190,7 +191,7 @@ export const getTopConfigs = query({
     limit: v.optional(v.number()),
     status: v.optional(configStatusValidator),
   },
-  returns: v.array(v.any()),
+  returns: v.array(convergenceConfigValidator),
   handler: async (ctx, args) => {
     return await queryConfigsWithOptions(ctx, args.system_name, {
       useIndex: args.status ? "by_system_status" : "by_system_rank",
@@ -213,7 +214,7 @@ export const getConfigByRank = query({
     rank: v.number(),
     status: v.optional(configStatusValidator),
   },
-  returns: v.union(v.any(), v.null()),
+  returns: v.union(convergenceConfigValidator, v.null()),
   handler: async (ctx, args) => {
     const configs = await queryConfigsWithOptions(ctx, args.system_name, {
       useIndex: "by_system_rank",
@@ -237,7 +238,7 @@ export const getAllConfigs = query({
     system_name: v.string(),
     status: v.optional(configStatusValidator),
   },
-  returns: v.array(v.any()),
+  returns: v.array(convergenceConfigValidator),
   handler: async (ctx, args) => {
     const configs = await queryConfigsWithOptions(ctx, args.system_name, {
       status: args.status,
@@ -258,7 +259,7 @@ export const getConfigsByOptimizationRun = query({
   args: {
     optimization_run_id: v.string(),
   },
-  returns: v.array(v.any()),
+  returns: v.array(convergenceConfigValidator),
   handler: async (ctx, args) => {
     const configs = await ctx.db
       .query("convergence_configs")
@@ -268,6 +269,66 @@ export const getConfigsByOptimizationRun = query({
       .collect();
     
     return configs.sort((a, b) => a.rank - b.rank);
+  },
+});
+
+/**
+ * Get configs by type across all systems
+ * 
+ * Retrieves all configurations of a specific type (e.g., "mab_params", "tool_workflow").
+ * Uses by_type index for efficient lookup.
+ */
+export const getConfigsByType = query({
+  args: {
+    config_type: v.string(),
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(convergenceConfigValidator),
+  handler: async (ctx, args) => {
+    const configs = await ctx.db
+      .query("convergence_configs")
+      .withIndex("by_type", (q) =>
+        q.eq("config_type", args.config_type)
+      )
+      .take(args.limit || 100);
+    
+    return configs.sort((a, b) => a.rank - b.rank);
+  },
+});
+
+/**
+ * Get configs by score range for a system
+ * 
+ * Retrieves configurations within a specific score range for a system.
+ * Uses by_score index for efficient range queries.
+ */
+export const getConfigsByScore = query({
+  args: {
+    system_name: v.string(),
+    min_score: v.optional(v.number()),
+    max_score: v.optional(v.number()),
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(convergenceConfigValidator),
+  handler: async (ctx, args) => {
+    let query = ctx.db
+      .query("convergence_configs")
+      .withIndex("by_score", (q) =>
+        q.eq("system_name", args.system_name)
+      );
+    
+    // Apply score filters
+    if (args.min_score !== undefined) {
+      query = query.filter((q) => q.gte(q.field("score"), args.min_score));
+    }
+    if (args.max_score !== undefined) {
+      query = query.filter((q) => q.lte(q.field("score"), args.max_score));
+    }
+    
+    const configs = await query
+      .take(args.limit || 50);
+    
+    return configs.sort((a, b) => b.score - a.score); // Sort by score descending
   },
 });
 

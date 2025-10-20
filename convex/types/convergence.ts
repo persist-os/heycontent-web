@@ -10,7 +10,7 @@ import { v } from "convex/values";
 // Config type validator - flexible string
 export const configTypeValidator = v.string();
 
-// Config status validator - flexible string  
+// Config status validator - flexible string to match schema
 export const configStatusValidator = v.string();
 
 // Config metrics validator - flexible any
@@ -31,12 +31,19 @@ export const convergenceConfigValidator = v.object({
   generation: v.optional(v.number()),
   metrics: configMetricsValidator,
   status: v.optional(configStatusValidator),
+  deployed_at: v.optional(v.number()),
+  archived_at: v.optional(v.number()),
+  usage_count: v.optional(v.number()),
+  success_rate: v.optional(v.number()),
+  last_used: v.optional(v.number()),
   replaces_config_id: v.optional(v.string()),
+  createdAt: v.number(),
+  updatedAt: v.number(),
 });
 
 // Type exports for TypeScript code
 export type ConfigType = "mab_params" | "tool_workflow" | "agent_config" | "feature_params";
-export type ConfigStatus = "candidate" | "active" | "archived";
+export type ConfigStatus = string; // Flexible string to match schema
 
 export interface ConfigMetrics {
   latency_ms?: number;
@@ -59,7 +66,14 @@ export interface ConvergenceConfig {
   generation?: number;
   metrics?: ConfigMetrics;
   status?: ConfigStatus;
+  deployed_at?: number;
+  archived_at?: number;
+  usage_count?: number;
+  success_rate?: number;
+  last_used?: number;
   replaces_config_id?: string;
+  createdAt: number;
+  updatedAt: number;
 }
 
 // Response types for API calls
