@@ -1,7 +1,7 @@
 // File: components/settings/tabs/DataTab.tsx
 import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Lock, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Lock, Loader2, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
@@ -9,7 +9,7 @@ import { getFirebaseAuth } from '@/app/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
-import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { mapAuthErrorCodeToMessage } from '@/app/api/auth/firebase/helpers';
 import { Input } from '@/components/ui/input';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -34,6 +34,7 @@ const DataTab = () => {
   const [deletePassword, setDeletePassword] = useState('');
   const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
   const [showDeletePassword, setShowDeletePassword] = useState(false);
+  const [isEmailProvider, setIsEmailProvider] = useState(false);
 
   useEffect(() => {
     let auth;
@@ -47,6 +48,14 @@ const DataTab = () => {
       setUser(firebaseUser);
       setUserId(firebaseUser?.uid);
       setUserEmail(firebaseUser?.email);
+      
+      // Check if user signed in with email/password
+      if (firebaseUser) {
+        const hasEmailProvider = firebaseUser.providerData.some(
+          provider => provider.providerId === 'password'
+        );
+        setIsEmailProvider(hasEmailProvider);
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -90,22 +99,43 @@ const DataTab = () => {
       toast.error('No authenticated user.');
       return;
     }
-    if (!deletePassword) {
-      setDeletePasswordError('Please enter your password to confirm.');
-      return;
-    }
+    
     setIsDeleting(true);
     setDeletePasswordError(null);
+    
     try {
-      // Step 0: Re-authenticate with password
-      try {
-        const credential = EmailAuthProvider.credential(user.email, deletePassword);
-        await reauthenticateWithCredential(user, credential);
-      } catch (error: any) {
-        setDeletePasswordError('Incorrect password. Please try again.');
-        setIsDeleting(false);
-        return;
+      // Step 0: Re-authenticate based on provider
+      if (isEmailProvider) {
+        // Email/password sign-in: require password
+        if (!deletePassword) {
+          setDeletePasswordError('Please enter your password to confirm.');
+          setIsDeleting(false);
+          return;
+        }
+        
+        try {
+          const credential = EmailAuthProvider.credential(user.email, deletePassword);
+          await reauthenticateWithCredential(user, credential);
+        } catch (error: any) {
+          setDeletePasswordError('Incorrect password. Please try again.');
+          setIsDeleting(false);
+          return;
+        }
+      } else {
+        // Google sign-in: require Google re-authentication
+        try {
+          const auth = getFirebaseAuth();
+          const provider = new GoogleAuthProvider();
+          await signInWithPopup(auth, provider);
+        } catch (error: any) {
+          if (error.code !== 'auth/popup-closed-by-user') {
+            toast.error('Failed to re-authenticate. Please try again.');
+          }
+          setIsDeleting(false);
+          return;
+        }
       }
+      
       // Step 1: Delete Convex user data FIRST
       try {
         await deleteUserAndData({ userId: user.uid });
@@ -115,6 +145,7 @@ const DataTab = () => {
         setIsDeleting(false);
         return; // Stop here if database deletion fails
       }
+      
       // Step 2: Delete Firebase user AFTER data is cleaned up
       try {
         await user.delete();
@@ -128,6 +159,7 @@ const DataTab = () => {
         setIsDeleting(false);
         return;
       }
+      
       // Success
       toast.success('Account deleted successfully.');
       try { localStorage.clear(); } catch (e) { /* ignore */ }
@@ -296,42 +328,45 @@ const DataTab = () => {
               <AlertDialogContent className="max-w-md">
                 <AlertDialogHeader className="space-y-3">
                   <AlertDialogTitle className="text-xl font-light tracking-tight">Delete Account</AlertDialogTitle>
-                  <AlertDialogDescription className="space-y-4 text-sm leading-relaxed">
-                    <div className="font-medium text-red-600 dark:text-red-400">
-                      This action cannot be undone.
-                    </div>
-                    <div className="text-muted-foreground">
-                      This will permanently delete your account and all associated data, including your content, connections, and settings.
-                    </div>
-                    <div className="space-y-3">
-                      <label className="text-sm font-medium text-foreground">
-                        Enter your password to confirm:
-                      </label>
-                      <div className="relative">
-                        <Input
-                          type={showDeletePassword ? 'text' : 'password'}
-                          placeholder="Password"
-                          value={deletePassword}
-                          onChange={e => { setDeletePassword(e.target.value); setDeletePasswordError(null); }}
-                          disabled={isDeleting}
-                          required
-                          className="pr-10 border-border/50 focus:border-red-400/50 transition-colors duration-200"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowDeletePassword(!showDeletePassword)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors duration-200"
-                          tabIndex={-1}
-                        >
-                          {showDeletePassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                      {deletePasswordError && (
-                        <div className="text-red-600 dark:text-red-400 text-sm">{deletePasswordError}</div>
-                      )}
-                    </div>
+                  <AlertDialogDescription className="text-sm leading-relaxed">
+                    This action cannot be undone. This will permanently delete your account and all associated data, including your content, connections, and settings.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
+                {isEmailProvider ? (
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-foreground">
+                      Enter your password to confirm:
+                    </label>
+                    <div className="relative">
+                      <Input
+                        type={showDeletePassword ? 'text' : 'password'}
+                        placeholder="Password"
+                        value={deletePassword}
+                        onChange={e => { setDeletePassword(e.target.value); setDeletePasswordError(null); }}
+                        disabled={isDeleting}
+                        required
+                        className="pr-10 border-border/50 focus:border-red-400/50 transition-colors duration-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowDeletePassword(!showDeletePassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors duration-200"
+                        tabIndex={-1}
+                      >
+                        {showDeletePassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    {deletePasswordError && (
+                      <div className="text-red-600 dark:text-red-400 text-sm">{deletePasswordError}</div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      You will be prompted to sign in with Google to confirm this action.
+                    </p>
+                  </div>
+                )}
                 <AlertDialogFooter className="gap-3">
                   <AlertDialogCancel 
                     disabled={isDeleting}
@@ -343,10 +378,10 @@ const DataTab = () => {
                     <Button
                       variant="destructive"
                       onClick={handleDeleteAccount}
-                      disabled={isDeleting || !deletePassword}
+                      disabled={isDeleting || (isEmailProvider && !deletePassword)}
                       className="bg-red-600 hover:bg-red-700 text-white transition-colors duration-200"
                     >
-                      {isDeleting ? 'Deleting...' : 'Delete Account'}
+                      {isDeleting ? 'Deleting...' : isEmailProvider ? 'Delete Account' : 'Continue with Google'}
                     </Button>
                   </AlertDialogAction>
                 </AlertDialogFooter>

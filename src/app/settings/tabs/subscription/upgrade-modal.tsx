@@ -246,7 +246,7 @@ export default function UpgradeModal({
 
   return (
     <Dialog open={open} onOpenChange={context === 'registration' || context === 'subscription_required' ? undefined : onClose}>
-      <DialogContent className={showCheckout ? "max-w-4xl w-[95vw] max-h-[95vh] overflow-auto" : "max-w-2xl"}>
+      <DialogContent className={showCheckout ? "max-w-4xl w-[95vw] max-h-[95vh] overflow-auto" : "max-w-5xl max-h-[90vh] overflow-auto"}>
         <DialogHeader>
           <DialogTitle>Choose Your Plan</DialogTitle>
           <DialogDescription>
@@ -294,7 +294,7 @@ export default function UpgradeModal({
                 Annual Billing <span className="ml-1 text-green-600 font-semibold">(Save {ANNUAL_DISCOUNT_PERCENT}%)</span>
               </Button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {planArray.map(plan => {
                 const intervalLabel = billingInterval === "yearly" ? "/year" : "/month";
                 let displayedPrice = plan.amount;
@@ -311,13 +311,12 @@ export default function UpgradeModal({
                 return (
                   <div
                     key={plan.id}
-                    className={`border rounded-xl p-6 flex flex-col ${
+                    className={`border rounded-xl p-6 flex flex-col cursor-pointer ${
                       selectedPlan === plan.id 
                         ? "border-primary shadow-lg" 
                         : "border-gray-200"
                     }`}
                     onClick={() => setSelectedPlan(plan.id)}
-                    style={{ cursor: "pointer" }}
                   >
                     <div className="flex-1">
                       <h3 className="font-bold text-xl mb-2">{plan.name}</h3>

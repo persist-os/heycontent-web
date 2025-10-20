@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { getFirebaseAuth } from '@/app/lib/firebase';
+import { GoogleSignInButton } from '@/components/auth/google-signin-button';
 
 import { Logo } from '@/components/ui/logo';
 import { motion } from "framer-motion";
@@ -118,6 +119,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, reason }) => {
     }
   };
 
+  const handleGoogleSignInError = (error: string) => {
+    setError(error);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background/80 via-muted/20 to-background/80 p-4">
       <div className="w-full max-w-md">
@@ -138,7 +143,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, reason }) => {
           <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
           <p className="text-muted-foreground mt-2">Sign in to your account</p>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-6 bg-background/80 backdrop-blur-sm shadow-xl rounded-2xl p-8 border border-border">
+        <div className="space-y-6 bg-background/80 backdrop-blur-sm shadow-xl rounded-2xl p-8 border border-border">
           {reason === 'session_expired' && (
             <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-xl text-yellow-800 dark:text-yellow-200 text-sm">
               Your session has expired. Please sign in again.
@@ -149,7 +154,49 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, reason }) => {
               You've been logged out because you signed in from another device. Please sign in again.
             </div>
           )}
-          <div>
+          
+          {/* Error message */}
+          {error && (
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl text-red-600 dark:text-red-200 text-sm">
+              {error}
+            </div>
+          )}
+
+          {/* Primary CTA: Google Sign-In */}
+          <GoogleSignInButton 
+            action="login"
+            onError={handleGoogleSignInError}
+          />
+
+          {/* Divider */}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-background text-muted-foreground">or sign in with email</span>
+            </div>
+          </div>
+
+          {/* Email/Password Fallback */}
+          <details className="group">
+            <summary className="cursor-pointer list-none">
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <Mail className="w-4 h-4" />
+                <span>Use email and password</span>
+                <svg 
+                  className="w-4 h-4 transition-transform group-open:rotate-180" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </summary>
+            
+            <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+              <div>
             <label className="block text-sm font-medium text-foreground mb-2">Email</label>
             <div className="relative">
               <input
@@ -187,39 +234,28 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, reason }) => {
               </button>
             </div>
           </div>
-          {error && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl text-red-600 dark:text-red-200 text-sm">
-              {error}
-            </div>
-          )}
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Signing in...' : 'Sign In'}
-          </button>
-          <div className="space-y-4">
-            <div className="text-center">
-              <a href="/auth/forgot-password" className="text-sm text-blue-600 hover:text-blue-700 hover:underline">
-                Forgot your password?
-              </a>
-            </div>
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-border"></div>
+              <button
+                type="submit"
+                className="w-full bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Signing in...' : 'Sign In'}
+              </button>
+              <div className="text-center">
+                <a href="/auth/forgot-password" className="text-sm text-blue-600 hover:text-blue-700 hover:underline">
+                  Forgot your password?
+                </a>
               </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-background text-muted-foreground">or</span>
-              </div>
-            </div>
-            <div className="text-center">
-              <a href="/auth/register" className="text-sm text-muted-foreground hover:text-foreground">
-                Don't have an account? <span className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium">Sign up</span>
-              </a>
-            </div>
+            </form>
+          </details>
+
+          {/* Sign up link */}
+          <div className="text-center pt-4 border-t border-border">
+            <a href="/auth/register" className="text-sm text-muted-foreground hover:text-foreground">
+              Don't have an account? <span className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium">Sign up</span>
+            </a>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
