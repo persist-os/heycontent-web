@@ -298,19 +298,19 @@ export const deleteUserAndData = mutation({
     );
     // crystals
     await batchDelete("crystals", () =>
-      ctx.db.query("crystals").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+      ctx.db.query("crystals").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
     // crystal_shards
     await batchDelete("crystal_shards", () =>
-      ctx.db.query("crystal_shards").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+      ctx.db.query("crystal_shards").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
     // crystal_formation_runs
     await batchDelete("crystal_formation_runs", () =>
-      ctx.db.query("crystal_formation_runs").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+      ctx.db.query("crystal_formation_runs").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
     // folders
     await batchDelete("folders", () =>
-      ctx.db.query("folders").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+      ctx.db.query("folders").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
     return summary;
   },

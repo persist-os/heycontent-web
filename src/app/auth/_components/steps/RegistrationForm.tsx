@@ -200,6 +200,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
             referredById={referredById}
             onNext={handleNextStep}
             onSkip={() => setCurrentStep('basic')}
+            onGoogleSignInError={setError}
           />
         )}
         

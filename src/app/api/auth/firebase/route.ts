@@ -44,6 +44,7 @@ export async function POST(request: Request) {
         provider: decodedToken.firebase?.sign_in_provider
       });
       logger.info('Firebase token verified successfully', { requestId, userId: decodedToken.uid, provider: decodedToken.firebase?.sign_in_provider });
+      
       await updateOrCreateConvexUser(
   decodedToken.uid,
   decodedToken.name || name || '',
@@ -62,15 +63,50 @@ export async function POST(request: Request) {
           : String(apiKeyError);
         apiKeyData = { error: 'Exception fetching API key', details: errorMsg };
       }
-      // Always redirect to /chat on success
-      // Extract apiKey from apiKeyData (either apiKeyData.apiKey or apiKeyData.data.key)
+      
+      // Extract apiKey for subscription check
       const apiKey =
         apiKeyData?.apiKey ||
         (apiKeyData?.data && typeof apiKeyData.data.key === 'string' ? apiKeyData.data.key : undefined);
+      
+      // Check subscription status via Convex to determine redirect
+      let hasSubscription = false;
+      try {
+        const subscriptionData = await fetchQuery(api.subscriptionQueries.getUserSubscription, { userId: decodedToken.uid });
+        hasSubscription = subscriptionData && 
+          subscriptionData.status && 
+          ['active', 'trialing', 'dev', 'tester', 'free'].includes(subscriptionData.status) &&
+          subscriptionData.plan &&
+          subscriptionData.plan !== null;
+        logger.info('Subscription status check via Convex', { 
+          requestId, 
+          userId: decodedToken.uid,
+          hasSubscription, 
+          status: subscriptionData?.status,
+          plan: subscriptionData?.plan,
+          subscriptionData: subscriptionData ? 'found' : 'null'
+        });
+      } catch (err) {
+        logger.warn('Could not check subscription status via Convex, defaulting to no subscription', { 
+          requestId, 
+          error: String(err) 
+        });
+        hasSubscription = false;
+      }
+      
+      // Determine redirect based on subscription status
+      // Users WITHOUT subscription go to settings subscription page
+      // Users WITH subscription go to dashboard
+      const redirectPath = !hasSubscription
+        ? '/settings?tab=subscription' 
+        : '/dashboard';
+      
+      logger.info('Determining redirect', { requestId, hasSubscription, action, redirectPath });
+      
       let apiKeyCookieSet = false;
       const response = NextResponse.json({
         success: true,
-        redirect: '/dashboard',
+        redirect: redirectPath,
         apiKey,
         apiKeyData,
         apiKeyCookieSet: false,
@@ -111,7 +147,7 @@ export async function POST(request: Request) {
       // Return response with updated JSON body
       return NextResponse.json({
         success: true,
-        redirect: '/dashboard',
+        redirect: redirectPath,
         apiKey,
         apiKeyData,
         apiKeyCookieSet,

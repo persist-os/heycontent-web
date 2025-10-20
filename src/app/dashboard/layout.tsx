@@ -20,12 +20,14 @@ import { api } from '@/convex/_generated/api';
 // Pages that don't require a subscription
 const PUBLIC_PATHS = [
   '/dashboard/subscribe-tab/subscription',
+  '/settings',
   '/auth/logout',
 ];
 
 // Pages that should be accessible even without a subscription
 const ALLOWED_WITHOUT_SUBSCRIPTION = [
   '/dashboard/subscribe-tab/subscription',
+  '/settings',
   '/auth/logout',
 ];
 
@@ -94,14 +96,22 @@ export default function DashboardLayout({
     }
   }, [firebaseUser, authLoading]);
 
-  // Show username modal if user needs to set username
+  // Show username modal ONLY after subscription is confirmed
+  // Priority: Subscription first, then username
   useEffect(() => {
-    if (!isUsernameLoading && needsUsername && firebaseUser) {
+    // Don't show username modal if subscription modal is showing
+    if (showSubscriptionRequired) {
+      setShowUsernameModal(false);
+      return;
+    }
+    
+    // Only show username modal after subscription is confirmed
+    if (!isUsernameLoading && needsUsername && firebaseUser && isSubscribed) {
       setShowUsernameModal(true);
     } else {
       setShowUsernameModal(false);
     }
-  }, [needsUsername, isUsernameLoading, firebaseUser]);
+  }, [needsUsername, isUsernameLoading, firebaseUser, isSubscribed, showSubscriptionRequired]);
 
   // Handle subscription checks and redirects
   useEffect(() => {

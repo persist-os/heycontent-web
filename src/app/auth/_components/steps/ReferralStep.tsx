@@ -1,5 +1,6 @@
 import React from 'react';
 import { Key } from 'lucide-react';
+import { GoogleSignInButton } from '@/components/auth/google-signin-button';
 
 interface ReferralStepProps {
   referralCode: string;
@@ -11,24 +12,59 @@ interface ReferralStepProps {
   onSkip: () => void;
 }
 
-export const ReferralStep: React.FC<ReferralStepProps> = ({
+interface GoogleSignInWithReferralProps extends ReferralStepProps {
+  onGoogleSignInError: (error: string) => void;
+}
+
+export const ReferralStep: React.FC<ReferralStepProps & { onGoogleSignInError?: (error: string) => void }> = ({
   referralCode,
   handleReferralCodeChange,
   referralCodeValid,
   checkReferralCode,
   referredById,
   onNext,
-  onSkip
+  onSkip,
+  onGoogleSignInError
 }) => {
   const [skipped, setSkipped] = React.useState(false);
+  const [showGoogleFlow, setShowGoogleFlow] = React.useState(true);
 
   const handleSkip = () => {
     setSkipped(true);
     onSkip();
   };
 
+  const handleGoogleSignUp = () => {
+    // Google Sign-In will automatically handle registration
+    // Pass referral code if provided and valid
+  };
+
   return (
     <div className="space-y-6">
+      {/* Google Sign-In Option */}
+      {showGoogleFlow && (
+        <>
+          <div>
+            <GoogleSignInButton 
+              action="register"
+              additionalData={{
+                referredBy: referredById || undefined
+              }}
+              onError={onGoogleSignInError}
+            />
+          </div>
+
+          {/* Divider */}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-background text-muted-foreground">or create account with email</span>
+            </div>
+          </div>
+        </>
+      )}
       <div>
         <label className="block text-sm font-medium text-foreground mb-2">Referral Code (optional)</label>
         <div className="relative">
