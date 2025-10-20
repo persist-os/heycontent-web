@@ -3,6 +3,7 @@ import { HonoWithConvex, HttpRouterWithHono } from "convex-helpers/server/hono";
 import { ActionCtx } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import { cors } from "hono/cors";
+import { ConfigStatus } from "./types/convergence";
 
 /**
  * PARALLEL SYSTEM: Native Convex Actions + Hono Fallback
@@ -4393,6 +4394,189 @@ app.post("/api/stardust/createSymbioticPair", async (c) => {
     return c.json({ 
       success: false,
       error: error.message || "Failed to create symbiotic pair"
+    }, 500);
+  }
+});
+
+// ============================================================================
+// CONVERGENCE CONFIG ROUTES
+// ============================================================================
+
+/**
+ * Get top configs for a system (most common read operation)
+ */
+app.get("/api/convergence/configs/:system_name", async (c) => {
+  try {
+    const system_name = c.req.param("system_name");
+    const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : 3;
+    const status = c.req.query("status") as ConfigStatus | undefined;
+    
+    const configs = await c.env.runQuery(api.convergenceQueries.getTopConfigs, {
+      system_name,
+      limit,
+      status,
+    });
+    
+    return c.json({ success: true, data: configs });
+  } catch (error: any) {
+    console.error("[CONVERGENCE] Get configs error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get configs"
+    }, 500);
+  }
+});
+
+/**
+ * Get single config by rank
+ */
+app.get("/api/convergence/configs/:system_name/rank/:rank", async (c) => {
+  try {
+    const system_name = c.req.param("system_name");
+    const rank = parseInt(c.req.param("rank"));
+    const status = c.req.query("status") as ConfigStatus | undefined;
+    
+    const config = await c.env.runQuery(api.convergenceQueries.getConfigByRank, {
+      system_name,
+      rank,
+      status,
+    });
+    
+    return c.json({ success: true, data: config });
+  } catch (error: any) {
+    console.error("[CONVERGENCE] Get config by rank error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get config"
+    }, 500);
+  }
+});
+
+/**
+ * Get system statistics
+ */
+app.get("/api/convergence/stats/:system_name", async (c) => {
+  try {
+    const system_name = c.req.param("system_name");
+    
+    const stats = await c.env.runQuery(api.convergenceQueries.getSystemStats, {
+      system_name,
+    });
+    
+    return c.json({ success: true, data: stats });
+  } catch (error: any) {
+    console.error("[CONVERGENCE] Get stats error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get stats"
+    }, 500);
+  }
+});
+
+/**
+ * Save single config (called by optimization runs)
+ */
+app.post("/api/convergence/configs", async (c) => {
+  try {
+    const body = await c.req.json();
+    
+    const configId = await c.env.runMutation(api.convergenceMutations.saveConfig, body);
+    
+    return c.json({ success: true, data: { configId } });
+  } catch (error: any) {
+    console.error("[CONVERGENCE] Save config error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to save config"
+    }, 500);
+  }
+});
+
+/**
+ * Batch save configs (optimization runs with multiple candidates)
+ */
+app.post("/api/convergence/configs/batch", async (c) => {
+  try {
+    const body = await c.req.json();
+    
+    const result = await c.env.runMutation(api.convergenceMutations.batchSaveConfigs, {
+      configs: body.configs,
+    });
+    
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[CONVERGENCE] Batch save error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to batch save configs"
+    }, 500);
+  }
+});
+
+/**
+ * Update config status (lifecycle management)
+ */
+app.patch("/api/convergence/configs/:configId/status", async (c) => {
+  try {
+    const configId = c.req.param("configId") as Id<"convergence_configs">;
+    const { status } = await c.req.json();
+    
+    await c.env.runMutation(api.convergenceMutations.updateConfigStatus, {
+      configId,
+      status,
+    });
+    
+    return c.json({ success: true, data: { configId } });
+  } catch (error: any) {
+    console.error("[CONVERGENCE] Update status error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to update status"
+    }, 500);
+  }
+});
+
+/**
+ * Record config usage (track performance in production)
+ */
+app.post("/api/convergence/configs/:configId/usage", async (c) => {
+  try {
+    const configId = c.req.param("configId") as Id<"convergence_configs">;
+    const { success } = await c.req.json();
+    
+    await c.env.runMutation(api.convergenceMutations.recordConfigUsage, {
+      configId,
+      success,
+    });
+    
+    return c.json({ success: true, data: { configId } });
+  } catch (error: any) {
+    console.error("[CONVERGENCE] Record usage error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to record usage"
+    }, 500);
+  }
+});
+
+/**
+ * Promote configs (deploy new optimized configs)
+ */
+app.post("/api/convergence/configs/promote", async (c) => {
+  try {
+    const { system_name, new_config_ids } = await c.req.json();
+    
+    const result = await c.env.runMutation(api.convergenceMutations.promoteConfigs, {
+      system_name,
+      new_config_ids,
+    });
+    
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[CONVERGENCE] Promote configs error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to promote configs"
     }, 500);
   }
 });

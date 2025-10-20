@@ -2095,5 +2095,67 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_user_active", ["userId", "active"]),
+
+  // ============================================================================
+  // CONVERGENCE OPTIMIZATION CONFIGS - Optimized parameters for MAB and tool workflows
+  // ============================================================================
+  
+  /**
+   * Convergence Configs - Store Convergence-optimized configurations
+   * 
+   * Universal storage for any system optimized by The Convergence framework:
+   * - MAB parameters (context enrichment, crystal thresholds, intelligence triggers)
+   * - Tool workflow bundles (Reddit tools, search tools, extraction tools)
+   * - Any other parameter combinations requiring optimization
+   * 
+   * Each system gets multiple configs ranked by performance score.
+   * Systems load top N configs dynamically instead of using hardcoded values.
+   */
+  convergence_configs: defineTable({
+    // System identification
+    system_name: v.string(),  // "context_enrichment", "crystal_thresholds_evolution", "reddit_tools"
+    config_type: v.string(),  // Flexible string instead of union
+    
+    // Configuration data
+    params: v.any(),  // The actual configuration (flexible structure)
+    
+    // Performance metrics
+    score: v.number(),              // Overall performance score (0-1)
+    rank: v.number(),               // Rank among configs for this system (1 = best)
+    test_cases_passed: v.number(),  // Number of test cases passed
+    test_cases_total: v.number(),   // Total test cases evaluated
+    
+    // Convergence metadata
+    optimization_run_id: v.string(),    // Links to Convergence run
+    algorithm_used: v.string(),         // "mab_evolution", "grid_search", etc.
+    generation: v.optional(v.number()), // Generation number if evolutionary
+    
+    // Evaluation breakdown
+    metrics: v.optional(v.any()),  // Flexible metrics object
+    
+    // Deployment tracking
+    status: v.string(),  // Flexible string instead of union
+    deployed_at: v.optional(v.number()),
+    archived_at: v.optional(v.number()),
+    
+    // Usage tracking
+    usage_count: v.optional(v.number()),      // Times this config was used
+    success_rate: v.optional(v.number()),     // Success rate in production
+    last_used: v.optional(v.number()),
+    
+    // Version control
+    version: v.string(),                      // Config version (for rollback)
+    replaces_config_id: v.optional(v.string()), // Previous config it replaces
+    
+    // Timestamps
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_system", ["system_name"])
+    .index("by_system_rank", ["system_name", "rank"])
+    .index("by_system_status", ["system_name", "status"])
+    .index("by_type", ["config_type"])
+    .index("by_score", ["system_name", "score"])
+    .index("by_optimization_run", ["optimization_run_id"]),
 });
 
