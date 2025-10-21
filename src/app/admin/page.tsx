@@ -31,7 +31,8 @@ import {
   Filter,
   SortAsc,
   SortDesc,
-  TrendingUp
+  TrendingUp,
+  Zap
 } from 'lucide-react';
 import { FeedbackDetailModal } from './components/FeedbackDetailModal';
 import { FeedbackFilters } from './components/FeedbackFilters';
@@ -399,6 +400,30 @@ export default function AdminPage() {
               {isSuperAdmin ? 'Super Admin' : 'Admin'}
             </Badge>
           </div>
+
+          {/* Convergence Admin Quick Access */}
+          <Card className="border-blue-200 dark:border-blue-900 bg-gradient-to-br from-blue-50 to-background dark:from-blue-950/20 dark:to-background">
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    <CardTitle className="text-xl">Convergence Control Panel</CardTitle>
+                  </div>
+                  <CardDescription className="text-sm">
+                    Self-learning optimization engine. Trigger runs, configure systems, and monitor performance.
+                  </CardDescription>
+                </div>
+                <Button 
+                  onClick={() => router.push('/admin/convergence')}
+                  className="gap-2"
+                >
+                  Open Dashboard
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+          </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-2">

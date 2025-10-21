@@ -18,7 +18,8 @@ import { v } from "convex/values";
 import { 
   configTypeValidator,
   configStatusValidator,
-  convergenceConfigValidator
+  convergenceConfigValidator,
+  convergenceConfigReturnValidator
 } from "./types/convergence";
 
 /**
@@ -127,7 +128,7 @@ export const getConfigs = query({
     rank: v.optional(v.number()),
     limit: v.optional(v.number()),
   },
-  returns: v.union(v.array(convergenceConfigValidator), v.null()),
+  returns: v.union(v.array(convergenceConfigReturnValidator), v.null()),
   handler: async (ctx, args) => {
     const { system_name, operation, status, rank, limit } = args;
     
@@ -191,7 +192,7 @@ export const getTopConfigs = query({
     limit: v.optional(v.number()),
     status: v.optional(configStatusValidator),
   },
-  returns: v.array(convergenceConfigValidator),
+  returns: v.array(convergenceConfigReturnValidator),
   handler: async (ctx, args) => {
     return await queryConfigsWithOptions(ctx, args.system_name, {
       useIndex: args.status ? "by_system_status" : "by_system_rank",
@@ -214,7 +215,7 @@ export const getConfigByRank = query({
     rank: v.number(),
     status: v.optional(configStatusValidator),
   },
-  returns: v.union(convergenceConfigValidator, v.null()),
+  returns: v.union(convergenceConfigReturnValidator, v.null()),
   handler: async (ctx, args) => {
     const configs = await queryConfigsWithOptions(ctx, args.system_name, {
       useIndex: "by_system_rank",
@@ -238,7 +239,7 @@ export const getAllConfigs = query({
     system_name: v.string(),
     status: v.optional(configStatusValidator),
   },
-  returns: v.array(convergenceConfigValidator),
+  returns: v.array(convergenceConfigReturnValidator),
   handler: async (ctx, args) => {
     const configs = await queryConfigsWithOptions(ctx, args.system_name, {
       status: args.status,
@@ -259,7 +260,7 @@ export const getConfigsByOptimizationRun = query({
   args: {
     optimization_run_id: v.string(),
   },
-  returns: v.array(convergenceConfigValidator),
+  returns: v.array(convergenceConfigReturnValidator),
   handler: async (ctx, args) => {
     const configs = await ctx.db
       .query("convergence_configs")
@@ -283,7 +284,7 @@ export const getConfigsByType = query({
     config_type: v.string(),
     limit: v.optional(v.number()),
   },
-  returns: v.array(convergenceConfigValidator),
+  returns: v.array(convergenceConfigReturnValidator),
   handler: async (ctx, args) => {
     const configs = await ctx.db
       .query("convergence_configs")
@@ -309,7 +310,7 @@ export const getConfigsByScore = query({
     max_score: v.optional(v.number()),
     limit: v.optional(v.number()),
   },
-  returns: v.array(convergenceConfigValidator),
+  returns: v.array(convergenceConfigReturnValidator),
   handler: async (ctx, args) => {
     let query = ctx.db
       .query("convergence_configs")
@@ -412,6 +413,40 @@ export const getSystemStats = query({
       last_updated,
       last_deployed,
     };
+  },
+});
+
+/**
+ * Search configs by context
+ * 
+ * For now, returns top-ranked configs filtered by contextTag.
+ * Vector similarity search will be added when Convex vector search API is integrated.
+ */
+export const searchConfigsByContext = query({
+  args: {
+    system_name: v.string(),
+    contextTag: v.optional(v.string()),
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(convergenceConfigReturnValidator),
+  handler: async (ctx, args) => {
+    const limit = args.limit || 5;
+    
+    let query = ctx.db
+      .query("convergence_configs")
+      .withIndex("by_system_rank", (q) => 
+        q.eq("system_name", args.system_name)
+      );
+    
+    // Filter by contextTag if provided
+    if (args.contextTag) {
+      query = query.filter((q) => 
+        q.eq(q.field("contextTag"), args.contextTag)
+      );
+    }
+    
+    const results = await query.take(limit);
+    return results;
   },
 });
 

@@ -4594,6 +4594,365 @@ app.post("/api/convergence/configs/promote", async (c) => {
   }
 });
 
+/**
+ * Search configs by context (contextTag-based retrieval)
+ * Vector similarity search endpoint - currently using contextTag filtering
+ */
+app.post("/api/convergence/configs/search-by-embedding", async (c) => {
+  try {
+    const { system_name, contextTag, limit } = await c.req.json();
+    
+    const configs = await c.env.runQuery(api.convergenceQueries.searchConfigsByContext, {
+      system_name,
+      contextTag,
+      limit,
+    });
+    
+    return c.json({ success: true, data: configs });
+  } catch (error: any) {
+    console.error("[CONVERGENCE] Context search error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to search configs by context"
+    }, 500);
+  }
+});
+
+// ============================================================================
+// CONVERGENCE STORAGE ROUTES - RL Data, Experiments, Optimization Runs
+// ============================================================================
+
+/**
+ * Save RL training data
+ */
+app.post("/api/convergence/storage/rl-data", async (c) => {
+  try {
+    const body = await c.req.json();
+    
+    const recordId = await c.env.runMutation(api.convergenceStorageMutations.saveRLData, body);
+    
+    return c.json({ success: true, data: { recordId } });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Save RL data error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to save RL data"
+    }, 500);
+  }
+});
+
+/**
+ * Batch save RL training data
+ */
+app.post("/api/convergence/storage/rl-data/batch", async (c) => {
+  try {
+    const body = await c.req.json();
+    
+    const result = await c.env.runMutation(api.convergenceStorageMutations.batchSaveRLData, {
+      records: body.records,
+    });
+    
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Batch save RL data error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to batch save RL data"
+    }, 500);
+  }
+});
+
+/**
+ * Get RL data by key
+ */
+app.get("/api/convergence/storage/rl-data/:rl_key", async (c) => {
+  try {
+    const rl_key = c.req.param("rl_key");
+    
+    const data = await c.env.runQuery(api.convergenceStorageQueries.getRLDataByKey, {
+      rl_key,
+    });
+    
+    return c.json({ success: true, data });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Get RL data error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get RL data"
+    }, 500);
+  }
+});
+
+/**
+ * Query RL episodes for training
+ */
+app.get("/api/convergence/storage/rl-data/query", async (c) => {
+  try {
+    const agent_id = c.req.query("agent_id");
+    const record_type = c.req.query("record_type");
+    const station = c.req.query("station");
+    const min_reward_score = c.req.query("min_reward_score") ? parseFloat(c.req.query("min_reward_score")!) : undefined;
+    const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : 100;
+    
+    if (!agent_id) {
+      return c.json({ success: false, error: "agent_id is required" }, 400);
+    }
+    
+    const data = await c.env.runQuery(api.convergenceStorageQueries.queryRLEpisodesForTraining, {
+      agent_id,
+      record_type: record_type as any,
+      station,
+      min_reward_score,
+      limit,
+    });
+    
+    return c.json({ success: true, data });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Query RL episodes error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to query RL episodes"
+    }, 500);
+  }
+});
+
+/**
+ * Get top RL performers
+ */
+app.get("/api/convergence/storage/rl-data/top-performers/:agent_id", async (c) => {
+  try {
+    const agent_id = c.req.param("agent_id");
+    const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : 10;
+    
+    const data = await c.env.runQuery(api.convergenceStorageQueries.getTopRLPerformers, {
+      agent_id,
+      limit,
+    });
+    
+    return c.json({ success: true, data });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Get top RL performers error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get top RL performers"
+    }, 500);
+  }
+});
+
+/**
+ * Save optimization experiment
+ */
+app.post("/api/convergence/storage/experiments", async (c) => {
+  try {
+    const body = await c.req.json();
+    
+    const experimentId = await c.env.runMutation(api.convergenceStorageMutations.saveExperiment, body);
+    
+    return c.json({ success: true, data: { experimentId } });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Save experiment error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to save experiment"
+    }, 500);
+  }
+});
+
+/**
+ * Batch save experiments
+ */
+app.post("/api/convergence/storage/experiments/batch", async (c) => {
+  try {
+    const body = await c.req.json();
+    
+    const result = await c.env.runMutation(api.convergenceStorageMutations.batchSaveExperiments, {
+      experiments: body.experiments,
+    });
+    
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Batch save experiments error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to batch save experiments"
+    }, 500);
+  }
+});
+
+/**
+ * Get experiments for run
+ */
+app.get("/api/convergence/storage/experiments/run/:optimization_run_id", async (c) => {
+  try {
+    const optimization_run_id = c.req.param("optimization_run_id");
+    const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : 1000;
+    
+    const data = await c.env.runQuery(api.convergenceStorageQueries.getExperimentsForRun, {
+      optimization_run_id,
+      limit,
+    });
+    
+    return c.json({ success: true, data });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Get experiments for run error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get experiments for run"
+    }, 500);
+  }
+});
+
+/**
+ * Get experiments by system
+ */
+app.get("/api/convergence/storage/experiments/system/:system_name", async (c) => {
+  try {
+    const system_name = c.req.param("system_name");
+    const min_score = c.req.query("min_score") ? parseFloat(c.req.query("min_score")!) : undefined;
+    const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : 100;
+    
+    const data = await c.env.runQuery(api.convergenceStorageQueries.getExperimentsBySystem, {
+      system_name,
+      min_score,
+      limit,
+    });
+    
+    return c.json({ success: true, data });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Get experiments by system error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get experiments by system"
+    }, 500);
+  }
+});
+
+/**
+ * Get evolution progress
+ */
+app.get("/api/convergence/storage/experiments/evolution/:optimization_run_id", async (c) => {
+  try {
+    const optimization_run_id = c.req.param("optimization_run_id");
+    const generation = c.req.query("generation") ? parseInt(c.req.query("generation")!) : undefined;
+    
+    const data = await c.env.runQuery(api.convergenceStorageQueries.getEvolutionProgress, {
+      optimization_run_id,
+      generation,
+    });
+    
+    return c.json({ success: true, data });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Get evolution progress error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get evolution progress"
+    }, 500);
+  }
+});
+
+/**
+ * Start optimization run
+ */
+app.post("/api/convergence/storage/runs/start", async (c) => {
+  try {
+    const body = await c.req.json();
+    
+    const runId = await c.env.runMutation(api.convergenceStorageMutations.startOptimizationRun, body);
+    
+    return c.json({ success: true, data: { runId } });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Start optimization run error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to start optimization run"
+    }, 500);
+  }
+});
+
+/**
+ * Complete optimization run
+ */
+app.post("/api/convergence/storage/runs/complete", async (c) => {
+  try {
+    const body = await c.req.json();
+    
+    const runId = await c.env.runMutation(api.convergenceStorageMutations.completeOptimizationRun, body);
+    
+    return c.json({ success: true, data: { runId } });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Complete optimization run error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to complete optimization run"
+    }, 500);
+  }
+});
+
+/**
+ * Get optimization run
+ */
+app.get("/api/convergence/storage/runs/:run_id", async (c) => {
+  try {
+    const run_id = c.req.param("run_id");
+    
+    const data = await c.env.runQuery(api.convergenceStorageQueries.getOptimizationRun, {
+      run_id,
+    });
+    
+    return c.json({ success: true, data });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Get optimization run error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get optimization run"
+    }, 500);
+  }
+});
+
+/**
+ * Get runs for system
+ */
+app.get("/api/convergence/storage/runs/system/:system_name", async (c) => {
+  try {
+    const system_name = c.req.param("system_name");
+    const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : 50;
+    
+    const data = await c.env.runQuery(api.convergenceStorageQueries.getRunsForSystem, {
+      system_name,
+      limit,
+    });
+    
+    return c.json({ success: true, data });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Get runs for system error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get runs for system"
+    }, 500);
+  }
+});
+
+/**
+ * Get system optimization stats
+ */
+app.get("/api/convergence/storage/stats/:system_name", async (c) => {
+  try {
+    const system_name = c.req.param("system_name");
+    
+    const data = await c.env.runQuery(api.convergenceStorageQueries.getSystemOptimizationStats, {
+      system_name,
+    });
+    
+    return c.json({ success: true, data });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Get system optimization stats error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get system optimization stats"
+    }, 500);
+  }
+});
+
 
 const router = new HttpRouterWithHono(app);
 export default router;
