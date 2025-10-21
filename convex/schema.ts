@@ -2333,7 +2333,7 @@ export default defineSchema({
     .vectorIndex("by_embedding", {
       vectorField: "embedding",
       dimensions: 768,
-      filterFields: ["system_name", "status"]
+      filterFields: ["system_name", "status"],
     }),
   // Convergence Storage - Generic key-value storage for Convergence framework
   convergence_storage: defineTable({
