@@ -128,4 +128,3 @@ function GoogleIcon() {
     </svg>
   );
 }
-

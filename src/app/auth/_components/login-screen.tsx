@@ -5,7 +5,6 @@ import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { getFirebaseAuth } from '@/app/lib/firebase';
 import { GoogleSignInButton } from '@/components/auth/google-signin-button';
-import { handleGoogleRedirectResult } from '@/app/lib/google-auth';
 
 import { Logo } from '@/components/ui/logo';
 import { motion } from "framer-motion";
@@ -24,40 +23,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, reason }) => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [authInitializing, setAuthInitializing] = useState(true);
-  const [processingGoogleAuth, setProcessingGoogleAuth] = useState(false);
 
   useEffect(() => {
     let mounted = true;
-    
-    // Check for Google OAuth redirect result on mount
     (async () => {
-      // First check if we're returning from Google OAuth
-      try {
-        setProcessingGoogleAuth(true);
-        const redirectResult = await handleGoogleRedirectResult();
-        
-        if (!mounted) return;
-        
-        if (redirectResult.success && redirectResult.redirect) {
-          // Successfully authenticated via Google redirect
-          window.location.href = redirectResult.redirect;
-          return;
-        } else if (redirectResult.error) {
-          // Error processing Google redirect
-          setError(redirectResult.error);
-          setProcessingGoogleAuth(false);
-        } else {
-          // No redirect result (normal page load)
-          setProcessingGoogleAuth(false);
-        }
-      } catch (err) {
-        console.error('Error checking Google redirect:', err);
-        if (mounted) {
-          setProcessingGoogleAuth(false);
-        }
-      }
-      
-      // Initialize auth as normal
       const ready = await waitForAuthReady(5, 150);
       if (!mounted) return;
       setAuthInitializing(false);
@@ -65,25 +34,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, reason }) => {
         // Non-blocking: keep form usable but show a soft warning
         setError(prev => prev || 'Initializing authentication… If sign in fails, please retry.');
       }
-      
-      // Check if user is already authenticated
-      // If they are, redirect them away from login page
-      try {
-        const { getFirebaseAuth } = await import('@/app/lib/firebase');
-        const auth = getFirebaseAuth();
-        const currentUser = auth.currentUser;
-        
-        if (currentUser && mounted) {
-          // User is already logged in, redirect to dashboard
-          console.log('[LOGIN] User already authenticated, redirecting to dashboard');
-          window.location.href = '/dashboard';
-        }
-      } catch (err) {
-        // Ignore errors checking auth state
-        console.debug('[LOGIN] Could not check current auth state:', err);
-      }
     })();
-    
     return () => { mounted = false };
   }, []);
 
@@ -171,31 +122,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, reason }) => {
   const handleGoogleSignInError = (error: string) => {
     setError(error);
   };
-
-  // Show loading state while processing Google OAuth redirect
-  if (processingGoogleAuth) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background/80 via-muted/20 to-background/80 p-4">
-        <div className="w-full max-w-md text-center">
-          <motion.div
-            animate={{
-              y: [0, -10, 0],
-              rotate: [0, 2, 0, -2, 0],
-            }}
-            transition={{
-              duration: 4,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          >
-            <Logo className="h-12 mx-auto mb-4" />
-          </motion.div>
-          <h2 className="text-xl font-semibold text-foreground mb-2">Completing sign-in...</h2>
-          <p className="text-muted-foreground">Please wait while we verify your Google account.</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background/80 via-muted/20 to-background/80 p-4">
