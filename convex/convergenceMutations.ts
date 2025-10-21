@@ -202,6 +202,8 @@ export const saveConfig = mutation({
       system_name: args.system_name,
       config_type: args.config_type,
       params: args.params,
+      contextTag: args.contextTag,
+      embedding: args.embedding,
       score: args.score,
       rank: args.rank,
       test_cases_passed: args.test_cases_passed,
