@@ -2181,6 +2181,5 @@ export default defineSchema({
   })
   .index("by_key", ["key"])
   .index("by_created_at", ["created_at"]),
-
 });
 
