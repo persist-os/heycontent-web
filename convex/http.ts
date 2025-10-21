@@ -254,10 +254,11 @@ app.get("/api/users/:id/conversations", async (c) => {
 app.post("/api/users/:id/save_insights", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
-  const { insights } = await c.req.json();
+  const { insights, greetings } = await c.req.json();
   const result = await ctx.runMutation(api.ambientInsights.createInsights, {
     userId,
     insights,
+    greetings: greetings || undefined,
   });
   return c.json(result);
 });
@@ -573,6 +574,70 @@ app.post("/api/notes", async (c) => {
 });
 
 // SUBSCRIPTION ENDPOINTS
+
+// ===== SUBSCRIPTION PLANS (STATIC DATA CACHING) =====
+
+// Get all subscription plans (cached)
+app.get("/api/subscription/plans", async (c) => {
+  const ctx = c.env;
+  
+  try {
+    const plans = await ctx.runQuery(api.subscriptionPlansQueries.getAllPlans, {});
+    return c.json({ success: true, data: plans });
+  } catch (error: any) {
+    console.error("Failed to get subscription plans:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to retrieve subscription plans",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Sync plans from backend (backend only)
+app.post("/api/subscription/plans/sync", async (c) => {
+  const ctx = c.env;
+  
+  try {
+    const { plans } = await c.req.json();
+    
+    if (!plans || !Array.isArray(plans)) {
+      return c.json({ 
+        success: false, 
+        error: "Missing or invalid plans array" 
+      }, 400);
+    }
+    
+    const result = await ctx.runMutation(api.subscriptionPlansMutations.syncPlans, { plans });
+    return c.json(result);
+  } catch (error: any) {
+    console.error("Failed to sync subscription plans:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to sync subscription plans",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Check if plans are initialized
+app.get("/api/subscription/plans/status", async (c) => {
+  const ctx = c.env;
+  
+  try {
+    const status = await ctx.runQuery(api.subscriptionPlansQueries.arePlansInitialized, {});
+    return c.json(status);
+  } catch (error: any) {
+    console.error("Failed to check plans status:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to check plans status",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// ===== USER SUBSCRIPTIONS =====
 
 // Get user's subscription
 app.get("/api/users/:id/stripe/subscription", async (c) => {
@@ -2571,6 +2636,22 @@ app.post("/api/contextEnrichmentBandit/getBanditPerformance", async (c) => {
     return c.json({ success: true, data: performance });
   } catch (error: any) {
     console.error("[ContextMAB] Get performance error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+/**
+ * Get decision by ID
+ */
+app.post("/api/contextEnrichmentBandit/getDecisionById", async (c) => {
+  const ctx = c.env;
+  try {
+    const { decisionId } = await c.req.json();
+    
+    const decision = await ctx.runQuery(api.contextEnrichmentBandit.getDecisionById, { decisionId });
+    return c.json({ success: true, data: decision });
+  } catch (error: any) {
+    console.error("[ContextMAB] Get decision error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });

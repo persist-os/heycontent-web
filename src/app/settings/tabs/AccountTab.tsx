@@ -14,6 +14,7 @@ import { useAuth } from '@/app/context/auth-context'
 import { ReadOnlyField, ReadOnlyTextArea } from './account/ReadOnlyField'
 import { ProfileFields, ReferralFields, PersonaFields } from './account/FormSections'
 import { Skeleton } from '@/components/ui/skeleton'
+import LanguageSelector from '../components/LanguageSelector'
 
 const MAX_PERSONA_LENGTH = 500
 const MAX_VISION_LENGTH = 500
@@ -222,6 +223,12 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
             <ReferralFields formData={formData} referrerName={referrerName} referrerLoading={referrerLoading} />
           </div>
         </form>
+      </div>
+
+      {/* Language Section */}
+      <div className="space-y-6">
+        <div className="h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
+        <LanguageSelector />
       </div>
 
     </div>

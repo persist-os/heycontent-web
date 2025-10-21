@@ -3,7 +3,7 @@
  * Aligned with actual Convergence optimization system functionality
  */
 
-export type TabId = 'runner' | 'experiments' | 'configs' | 'rl_meta' | 'runs' | 'terminal';
+export type TabId = 'runner' | 'experiments' | 'configs' | 'rl_meta' | 'runs' | 'terminal' | 'generator';
 
 export interface Tab {
   id: TabId;
@@ -12,6 +12,7 @@ export interface Tab {
 }
 
 export interface OptimizationParams {
+  system_name: string; // REQUIRED: System to optimize (e.g., "context_enrichment")
   api_name: string;
   search_space_params: string[];
   test_cases_path: string;
@@ -22,6 +23,14 @@ export interface OptimizationParams {
   enable_rl_meta: boolean;
   enable_agent_society: boolean;
   mock_mode: boolean;
+  mutation_rate: number;
+  crossover_rate: number;
+  elite_size: number;
+  max_retries: number;
+  timeout_seconds: number;
+  early_stopping_enabled: boolean;
+  early_stopping_patience: number;
+  endpoint: string;
 }
 
 export interface ExperimentEntry {
@@ -64,5 +73,37 @@ export interface LegacyRecord {
   score: number;
   success: boolean;
   total_uses: number;
+}
+
+export interface ConfigGenerationParams {
+  user_id: string;
+  system_name: string;
+  template_type: 'llm_chat' | 'agno_agent' | 'web_automation';
+  endpoint: string;
+  api_key_env: string;
+  description: string;
+  provider_name: string;
+  intensity: 'quick' | 'balanced' | 'thorough';
+}
+
+export interface ConfigGenerationResponse {
+  success: boolean;
+  message: string;
+  config_id?: string;
+  config_preview?: {
+    api_name: string;
+    endpoint: string;
+    parameters: string[];
+    test_case_count: number;
+    intensity: string;
+  };
+  error?: string;
+}
+
+export interface TemplateOption {
+  id: string;
+  name: string;
+  description: string;
+  examples: string[];
 }
 

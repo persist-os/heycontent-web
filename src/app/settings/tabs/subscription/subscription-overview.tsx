@@ -119,7 +119,10 @@ export default function SubscriptionOverview() {
     return null;
   }
 
-  // Fetch plans and subscription status from API
+  // Fetch plans from Convex (cached, instant)
+  const convexPlans = useQuery(api.subscriptionPlansQueries.getAllPlans, {});
+  
+  // Fetch subscription status from API
   useEffect(() => {
     async function fetchData() {
       if (!userId) return;
@@ -132,25 +135,8 @@ export default function SubscriptionOverview() {
           setLoading(false);
           return;
         }
-        // Fetch plans
-        let plansData = null;
-        try {
-          const plansRes = await fetch('/api/subscription/plans', {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${apiKey}`
-            }
-          });
-          if (!plansRes.ok) {
-            throw new Error(`Failed to fetch plans: ${plansRes.status} ${plansRes.statusText}`);
-          }
-          plansData = await plansRes.json();
-        } catch (e) {
-          plansData = null;
-        }
-        setPlans((plansData && plansData.data) || {});
-        // Fetch subscription status
+        // Plans are now fetched from Convex via useQuery above (instant, cached)
+        // Fetch subscription status from backend
         let statusObj = null;
         try {
           const statusUrl = `/api/subscription/status`;
@@ -184,6 +170,13 @@ export default function SubscriptionOverview() {
     }
     fetchData();
   }, [userId]);
+
+  // Update plans state when Convex data loads
+  useEffect(() => {
+    if (convexPlans) {
+      setPlans(convexPlans);
+    }
+  }, [convexPlans]);
 
   // Map plan using plan_type whenever plans or status changes
   useEffect(() => {

@@ -248,70 +248,156 @@ export const deleteUserAndData = mutation({
       .first();
     if (!user) throw new Error("User not found");
     const BATCH_SIZE = 50;
-    // Helper for batch deletion
+    // Helper for batch deletion with resilient error handling
     async function batchDelete(table: string, getQuery: () => Promise<any[]>) {
       let deleted = 0;
       const errors: any[] = [];
-      let hasMore = true;
-      while (hasMore) {
-        const items = await getQuery();
-        if (!items || items.length === 0) break;
-        for (const item of items) {
-          try {
-            await ctx.db.delete(item._id);
-            deleted++;
-          } catch (err) {
-            errors.push({ id: item._id, error: String(err) });
+      try {
+        let hasMore = true;
+        while (hasMore) {
+          const items = await getQuery();
+          if (!items || items.length === 0) break;
+          for (const item of items) {
+            try {
+              await ctx.db.delete(item._id);
+              deleted++;
+            } catch (err) {
+              errors.push({ id: item._id, error: String(err) });
+            }
           }
+          hasMore = items.length === BATCH_SIZE;
         }
-        hasMore = items.length === BATCH_SIZE;
+        summary[table] = { deleted, errors };
+        if (errors.length > 0) summary.errors.push({ table, errors });
+      } catch (err) {
+        // Table or index might not exist - log but continue
+        summary[table] = { deleted, errors: [{ table, error: String(err) }] };
+        summary.errors.push({ table, error: String(err) });
       }
-      summary[table] = { deleted, errors };
-      if (errors.length > 0) summary.errors.push({ table, errors });
     }
-    // Users
-    await batchDelete("users", () =>
-      ctx.db.query("users").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // ⚠️ DEPRECATED: Old personas table removed - now using crystal system
-    // TODO: Remove this comment after confirming no old persona data exists
-    // Conversations
+    // Conversations (must be before messages)
     await batchDelete("conversations", () =>
       ctx.db.query("conversations").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
+    
+    // Messages (new messages table)
+    await batchDelete("messages", () =>
+      ctx.db.query("messages").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
     // Notes
     await batchDelete("notes", () =>
       ctx.db.query("notes").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
-    // api_keys (no index)
+    
+    // Projects (must be deleted before related items)
+    await batchDelete("projects", () =>
+      ctx.db.query("projects").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Widgets
+    await batchDelete("widgets", () =>
+      ctx.db.query("widgets").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Project Widgets
+    await batchDelete("project_widgets", () =>
+      ctx.db.query("project_widgets").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Widget Outputs
+    await batchDelete("widget_outputs", () =>
+      ctx.db.query("widget_outputs").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Project Fingerprints
+    await batchDelete("project_fingerprints", () =>
+      ctx.db.query("project_fingerprints").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Fingerprint Evolutions
+    await batchDelete("fingerprint_evolutions", () =>
+      ctx.db.query("fingerprint_evolutions").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Content Embeddings
+    await batchDelete("contentEmbeddings", () =>
+      ctx.db.query("contentEmbeddings").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Embedding Syncs
+    await batchDelete("embeddingSyncs", () =>
+      ctx.db.query("embeddingSyncs").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Crystals
+    await batchDelete("crystals", () =>
+      ctx.db.query("crystals").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Crystal Shards
+    await batchDelete("crystal_shards", () =>
+      ctx.db.query("crystal_shards").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Crystal Formation Runs
+    await batchDelete("crystal_formation_runs", () =>
+      ctx.db.query("crystal_formation_runs").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Intelligence Config
+    await batchDelete("intelligence_config", () =>
+      ctx.db.query("intelligence_config").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // MAB Arms (context enrichment)
+    await batchDelete("mab_arms", () =>
+      ctx.db.query("mab_arms").withIndex("by_user_agent", (q) => q.eq("user_id", userId)).take(BATCH_SIZE)
+    );
+    
+    // Subscriptions
+    await batchDelete("subscriptions", () =>
+      ctx.db.query("subscriptions").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Usage Events
+    await batchDelete("usageEvents", () =>
+      ctx.db.query("usageEvents").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Rate Limits
+    await batchDelete("rate_limits", () =>
+      ctx.db.query("rate_limits").withIndex("by_user_resource", (q) => q.eq("user_id", userId)).take(BATCH_SIZE)
+    );
+    
+    // API Keys (no index)
     await batchDelete("api_keys", async () => {
       const all = await ctx.db.query("api_keys").take(BATCH_SIZE * 2);
       return all.filter((item) => item.user_id === userId).slice(0, BATCH_SIZE);
     });
-    // rate_limits
-    await batchDelete("rate_limits", () =>
-      ctx.db.query("rate_limits").withIndex("by_user_resource", (q) => q.eq("user_id", userId)).take(BATCH_SIZE)
-    );
-    // usageEvents
-    await batchDelete("usageEvents", () =>
-      ctx.db.query("usageEvents").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // crystals
-    await batchDelete("crystals", () =>
-      ctx.db.query("crystals").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // crystal_shards
-    await batchDelete("crystal_shards", () =>
-      ctx.db.query("crystal_shards").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // crystal_formation_runs
-    await batchDelete("crystal_formation_runs", () =>
-      ctx.db.query("crystal_formation_runs").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    // folders
+    
+    // Folders
     await batchDelete("folders", () =>
       ctx.db.query("folders").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
+    
+    // User Preferences
+    await batchDelete("user_preferences", () =>
+      ctx.db.query("user_preferences").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Referrals (where user is referrer)
+    await batchDelete("referrals", async () => {
+      const userDoc = await ctx.db.query("users").withIndex("by_userId", (q) => q.eq("userId", userId)).first();
+      if (!userDoc) return [];
+      return await ctx.db.query("referrals").withIndex("by_referrer", (q) => q.eq("referrerId", userDoc._id)).take(BATCH_SIZE);
+    });
+    
+    // Users (must be last)
+    await batchDelete("users", () =>
+      ctx.db.query("users").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
     return summary;
   },
 });
@@ -401,6 +487,57 @@ export const updateEmailPreferences = mutation({
       success: false,
       userId: undefined,
       message: "We couldn't find this email address in our database. You may already be unsubscribed, or this email was never subscribed to our mailing list."
+    };
+  },
+});
+
+// User preferences - update user preferences including language
+export const updateUserPreferences = mutation({
+  args: {
+    userId: v.string(),
+    preferences: v.object({
+      showPersonaToFriends: v.optional(v.boolean()),
+      allowFriendRequests: v.optional(v.boolean()),
+      friendRequestNotifications: v.optional(v.boolean()),
+      language: v.optional(v.string()),
+    }),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const { userId, preferences } = args;
+    const now = Date.now();
+
+    // Find existing preferences
+    const existingPreferences = await ctx.db
+      .query("user_preferences")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .first();
+
+    if (existingPreferences) {
+      // Update existing preferences
+      await ctx.db.patch(existingPreferences._id, {
+        ...preferences,
+        updatedAt: now,
+      });
+    } else {
+      // Create new preferences record
+      await ctx.db.insert("user_preferences", {
+        userId,
+        showPersonaToFriends: preferences.showPersonaToFriends ?? false,
+        allowFriendRequests: preferences.allowFriendRequests ?? true,
+        friendRequestNotifications: preferences.friendRequestNotifications ?? true,
+        language: preferences.language ?? "en",
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    return {
+      success: true,
+      message: "Preferences updated successfully",
     };
   },
 });

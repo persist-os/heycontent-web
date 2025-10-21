@@ -104,6 +104,7 @@ export default defineSchema({
       category: v.string(),
       recommendation: v.string(),
     })),
+    greetings: v.optional(v.array(v.string())),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -966,6 +967,7 @@ export default defineSchema({
     showPersonaToFriends: v.boolean(), // TODO: Rename to showCrystalsToFriends or remove entirely
     allowFriendRequests: v.boolean(),
     friendRequestNotifications: v.boolean(),
+    language: v.optional(v.string()), // ISO 639-1 language code (e.g., "ko", "ja", "es")
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -1746,6 +1748,7 @@ export default defineSchema({
       threshold: v.number(),
       limit: v.number(),
       content_types: v.array(v.string()),
+      // Allow both nested and flat structures for backward compatibility
       shard_params: v.optional(v.object({
         limit: v.number(),
         dimensions: v.union(v.null(), v.array(v.string())),
@@ -1753,6 +1756,9 @@ export default defineSchema({
         keywords: v.union(v.null(), v.array(v.string())),
         tags: v.union(v.null(), v.array(v.string())),
       })),
+      // Flat structure (for Convergence-generated configs)
+      shard_limit: v.optional(v.number()),
+      shard_confidence: v.optional(v.number()),
     }),
     
     // Thompson Sampling parameters (Beta distribution)
@@ -1792,6 +1798,7 @@ export default defineSchema({
       threshold: v.number(),
       limit: v.number(),
       content_types: v.array(v.string()),
+      // Allow both nested and flat structures for backward compatibility
       shard_params: v.optional(v.object({
         limit: v.number(),
         dimensions: v.union(v.null(), v.array(v.string())),
@@ -1799,6 +1806,9 @@ export default defineSchema({
         keywords: v.union(v.null(), v.array(v.string())),
         tags: v.union(v.null(), v.array(v.string())),
       })),
+      // Flat structure (for Convergence-generated configs)
+      shard_limit: v.optional(v.number()),
+      shard_confidence: v.optional(v.number()),
     }),
     
     // All arms' state at decision time (for analysis)
@@ -2340,5 +2350,95 @@ export default defineSchema({
   })
   .index("by_key", ["key"])
   .index("by_created_at", ["created_at"]),
+
+  // Translations - Progressive translation cache for all languages
+  translations: defineTable({
+    // Cache key
+    sourceText: v.string(),           // Original text (usually English)
+    sourceTextHash: v.string(),       // SHA-256 hash for fast lookup
+    sourceLang: v.string(),           // ISO 639-1 code (e.g., "en")
+    targetLang: v.string(),           // ISO 639-1 code (e.g., "ko", "ja", "es")
+    
+    // Translation
+    translatedText: v.string(),       // The translated text
+    translationMethod: v.union(       // How it was translated
+      v.literal("ai"),                // AI-generated (Gemini)
+      v.literal("manual"),            // Manually entered
+      v.literal("edited")             // AI-generated, then manually edited
+    ),
+    
+    // Context (helps with context-aware translation)
+    context: v.optional(v.string()),  // Where it's used (e.g., "button.save", "heading.welcome")
+    componentPath: v.optional(v.string()), // Component path for tracking
+    
+    // Usage tracking
+    usageCount: v.number(),           // How many times requested
+    firstUsedAt: v.number(),          // When first user encountered this
+    lastUsedAt: v.number(),           // Most recent request
+    
+    // Quality control
+    verified: v.boolean(),            // Manually verified/approved
+    needsReview: v.optional(v.boolean()), // Flagged for review
+    version: v.number(),              // For translation updates/improvements
+    
+    // Metadata
+    translatedBy: v.optional(v.string()), // userId who first triggered or manually edited
+    reviewedBy: v.optional(v.string()),   // userId who verified
+    notes: v.optional(v.string()),        // Admin notes about translation
+    
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_hash_and_lang", ["sourceTextHash", "targetLang"])
+    .index("by_source_and_lang", ["sourceText", "targetLang"])
+    .index("by_usage", ["usageCount"])
+    .index("by_target_lang", ["targetLang"])
+    .index("by_verification", ["verified", "targetLang"])
+    .index("by_needs_review", ["needsReview"])
+    .index("by_version", ["sourceTextHash", "targetLang", "version"]),
+
+  // Subscription Plans - Static plan data cached from Stripe
+  subscription_plans: defineTable({
+    // Plan identification
+    planKey: v.string(),              // "free", "basic", "pro"
+    planName: v.string(),             // "Free", "Basic", "Pro"
+    
+    // Interval-specific pricing
+    interval: v.union(
+      v.literal("month"),
+      v.literal("year")
+    ),
+    
+    // Stripe integration
+    priceId: v.string(),              // Stripe price ID (flat fee)
+    productId: v.string(),            // Stripe product ID
+    meteredPriceId: v.optional(v.string()), // Stripe metered price ID (usage-based)
+    
+    // Pricing
+    amount: v.number(),               // Price in cents
+    currency: v.string(),             // "usd", "eur", etc.
+    
+    // Usage limits
+    includedRequests: v.number(),     // Included API requests per period
+    overage: v.number(),              // Overage price per request (0 for free tier)
+    
+    // Features
+    features: v.array(v.string()),    // List of feature descriptions
+    
+    // Metering configuration
+    isMetered: v.boolean(),           // Whether this plan has usage-based billing
+    
+    // Metadata
+    active: v.boolean(),              // Whether this plan is available for signup
+    sortOrder: v.number(),            // Display order (0 = first)
+    
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    lastSyncedAt: v.number(),         // When plan was last synced from backend
+  })
+    .index("by_plan_key", ["planKey"])
+    .index("by_plan_key_interval", ["planKey", "interval"])
+    .index("by_active", ["active", "sortOrder"])
+    .index("by_price_id", ["priceId"]),
 });
 

@@ -4,7 +4,7 @@
  * Reuses MAB patterns from intelligenceBandit.ts but for context enrichment.
  */
 
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 
 /**
@@ -21,6 +21,7 @@ export const initializeArms = mutation({
         threshold: v.number(),
         limit: v.number(),
         content_types: v.array(v.string()),
+        // Allow both nested and flat structures for backward compatibility
         shard_params: v.optional(v.object({
           limit: v.number(),
           dimensions: v.union(v.null(), v.array(v.string())),
@@ -28,6 +29,9 @@ export const initializeArms = mutation({
           keywords: v.union(v.null(), v.array(v.string())),
           tags: v.union(v.null(), v.array(v.string())),
         })),
+        // Flat structure (for Convergence-generated configs)
+        shard_limit: v.optional(v.number()),
+        shard_confidence: v.optional(v.number()),
       }),
       description: v.string(),
     })),
@@ -112,6 +116,7 @@ export const createDecision = mutation({
       threshold: v.number(),
       limit: v.number(),
       content_types: v.array(v.string()),
+      // Allow both nested and flat structures for backward compatibility
       shard_params: v.optional(v.object({
         limit: v.number(),
         dimensions: v.union(v.null(), v.array(v.string())),
@@ -119,6 +124,9 @@ export const createDecision = mutation({
         keywords: v.union(v.null(), v.array(v.string())),
         tags: v.union(v.null(), v.array(v.string())),
       })),
+      // Flat structure (for Convergence-generated configs)
+      shard_limit: v.optional(v.number()),
+      shard_confidence: v.optional(v.number()),
     }),
     arms_state: v.array(v.object({
       armId: v.string(),
@@ -177,7 +185,7 @@ export const updateArmPerformance = mutation({
     finalReward: v.number(),
   },
   handler: async (ctx, { userId, agentType, decisionId, engagementScore, gradingScore, finalReward }) => {
-    // Get decision
+    // Get decision - decisionId should be a valid Convex ID
     const decision = await ctx.db.get(decisionId as any) as any;
     
     if (!decision) {
@@ -273,3 +281,15 @@ export const getBanditPerformance = query({
   },
 });
 
+/**
+ * Get decision by ID
+ */
+export const getDecisionById = query({
+  args: {
+    decisionId: v.string(),
+  },
+  handler: async (ctx, { decisionId }) => {
+    const decision = await ctx.db.get(decisionId as any);
+    return decision;
+  },
+});

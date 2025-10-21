@@ -190,4 +190,52 @@ export const getEmailPreferences = query({
     };
   },
 });
+
+// User preferences - get user preferences including language
+export const getUserPreferences = query({
+  args: { userId: v.string() },
+  returns: v.union(
+    v.object({
+      showPersonaToFriends: v.boolean(),
+      allowFriendRequests: v.boolean(),
+      friendRequestNotifications: v.boolean(),
+      language: v.optional(v.string()),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    try {
+      const preferences = await ctx.db
+        .query("user_preferences")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .first();
+      
+      if (!preferences) {
+        // Return safe defaults if no preferences exist yet
+        return {
+          showPersonaToFriends: false,
+          allowFriendRequests: true,
+          friendRequestNotifications: true,
+          language: "en",
+        };
+      }
+      
+      return {
+        showPersonaToFriends: preferences.showPersonaToFriends,
+        allowFriendRequests: preferences.allowFriendRequests,
+        friendRequestNotifications: preferences.friendRequestNotifications,
+        language: preferences.language,
+      };
+    } catch (error) {
+      // If the table doesn't exist yet or there's an error, return safe defaults
+      console.error("Error fetching user preferences:", error);
+      return {
+        showPersonaToFriends: false,
+        allowFriendRequests: true,
+        friendRequestNotifications: true,
+        language: "en",
+      };
+    }
+  },
+});
   

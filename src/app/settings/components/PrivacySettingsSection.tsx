@@ -30,10 +30,10 @@ const PrivacySettingsSection: React.FC<PrivacySettingsSectionProps> = ({
   
   // Convex queries and mutations
   const userPreferences = useQuery(
-    api.friendshipQueries.getUserPreferences,
+    api.userQueries.getUserPreferences,
     userId ? { userId } : 'skip'
   )
-  const updateUserPreferences = useMutation(api.friendshipMutations.updateUserPreferences)
+  const updateUserPreferences = useMutation(api.userMutations.updateUserPreferences)
 
   // Local state for settings
   const [settings, setSettings] = useState({

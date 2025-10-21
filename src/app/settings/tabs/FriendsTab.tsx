@@ -52,7 +52,7 @@ const FriendsTab = ({ userId }: FriendsTabProps) => {
     userId ? { userId } : 'skip'
   )
   const userPreferences = useQuery(
-    api.friendshipQueries.getUserPreferences,
+    api.userQueries.getUserPreferences,
     userId ? { userId } : 'skip'
   )
 
@@ -61,7 +61,7 @@ const FriendsTab = ({ userId }: FriendsTabProps) => {
   const acceptFriendRequest = useMutation(api.friendshipMutations.acceptFriendRequest)
   const declineFriendRequest = useMutation(api.friendshipMutations.declineFriendRequest)
   const removeFriend = useMutation(api.friendshipMutations.removeFriend)
-  const updateUserPreferences = useMutation(api.friendshipMutations.updateUserPreferences)
+  const updateUserPreferences = useMutation(api.userMutations.updateUserPreferences)
 
   // Loading states
   const isLoading = pendingRequests === undefined || friends === undefined

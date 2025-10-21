@@ -11,6 +11,8 @@ import { api } from '@/convex/_generated/api'
 import type { Message } from '@/app/types/chat';
 import { uploadFile, formatFileSize, getFileTypeIcon, getFileDisplayUrl, type FileUploadResponse } from '@/lib/file-upload';
 import { track } from '@/lib/analytics';
+import { T } from '@/components/translation';
+import { useTranslation as useTextTranslation } from '@/hooks/useTranslation';
 
 interface ChatInputProps {
   onSend: (message: string, fileAttachments?: FileUploadResponse[]) => void
@@ -37,19 +39,7 @@ interface ChatInputProps {
   onToggleNotepadInMessages?: (enabled: boolean) => void
 }
 
-const placeholders = [
-  "What should I focus on next?",
-  "Analyze audience growth...",
-  "Get partnership recommendations...",
-  "Optimize engagement...",
-]
-
-const contextPlaceholders = [
-  "Ask about this content's analysis...",
-  "What insights can you share?",
-  "How can I improve this content?",
-  "What trends do you see?",
-]
+// Note: Placeholders are translated dynamically in the component
 
 export function ChatInput({
   onSend,
@@ -76,7 +66,7 @@ export function ChatInput({
   onToggleNotepadInMessages
 }: ChatInputProps) {
   const [input, setInput] = useState('')
-  const [placeholder, setPlaceholder] = useState(placeholders[0])
+  const [placeholderIndex, setPlaceholderIndex] = useState(0)
   const [showFullReply, setShowFullReply] = useState(false)
   const [fileAttachments, setFileAttachments] = useState<FileUploadResponse[]>([])
   const [isUploading, setIsUploading] = useState(false)
@@ -210,25 +200,36 @@ export function ChatInput({
     // Simple cursor positioning - no complex link handling needed
   }, [])
 
+  // Define placeholder arrays
+  const placeholders = [
+    "What should I focus on next?",
+    "Analyze audience growth...",
+    "Get partnership recommendations...",
+    "Optimize engagement...",
+  ]
+
+  const contextPlaceholders = [
+    "Ask about this content's analysis...",
+    "What insights can you share?",
+    "How can I improve this content?",
+    "What trends do you see?",
+  ]
+
   // Use context-aware placeholders when analysis is available
   const activePlaceholders = hasAnalysis ? contextPlaceholders : placeholders
 
   // Rotate placeholders
   useEffect(() => {
     const interval = setInterval(() => {
-      setPlaceholder(prev => {
-        const currentIndex = activePlaceholders.indexOf(prev)
-        const nextIndex = (currentIndex + 1) % activePlaceholders.length
-        return activePlaceholders[nextIndex] || activePlaceholders[0]
-      })
+      setPlaceholderIndex(prev => (prev + 1) % activePlaceholders.length)
     }, 3000)
     return () => clearInterval(interval)
-  }, [activePlaceholders])
+  }, [activePlaceholders.length])
 
-  // Update placeholder when context changes
+  // Reset placeholder index when context changes
   useEffect(() => {
-    setPlaceholder(activePlaceholders[0])
-  }, [hasAnalysis, activePlaceholders])
+    setPlaceholderIndex(0)
+  }, [hasAnalysis])
 
   // Auto-resize textarea and sync display div
   useEffect(() => {
@@ -423,27 +424,25 @@ export function ChatInput({
   const isNearLimit = characterCount > maxLength * 0.8
   const isAtLimit = characterCount >= maxLength
 
-  // Dynamic placeholder based on context
-  let contextPlaceholder = placeholder
-  if (hasContext && contextPlatform) {
-    if (contextPlatform === 'ai-insights') {
-      contextPlaceholder = "Ask about these insights..."
-    } else if (contextPlatform === 'smart-notes') {
-      contextPlaceholder = "Ask about your notes..."
-    } else {
-      contextPlaceholder = `Ask about your ${contextPlatform} content...`
-    }
-  } else if (hasAnalysis) {
-    contextPlaceholder = "Ask me anything about your content..."
-  }
+  // Get current placeholder text
+  const placeholderText = activePlaceholders[placeholderIndex]
+  
+  // Translate placeholder
+  const { text: translatedPlaceholder } = useTextTranslation(placeholderText, {
+    context: `chat.placeholder`,
+  })
 
   return (
     <div className="shrink-0 bg-background relative">
       {authStatus === 'waiting' && (
-        <div className="px-3 py-2 text-xs text-muted-foreground">Initializing authentication…</div>
+        <div className="px-3 py-2 text-xs text-muted-foreground">
+          <T context="chat.auth.loading">Initializing authentication…</T>
+        </div>
       )}
       {authStatus === 'unavailable' && (
-        <div className="px-3 py-2 text-xs text-warning">Authentication state not ready. Please wait and try again.</div>
+        <div className="px-3 py-2 text-xs text-warning">
+          <T context="chat.auth.unavailable">Authentication state not ready. Please wait and try again.</T>
+        </div>
       )}
       <form onSubmit={handleSubmit} className="p-2 sm:p-3">
         {/* Context indicator */}
@@ -457,8 +456,8 @@ export function ChatInput({
               <Search className="w-4 h-4 flex-shrink-0" />
               <span className="break-words">
                 {hasAnalysis 
-                  ? `AI analysis for this ${contextPlatform} content will be included as context`
-                  : `Discussing ${contextPlatform} content`
+                  ? <T context="chat.context.analysis">AI analysis for this {contextPlatform} content will be included as context</T>
+                  : <T context="chat.context.discussing">Discussing {contextPlatform} content</T>
                 }
               </span>
             </div>
@@ -475,7 +474,7 @@ export function ChatInput({
                 className="flex-1 text-left hover:text-foreground transition-colors min-w-0"
               >
                 <span className={showFullReply ? "break-words whitespace-pre-wrap min-w-0" : "truncate block min-w-0"}>
-                  Replying to: {showFullReply 
+                  <T context="chat.replying">Replying to</T>: {showFullReply 
                     ? referencedMessage.content 
                     : referencedMessage.content.length > 60 
                       ? `${referencedMessage.content.slice(0, 60)}...` 
@@ -505,7 +504,7 @@ export function ChatInput({
                 onClick={handleReferenceClick}
                 className="flex-1 text-left hover:text-foreground transition-colors font-medium"
               >
-                Add quote to notepad
+                <T context="chat.notepad.add">Add quote to notepad</T>
               </button>
               <button
                 onClick={() => {
@@ -645,7 +644,7 @@ export function ChatInput({
                 ref={textareaRef}
                 value={currentInput}
                 onChange={handleTextareaChange}
-                placeholder={contextPlaceholder}
+                placeholder={translatedPlaceholder}
                 className="text-base leading-relaxed flex-1 bg-transparent border-0 outline-0 focus:outline-none focus:ring-0 resize-none placeholder:text-muted-foreground chat-font 
                 [&::-webkit-scrollbar]:w-2 
                 [&::-webkit-scrollbar]:h-2
@@ -754,7 +753,7 @@ export function ChatInput({
           </div>
         </div>
         <div className="mt-1.5 text-xs text-muted-foreground text-center">
-          Press Enter to send, Shift+Enter for new line, @ to link content
+          <T context="chat.help">Press Enter to send, Shift+Enter for new line, @ to link content</T>
         </div>
         
         {/* Temporary shadow text display - only in development */}

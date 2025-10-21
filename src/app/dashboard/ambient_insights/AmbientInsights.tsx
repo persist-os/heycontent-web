@@ -75,6 +75,9 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
   const [currentPage, setCurrentPage] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [shownInsightIds, setShownInsightIds] = useState<Set<string>>(new Set());
+  
+  // Random greeting selection (changes per session, not per render)
+  const [selectedGreeting, setSelectedGreeting] = useState<string>("What can I help you with?");
 
   // Always call useQuery, passing skip if userId is not available
   if (process.env.NODE_ENV === 'development' && userId) {
@@ -95,19 +98,30 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
     })
   }
 
-  // Only log once when insights actually change, not on every render
+  // Update greeting and reset state when insights change
   useEffect(() => {
     const insightsId = convexInsights?._id;
-    if (process.env.NODE_ENV === 'development' && insightsId && insightsId !== lastLoggedInsights && userId) {
-      console.log('AmbientInsights: New insights loaded:', {
-        id: insightsId,
-        dataCount: convexInsights?.data?.length || 0,
-        userId
-      });
+    if (insightsId && insightsId !== lastLoggedInsights && userId) {
+      // Development logging
+      if (process.env.NODE_ENV === 'development') {
+        console.log('AmbientInsights: New insights loaded:', {
+          id: insightsId,
+          dataCount: convexInsights?.data?.length || 0,
+          greetingsCount: convexInsights?.greetings?.length || 0,
+          userId
+        });
+      }
+      
       setLastLoggedInsights(insightsId);
       // Reset tracking when new insights are loaded
       setCurrentPage(0);
       setShownInsightIds(new Set());
+      
+      // Select a random greeting when new insights are loaded
+      if (convexInsights?.greetings && convexInsights.greetings.length > 0) {
+        const randomIndex = Math.floor(Math.random() * convexInsights.greetings.length);
+        setSelectedGreeting(convexInsights.greetings[randomIndex]);
+      }
     }
   }, [convexInsights?._id, userId, lastLoggedInsights]);
 
@@ -320,10 +334,10 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
 
   return (
     <InsightsContainer>
-      {/* Header with "What can I help you with?" and Refresh button */}
+      {/* Header with dynamic greeting and Refresh button */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg sm:text-xl lg:text-2xl font-light text-foreground">
-          What can I help you with?
+        <h2 className="text-lg sm:text-xl lg:text-2xl font-light text-foreground pr-6">
+          {selectedGreeting}
         </h2>
         <Button
           onClick={handleRefresh}

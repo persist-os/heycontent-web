@@ -14,6 +14,7 @@ export interface Insight {
 export interface AmbientInsightsDocument extends Doc<'ambientInsights'> {
   userId: string;
   data: Insight[];
+  greetings?: string[];
   createdAt: number;
   updatedAt: number;
 }
@@ -65,12 +66,14 @@ export const createInsights = mutation({
         recommendation: v.string(),
       })
     ),
+    greetings: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args): Promise<Id<'ambientInsights'>> => {
     const now = Date.now();
     const insightsId = await ctx.db.insert('ambientInsights', {
       userId: args.userId,
       data: args.insights,
+      greetings: args.greetings,
       createdAt: now,
       updatedAt: now,
     });
@@ -106,13 +109,15 @@ export const createNewInsightsDocument = internalMutation({
         category: v.string(),
         recommendation: v.string(),
       })
-    )) 
+    )),
+    greetings: v.optional(v.array(v.string()))
   },
   handler: async (ctx, args): Promise<Id<'ambientInsights'>> => {
     const now = Date.now();
     return await ctx.db.insert('ambientInsights', {
       userId: args.userId,
       data: args.insights || [],
+      greetings: args.greetings || [],
       createdAt: now,
       updatedAt: now,
     });

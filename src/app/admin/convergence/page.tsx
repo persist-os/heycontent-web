@@ -11,6 +11,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { useAdminAuth } from '@/app/lib/admin-auth';
 import { Shield } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -24,8 +26,14 @@ import { ConfigsView } from './components/tabs/ConfigsView';
 import { RLMetaView } from './components/tabs/RLMetaView';
 import { RunsView } from './components/tabs/RunsView';
 import { TerminalView } from './components/tabs/TerminalView';
+import { ConfigGenerator } from './components/tabs/ConfigGenerator';
 
 const TABS: Tab[] = [
+  {
+    id: 'generator',
+    label: 'CONFIG_GEN',
+    cmd: 'convergence init --guided',
+  },
   {
     id: 'runner',
     label: 'OPTIMIZER',
@@ -61,7 +69,31 @@ const TABS: Tab[] = [
 export default function ConvergenceDashboard() {
   const router = useRouter();
   const { isAdmin, isSuperAdmin } = useAdminAuth();
-  const [activeTab, setActiveTab] = useState<TabId>('runner');
+  const [activeTab, setActiveTab] = useState<TabId>('generator');
+
+  // Query real stats from Convex for header
+  // Note: These queries get data across ALL systems
+  const allRuns = useQuery(api.convergenceStorageQueries.getRunsForSystem, {
+    system_name: 'context_enrichment', // We'll aggregate across systems client-side if needed
+    limit: 1000
+  });
+  
+  const allExperiments = useQuery(api.convergenceStorageQueries.getExperimentsBySystem, {
+    system_name: 'context_enrichment',
+    min_score: 0.0,
+    limit: 1000
+  });
+  
+  const allConfigs = useQuery(api.convergenceQueries.getConfigs, {
+    system_name: 'context_enrichment',
+    operation: 'all',
+    limit: 1000
+  });
+
+  // Calculate real counts
+  const totalRuns = allRuns?.length || 0;
+  const activeExperiments = allExperiments?.length || 0;
+  const configCount = allConfigs?.length || 0;
 
   const hasAccess = isAdmin || isSuperAdmin;
 
@@ -93,6 +125,8 @@ export default function ConvergenceDashboard() {
 
   const renderTabContent = () => {
     switch (activeTab) {
+      case 'generator':
+        return <ConfigGenerator />;
       case 'runner':
         return <OptimizationRunner />;
       case 'experiments':
@@ -106,7 +140,7 @@ export default function ConvergenceDashboard() {
       case 'terminal':
         return <TerminalView />;
       default:
-        return <OptimizationRunner />;
+        return <ConfigGenerator />;
     }
   };
 
@@ -121,9 +155,9 @@ export default function ConvergenceDashboard() {
       />
       
       <ConvergenceHeader
-        totalSessions={7}
-        activeExperiments={42}
-        legacyEntries={156}
+        totalSessions={totalRuns}
+        activeExperiments={activeExperiments}
+        legacyEntries={configCount}
       />
 
       <ConvergenceTabs

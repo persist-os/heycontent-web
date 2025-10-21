@@ -40,16 +40,73 @@ export function DeleteAccountButton({ className = '' }: { className?: string }) 
     }
 
     try {
-      // Delete Convex user data first
+      // Step 1: Get fresh Firebase token
+      let token: string;
       try {
-        await deleteUserAndData({ userId: user.uid });
+        token = await user.getIdToken(true); // Force refresh
       } catch (error: any) {
-        console.error('Error deleting user data from database:', error);
-        // Continue with Firebase deletion even if Convex deletion fails
+        console.error('Error getting Firebase token:', error);
+        toast.error('Authentication error. Please try again.');
+        setIsSubmitting(false);
+        return;
       }
 
-      // Delete Firebase user
-      await user.delete();
+      // Step 2: Cancel Stripe subscription and delete customer via backend
+      try {
+        const response = await fetch('/api/user/delete-account', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId: user.uid, token }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          console.error('Backend account deletion failed:', data);
+          toast.error('Failed to cancel subscription. Please contact support.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (data.errors) {
+          console.warn('Account deletion completed with warnings:', data.errors);
+        }
+      } catch (error: any) {
+        console.error('Error calling backend delete-account:', error);
+        toast.error('Failed to cancel subscription. Please contact support.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Step 3: Delete Convex user data
+      try {
+        const result = await deleteUserAndData({ userId: user.uid });
+        console.log('Convex deletion result:', result);
+      } catch (error: any) {
+        console.error('Error deleting user data from database:', error);
+        const errorMessage = error?.message || error?.toString() || 'Unknown error';
+        toast.error(`Failed to delete user data: ${errorMessage}`);
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Step 4: Delete Firebase user
+      try {
+        await user.delete();
+      } catch (error: any) {
+        console.error('Error deleting Firebase user:', error);
+        // If we get a "requires recent login" error, the data is already deleted
+        // so we can proceed to sign out
+        if (error.code === 'auth/requires-recent-login') {
+          toast.error('Please sign in again to complete account deletion.');
+          await auth.signOut();
+          router.push('/auth/login');
+          return;
+        }
+        throw error;
+      }
       
       // Redirect to home page after successful deletion
       router.push('/');
