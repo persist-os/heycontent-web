@@ -8,11 +8,11 @@
  */
 
 import React, { useState } from 'react';
+import { T } from '@/components/translation';
 import { 
   useAuth, 
   useCrystalData, 
   useFormationData,
-  useMigrationStatus,
   useFormationRuns,
   InsightsNavigation,
   OverviewView,
@@ -26,95 +26,20 @@ import {
   DeletionTools,
   ViewType
 } from './components';
-import { useMutation } from 'convex/react';
-import { api } from '@/convex/_generated/api';
 import { toast } from 'sonner';
 import { getApiKey } from '@/app/lib/api-helpers';
-import { ChevronDown, ChevronUp, Activity } from 'lucide-react';
+import { Activity } from 'lucide-react';
 
 export default function CrystalsPage() {
   const [activeView, setActiveView] = useState<ViewType>('overview');
-  const [isMigrating, setIsMigrating] = useState(false);
   const [isFormingCrystals, setIsFormingCrystals] = useState(false);
-  const [showMigrationTools, setShowMigrationTools] = useState(false);
-  const [showDebugInfo, setShowDebugInfo] = useState(false);
+  const [showFormationTools, setShowFormationTools] = useState(false);
   
   const userId = useAuth();
   const { crystalStats, recentCrystals, recentShards } = useCrystalData(userId);
   const { formationStatus, formationEligibility } = useFormationData(userId);
-  const { needsMigration, attempts, contentProcessed, isLoading: isMigrationStatusLoading } = useMigrationStatus(userId);
   const { formationRuns } = useFormationRuns(userId, 5);
-  const markMigrationComplete = useMutation(api.crystalMigration.markMigrationComplete);
   
-  const handleManualMigration = async () => {
-    if (!userId || isMigrating || !needsMigration) return;
-
-    setIsMigrating(true);
-    try {
-      console.log('🔮 [MANUAL MIGRATION] Starting simplified migration for user:', userId);
-      
-      const apiKey = await getApiKey();
-      if (!apiKey) {
-        throw new Error('Authentication required. Please log in again.');
-      }
-      
-      const response = await fetch('/api/migration/run', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({}),
-      });
-
-      console.log('🔮 [MANUAL MIGRATION] API response status:', response.status);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      
-      console.log('🔮 [MANUAL MIGRATION] Migration result:', result);
-      
-      if (result.success) {
-        try {
-          await markMigrationComplete({
-            userId,
-            contentProcessed: {
-              conversations: 0,
-              notes: 0,
-              totalItems: result.items_added || 0
-            }
-          });
-          console.log('🔮 [MANUAL MIGRATION] Marked migration as complete in tracking');
-        } catch (trackingError) {
-          console.error('🔮 [MANUAL MIGRATION] Failed to mark as complete:', trackingError);
-        }
-        
-        toast.success(
-          `Migration completed! Processed ${result.items_added} items, created ${result.shards_created} shards and ${result.crystals_created} crystals`,
-          { duration: 5000 }
-        );
-      } else {
-        toast.error(
-          `Migration failed: ${result.error || result.message || 'Unknown error'}`,
-          { duration: 5000 }
-        );
-      }
-      
-    } catch (error) {
-      console.error('🔮 [MANUAL MIGRATION] Error:', error);
-      toast.error(
-        `Migration failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        { duration: 5000 }
-      );
-    } finally {
-      setIsMigrating(false);
-    }
-  };
-
   const handleManualCrystalFormation = async () => {
     if (!userId || isFormingCrystals) return;
 
@@ -188,8 +113,12 @@ export default function CrystalsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-light tracking-tight text-foreground">Cosmic Intelligence</h1>
-            <p className="text-muted-foreground font-light">Dual-species organisms: stars for what you do, crystals for who you are</p>
+            <h1 className="text-3xl font-light tracking-tight text-foreground">
+              <T context="crystals.page.title">Cosmic Intelligence</T>
+            </h1>
+            <p className="text-muted-foreground font-light">
+              <T context="crystals.page.subtitle">Dual-species organisms: stars for what you do, crystals for who you are</T>
+            </p>
           </div>
 
           {/* Quick Stats */}
@@ -197,18 +126,18 @@ export default function CrystalsPage() {
             <div className="hidden sm:flex items-center gap-6">
               <div className="text-center">
                 <div className="text-2xl font-light text-foreground">{crystalStats.crystalsCount}</div>
-                <div className="text-xs text-muted-foreground">Crystals</div>
+                <div className="text-xs text-muted-foreground"><T context="crystals.stats.crystals">Crystals</T></div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-light text-foreground">{crystalStats.shardsCount}</div>
-                <div className="text-xs text-muted-foreground">Shards</div>
+                <div className="text-xs text-muted-foreground"><T context="crystals.stats.shards">Shards</T></div>
               </div>
               <div className="w-px h-8 bg-border/40" />
               <div className="text-center px-3 py-2 bg-primary/5 rounded-xl border border-primary/10">
                 <div className="text-2xl font-medium text-primary">
                   {crystalStats.recentActivity.crystalsThisWeek + crystalStats.recentActivity.shardsThisWeek}
                 </div>
-                <div className="text-xs text-muted-foreground">This Week</div>
+                <div className="text-xs text-muted-foreground"><T context="crystals.stats.this_week">This Week</T></div>
               </div>
             </div>
           )}
@@ -219,17 +148,17 @@ export default function CrystalsPage() {
           <div className="sm:hidden grid grid-cols-3 gap-3">
             <div className="bg-muted/10 rounded-xl p-3 text-center">
               <div className="text-xl font-light text-foreground">{crystalStats.crystalsCount}</div>
-              <div className="text-xs text-muted-foreground">Crystals</div>
+              <div className="text-xs text-muted-foreground"><T context="crystals.stats.crystals">Crystals</T></div>
             </div>
             <div className="bg-muted/10 rounded-xl p-3 text-center">
               <div className="text-xl font-light text-foreground">{crystalStats.shardsCount}</div>
-              <div className="text-xs text-muted-foreground">Shards</div>
+              <div className="text-xs text-muted-foreground"><T context="crystals.stats.shards">Shards</T></div>
             </div>
             <div className="bg-primary/5 border border-primary/10 rounded-xl p-3 text-center">
               <div className="text-xl font-medium text-primary">
                 {crystalStats.recentActivity.crystalsThisWeek + crystalStats.recentActivity.shardsThisWeek}
               </div>
-              <div className="text-xs text-muted-foreground">This Week</div>
+              <div className="text-xs text-muted-foreground"><T context="crystals.stats.this_week">This Week</T></div>
             </div>
           </div>
         )}
@@ -275,67 +204,30 @@ export default function CrystalsPage() {
         {/* System Tools - Collapsible */}
         <div className="space-y-3 pt-8 border-t border-border/20">
           
-          {/* Migration Tools */}
+          {/* Formation Tools */}
           <div className="border border-border/40 rounded-2xl overflow-hidden">
             <button
-              onClick={() => setShowMigrationTools(!showMigrationTools)}
+              onClick={() => setShowFormationTools(!showFormationTools)}
               className="w-full px-6 py-4 flex items-center justify-between bg-muted/10 hover:bg-muted/20 transition-colors"
             >
               <div className="flex items-center gap-3">
                 <Activity className="w-5 h-5 text-muted-foreground" />
                 <div className="text-left">
-                  <div className="font-medium text-foreground">Migration & Formation</div>
+                  <div className="font-medium text-foreground"><T context="crystals.tools.formation">Crystal Formation</T></div>
                   <div className="text-sm text-muted-foreground font-light">
-                    {!needsMigration ? 'Migration complete' : 'Migration available'} • Form new crystals
+                    <T context="crystals.tools.form_new">Form new crystals from shards</T>
                   </div>
                 </div>
               </div>
-              {showMigrationTools ? (
-                <ChevronUp className="w-5 h-5 text-muted-foreground" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-muted-foreground" />
-              )}
             </button>
             
-            {showMigrationTools && (
+            {showFormationTools && (
               <div className="px-6 py-4 space-y-4 bg-background">
                 <div className="space-y-3">
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium text-sm text-foreground">Content Migration</h4>
-                      {!needsMigration && contentProcessed && (
-                        <div className="text-xs text-muted-foreground">
-                          {contentProcessed.totalItems} items processed
-                        </div>
-                      )}
-                    </div>
+                    <h4 className="font-medium text-sm text-foreground mb-2"><T context="crystals.formation.title">Crystal Formation</T></h4>
                     <p className="text-sm text-muted-foreground mb-3 font-light">
-                      {!needsMigration 
-                        ? 'Your content has been migrated to the crystal system' 
-                        : 'Process your existing content into crystals and shards'}
-                    </p>
-                    <button
-                      onClick={handleManualMigration}
-                      disabled={isMigrating || !needsMigration || isMigrationStatusLoading}
-                      className={`px-4 py-2 text-sm rounded-xl border transition-all ${
-                        (isMigrating || !needsMigration || isMigrationStatusLoading)
-                          ? 'bg-muted/20 text-muted-foreground cursor-not-allowed border-border/20'
-                          : 'bg-background hover:bg-muted/30 text-foreground border-border/40'
-                      }`}
-                    >
-                      {isMigrating ? 'Processing...' : !needsMigration ? 'Already Migrated' : 'Run Migration'}
-                    </button>
-                    {attempts > 0 && needsMigration && (
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Previous attempts: {attempts}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="pt-3 border-t border-border/20">
-                    <h4 className="font-medium text-sm text-foreground mb-2">Crystal Formation</h4>
-                    <p className="text-sm text-muted-foreground mb-3 font-light">
-                      Create new crystals from your existing shards
+                      <T context="crystals.formation.description">Create new crystals from your existing shards</T>
                     </p>
                     <button
                       onClick={handleManualCrystalFormation}
@@ -346,7 +238,10 @@ export default function CrystalsPage() {
                           : 'bg-background hover:bg-muted/30 text-foreground border-border/40'
                       }`}
                     >
-                      {isFormingCrystals ? 'Forming...' : 'Form Crystals'}
+                      {isFormingCrystals ? 
+                        <T context="crystals.formation.forming">Forming...</T> : 
+                        <T context="crystals.formation.form_crystals">Form Crystals</T>
+                      }
                     </button>
                   </div>
 
@@ -366,9 +261,6 @@ export default function CrystalsPage() {
             crystalStats={crystalStats}
             formationStatus={formationStatus}
             formationEligibility={formationEligibility}
-            needsMigration={needsMigration}
-            contentProcessed={contentProcessed}
-            migrationAttempts={attempts}
             formationRuns={formationRuns}
           />
         </div>

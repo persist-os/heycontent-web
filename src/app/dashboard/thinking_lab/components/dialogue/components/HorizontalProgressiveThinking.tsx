@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Search, Brain, Sparkles, Database, CheckCircle, ChevronDown, ChevronUp, FileText, Youtube, Mail, MessageSquare } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Message } from '@/app/types/chat'
+import { useTranslation, useLanguagePreference } from '@/hooks/useTranslation'
+import { T } from '@/components/translation'
 
 interface ThinkingStep {
   id: string
@@ -54,6 +56,7 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
   isCompleted = false,
   vectorSearchMetadata
 }) => {
+  const { language } = useLanguagePreference()
   const [steps, setSteps] = useState<ThinkingStep[]>([])
   const [processedStatusCount, setProcessedStatusCount] = useState(0)
   const [isThinkingExpanded, setIsThinkingExpanded] = useState(false)
@@ -77,8 +80,8 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
     }
   }, [vectorSearchMetadata?.foundRelevantContent, isCompleted])
 
-  // Simplified, friendly message pools
-  const messagePools = {
+  // Source message pools (English) - These will be translated
+  const sourceMessagePools = {
     intentAnalysis: {
       main: [
         "Understanding what you need",
@@ -142,6 +145,7 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
   };
 
   // Helper function to randomly select from message pools
+  // Note: Individual messages will be translated when rendered in the UI
   const getRandomMessage = (pool: string[], count?: number): string => {
     const randomIndex = Math.floor(Math.random() * pool.length);
     const message = pool[randomIndex];
@@ -183,8 +187,8 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
         const analyzingStep: ThinkingStep = {
           id: `analyzing-${Date.now()}`,
           stage: 'analyzing',
-          message: getRandomMessage(messagePools.intentAnalysis.main),
-          submessage: getRandomMessage(messagePools.intentAnalysis.sub),
+          message: getRandomMessage(sourceMessagePools.intentAnalysis.main),
+          submessage: getRandomMessage(sourceMessagePools.intentAnalysis.sub),
           timestamp: new Date(),
           isCompleted: false,
           isActive: true
@@ -208,8 +212,8 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
         const contextNeededStep: ThinkingStep = {
           id: `context-needed-${Date.now()}`,
           stage: 'searching',
-          message: getRandomMessage(messagePools.contextNeeded.main),
-          submessage: getRandomMessage(messagePools.contextNeeded.sub),
+          message: getRandomMessage(sourceMessagePools.contextNeeded.main),
+          submessage: getRandomMessage(sourceMessagePools.contextNeeded.sub),
           timestamp: new Date(),
           isCompleted: false,
           isActive: true
@@ -240,8 +244,8 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
         const vectorSearchStep: ThinkingStep = {
           id: `vector-search-${Date.now()}`,
           stage: 'searching',
-          message: getRandomMessage(messagePools.vectorSearch.main),
-          submessage: getRandomMessage(messagePools.vectorSearch.sub, itemCount),
+          message: getRandomMessage(sourceMessagePools.vectorSearch.main),
+          submessage: getRandomMessage(sourceMessagePools.vectorSearch.sub, itemCount),
           timestamp: new Date(),
           isCompleted: false,
           isActive: true
@@ -264,8 +268,8 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
           const gradingStep: ThinkingStep = {
             id: `grading-${Date.now()}`,
             stage: 'grading',
-            message: getRandomMessage(messagePools.grading.main),
-            submessage: getRandomMessage(messagePools.grading.sub),
+            message: getRandomMessage(sourceMessagePools.grading.main),
+            submessage: getRandomMessage(sourceMessagePools.grading.sub),
             timestamp: new Date(),
             isCompleted: false,
             isActive: true,
@@ -362,8 +366,8 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
         const generationStep: ThinkingStep = {
           id: `generation-${Date.now()}`,
           stage: 'generating',
-          message: getRandomMessage(messagePools.generation.main),
-          submessage: getRandomMessage(messagePools.generation.sub),
+          message: getRandomMessage(sourceMessagePools.generation.main),
+          submessage: getRandomMessage(sourceMessagePools.generation.sub),
           timestamp: new Date(),
           isCompleted: false,
           isActive: true
@@ -392,7 +396,7 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
         <Sparkles className="w-4 h-4 text-primary animate-pulse" />
-        <span>Thinking...</span>
+        <span><T context="thinking_process.loading">Thinking...</T></span>
       </div>
     )
   }
@@ -430,7 +434,13 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
         onClick={() => setIsThinkingExpanded(!isThinkingExpanded)}
       >
         <Sparkles className="w-4 h-4 text-primary" />
-        <span>{isCompleted ? 'Show thinking process' : 'Thinking...'}</span>
+        <span>
+          {isCompleted ? (
+            <T context="thinking_process.show_process">Show thinking process</T>
+          ) : (
+            <T context="thinking_process.loading">Thinking...</T>
+          )}
+        </span>
         {isThinkingExpanded ? 
           <ChevronUp className="w-3 h-3" /> : 
           <ChevronDown className="w-3 h-3" />
@@ -453,7 +463,9 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
                   {steps.map((step) => (
                     <div key={step.id} className="flex items-center gap-2 text-sm">
                       {getStageIcon(step.stage, step.isActive, step.isCompleted)}
-                      <span className="text-foreground">{step.message}</span>
+                      <span className="text-foreground">
+                        <T context={`thinking_process.${step.stage}`}>{step.message}</T>
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -465,7 +477,7 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
                vectorSearchMetadata.relevantContent.length > 0 && (
                 <div className="pt-2 border-t border-border">
                   <div className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">
-                    Context Used ({vectorSearchMetadata.relevantContent.length} item{vectorSearchMetadata.relevantContent.length > 1 ? 's' : ''})
+                    <T context="thinking_process.context_used">Context Used</T> ({vectorSearchMetadata.relevantContent.length} item{vectorSearchMetadata.relevantContent.length > 1 ? 's' : ''})
                   </div>
                   <div className="space-y-2">
                     {vectorSearchMetadata.relevantContent.map((item, index) => (

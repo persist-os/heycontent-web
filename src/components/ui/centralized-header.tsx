@@ -9,6 +9,7 @@ import { EnhancedHelpButton } from '@/components/ui/enhanced-help-button';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { T } from '@/components/translation';
 
 // Types for different header compositions
 export interface HeaderAction {
@@ -286,13 +287,13 @@ export const createSaveAction = (
   onClick: async () => {
     try {
       await onSave();
-      toast.success('Saved successfully', { 
+      toast.success(<T context="toast.save.success">Saved successfully</T>, { 
         duration: 1800, 
         position: 'top-center',
         icon: null 
       });
     } catch (err) {
-      toast.error('Failed to save');
+      toast.error(<T context="toast.save.error">Failed to save</T>);
     }
   },
   title: 'Save',

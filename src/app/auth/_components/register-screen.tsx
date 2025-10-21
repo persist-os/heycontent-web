@@ -9,6 +9,7 @@ import { getApiKey } from '@/app/lib/api-helpers';
 import { handleGoogleRedirectResult } from '@/app/lib/google-auth';
 import { Logo } from '@/components/ui/logo';
 import { motion } from "framer-motion";
+import { T } from '@/components/translation';
 
 interface RegisterScreenProps {
   onSuccess?: (apiKey: string) => void;
@@ -174,8 +175,12 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
           >
             <Logo className="h-12 mx-auto mb-4" />
           </motion.div>
-          <h2 className="text-xl font-semibold text-foreground mb-2">Completing registration...</h2>
-          <p className="text-muted-foreground">Please wait while we verify your Google account.</p>
+          <h2 className="text-xl font-semibold text-foreground mb-2">
+            <T context="heading.auth.completing-registration">Completing registration...</T>
+          </h2>
+          <p className="text-muted-foreground">
+            <T context="message.auth.verify-google">Please wait while we verify your Google account.</T>
+          </p>
         </div>
       </div>
     );
@@ -194,7 +199,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
             />
             <div className="text-center">
               <p className="text-muted-foreground mb-2 text-sm">
-                Please select a plan to continue
+                <T context="message.auth.select-plan">Please select a plan to continue</T>
               </p>
             </div>
           </div>
@@ -207,13 +212,17 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
         )}
         {step === 'register' && registrationSuccess && (
           <div className="bg-background shadow-lg rounded-xl p-8 text-center border border-border">
-            <h2 className="text-2xl font-bold mb-4 text-green-600 dark:text-green-400">Registration successful!</h2>
-            <p className="mb-6 text-foreground">Your account has been created. Click below to continue.</p>
+            <h2 className="text-2xl font-bold mb-4 text-green-600 dark:text-green-400">
+              <T context="heading.auth.registration-successful">Registration successful!</T>
+            </h2>
+            <p className="mb-6 text-foreground">
+              <T context="message.auth.account-created">Your account has been created. Click below to continue.</T>
+            </p>
             <button
               className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
               onClick={handleContinueAfterSuccess}
             >
-              Continue
+              <T context="button.auth.continue">Continue</T>
             </button>
           </div>
         )}

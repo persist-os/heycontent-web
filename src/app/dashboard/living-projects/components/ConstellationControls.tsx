@@ -2,6 +2,8 @@
 
 import React from 'react'
 import { Button } from '@/components/ui/button'
+import { T } from '@/components/translation/T'
+import { useTranslation } from '@/hooks/useTranslation'
 
 interface ConstellationControlsProps {
   scale: number
@@ -22,6 +24,10 @@ export function ConstellationControls({
     return `${Math.round(value * 100)}%`
   }
 
+  const { text: zoomOutText } = useTranslation('Zoom out', { targetLang: 'en', context: 'constellation.controls.zoom_out' })
+  const { text: zoomInText } = useTranslation('Zoom in', { targetLang: 'en', context: 'constellation.controls.zoom_in' })
+  const { text: resetText } = useTranslation('Reset view', { targetLang: 'en', context: 'constellation.controls.reset' })
+
   return (
     <div className={`${className}`}>
       {/* Compact Zoom Controls */}
@@ -34,7 +40,7 @@ export function ConstellationControls({
             onClick={onZoomOut}
             disabled={scale <= 0.2}
             className="h-6 w-6 p-0 text-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-            title="Zoom out"
+            title={zoomOutText}
           >
             <span className="text-xs font-light leading-none">−</span>
           </Button>
@@ -45,9 +51,9 @@ export function ConstellationControls({
             size="sm"
             onClick={onReset}
             className="h-6 px-2 text-xs font-medium text-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-            title="Reset view"
+            title={resetText}
           >
-            Reset
+            <T context="constellation.controls.reset_button">Reset</T>
           </Button>
           
           {/* Zoom In */}
@@ -57,7 +63,7 @@ export function ConstellationControls({
             onClick={onZoomIn}
             disabled={scale >= 3.0}
             className="h-6 w-6 p-0 text-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-            title="Zoom in"
+            title={zoomInText}
           >
             <span className="text-xs font-light leading-none">+</span>
           </Button>

@@ -14,6 +14,7 @@ import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, Google
 import { mapAuthErrorCodeToMessage } from '@/app/api/auth/firebase/helpers';
 import { Input } from '@/components/ui/input';
 import { AutomaticEmbeddingStatus } from './platform-connect/AutomaticEmbeddingStatus';
+import { T } from '@/components/translation/T';
 
 const DataTab = () => {
   const router = useRouter();
@@ -218,14 +219,20 @@ const DataTab = () => {
       {/* Security Section */}
       <div className="space-y-6">
         <div className="space-y-1">
-          <h2 className="text-2xl font-light tracking-tight text-foreground">Security</h2>
-          <p className="text-muted-foreground">Manage your password and account security</p>
+          <h2 className="text-2xl font-light tracking-tight text-foreground">
+            <T context="settings.security.title">Security</T>
+          </h2>
+          <p className="text-muted-foreground">
+            <T context="settings.security.subtitle">Manage your password and account security</T>
+          </p>
         </div>
 
         <form onSubmit={handleChangePassword} className="space-y-6">
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Current Password</label>
+              <label className="text-sm font-medium text-foreground">
+                <T context="field.label.current_password">Current Password</T>
+              </label>
               <div className="relative">
                 <Input
                   type={showCurrentPassword ? "text" : "password"}
@@ -247,7 +254,9 @@ const DataTab = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">New Password</label>
+              <label className="text-sm font-medium text-foreground">
+                <T context="field.label.new_password">New Password</T>
+              </label>
               <div className="relative">
                 <Input
                   type={showNewPassword ? "text" : "password"}
@@ -269,7 +278,9 @@ const DataTab = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Confirm New Password</label>
+              <label className="text-sm font-medium text-foreground">
+                <T context="field.label.confirm_password">Confirm New Password</T>
+              </label>
               <div className="relative">
                 <Input
                   type={showConfirmPassword ? "text" : "password"}
@@ -300,10 +311,10 @@ const DataTab = () => {
               {isChangingPassword ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating Password...
+                  <T context="button.updating_password">Updating Password...</T>
                 </>
               ) : (
-                'Update Password'
+                <T context="button.update_password">Update Password</T>
               )}
             </Button>
           </div>
@@ -315,16 +326,22 @@ const DataTab = () => {
       {/* Privacy Section */}
       <div className="space-y-6">
         <div className="space-y-1">
-          <h2 className="text-2xl font-light tracking-tight text-foreground">Privacy</h2>
-          <p className="text-muted-foreground">Control how your data is collected and used</p>
+          <h2 className="text-2xl font-light tracking-tight text-foreground">
+            <T context="settings.privacy.title">Privacy</T>
+          </h2>
+          <p className="text-muted-foreground">
+            <T context="settings.privacy.subtitle">Control how your data is collected and used</T>
+          </p>
         </div>
 
         <div className="space-y-4">
           <div className="flex items-start justify-between py-4">
             <div className="space-y-1 flex-1">
-              <h3 className="font-medium text-foreground">Data Collection</h3>
+              <h3 className="font-medium text-foreground">
+                <T context="settings.privacy.data_collection.title">Data Collection</T>
+              </h3>
               <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl">
-                We collect and analyze data from your connected platforms to provide personalized insights and improve your content strategy. This helps us deliver better recommendations and features.
+                <T context="settings.privacy.data_collection.description">We collect and analyze data from your connected platforms to provide personalized insights and improve your content strategy. This helps us deliver better recommendations and features.</T>
               </p>
             </div>
             <Button 
@@ -332,7 +349,7 @@ const DataTab = () => {
               disabled={isDeleting}
               className="text-muted-foreground hover:text-foreground transition-colors duration-200 ml-6"
             >
-              Configure
+              <T context="button.configure">Configure</T>
             </Button>
           </div>
         </div>
@@ -343,16 +360,22 @@ const DataTab = () => {
       {/* Danger Zone */}
       <div className="space-y-6">
         <div className="space-y-1">
-          <h2 className="text-2xl font-light tracking-tight text-foreground">Danger Zone</h2>
-          <p className="text-muted-foreground">Irreversible actions that affect your account</p>
+          <h2 className="text-2xl font-light tracking-tight text-foreground">
+            <T context="settings.danger_zone.title">Danger Zone</T>
+          </h2>
+          <p className="text-muted-foreground">
+            <T context="settings.danger_zone.subtitle">Irreversible actions that affect your account</T>
+          </p>
         </div>
 
         <div className="border border-red-200/50 dark:border-red-800/30 rounded-2xl p-6 bg-red-50/30 dark:bg-red-950/20">
           <div className="flex items-start justify-between">
             <div className="space-y-2 flex-1">
-              <h3 className="font-medium text-red-600 dark:text-red-400">Delete Account</h3>
+              <h3 className="font-medium text-red-600 dark:text-red-400">
+                <T context="settings.delete_account.title">Delete Account</T>
+              </h3>
               <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl">
-                Permanently delete your account and all associated data. This action cannot be undone and will immediately remove all your content, connections, and settings.
+                <T context="settings.delete_account.warning">Permanently delete your account and all associated data. This action cannot be undone and will immediately remove all your content, connections, and settings.</T>
               </p>
             </div>
             <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
@@ -363,20 +386,22 @@ const DataTab = () => {
                   disabled={isDeleting}
                   className="ml-6 bg-red-600 hover:bg-red-700 text-white transition-colors duration-200"
                 >
-                  Delete Account
+                  <T context="button.delete_account">Delete Account</T>
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent className="max-w-md">
                 <AlertDialogHeader className="space-y-3">
-                  <AlertDialogTitle className="text-xl font-light tracking-tight">Delete Account</AlertDialogTitle>
+                  <AlertDialogTitle className="text-xl font-light tracking-tight">
+                    <T context="settings.delete_account.confirm_title">Delete Account</T>
+                  </AlertDialogTitle>
                   <AlertDialogDescription className="text-sm leading-relaxed">
-                    This action cannot be undone. This will permanently delete your account and all associated data, including your content, connections, and settings.
+                    <T context="settings.delete_account.confirm_message">This action cannot be undone. This will permanently delete your account and all associated data, including your content, connections, and settings.</T>
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 {isEmailProvider ? (
                   <div className="space-y-3">
                     <label className="text-sm font-medium text-foreground">
-                      Enter your password to confirm:
+                      <T context="settings.delete_account.password_prompt">Enter your password to confirm:</T>
                     </label>
                     <div className="relative">
                       <Input
@@ -404,7 +429,7 @@ const DataTab = () => {
                 ) : (
                   <div className="space-y-3">
                     <p className="text-sm text-muted-foreground">
-                      You will be prompted to sign in with Google to confirm this action.
+                      <T context="settings.delete_account.google_prompt">You will be prompted to sign in with Google to confirm this action.</T>
                     </p>
                   </div>
                 )}
@@ -413,7 +438,7 @@ const DataTab = () => {
                     disabled={isDeleting}
                     className="text-muted-foreground hover:text-foreground transition-colors duration-200"
                   >
-                    Cancel
+                    <T context="button.cancel">Cancel</T>
                   </AlertDialogCancel>
                   <AlertDialogAction asChild>
                     <Button
@@ -422,7 +447,7 @@ const DataTab = () => {
                       disabled={isDeleting || (isEmailProvider && !deletePassword)}
                       className="bg-red-600 hover:bg-red-700 text-white transition-colors duration-200"
                     >
-                      {isDeleting ? 'Deleting...' : isEmailProvider ? 'Delete Account' : 'Continue with Google'}
+                      {isDeleting ? <T context="button.deleting">Deleting...</T> : isEmailProvider ? <T context="button.delete_account">Delete Account</T> : <T context="button.continue_google">Continue with Google</T>}
                     </Button>
                   </AlertDialogAction>
                 </AlertDialogFooter>
@@ -437,8 +462,12 @@ const DataTab = () => {
       {/* Content Intelligence Section */}
       <div className="space-y-6">
         <div className="space-y-1">
-          <h2 className="text-2xl font-light tracking-tight text-foreground">Content Intelligence</h2>
-          <p className="text-muted-foreground">Smart search and AI-powered insights for your content</p>
+          <h2 className="text-2xl font-light tracking-tight text-foreground">
+            <T context="settings.content_intelligence.title">Content Intelligence</T>
+          </h2>
+          <p className="text-muted-foreground">
+            <T context="settings.content_intelligence.subtitle">Smart search and AI-powered insights for your content</T>
+          </p>
         </div>
 
         <AutomaticEmbeddingStatus />

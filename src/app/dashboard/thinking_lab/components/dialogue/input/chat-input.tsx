@@ -200,19 +200,31 @@ export function ChatInput({
     // Simple cursor positioning - no complex link handling needed
   }, [])
 
-  // Define placeholder arrays
+  // Define placeholder arrays - unique prompts that reflect HeyContext's distinctive approach
   const placeholders = [
-    "What should I focus on next?",
-    "Analyze audience growth...",
-    "Get partnership recommendations...",
-    "Optimize engagement...",
+    "I've been turning this over in my mind...",
+    "Something feels different about this...",
+    "I'm sensing a pattern here...",
+    "This reminds me of that time...",
+    "What if we looked at this sideways?",
+    "The part that keeps nagging at me...",
+    "This connects to something I thought about before...",
+    "I keep coming back to...",
+    "There's something here I'm not quite seeing...",
+    "Why does this feel important right now?",
   ]
 
   const contextPlaceholders = [
-    "Ask about this content's analysis...",
-    "What insights can you share?",
-    "How can I improve this content?",
-    "What trends do you see?",
+    "What's catching your attention here?",
+    "I sense there's more beneath the surface...",
+    "This reminds me of something we've discussed...",
+    "What connections are you making?",
+    "The piece that stands out to me...",
+    "Help me understand what you're seeing...",
+    "This brings up memories of...",
+    "What's shifting in your thinking?",
+    "I wonder about the bigger picture...",
+    "What feels most alive here?",
   ]
 
   // Use context-aware placeholders when analysis is available

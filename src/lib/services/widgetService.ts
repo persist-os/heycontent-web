@@ -72,8 +72,8 @@ export async function runWidget(params: WidgetRunRequest): Promise<WidgetRunResp
   }
 
   if (!userId) {
-    // Retry for auth timing issues
-    const readyAgain = await waitForAuthReady(3, 250);
+    // Retry for auth timing issues with longer timeout
+    const readyAgain = await waitForAuthReady(8, 300);
     if (!readyAgain) {
       throw new AuthenticationError('Authentication state not ready. Please wait and try again.');
     }

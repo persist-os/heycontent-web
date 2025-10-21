@@ -105,6 +105,12 @@ export default defineSchema({
       recommendation: v.string(),
     })),
     greetings: v.optional(v.array(v.string())),
+    customCommandPrompts: v.optional(v.array(v.object({
+      id: v.string(),
+      label: v.string(),
+      category: v.string(),
+      noteType: v.optional(v.string()),
+    }))),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -2311,6 +2317,7 @@ export default defineSchema({
     status: v.string(),  // Flexible string instead of union
     deployed_at: v.optional(v.number()),
     archived_at: v.optional(v.number()),
+    promotion_id: v.optional(v.string()),     // Idempotency key for config promotion
     
     // Usage tracking
     usage_count: v.optional(v.number()),      // Times this config was used

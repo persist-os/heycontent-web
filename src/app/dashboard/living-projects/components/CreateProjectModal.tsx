@@ -8,6 +8,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { FileText, MessageSquare, Plus, X } from 'lucide-react'
 import { ContentAttachmentPanel } from '../[projectId]/widgets/[widgetId]/components/ContentAttachmentPanel'
+import { T } from '@/components/translation/T'
+import { useTranslation } from '@/hooks/useTranslation'
 
 interface CreateProjectModalProps {
   isOpen: boolean
@@ -110,28 +112,47 @@ export function CreateProjectModal({
   
   const totalAttached = attachedNoteIds.length + attachedConversationIds.length + attachedCrystalIds.length + attachedShardIds.length
 
+  // Translated texts
+  const { text: projectNamePlaceholder } = useTranslation(
+    defaultName || "Content Strategy Q1, Personal Blog, Creative Workshop...",
+    { targetLang: 'en', context: 'project.modal.placeholder.name' }
+  )
+  const { text: descriptionPlaceholder } = useTranslation(
+    defaultName ? "A few words about what you're building..." : "What are you hoping to build or explore together...",
+    { targetLang: 'en', context: 'project.modal.placeholder.description' }
+  )
+
   return (
     <>
       <Dialog open={isOpen && !showContentSelector} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-lg border-border/30">
           {/* Gradient line at top */}
-          <div className="h-px bg-gradient-to-r from-blue-400/60 via-transparent to-transparent w-3/4 mb-8" />
+          <div className="h-px bg-gradient-to-r from-primary/40 via-primary/20 to-transparent w-3/4 mb-8" />
           
           <DialogHeader className="pb-8">
             <div className="space-y-6">
               <div className="space-y-3">
                 <DialogTitle className="text-3xl font-light tracking-tight text-foreground">
-                  {defaultName ? 'New project' : 'Living project'}
+                  {defaultName ? (
+                    <T context="project.modal.title.new">New project</T>
+                  ) : (
+                    <T context="project.modal.title.living">Living project</T>
+                  )}
                 </DialogTitle>
                 
                 <div className="h-px bg-gradient-to-r from-transparent via-border/50 to-transparent w-2/3" />
               </div>
               
               <DialogDescription className="text-muted-foreground/80 leading-relaxed text-base ml-1">
-                {defaultName 
-                  ? 'Transform your selected note into the foundation of a new project workspace.'
-                  : 'Name your project and give it some initial context. It will evolve through discovery conversations.'
-                }
+                {defaultName ? (
+                  <T context="project.modal.description.transform">
+                    Transform your selected note into the foundation of a new project workspace.
+                  </T>
+                ) : (
+                  <T context="project.modal.description.evolve">
+                    Name your project and give it some initial context. It will evolve through discovery conversations.
+                  </T>
+                )}
               </DialogDescription>
             </div>
           </DialogHeader>
@@ -140,14 +161,14 @@ export function CreateProjectModal({
             <div className="space-y-6">
               <div className="space-y-3">
                 <Label htmlFor="project-name" className="text-sm font-medium text-foreground/90">
-                  Project name
+                  <T context="project.modal.label.name">Project name</T>
                 </Label>
                 <Input
                   id="project-name"
-                  placeholder={defaultName || "Content Strategy Q1, Personal Blog, Creative Workshop..."}
+                  placeholder={projectNamePlaceholder}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="text-base py-3 border-border/50 focus:border-blue-400/60 transition-colors duration-300"
+                  className="text-base py-3 border-border/50 focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-colors duration-300"
                   autoFocus
                   maxLength={100}
                   disabled={isLoading}
@@ -156,15 +177,21 @@ export function CreateProjectModal({
 
               <div className="space-y-3">
                 <Label htmlFor="project-description" className="text-sm font-medium text-foreground/90">
-                  {defaultName ? 'Brief context' : 'Initial direction'}
-                  <span className="text-muted-foreground/60 ml-2 font-normal">optional</span>
+                  {defaultName ? (
+                    <T context="project.modal.label.brief_context">Brief context</T>
+                  ) : (
+                    <T context="project.modal.label.initial_direction">Initial direction</T>
+                  )}
+                  <span className="text-muted-foreground/60 ml-2 font-normal">
+                    <T context="project.modal.label.optional">optional</T>
+                  </span>
                 </Label>
                 <Textarea
                   id="project-description"
-                  placeholder={defaultName ? "A few words about what you're building..." : "What are you hoping to build or explore together..."}
+                  placeholder={descriptionPlaceholder}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="text-base min-h-[90px] resize-none border-border/50 focus:border-blue-400/60 transition-colors duration-300"
+                  className="text-base min-h-[90px] resize-none border-border/50 focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-colors duration-300"
                   maxLength={500}
                   disabled={isLoading}
                 />
@@ -180,28 +207,30 @@ export function CreateProjectModal({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-medium text-foreground/90">
-                  Attach content
-                  <span className="text-muted-foreground/60 ml-2 font-normal">optional</span>
+                  <T context="project.modal.label.attach_content">Attach content</T>
+                  <span className="text-muted-foreground/60 ml-2 font-normal">
+                    <T context="project.modal.label.optional">optional</T>
+                  </span>
                 </Label>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => setShowContentSelector(true)}
-                  className="text-xs gap-2 border-border/50 hover:border-blue-400/60 transition-colors duration-300"
+                  className="text-xs gap-2 border-border/50 hover:border-primary/60 hover:bg-primary/5 transition-colors duration-300"
                   disabled={isLoading}
                 >
                   <Plus className="w-3 h-3" />
-                  Add content
+                  <T context="project.modal.button.add_content">Add content</T>
                 </Button>
               </div>
 
               {totalAttached > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {attachedNoteIds.map((noteId) => (
-                    <div key={noteId} className="flex items-center gap-1.5 px-2 py-1 bg-blue-400/10 border border-blue-400/30 rounded text-xs text-foreground/80">
+                    <div key={noteId} className="flex items-center gap-1.5 px-2 py-1 bg-primary/10 border border-primary/30 rounded text-xs text-foreground">
                       <FileText className="w-3 h-3" />
-                      <span>Note</span>
+                      <span><T context="project.modal.content.note">Note</T></span>
                       <button
                         type="button"
                         onClick={() => removeNote(noteId)}
@@ -214,9 +243,9 @@ export function CreateProjectModal({
                     </div>
                   ))}
                   {attachedConversationIds.map((convId) => (
-                    <div key={convId} className="flex items-center gap-1.5 px-2 py-1 bg-amber-400/10 border border-amber-400/30 rounded text-xs text-foreground/80">
+                    <div key={convId} className="flex items-center gap-1.5 px-2 py-1 bg-accent/10 border border-accent/30 rounded text-xs text-foreground">
                       <MessageSquare className="w-3 h-3" />
-                      <span>Conversation</span>
+                      <span><T context="project.modal.content.conversation">Conversation</T></span>
                       <button
                         type="button"
                         onClick={() => removeConversation(convId)}
@@ -229,9 +258,9 @@ export function CreateProjectModal({
                     </div>
                   ))}
                   {attachedCrystalIds.map((crystalId) => (
-                    <div key={crystalId} className="flex items-center gap-1.5 px-2 py-1 bg-purple-400/10 border border-purple-400/30 rounded text-xs text-foreground/80">
+                    <div key={crystalId} className="flex items-center gap-1.5 px-2 py-1 bg-secondary/30 border border-secondary/50 rounded text-xs text-foreground">
                       <span>💎</span>
-                      <span>Crystal</span>
+                      <span><T context="project.modal.content.crystal">Crystal</T></span>
                       <button
                         type="button"
                         onClick={() => removeCrystal(crystalId)}
@@ -244,9 +273,9 @@ export function CreateProjectModal({
                     </div>
                   ))}
                   {attachedShardIds.map((shardId) => (
-                    <div key={shardId} className="flex items-center gap-1.5 px-2 py-1 bg-cyan-400/10 border border-cyan-400/30 rounded text-xs text-foreground/80">
+                    <div key={shardId} className="flex items-center gap-1.5 px-2 py-1 bg-muted border border-border rounded text-xs text-foreground">
                       <span>✨</span>
-                      <span>Shard</span>
+                      <span><T context="project.modal.content.shard">Shard</T></span>
                       <button
                         type="button"
                         onClick={() => removeShard(shardId)}
@@ -270,7 +299,11 @@ export function CreateProjectModal({
                 className="flex-1 py-3 text-base border-border/50 hover:border-border hover:bg-muted/30 transition-all duration-300"
                 disabled={isLoading}
               >
-                {defaultName ? 'Not now' : 'Maybe later'}
+                {defaultName ? (
+                  <T context="project.modal.button.not_now">Not now</T>
+                ) : (
+                  <T context="project.modal.button.maybe_later">Maybe later</T>
+                )}
               </Button>
               <Button
                 type="submit"
@@ -280,10 +313,14 @@ export function CreateProjectModal({
                 {isLoading ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin" />
-                    <span>Creating...</span>
+                    <span><T context="project.modal.button.creating">Creating...</T></span>
                   </div>
                 ) : (
-                  defaultName ? 'Create project' : 'Begin discovery'
+                  defaultName ? (
+                    <T context="project.modal.button.create_project">Create project</T>
+                  ) : (
+                    <T context="project.modal.button.begin_discovery">Begin discovery</T>
+                  )
                 )}
               </Button>
             </div>

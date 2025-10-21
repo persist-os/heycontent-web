@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { useSpring, config } from "framer-motion";
+import { useSpring } from "framer-motion";
 import { SpatialPosition, BrieferAgent } from "../types";
 import {
   calculatePosition,
@@ -195,9 +195,9 @@ export function useRoomViewport() {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   
-  const panX = useSpring(pan.x, config.gentle);
-  const panY = useSpring(pan.y, config.gentle);
-  const zoomValue = useSpring(zoom, config.gentle);
+  const panX = useSpring(pan.x, { stiffness: 100, damping: 20 });
+  const panY = useSpring(pan.y, { stiffness: 100, damping: 20 });
+  const zoomValue = useSpring(zoom, { stiffness: 100, damping: 20 });
   
   useEffect(() => {
     panX.set(pan.x);

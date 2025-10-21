@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useTranslation, useLanguagePreference } from '@/hooks/useTranslation';
+import { useTranslation } from '@/hooks/useTranslation';
+import { useLanguageContext } from '@/app/context/language-context';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface TProps {
@@ -33,13 +34,13 @@ export function T({
   className = '',
   as: Component = 'span',
 }: TProps) {
-  const { language } = useLanguagePreference();
+  const { language } = useLanguageContext();
   
   // Extract text from children
   const sourceText = extractText(children);
   
   // Get translation
-  const { text, isTranslating, isFromCache } = useTranslation(sourceText, {
+  const { text, isTranslating, isFromCache, error, retryTranslation } = useTranslation(sourceText, {
     sourceLang,
     targetLang: language,
     context,
@@ -59,6 +60,20 @@ export function T({
   // If same language or instant cache hit, no animation
   if (language === sourceLang || (isFromCache && displayText === text)) {
     return <Component className={className}>{displayText}</Component>;
+  }
+
+  // If there's an error, show original text with retry option
+  if (error) {
+    return (
+      <Component 
+        className={`${className} cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors`}
+        onClick={retryTranslation}
+        title={`Translation failed: ${error}. Click to retry.`}
+      >
+        {sourceText}
+        <span className="ml-1 text-red-500 text-xs">⚠️</span>
+      </Component>
+    );
   }
 
   // Progressive translation with smooth fade

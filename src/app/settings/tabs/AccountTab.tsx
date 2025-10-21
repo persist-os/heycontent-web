@@ -15,6 +15,7 @@ import { ReadOnlyField, ReadOnlyTextArea } from './account/ReadOnlyField'
 import { ProfileFields, ReferralFields, PersonaFields } from './account/FormSections'
 import { Skeleton } from '@/components/ui/skeleton'
 import LanguageSelector from '../components/LanguageSelector'
+import { T } from '@/components/translation/T'
 
 const MAX_PERSONA_LENGTH = 500
 const MAX_VISION_LENGTH = 500
@@ -167,8 +168,12 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <h2 className="text-2xl font-light tracking-tight text-foreground">Profile</h2>
-            <p className="text-muted-foreground">Your personal information and account details</p>
+            <h2 className="text-2xl font-light tracking-tight text-foreground">
+              <T context="settings.profile.title">Profile</T>
+            </h2>
+            <p className="text-muted-foreground">
+              <T context="settings.profile.subtitle">Your personal information and account details</T>
+            </p>
           </div>
           
           {!isEditMode ? (
@@ -178,7 +183,7 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
               className="text-muted-foreground hover:text-foreground transition-colors duration-200"
             >
               <Edit2 className="w-4 h-4 mr-2" />
-              Edit
+              <T context="button.edit">Edit</T>
             </Button>
           ) : (
             <div className="flex items-center gap-3">
@@ -189,7 +194,7 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
                 className="text-muted-foreground hover:text-foreground transition-colors duration-200"
               >
                 <X className="w-4 h-4 mr-2" />
-                Cancel
+                <T context="button.cancel">Cancel</T>
               </Button>
               <Button
                 onClick={(e) => handleProfileUpdate(e, formData, setIsUpdating, setFormData, updateUser, userId, userEmail, setIsEditMode, firebaseUser?.photoURL)}
@@ -197,7 +202,7 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
                 className="bg-foreground text-background hover:bg-foreground/90 transition-colors duration-200"
               >
                 <Save className="w-4 h-4 mr-2" />
-                {isUpdating ? 'Saving...' : 'Save Changes'}
+                {isUpdating ? <T context="button.saving">Saving...</T> : <T context="button.save_changes">Save Changes</T>}
               </Button>
             </div>
           )}

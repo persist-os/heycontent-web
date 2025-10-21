@@ -328,23 +328,59 @@ export const recordConfigUsage = mutation({
  * Atomic operation to replace active configs with new optimized versions.
  * Call this after optimization run to deploy new configs.
  * 
+ * IDEMPOTENT: Safe to call multiple times with same promotion_id.
+ * If already promoted, returns counts without re-executing.
+ * 
  * Process:
- * 1. Archives all currently active configs for the system
- * 2. Activates specified new configs
- * 3. Returns counts for verification
+ * 1. Check if promotion_id was already executed (idempotency check)
+ * 2. Archives all currently active configs for the system
+ * 3. Activates specified new configs
+ * 4. Returns counts for verification
  */
 export const promoteConfigs = mutation({
   args: {
     system_name: v.string(),
     new_config_ids: v.array(v.id("convergence_configs")),
+    promotion_id: v.optional(v.string()),  // Optional for backward compatibility
   },
   returns: v.object({
     archived_count: v.number(),
     promoted_count: v.number(),
+    already_promoted: v.optional(v.boolean()),
   }),
   handler: async (ctx, args) => {
     const now = Date.now();
+    const promotion_id = args.promotion_id || `promo_${now}_${Math.random().toString(36).substring(7)}`;
     
+    // Idempotency check: Has this promotion_id already been executed?
+    if (args.promotion_id) {
+      const existingPromotion = await ctx.db
+        .query("convergence_configs")
+        .withIndex("by_system_status", (q) =>
+          q.eq("system_name", args.system_name).eq("status", "active")
+        )
+        .filter((q) => q.eq(q.field("promotion_id"), args.promotion_id))
+        .first();
+      
+      if (existingPromotion) {
+        // Already promoted - count active configs with this promotion_id
+        const promotedConfigs = await ctx.db
+          .query("convergence_configs")
+          .withIndex("by_system_status", (q) =>
+            q.eq("system_name", args.system_name).eq("status", "active")
+          )
+          .filter((q) => q.eq(q.field("promotion_id"), args.promotion_id))
+          .collect();
+        
+        return {
+          archived_count: 0,
+          promoted_count: promotedConfigs.length,
+          already_promoted: true,
+        };
+      }
+    }
+    
+    // Archive old active configs
     const activeConfigs = await ctx.db
       .query("convergence_configs")
       .withIndex("by_system_status", (q) =>
@@ -360,17 +396,20 @@ export const promoteConfigs = mutation({
       });
     }
     
+    // Activate new configs with promotion_id
     for (const configId of args.new_config_ids) {
       await ctx.db.patch(configId, {
         status: "active",
         deployed_at: now,
         updatedAt: now,
+        promotion_id,
       });
     }
     
     return {
       archived_count: activeConfigs.length,
       promoted_count: args.new_config_ids.length,
+      already_promoted: false,
     };
   },
 });

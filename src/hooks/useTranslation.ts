@@ -5,12 +5,14 @@ import { useAuth } from '@/app/context/auth-context';
 import { fetchWithApiKey } from '@/app/lib/api-helpers';
 import type { TranslateRequest } from '@/convex/types/translation';
 import type { UserPreferences } from '@/convex/types/user';
+import { setStoredLanguage } from '@/lib/language-utils';
 
 export interface TranslationState {
   text: string;
   isTranslating: boolean;
   isFromCache: boolean;
   error: string | null;
+  retryCount?: number;
 }
 
 /**
@@ -45,6 +47,7 @@ export function useTranslation(
     isTranslating: false,
     isFromCache: false,
     error: null,
+    retryCount: 0,
   });
 
   // Skip if disabled or same language
@@ -65,14 +68,18 @@ export function useTranslation(
   // Mutation to save translation
   const saveTranslation = useMutation(api.translationMutations.saveTranslation);
 
-  // Translate using backend AI
-  const translateWithAI = useCallback(async () => {
+  // Translate using backend AI with retry logic
+  const translateWithAI = useCallback(async (retryCount = 0) => {
     if (!shouldTranslate) return;
+
+    const maxRetries = 3;
+    const baseDelay = 1000; // 1 second base delay
 
     setTranslationState(prev => ({
       ...prev,
       isTranslating: true,
       error: null,
+      retryCount,
     }));
 
     try {
@@ -87,7 +94,7 @@ export function useTranslation(
       });
 
       if (!response.ok) {
-        throw new Error('Translation failed');
+        throw new Error(`Translation failed: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
@@ -99,6 +106,7 @@ export function useTranslation(
         isTranslating: false,
         isFromCache: false,
         error: null,
+        retryCount: 0,
       });
 
       // Save to Convex cache
@@ -112,12 +120,25 @@ export function useTranslation(
         translatedBy: firebaseUser?.uid,
       });
     } catch (error) {
-      console.error('Translation error:', error);
-      setTranslationState(prev => ({
-        ...prev,
-        isTranslating: false,
-        error: 'Translation failed',
-      }));
+      console.error(`Translation error (attempt ${retryCount + 1}):`, error);
+      
+      if (retryCount < maxRetries) {
+        // Exponential backoff: 1s, 2s, 4s
+        const delay = baseDelay * Math.pow(2, retryCount);
+        console.log(`Retrying translation in ${delay}ms...`);
+        
+        setTimeout(() => {
+          translateWithAI(retryCount + 1);
+        }, delay);
+      } else {
+        // Max retries exceeded
+        setTranslationState(prev => ({
+          ...prev,
+          isTranslating: false,
+          error: `Translation failed after ${maxRetries + 1} attempts`,
+          retryCount: 0,
+        }));
+      }
     }
   }, [
     sourceText,
@@ -137,6 +158,7 @@ export function useTranslation(
         isTranslating: false,
         isFromCache: false,
         error: null,
+        retryCount: 0,
       });
       return;
     }
@@ -156,11 +178,22 @@ export function useTranslation(
         isTranslating: false,
         isFromCache: true,
         error: null,
+        retryCount: 0,
       });
     }
   }, [cachedTranslation, sourceText, shouldTranslate, translateWithAI]);
 
-  return translationState;
+  // Manual retry function for failed translations
+  const retryTranslation = useCallback(() => {
+    if (translationState.error && shouldTranslate) {
+      translateWithAI(0); // Reset retry count
+    }
+  }, [translationState.error, shouldTranslate, translateWithAI]);
+
+  return {
+    ...translationState,
+    retryTranslation,
+  };
 }
 
 /**
@@ -182,14 +215,20 @@ export function useLanguagePreference() {
 
   const setLanguage = useCallback(
     async (newLanguage: string) => {
-      if (!userId) return;
+      if (!userId) {
+        // Guest user - save to localStorage only
+        setStoredLanguage(newLanguage, 'manual');
+        return;
+      }
 
+      // Authenticated user - save to Convex + localStorage (keep in sync)
       await updatePreferences({
         userId,
         preferences: {
           language: newLanguage,
         },
       });
+      setStoredLanguage(newLanguage, 'manual');
     },
     [userId, updatePreferences]
   );

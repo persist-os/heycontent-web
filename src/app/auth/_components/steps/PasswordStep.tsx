@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, Key, ArrowLeft } from 'lucide-react';
+import { T } from '@/components/translation';
 
 interface PasswordRequirements {
   upper: boolean;
@@ -36,7 +37,9 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
   return (
     <div className="space-y-6">
       <div>
-        <label htmlFor="password" className="block text-sm font-medium text-foreground mb-2">Password</label>
+        <label htmlFor="password" className="block text-sm font-medium text-foreground mb-2">
+          <T context="label.auth.password">Password</T>
+        </label>
         <div className="relative">
           <input
             id="password"
@@ -64,7 +67,9 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
             onClick={() => setShowPasswordRequirements(!showPasswordRequirements)}
             className="flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            <span className="mr-1">Password requirements</span>
+            <span className="mr-1">
+              <T context="label.auth.password-requirements">Password requirements</T>
+            </span>
             <svg
               className={`w-4 h-4 transform transition-transform ${showPasswordRequirements ? 'rotate-180' : ''}`}
               fill="none"
@@ -80,23 +85,23 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
               <ul className="space-y-1.5 text-sm">
                 <li className={`flex items-center ${passwordValid.upper ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
                   <span className="mr-2">{passwordValid.upper ? '✓' : '•'}</span>
-                  At least one uppercase letter
+                  <T context="message.auth.req-uppercase">At least one uppercase letter</T>
                 </li>
                 <li className={`flex items-center ${passwordValid.lower ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
                   <span className="mr-2">{passwordValid.lower ? '✓' : '•'}</span>
-                  At least one lowercase letter
+                  <T context="message.auth.req-lowercase">At least one lowercase letter</T>
                 </li>
                 <li className={`flex items-center ${passwordValid.number ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
                   <span className="mr-2">{passwordValid.number ? '✓' : '•'}</span>
-                  At least one number
+                  <T context="message.auth.req-number">At least one number</T>
                 </li>
                 <li className={`flex items-center ${passwordValid.special ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
                   <span className="mr-2">{passwordValid.special ? '✓' : '•'}</span>
-                  At least one special character
+                  <T context="message.auth.req-special">At least one special character</T>
                 </li>
                 <li className={`flex items-center ${passwordValid.length ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
                   <span className="mr-2">{passwordValid.length ? '✓' : '•'}</span>
-                  At least 8 characters
+                  <T context="message.auth.req-length">At least 8 characters</T>
                 </li>
               </ul>
             </div>
@@ -117,7 +122,7 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
           className="flex-1 bg-secondary text-secondary-foreground py-3 rounded-xl hover:bg-secondary/80 transition-colors font-medium flex items-center justify-center"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
+          <T context="button.auth.back">Back</T>
         </button>
         <button
           type="button"
@@ -125,7 +130,11 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
           className="flex-1 bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           disabled={isLoading || !isPasswordValid}
         >
-          {isLoading ? 'Creating account...' : 'Create Account'}
+          {isLoading ? (
+            <T context="button.auth.creating-account">Creating account...</T>
+          ) : (
+            <T context="button.auth.create-account">Create Account</T>
+          )}
         </button>
       </div>
     </div>

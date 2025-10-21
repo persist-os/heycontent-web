@@ -10,6 +10,7 @@ import React from 'react'
 import { Button } from '@/components/ui/button'
 import { FileText, MessageSquare, Calendar, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react'
 import type { WidgetOutput } from '../types'
+import { T, TButton } from '@/components/translation'
 
 interface WidgetOutputCardProps {
   output: WidgetOutput
@@ -65,11 +66,15 @@ export function WidgetOutputCard({
                     </div>
                   </div>
                   <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                    <span>{promptCount} conversation {promptCount === 1 ? 'starter' : 'starters'}</span>
+                    <span>
+                      <T context="widget.conversation_starters">
+                        {promptCount} conversation {promptCount === 1 ? 'starter' : 'starters'}
+                      </T>
+                    </span>
                     {hasNote && (
                       <span className="flex items-center gap-1">
                         <FileText className="w-3 h-3" />
-                        + generated note
+                        <T context="widget.generated_note">+ generated note</T>
                       </span>
                     )}
                   </div>
@@ -95,7 +100,7 @@ export function WidgetOutputCard({
                 <div className="flex items-center gap-2">
                   <FileText className="w-4 h-4 text-muted-foreground" />
                   <h4 className="text-sm font-medium text-foreground">
-                    {output.noteTitle || "Generated Note"}
+                    <T context="widget.note_title">{output.noteTitle || "Generated Note"}</T>
                   </h4>
                 </div>
               </div>
@@ -105,7 +110,7 @@ export function WidgetOutputCard({
             {promptCount > 0 && (
               <div className="space-y-2">
                 <h4 className="text-sm font-medium text-foreground/80">
-                  Conversation Starters
+                  <T context="widget.conversation_starters_title">Conversation Starters</T>
                 </h4>
                 <div className="space-y-2">
                   {output.prompts.slice(0, isExpanded ? output.prompts.length : 2).map((prompt, idx) => (
@@ -125,7 +130,7 @@ export function WidgetOutputCard({
                   ))}
                   {!isExpanded && promptCount > 2 && (
                     <div className="text-xs text-muted-foreground/60 text-center py-2">
-                      +{promptCount - 2} more starters
+                      <T context="widget.more_starters">+{promptCount - 2} more starters</T>
                     </div>
                   )}
                 </div>
@@ -140,25 +145,25 @@ export function WidgetOutputCard({
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <h4 className="text-sm font-medium text-foreground/80 mb-3">
-                  Output Details
+                  <T context="widget.output_details">Output Details</T>
                 </h4>
                 <div className="space-y-2 text-sm text-muted-foreground">
                   <div className="flex justify-between">
-                    <span>Output ID:</span>
+                    <span><T context="widget.output_id">Output ID:</T></span>
                     <span className="font-mono text-xs">{output.outputId}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Created:</span>
+                    <span><T context="widget.created">Created:</T></span>
                     <span>{new Date(output.createdAt).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Conversation Starters:</span>
+                    <span><T context="widget.conversation_starters_count">Conversation Starters:</T></span>
                     <span>{promptCount}</span>
                   </div>
                   {hasNote && (
                     <div className="flex justify-between">
-                      <span>Generated Note:</span>
-                      <span className="text-green-600 dark:text-green-400">✓ Created</span>
+                      <span><T context="widget.generated_note_status">Generated Note:</T></span>
+                      <span className="text-green-600 dark:text-green-400">✓ <T context="widget.created_status">Created</T></span>
                     </div>
                   )}
                 </div>
@@ -166,7 +171,7 @@ export function WidgetOutputCard({
               
               <div>
                 <h4 className="text-sm font-medium text-foreground/80 mb-3">
-                  Actions
+                  <T context="widget.actions">Actions</T>
                 </h4>
                 <div className="space-y-2">
                   <Button
@@ -176,7 +181,7 @@ export function WidgetOutputCard({
                     onClick={onLaunchLab}
                   >
                     <ExternalLink className="w-4 h-4 mr-2" />
-                    Open in Thinking Lab
+                    <T context="button.open_thinking_lab">Open in Thinking Lab</T>
                   </Button>
                 </div>
               </div>

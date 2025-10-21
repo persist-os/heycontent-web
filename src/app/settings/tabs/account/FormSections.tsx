@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { T } from '@/components/translation/T';
 
 const MAX_PERSONA_LENGTH = 500;
 const MAX_VISION_LENGTH = 500;
@@ -50,7 +51,9 @@ export const ProfileFields = ({ formData, setFormData, isEditMode }: ProfileFiel
     {/* Name Field */}
     {isEditMode ? (
       <div>
-        <label htmlFor="name" className="text-sm font-medium">Name</label>
+        <label htmlFor="name" className="text-sm font-medium">
+          <T context="field.label.name">Name</T>
+        </label>
         <Input
           type="text"
           value={formData.name}
@@ -67,7 +70,9 @@ export const ProfileFields = ({ formData, setFormData, isEditMode }: ProfileFiel
     {/* Username Field */}
     {isEditMode ? (
       <div>
-        <label htmlFor="username" className="text-sm font-medium">Username</label>
+        <label htmlFor="username" className="text-sm font-medium">
+          <T context="field.label.username">Username</T>
+        </label>
         <Input
           type="text"
           value={formData.username}
@@ -91,11 +96,14 @@ export const ReferralFields = ({ formData, referrerName = '', referrerLoading = 
       value={formData.referralCode || "Loading..."} 
       showCopy={!!formData.referralCode}
       helperText={formData.referralCode ? "Share this code with friends to invite them" : "Your referral code is being generated..."}
+      translateLabel={true}
+      translateHelper={true}
     />
     {/* Referred By (always read-only) */}
     <ReadOnlyField 
       label="Referred By" 
       value={referrerLoading ? 'Loading...' : referrerName ? referrerName : ''}
+      translateLabel={true}
     />
   </>
 );
@@ -105,8 +113,12 @@ export const PersonaFields = ({ formData, setFormData, isEditMode, showPersonaFi
   <div className="mt-6 space-y-4">
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-muted/50 rounded-lg">
       <div>
-        <h3 className="font-medium">Persona Information</h3>
-        <p className="text-sm text-muted-foreground">Help Content understand your journey and goals</p>
+        <h3 className="font-medium">
+          <T context="settings.persona.title">Persona Information</T>
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          <T context="settings.persona.subtitle">Help Content understand your journey and goals</T>
+        </p>
       </div>
       <Button
         type="button"
@@ -115,7 +127,7 @@ export const PersonaFields = ({ formData, setFormData, isEditMode, showPersonaFi
         onClick={() => setShowPersonaFields(!showPersonaFields)}
         className="w-full sm:w-auto"
       >
-        {showPersonaFields ? 'Hide' : 'Show'} Persona Fields
+        {showPersonaFields ? <T context="button.hide">Hide</T> : <T context="button.show">Show</T>} <T context="settings.persona.fields">Persona Fields</T>
       </Button>
     </div>
     {showPersonaFields && (
@@ -126,7 +138,9 @@ export const PersonaFields = ({ formData, setFormData, isEditMode, showPersonaFi
         {/* Current Persona */}
         {isEditMode ? (
           <div>
-            <label className="text-sm font-medium">Current Persona</label>
+            <label className="text-sm font-medium">
+              <T context="field.label.current_persona">Current Persona</T>
+            </label>
             <Textarea
               placeholder="Describe your current persona..."
               value={formData.currentPersona}
@@ -141,12 +155,15 @@ export const PersonaFields = ({ formData, setFormData, isEditMode, showPersonaFi
             label="Current Persona" 
             value={formData.currentPersona}
             characterCount={`${formData.currentPersona.length}/${MAX_PERSONA_LENGTH}`}
+            translateLabel={true}
           />
         )}
         {/* Future Vision */}
         {isEditMode ? (
           <div>
-            <label className="text-sm font-medium">Future Vision</label>
+            <label className="text-sm font-medium">
+              <T context="field.label.future_vision">Future Vision</T>
+            </label>
             <Textarea
               placeholder="Describe your future vision..."
               value={formData.futureVision}
@@ -161,6 +178,7 @@ export const PersonaFields = ({ formData, setFormData, isEditMode, showPersonaFi
             label="Future Vision" 
             value={formData.futureVision}
             characterCount={`${formData.futureVision.length}/${MAX_VISION_LENGTH}`}
+            translateLabel={true}
           />
         )}
       </div>

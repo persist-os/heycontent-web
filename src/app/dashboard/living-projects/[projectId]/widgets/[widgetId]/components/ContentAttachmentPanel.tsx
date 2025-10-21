@@ -14,6 +14,7 @@ import { PanelHeader } from './PanelHeader';
 import { QuickNoteForm } from './QuickNoteForm';
 import { SearchAndFilterBar } from './SearchAndFilterBar';
 import { EnhancedItemCard } from './EnhancedItemCard';
+import { T } from '@/components/translation';
 
 /**
  * ContentAttachmentPanel - Unified content attachment for widgets and projects

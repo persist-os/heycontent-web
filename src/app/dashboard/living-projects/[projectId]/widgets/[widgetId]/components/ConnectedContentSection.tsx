@@ -9,6 +9,7 @@ import { ConversationCard } from './ConversationCard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, Zap, Calendar } from 'lucide-react';
+import { T, TButton, THeading } from '@/components/translation';
 
 interface ConnectedContentSectionProps {
   widgetId: string | Id<"widgets">;
@@ -64,24 +65,24 @@ export function ConnectedContentSection({
     return (
       <div className="space-y-8">
         <div className="flex items-baseline gap-6">
-          <h2 className="text-3xl font-light tracking-tight text-foreground">
-            Connected Content
-          </h2>
+          <THeading level={2} className="text-3xl font-light tracking-tight text-foreground">
+            <T context="widget.connected_content">Connected Content</T>
+          </THeading>
           <span className="text-sm text-muted-foreground">
-            No content linked yet
+            <T context="widget.no_content_linked">No content linked yet</T>
           </span>
         </div>
 
         <div className="border border-dashed border-border/50 rounded p-16 text-center">
           <p className="text-base text-muted-foreground mb-8 max-w-lg mx-auto leading-relaxed">
-            Link notes, conversations, crystals, and shards to this widget to build context and maintain connections across your work.
+            <T context="widget.link_content_description">Link notes, conversations, crystals, and shards to this widget to build context and maintain connections across your work.</T>
           </p>
           <Button
             onClick={onAddContent}
             variant="outline"
             className="hover:bg-muted/50 transition-colors duration-300"
           >
-            Add Content
+            <T context="button.add_content">Add Content</T>
           </Button>
         </div>
       </div>
@@ -99,7 +100,7 @@ export function ConnectedContentSection({
               activeTab === 'notes' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground/70'
             }`}
           >
-            Notes
+            <T context="widget.notes">Notes</T>
             <span className="ml-2 text-sm">
               {notesCount}
             </span>
@@ -114,7 +115,7 @@ export function ConnectedContentSection({
               activeTab === 'conversations' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground/70'
             }`}
           >
-            Conversations
+            <T context="widget.conversations">Conversations</T>
             <span className="ml-2 text-sm">
               {conversationsCount}
             </span>
@@ -129,7 +130,7 @@ export function ConnectedContentSection({
               activeTab === 'crystals' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground/70'
             }`}
           >
-            Crystals
+            <T context="widget.crystals">Crystals</T>
             <span className="ml-2 text-sm">
               {crystalsCount}
             </span>
@@ -144,7 +145,7 @@ export function ConnectedContentSection({
               activeTab === 'shards' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground/70'
             }`}
           >
-            Shards
+            <T context="widget.shards">Shards</T>
             <span className="ml-2 text-sm">
               {shardsCount}
             </span>
@@ -160,7 +161,7 @@ export function ConnectedContentSection({
           size="sm"
           className="text-muted-foreground hover:text-foreground transition-colors duration-300 mb-3"
         >
-          Add More
+          <T context="button.add_more">Add More</T>
         </Button>
       </div>
 
@@ -180,7 +181,9 @@ export function ConnectedContentSection({
               </div>
             ) : (
               <div className="py-16 text-center">
-                <p className="text-muted-foreground">No notes connected yet</p>
+                <p className="text-muted-foreground">
+                  <T context="widget.no_notes_connected">No notes connected yet</T>
+                </p>
               </div>
             )}
           </>
@@ -200,7 +203,9 @@ export function ConnectedContentSection({
               </div>
             ) : (
               <div className="py-16 text-center">
-                <p className="text-muted-foreground">No conversations connected yet</p>
+                <p className="text-muted-foreground">
+                  <T context="widget.no_conversations_connected">No conversations connected yet</T>
+                </p>
               </div>
             )}
           </>
@@ -221,7 +226,7 @@ export function ConnectedContentSection({
                       </div>
                       <div className="flex-1 min-w-0">
                         <h4 className="font-medium text-foreground group-hover:text-foreground transition-colors truncate">
-                          {crystal.name || 'Untitled Crystal'}
+                          <T context="widget.crystal_title">{crystal.name || 'Untitled Crystal'}</T>
                         </h4>
                         <p className="text-sm text-muted-foreground/70 line-clamp-2 mt-1 font-light italic">
                           {crystal.supporting_quotes && crystal.supporting_quotes.length > 0 
@@ -240,7 +245,7 @@ export function ConnectedContentSection({
                           )}
                           {crystal.confidence_score && (
                             <Badge variant="outline" className="text-xs">
-                              {crystal.confidence_score} confidence
+                              <T context="widget.confidence_score">{crystal.confidence_score} confidence</T>
                             </Badge>
                           )}
                         </div>
@@ -251,7 +256,9 @@ export function ConnectedContentSection({
               </div>
             ) : (
               <div className="py-16 text-center">
-                <p className="text-muted-foreground">No crystals connected yet</p>
+                <p className="text-muted-foreground">
+                  <T context="widget.no_crystals_connected">No crystals connected yet</T>
+                </p>
               </div>
             )}
           </>
@@ -272,7 +279,7 @@ export function ConnectedContentSection({
                       </div>
                       <div className="flex-1 min-w-0">
                         <h4 className="font-medium text-foreground group-hover:text-foreground transition-colors line-clamp-2">
-                          {shard.exact_quote || (shard.dimension ? `${shard.dimension} Insight` : 'Insight Shard')}
+                          <T context="widget.shard_title">{shard.exact_quote || (shard.dimension ? `${shard.dimension} Insight` : 'Insight Shard')}</T>
                         </h4>
                         <p className="text-sm text-muted-foreground/70 line-clamp-2 mt-1 font-light">
                           {shard.what_it_reveals || 'No revelation'}
@@ -284,7 +291,7 @@ export function ConnectedContentSection({
                           </div>
                           {shard.confidence_level && (
                             <Badge variant="outline" className="text-xs">
-                              {shard.confidence_level} confidence
+                              <T context="widget.confidence_level">{shard.confidence_level} confidence</T>
                             </Badge>
                           )}
                           {shard.shard_status && (
@@ -300,7 +307,9 @@ export function ConnectedContentSection({
               </div>
             ) : (
               <div className="py-16 text-center">
-                <p className="text-muted-foreground">No shards connected yet</p>
+                <p className="text-muted-foreground">
+                  <T context="widget.no_shards_connected">No shards connected yet</T>
+                </p>
               </div>
             )}
           </>

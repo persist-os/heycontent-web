@@ -7,6 +7,7 @@
 
 import React from 'react'
 import { X } from 'lucide-react'
+import { T } from '@/components/translation/T'
 
 interface EditableTextFieldProps {
   value: string
@@ -104,7 +105,7 @@ export const EditableArrayField = ({
               onClick={() => onChange([...values, ''])}
               className="text-xs text-muted-foreground/50 hover:text-foreground transition-colors"
             >
-              + Add item
+              + <T context="fingerprint.editable.add_item">Add item</T>
             </button>
           </>
         )}

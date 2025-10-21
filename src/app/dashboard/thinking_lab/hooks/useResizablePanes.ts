@@ -12,6 +12,7 @@ interface UseResizablePanesResult {
     snapToRight: () => void
     startDrag: (e: React.MouseEvent) => void
     setSplitRatio: (ratio: number) => void
+    setPreferredRatio: (ratio: number) => void
   }
   styles: {
     leftPanelStyle: React.CSSProperties
@@ -28,6 +29,7 @@ export function useResizablePanes(initialRatio = 0.5): UseResizablePanesResult {
   const dragStartX = useRef<number>(0)
   const dragStartRatio = useRef<number>(0)
   const containerRef = useRef<HTMLDivElement>(null)
+  const preferredRatio = useRef<number>(initialRatio)
 
   // Snap functions
   const snapToLeft = useCallback(() => {
@@ -38,7 +40,7 @@ export function useResizablePanes(initialRatio = 0.5): UseResizablePanesResult {
 
   const snapToSplit = useCallback(() => {
     setIsSnapping(true)
-    setSplitRatio(0.5) // 50/50 split
+    setSplitRatio(preferredRatio.current) // Use preferred ratio instead of 50/50
     setTimeout(() => setIsSnapping(false), 300)
   }, [])
 
@@ -46,6 +48,11 @@ export function useResizablePanes(initialRatio = 0.5): UseResizablePanesResult {
     setIsSnapping(true)
     setSplitRatio(0.0) // Full right panel (100% width)
     setTimeout(() => setIsSnapping(false), 300)
+  }, [])
+
+  // Set preferred ratio function
+  const setPreferredRatio = useCallback((ratio: number) => {
+    preferredRatio.current = ratio
   }, [])
 
   // Drag handling
@@ -75,9 +82,11 @@ export function useResizablePanes(initialRatio = 0.5): UseResizablePanesResult {
 
   const endDrag = useCallback(() => {
     setIsDragging(false)
+    // Save the current ratio as preferred when user finishes dragging
+    preferredRatio.current = splitRatio
     document.removeEventListener('mousemove', handleDrag)
     document.removeEventListener('mouseup', endDrag)
-  }, [handleDrag])
+  }, [handleDrag, splitRatio])
 
   // Cleanup on unmount
   useEffect(() => {
@@ -110,7 +119,7 @@ export function useResizablePanes(initialRatio = 0.5): UseResizablePanesResult {
 
   return {
     state: { splitRatio, isDragging, isSnapping },
-    actions: { snapToLeft, snapToSplit, snapToRight, startDrag, setSplitRatio },
+    actions: { snapToLeft, snapToSplit, snapToRight, startDrag, setSplitRatio, setPreferredRatio },
     styles: { leftPanelStyle, rightPanelStyle, dividerStyle },
     containerRef
   }

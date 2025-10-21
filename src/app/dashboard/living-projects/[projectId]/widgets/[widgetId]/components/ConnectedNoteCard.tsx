@@ -10,6 +10,7 @@ import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { truncateContent } from '../utils'
 import type { ConnectedNote } from '../types'
+import { T } from '@/components/translation'
 
 interface ConnectedNoteCardProps {
   note: ConnectedNote
@@ -39,7 +40,7 @@ export function ConnectedNoteCard({ note, onNoteClick }: ConnectedNoteCardProps)
         {/* Title and Preview */}
         <div className="space-y-3">
           <h3 className="text-xl font-light tracking-tight text-foreground group-hover:text-foreground/80 transition-colors">
-            {note.title || 'Untitled Note'}
+            <T context="widget.note_title">{note.title || 'Untitled Note'}</T>
           </h3>
           
           <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
@@ -52,7 +53,7 @@ export function ConnectedNoteCard({ note, onNoteClick }: ConnectedNoteCardProps)
           <div className="flex items-baseline gap-4 text-xs text-muted-foreground">
             <span>{formatDate(createdDate)}</span>
             {note.tags && note.tags.length > 0 && (
-              <span>{note.tags.length} tags</span>
+              <span><T context="widget.tags_count">{note.tags.length} tags</T></span>
             )}
           </div>
           
@@ -65,7 +66,7 @@ export function ConnectedNoteCard({ note, onNoteClick }: ConnectedNoteCardProps)
             }}
             className="text-xs text-muted-foreground hover:text-foreground h-auto py-1 px-2"
           >
-            {showMetadata ? 'Hide Details' : 'Show Details'}
+            {showMetadata ? <T context="button.hide_details">Hide Details</T> : <T context="button.show_details">Show Details</T>}
           </Button>
         </div>
 
@@ -74,12 +75,12 @@ export function ConnectedNoteCard({ note, onNoteClick }: ConnectedNoteCardProps)
           <div className="pt-4 space-y-3 border-t border-border/30">
             <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
               <div>
-                <span className="text-muted-foreground">Created</span>
+                <span className="text-muted-foreground"><T context="widget.created">Created</T></span>
                 <p className="text-foreground font-light">{formatDate(createdDate)}</p>
               </div>
               
               <div>
-                <span className="text-muted-foreground">Updated</span>
+                <span className="text-muted-foreground"><T context="widget.updated">Updated</T></span>
                 <p className="text-foreground font-light">{formatDate(updatedDate)}</p>
               </div>
               

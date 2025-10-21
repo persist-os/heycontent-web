@@ -70,7 +70,7 @@ export function isAuthReady(): Promise<boolean> {
  * Only retries if auth appears to be initializing (not if user is actually not signed in)
  * Uses centralized auth state manager to prevent multiple listeners
  */
-export async function waitForAuthState(retries: number = 3, interval: number = 100): Promise<any> {
+export async function waitForAuthState(retries: number = 10, interval: number = 150): Promise<any> {
   for (let i = 0; i < retries; i++) {
     try {
       // Import auth state manager dynamically to avoid circular dependencies
@@ -142,7 +142,7 @@ export function getCurrentUserIdSync(): string | null {
  * Wait until authentication state is ready (user determined),
  * resolving to true if ready (even if signed out), false if unavailable.
  */
-export async function waitForAuthReady(retries: number = 5, interval: number = 150): Promise<boolean> {
+export async function waitForAuthReady(retries: number = 10, interval: number = 200): Promise<boolean> {
   const ready = await isAuthReady();
   if (ready) return true;
   for (let i = 0; i < retries; i++) {
@@ -167,9 +167,8 @@ export async function getApiKey(): Promise<string | null> {
       throw new AuthenticationError('Firebase Auth not available');
     }
     
-    // Use centralized auth state manager to prevent multiple listeners
-    const { authStateManager } = await import('./auth-state-manager');
-    const currentUser = authStateManager.getCurrentUser();
+    // Wait for user to be loaded (not just auth system initialized)
+    const currentUser = await waitForAuthState();
     if (!currentUser) {
       throw new AuthenticationError('No authenticated user found');
     }
@@ -332,7 +331,7 @@ export async function getCurrentUserId(): Promise<string> {
     }
   }
 
-  // Fallback: wait for Firebase auth to be ready using centralized manager
+  // Fallback: wait for Firebase auth to be ready and user to be loaded
   try {
     const tAuthWaitStart = now();
     const authReady = await isAuthReady();
@@ -340,13 +339,12 @@ export async function getCurrentUserId(): Promise<string> {
     const sinceInitMs = authInitializedAt ? now() - authInitializedAt : null;
     debugLog.log('getCurrentUserId: auth readiness result', { authReady, waitedMs, sinceAuthInitializedMs: sinceInitMs });
     if (authReady) {
-      // Use centralized auth state manager instead of direct Firebase auth
-      const { authStateManager } = await import('./auth-state-manager');
-      const currentUser = authStateManager.getCurrentUser();
+      // Wait for user to be loaded (not just auth system initialized)
+      const currentUser = await waitForAuthState();
       debugLog.log('getCurrentUserId: auth state', { hasUser: Boolean(currentUser), uid: currentUser?.uid ?? null });
       const uid = currentUser?.uid;
       if (typeof uid === 'string' && uid.length > 0) {
-        debugLog.info('getCurrentUserId: extracted uid from centralized auth manager', { uid, ms: now() - t0 });
+        debugLog.info('getCurrentUserId: extracted uid from user state', { uid, ms: now() - t0 });
         return uid;
       }
     }

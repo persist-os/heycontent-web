@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Loader2 } from 'lucide-react'
 import { Id } from '@/convex/_generated/dataModel'
 import type { WidgetConfig } from '@/types/projectWidgets'
+import { T, TButton } from '@/components/translation'
 
 interface WidgetHeaderProps {
   widget: WidgetConfig
@@ -41,14 +42,14 @@ export function WidgetHeader({
                 onClick={() => router.push(`/dashboard/living-projects/${projectId}`)}
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300 mb-6 block"
               >
-                ← Back to Project
+                <T context="navigation.back">← Back to Project</T>
               </button>
             </div>
 
             <div className="space-y-3">
               <div className="flex items-baseline gap-6">
                 <h1 className="text-5xl font-light tracking-tight text-foreground">
-                  {widget.title}
+                  <T context="widget.title">{widget.title}</T>
                 </h1>
                 <span className="text-sm text-muted-foreground">
                   {widget.widget_type}
@@ -56,7 +57,7 @@ export function WidgetHeader({
               </div>
 
               <p className="text-base text-muted-foreground leading-relaxed max-w-3xl">
-                {widget.description}
+                <T context="widget.description">{widget.description}</T>
               </p>
             </div>
           </div>
@@ -68,7 +69,7 @@ export function WidgetHeader({
               variant="ghost"
               className="text-muted-foreground hover:text-foreground transition-colors duration-300"
             >
-              Open in Lab
+              <T context="button.open_lab">Open in Lab</T>
             </Button>
             <Button
               onClick={onRunWidget}
@@ -79,10 +80,10 @@ export function WidgetHeader({
               {isRunning ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Running
+                  <T context="button.running">Running</T>
                 </>
               ) : (
-                'Run Widget'
+                <T context="button.run_widget">Run Widget</T>
               )}
             </Button>
           </div>

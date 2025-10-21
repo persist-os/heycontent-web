@@ -21,6 +21,7 @@ import {
   Clock
 } from 'lucide-react'
 import PrivacySettingsSection from '../components/PrivacySettingsSection'
+import { T } from '@/components/translation/T'
 
 interface FriendsTabProps {
   userId?: string
@@ -227,8 +228,12 @@ const FriendsTab = ({ userId }: FriendsTabProps) => {
       {pendingRequests && pendingRequests.length > 0 && (
         <div className="space-y-6">
           <div className="space-y-1">
-            <h2 className="text-2xl font-light tracking-tight text-foreground">Friend Requests</h2>
-            <p className="text-muted-foreground">People who want to connect with you</p>
+            <h2 className="text-2xl font-light tracking-tight text-foreground">
+              <T context="settings.friends.requests.title">Friend Requests</T>
+            </h2>
+            <p className="text-muted-foreground">
+              <T context="settings.friends.requests.subtitle">People who want to connect with you</T>
+            </p>
           </div>
 
           <div className="space-y-4">
@@ -269,7 +274,7 @@ const FriendsTab = ({ userId }: FriendsTabProps) => {
                         className="bg-foreground text-background hover:bg-foreground/90 transition-colors duration-200"
                       >
                         <Check className="w-4 h-4 mr-2" />
-                        Accept
+                        <T context="button.accept">Accept</T>
                       </Button>
                       <Button
                         onClick={() => handleDeclineRequest(request._id)}
@@ -278,7 +283,7 @@ const FriendsTab = ({ userId }: FriendsTabProps) => {
                         className="text-muted-foreground hover:text-foreground transition-colors duration-200"
                       >
                         <X className="w-4 h-4 mr-2" />
-                        Decline
+                        <T context="button.decline">Decline</T>
                       </Button>
                     </div>
                   </div>
@@ -297,8 +302,12 @@ const FriendsTab = ({ userId }: FriendsTabProps) => {
       {/* Find Friends Section */}
       <div className="space-y-6">
         <div className="space-y-1">
-          <h2 className="text-2xl font-light tracking-tight text-foreground">Find Friends</h2>
-          <p className="text-muted-foreground">Search for people to connect with</p>
+          <h2 className="text-2xl font-light tracking-tight text-foreground">
+            <T context="settings.friends.find.title">Find Friends</T>
+          </h2>
+          <p className="text-muted-foreground">
+            <T context="settings.friends.find.subtitle">Search for people to connect with</T>
+          </p>
         </div>
 
         <div className="space-y-6">
@@ -320,12 +329,12 @@ const FriendsTab = ({ userId }: FriendsTabProps) => {
               {isSearching ? (
                 <>
                   <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-background border-t-transparent" />
-                  Searching...
+                  <T context="button.searching">Searching...</T>
                 </>
               ) : (
                 <>
                   <Search className="w-4 h-4 mr-2" />
-                  Search
+                  <T context="button.search">Search</T>
                 </>
               )}
             </Button>
@@ -334,7 +343,9 @@ const FriendsTab = ({ userId }: FriendsTabProps) => {
           {/* Search Results */}
           {searchResults.length > 0 && (
             <div className="space-y-4">
-              <h3 className="font-medium text-foreground">Search Results</h3>
+              <h3 className="font-medium text-foreground">
+                <T context="settings.friends.search_results">Search Results</T>
+              </h3>
               {searchResults.map((user) => (
                 <Card key={user._id} className="border-border/50">
                   <CardContent className="p-6">
@@ -370,17 +381,17 @@ const FriendsTab = ({ userId }: FriendsTabProps) => {
                         {user.friendshipStatus === 'accepted' ? (
                           <>
                             <UserCheck className="w-4 h-4 mr-2" />
-                            Already Friends
+                            <T context="settings.friends.status.already_friends">Already Friends</T>
                           </>
                         ) : user.requestSent || user.friendshipStatus === 'pending' ? (
                           <>
                             <Check className="w-4 h-4 mr-2" />
-                            Request Sent
+                            <T context="settings.friends.status.request_sent">Request Sent</T>
                           </>
                         ) : (
                           <>
                             <UserPlus className="w-4 h-4 mr-2" />
-                            Add Friend
+                            <T context="button.add_friend">Add Friend</T>
                           </>
                         )}
                       </Button>
@@ -399,17 +410,19 @@ const FriendsTab = ({ userId }: FriendsTabProps) => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <h2 className="text-2xl font-light tracking-tight text-foreground">My Friends</h2>
+            <h2 className="text-2xl font-light tracking-tight text-foreground">
+              <T context="settings.friends.my_friends.title">My Friends</T>
+            </h2>
             <p className="text-muted-foreground">
               {!friends || friends.length === 0 
-                ? "You haven't added any friends yet" 
+                ? <T context="settings.friends.my_friends.no_friends">You haven't added any friends yet</T>
                 : `${friends.length} ${friends.length === 1 ? 'friend' : 'friends'}`
               }
             </p>
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Users className="w-4 h-4" />
-            <span>{friends?.length || 0} total</span>
+            <span>{friends?.length || 0} <T context="label.total">total</T></span>
           </div>
         </div>
 
@@ -440,9 +453,11 @@ const FriendsTab = ({ userId }: FriendsTabProps) => {
                   <Users className="w-8 h-8 text-muted-foreground" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="font-medium text-foreground">No friends yet</h3>
+                  <h3 className="font-medium text-foreground">
+                    <T context="settings.friends.empty.title">No friends yet</T>
+                  </h3>
                   <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                    Start connecting with people by searching for them above or sharing your profile with others.
+                    <T context="settings.friends.empty.subtitle">Start connecting with people by searching for them above or sharing your profile with others.</T>
                   </p>
                 </div>
               </div>
@@ -468,7 +483,7 @@ const FriendsTab = ({ userId }: FriendsTabProps) => {
                             variant="default"
                             className="text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                           >
-                            friend
+                            <T context="label.friend">friend</T>
                           </Badge>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -492,7 +507,7 @@ const FriendsTab = ({ userId }: FriendsTabProps) => {
                       className="text-muted-foreground hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200"
                     >
                       <UserMinus className="w-4 h-4 mr-2" />
-                      Remove
+                      <T context="button.remove">Remove</T>
                     </Button>
                   </div>
                 </CardContent>

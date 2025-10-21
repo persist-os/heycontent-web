@@ -417,21 +417,3 @@ export const useShardsByIds = (userId: string | undefined, shardIds: string[] | 
   };
 };
 
-/**
- * Hook to check if user needs migration
- * Prevents duplicate migrations by checking Convex migration_tracking table
- */
-export const useMigrationStatus = (userId: string | undefined) => {
-  const migrationStatus = useQuery(
-    api.crystalMigration.checkNeedsMigration,
-    userId ? { userId } : "skip"
-  );
-
-  return {
-    needsMigration: migrationStatus?.needsMigration ?? true,
-    lastAttempt: migrationStatus?.lastAttempt,
-    attempts: migrationStatus?.attempts || 0,
-    contentProcessed: migrationStatus?.contentProcessed,
-    isLoading: migrationStatus === undefined
-  };
-};

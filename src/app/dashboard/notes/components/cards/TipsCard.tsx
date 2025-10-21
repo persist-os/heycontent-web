@@ -2,6 +2,7 @@ import React from 'react';
 import { BaseCard } from './BaseCard';
 import { Note } from '../../types';
 import { Lightbulb, CheckCircle } from 'lucide-react';
+import { T } from '@/components/translation/T';
 
 interface TipsCardProps {
   note: Note;
@@ -71,7 +72,7 @@ export function TipsCard({
             <Lightbulb className="w-4 h-4 text-yellow-600" />
           )}
           <h3 className="font-semibold text-foreground flex-1 pr-8 line-clamp-1">
-            {note.title || 'Tips & Advice'}
+            {note.title || <T context="tips.default_title">Tips & Advice</T>}
           </h3>
         </div>
 
@@ -88,13 +89,15 @@ export function TipsCard({
           
           {tips.length === 0 && (
             <div className="text-sm text-muted-foreground italic">
-              No tips yet
+              <T context="tips.empty_state">No tips yet</T>
             </div>
           )}
           
           {note.content && note.content.split('\n').length > tips.length && (
             <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-              <span>+{note.content.split('\n').length - tips.length} more tips</span>
+              <span>
+                +{note.content.split('\n').length - tips.length} <T context="tips.more_count">more tips</T>
+              </span>
             </div>
           )}
         </div>
@@ -104,7 +107,9 @@ export function TipsCard({
           <div className="mt-3 pt-2 border-t border-border">
             <div className="flex items-center gap-1">
               <CheckCircle className="w-3 h-3 text-yellow-600" />
-              <span className="text-xs text-muted-foreground">HeyContent Tips</span>
+              <span className="text-xs text-muted-foreground">
+                <T context="tips.heycontent_brand">HeyContent Tips</T>
+              </span>
             </div>
           </div>
         )}

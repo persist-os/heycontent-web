@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
+import { useLanguagePreference, useTranslation } from '@/hooks/useTranslation';
 
 interface CopyButtonProps {
   text: string;
@@ -19,6 +20,19 @@ export const CopyButton: React.FC<CopyButtonProps> = ({
   tooltipText = 'Copy to clipboard'
 }) => {
   const [copied, setCopied] = useState(false);
+  const { language } = useLanguagePreference();
+  
+  const { text: copiedText } = useTranslation('Copied!', {
+    context: 'button.copied',
+    targetLang: language,
+    enabled: true,
+  });
+  
+  const { text: copyText } = useTranslation('Copy', {
+    context: 'button.copy',
+    targetLang: language,
+    enabled: true,
+  });
 
   const handleCopy = async () => {
     try {
@@ -55,7 +69,7 @@ export const CopyButton: React.FC<CopyButtonProps> = ({
         hover:text-gray-700 dark:hover:text-gray-300
         ${className}
       `}
-      title={copied ? 'Copied!' : tooltipText}
+      title={copied ? copiedText : tooltipText}
       disabled={copied}
     >
       {copied ? (
@@ -65,7 +79,7 @@ export const CopyButton: React.FC<CopyButtonProps> = ({
       )}
       {showText && (
         <span className="text-xs font-medium">
-          {copied ? 'Copied' : 'Copy'}
+          {copied ? copiedText : copyText}
         </span>
       )}
     </button>

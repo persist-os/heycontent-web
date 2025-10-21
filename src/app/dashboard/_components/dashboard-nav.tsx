@@ -1,18 +1,25 @@
 'use client'
 
 import React, { memo, useCallback, useMemo, useEffect, useState, useRef } from 'react'
-import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Logo } from '@/components/ui/logo'
 import {
-  Users, Settings, FileText, LogOut, BarChart3, Menu, X, MessageSquare, Clock, Handshake, Trash2, Shield, Zap, Search, ArrowRight, Sparkles, Command, Gem, MoreHorizontal, Radio
+  FileText, Shield, Zap, Sparkles, Gem, Radio
 } from 'lucide-react'
-import { ThemeToggle } from '@/components/theme-toggle'
 import { useSidebar } from '@/app/context/sidebar-context'
 import { getApiKey } from '@/app/lib/api-helpers'
 import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDialog'
 import { useAdminAuth } from '@/app/lib/admin-auth'
 import { cn } from '@/lib/utils'
+import { useLanguagePreference, useTranslation } from '@/hooks/useTranslation'
+import { useUnifiedSearch } from '@/hooks/useUnifiedSearch'
+import {
+  CommandPaletteHeader,
+  CommandPaletteSearch,
+  SpacesGrid,
+  RecentConversations,
+  EmptySearchState,
+  SearchResults,
+} from '@/components/command-palette'
 
 const navItems = [
   // {
@@ -91,13 +98,33 @@ export const DashboardNav = memo(function DashboardNav() {
   const router = useRouter()
   const { isExpanded, setIsExpanded } = useSidebar();
   const { canAccessAdmin } = useAdminAuth();
+  const { language } = useLanguagePreference();
+  
+  // Get translated placeholder text
+  const { text: searchPlaceholder } = useTranslation('Search spaces, chats, or actions...', {
+    context: 'dashboard_nav.search.placeholder',
+    targetLang: language,
+    enabled: true,
+  });
+  
+  // Unified search hook (gets Firebase userId internally)
+  const {
+    searchQuery,
+    setSearchQuery,
+    searchMode,
+    setSearchMode,
+    results: searchResults,
+    isSearching,
+    triggerVectorSearch
+  } = useUnifiedSearch({
+    enabled: isExpanded
+  });
+  
   const [recentChats, setRecentChats] = useState<ChatHistory[]>([])
   const [apiKeyError, setApiKeyError] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [showChatMenu, setShowChatMenu] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   
@@ -105,16 +132,27 @@ export const DashboardNav = memo(function DashboardNav() {
   // Build nav items based on user permissions
   const dynamicNavItems = [
     ...navItems,
-    // Only show admin to users with admin access
-    ...(canAccessAdmin ? [{
-      id: 'admin',
-      label: 'Admin',
-      description: 'System administration and controls',
-      icon: Shield,
-      href: '/admin',
-      dataAttr: 'data-admin-link',
-      category: 'system',
-    }] : []),
+    // Only show admin and briefing room to users with admin access
+    ...(canAccessAdmin ? [
+      {
+        id: 'briefing-room',
+        label: 'Briefing Room',
+        description: 'Living intelligence command center',
+        icon: Radio,
+        href: '/dashboard/briefing_room',
+        dataAttr: 'data-briefing-room-link',
+        category: 'explore',
+      },
+      {
+        id: 'admin',
+        label: 'Admin',
+        description: 'System administration and controls',
+        icon: Shield,
+        href: '/admin',
+        dataAttr: 'data-admin-link',
+        category: 'system',
+      }
+    ] : []),
   ];
 
   // Memoized fetch function to prevent recreation
@@ -157,8 +195,19 @@ export const DashboardNav = memo(function DashboardNav() {
     } else {
       // Clear search when closing
       setSearchQuery('');
+      setSearchMode('keyword');
     }
-  }, [isExpanded, fetchRecentChats, apiKeyError]);
+  }, [isExpanded, fetchRecentChats, apiKeyError, setSearchQuery, setSearchMode]);
+
+  // Handle search input key events
+  const handleSearchKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      e.preventDefault();
+      triggerVectorSearch();
+    } else if (e.key === 'Escape') {
+      setIsExpanded(false);
+    }
+  }, [searchQuery, triggerVectorSearch, setIsExpanded]);
 
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -171,12 +220,14 @@ export const DashboardNav = memo(function DashboardNav() {
       // Escape to close
       if (e.key === 'Escape' && isExpanded) {
         setIsExpanded(false);
+        setSearchQuery('');
+        setSearchMode('keyword');
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isExpanded, setIsExpanded]);
+  }, [isExpanded, setIsExpanded, setSearchQuery, setSearchMode]);
 
   // Close chat menu when clicking outside
   useEffect(() => {
@@ -272,9 +323,9 @@ export const DashboardNav = memo(function DashboardNav() {
   // Memoize active item calculation
   const isItemActive = useCallback((item: typeof dynamicNavItems[0]) => {
     switch (item.id) {
-      // case 'briefing-room':
-      //   // This tab is active for briefing room routes
-      //   return pathname.startsWith('/dashboard/briefing_room');
+      case 'briefing-room':
+        // This tab is active for briefing room routes
+        return pathname.startsWith('/dashboard/briefing_room');
       case 'constellations':
         // This tab is active for constellation/living projects routes
         return pathname.startsWith('/dashboard/living-projects');
@@ -294,12 +345,25 @@ export const DashboardNav = memo(function DashboardNav() {
     }
   }, [pathname]);
 
+  const handleToggleChatMenu = useCallback((chatId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowChatMenu(showChatMenu === chatId ? null : chatId);
+  }, [showChatMenu]);
+
+  const handleDeleteChatClick = useCallback((chatId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowChatMenu(null);
+    openDeleteDialog(chatId, e);
+  }, [openDeleteDialog]);
+
   return (
     <>
       {/* Backdrop with blur effect */}
       {isExpanded && (
         <div 
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-all duration-300"
+          className="fixed inset-0 bg-background/80 backdrop-blur-md z-40 transition-all duration-300"
           onClick={() => setIsExpanded(false)}
         />
       )}
@@ -311,211 +375,55 @@ export const DashboardNav = memo(function DashboardNav() {
           ? "opacity-100 scale-100" 
           : "opacity-0 scale-95 pointer-events-none"
       )}>
-        <div className="w-[90vw] max-w-2xl bg-background/95 backdrop-blur-xl border border-border/40 rounded-3xl shadow-2xl overflow-hidden">
+        <div className="w-[90vw] max-w-2xl bg-card/95 backdrop-blur-2xl border border-border/50 rounded-3xl shadow-2xl shadow-primary/10 overflow-hidden">
           
-          {/* Header with Search */}
-          <div className="p-6 border-b border-border/20">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-                  <Sparkles className="w-6 h-6 text-primary/70" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-light tracking-tight text-foreground">
-                    Command Palette
-                  </h2>
-                  <p className="text-sm text-muted-foreground/60 font-light">
-                    Navigate your creative universe
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 ml-auto">
-                <button
-                  onClick={() => handleNavigate('/settings')}
-                  className={cn(
-                    "p-1.5 hover:bg-muted/30 rounded-lg transition-colors",
-                    pathname === '/settings' && "bg-muted/40"
-                  )}
-                  title="Settings"
-                  aria-label="Settings"
-                >
-                  <Settings className="w-4 h-4 text-foreground" />
-                </button>
-                <ThemeToggle />
-                <div className="px-2 py-1 bg-muted/20 rounded-lg">
-                  <span className="text-xs font-mono text-muted-foreground/60">⌘K</span>
-                </div>
-                <button
-                  onClick={() => setIsExpanded(false)}
-                  className="p-1.5 hover:bg-muted/30 rounded-lg transition-colors"
-                  title="Close command palette"
-                  aria-label="Close command palette"
-                >
-                  <X className="w-4 h-4 text-foreground" />
-                </button>
-              </div>
-            </div>
+          {/* Header */}
+          <CommandPaletteHeader
+            onClose={() => setIsExpanded(false)}
+            onSettingsClick={() => handleNavigate('/settings')}
+            isSettingsActive={pathname === '/settings'}
+          />
 
-            {/* Search Input */}
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                placeholder="Search spaces, chats, or actions..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-muted/20 border-0 rounded-2xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:bg-muted/30 transition-all font-light"
-              />
-            </div>
-          </div>
+          {/* Search */}
+          <CommandPaletteSearch
+            ref={searchInputRef}
+            value={searchQuery}
+            onChange={setSearchQuery}
+            onKeyDown={handleSearchKeyDown}
+            placeholder={searchPlaceholder}
+          />
 
           {/* Content */}
           <div className="max-h-[60vh] overflow-y-auto">
             
-            {/* Navigation Items */}
-            {filteredNavItems.length > 0 && (
-              <div className="p-6">
-                <h3 className="text-sm font-light text-muted-foreground/70 mb-4 tracking-wide">
-                  Spaces
-                </h3>
-                <div className="space-y-2">
-                  {filteredNavItems.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => handleNavigate(item.href)}
-                      onMouseEnter={() => setHoveredItem(item.id)}
-                      onMouseLeave={() => setHoveredItem(null)}
-                      className={cn(
-                        "w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 text-left group",
-                        isItemActive(item)
-                          ? "bg-primary/10 border border-primary/20"
-                          : "hover:bg-muted/30 border border-transparent",
-                        hoveredItem === item.id && "scale-[1.02]"
-                      )}
-                      {...{[item.dataAttr]: true}}
-                    >
-                      <div className={cn(
-                        "w-14 h-14 rounded-2xl flex items-center justify-center transition-all",
-                        isItemActive(item)
-                          ? "bg-primary/20"
-                          : "bg-muted/20 group-hover:bg-muted/40"
-                      )}>
-                        <item.icon className={cn(
-                          "w-7 h-7 transition-colors",
-                          isItemActive(item)
-                            ? "text-primary"
-                            : "text-muted-foreground group-hover:text-foreground"
-                        )} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-medium text-foreground group-hover:text-foreground transition-colors">
-                            {item.label}
-                          </h4>
-                          {isItemActive(item) && (
-                            <div className="w-2 h-2 rounded-full bg-primary/60" />
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground/70 font-light leading-relaxed">
-                          {item.description}
-                        </p>
-                      </div>
-                      <ArrowRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Show search results if searching */}
+            {searchQuery.trim() ? (
+              <SearchResults
+                results={searchResults}
+                isSearching={isSearching}
+                searchMode={searchMode}
+                onNavigate={handleNavigate}
+              />
+            ) : (
+              <>
+                {/* Navigation Items */}
+                <SpacesGrid
+                  items={filteredNavItems}
+                  isItemActive={isItemActive}
+                  onNavigate={handleNavigate}
+                />
 
-            {/* Recent Chats */}
-            {filteredChats.length > 0 && (
-              <div className="px-6 pb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-light text-muted-foreground/70 tracking-wide">
-                    Recent Conversations
-                  </h3>
-                  <button
-                    onClick={() => handleNavigate('/dashboard/history')}
-                    className="text-xs text-primary/70 hover:text-primary transition-colors font-light"
-                  >
-                    View All
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  {filteredChats.map((chat) => (
-                    <div
-                      key={chat.id}
-                      className="group flex items-center gap-3 p-3 rounded-xl hover:bg-muted/20 transition-all"
-                    >
-                      <button
-                        onClick={() => handleNavigate(`/dashboard/thinking_lab?chatId=${chat.id}`)}
-                        className="flex items-center gap-3 flex-1 min-w-0"
-                        title={chat.topic}
-                      >
-                        <div className="w-12 h-12 rounded-xl bg-muted/20 flex items-center justify-center flex-shrink-0">
-                          <MessageSquare className="w-6 h-6 text-muted-foreground/60" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">
-                            {chat.topic}
-                          </p>
-                          <p className="text-xs text-muted-foreground/60 font-light">
-                            {chat.createdAt ? formatRelativeTime(chat.createdAt) : 'No timestamp'}
-                          </p>
-                        </div>
-                      </button>
-                      <div className="relative">
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setShowChatMenu(showChatMenu === chat.id ? null : chat.id);
-                          }}
-                          className="opacity-0 group-hover:opacity-100 p-2 hover:bg-muted/30 rounded-lg transition-all"
-                          title="More options"
-                        >
-                          <MoreHorizontal className="w-4 h-4 text-foreground" />
-                        </button>
-                        {showChatMenu === chat.id && (
-                          <div className="absolute right-0 top-full mt-1 w-36 bg-background border border-border/40 rounded-lg shadow-lg z-50">
-                            <div className="py-1">
-                              <button
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setShowChatMenu(null);
-                                  openDeleteDialog(chat.id, e);
-                                }}
-                                className="w-full px-4 py-2 text-left text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors flex items-center gap-2"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                                Delete chat
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-
-            {/* Empty State */}
-            {filteredNavItems.length === 0 && filteredChats.length === 0 && searchQuery.trim() && (
-              <div className="p-8 text-center">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/20 flex items-center justify-center">
-                  <Search className="w-6 h-6 text-muted-foreground/40" />
-                </div>
-                <h3 className="text-lg font-light text-foreground mb-2">
-                  No results found
-                </h3>
-                <p className="text-muted-foreground/60 font-light">
-                  Try adjusting your search or explore available spaces above
-                </p>
-              </div>
+                {/* Recent Chats */}
+                <RecentConversations
+                  chats={filteredChats}
+                  onNavigate={handleNavigate}
+                  onViewAll={() => handleNavigate('/dashboard/history')}
+                  formatTimestamp={formatRelativeTime}
+                  showChatMenu={showChatMenu}
+                  onToggleChatMenu={handleToggleChatMenu}
+                  onDeleteChat={handleDeleteChatClick}
+                />
+              </>
             )}
           </div>
         </div>

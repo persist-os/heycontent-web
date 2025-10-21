@@ -59,25 +59,29 @@ const ChatPanel = React.memo<{
       {messages.length > 0 ? (
         <>
           {/* Header with New Conversation Button and Restore Notepad Button */}
-          <div className="flex justify-between items-center h-24 border-b border-border/20 flex-shrink-0 px-6">
-            <button
-              onClick={startNewConversation}
-              className="text-sm font-light text-muted-foreground hover:text-foreground transition-colors duration-300 border-b border-transparent hover:border-current pb-1"
-            >
-              New conversation
-            </button>
+          <div className="flex justify-between items-center h-24 border-b border-border/30 flex-shrink-0 px-6 bg-background">
+            <div></div>
             
-            {/* Restore Notepad Button - only show when in full screen */}
-            {isFullScreen && onRestoreNotepad && (
+            <div className="flex items-center gap-3">
               <button
-                onClick={onRestoreNotepad}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/30 rounded-lg transition-colors duration-200"
-                title="Restore notepad"
+                onClick={startNewConversation}
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-200"
               >
-                <PanelRight className="w-4 h-4" />
-                Restore notepad
+                New conversation
               </button>
-            )}
+              
+              {/* Restore Notepad Button - only show when in full screen */}
+              {isFullScreen && onRestoreNotepad && (
+                <button
+                  onClick={onRestoreNotepad}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/40 rounded-lg transition-all duration-200"
+                  title="Restore notepad"
+                >
+                  <PanelRight className="w-4 h-4" />
+                  Restore notepad
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Messages Area - takes remaining space */}
@@ -109,23 +113,23 @@ const ChatPanel = React.memo<{
         </>
       ) : isLoading ? (
         /* Loading state - show while conversation is being loaded */
-        <div className="h-full flex items-center justify-center">
-          <div className="text-center space-y-4">
+        <div className="h-full flex items-center justify-center bg-background">
+          <div className="text-center space-y-4 p-8 rounded-2xl bg-card/60 backdrop-blur-lg border border-border/50 shadow-xl">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
             <p className="text-sm text-muted-foreground">Loading conversation...</p>
           </div>
         </div>
       ) : error ? (
         /* Error state - show if conversation failed to load */
-        <div className="h-full flex items-center justify-center">
-          <div className="text-center space-y-4 max-w-md px-6">
-            <div className="text-red-500 text-4xl">⚠️</div>
+        <div className="h-full flex items-center justify-center bg-background">
+          <div className="text-center space-y-4 max-w-md px-6 p-8 rounded-2xl bg-card/60 backdrop-blur-lg border border-destructive/30 shadow-xl">
+            <div className="text-destructive text-4xl">⚠️</div>
             <div>
               <h3 className="text-lg font-medium text-foreground mb-2">Failed to load conversation</h3>
               <p className="text-sm text-muted-foreground mb-4">{error}</p>
               <button
                 onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 hover:shadow-lg transition-all duration-200"
               >
                 Try Again
               </button>
@@ -134,7 +138,7 @@ const ChatPanel = React.memo<{
         </div>
       ) : (
         /* Empty state - show widget prompts or ambient insights */
-        <div className="h-full flex flex-col">
+        <div className="h-full flex flex-col bg-background">
           <div className="flex-1 px-6 py-4">
             {widgetOutputId && authData.user?.uid ? (
               <WidgetPrompts
@@ -155,7 +159,7 @@ const ChatPanel = React.memo<{
               />
             )}
           </div>
-          <div className="px-6 py-3 border-t border-border">
+          <div className="px-6 py-3 border-t border-border/30 backdrop-blur-sm bg-card/40">
             <BottomBarActions
               onActionClick={handleActionClick}
               onInputPopulate={onInputPopulate}
@@ -180,7 +184,7 @@ const NotepadPanel = React.memo<{
   const { sessionId } = useDialogueStore()
 
   return (
-    <div className="h-full bg-background">
+    <div className="h-full">
       <MarkdownNotepad
         isOpen={true}
         quotedContent={quotedContent}
@@ -288,9 +292,19 @@ export function FullThinkingLab({
 }: LabCompositionProps) {
   const { quotedContent, setQuotedContent, clearQuotedContent, resetForWidget, messages, addMessage } = useDialogueStore()
   const { inputComponent, handleInputPopulate } = useInputSection(clearQuotedContent)
-  const resizable = useResizablePanes(0.5)
+  
+  // When noteId is provided, default to notepad-full view (0.0 = full notepad)
+  // When chatId or widgetOutputId is provided, default to chat view (0.65 = 65% chat, 35% notepad)
+  // When nothing is provided, default to balanced view (0.65)
+  const initialRatio = noteId ? 0.0 : 0.65
+  const resizable = useResizablePanes(initialRatio)
   const [userId, setUserId] = React.useState<string | null>(null)
   const [openingMessageSent, setOpeningMessageSent] = React.useState(false)
+
+  // Set the preferred ratio based on what was loaded
+  React.useEffect(() => {
+    resizable.actions.setPreferredRatio(noteId ? 0.65 : 0.65)
+  }, [resizable.actions, noteId])
 
   // Get user ID
   React.useEffect(() => {
@@ -432,10 +446,10 @@ export function FullThinkingLab({
       {isChatFullScreen && (
         <button
           onClick={handleNotepadExpand}
-          className="fixed top-1/2 right-4 transform -translate-y-1/2 z-50 p-2 bg-background border border-border/50 rounded-full shadow-lg hover:shadow-xl hover:bg-muted/30 transition-all duration-200 group"
+          className="fixed top-1/2 right-4 transform -translate-y-1/2 z-50 p-3 bg-card/90 backdrop-blur-xl border border-border/50 rounded-full shadow-xl hover:shadow-2xl hover:bg-muted/40 hover:border-border transition-all duration-200 group"
           title="Restore notepad"
         >
-          <ChevronLeft className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+          <ChevronLeft className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
         </button>
       )}
       
@@ -454,14 +468,14 @@ export function FullThinkingLab({
           </div>
           
           {/* Chat Input */}
-          <div className="border-t border-border flex-shrink-0">
+          <div className="border-t border-primary/20 backdrop-blur-sm bg-card/30 flex-shrink-0 shadow-inner shadow-primary/5">
             {inputComponent}
           </div>
         </div>
 
-        {/* Invisible Draggable Divider - hover to resize */}
+        {/* Draggable Divider - hover to resize */}
         <div
-          className="w-2 cursor-col-resize flex-shrink-0 hover:bg-border/20 transition-colors duration-200"
+          className="w-1 cursor-col-resize flex-shrink-0 bg-[hsl(var(--notepad-border))] hover:bg-[hsl(var(--notepad-icon-hover))]/30 transition-all duration-200 relative group"
           style={resizable.styles.dividerStyle}
           onMouseDown={resizable.actions.startDrag}
           title="Drag to resize panels"

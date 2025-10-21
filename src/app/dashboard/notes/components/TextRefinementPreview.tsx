@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Check, RotateCcw, X, Loader2, CheckCircle2, Sparkles } from 'lucide-react';
 import { useRotatingLoadingMessage } from '../../../../lib/loading-messages';
+import { T } from '@/components/translation/T';
 
 interface TextRefinementPreviewProps {
   originalText: string;
@@ -259,7 +260,7 @@ export function TextRefinementPreview({
             {operationState.showSuccess ? (
               <span className="flex items-center gap-2 text-green-600 dark:text-green-400">
                 <CheckCircle2 className="w-4 h-4" />
-                Text refined successfully!
+                <T context="refinement.success">Text refined successfully!</T>
               </span>
             ) : operationState.isCompleting ? (
                               <span className="flex items-center gap-2">
@@ -267,7 +268,7 @@ export function TextRefinementPreview({
                 {loadingMessage}
               </span>
             ) : (
-              'Text Refinement Preview'
+              <T context="refinement.preview">Text Refinement Preview</T>
             )}
           </h3>
         </div>
@@ -276,13 +277,13 @@ export function TextRefinementPreview({
             {changeStats.additions > 0 && (
               <span className="flex items-center gap-1">
                 <div className="w-2 h-2 rounded-full bg-green-500" />
-                {changeStats.additions} added
+                {changeStats.additions} <T context="refinement.stats">added</T>
               </span>
             )}
             {changeStats.deletions > 0 && (
               <span className="flex items-center gap-1">
                 <div className="w-2 h-2 rounded-full bg-red-500" />
-                {changeStats.deletions} removed
+                {changeStats.deletions} <T context="refinement.stats">removed</T>
               </span>
             )}
           </div>
@@ -305,7 +306,7 @@ export function TextRefinementPreview({
         ) : operationState.showSuccess ? (
           <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
             <CheckCircle2 className="w-4 h-4 animate-pulse" />
-            Changes applied to your note!
+            <T context="refinement.success">Changes applied to your note!</T>
           </div>
         ) : (
           <div 
@@ -371,7 +372,7 @@ export function TextRefinementPreview({
             ) : (
               <Check className="w-3 h-3" />
             )}
-            Accept
+            <T context="refinement.action">Accept</T>
           </button>
           
           <button
@@ -392,7 +393,7 @@ export function TextRefinementPreview({
             ) : (
               <RotateCcw className="w-3 h-3" />
             )}
-            Retry
+            <T context="refinement.action">Retry</T>
           </button>
           
           <button
@@ -407,7 +408,7 @@ export function TextRefinementPreview({
             title="Cancel and keep original text"
           >
             <X className="w-3 h-3" />
-            Reject
+            <T context="refinement.action">Reject</T>
           </button>
         </div>
       )}
@@ -421,7 +422,7 @@ export function TextRefinementPreview({
                 <span>{loadingMessage}</span>
               ) : (
                 <span className="text-green-600 dark:text-green-400">
-                  Refinement applied successfully!
+                  <T context="refinement.success">Refinement applied successfully!</T>
                 </span>
               )}
             </div>
@@ -429,17 +430,17 @@ export function TextRefinementPreview({
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1">
                 <kbd className="px-1 py-0.5 bg-muted rounded text-xs">↵</kbd>
-                accept
+                <T context="refinement.shortcut">accept</T>
               </span>
               <span className="flex items-center gap-1">
                 <kbd className="px-1 py-0.5 bg-muted rounded text-xs">r</kbd>
-                retry
+                <T context="refinement.shortcut">retry</T>
               </span>
             </div>
           )}
           <span className="flex items-center gap-1">
             <kbd className="px-1 py-0.5 bg-muted rounded text-xs">esc</kbd>
-            {operationState.isCompleting ? 'force close' : 'reject'}
+            {operationState.isCompleting ? <T context="refinement.shortcut">force close</T> : <T context="refinement.shortcut">reject</T>}
           </span>
         </div>
       </div>

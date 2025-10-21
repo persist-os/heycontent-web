@@ -7,6 +7,7 @@ import { api } from '@/convex/_generated/api';
 import type { Id } from '@/convex/_generated/dataModel';
 import { useAuth } from '@/app/context/auth-context';
 import { cn } from '@/lib/utils';
+import { T } from '@/components/translation';
 
 interface ShareNoteModalProps {
   noteId: Id<'notes'>;
@@ -157,7 +158,9 @@ export function ShareNoteModal({ noteId, noteTitle, isOpen, onClose }: ShareNote
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border">
           <div>
-            <h2 className="text-lg font-semibold text-foreground">Share Note</h2>
+            <h2 className="text-lg font-semibold text-foreground">
+              <T context="notes.share.title">Share Note</T>
+            </h2>
             <p className="text-sm text-muted-foreground mt-1 truncate">
               {noteTitle}
             </p>
@@ -185,7 +188,7 @@ export function ShareNoteModal({ noteId, noteTitle, isOpen, onClose }: ShareNote
               )}
             >
               <Users className="w-4 h-4" />
-              <span>Friends</span>
+              <span><T context="notes.share.friends">Friends</T></span>
             </button>
             <button
               onClick={() => setShareMode('email')}
@@ -197,14 +200,14 @@ export function ShareNoteModal({ noteId, noteTitle, isOpen, onClose }: ShareNote
               )}
             >
               <Mail className="w-4 h-4" />
-              <span>Email</span>
+              <span><T context="notes.share.email">Email</T></span>
             </button>
           </div>
 
           {/* Permission Selection */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
-              Permission
+              <T context="notes.share.permission">Permission</T>
             </label>
             <div className="flex space-x-2">
               <button
@@ -218,7 +221,7 @@ export function ShareNoteModal({ noteId, noteTitle, isOpen, onClose }: ShareNote
                 )}
                 disabled={isSharing}
               >
-                Can view
+                <T context="notes.share.can-view">Can view</T>
               </button>
               <button
                 type="button"
@@ -231,7 +234,7 @@ export function ShareNoteModal({ noteId, noteTitle, isOpen, onClose }: ShareNote
                 )}
                 disabled={isSharing}
               >
-                Can edit
+                <T context="notes.share.can-edit">Can edit</T>
               </button>
             </div>
           </div>
@@ -240,7 +243,7 @@ export function ShareNoteModal({ noteId, noteTitle, isOpen, onClose }: ShareNote
           {shareMode === 'friends' && (
             <div>
               <h3 className="text-sm font-medium text-foreground mb-3">
-                Share with Friends
+                <T context="notes.share.share-with-friends">Share with Friends</T>
               </h3>
               {friends && friends.length > 0 ? (
                 <div className="max-h-64 overflow-y-auto space-y-2">
@@ -272,7 +275,13 @@ export function ShareNoteModal({ noteId, noteTitle, isOpen, onClose }: ShareNote
                               : "bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                           )}
                         >
-                          {isAlreadyShared ? 'Shared' : isSharing ? 'Sharing...' : 'Share'}
+                          {isAlreadyShared ? (
+                            <T context="notes.share.shared">Shared</T>
+                          ) : isSharing ? (
+                            <T context="notes.share.sharing">Sharing...</T>
+                          ) : (
+                            <T context="button.share">Share</T>
+                          )}
                         </button>
                       </div>
                     );
@@ -281,8 +290,8 @@ export function ShareNoteModal({ noteId, noteTitle, isOpen, onClose }: ShareNote
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No friends to share with</p>
-                  <p className="text-xs">Add friends to share notes easily</p>
+                  <p className="text-sm"><T context="notes.share.no-friends">No friends to share with</T></p>
+                  <p className="text-xs"><T context="notes.share.add-friends-hint">Add friends to share notes easily</T></p>
                 </div>
               )}
             </div>
@@ -293,7 +302,7 @@ export function ShareNoteModal({ noteId, noteTitle, isOpen, onClose }: ShareNote
             <form onSubmit={handleShare} className="space-y-4">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-foreground mb-2">
-                  Share with email
+                  <T context="notes.share.share-with-email">Share with email</T>
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -315,7 +324,13 @@ export function ShareNoteModal({ noteId, noteTitle, isOpen, onClose }: ShareNote
                 className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <UserPlus className="w-4 h-4" />
-                <span>{isSharing ? 'Sharing...' : 'Share Note'}</span>
+                <span>
+                  {isSharing ? (
+                    <T context="notes.share.sharing">Sharing...</T>
+                  ) : (
+                    <T context="notes.share.share-note-button">Share Note</T>
+                  )}
+                </span>
               </button>
             </form>
           )}
@@ -341,7 +356,7 @@ export function ShareNoteModal({ noteId, noteTitle, isOpen, onClose }: ShareNote
           {sharedUsers && sharedUsers.length > 0 && (
             <div>
               <h3 className="text-sm font-medium text-foreground mb-3">
-                Shared with ({sharedUsers.length})
+                <T context="notes.share.shared-with">Shared with</T> ({sharedUsers.length})
               </h3>
               <div className="space-y-2">
                 {sharedUsers.map((user) => (
@@ -357,7 +372,11 @@ export function ShareNoteModal({ noteId, noteTitle, isOpen, onClose }: ShareNote
                         {user.email}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {user.permission === 'edit' ? 'Can edit' : 'Can view'} • Shared {formatDate(user.sharedAt)}
+                        {user.permission === 'edit' ? (
+                          <T context="notes.share.can-edit">Can edit</T>
+                        ) : (
+                          <T context="notes.share.can-view">Can view</T>
+                        )} • <T context="notes.share.shared-date">Shared</T> {formatDate(user.sharedAt)}
                       </p>
                     </div>
                     <button

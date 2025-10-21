@@ -13,47 +13,8 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import toast from 'react-hot-toast';
-
-// Comprehensive language list with native names
-const LANGUAGES = [
-  { code: 'en', name: 'English', nativeName: 'English' },
-  { code: 'ko', name: 'Korean', nativeName: '한국어' },
-  { code: 'ja', name: 'Japanese', nativeName: '日本語' },
-  { code: 'zh', name: 'Chinese (Simplified)', nativeName: '简体中文' },
-  { code: 'zh-TW', name: 'Chinese (Traditional)', nativeName: '繁體中文' },
-  { code: 'es', name: 'Spanish', nativeName: 'Español' },
-  { code: 'fr', name: 'French', nativeName: 'Français' },
-  { code: 'de', name: 'German', nativeName: 'Deutsch' },
-  { code: 'it', name: 'Italian', nativeName: 'Italiano' },
-  { code: 'pt', name: 'Portuguese', nativeName: 'Português' },
-  { code: 'ru', name: 'Russian', nativeName: 'Русский' },
-  { code: 'ar', name: 'Arabic', nativeName: 'العربية' },
-  { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी' },
-  { code: 'th', name: 'Thai', nativeName: 'ไทย' },
-  { code: 'vi', name: 'Vietnamese', nativeName: 'Tiếng Việt' },
-  { code: 'id', name: 'Indonesian', nativeName: 'Bahasa Indonesia' },
-  { code: 'tr', name: 'Turkish', nativeName: 'Türkçe' },
-  { code: 'pl', name: 'Polish', nativeName: 'Polski' },
-  { code: 'nl', name: 'Dutch', nativeName: 'Nederlands' },
-  { code: 'sv', name: 'Swedish', nativeName: 'Svenska' },
-  { code: 'no', name: 'Norwegian', nativeName: 'Norsk' },
-  { code: 'da', name: 'Danish', nativeName: 'Dansk' },
-  { code: 'fi', name: 'Finnish', nativeName: 'Suomi' },
-  { code: 'cs', name: 'Czech', nativeName: 'Čeština' },
-  { code: 'hu', name: 'Hungarian', nativeName: 'Magyar' },
-  { code: 'ro', name: 'Romanian', nativeName: 'Română' },
-  { code: 'uk', name: 'Ukrainian', nativeName: 'Українська' },
-  { code: 'el', name: 'Greek', nativeName: 'Ελληνικά' },
-  { code: 'he', name: 'Hebrew', nativeName: 'עברית' },
-  { code: 'fa', name: 'Persian', nativeName: 'فارسی' },
-  { code: 'bn', name: 'Bengali', nativeName: 'বাংলা' },
-  { code: 'ta', name: 'Tamil', nativeName: 'தமிழ்' },
-  { code: 'te', name: 'Telugu', nativeName: 'తెలుగు' },
-  { code: 'mr', name: 'Marathi', nativeName: 'मराठी' },
-  { code: 'ur', name: 'Urdu', nativeName: 'اردو' },
-  { code: 'ms', name: 'Malay', nativeName: 'Bahasa Melayu' },
-  { code: 'fil', name: 'Filipino', nativeName: 'Filipino' },
-];
+import { T } from '@/components/translation/T';
+import { LANGUAGES } from '@/lib/language-constants';
 
 export default function LanguageSelector() {
   const { language, setLanguage, isLoading } = useLanguagePreference();
@@ -97,10 +58,11 @@ export default function LanguageSelector() {
     <div className="space-y-4">
       <div className="flex items-start justify-between">
         <div>
-          <h3 className="text-lg font-medium">Language</h3>
+          <h3 className="text-lg font-medium">
+            <T context="settings.language.title">Language</T>
+          </h3>
           <p className="text-sm text-muted-foreground mt-1">
-            Choose your preferred language. The first time you select a language, 
-            the interface will translate progressively as you use it.
+            <T context="settings.language.subtitle">Choose your preferred language. The first time you select a language, the interface will translate progressively as you use it.</T>
           </p>
         </div>
         <Globe className="w-5 h-5 text-muted-foreground" />
@@ -120,7 +82,9 @@ export default function LanguageSelector() {
 
         {/* Language Selector with Search */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">Select Language</label>
+          <label className="text-sm font-medium">
+            <T context="settings.language.select_label">Select Language</T>
+          </label>
           
           {/* Search */}
           <div className="relative">
@@ -164,7 +128,7 @@ export default function LanguageSelector() {
 
           {filteredLanguages.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
-              No languages found matching "{searchQuery}"
+              <T context="settings.language.no_results">No languages found matching "{searchQuery}"</T>
             </div>
           )}
         </div>
@@ -176,12 +140,10 @@ export default function LanguageSelector() {
               <div className="text-2xl">✨</div>
               <div className="flex-1 text-sm">
                 <p className="font-medium text-blue-900 dark:text-blue-100 mb-1">
-                  Progressive Translation
+                  <T context="settings.language.progressive_title">Progressive Translation</T>
                 </p>
                 <p className="text-blue-700 dark:text-blue-300">
-                  The first time you select {currentLanguage.name}, the interface 
-                  will translate itself as you explore. Each translation is cached 
-                  for instant loading next time!
+                  <T context="settings.language.progressive_description">The first time you select {currentLanguage.name}, the interface will translate itself as you explore. Each translation is cached for instant loading next time!</T>
                 </p>
               </div>
             </div>

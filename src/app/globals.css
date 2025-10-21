@@ -5,89 +5,180 @@
 /* Using system fonts instead of custom fonts */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
+    /* Light mode: Material Design 3 color system */
+    --background: 0 0% 98%; /* Surface N-98 - Light neutral surface */
+    --foreground: 0 0% 10%; /* On Surface N-10 - Dark text for high contrast */
 
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
+    --card: 0 0% 96%; /* Surface Container Low N-96 - Card backgrounds */
+    --card-foreground: 0 0% 10%; /* On Surface N-10 - Dark text on cards */
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%; /* Surface Container Highest N-100 - Elevated surfaces */
+    --popover-foreground: 0 0% 10%; /* On Surface N-10 - Dark text */
 
-    --primary: 221 83% 53%; /* #3B82F6 as primary for light mode - readable blue */
-    --primary-foreground: 0 0% 100%;
+    /* Notepad-specific colors - clean neutral aesthetic */
+    --notepad-bg: 0 0% 98%; /* Clean white background - distinctly different from chat */
+    --notepad-header-bg: 0 0% 99%; /* Slightly lighter white for header */
+    --notepad-icon: 220 10% 45%; /* Neutral gray for icons */
+    --notepad-icon-hover: 220 10% 25%; /* Darker gray on hover */
+    --notepad-border: 220 10% 90%; /* Subtle neutral border */
 
-    --secondary: 0 0% 96.1%; /* Light gray background */
-    --secondary-foreground: 0 0% 9%;
+    --primary: 220 15% 25%; /* Neutral dark gray primary - less iMessage blue */
+    --primary-foreground: 0 0% 100%; /* On Primary P-100 - White text on primary */
 
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
+    --secondary: 220 15% 90%; /* Light neutral secondary */
+    --secondary-foreground: 220 15% 20%; /* Dark text on secondary */
 
-    --accent: 221 83% 53%; /* #3B82F6 as accent for light mode - blue to match primary */
-    --accent-foreground: 0 0% 100%;
+    --muted: 0 0% 94%; /* Surface Container N-94 - Muted backgrounds */
+    --muted-foreground: 220 10% 46%; /* On Surface Variant NV-30 - Muted text */
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
+    --accent: 210 100% 50%; /* Navy blue accent instead of orange */
+    --accent-foreground: 0 0% 100%; /* On Tertiary T-100 - White text on accent */
 
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 221 83% 53%; /* Readable blue for focus rings */
+    --destructive: 0 100% 40%; /* Error E-40 - Red error */
+    --destructive-foreground: 0 0% 100%; /* On Error E-100 - White text */
 
-    --radius: 0.5rem;
+    --border: 220 10% 80%; /* Outline Variant NV-80 - Subtle borders */
+    --input: 0 0% 94%; /* Surface Container N-94 - Input backgrounds */
+    --ring: 220 15% 25%; /* Neutral gray focus rings */
 
-    /* Custom HeyContent colors */
-    --yellow: 55 95% 58%; /* #FFDF39 */
-    --purple: 262 83% 58%; /* #8B5CF6 - updated to match landing page */
-    --green: 140 60% 53%; /* #45E290 */
-    --light-yellow: 55 100% 92%; /* Light yellow background */
-    --light-purple: 262 100% 95%; /* Light purple background */
-    --light-green: 140 60% 95%; /* Light green background */
+    --radius: 0.75rem;
+
+    /* Custom HeyContext colors - Navy and light blue theme */
+    --yellow: 210 100% 60%; /* Light blue instead of yellow */
+    --purple: 210 100% 40%; /* Navy blue instead of purple */
+    --green: 210 100% 70%; /* Light blue-green instead of green */
+    --light-yellow: 210 100% 95%; /* Very light blue background */
+    --light-purple: 210 100% 92%; /* Light navy background */
+    --light-green: 210 100% 94%; /* Light blue-green background */
     --gray-text: 220 10% 55%; /* Gray text */
     --dark-text: 220 25% 20%; /* Dark text */
-    --user-message: 220 13% 18%; /* #2D3748 - gray-blue for user messages */
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --user-message: 220 15% 20%; /* Neutral dark gray for user messages */
+    --chat-accent: 210 100% 50%; /* Navy blue for chat UI elements (buttons, links, etc.) */
+    --chat-accent-light: 210 100% 95%; /* Very light blue for chat backgrounds */
+    --chart-1: 210 100% 40%; /* Navy blue */
+    --chart-2: 210 100% 60%; /* Medium blue */
+    --chart-3: 210 100% 70%; /* Light blue */
+    --chart-4: 210 100% 50%; /* Medium navy */
+    --chart-5: 210 100% 80%; /* Very light blue */
+
+    /* Content Type Colors - Vibrant & Unique (Light Mode) */
+    /* Notes: Blue quantum field - knowledge crystallization */
+    --note-primary: 217 91% 60%; /* Vibrant blue */
+    --note-bg: 217 91% 97%; /* Very light blue background */
+    --note-border: 217 91% 85%; /* Light blue border */
+    --note-text: 217 91% 25%; /* Dark blue text */
+    --note-accent: 217 91% 50%; /* Medium blue accent */
+
+    /* Conversations: Emerald consciousness - temporal dialogue */
+    --conversation-primary: 160 84% 52%; /* Vibrant emerald */
+    --conversation-bg: 160 84% 97%; /* Very light emerald background */
+    --conversation-border: 160 84% 85%; /* Light emerald border */
+    --conversation-text: 160 84% 25%; /* Dark emerald text */
+    --conversation-accent: 160 84% 45%; /* Medium emerald accent */
+
+    /* Crystals: Violet consciousness - crystallized intelligence */
+    --crystal-primary: 270 95% 65%; /* Vibrant violet */
+    --crystal-bg: 270 95% 97%; /* Very light violet background */
+    --crystal-border: 270 95% 85%; /* Light violet border */
+    --crystal-text: 270 95% 30%; /* Dark violet text */
+    --crystal-accent: 270 95% 55%; /* Medium violet accent */
+
+    /* Shards: Amber energy - quantum fragments */
+    --shard-primary: 38 92% 58%; /* Vibrant amber */
+    --shard-bg: 38 92% 96%; /* Very light amber background */
+    --shard-border: 38 92% 85%; /* Light amber border */
+    --shard-text: 38 92% 30%; /* Dark amber text */
+    --shard-accent: 38 92% 50%; /* Medium amber accent */
+
+    /* Widgets: Sky blue - AI tools and actions */
+    --widget-primary: 199 89% 55%; /* Vibrant sky blue */
+    --widget-bg: 199 89% 97%; /* Very light sky background */
+    --widget-border: 199 89% 85%; /* Light sky border */
+    --widget-text: 199 89% 25%; /* Dark sky text */
+    --widget-accent: 199 89% 48%; /* Medium sky accent */
   }
 
   .dark {
-    /* Main dark background: #202020 */
-    --background: 0 0% 12.5%; /* #202020 */
-    --foreground: 0 0% 98%;
+    /* Dark mode: Material Design 3 color system */
+    --background: 0 0% 6%; /* Surface N-6 - Dark neutral surface */
+    --foreground: 0 0% 90%; /* On Surface N-90 - Light text for high contrast */
 
-    --card: 0 0% 12.5%; /* #202020 */
-    --card-foreground: 0 0% 98%;
+    --card: 0 0% 10%; /* Surface Container Low N-10 - Card backgrounds */
+    --card-foreground: 0 0% 90%; /* On Surface N-90 - Light text on cards */
 
-    --popover: 0 0% 12.5%; /* #202020 */
-    --popover-foreground: 0 0% 98%;
+    --popover: 0 0% 22%; /* Surface Container Highest N-22 - Elevated surfaces */
+    --popover-foreground: 0 0% 90%; /* On Surface N-90 - Light text */
 
-    --primary: 217 91% 60%; /* #60A5FA as primary for dark mode - readable blue */
-    --primary-foreground: 0 0% 0%; /* black text on blue in dark mode */
+    /* Notepad-specific colors - clean neutral aesthetic - Dark mode */
+    --notepad-bg: 220 13% 8%; /* Clean dark background - distinctly different from chat */
+    --notepad-header-bg: 220 13% 10%; /* Slightly lighter for header */
+    --notepad-icon: 220 10% 50%; /* Neutral gray for icons */
+    --notepad-icon-hover: 220 10% 70%; /* Lighter gray on hover */
+    --notepad-border: 220 10% 20%; /* Subtle dark border */
 
-    --secondary: 0 0% 18.9%; /* Slightly lighter than main background */
-    --secondary-foreground: 0 0% 98%;
+    --primary: 220 15% 80%; /* Neutral light gray primary - less iMessage blue */
+    --primary-foreground: 220 15% 20%; /* On Primary P-20 - Dark text on primary */
 
-    --muted: 0 0% 16%; /* Between background and secondary */
-    --muted-foreground: 0 0% 63.9%;
+    --secondary: 220 15% 20%; /* Dark neutral secondary */
+    --secondary-foreground: 220 15% 90%; /* Light text on secondary */
 
-    --accent: 217 91% 60%; /* #60A5FA as accent for dark mode - blue to match primary */
-    --accent-foreground: 0 0% 100%;
+    --muted: 0 0% 12%; /* Surface Container N-12 - Muted backgrounds */
+    --muted-foreground: 220 10% 80%; /* On Surface Variant NV-80 - Muted text */
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
+    --accent: 210 100% 80%; /* Navy blue accent instead of orange */
+    --accent-foreground: 210 100% 20%; /* On Tertiary T-20 - Dark text on accent */
 
-    --border: 0 0% 20%; /* Subtle borders in dark mode */
-    --input: 0 0% 20%; /* Input backgrounds slightly lighter */
-    --ring: 217 91% 60%; /* Readable blue for focus rings */
+    --destructive: 0 100% 80%; /* Error E-80 - Bright red error */
+    --destructive-foreground: 0 100% 20%; /* On Error E-20 - Dark text */
 
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-    --user-message: 220 13% 18%; /* #2D3748 - gray-blue for user messages in dark mode too */
+    --border: 220 10% 30%; /* Outline Variant NV-30 - Subtle borders */
+    --input: 0 0% 12%; /* Surface Container N-12 - Input backgrounds */
+    --ring: 220 15% 80%; /* Neutral gray focus rings */
+
+    --chart-1: 210 100% 60%; /* Navy blue for dark mode */
+    --chart-2: 210 100% 70%; /* Medium blue for dark mode */
+    --chart-3: 210 100% 80%; /* Light blue for dark mode */
+    --chart-4: 210 100% 50%; /* Medium navy for dark mode */
+    --chart-5: 210 100% 90%; /* Very light blue for dark mode */
+    --user-message: 220 15% 25%; /* Neutral gray for user messages in dark mode */
+    --chat-accent: 210 100% 80%; /* Navy blue for chat UI elements in dark mode */
+    --chat-accent-light: 210 100% 10%; /* Dark blue for chat backgrounds in dark mode */
+
+    /* Content Type Colors - Vibrant & Unique (Dark Mode) */
+    /* Notes: Blue quantum field - knowledge crystallization */
+    --note-primary: 217 91% 70%; /* Lighter vibrant blue for dark mode */
+    --note-bg: 217 91% 12%; /* Dark blue background */
+    --note-border: 217 91% 25%; /* Medium blue border */
+    --note-text: 217 91% 85%; /* Light blue text */
+    --note-accent: 217 91% 60%; /* Bright blue accent */
+
+    /* Conversations: Emerald consciousness - temporal dialogue */
+    --conversation-primary: 160 84% 65%; /* Lighter emerald */
+    --conversation-bg: 160 84% 12%; /* Dark emerald background */
+    --conversation-border: 160 84% 25%; /* Medium emerald border */
+    --conversation-text: 160 84% 85%; /* Light emerald text */
+    --conversation-accent: 160 84% 55%; /* Bright emerald accent */
+
+    /* Crystals: Violet consciousness - crystallized intelligence */
+    --crystal-primary: 270 95% 75%; /* Lighter violet */
+    --crystal-bg: 270 95% 12%; /* Dark violet background */
+    --crystal-border: 270 95% 30%; /* Medium violet border */
+    --crystal-text: 270 95% 85%; /* Light violet text */
+    --crystal-accent: 270 95% 65%; /* Bright violet accent */
+
+    /* Shards: Amber energy - quantum fragments */
+    --shard-primary: 38 92% 70%; /* Lighter amber */
+    --shard-bg: 38 92% 12%; /* Dark amber background */
+    --shard-border: 38 92% 28%; /* Medium amber border */
+    --shard-text: 38 92% 85%; /* Light amber text */
+    --shard-accent: 38 92% 60%; /* Bright amber accent */
+
+    /* Widgets: Sky blue - AI tools and actions */
+    --widget-primary: 199 89% 70%; /* Lighter sky blue */
+    --widget-bg: 199 89% 12%; /* Dark sky background */
+    --widget-border: 199 89% 25%; /* Medium sky border */
+    --widget-text: 199 89% 85%; /* Light sky text */
+    --widget-accent: 199 89% 60%; /* Bright sky accent */
   }
 }
 
@@ -318,7 +409,7 @@
 
 @keyframes highlight {
   0% {
-    background-color: rgba(59, 130, 246, 0.1);
+    background-color: rgba(148, 163, 184, 0.1);
   }
   100% {
     background-color: transparent;
@@ -406,21 +497,42 @@
     animation: spin 1s linear infinite;
   }
 
-  /* Safe area utilities for mobile devices */
-  .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom, 0.5rem);
+  /* Chat-specific utility classes for blue accents */
+  .chat-button-primary {
+    @apply bg-blue-600 text-white hover:bg-blue-700 transition-colors;
   }
 
-  .pt-safe {
-    padding-top: env(safe-area-inset-top, 0.5rem);
+  .chat-button-secondary {
+    @apply bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors;
   }
 
-  .pl-safe {
-    padding-left: env(safe-area-inset-left, 0.5rem);
+  .chat-link {
+    @apply text-blue-600 hover:text-blue-800 underline transition-colors;
   }
 
-  .pr-safe {
-    padding-right: env(safe-area-inset-right, 0.5rem);
+  .chat-input-focus {
+    @apply focus:ring-blue-500 focus:border-blue-500;
+  }
+
+  .chat-accent-border {
+    @apply border-blue-200;
+  }
+
+  /* Dark mode chat utilities */
+  .dark .chat-button-secondary {
+    @apply bg-blue-900 text-blue-200 hover:bg-blue-800;
+  }
+
+  .dark .chat-link {
+    @apply text-blue-400 hover:text-blue-300;
+  }
+
+  .dark .chat-input-focus {
+    @apply focus:ring-blue-400 focus:border-blue-400;
+  }
+
+  .dark .chat-accent-border {
+    @apply border-blue-700;
   }
 }
 
@@ -651,6 +763,6 @@ button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid hsl(220 15% 25%);
   outline-offset: 2px;
 }

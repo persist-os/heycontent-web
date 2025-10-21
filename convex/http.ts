@@ -1004,6 +1004,36 @@ app.get("/api/users/:id/ambient-data-bundle", async (c) => {
   }
 });
 
+// Get custom command prompts for a user
+app.get("/api/users/:id/custom-command-prompts", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  try {
+    const prompts = await ctx.runQuery(api.ambientInsights.getCustomCommandPrompts, { userId });
+    return c.json({ success: true, data: prompts });
+  } catch (error) {
+    console.error("Failed to get custom command prompts:", error);
+    return c.json({ success: false, error: "Failed to get custom command prompts" }, 500);
+  }
+});
+
+// Update custom command prompts for a user
+app.post("/api/users/:id/custom-command-prompts", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { customCommandPrompts } = await c.req.json();
+  try {
+    await ctx.runMutation(api.ambientInsights.updateCustomCommandPrompts, {
+      userId,
+      customCommandPrompts,
+    });
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Failed to update custom command prompts:", error);
+    return c.json({ success: false, error: "Failed to update custom command prompts" }, 500);
+  }
+});
+
 // FEEDBACK ROUTES
 
 // Create new feedback
@@ -4655,14 +4685,17 @@ app.post("/api/convergence/configs/:configId/usage", async (c) => {
 
 /**
  * Promote configs (deploy new optimized configs)
+ * 
+ * IDEMPOTENT: Pass promotion_id for safe retries
  */
 app.post("/api/convergence/configs/promote", async (c) => {
   try {
-    const { system_name, new_config_ids } = await c.req.json();
+    const { system_name, new_config_ids, promotion_id } = await c.req.json();
     
     const result = await c.env.runMutation(api.convergenceMutations.promoteConfigs, {
       system_name,
       new_config_ids,
+      promotion_id,
     });
     
     return c.json({ success: true, data: result });

@@ -131,6 +131,51 @@ export async function signInWithGoogle(
 }
 
 /**
+ * Handles Google OAuth redirect result processing
+ * Used when returning from Google OAuth redirect flow
+ */
+export async function handleGoogleRedirectResult(): Promise<GoogleSignInResult> {
+  try {
+    // Check if we have URL parameters indicating a redirect result
+    if (typeof window === 'undefined') {
+      return { success: false, error: 'Not in browser environment' };
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get('error');
+    const code = urlParams.get('code');
+    const state = urlParams.get('state');
+
+    // If there's an error parameter, handle it
+    if (error) {
+      return {
+        success: false,
+        error: `OAuth error: ${error}`
+      };
+    }
+
+    // If there's no code parameter, this isn't a redirect result
+    if (!code) {
+      return { success: false, error: 'No redirect result found' };
+    }
+
+    // Process the authorization code
+    // This would typically involve exchanging the code for tokens
+    // For now, we'll redirect to the dashboard
+    return {
+      success: true,
+      redirect: '/dashboard'
+    };
+
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message || 'Error processing redirect result'
+    };
+  }
+}
+
+/**
  * Wait for both API key and Firebase auth token cookies to be set by server
  * This is CRITICAL - middleware checks for firebase-auth-token before allowing access
  */

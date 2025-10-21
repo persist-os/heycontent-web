@@ -64,7 +64,7 @@ export function DesktopNotepadLayout({
   return (
     <div 
       ref={sidebarRef}
-      className="h-full bg-background border-l border-border/50 flex flex-col"
+      className="h-full bg-[hsl(var(--notepad-bg))] flex flex-col"
       style={{ width, ...style }}
     >
       {/* Header */}
