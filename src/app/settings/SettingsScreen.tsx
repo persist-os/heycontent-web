@@ -11,7 +11,7 @@ import FriendsTab from './tabs/FriendsTab'
 import { handleSignOut } from './utils'
 import SubscriptionOverview from './tabs/subscription/subscription-overview'
 import { getFirebaseAuth } from '@/app/lib/firebase'
-import { onAuthStateChanged } from 'firebase/auth'
+import { authStateManager } from '@/app/lib/auth-state-manager'
 
 const SettingsScreen = () => {
   const router = useRouter()
@@ -64,14 +64,8 @@ const SettingsScreen = () => {
   }, [])
 
   useEffect(() => {
-    let auth
-    try {
-      auth = getFirebaseAuth()
-    } catch (e) {
-      auth = null
-    }
-    if (!auth) return
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    // Use centralized auth state manager to prevent multiple listeners
+    const unsubscribe = authStateManager.subscribe((firebaseUser) => {
       setUserId(firebaseUser?.uid)
       setUserEmail(firebaseUser?.email)
       if (firebaseUser) {

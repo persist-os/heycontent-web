@@ -11,23 +11,14 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useBriefingRoom } from "../hooks";
 import { EmptyBriefingRoom } from "./EmptyBriefingRoom";
-import { getFirebaseAuth } from "@/app/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { authStateManager } from "@/app/lib/auth-state-manager";
 
 export function BriefingRoom() {
   const [userId, setUserId] = React.useState<string | undefined>();
   
-  // Auth
+  // Auth - Use centralized auth state manager to prevent multiple listeners
   React.useEffect(() => {
-    let auth;
-    try {
-      auth = getFirebaseAuth();
-    } catch (e) {
-      auth = null;
-    }
-    if (!auth) return;
-    
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = authStateManager.subscribe((firebaseUser) => {
       setUserId(firebaseUser?.uid);
     });
     

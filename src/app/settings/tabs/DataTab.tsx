@@ -6,13 +6,13 @@ import { Button } from '@/components/ui/button'
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { getFirebaseAuth } from '@/app/lib/firebase';
+import { authStateManager } from '@/app/lib/auth-state-manager';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { mapAuthErrorCodeToMessage } from '@/app/api/auth/firebase/helpers';
 import { Input } from '@/components/ui/input';
-import { onAuthStateChanged } from 'firebase/auth';
 import { AutomaticEmbeddingStatus } from './platform-connect/AutomaticEmbeddingStatus';
 
 const DataTab = () => {
@@ -37,14 +37,8 @@ const DataTab = () => {
   const [isEmailProvider, setIsEmailProvider] = useState(false);
 
   useEffect(() => {
-    let auth;
-    try {
-      auth = getFirebaseAuth();
-    } catch (e) {
-      auth = null;
-    }
-    if (!auth) return;
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    // Use centralized auth state manager to prevent multiple listeners
+    const unsubscribe = authStateManager.subscribe((firebaseUser) => {
       setUser(firebaseUser);
       setUserId(firebaseUser?.uid);
       setUserEmail(firebaseUser?.email);

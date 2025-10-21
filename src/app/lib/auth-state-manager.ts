@@ -19,16 +19,31 @@ class AuthStateManager {
   private unsubscribe: (() => void) | null = null;
   private currentUser: User | null = null;
   private isInitialized = false;
+  private initializationPromise: Promise<void> | null = null;
 
   constructor() {
-    // Initialize auth state manager
-    this.initialize();
+    // Don't initialize immediately - wait for first subscription
   }
 
-  private async initialize() {
+  private async initialize(): Promise<void> {
     if (this.isInitialized) return;
     
+    // If initialization is already in progress, wait for it
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+    
+    this.initializationPromise = this._doInitialize();
+    return this.initializationPromise;
+  }
+
+  private async _doInitialize(): Promise<void> {
     try {
+      // Ensure we're on the client side before initializing Firebase
+      if (typeof window === 'undefined') {
+        throw new Error('AuthStateManager cannot initialize on server side');
+      }
+      
       this.auth = getFirebaseAuth();
       this.isInitialized = true;
       
@@ -60,6 +75,9 @@ class AuthStateManager {
       );
     } catch (error) {
       console.error('[AuthStateManager] Failed to initialize:', error);
+      this.isInitialized = false;
+      this.initializationPromise = null;
+      throw error;
     }
   }
 
@@ -71,10 +89,20 @@ class AuthStateManager {
     onAuthStateChanged: AuthStateCallback,
     onError?: AuthErrorCallback
   ): () => void {
-    // Add listeners
+    // Add listeners first
     this.listeners.add(onAuthStateChanged);
     if (onError) {
       this.errorListeners.add(onError);
+    }
+
+    // Initialize if not already done
+    if (!this.isInitialized) {
+      this.initialize().catch((error) => {
+        console.error('[AuthStateManager] Failed to initialize during subscription:', error);
+        if (onError) {
+          onError(error);
+        }
+      });
     }
 
     // If we already have a current user, call the callback immediately
@@ -107,6 +135,14 @@ class AuthStateManager {
    */
   isReady(): boolean {
     return this.isInitialized && this.auth !== null;
+  }
+
+  /**
+   * Wait for auth to be ready
+   */
+  async waitForReady(): Promise<void> {
+    if (this.isInitialized) return;
+    await this.initialize();
   }
 
   /**

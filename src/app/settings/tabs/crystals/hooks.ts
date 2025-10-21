@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
-import { getFirebaseAuth } from '@/app/lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { authStateManager } from '@/app/lib/auth-state-manager';
 import { CrystalStats, FormationStatus, FormationEligibility } from './types';
 import { toast } from 'sonner';
 
@@ -11,15 +10,8 @@ export const useAuth = () => {
   const [userId, setUserId] = useState<string | undefined>();
 
   useEffect(() => {
-    let auth;
-    try {
-      auth = getFirebaseAuth();
-    } catch (e) {
-      auth = null;
-    }
-    if (!auth) return;
-    
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    // Use centralized auth state manager to prevent multiple listeners
+    const unsubscribe = authStateManager.subscribe((firebaseUser) => {
       setUserId(firebaseUser?.uid);
     });
     

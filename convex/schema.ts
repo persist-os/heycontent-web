@@ -2310,11 +2310,6 @@ export default defineSchema({
     // Version control
     version: v.string(),                      // Config version (for rollback)
     replaces_config_id: v.optional(v.string()), // Previous config it replaces
-    
-    // Vector search support
-    embedding: v.optional(v.array(v.float64())),  // 768-dim embedding for contextual retrieval
-    contextTag: v.optional(v.string()),           // Combined tag: "ctx_abc123_high_confidence"
-    
     // RL tracking
     rl_episodes: v.optional(v.number()),      // Episodes recorded for RL
     rl_reward_sum: v.optional(v.number()),    // Accumulated reward scores

@@ -1,4 +1,9 @@
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { 
+  GoogleAuthProvider, 
+  signInWithRedirect, 
+  getRedirectResult,
+  UserCredential 
+} from 'firebase/auth';
 import { getFirebaseAuth } from './firebase';
 import { waitForAuthReady } from './api-helpers';
 import Cookies from 'js-cookie';
@@ -16,10 +21,12 @@ interface GoogleSignInResult {
   error?: string;
   redirect?: string;
   apiKey?: string;
+  isRedirecting?: boolean;
 }
 
 /**
  * Handles Google Sign-In flow with Firebase and backend authentication.
+ * Uses redirect flow instead of popup to avoid cross-origin issues.
  * Supports both login and registration flows.
  */
 export async function signInWithGoogle(
@@ -34,13 +41,94 @@ export async function signInWithGoogle(
     // Wait a bit to ensure auth is fully initialized
     await new Promise(resolve => setTimeout(resolve, 100));
     
+    // Store action and additional data in sessionStorage for retrieval after redirect
+    if (action) {
+      sessionStorage.setItem('google_auth_action', action);
+    }
+    if (additionalData) {
+      sessionStorage.setItem('google_auth_data', JSON.stringify(additionalData));
+    }
+    
     // Create Google provider
     const provider = new GoogleAuthProvider();
     provider.addScope('email');
     provider.addScope('profile');
     
-    // Sign in with popup
-    const result = await signInWithPopup(auth, provider);
+    // Use redirect instead of popup to avoid cross-origin issues
+    await signInWithRedirect(auth, provider);
+    
+    // Function returns immediately, browser redirects to Google
+    return {
+      success: true,
+      isRedirecting: true,
+    };
+    
+  } catch (error: any) {
+    console.error('Google Sign-In Error:', {
+      code: error.code,
+      message: error.message,
+      fullError: error,
+      origin: typeof window !== 'undefined' ? window.location.origin : 'unknown',
+    });
+    
+    // Handle Firebase auth errors
+    if (error.code === 'auth/popup-closed-by-user') {
+      return {
+        success: false,
+        error: 'Sign-in cancelled'
+      };
+    }
+    
+    if (error.code === 'auth/popup-blocked') {
+      return {
+        success: false,
+        error: 'Pop-up blocked. Please allow pop-ups for this site.'
+      };
+    }
+    
+    if (error.code === 'auth/network-request-failed') {
+      return {
+        success: false,
+        error: 'Network error. Please check your connection.'
+      };
+    }
+    
+    return {
+      success: false,
+      error: error.message || 'An error occurred during sign-in'
+    };
+  }
+}
+
+/**
+ * Processes Google Sign-In redirect result after user returns from Google OAuth.
+ * Call this on page load to complete the authentication flow.
+ * 
+ * IMPORTANT: Only calls getFirebaseAuth() if there's actually a pending redirect result.
+ * This prevents unnecessary Firebase initialization on normal page loads.
+ */
+export async function handleGoogleRedirectResult(): Promise<GoogleSignInResult> {
+  try {
+    // Check if we're coming back from a redirect by looking for sessionStorage markers
+    const hasAuthAction = sessionStorage.getItem('google_auth_action');
+    const hasAuthData = sessionStorage.getItem('google_auth_data');
+    
+    // If no markers, this is a normal page load, not an OAuth redirect
+    if (!hasAuthAction && !hasAuthData) {
+      return { success: false };
+    }
+    
+    // We have markers, so we're likely coming back from OAuth redirect
+    const auth = getFirebaseAuth();
+    const result = await getRedirectResult(auth);
+    
+    if (!result) {
+      // No redirect result despite having markers - clean up and return
+      sessionStorage.removeItem('google_auth_action');
+      sessionStorage.removeItem('google_auth_data');
+      return { success: false };
+    }
+    
     const user = result.user;
     
     if (!user) {
@@ -49,6 +137,15 @@ export async function signInWithGoogle(
         error: 'No user returned from Google Sign-In'
       };
     }
+    
+    // Retrieve stored action and additional data from sessionStorage
+    const action = sessionStorage.getItem('google_auth_action') || 'login';
+    const additionalDataStr = sessionStorage.getItem('google_auth_data');
+    const additionalData = additionalDataStr ? JSON.parse(additionalDataStr) : undefined;
+    
+    // Clean up sessionStorage
+    sessionStorage.removeItem('google_auth_action');
+    sessionStorage.removeItem('google_auth_data');
     
     // Get Firebase ID token
     const idToken = await user.getIdToken(true);
@@ -104,31 +201,15 @@ export async function signInWithGoogle(
     };
     
   } catch (error: any) {
-    // Handle Firebase auth errors
-    if (error.code === 'auth/popup-closed-by-user') {
-      return {
-        success: false,
-        error: 'Sign-in cancelled'
-      };
-    }
-    
-    if (error.code === 'auth/popup-blocked') {
-      return {
-        success: false,
-        error: 'Pop-up blocked. Please allow pop-ups for this site.'
-      };
-    }
-    
-    if (error.code === 'auth/network-request-failed') {
-      return {
-        success: false,
-        error: 'Network error. Please check your connection.'
-      };
-    }
+    console.error('Google Redirect Result Error:', {
+      code: error.code,
+      message: error.message,
+      fullError: error,
+    });
     
     return {
       success: false,
-      error: error.message || 'An error occurred during sign-in'
+      error: error.message || 'An error occurred processing sign-in'
     };
   }
 }
