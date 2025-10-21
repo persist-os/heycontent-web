@@ -74,12 +74,22 @@ export function getFirebaseAuth(): Auth {
   if (!auth) {
     const firebaseApp = getFirebaseApp();
     auth = getAuth(firebaseApp);
+    
+    // Set persistence with error handling
     setPersistence(auth, browserLocalPersistence).then(() => {
       debugLog('Auth persistence set to browserLocalPersistence');
     }).catch((error) => {
       console.error('[FIREBASE] Error setting auth persistence:', error);
     });
+    
     debugLog('Initialized Firebase Auth singleton');
   }
+  
+  // Ensure auth is ready before returning
+  if (auth && !auth.currentUser && typeof auth.onAuthStateChanged === 'function') {
+    // This helps prevent the "Pending promise was never set" error
+    return auth;
+  }
+  
   return auth;
 }

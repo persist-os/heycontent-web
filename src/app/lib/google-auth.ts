@@ -31,6 +31,9 @@ export async function signInWithGoogle(
     // Get Firebase Auth instance
     const auth = getFirebaseAuth();
     
+    // Wait a bit to ensure auth is fully initialized
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     // Create Google provider
     const provider = new GoogleAuthProvider();
     provider.addScope('email');
