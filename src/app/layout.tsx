@@ -1,5 +1,6 @@
 import React from 'react'
 import type { Metadata, Viewport } from 'next'
+import Script from 'next/script'
 import './globals.css'
 import { Providers } from './providers'
 import { headers } from 'next/headers'
@@ -246,6 +247,20 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationSchema) }}
         />
       </head>
+      
+      {/* Google Tag Manager */}
+      <Script
+        src="https://www.googletagmanager.com/gtag/js?id=AW-17670765753"
+        strategy="afterInteractive"
+      />
+      <Script id="google-analytics" strategy="afterInteractive">
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'AW-17670765753');
+        `}
+      </Script>
       <body className="font-sans min-h-screen">
         <Providers>
           <InlineReplyProvider>
