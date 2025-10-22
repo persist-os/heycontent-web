@@ -16,6 +16,7 @@ import { T } from '@/components/translation';
 
 export function BriefingRoom() {
   const [userId, setUserId] = React.useState<string | undefined>();
+  const [activeFilter, setActiveFilter] = React.useState<string | null>(null);
   
   // Auth - Use centralized auth state manager to prevent multiple listeners
   React.useEffect(() => {
@@ -36,6 +37,18 @@ export function BriefingRoom() {
     archive,
     toggleStar,
   } = useBriefingRoom(userId);
+  
+  // Filter events based on active filter
+  const filteredEvents = React.useMemo(() => {
+    if (!events) return [];
+    if (!activeFilter) return events;
+    
+    if (activeFilter === "unread") {
+      return events.filter(event => !event.viewed);
+    }
+    
+    return events.filter(event => event.category === activeFilter);
+  }, [events, activeFilter]);
   
   // Loading state
   if (isLoading) {
@@ -58,6 +71,30 @@ export function BriefingRoom() {
   // Empty state
   if (!events || events.length === 0) {
     return <EmptyBriefingRoom />;
+  }
+  
+  // Empty filtered state
+  if (filteredEvents.length === 0 && activeFilter) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center"
+        >
+          <div className="text-4xl mb-4">🔍</div>
+          <p className="text-muted-foreground font-light mb-4">
+            <T context="briefing.no_results">No {activeFilter} briefings found</T>
+          </p>
+          <button
+            onClick={() => setActiveFilter(null)}
+            className="text-primary hover:text-primary/80 transition-colors"
+          >
+            <T context="briefing.show_all">Show all briefings</T>
+          </button>
+        </motion.div>
+      </div>
+    );
   }
   
   // Main briefing room interface
@@ -85,7 +122,7 @@ export function BriefingRoom() {
           </p>
         </motion.div>
         
-        {/* Stats Overview */}
+        {/* Stats Overview - Filter Cards */}
         {counts && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -97,27 +134,36 @@ export function BriefingRoom() {
               label="Total"
               value={counts.total}
               color="slate"
+              isActive={activeFilter === null}
+              onClick={() => setActiveFilter(null)}
             />
             <StatCard
               label="Unread"
               value={counts.unread}
               color="blue"
-              pulse={counts.unread > 0}
+              isActive={activeFilter === "unread"}
+              onClick={() => setActiveFilter(activeFilter === "unread" ? null : "unread")}
             />
             <StatCard
               label="Crystals"
               value={counts.byCategory.crystal}
               color="blue"
+              isActive={activeFilter === "crystal"}
+              onClick={() => setActiveFilter(activeFilter === "crystal" ? null : "crystal")}
             />
             <StatCard
               label="Widgets"
               value={counts.byCategory.widget}
               color="amber"
+              isActive={activeFilter === "widget"}
+              onClick={() => setActiveFilter(activeFilter === "widget" ? null : "widget")}
             />
             <StatCard
               label="Dreams"
               value={counts.byCategory.dream}
               color="purple"
+              isActive={activeFilter === "dream"}
+              onClick={() => setActiveFilter(activeFilter === "dream" ? null : "dream")}
             />
           </motion.div>
         )}
@@ -125,7 +171,7 @@ export function BriefingRoom() {
         {/* Briefings List with gradient cards */}
         <div className="space-y-6 relative z-10">
           <AnimatePresence mode="popLayout">
-            {events.map((event, index) => (
+            {filteredEvents.map((event, index) => (
               <motion.div
                 key={event._id}
                 initial={{ opacity: 0, y: 20 }}
@@ -227,12 +273,16 @@ function StatCard({
   label,
   value,
   color,
-  pulse = false
+  pulse = false,
+  isActive = false,
+  onClick
 }: {
   label: string;
   value: number;
   color: string;
   pulse?: boolean;
+  isActive?: boolean;
+  onClick?: () => void;
 }) {
   const getGradientClass = () => {
     if (color === "blue") return "from-primary/20 to-primary/5";
@@ -245,16 +295,21 @@ function StatCard({
   const shadowColor = color === "blue" ? "shadow-primary/20" : color === "amber" ? "shadow-accent/20" : "shadow-secondary/20";
   
   return (
-    <div className={`
-      bg-gradient-to-br ${getGradientClass()} 
-      backdrop-blur-md 
-      rounded-xl p-4 
-      border border-border/50
-      shadow-lg ${shadowColor}
-      hover:shadow-xl hover:scale-105
-      transition-all duration-300
-      ${pulse ? "animate-pulse" : ""}
-    `}>
+    <div 
+      className={`
+        bg-gradient-to-br ${getGradientClass()} 
+        backdrop-blur-md 
+        rounded-xl p-4 
+        border ${isActive ? 'border-primary/50' : 'border-border/50'}
+        shadow-lg ${shadowColor}
+        hover:shadow-xl hover:scale-105
+        transition-all duration-300
+        ${pulse ? "animate-pulse" : ""}
+        ${onClick ? "cursor-pointer" : ""}
+        ${isActive ? "ring-2 ring-primary/30" : ""}
+      `}
+      onClick={onClick}
+    >
       <p className="text-xs text-muted-foreground mb-1 font-medium">
         <T context={`briefing.stats.${label.toLowerCase()}`}>{label}</T>
       </p>
