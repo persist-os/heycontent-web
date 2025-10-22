@@ -3,6 +3,7 @@
 import React from 'react';
 import { FileText, X, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { T, TButton } from '@/components/translation';
 
 interface PanelHeaderProps {
   onClose: () => void;
@@ -18,22 +19,22 @@ export function PanelHeader({ onClose, onQuickNoteToggle }: PanelHeaderProps) {
         </div>
         <div>
           <h2 className="text-2xl font-light tracking-tight text-foreground">
-            Manage Content
+            <T context="widget.manage_content">Manage Content</T>
           </h2>
           <p className="text-sm text-muted-foreground/60 font-light">
-            Attach notes, conversations, and insights
+            <T context="widget.attach_content_description">Attach notes, conversations, and insights</T>
           </p>
         </div>
       </div>
       <div className="flex items-center gap-2">
         <Button 
           variant="default" 
-          size="sm" 
+          size="sm"
           onClick={onQuickNoteToggle}
           className="rounded-xl"
         >
           <Plus className="w-4 h-4 mr-2" />
-          Quick Note
+          <T context="button.quick_note">Quick Note</T>
         </Button>
         <div className="px-2 py-1 bg-muted/20 rounded-lg">
           <span className="text-xs font-mono text-muted-foreground/60">ESC</span>

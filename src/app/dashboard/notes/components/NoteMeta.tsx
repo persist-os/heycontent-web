@@ -3,6 +3,8 @@ import React, { useState, useRef } from 'react';
 import { Note } from '../types';
 import { X, Plus, Hash } from 'lucide-react';
 import { getRecentTags, type NoteTagData } from '../utils/tag-utils';
+import { T } from '@/components/translation/T';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface NoteMetaProps {
   note: Note;
@@ -22,6 +24,18 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onTagsChange, onEditin
   const newTagInputRef = useRef<HTMLInputElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   
+  // Translation hooks for string attributes
+  const { text: untitledText } = useTranslation("Untitled", { context: "note.default_title" });
+  const { text: placeholderText } = useTranslation("Untitled Notes", { context: "note.placeholder" });
+  const { text: readonlyTooltipText } = useTranslation("Read-only note", { context: "note.readonly_tooltip" });
+  const { text: editTooltipText } = useTranslation("Click to edit title", { context: "note.edit_tooltip" });
+  const { text: readonlyText } = useTranslation("Read-only", { context: "note.readonly" });
+  const { text: tagPlaceholderText } = useTranslation("tag name", { context: "note.tag_placeholder" });
+  const { text: addLabelTooltipText } = useTranslation("Add label", { context: "note.add_label_tooltip" });
+  const { text: addTagTooltipText } = useTranslation("Add tag", { context: "note.add_tag_tooltip" });
+  const { text: labelButtonText } = useTranslation("Label", { context: "note.label_button" });
+  const { text: addTagButtonText } = useTranslation("Add Tag", { context: "note.add_tag_button" });
+  
   const isEditingTitle = editedTitle !== null;
   const currentTags = note.tags || [];
 
@@ -37,7 +51,7 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onTagsChange, onEditin
       .slice(0, 2); // Only 2 suggestions for clean design
   }, [showTagInput, noteTagData, currentTags]);
 
-  const displayTitle = isEditingTitle ? editedTitle : (note.title || "Untitled");
+  const displayTitle = isEditingTitle ? editedTitle : (note.title || untitledText);
 
   // Elegant title editing
   const startTitleEdit = () => {
@@ -89,8 +103,8 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onTagsChange, onEditin
   };
   
   return (
-    <div className="space-y-4">
-      {/* Breathtaking title section */}
+    <div className="space-y-3">
+      {/* Clean title section */}
       <div className="group">
         {isEditingTitle ? (
           <input
@@ -100,30 +114,30 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onTagsChange, onEditin
             onChange={(e) => setEditedTitle(e.target.value)}
             onBlur={saveTitleEdit}
             onKeyDown={handleTitleKey}
-            className="w-full text-2xl font-light tracking-tight bg-transparent border-0 outline-0 text-foreground placeholder:text-muted-foreground/50 focus:text-foreground transition-colors duration-300"
-            placeholder="Note title..."
+            className="w-full text-2xl sm:text-3xl font-normal tracking-tight bg-transparent border-0 outline-0 text-foreground placeholder:text-[hsl(var(--notepad-icon))]/40 focus:text-foreground transition-colors duration-200"
+            placeholder={placeholderText}
             autoFocus
           />
         ) : (
           <h1
             onClick={isReadOnly ? undefined : startTitleEdit}
-            className={`text-2xl font-light tracking-tight text-foreground transition-all duration-300 ${
+            className={`text-2xl sm:text-3xl font-normal tracking-tight text-foreground transition-colors duration-200 ${
               isReadOnly 
                 ? 'cursor-default' 
-                : 'cursor-pointer hover:text-foreground/80 hover:scale-[1.01] transform-gpu'
+                : 'cursor-text'
             }`}
-            title={isReadOnly ? "Read-only note" : "Click to edit title"}
+            title={isReadOnly ? readonlyTooltipText : editTooltipText}
           >
             {displayTitle}
           </h1>
         )}
       </div>
 
-      {/* Minimal metadata row */}
-      <div className="flex items-center justify-between">
-        {/* Left: full timestamp */}
-        <div className="flex items-center text-xs text-muted-foreground/70">
-          <time className="font-medium tracking-wide">
+      {/* Timestamp and action row - single line to match screenshots */}
+      <div className="flex items-center justify-between gap-4">
+        {/* Left: timestamp */}
+        <div className="text-sm text-[hsl(var(--notepad-icon))] shrink-0">
+          <time>
             {note.updatedAt
               ? new Date(note.updatedAt).toLocaleDateString('en-US', {
                   month: 'short',
@@ -139,25 +153,26 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onTagsChange, onEditin
           </time>
         </div>
 
-        {/* Right: tags and actions */}
-        <div className="flex items-center gap-2">
+        {/* Right: tags and action buttons in single line */}
+        <div className="flex items-center gap-2 min-w-0">
+          {/* Tags display as simple chips */}
           {currentTags.length > 0 && (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 shrink">
               {currentTags.slice(0, 3).map((tag) => (
                 <button
                   key={tag}
-                  onClick={() => removeTag(tag)}
-                  className="group/tag inline-flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted/60 rounded-full border border-border/30 hover:border-border/60 transition-all duration-300 hover:scale-[1.02]"
-                  title={`Remove "${tag}"`}
+                  onClick={() => !isReadOnly && removeTag(tag)}
+                  disabled={isReadOnly}
+                  className="group/tag inline-flex items-center gap-1 px-2.5 py-1 text-xs text-[hsl(var(--notepad-icon))] hover:text-foreground bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded-md border border-[hsl(var(--notepad-border))] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={isReadOnly ? readonlyText : `Remove "${tag}"`}
                 >
-                  <Hash className="w-2.5 h-2.5" />
-                  <span className="font-medium">{tag}</span>
-                  <X className="w-2.5 h-2.5 opacity-0 group-hover/tag:opacity-70 transition-opacity duration-200" />
+                  <span className="font-medium whitespace-nowrap">{tag}</span>
+                  {!isReadOnly && <X className="w-3 h-3 opacity-0 group-hover/tag:opacity-100 transition-opacity duration-200 shrink-0" />}
                 </button>
               ))}
               
               {currentTags.length > 3 && (
-                <span className="text-xs text-muted-foreground/60 font-medium">
+                <span className="text-xs text-[hsl(var(--notepad-icon))] font-medium shrink-0">
                   +{currentTags.length - 3}
                 </span>
               )}
@@ -166,7 +181,7 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onTagsChange, onEditin
 
           {/* Tag input when active */}
           {showTagInput ? (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2 shrink-0">
               <input
                 ref={newTagInputRef}
                 type="text"
@@ -180,36 +195,53 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onTagsChange, onEditin
                   }
                   setShowTagInput(false);
                 }}
-                className="w-20 px-2 py-1 text-xs bg-muted/40 border border-border/60 rounded-full outline-0 focus:border-primary/50 focus:bg-background transition-all duration-300"
-                placeholder="tag..."
+                className="w-24 px-2.5 py-1 text-xs bg-black/5 dark:bg-white/5 border border-[hsl(var(--notepad-border))] rounded-md outline-0 focus:border-accent/50 transition-all duration-200"
+                placeholder={tagPlaceholderText}
                 autoFocus
               />
               
-              {/* Smart suggestions */}
+              {/* Smart suggestions with amber accent */}
               {tagSuggestions.map((tag) => (
                 <button
                   key={tag}
-                  onClick={() => {
+                  onMouseDown={(e) => {
+                    e.preventDefault();
                     addTag(tag);
+                    setNewTag('');
                     setShowTagInput(false);
                   }}
-                  className="px-2 py-1 text-xs text-primary/80 hover:text-primary bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-full transition-all duration-300 hover:scale-[1.02]"
+                  className="px-2.5 py-1 text-xs font-medium text-white bg-accent hover:bg-accent/90 rounded-md transition-all duration-200 whitespace-nowrap"
                   title={`Add "${tag}"`}
                 >
-                  +{tag}
+                  {tag}
                 </button>
               ))}
             </div>
-          ) : (
-            <button
-              onClick={() => setShowTagInput(true)}
-              className="p-1.5 text-muted-foreground/60 hover:text-foreground hover:bg-muted/40 rounded-full transition-all duration-300 hover:scale-[1.05]"
-              title="Add tags"
-            >
-              <Plus className="w-3.5 h-3.5" />
-            </button>
+          ) : !isReadOnly && (
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Label button (Apple Notes style) */}
+              {currentTags.length === 0 && (
+                <button
+                  onClick={() => setShowTagInput(true)}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-accent border border-[hsl(var(--notepad-border))] rounded-md hover:bg-black/5 dark:hover:bg-white/5 transition-all duration-200 whitespace-nowrap"
+                  title={addLabelTooltipText}
+                >
+                  <Hash className="w-3 h-3 shrink-0" />
+                  {labelButtonText}
+                </button>
+              )}
+              
+              {/* add tag button (Apple Notes style) */}
+              <button
+                onClick={() => setShowTagInput(true)}
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-white bg-accent hover:bg-accent/90 rounded-md transition-all duration-200 whitespace-nowrap"
+                title={addTagTooltipText}
+              >
+                <Plus className="w-3 h-3 shrink-0" />
+                {addTagButtonText}
+              </button>
+            </div>
           )}
-
         </div>
       </div>
     </div>

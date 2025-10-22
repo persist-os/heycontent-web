@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { T } from '@/components/translation/T';
 
 interface ShortcutHelpItem {
   key: string;
@@ -45,7 +46,9 @@ export function ShortcutsHelp({ onClose }: ShortcutsHelpProps) {
       className="fixed bottom-16 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-gray-200 w-80 max-h-[60vh] overflow-y-auto"
     >
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-medium text-gray-700">Keyboard Shortcuts</h3>
+        <h3 className="text-sm font-medium text-gray-700">
+          <T context="shortcuts.title">Keyboard Shortcuts</T>
+        </h3>
         <button
           onClick={onClose}
           className="text-gray-400 hover:text-gray-600"
@@ -60,7 +63,11 @@ export function ShortcutsHelp({ onClose }: ShortcutsHelpProps) {
               <code className="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono">
                 {shortcut.key}
               </code>
-              <span className="text-xs text-gray-600">{shortcut.description}</span>
+              <span className="text-xs text-gray-600">
+                <T context={`shortcuts.${shortcut.key.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`}>
+                  {shortcut.description}
+                </T>
+              </span>
             </div>
             {shortcut.example && (
               <span className="text-xs text-gray-400 font-mono">{shortcut.example}</span>

@@ -7,6 +7,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Plus, ExternalLink, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { T } from '@/components/translation';
+import { useLanguagePreference, useTranslation } from '@/hooks/useTranslation';
 
 interface CreateNoteButtonProps {
   content: string;
@@ -19,6 +21,31 @@ interface CreateNoteButtonProps {
 export const CreateNoteButton = ({ content, onNoteCreate, title, className, disabled = false }: CreateNoteButtonProps) => {
   const { createNote, isCreating } = useCreateNote();
   const [isOpen, setIsOpen] = useState(false);
+  const { language } = useLanguagePreference();
+  
+  const { text: saveText } = useTranslation('Save', {
+    context: 'button.save',
+    targetLang: language,
+    enabled: true,
+  });
+  
+  const { text: tooltipText } = useTranslation('Save content as note', {
+    context: 'tooltip.save_note',
+    targetLang: language,
+    enabled: true,
+  });
+  
+  const { text: addToNotesText } = useTranslation('Add to Notes', {
+    context: 'button.add_to_notes',
+    targetLang: language,
+    enabled: true,
+  });
+  
+  const { text: openAsNoteText } = useTranslation('Open as Note', {
+    context: 'button.open_as_note',
+    targetLang: language,
+    enabled: true,
+  });
 
   const handleCreateNote = async (redirect: boolean) => {
     if (content.trim()) {
@@ -63,7 +90,7 @@ export const CreateNoteButton = ({ content, onNoteCreate, title, className, disa
                 ) : (
                   <Plus className="h-3.5 w-3.5" />
                 )}
-                <span className="ml-1.5">Save</span>
+                <span className="ml-1.5">{saveText}</span>
                 <div className={cn(
                   "ml-1 h-3 w-0.5 bg-border/40 transition-opacity duration-200",
                   "group-hover:bg-border/60"
@@ -72,7 +99,7 @@ export const CreateNoteButton = ({ content, onNoteCreate, title, className, disa
             </DropdownMenuTrigger>
           </TooltipTrigger>
           <TooltipContent side="top" className="text-xs">
-            <p>Save content as note</p>
+            <p>{tooltipText}</p>
           </TooltipContent>
         </Tooltip>
 
@@ -86,14 +113,14 @@ export const CreateNoteButton = ({ content, onNoteCreate, title, className, disa
             className="text-xs h-8 cursor-pointer focus:bg-primary focus:text-black active:bg-primary active:text-black dark:focus:bg-primary dark:focus:text-black dark:active:bg-primary dark:active:text-black"
           >
             <Plus className="mr-2 h-3.5 w-3.5" />
-            <span>Add to Notes</span>
+            <span>{addToNotesText}</span>
           </DropdownMenuItem>
           <DropdownMenuItem 
             onClick={() => !disabled && handleCreateNote(true)}
             className="text-xs h-8 cursor-pointer focus:bg-primary focus:text-black active:bg-primary active:text-black dark:focus:bg-primary dark:focus:text-black dark:active:bg-primary dark:active:text-black"
           >
             <ExternalLink className="mr-2 h-3.5 w-3.5" />
-            <span>Open as Note</span>
+            <span>{openAsNoteText}</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

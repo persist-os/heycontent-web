@@ -15,7 +15,7 @@ export interface RichTextEditorRef {
 export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>(({
   content,
   onContentChange,
-  placeholder = 'Start writing...',
+  placeholder = 'Start writing or Cmd/Ctrl + K for AI assistance...',
   disabled = false,
   className = '',
   showPreview = true,

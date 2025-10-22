@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { Edit3, Trash2, Save, X, ExternalLink } from 'lucide-react';
+import { T } from '@/components/translation';
 
 interface StarCardProps {
   project: {
@@ -187,22 +188,22 @@ export const StarCard: React.FC<StarCardProps> = ({ project }) => {
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           {project.noteCount > 0 && (
             <span className="px-2 py-1 bg-muted/30 rounded">
-              {project.noteCount} {project.noteCount === 1 ? 'note' : 'notes'}
+              {project.noteCount} <T context={`star.content.note${project.noteCount === 1 ? '' : 's'}`}>{project.noteCount === 1 ? 'note' : 'notes'}</T>
             </span>
           )}
           {project.conversationCount > 0 && (
             <span className="px-2 py-1 bg-muted/30 rounded">
-              {project.conversationCount} {project.conversationCount === 1 ? 'chat' : 'chats'}
+              {project.conversationCount} <T context={`star.content.chat${project.conversationCount === 1 ? '' : 's'}`}>{project.conversationCount === 1 ? 'chat' : 'chats'}</T>
             </span>
           )}
           {project.crystalCount > 0 && (
             <span className="px-2 py-1 bg-muted/30 rounded">
-              {project.crystalCount} {project.crystalCount === 1 ? 'crystal' : 'crystals'}
+              {project.crystalCount} <T context={`star.content.crystal${project.crystalCount === 1 ? '' : 's'}`}>{project.crystalCount === 1 ? 'crystal' : 'crystals'}</T>
             </span>
           )}
           {project.shardCount > 0 && (
             <span className="px-2 py-1 bg-muted/30 rounded">
-              {project.shardCount} {project.shardCount === 1 ? 'shard' : 'shards'}
+              {project.shardCount} <T context={`star.content.shard${project.shardCount === 1 ? '' : 's'}`}>{project.shardCount === 1 ? 'shard' : 'shards'}</T>
             </span>
           )}
         </div>
@@ -216,7 +217,7 @@ export const StarCard: React.FC<StarCardProps> = ({ project }) => {
               onClick={() => setIsExpanded(!isExpanded)}
               className="text-xs font-medium text-foreground uppercase tracking-wide hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
             >
-              Fingerprint {isExpanded ? '−' : '+'}
+              <T context="star.fingerprint.title">Fingerprint</T> {isExpanded ? '−' : '+'}
             </button>
           </div>
 
@@ -224,7 +225,9 @@ export const StarCard: React.FC<StarCardProps> = ({ project }) => {
             <div className="space-y-3">
               {fingerprint.core_intention && (
                 <div className="space-y-1">
-                  <h5 className="text-xs font-medium text-foreground uppercase tracking-wide">Core Intention</h5>
+                  <h5 className="text-xs font-medium text-foreground uppercase tracking-wide">
+                    <T context="star.fingerprint.core_intention">Core Intention</T>
+                  </h5>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     {fingerprint.core_intention}
                   </p>
@@ -233,7 +236,9 @@ export const StarCard: React.FC<StarCardProps> = ({ project }) => {
 
               {fingerprint.working_style && (
                 <div className="space-y-1">
-                  <h5 className="text-xs font-medium text-foreground uppercase tracking-wide">Working Style</h5>
+                  <h5 className="text-xs font-medium text-foreground uppercase tracking-wide">
+                    <T context="star.fingerprint.working_style">Working Style</T>
+                  </h5>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     {fingerprint.working_style}
                   </p>
@@ -242,7 +247,9 @@ export const StarCard: React.FC<StarCardProps> = ({ project }) => {
 
               {fingerprint.primary_pattern && (
                 <div className="space-y-1">
-                  <h5 className="text-xs font-medium text-foreground uppercase tracking-wide">Primary Pattern</h5>
+                  <h5 className="text-xs font-medium text-foreground uppercase tracking-wide">
+                    <T context="star.fingerprint.primary_pattern">Primary Pattern</T>
+                  </h5>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     {fingerprint.primary_pattern}
                   </p>
@@ -251,7 +258,9 @@ export const StarCard: React.FC<StarCardProps> = ({ project }) => {
 
               {fingerprint.time_horizon && (
                 <div className="space-y-1">
-                  <h5 className="text-xs font-medium text-foreground uppercase tracking-wide">Time Horizon</h5>
+                  <h5 className="text-xs font-medium text-foreground uppercase tracking-wide">
+                    <T context="star.fingerprint.time_horizon">Time Horizon</T>
+                  </h5>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     {fingerprint.time_horizon}
                   </p>
@@ -260,7 +269,9 @@ export const StarCard: React.FC<StarCardProps> = ({ project }) => {
 
               {fingerprint.domain && (
                 <div className="space-y-1">
-                  <h5 className="text-xs font-medium text-foreground uppercase tracking-wide">Domain</h5>
+                  <h5 className="text-xs font-medium text-foreground uppercase tracking-wide">
+                    <T context="star.fingerprint.domain">Domain</T>
+                  </h5>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     {fingerprint.domain}
                   </p>
@@ -269,7 +280,9 @@ export const StarCard: React.FC<StarCardProps> = ({ project }) => {
 
               {fingerprint.success_vision && (
                 <div className="space-y-1">
-                  <h5 className="text-xs font-medium text-foreground uppercase tracking-wide">Success Vision</h5>
+                  <h5 className="text-xs font-medium text-foreground uppercase tracking-wide">
+                    <T context="star.fingerprint.success_vision">Success Vision</T>
+                  </h5>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     {fingerprint.success_vision}
                   </p>
@@ -282,10 +295,10 @@ export const StarCard: React.FC<StarCardProps> = ({ project }) => {
 
       {/* Footer Metadata */}
       <div className="flex items-center justify-between pt-2 text-xs text-muted-foreground">
-        <span>Updated {formatRelativeTime(project.updatedAt)}</span>
+        <span><T context="star.metadata.updated">Updated</T> {formatRelativeTime(project.updatedAt)}</span>
         {project.hasFingerprintId && (
           <span className="px-2 py-1 bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 rounded">
-            intelligent
+            <T context="star.metadata.intelligent">intelligent</T>
           </span>
         )}
       </div>

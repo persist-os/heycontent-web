@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useMemo } from 'react'
+import { T } from '@/components/translation/T'
 
 interface ProjectPosition {
   id: string
@@ -94,12 +95,14 @@ export function ConstellationMinimap({
 
   return (
     <div className={`${className}`}>
-      <div className="bg-background/90 backdrop-blur-sm border border-border/50 rounded-lg p-2 shadow-lg">
+      <div className="bg-background/90 backdrop-blur-sm border border-border/50 rounded-lg p-2 shadow-lg max-w-[180px] max-h-[160px]">
         {/* Minimap Header */}
         <div className="mb-2 px-1">
-          <div className="text-xs font-medium text-foreground/80">Constellation</div>
+          <div className="text-xs font-medium text-foreground/80">
+            <T context="constellation.minimap.title">Constellation</T>
+          </div>
           <div className="text-xs text-muted-foreground/60 font-mono">
-            {positions.length} project{positions.length !== 1 ? 's' : ''}
+            {positions.length} <T context="constellation.minimap.project">{positions.length !== 1 ? 'projects' : 'project'}</T>
           </div>
         </div>
 
@@ -195,15 +198,21 @@ export function ConstellationMinimap({
         <div className="mt-2 px-1 space-y-1">
           <div className="flex items-center gap-2 text-xs text-muted-foreground/70">
             <div className="w-2 h-2 rounded-full bg-blue-500/80 dark:bg-blue-400/80" />
-            <span>Important</span>
+            <span>
+              <T context="constellation.minimap.legend.important">Important</T>
+            </span>
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground/60">
             <div className="w-1.5 h-1.5 rounded-full bg-blue-400/60 dark:bg-blue-300/60" />
-            <span>Active</span>
+            <span>
+              <T context="constellation.minimap.legend.active">Active</T>
+            </span>
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground/50">
             <div className="w-1 h-1 rounded-full bg-muted-foreground/40" />
-            <span>Others</span>
+            <span>
+              <T context="constellation.minimap.legend.others">Others</T>
+            </span>
           </div>
         </div>
       </div>

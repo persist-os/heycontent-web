@@ -9,6 +9,7 @@ import { ActionButtons } from './ActionButtons'
 import type { Note, NoteUpdate } from '../../../../notes/types'
 import type { Id } from "@/convex/_generated/dataModel"
 import type { PanelState } from '../hooks/useSplitScreenLayout'
+import { useTranslation } from '@/hooks/useTranslation'
 
 interface NotepadHeaderProps {
   note: Note
@@ -70,59 +71,44 @@ export function NotepadHeader({
   // Progressive spacing that scales elegantly
   const metaSpacing = isMobile ? "mb-4" : "mb-5 lg:mb-6"
   const controlsMarginTop = isMobile ? "mt-3" : "mt-4 lg:mt-5"
+  
+  // Translations
+  const { text: collapseTooltip } = useTranslation('Collapse notepad', {
+    context: 'notepad.actions.collapse'
+  })
 
   return (
-    <div className={`${containerPadding} border-b border-border/30 bg-background/95 relative`}>
-      {/* Collapse Button - Top Right with better spacing */}
+    <div className={`${containerPadding} border-b border-[hsl(var(--notepad-border))] bg-[hsl(var(--notepad-header-bg))] relative`}>
+      {/* Collapse Button - Top Right, absolutely positioned to never interfere */}
       {onClose && (
         <button
           onClick={onClose}
-          className="absolute top-6 right-6 p-2 text-muted-foreground hover:text-foreground hover:bg-muted/30 rounded transition-colors duration-200 z-10"
-          title="Collapse notepad"
+          className="absolute top-4 right-4 p-1.5 text-[hsl(var(--notepad-icon))] hover:text-[hsl(var(--notepad-icon-hover))] hover:bg-black/5 dark:hover:bg-white/5 rounded-md transition-colors duration-200 z-20"
+          title={collapseTooltip}
         >
           <X className="w-4 h-4" />
         </button>
       )}
       
-      {/* Note Metadata Section */}
-      <div className={metaSpacing}>
-        <NoteMeta
-          note={note}
-          onUpdate={onNoteUpdate}
-          onTitleChange={() => {}}
-          onTagsChange={(tags) => onNoteUpdate(note._id, { tags })}
-          onEditingTitleChange={onEditingTitleChange}
-          noteTagData={noteTagData}
-          isReadOnly={isReadOnly}
-          notePermission={notePermission}
-        />
-      </div>
-      
-      {/* Controls Section - Responsive layout that prevents overlap */}
-      <div className={controlsMarginTop}>
-        {/* Mobile: Stack controls vertically for clarity */}
-        <div className="sm:hidden space-y-3">
-          {/* Top row: Type and Note selectors with generous spacing */}
-          <div className="flex items-center gap-2">
-            <SimpleTypeSelector
-              noteId={note._id}
-              currentType={note.type || 'idea_bank'}
-              onTypeChange={(type) => onNoteUpdate(note._id, { type })}
-              isMobile={isMobile}
-              isReadOnly={isReadOnly}
-            />
-            
-            <NoteSelector
-              currentNoteId={currentNoteId}
-              availableNotes={availableNotes}
-              onCreateNew={onCreateNewNote}
-              onSwitchNote={onSwitchNote}
-              isMobile={isMobile}
-            />
-          </div>
+      {/* Content with padding to avoid close button - pr-12 ensures no overlap */}
+      <div className={onClose ? "pr-12" : ""}>
+        {/* Note Metadata Section */}
+        <div className={metaSpacing}>
+          <NoteMeta
+            note={note}
+            onUpdate={onNoteUpdate}
+            onTitleChange={() => {}}
+            onTagsChange={(tags) => onNoteUpdate(note._id, { tags })}
+            onEditingTitleChange={onEditingTitleChange}
+            noteTagData={noteTagData}
+            isReadOnly={isReadOnly}
+            notePermission={notePermission}
+          />
+        </div>
 
-          {/* Bottom row: Action buttons centered with breathing room */}
-          <div className="flex justify-center pt-1">
+        {/* Action Buttons Bar - After title/time, before selectors */}
+        <div className="flex justify-start mb-3">
+          <div className="bg-background/80 backdrop-blur-sm border border-border/30 rounded-full px-3 py-1.5 shadow-sm">
             <ActionButtons
               onTriggerCommandPalette={onTriggerCommandPalette}
               onGenerateMetadata={onGenerateMetadata}
@@ -137,46 +123,56 @@ export function NotepadHeader({
             />
           </div>
         </div>
-
-        {/* Tablet and up: Asymmetric horizontal layout with calculated space */}
-        <div className="hidden sm:block">
-          <div className="flex items-center">
-            {/* Left side: Selectors with controlled width - max width to prevent overlap */}
-            <div className="flex items-center gap-3 min-w-0 flex-shrink max-w-[60%] sm:max-w-[70%] lg:max-w-[75%]">
-              <SimpleTypeSelector
-                noteId={note._id}
-                currentType={note.type || 'idea_bank'}
-                onTypeChange={(type) => onNoteUpdate(note._id, { type })}
-                isMobile={false}
-                isReadOnly={isReadOnly}
-              />
+        
+        {/* Controls Section - Selectors only */}
+        <div className={controlsMarginTop}>
+          {/* Mobile: Stack selectors with more space */}
+          <div className="sm:hidden">
+            <div className="flex items-center gap-3">
+              <div className="w-24 shrink-0">
+                <SimpleTypeSelector
+                  noteId={note._id}
+                  currentType={note.type || 'idea_bank'}
+                  onTypeChange={(type) => onNoteUpdate(note._id, { type })}
+                  isMobile={isMobile}
+                  isReadOnly={isReadOnly}
+                />
+              </div>
               
-              <NoteSelector
-                currentNoteId={currentNoteId}
-                availableNotes={availableNotes}
-                onCreateNew={onCreateNewNote}
-                onSwitchNote={onSwitchNote}
-                isMobile={false}
-              />
+              <div className="w-36 shrink-0">
+                <NoteSelector
+                  currentNoteId={currentNoteId}
+                  availableNotes={availableNotes}
+                  onCreateNew={onCreateNewNote}
+                  onSwitchNote={onSwitchNote}
+                  isMobile={isMobile}
+                />
+              </div>
             </div>
+          </div>
 
-            {/* Flexible spacer with minimum gap to prevent overlap */}
-            <div className="flex-1 min-w-4 sm:min-w-6 lg:min-w-8" />
-
-            {/* Right side: Action buttons with fixed positioning */}
-            <div className="flex-shrink-0">
-              <ActionButtons
-                onTriggerCommandPalette={onTriggerCommandPalette}
-                onGenerateMetadata={onGenerateMetadata}
-                onSaveNote={onSaveNote}
-                onShare={onShare}
-                shouldShowSmartButton={shouldShowSmartButton}
-                isGeneratingMetadata={isGeneratingMetadata}
-                isCreating={isCreating}
-                isMobile={false}
-                isReadOnly={isReadOnly}
-                notePermission={notePermission}
-              />
+          {/* Desktop: Selectors in a row with better spacing */}
+          <div className="hidden sm:block">
+            <div className="flex items-center gap-4">
+              <div className="w-32 shrink-0">
+                <SimpleTypeSelector
+                  noteId={note._id}
+                  currentType={note.type || 'idea_bank'}
+                  onTypeChange={(type) => onNoteUpdate(note._id, { type })}
+                  isMobile={false}
+                  isReadOnly={isReadOnly}
+                />
+              </div>
+              
+              <div className="w-48 shrink-0">
+                <NoteSelector
+                  currentNoteId={currentNoteId}
+                  availableNotes={availableNotes}
+                  onCreateNew={onCreateNewNote}
+                  onSwitchNote={onSwitchNote}
+                  isMobile={false}
+                />
+              </div>
             </div>
           </div>
         </div>

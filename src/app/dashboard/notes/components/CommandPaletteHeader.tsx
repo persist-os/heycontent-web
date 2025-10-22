@@ -5,6 +5,7 @@ import { OperationState } from '../hooks/useOperationState';
 import { RefinementState } from '../hooks/useRefinementState';
 import { NOTE_TYPE_ICONS } from './InlineCommandPalette.constants';
 import { NoteType as RefinementNoteType } from '../utils/refinement-configs';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface CommandPaletteHeaderProps {
   operationState: OperationState;
@@ -36,6 +37,16 @@ export function CommandPaletteHeader({
 }: CommandPaletteHeaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Translation hooks for all placeholder texts
+  const { text: refiningText } = useTranslation('Refining text...', { context: 'commandpalette.placeholder.refining' });
+  const { text: generatingText } = useTranslation('Generating content...', { context: 'commandpalette.placeholder.generating' });
+  const { text: processingText } = useTranslation('Processing...', { context: 'commandpalette.placeholder.processing' });
+  const { text: generatedText } = useTranslation('Content generated!', { context: 'commandpalette.placeholder.generated' });
+  const { text: refinedText } = useTranslation('Text refined!', { context: 'commandpalette.placeholder.refined' });
+  const { text: previewText } = useTranslation('Refinement Preview', { context: 'commandpalette.placeholder.preview' });
+  const { text: refinePrefix } = useTranslation('Refine:', { context: 'commandpalette.placeholder.refineprefix' });
+  const { text: createText } = useTranslation('What would you like to create?', { context: 'commandpalette.placeholder.create' });
+
   // Focus input when opened
   useEffect(() => {
     if (isOpen && inputRef.current && !refinementState.showInternalPreview) {
@@ -61,24 +72,24 @@ export function CommandPaletteHeader({
 
   const getPlaceholder = () => {
     if (operationState.isOperationInProgress || refinementState.isProcessingRefinement) {
-      return refinementState.previewTransition === 'loading' ? 'Refining text...' :
-             operationState.operationType === 'generation' ? 'Generating content...' : 
-             'Processing...';
+      return refinementState.previewTransition === 'loading' ? refiningText :
+             operationState.operationType === 'generation' ? generatingText : 
+             processingText;
     }
     
     if (operationState.completedCommandId) {
-      return operationState.operationType === 'generation' ? 'Content generated!' : 'Text refined!';
+      return operationState.operationType === 'generation' ? generatedText : refinedText;
     }
     
     if (refinementState.showInternalPreview) {
-      return 'Refinement Preview';
+      return previewText;
     }
     
     if (refinementMode) {
-      return `Refine: "${selectedText.slice(0, 30)}${selectedText.length > 30 ? '...' : ''}"`; 
+      return `${refinePrefix} "${selectedText.slice(0, 30)}${selectedText.length > 30 ? '...' : ''}"`; 
     }
     
-    return 'What would you like to create?';
+    return createText;
   };
 
   const showModeSelector = !operationState.isOperationInProgress && 

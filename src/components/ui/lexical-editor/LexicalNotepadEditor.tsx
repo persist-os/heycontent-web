@@ -22,6 +22,7 @@ import { NoteRefNode } from './nodes/NoteRefNode'
 import { useNoteRefPlugin } from './plugins/NoteRefPlugin'
 import { CommandPalettePlugin } from './plugins/CommandPalettePlugin'
 import { transformers } from './markdown-transformers'
+import { T } from '@/components/translation'
 
 export interface LexicalNotepadEditorRef {
   triggerCommandPalette: () => void
@@ -191,7 +192,7 @@ function EditorContent({
         }
         placeholder={
           <div className="absolute top-4 left-4 text-muted-foreground/50 pointer-events-none">
-            Start writing...
+            <T context="notepad.placeholder">Start writing or Cmd/Ctrl + K for AI assistance...</T>
           </div>
         }
         ErrorBoundary={LexicalErrorBoundary}

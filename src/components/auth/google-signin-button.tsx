@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { signInWithGoogle } from '@/app/lib/google-auth';
+import { T } from '@/components/translation';
 
 interface GoogleSignInButtonProps {
   action?: 'login' | 'register';
@@ -82,12 +83,20 @@ export function GoogleSignInButton({
       {isLoading ? (
         <>
           <Loader2 className="w-5 h-5 animate-spin" />
-          <span>Signing {action === 'register' ? 'up' : 'in'}...</span>
+          <span>
+            {action === 'register' ? (
+              <T context="button.auth.signing-up-google">Signing up...</T>
+            ) : (
+              <T context="button.auth.signing-in-google">Signing in...</T>
+            )}
+          </span>
         </>
       ) : (
         <>
           <GoogleIcon />
-          <span>Continue with Google</span>
+          <span>
+            <T context="button.auth.continue-google">Continue with Google</T>
+          </span>
         </>
       )}
     </button>
@@ -128,4 +137,3 @@ function GoogleIcon() {
     </svg>
   );
 }
-

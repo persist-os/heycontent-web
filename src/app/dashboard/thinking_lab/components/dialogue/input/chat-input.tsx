@@ -11,6 +11,8 @@ import { api } from '@/convex/_generated/api'
 import type { Message } from '@/app/types/chat';
 import { uploadFile, formatFileSize, getFileTypeIcon, getFileDisplayUrl, type FileUploadResponse } from '@/lib/file-upload';
 import { track } from '@/lib/analytics';
+import { T } from '@/components/translation';
+import { useTranslation as useTextTranslation } from '@/hooks/useTranslation';
 
 interface ChatInputProps {
   onSend: (message: string, fileAttachments?: FileUploadResponse[]) => void
@@ -37,19 +39,7 @@ interface ChatInputProps {
   onToggleNotepadInMessages?: (enabled: boolean) => void
 }
 
-const placeholders = [
-  "What should I focus on next?",
-  "Analyze audience growth...",
-  "Get partnership recommendations...",
-  "Optimize engagement...",
-]
-
-const contextPlaceholders = [
-  "Ask about this content's analysis...",
-  "What insights can you share?",
-  "How can I improve this content?",
-  "What trends do you see?",
-]
+// Note: Placeholders are translated dynamically in the component
 
 export function ChatInput({
   onSend,
@@ -76,7 +66,7 @@ export function ChatInput({
   onToggleNotepadInMessages
 }: ChatInputProps) {
   const [input, setInput] = useState('')
-  const [placeholder, setPlaceholder] = useState(placeholders[0])
+  const [placeholderIndex, setPlaceholderIndex] = useState(0)
   const [showFullReply, setShowFullReply] = useState(false)
   const [fileAttachments, setFileAttachments] = useState<FileUploadResponse[]>([])
   const [isUploading, setIsUploading] = useState(false)
@@ -210,25 +200,48 @@ export function ChatInput({
     // Simple cursor positioning - no complex link handling needed
   }, [])
 
+  // Define placeholder arrays - unique prompts that reflect HeyContext's distinctive approach
+  const placeholders = [
+    "I've been turning this over in my mind...",
+    "Something feels different about this...",
+    "I'm sensing a pattern here...",
+    "This reminds me of that time...",
+    "What if we looked at this sideways?",
+    "The part that keeps nagging at me...",
+    "This connects to something I thought about before...",
+    "I keep coming back to...",
+    "There's something here I'm not quite seeing...",
+    "Why does this feel important right now?",
+  ]
+
+  const contextPlaceholders = [
+    "What's catching your attention here?",
+    "I sense there's more beneath the surface...",
+    "This reminds me of something we've discussed...",
+    "What connections are you making?",
+    "The piece that stands out to me...",
+    "Help me understand what you're seeing...",
+    "This brings up memories of...",
+    "What's shifting in your thinking?",
+    "I wonder about the bigger picture...",
+    "What feels most alive here?",
+  ]
+
   // Use context-aware placeholders when analysis is available
   const activePlaceholders = hasAnalysis ? contextPlaceholders : placeholders
 
   // Rotate placeholders
   useEffect(() => {
     const interval = setInterval(() => {
-      setPlaceholder(prev => {
-        const currentIndex = activePlaceholders.indexOf(prev)
-        const nextIndex = (currentIndex + 1) % activePlaceholders.length
-        return activePlaceholders[nextIndex] || activePlaceholders[0]
-      })
+      setPlaceholderIndex(prev => (prev + 1) % activePlaceholders.length)
     }, 3000)
     return () => clearInterval(interval)
-  }, [activePlaceholders])
+  }, [activePlaceholders.length])
 
-  // Update placeholder when context changes
+  // Reset placeholder index when context changes
   useEffect(() => {
-    setPlaceholder(activePlaceholders[0])
-  }, [hasAnalysis, activePlaceholders])
+    setPlaceholderIndex(0)
+  }, [hasAnalysis])
 
   // Auto-resize textarea and sync display div
   useEffect(() => {
@@ -423,27 +436,48 @@ export function ChatInput({
   const isNearLimit = characterCount > maxLength * 0.8
   const isAtLimit = characterCount >= maxLength
 
-  // Dynamic placeholder based on context
-  let contextPlaceholder = placeholder
-  if (hasContext && contextPlatform) {
-    if (contextPlatform === 'ai-insights') {
-      contextPlaceholder = "Ask about these insights..."
-    } else if (contextPlatform === 'smart-notes') {
-      contextPlaceholder = "Ask about your notes..."
-    } else {
-      contextPlaceholder = `Ask about your ${contextPlatform} content...`
-    }
-  } else if (hasAnalysis) {
-    contextPlaceholder = "Ask me anything about your content..."
-  }
+  // Get current placeholder text
+  const placeholderText = activePlaceholders[placeholderIndex]
+  
+  // Translate placeholder
+  const { text: translatedPlaceholder } = useTextTranslation(placeholderText, {
+    context: `chat.placeholder`,
+  })
+
+  // Translate aria-labels
+  const { text: clearReplyLabel } = useTextTranslation('Clear reply', {
+    context: 'chat.aria.clear_reply',
+  })
+  const { text: removeFileLabel } = useTextTranslation('Remove file', {
+    context: 'chat.aria.remove_file',
+  })
+  const { text: selectFilesLabel } = useTextTranslation('Select files to attach', {
+    context: 'chat.aria.select_files',
+  })
+  const { text: attachFilesLabel } = useTextTranslation('Attach files', {
+    context: 'chat.aria.attach_files',
+  })
+  const { text: sendMessageLabel } = useTextTranslation('Send message', {
+    context: 'chat.aria.send_message',
+  })
+  const { text: notepadIncludedTooltip } = useTextTranslation('Notepad included in messages - Click to exclude', {
+    context: 'chat.notepad.tooltip.included',
+  })
+  const { text: notepadExcludedTooltip } = useTextTranslation('Notepad excluded from messages - Click to include', {
+    context: 'chat.notepad.tooltip.excluded',
+  })
 
   return (
     <div className="shrink-0 bg-background relative">
       {authStatus === 'waiting' && (
-        <div className="px-3 py-2 text-xs text-muted-foreground">Initializing authentication…</div>
+        <div className="px-3 py-2 text-xs text-muted-foreground">
+          <T context="chat.auth.loading">Initializing authentication…</T>
+        </div>
       )}
       {authStatus === 'unavailable' && (
-        <div className="px-3 py-2 text-xs text-warning">Authentication state not ready. Please wait and try again.</div>
+        <div className="px-3 py-2 text-xs text-warning">
+          <T context="chat.auth.unavailable">Authentication state not ready. Please wait and try again.</T>
+        </div>
       )}
       <form onSubmit={handleSubmit} className="p-2 sm:p-3">
         {/* Context indicator */}
@@ -457,8 +491,8 @@ export function ChatInput({
               <Search className="w-4 h-4 flex-shrink-0" />
               <span className="break-words">
                 {hasAnalysis 
-                  ? `AI analysis for this ${contextPlatform} content will be included as context`
-                  : `Discussing ${contextPlatform} content`
+                  ? <T context="chat.context.analysis">AI analysis for this {contextPlatform} content will be included as context</T>
+                  : <T context="chat.context.discussing">Discussing {contextPlatform} content</T>
                 }
               </span>
             </div>
@@ -475,7 +509,7 @@ export function ChatInput({
                 className="flex-1 text-left hover:text-foreground transition-colors min-w-0"
               >
                 <span className={showFullReply ? "break-words whitespace-pre-wrap min-w-0" : "truncate block min-w-0"}>
-                  Replying to: {showFullReply 
+                  <T context="chat.replying">Replying to</T>: {showFullReply 
                     ? referencedMessage.content 
                     : referencedMessage.content.length > 60 
                       ? `${referencedMessage.content.slice(0, 60)}...` 
@@ -488,7 +522,7 @@ export function ChatInput({
                   onClearReference?.()
                 }}
                 className="text-muted-foreground hover:text-foreground p-1.5 rounded-full hover:bg-muted flex-shrink-0 transition-colors"
-                aria-label="Clear reply"
+                aria-label={clearReplyLabel}
               >
                 <span className="text-base font-medium">×</span>
               </button>
@@ -505,7 +539,7 @@ export function ChatInput({
                 onClick={handleReferenceClick}
                 className="flex-1 text-left hover:text-foreground transition-colors font-medium"
               >
-                Add quote to notepad
+                <T context="chat.notepad.add">Add quote to notepad</T>
               </button>
               <button
                 onClick={() => {
@@ -513,7 +547,7 @@ export function ChatInput({
                   onClearReference?.()
                 }}
                 className="text-muted-foreground hover:text-foreground p-1 rounded transition-colors"
-                aria-label="Clear reply"
+                aria-label={clearReplyLabel}
               >
                 <span className="text-sm">×</span>
               </button>
@@ -568,7 +602,7 @@ export function ChatInput({
                           <button
                             onClick={() => removeFileAttachment(index)}
                             className="bg-black/50 text-white hover:bg-black/70 w-11 h-11 rounded-full transition-colors flex items-center justify-center"
-                            aria-label="Remove file"
+                            aria-label={removeFileLabel}
                           >
                             <X className="w-5 h-5" />
                           </button>
@@ -598,7 +632,7 @@ export function ChatInput({
                           <button
                             onClick={() => removeFileAttachment(index)}
                             className="bg-black/50 text-white hover:bg-black/70 w-11 h-11 rounded-full transition-colors flex items-center justify-center"
-                            aria-label="Remove file"
+                            aria-label={removeFileLabel}
                           >
                             <X className="w-5 h-5" />
                           </button>
@@ -619,7 +653,7 @@ export function ChatInput({
                         <button
                           onClick={() => removeFileAttachment(index)}
                           className="text-muted-foreground hover:text-foreground w-11 h-11 rounded transition-colors flex items-center justify-center"
-                          aria-label="Remove file"
+                          aria-label={removeFileLabel}
                         >
                           <X className="w-5 h-5" />
                         </button>
@@ -645,7 +679,7 @@ export function ChatInput({
                 ref={textareaRef}
                 value={currentInput}
                 onChange={handleTextareaChange}
-                placeholder={contextPlaceholder}
+                placeholder={translatedPlaceholder}
                 className="text-base leading-relaxed flex-1 bg-transparent border-0 outline-0 focus:outline-none focus:ring-0 resize-none placeholder:text-muted-foreground chat-font 
                 [&::-webkit-scrollbar]:w-2 
                 [&::-webkit-scrollbar]:h-2
@@ -678,7 +712,7 @@ export function ChatInput({
                   onChange={handleFileInputChange}
                   className="hidden"
                   accept="image/*,.pdf,.doc,.docx,.txt,.csv,.xlsx,.xls"
-                  aria-label="Select files to attach"
+                  aria-label={selectFilesLabel}
                 />
                 {/* Character count */}
                 {!isLoading && (
@@ -697,7 +731,7 @@ export function ChatInput({
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isLoading || disabled || isUploading}
                     className="w-11 h-11 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    aria-label="Attach files"
+                    aria-label={attachFilesLabel}
                   >
                     {isUploading ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
@@ -718,8 +752,8 @@ export function ChatInput({
                         : 'text-muted-foreground hover:text-foreground'
                     }`}
                     title={includeNotepadInMessages 
-                      ? 'Notepad included in messages - Click to exclude'
-                      : 'Notepad excluded from messages - Click to include'
+                      ? notepadIncludedTooltip
+                      : notepadExcludedTooltip
                     }
                   >
                     <NotepadIcon className={`w-5 h-5 ${!includeNotepadInMessages ? 'opacity-50' : ''}`} />
@@ -735,7 +769,7 @@ export function ChatInput({
                 {/* Send button */}
                 <button
                   type="submit"
-                  aria-label="Send message"
+                  aria-label={sendMessageLabel}
                   disabled={isLoading || (!currentInput.trim() && fileAttachments.length === 0) || isAtLimit || disabled}
                   className={`w-11 h-11 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                     isLoading || (!currentInput.trim() && fileAttachments.length === 0) || isAtLimit || disabled
@@ -754,7 +788,7 @@ export function ChatInput({
           </div>
         </div>
         <div className="mt-1.5 text-xs text-muted-foreground text-center">
-          Press Enter to send, Shift+Enter for new line, @ to link content
+          <T context="chat.help">Press Enter to send, Shift+Enter for new line, @ to link content</T>
         </div>
         
         {/* Temporary shadow text display - only in development */}

@@ -3,6 +3,7 @@ import { HonoWithConvex, HttpRouterWithHono } from "convex-helpers/server/hono";
 import { ActionCtx } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import { cors } from "hono/cors";
+import { ConfigStatus } from "./types/convergence";
 
 /**
  * PARALLEL SYSTEM: Native Convex Actions + Hono Fallback
@@ -43,6 +44,7 @@ app.use('*', async (c, next) => {
   else if (path.includes('/subscription') || path.includes('/stripe')) domain = 'subscription';
   else if (path.includes('/feedback')) domain = 'feedback';
   else if (path.includes('/backgroundJobs') || path.includes('/background')) domain = 'background_jobs';
+  else if (path.includes('/briefing')) domain = 'briefing';
   
   console.log(`🔵 [${domain.toUpperCase()}] ${method} ${path} - START`);
   
@@ -253,10 +255,11 @@ app.get("/api/users/:id/conversations", async (c) => {
 app.post("/api/users/:id/save_insights", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("id");
-  const { insights } = await c.req.json();
+  const { insights, greetings } = await c.req.json();
   const result = await ctx.runMutation(api.ambientInsights.createInsights, {
     userId,
     insights,
+    greetings: greetings || undefined,
   });
   return c.json(result);
 });
@@ -270,19 +273,42 @@ app.post("/api/api-keys", async (c) => {
   if (!user_id || !key_hash) {
     return c.json({ error: "Missing user_id or key_hash" }, 400);
   }
-  try {
-    await ctx.runMutation(api.apiKeysMutations.insert_api_key, {
-      user_id,
-      key_hash,
-      scopes,
-      rate_tier,
-      clientType: clientType || "web", // Default to "web" if not specified
-    });
-    return c.json({ success: true }, 201); // 201 Created status
-  } catch (error) {
-    console.error("Failed to create API key:", error);
-    return c.json({ success: false, error: "Failed to create API key" }, 500);
+  
+  // Retry logic with exponential backoff for OCC conflicts
+  const maxRetries = 3;
+  let lastError;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      await ctx.runMutation(api.apiKeysMutations.insert_api_key, {
+        user_id,
+        key_hash,
+        scopes,
+        rate_tier,
+        clientType: clientType || "web",
+      });
+      return c.json({ success: true }, 201);
+    } catch (error: any) {
+      lastError = error;
+      
+      // Check if it's an OCC error (Convex error code 1)
+      const isOCCError = error?.message?.includes("changed while this mutation was being run") ||
+                         error?.message?.includes("https://docs.convex.dev/error#1");
+      
+      if (isOCCError && attempt < maxRetries - 1) {
+        // Exponential backoff: 50ms, 100ms, 200ms
+        const delay = 50 * Math.pow(2, attempt);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      
+      // Non-OCC error or final attempt - fail
+      break;
+    }
   }
+  
+  console.error("Failed to create API key after retries:", lastError);
+  return c.json({ success: false, error: "Failed to create API key" }, 500);
 });
 
 // Validate API key
@@ -572,6 +598,70 @@ app.post("/api/notes", async (c) => {
 });
 
 // SUBSCRIPTION ENDPOINTS
+
+// ===== SUBSCRIPTION PLANS (STATIC DATA CACHING) =====
+
+// Get all subscription plans (cached)
+app.get("/api/subscription/plans", async (c) => {
+  const ctx = c.env;
+  
+  try {
+    const plans = await ctx.runQuery(api.subscriptionPlansQueries.getAllPlans, {});
+    return c.json({ success: true, data: plans });
+  } catch (error: any) {
+    console.error("Failed to get subscription plans:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to retrieve subscription plans",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Sync plans from backend (backend only)
+app.post("/api/subscription/plans/sync", async (c) => {
+  const ctx = c.env;
+  
+  try {
+    const { plans } = await c.req.json();
+    
+    if (!plans || !Array.isArray(plans)) {
+      return c.json({ 
+        success: false, 
+        error: "Missing or invalid plans array" 
+      }, 400);
+    }
+    
+    const result = await ctx.runMutation(api.subscriptionPlansMutations.syncPlans, { plans });
+    return c.json(result);
+  } catch (error: any) {
+    console.error("Failed to sync subscription plans:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to sync subscription plans",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Check if plans are initialized
+app.get("/api/subscription/plans/status", async (c) => {
+  const ctx = c.env;
+  
+  try {
+    const status = await ctx.runQuery(api.subscriptionPlansQueries.arePlansInitialized, {});
+    return c.json(status);
+  } catch (error: any) {
+    console.error("Failed to check plans status:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to check plans status",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// ===== USER SUBSCRIPTIONS =====
 
 // Get user's subscription
 app.get("/api/users/:id/stripe/subscription", async (c) => {
@@ -935,6 +1025,36 @@ app.get("/api/users/:id/ambient-data-bundle", async (c) => {
   } catch (error) {
     console.error("Failed to get user data bundle:", error);
     return c.json({ success: false, error: "Failed to get user data bundle" }, 500);
+  }
+});
+
+// Get custom command prompts for a user
+app.get("/api/users/:id/custom-command-prompts", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  try {
+    const prompts = await ctx.runQuery(api.ambientInsights.getCustomCommandPrompts, { userId });
+    return c.json({ success: true, data: prompts });
+  } catch (error) {
+    console.error("Failed to get custom command prompts:", error);
+    return c.json({ success: false, error: "Failed to get custom command prompts" }, 500);
+  }
+});
+
+// Update custom command prompts for a user
+app.post("/api/users/:id/custom-command-prompts", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { customCommandPrompts } = await c.req.json();
+  try {
+    await ctx.runMutation(api.ambientInsights.updateCustomCommandPrompts, {
+      userId,
+      customCommandPrompts,
+    });
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Failed to update custom command prompts:", error);
+    return c.json({ success: false, error: "Failed to update custom command prompts" }, 500);
   }
 });
 
@@ -2570,6 +2690,22 @@ app.post("/api/contextEnrichmentBandit/getBanditPerformance", async (c) => {
     return c.json({ success: true, data: performance });
   } catch (error: any) {
     console.error("[ContextMAB] Get performance error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+/**
+ * Get decision by ID
+ */
+app.post("/api/contextEnrichmentBandit/getDecisionById", async (c) => {
+  const ctx = c.env;
+  try {
+    const { decisionId } = await c.req.json();
+    
+    const decision = await ctx.runQuery(api.contextEnrichmentBandit.getDecisionById, { decisionId });
+    return c.json({ success: true, data: decision });
+  } catch (error: any) {
+    console.error("[ContextMAB] Get decision error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -4406,6 +4542,638 @@ app.post("/api/stardust/createSymbioticPair", async (c) => {
     return c.json({ 
       success: false,
       error: error.message || "Failed to create symbiotic pair"
+    }, 500);
+  }
+});
+
+// ============================================================================
+// CONVERGENCE CONFIG ROUTES
+// ============================================================================
+
+/**
+ * Get top configs for a system (most common read operation)
+ */
+app.get("/api/convergence/configs/:system_name", async (c) => {
+  try {
+    const system_name = c.req.param("system_name");
+    const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : 3;
+    const status = c.req.query("status") as ConfigStatus | undefined;
+    
+    const configs = await c.env.runQuery(api.convergenceQueries.getTopConfigs, {
+      system_name,
+      limit,
+      status,
+    });
+    
+    return c.json({ success: true, data: configs });
+  } catch (error: any) {
+    console.error("[CONVERGENCE] Get configs error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get configs"
+    }, 500);
+  }
+});
+
+/**
+ * Get single config by rank
+ */
+app.get("/api/convergence/configs/:system_name/rank/:rank", async (c) => {
+  try {
+    const system_name = c.req.param("system_name");
+    const rank = parseInt(c.req.param("rank"));
+    const status = c.req.query("status") as ConfigStatus | undefined;
+    
+    const config = await c.env.runQuery(api.convergenceQueries.getConfigByRank, {
+      system_name,
+      rank,
+      status,
+    });
+    
+    return c.json({ success: true, data: config });
+  } catch (error: any) {
+    console.error("[CONVERGENCE] Get config by rank error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get config"
+    }, 500);
+  }
+});
+
+/**
+ * Get system statistics
+ */
+app.get("/api/convergence/stats/:system_name", async (c) => {
+  try {
+    const system_name = c.req.param("system_name");
+    
+    const stats = await c.env.runQuery(api.convergenceQueries.getSystemStats, {
+      system_name,
+    });
+    
+    return c.json({ success: true, data: stats });
+  } catch (error: any) {
+    console.error("[CONVERGENCE] Get stats error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get stats"
+    }, 500);
+  }
+});
+
+/**
+ * Save single config (called by optimization runs)
+ */
+app.post("/api/convergence/configs", async (c) => {
+  try {
+    const body = await c.req.json();
+    
+    const configId = await c.env.runMutation(api.convergenceMutations.saveConfig, body);
+    
+    return c.json({ success: true, data: { configId } });
+  } catch (error: any) {
+    console.error("[CONVERGENCE] Save config error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to save config"
+    }, 500);
+  }
+});
+
+/**
+ * Batch save configs (optimization runs with multiple candidates)
+ */
+app.post("/api/convergence/configs/batch", async (c) => {
+  try {
+    const body = await c.req.json();
+    
+    const result = await c.env.runMutation(api.convergenceMutations.batchSaveConfigs, {
+      configs: body.configs,
+    });
+    
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[CONVERGENCE] Batch save error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to batch save configs"
+    }, 500);
+  }
+});
+
+/**
+ * Update config status (lifecycle management)
+ */
+app.patch("/api/convergence/configs/:configId/status", async (c) => {
+  try {
+    const configId = c.req.param("configId") as Id<"convergence_configs">;
+    const { status } = await c.req.json();
+    
+    await c.env.runMutation(api.convergenceMutations.updateConfigStatus, {
+      configId,
+      status,
+    });
+    
+    return c.json({ success: true, data: { configId } });
+  } catch (error: any) {
+    console.error("[CONVERGENCE] Update status error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to update status"
+    }, 500);
+  }
+});
+
+/**
+ * Record config usage (track performance in production)
+ */
+app.post("/api/convergence/configs/:configId/usage", async (c) => {
+  try {
+    const configId = c.req.param("configId") as Id<"convergence_configs">;
+    const { success } = await c.req.json();
+    
+    await c.env.runMutation(api.convergenceMutations.recordConfigUsage, {
+      configId,
+      success,
+    });
+    
+    return c.json({ success: true, data: { configId } });
+  } catch (error: any) {
+    console.error("[CONVERGENCE] Record usage error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to record usage"
+    }, 500);
+  }
+});
+
+/**
+ * Promote configs (deploy new optimized configs)
+ * 
+ * IDEMPOTENT: Pass promotion_id for safe retries
+ */
+app.post("/api/convergence/configs/promote", async (c) => {
+  try {
+    const { system_name, new_config_ids, promotion_id } = await c.req.json();
+    
+    const result = await c.env.runMutation(api.convergenceMutations.promoteConfigs, {
+      system_name,
+      new_config_ids,
+      promotion_id,
+    });
+    
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[CONVERGENCE] Promote configs error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to promote configs"
+    }, 500);
+  }
+});
+
+/**
+ * Search configs by context (contextTag-based retrieval)
+ * Vector similarity search endpoint - currently using contextTag filtering
+ */
+app.post("/api/convergence/configs/search-by-embedding", async (c) => {
+  try {
+    const { system_name, contextTag, limit } = await c.req.json();
+    
+    const configs = await c.env.runQuery(api.convergenceQueries.searchConfigsByContext, {
+      system_name,
+      contextTag,
+      limit,
+    });
+    
+    return c.json({ success: true, data: configs });
+  } catch (error: any) {
+    console.error("[CONVERGENCE] Context search error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to search configs by context"
+    }, 500);
+  }
+});
+
+// ============================================================================
+// CONVERGENCE STORAGE ROUTES - RL Data, Experiments, Optimization Runs
+// ============================================================================
+
+/**
+ * Save RL training data
+ */
+app.post("/api/convergence/storage/rl-data", async (c) => {
+  try {
+    const body = await c.req.json();
+    
+    const recordId = await c.env.runMutation(api.convergenceStorageMutations.saveRLData, body);
+    
+    return c.json({ success: true, data: { recordId } });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Save RL data error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to save RL data"
+    }, 500);
+  }
+});
+
+/**
+ * Batch save RL training data
+ */
+app.post("/api/convergence/storage/rl-data/batch", async (c) => {
+  try {
+    const body = await c.req.json();
+    
+    const result = await c.env.runMutation(api.convergenceStorageMutations.batchSaveRLData, {
+      records: body.records,
+    });
+    
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Batch save RL data error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to batch save RL data"
+    }, 500);
+  }
+});
+
+/**
+ * Get RL data by key
+ */
+app.get("/api/convergence/storage/rl-data/:rl_key", async (c) => {
+  try {
+    const rl_key = c.req.param("rl_key");
+    
+    const data = await c.env.runQuery(api.convergenceStorageQueries.getRLDataByKey, {
+      rl_key,
+    });
+    
+    return c.json({ success: true, data });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Get RL data error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get RL data"
+    }, 500);
+  }
+});
+
+/**
+ * Query RL episodes for training
+ */
+app.get("/api/convergence/storage/rl-data/query", async (c) => {
+  try {
+    const agent_id = c.req.query("agent_id");
+    const record_type = c.req.query("record_type");
+    const station = c.req.query("station");
+    const min_reward_score = c.req.query("min_reward_score") ? parseFloat(c.req.query("min_reward_score")!) : undefined;
+    const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : 100;
+    
+    if (!agent_id) {
+      return c.json({ success: false, error: "agent_id is required" }, 400);
+    }
+    
+    const data = await c.env.runQuery(api.convergenceStorageQueries.queryRLEpisodesForTraining, {
+      agent_id,
+      record_type: record_type as any,
+      station,
+      min_reward_score,
+      limit,
+    });
+    
+    return c.json({ success: true, data });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Query RL episodes error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to query RL episodes"
+    }, 500);
+  }
+});
+
+/**
+ * Get top RL performers
+ */
+app.get("/api/convergence/storage/rl-data/top-performers/:agent_id", async (c) => {
+  try {
+    const agent_id = c.req.param("agent_id");
+    const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : 10;
+    
+    const data = await c.env.runQuery(api.convergenceStorageQueries.getTopRLPerformers, {
+      agent_id,
+      limit,
+    });
+    
+    return c.json({ success: true, data });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Get top RL performers error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get top RL performers"
+    }, 500);
+  }
+});
+
+/**
+ * Save optimization experiment
+ */
+app.post("/api/convergence/storage/experiments", async (c) => {
+  try {
+    const body = await c.req.json();
+    
+    const experimentId = await c.env.runMutation(api.convergenceStorageMutations.saveExperiment, body);
+    
+    return c.json({ success: true, data: { experimentId } });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Save experiment error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to save experiment"
+    }, 500);
+  }
+});
+
+/**
+ * Batch save experiments
+ */
+app.post("/api/convergence/storage/experiments/batch", async (c) => {
+  try {
+    const body = await c.req.json();
+    
+    const result = await c.env.runMutation(api.convergenceStorageMutations.batchSaveExperiments, {
+      experiments: body.experiments,
+    });
+    
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Batch save experiments error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to batch save experiments"
+    }, 500);
+  }
+});
+
+/**
+ * Get experiments for run
+ */
+app.get("/api/convergence/storage/experiments/run/:optimization_run_id", async (c) => {
+  try {
+    const optimization_run_id = c.req.param("optimization_run_id");
+    const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : 1000;
+    
+    const data = await c.env.runQuery(api.convergenceStorageQueries.getExperimentsForRun, {
+      optimization_run_id,
+      limit,
+    });
+    
+    return c.json({ success: true, data });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Get experiments for run error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get experiments for run"
+    }, 500);
+  }
+});
+
+/**
+ * Get experiments by system
+ */
+app.get("/api/convergence/storage/experiments/system/:system_name", async (c) => {
+  try {
+    const system_name = c.req.param("system_name");
+    const min_score = c.req.query("min_score") ? parseFloat(c.req.query("min_score")!) : undefined;
+    const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : 100;
+    
+    const data = await c.env.runQuery(api.convergenceStorageQueries.getExperimentsBySystem, {
+      system_name,
+      min_score,
+      limit,
+    });
+    
+    return c.json({ success: true, data });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Get experiments by system error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get experiments by system"
+    }, 500);
+  }
+});
+
+/**
+ * Get evolution progress
+ */
+app.get("/api/convergence/storage/experiments/evolution/:optimization_run_id", async (c) => {
+  try {
+    const optimization_run_id = c.req.param("optimization_run_id");
+    const generation = c.req.query("generation") ? parseInt(c.req.query("generation")!) : undefined;
+    
+    const data = await c.env.runQuery(api.convergenceStorageQueries.getEvolutionProgress, {
+      optimization_run_id,
+      generation,
+    });
+    
+    return c.json({ success: true, data });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Get evolution progress error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get evolution progress"
+    }, 500);
+  }
+});
+
+/**
+ * Start optimization run
+ */
+app.post("/api/convergence/storage/runs/start", async (c) => {
+  try {
+    const body = await c.req.json();
+    
+    const runId = await c.env.runMutation(api.convergenceStorageMutations.startOptimizationRun, body);
+    
+    return c.json({ success: true, data: { runId } });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Start optimization run error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to start optimization run"
+    }, 500);
+  }
+});
+
+/**
+ * Complete optimization run
+ */
+app.post("/api/convergence/storage/runs/complete", async (c) => {
+  try {
+    const body = await c.req.json();
+    
+    const runId = await c.env.runMutation(api.convergenceStorageMutations.completeOptimizationRun, body);
+    
+    return c.json({ success: true, data: { runId } });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Complete optimization run error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to complete optimization run"
+    }, 500);
+  }
+});
+
+/**
+ * Get optimization run
+ */
+app.get("/api/convergence/storage/runs/:run_id", async (c) => {
+  try {
+    const run_id = c.req.param("run_id");
+    
+    const data = await c.env.runQuery(api.convergenceStorageQueries.getOptimizationRun, {
+      run_id,
+    });
+    
+    return c.json({ success: true, data });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Get optimization run error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get optimization run"
+    }, 500);
+  }
+});
+
+/**
+ * Get runs for system
+ */
+app.get("/api/convergence/storage/runs/system/:system_name", async (c) => {
+  try {
+    const system_name = c.req.param("system_name");
+    const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : 50;
+    
+    const data = await c.env.runQuery(api.convergenceStorageQueries.getRunsForSystem, {
+      system_name,
+      limit,
+    });
+    
+    return c.json({ success: true, data });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Get runs for system error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get runs for system"
+    }, 500);
+  }
+});
+
+/**
+ * Get system optimization stats
+ */
+app.get("/api/convergence/storage/stats/:system_name", async (c) => {
+  try {
+    const system_name = c.req.param("system_name");
+    
+    const data = await c.env.runQuery(api.convergenceStorageQueries.getSystemOptimizationStats, {
+      system_name,
+    });
+    
+    return c.json({ success: true, data });
+  } catch (error: any) {
+    console.error("[CONVERGENCE_STORAGE] Get system optimization stats error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get system optimization stats"
+    }, 500);
+  }
+});
+
+// ============================================================================
+// BRIEFING ROOM ENDPOINTS
+// ============================================================================
+
+/**
+ * Publish system intelligence briefing
+ */
+app.post("/api/briefing/publishSystemIntelligence", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { userId, alertType, title, description, priority, metadata } = body;
+    
+    const eventId = await c.env.runMutation(internal.briefingRoomInternal.publishSystemIntelligenceBriefing, {
+      userId,
+      alertType,
+      title,
+      description,
+      priority: priority || "medium",
+      metadata: metadata || {},
+    });
+    
+    return c.json({ success: true, data: eventId });
+  } catch (error: any) {
+    console.error("[BRIEFING] Publish system intelligence error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to publish system intelligence briefing"
+    }, 500);
+  }
+});
+
+/**
+ * Publish crystal formation briefing
+ */
+app.post("/api/briefing/publishCrystalFormation", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { userId, crystalId, crystalName, crystalType, confidenceScore, coreInsight, shardCount } = body;
+    
+    const eventId = await c.env.runMutation(internal.briefingRoomInternal.publishCrystalFormationBriefing, {
+      userId,
+      crystalId,
+      crystalName,
+      crystalType,
+      confidenceScore,
+      coreInsight,
+      shardCount,
+    });
+    
+    return c.json({ success: true, data: eventId });
+  } catch (error: any) {
+    console.error("[BRIEFING] Publish crystal formation error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to publish crystal formation briefing"
+    }, 500);
+  }
+});
+
+/**
+ * Publish widget completion briefing
+ */
+app.post("/api/briefing/publishWidgetCompletion", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { userId, widgetId, widgetTitle, widgetType, completedAt, summary, projectId } = body;
+    
+    const eventId = await c.env.runMutation(internal.briefingRoomInternal.publishWidgetCompletionBriefing, {
+      userId,
+      widgetId,
+      widgetTitle,
+      widgetType,
+      completedAt,
+      summary,
+      projectId,
+    });
+    
+    return c.json({ success: true, data: eventId });
+  } catch (error: any) {
+    console.error("[BRIEFING] Publish widget completion error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to publish widget completion briefing"
     }, 500);
   }
 });

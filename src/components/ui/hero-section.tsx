@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react'
 import React from 'react'
 import { useRouter } from 'next/navigation'
 import { Logo } from './logo'
+import { T } from '@/components/translation'
+import { LanguageToggleSimple } from '@/components/language-toggle-simple'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 const searchSuggestions = [
   "How does this connect to what we discussed last week?",
@@ -64,34 +67,40 @@ export function HeroSection() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 dark:from-slate-900 dark:via-blue-950/20 dark:to-indigo-950/10 flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-secondary via-primary/[0.03] to-accent/[0.02] dark:from-background dark:via-primary/[0.02] dark:to-accent/[0.01] flex flex-col relative overflow-hidden">
       {/* Animated background elements */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-indigo-100/30 dark:from-blue-950/20 dark:to-indigo-950/10 transition-all duration-1000" />
-      <div className={`absolute top-1/4 left-1/4 ${isMobile ? 'w-64 h-64' : 'w-96 h-96'} bg-gradient-to-br from-blue-200/30 to-cyan-200/20 dark:from-blue-800/15 dark:to-cyan-800/10 rounded-full blur-3xl animate-pulse-slow`} />
-      <div className={`absolute bottom-1/4 right-1/4 ${isMobile ? 'w-48 h-48' : 'w-80 h-80'} bg-gradient-to-br from-indigo-200/25 to-purple-200/15 dark:from-indigo-800/12 dark:to-purple-800/8 rounded-full blur-3xl animate-pulse-slow`} style={{animationDelay: '1s'}} />
-      <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 ${isMobile ? 'w-40 h-40' : 'w-64 h-64'} bg-gradient-to-br from-emerald-200/20 to-teal-200/15 dark:from-emerald-800/10 dark:to-teal-800/8 rounded-full blur-3xl animate-pulse-slow`} style={{animationDelay: '2s'}} />
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.05] to-accent/[0.03] dark:from-primary/[0.02] dark:to-accent/[0.01] transition-all duration-1000" />
+      <div className={`absolute top-1/4 left-1/4 ${isMobile ? 'w-64 h-64' : 'w-96 h-96'} bg-gradient-to-br from-primary/[0.15] to-accent/[0.10] dark:from-primary/[0.08] dark:to-accent/[0.05] rounded-full blur-3xl animate-pulse-slow`} />
+      <div className={`absolute bottom-1/4 right-1/4 ${isMobile ? 'w-48 h-48' : 'w-80 h-80'} bg-gradient-to-br from-accent/[0.12] to-primary/[0.08] dark:from-accent/[0.06] dark:to-primary/[0.04] rounded-full blur-3xl animate-pulse-slow`} style={{animationDelay: '1s'}} />
+      <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 ${isMobile ? 'w-40 h-40' : 'w-64 h-64'} bg-gradient-to-br from-primary/[0.10] to-accent/[0.08] dark:from-primary/[0.05] dark:to-accent/[0.04] rounded-full blur-3xl animate-pulse-slow`} style={{animationDelay: '2s'}} />
       
       {/* Header */}
       <nav className="relative z-10 p-4 sm:p-8 lg:p-12 animate-fade-in-down">
         <div className="flex justify-between items-center max-w-7xl mx-auto">
           <div className="transform active:scale-95 hover:scale-105 transition-transform duration-200">
-            <Logo className="h-6 sm:h-8 text-slate-800 dark:text-slate-200" />
+            <Logo className="h-6 sm:h-8 text-foreground/80" />
           </div>
           
-          <div className="flex items-center gap-4 sm:gap-6">
+          <div className="flex items-center gap-3 sm:gap-4">
             <button 
               onClick={() => router.push('/pricing')}
-              className="text-sm sm:text-base text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors font-light"
+              className="text-sm sm:text-base text-muted-foreground hover:text-foreground transition-colors font-light"
             >
-              Pricing
+              <T context="nav.pricing">Pricing</T>
             </button>
+            <div className="flex items-center gap-2 relative z-20">
+              <LanguageToggleSimple />
+              <ThemeToggle />
+            </div>
             <button 
               onClick={() => router.push('/auth/login')}
               onTouchStart={() => setIsButtonPressed(true)}
               onTouchEnd={() => setIsButtonPressed(false)}
-              className={`group px-4 sm:px-6 lg:px-8 py-2 sm:py-3 bg-gradient-to-r from-slate-900 to-slate-800 dark:from-slate-100 dark:to-slate-200 text-slate-50 dark:text-slate-900 rounded-full text-xs sm:text-sm font-medium hover:from-slate-800 hover:to-slate-700 dark:hover:from-slate-200 dark:hover:to-slate-300 transition-all duration-300 hover:scale-105 active:scale-95 hover:shadow-xl hover:shadow-slate-900/20 ${isButtonPressed ? 'scale-95' : ''} ${isMobile ? 'min-h-[44px] touch-manipulation' : ''}`}
+              className={`group px-4 sm:px-6 lg:px-8 py-2 sm:py-3 bg-gradient-to-r from-foreground to-foreground/90 text-background rounded-full text-xs sm:text-sm font-medium hover:from-foreground/90 hover:to-foreground/80 transition-all duration-300 hover:scale-105 active:scale-95 hover:shadow-xl hover:shadow-foreground/20 ${isButtonPressed ? 'scale-95' : ''} ${isMobile ? 'min-h-[44px] touch-manipulation' : ''}`}
             >
-              <span className="group-hover:tracking-wide transition-all duration-300">Sign in</span>
+              <span className="group-hover:tracking-wide transition-all duration-300">
+                <T context="nav.signin">Sign in</T>
+              </span>
             </button>
           </div>
         </div>
@@ -102,21 +111,21 @@ export function HeroSection() {
         <div className="max-w-5xl mx-auto text-center">
           <div className="space-y-8 sm:space-y-10">
             <div className="space-y-6 sm:space-y-8">
-              <div className="text-slate-500 dark:text-slate-400 text-sm sm:text-lg font-light tracking-wider uppercase animate-fade-in-up hover:text-slate-700 dark:hover:text-slate-300 hover:tracking-widest transition-all duration-300 cursor-default">
-                Stop explaining. Stop repeating. Stop starting over.
+              <div className="text-muted-foreground text-sm sm:text-lg font-light tracking-wider uppercase animate-fade-in-up hover:text-foreground/70 hover:tracking-widest transition-all duration-300 cursor-default">
+                <T context="hero.tagline">Stop explaining. Stop repeating. Stop starting over.</T>
               </div>
               
-              <h1 className="text-3xl sm:text-5xl lg:text-7xl font-light text-slate-900 dark:text-slate-100 leading-tight animate-fade-in-up hover:text-slate-700 dark:hover:text-slate-200 transition-colors duration-300 cursor-default" style={{animationDelay: '0.1s'}}>
-                <span className="inline-block">Work with AI </span>
-                <span className="block text-4xl sm:text-6xl lg:text-8xl font-extralight text-blue-600 dark:text-blue-400 mt-1 sm:mt-2 hover:text-blue-700 dark:hover:text-blue-300 transition-colors duration-300">that learns you</span>
+              <h1 className="text-3xl sm:text-5xl lg:text-7xl font-light text-foreground leading-tight animate-fade-in-up hover:text-foreground/80 transition-colors duration-300 cursor-default" style={{animationDelay: '0.1s'}}>
+                <span className="inline-block"><T context="hero.headline1">Work with AI </T></span>
+                <span className="block text-4xl sm:text-6xl lg:text-8xl font-extralight text-primary mt-1 sm:mt-2 hover:text-primary/80 transition-colors duration-300"><T context="hero.headline2">that learns you</T></span>
               </h1>
               
               <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 animate-fade-in-up" style={{animationDelay: '0.2s'}}>
-                <p className="text-lg sm:text-xl lg:text-2xl text-slate-600 dark:text-slate-400 font-light leading-relaxed hover:text-slate-700 dark:hover:text-slate-300 transition-colors duration-300 cursor-default">
-                  What you said last week connects to what you're thinking right now. Your scattered notes reveal patterns you missed. Everything you write feeds understanding that grows deeper every day.
+                <p className="text-lg sm:text-xl lg:text-2xl text-muted-foreground font-light leading-relaxed hover:text-foreground/70 transition-colors duration-300 cursor-default">
+                  <T context="hero.description1">What you said last week connects to what you're thinking right now. Your scattered notes reveal patterns you missed. Everything you write feeds understanding that grows deeper every day.</T>
                 </p>
-                <p className="text-base sm:text-lg lg:text-xl text-slate-500 dark:text-slate-500 font-light leading-relaxed hover:text-slate-600 dark:hover:text-slate-400 transition-colors duration-300 cursor-default">
-                  No organizing. No managing. Just natural conversation that builds permanent memory.
+                <p className="text-base sm:text-lg lg:text-xl text-muted-foreground/80 font-light leading-relaxed hover:text-muted-foreground transition-colors duration-300 cursor-default">
+                  <T context="hero.description2">No organizing. No managing. Just natural conversation that builds permanent memory.</T>
                 </p>
               </div>
             </div>
@@ -127,9 +136,11 @@ export function HeroSection() {
                 onClick={() => router.push('/auth/login')}
                 onTouchStart={() => setIsButtonPressed(true)}
                 onTouchEnd={() => setIsButtonPressed(false)}
-                className={`group px-8 sm:px-10 py-3 sm:py-4 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-base sm:text-lg font-medium hover:bg-slate-800 dark:hover:bg-slate-200 transition-all duration-300 active:scale-95 hover:scale-105 hover:shadow-xl min-w-[200px] sm:min-w-[240px] ${isButtonPressed ? 'scale-95' : ''} ${isMobile ? 'min-h-[48px] touch-manipulation' : ''}`}
+                className={`group px-8 sm:px-10 py-3 sm:py-4 bg-foreground text-background text-base sm:text-lg font-medium hover:bg-foreground/90 transition-all duration-300 active:scale-95 hover:scale-105 hover:shadow-xl min-w-[200px] sm:min-w-[240px] ${isButtonPressed ? 'scale-95' : ''} ${isMobile ? 'min-h-[48px] touch-manipulation' : ''}`}
               >
-                <span className="transition-all duration-300 group-active:tracking-wide">See how it works</span>
+                <span className="transition-all duration-300 group-active:tracking-wide">
+                  <T context="hero.cta">See how it works</T>
+                </span>
               </button>
             </div>
           </div>

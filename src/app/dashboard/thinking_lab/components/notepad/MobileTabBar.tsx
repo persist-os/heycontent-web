@@ -16,7 +16,12 @@ export const MobileTabBar: React.FC<MobileTabBarProps> = ({
   hasUnreadNotepadChanges
 }) => {
   return (
-    <div className="sm:hidden border-b border-border bg-background">
+    <div className={cn(
+      "sm:hidden border-b transition-colors duration-200",
+      activeTab === 'notes' 
+        ? "border-[hsl(var(--notepad-border))] bg-[hsl(var(--notepad-header-bg))]" 
+        : "border-border bg-background"
+    )}>
       <div className="flex">
         {/* Chat Tab */}
         <button
@@ -25,7 +30,9 @@ export const MobileTabBar: React.FC<MobileTabBarProps> = ({
             "flex-1 flex items-center justify-center gap-2 py-3 px-4 relative transition-all duration-200",
             activeTab === 'chat'
               ? "text-foreground bg-muted/50"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+              : activeTab === 'notes'
+                ? "text-[hsl(var(--notepad-icon))] hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
           )}
         >
           <MessageSquare className="w-4 h-4" />
@@ -43,7 +50,7 @@ export const MobileTabBar: React.FC<MobileTabBarProps> = ({
           className={cn(
             "flex-1 flex items-center justify-center gap-2 py-3 px-4 relative transition-all duration-200",
             activeTab === 'notes'
-              ? "text-foreground bg-muted/50"
+              ? "text-foreground bg-black/5 dark:bg-white/5"
               : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
           )}
         >
@@ -51,14 +58,14 @@ export const MobileTabBar: React.FC<MobileTabBarProps> = ({
             <FileText className="w-4 h-4" />
             {/* Badge indicator */}
             {hasUnreadNotepadChanges && (
-              <div className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full animate-pulse" />
+              <div className="absolute -top-1 -right-1 w-2 h-2 bg-accent rounded-full animate-pulse" />
             )}
           </div>
           <span className="text-sm font-medium">Notes</span>
 
           {/* Active indicator */}
           {activeTab === 'notes' && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent" />
           )}
         </button>
 

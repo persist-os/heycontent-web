@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Check, Zap } from 'lucide-react';
+import { T } from '@/components/translation';
 
 export function ApiCallBreakdown() {
   const meteredCalls = [
@@ -37,11 +38,11 @@ export function ApiCallBreakdown() {
               <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
             <CardTitle className="text-lg text-green-700 dark:text-green-400">
-              Always Free
+              <T context="apiCallBreakdown.alwaysFree">Always Free</T>
             </CardTitle>
           </div>
           <p className="text-sm text-green-600/80 dark:text-green-400/80 mt-2">
-            Never counts toward your quota
+            <T context="apiCallBreakdown.neverCounts">Never counts toward your quota</T>
           </p>
         </CardHeader>
         <CardContent className="p-0">
@@ -50,7 +51,9 @@ export function ApiCallBreakdown() {
               <div key={index} className="px-6 py-4 hover:bg-green-50/50 dark:hover:bg-green-950/20 transition-colors">
                 <div className="flex items-start gap-3">
                   <Check className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
-                  <span className="text-sm">{item}</span>
+                  <span className="text-sm">
+                    <T context={`apiCallBreakdown.free${index + 1}`}>{item}</T>
+                  </span>
                 </div>
               </div>
             ))}
@@ -65,10 +68,12 @@ export function ApiCallBreakdown() {
             <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800">
               <Zap className="w-5 h-5 text-slate-600 dark:text-slate-400" />
             </div>
-            <CardTitle className="text-lg">Metered Actions</CardTitle>
+            <CardTitle className="text-lg">
+              <T context="apiCallBreakdown.meteredActions">Metered Actions</T>
+            </CardTitle>
           </div>
           <p className="text-sm text-muted-foreground mt-2">
-            These count toward your API quota
+            <T context="apiCallBreakdown.countsToward">These count toward your API quota</T>
           </p>
         </CardHeader>
         <CardContent className="p-0">
@@ -76,9 +81,11 @@ export function ApiCallBreakdown() {
             {meteredCalls.map((item, index) => (
               <div key={index} className="px-6 py-4 hover:bg-muted/30 transition-colors">
                 <div className="flex items-start justify-between gap-4">
-                  <span className="text-sm">{item.action}</span>
+                  <span className="text-sm">
+                    <T context={`apiCallBreakdown.metered${index + 1}.action`}>{item.action}</T>
+                  </span>
                   <span className="text-sm font-mono text-muted-foreground shrink-0">
-                    {item.calls}
+                    <T context={`apiCallBreakdown.metered${index + 1}.calls`}>{item.calls}</T>
                   </span>
                 </div>
               </div>

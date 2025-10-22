@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react'
 import { Send, MessageSquare, Search, BookOpen, Users } from 'lucide-react'
+import { T } from '@/components/translation'
+import { useLanguagePreference, useTranslation } from '@/hooks/useTranslation'
 
 interface Source {
   id: string
@@ -89,6 +91,13 @@ function ContextualSources({ sources: sourceIds }: { sources?: string[] }) {
 
 export function ContextualShowcase() {
   const [inputValue, setInputValue] = useState('')
+  const { language } = useLanguagePreference()
+  
+  const { text: placeholderText } = useTranslation('Message HeyContext...', {
+    context: 'showcase.input.placeholder',
+    targetLang: language,
+    enabled: true,
+  })
 
   return (
     <section className="py-24 bg-gradient-to-b from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-900/90 relative overflow-hidden">
@@ -99,10 +108,10 @@ export function ContextualShowcase() {
       <div className="max-w-7xl mx-auto px-8 sm:px-12 relative z-10">
         <div className="text-center mb-16">
           <h2 className="text-4xl sm:text-5xl font-light text-slate-900 dark:text-slate-100 leading-tight mb-6">
-            Naturally intelligent
+            <T context="showcase.contextual.heading">Naturally intelligent</T>
           </h2>
           <p className="text-xl text-slate-600 dark:text-slate-400 font-light max-w-2xl mx-auto leading-relaxed">
-            Conversations that remember. Notes that connect. Understanding that grows.
+            <T context="showcase.contextual.subheading">Conversations that remember. Notes that connect. Understanding that grows.</T>
           </p>
         </div>
 
@@ -117,12 +126,16 @@ export function ContextualShowcase() {
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100">HeyContext</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Active session</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    <T context="showcase.status.active">Active session</T>
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-xs text-slate-500 dark:text-slate-400">Live</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  <T context="showcase.status.live">Live</T>
+                </span>
               </div>
             </div>
 
@@ -178,7 +191,7 @@ export function ContextualShowcase() {
                       type="text"
                       value={inputValue}
                       onChange={(e) => setInputValue(e.target.value)}
-                      placeholder="Message HeyContext..."
+                      placeholder={placeholderText}
                       className="w-full px-4 py-3 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400/20 focus:border-slate-400"
                       disabled
                     />
@@ -200,7 +213,7 @@ export function ContextualShowcase() {
         <div className="mt-16 text-center">
           <div className="inline-block bg-slate-100/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-full px-8 py-4 hover:bg-slate-200/60 dark:hover:bg-slate-700/60 transition-all duration-300 hover:scale-105">
             <p className="text-slate-600 dark:text-slate-400 font-light">
-              Simply works the way you think
+              <T context="showcase.tagline">Simply works the way you think</T>
             </p>
           </div>
         </div>

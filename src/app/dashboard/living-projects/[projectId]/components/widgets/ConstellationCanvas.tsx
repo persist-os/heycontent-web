@@ -19,6 +19,7 @@ import { FloatingContentCard } from './FloatingContentCard'
 import { ContentAttachmentPanel } from '@/app/dashboard/living-projects/components/ContentAttachmentPanel'
 import { ProjectFingerprint } from './ProjectFingerprint'
 import { useAnalytics } from '@/hooks/useAnalytics'
+import { T } from '@/components/translation/T'
 
 interface ConstellationCanvasProps {
   widgets: WidgetConfig[]
@@ -27,17 +28,12 @@ interface ConstellationCanvasProps {
   onWidgetClick: (widget: WidgetConfig) => void
   onWidgetHover: (widgetId: string | null) => void
   highlightedWidget: string | null
-  showWidgetPanel: boolean
   onWidgetRun?: (widgetId: string) => void
   runningWidgetId?: string | null
-  selectedWidget?: WidgetConfig | null
   contentItems?: any[]
   storedLayout?: any
   onContentOpen?: (id: string, type: string) => void
   onLayoutReset?: () => void
-  widgetPanelWidth?: number
-  selectedContent?: { item: any; type: 'note' | 'conversation' | 'crystal' | 'shard' } | null
-  contentPanelWidth?: number
 }
 
 export function ConstellationCanvas({
@@ -47,24 +43,18 @@ export function ConstellationCanvas({
   onWidgetClick,
   onWidgetHover,
   highlightedWidget,
-  showWidgetPanel,
   onWidgetRun,
   runningWidgetId,
-  selectedWidget,
   contentItems,
   storedLayout,
   onContentOpen,
-  onLayoutReset,
-  widgetPanelWidth = 384,
-  selectedContent,
-  contentPanelWidth = 448
+  onLayoutReset
 }: ConstellationCanvasProps) {
   const { trackWidgetOpen } = useAnalytics()
   const [viewportSize, setViewportSize] = useState({
     width: typeof window !== 'undefined' ? window.innerWidth : 1200,
     height: typeof window !== 'undefined' ? window.innerHeight : 800
   })
-  const [showAttachmentPanel, setShowAttachmentPanel] = useState(false)
   
   // Handle content card click - delegate to parent
   const handleContentOpen = useCallback((id: string, type: string) => {
@@ -137,13 +127,9 @@ export function ConstellationCanvas({
     focusOnPoint(x, y)
   }, [focusOnPoint])
 
-  // Calculate total panel width
-  const totalPanelWidth = (showWidgetPanel ? widgetPanelWidth : 0) + (selectedContent ? contentPanelWidth : 0)
-  
   return (
     <div 
-      className="relative h-screen bg-gradient-to-br from-background via-background to-muted/20 overflow-hidden transition-all duration-300"
-      style={{ width: `calc(100vw - ${totalPanelWidth}px)` }}
+      className="relative h-screen bg-gradient-to-br from-background via-primary/5 to-muted/30 overflow-hidden transition-all duration-300"
     >
       {/* Widget Constellation Canvas */}
       <div
@@ -224,16 +210,16 @@ export function ConstellationCanvas({
                   y={position.y}
                   size={position.size}
                   importance={position.importance}
-                  isHighlighted={selectedContent?.item?._id === contentItem._id || highlightedWidget === position.id}
+                  isHighlighted={highlightedWidget === position.id}
                   scale={transform.scale}
                   onOpen={handleContentOpen}
                 />
               )
             })}
 
-          {/* Canvas bounds indicator */}
+          {/* Canvas bounds indicator with accent */}
           <div
-            className="absolute inset-0 border border-border/10 rounded-lg pointer-events-none"
+            className="absolute inset-0 border border-primary/10 rounded-lg pointer-events-none"
             style={{
               width: layout.canvasWidth,
               height: layout.canvasHeight
@@ -242,18 +228,23 @@ export function ConstellationCanvas({
         </div>
       </div>
 
-      {/* Project Fingerprint - Top Left */}
+      {/* Project Fingerprint - Top Left with enhanced glassmorphism */}
       <div className="absolute top-4 left-4 z-10 pointer-events-auto max-w-2xl">
-        <ProjectFingerprint projectId={projectId} />
+        <div className="bg-gradient-to-br from-card/85 via-card/80 to-primary/10 backdrop-blur-xl border border-border/50 rounded-xl shadow-xl shadow-primary/10 ring-1 ring-border/20">
+          <ProjectFingerprint projectId={projectId} />
+        </div>
       </div>
 
-      {/* Stats Overlay - Top Right */}
+      {/* Stats Overlay - Top Right with color variety */}
       <div className="absolute top-4 right-4 z-10 pointer-events-none">
-        <div className="bg-background/60 backdrop-blur-sm border border-border/30 rounded-lg px-4 py-2 shadow-sm">
-          <div className="flex items-center gap-4 text-xs text-muted-foreground/70">
-            <span>Active: {widgets.filter(w => w.priority > 7).length}</span>
-            <span>•</span>
-            <span>{Math.round(transform.scale * 100)}% zoom</span>
+        <div className="bg-gradient-to-br from-card/80 via-card/70 to-accent/10 backdrop-blur-lg border border-border/40 rounded-xl px-5 py-2.5 shadow-lg shadow-accent/10">
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+              <T context="constellation.canvas.stats.active">Active</T>: <span className="text-foreground font-medium">{widgets.filter(w => w.priority > 7).length}</span>
+            </span>
+            <span className="text-border">•</span>
+            <span className="text-foreground font-mono">{Math.round(transform.scale * 100)}% <T context="constellation.canvas.stats.zoom">zoom</T></span>
           </div>
         </div>
       </div>
@@ -267,55 +258,44 @@ export function ConstellationCanvas({
         className="absolute bottom-4 left-4 z-10"
       />
 
-      {/* Layout Reset Button */}
+      {/* Layout Reset Button with accent */}
       {onLayoutReset && (
         <div className="absolute bottom-4 left-64 z-10">
           <button
             onClick={onLayoutReset}
-            className="px-3 py-2 text-xs bg-background/80 backdrop-blur-sm border border-border/30 rounded-lg hover:bg-background/90 transition-colors"
+            className="px-4 py-2 text-xs bg-gradient-to-r from-secondary/80 to-secondary/60 backdrop-blur-lg border border-border/40 rounded-lg hover:from-secondary hover:to-secondary/80 hover:shadow-lg hover:shadow-primary/10 transition-all duration-200"
             title="Reset layout"
           >
-            Reset Layout
+            <T context="constellation.canvas.button.reset_layout">Reset Layout</T>
           </button>
         </div>
       )}
 
-      {/* Minimap - Bottom Right */}
-      <ConstellationMinimap
-        positions={layout.positions}
-        canvasWidth={layout.canvasWidth}
-        canvasHeight={layout.canvasHeight}
-        viewportWidth={viewportSize.width}
-        viewportHeight={viewportSize.height}
-        currentTransform={transform}
-        onViewportClick={handleMinimapClick}
-        className="absolute bottom-4 right-4 z-10"
-      />
+      {/* Minimap - Top Right with responsive positioning to prevent cutoff */}
+      <div className="absolute top-20 right-4 z-10 max-sm:top-16 max-sm:right-2">
+        <ConstellationMinimap
+          positions={layout.positions}
+          canvasWidth={layout.canvasWidth}
+          canvasHeight={layout.canvasHeight}
+          viewportWidth={viewportSize.width}
+          viewportHeight={viewportSize.height}
+          currentTransform={transform}
+          onViewportClick={handleMinimapClick}
+        />
+      </div>
 
-      {/* Keyboard shortcuts hint - Center Bottom, Above Controls */}
+      {/* Keyboard shortcuts hint - Center Bottom, Above Controls with accent */}
       {transform.scale < 0.6 && (
         <div className="absolute bottom-20 left-1/2 z-10 pointer-events-none" style={{ transform: 'translateX(-50%)' }}>
-          <div className="bg-background/80 backdrop-blur-sm border border-border/50 rounded-lg px-4 py-2 shadow-lg">
-            <div className="text-xs text-muted-foreground/70 text-center">
-              Drag to explore • Scroll to zoom • Click widgets to interact
+          <div className="bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 backdrop-blur-md border border-primary/30 rounded-xl px-5 py-3 shadow-xl shadow-primary/10">
+            <div className="text-xs text-foreground text-center font-medium">
+              <T context="constellation.canvas.hint.controls">Drag to explore • Scroll to zoom • Click widgets to interact</T>
             </div>
           </div>
         </div>
       )}
 
-      {/* Content Attachment Panel for Selected Widget */}
-      {selectedWidget && userId && showAttachmentPanel && (
-        <ContentAttachmentPanel
-          widgetId={selectedWidget._id}
-          userId={userId}
-          isOpen={showAttachmentPanel}
-          onClose={() => setShowAttachmentPanel(false)}
-          attachedNoteIds={(selectedWidget as any).noteIds || []}
-          attachedConversationIds={(selectedWidget as any).conversationIds || []}
-          attachedCrystalIds={(selectedWidget as any).crystalIds || []}
-          attachedShardIds={(selectedWidget as any).shardIds || []}
-        />
-      )}
+      {/* Content Attachment Panel is now handled in unified panel Actions tab */}
     </div>
   )
 }

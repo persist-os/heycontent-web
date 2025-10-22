@@ -1,5 +1,6 @@
 import React from 'react';
 import { ViewType } from './types';
+import { T } from '@/components/translation';
 
 interface InsightsNavigationProps {
   activeView: ViewType;
@@ -8,11 +9,11 @@ interface InsightsNavigationProps {
 
 export const InsightsNavigation: React.FC<InsightsNavigationProps> = ({ activeView, onViewChange }) => {
   const tabs = [
-    { id: 'overview' as const, label: 'Overview', description: 'Summary and recent activity' },
-    { id: 'crystals' as const, label: 'Crystals', description: 'Consciousness insights' },
-    { id: 'shards' as const, label: 'Shards', description: 'Memory fragments' },
-    { id: 'stardust' as const, label: 'Stardust', description: 'Emerging potentials' },
-    { id: 'stars' as const, label: 'Stars', description: 'Your project organisms' }
+    { id: 'overview' as const, label: 'Overview', description: 'Summary and recent activity', labelContext: 'crystals.nav.overview', descContext: 'crystals.nav.overview_desc' },
+    { id: 'crystals' as const, label: 'Crystals', description: 'Consciousness insights', labelContext: 'crystals.nav.crystals', descContext: 'crystals.nav.crystals_desc' },
+    { id: 'shards' as const, label: 'Shards', description: 'Memory fragments', labelContext: 'crystals.nav.shards', descContext: 'crystals.nav.shards_desc' },
+    { id: 'stardust' as const, label: 'Stardust', description: 'Emerging potentials', labelContext: 'crystals.nav.stardust', descContext: 'crystals.nav.stardust_desc' },
+    { id: 'stars' as const, label: 'Stars', description: 'Your project organisms', labelContext: 'crystals.nav.stars', descContext: 'crystals.nav.stars_desc' }
   ];
 
   return (
@@ -29,9 +30,11 @@ export const InsightsNavigation: React.FC<InsightsNavigationProps> = ({ activeVi
             }`}
           >
             <div className="space-y-1">
-              <div className="font-medium text-sm">{tab.label}</div>
+              <div className="font-medium text-sm">
+                <T context={tab.labelContext}>{tab.label}</T>
+              </div>
               <div className="text-xs text-muted-foreground group-hover:text-muted-foreground/80 transition-colors duration-200">
-                {tab.description}
+                <T context={tab.descContext}>{tab.description}</T>
               </div>
             </div>
             {activeView === tab.id && (

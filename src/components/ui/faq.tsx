@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
+import { T } from '@/components/translation'
+
 const faqData = [
   {
     question: "What's available right now?",
@@ -47,17 +49,19 @@ export function FAQ() {
   }
 
   return (
-    <section className="py-20 sm:py-28 lg:py-32 bg-gradient-to-b from-white via-slate-50/20 to-white dark:from-slate-900 dark:via-slate-800/20 dark:to-slate-900 relative overflow-hidden min-h-screen flex items-center">
-        {/* Background elements */}
-        <div className="absolute top-1/3 left-1/4 w-48 sm:w-64 h-48 sm:h-64 bg-gradient-to-br from-blue-100/15 to-indigo-100/10 dark:from-blue-900/8 dark:to-indigo-900/6 rounded-full blur-3xl animate-pulse-slow" />
+    <section className="py-20 sm:py-28 lg:py-32 bg-gradient-to-b from-primary/[0.08] via-accent/[0.07] to-primary/[0.08] dark:from-background dark:via-muted/[0.05] dark:to-background relative overflow-hidden min-h-screen flex items-center">
+        {/* Background elements - dramatic gradient orbs */}
+        <div className="absolute top-1/3 left-1/4 w-[550px] h-[550px] bg-gradient-to-br from-primary/[0.22] to-accent/[0.18] dark:from-primary/[0.04] dark:to-accent/[0.03] rounded-full blur-3xl animate-pulse-slow" />
+        <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-gradient-to-br from-accent/[0.20] to-primary/[0.15] dark:from-accent/[0.04] dark:to-primary/[0.03] rounded-full blur-3xl animate-pulse-slow" style={{animationDelay: '2s'}} />
+        <div className="absolute top-1/2 right-1/3 w-[450px] h-[450px] bg-gradient-to-br from-primary/[0.18] to-accent/[0.12] dark:from-primary/[0.04] dark:to-accent/[0.03] rounded-full blur-3xl animate-pulse-slow" style={{animationDelay: '4s'}} />
         
         <div className="max-w-4xl mx-auto px-4 sm:px-8 lg:px-12 relative z-10 w-full">
           <div className="text-center mb-12 sm:mb-16">
-            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-light text-slate-900 dark:text-slate-100 leading-tight tracking-wide mb-4 sm:mb-6 animate-fade-in-up">
-              Frequently asked questions
+            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-light text-foreground leading-tight tracking-wide mb-4 sm:mb-6 animate-fade-in-up">
+              <T context="faq.heading">Frequently asked questions</T>
             </h2>
-            <p className="text-base sm:text-xl text-slate-600 dark:text-slate-400 font-light max-w-2xl mx-auto leading-relaxed animate-fade-in-up" style={{animationDelay: '0.2s'}}>
-              Everything you need to know about HeyContext and how it works.
+            <p className="text-base sm:text-xl text-muted-foreground font-light max-w-2xl mx-auto leading-relaxed animate-fade-in-up" style={{animationDelay: '0.2s'}}>
+              <T context="faq.subheading">Everything you need to know about HeyContext and how it works.</T>
             </p>
           </div>
 
@@ -67,19 +71,19 @@ export function FAQ() {
               return (
                 <div 
                   key={index}
-                  className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm rounded-lg sm:rounded-xl border border-slate-200/50 dark:border-slate-700/50 hover:border-blue-300/50 dark:hover:border-blue-600/30 transition-all duration-300 overflow-hidden active:scale-[0.99] sm:active:scale-100"
+                  className="bg-gradient-to-br from-card/85 via-primary/[0.07] to-accent/[0.06] dark:bg-card/70 backdrop-blur-xl hover:backdrop-blur-2xl rounded-xl sm:rounded-2xl border-2 border-primary/[0.30] dark:border-border hover:border-accent/[0.40] dark:hover:border-primary/[0.15] shadow-xl shadow-primary/[0.20] hover:shadow-2xl hover:shadow-accent/[0.30] dark:shadow-primary/[0.10] dark:hover:shadow-primary/[0.15] hover:bg-gradient-to-br hover:from-card/90 hover:via-primary/[0.08] hover:to-accent/[0.08] transition-all duration-300 overflow-hidden hover:scale-[1.01] active:scale-[0.99]"
                 >
                   <button
                     onClick={() => toggleItem(index)}
-                    className="w-full px-4 sm:px-6 py-4 sm:py-5 text-left flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition-colors duration-200 touch-manipulation"
-                    aria-expanded={isOpen ? 'true' : 'false'}
+                    className="w-full px-5 sm:px-7 py-5 sm:py-6 text-left flex items-center justify-between hover:bg-gradient-to-r hover:from-primary/[0.04] hover:via-accent/[0.035] hover:to-primary/[0.03] dark:hover:bg-muted/50 rounded-t-xl sm:rounded-t-2xl transition-all duration-200 touch-manipulation"
+                    aria-expanded={isOpen ? "true" : "false"}
                     aria-controls={`faq-answer-${index}`}
                   >
-                    <h3 className="text-base sm:text-lg font-medium text-slate-900 dark:text-slate-100 pr-3 sm:pr-4">
-                      {item.question}
+                    <h3 className="text-base sm:text-lg font-medium text-foreground pr-3 sm:pr-4">
+                      <T context={`faq.question${index + 1}`}>{item.question}</T>
                     </h3>
                     <ChevronDown 
-                      className={`w-4 sm:w-5 h-4 sm:h-5 text-slate-500 dark:text-slate-400 transition-transform duration-200 flex-shrink-0 ${
+                      className={`w-4 sm:w-5 h-4 sm:h-5 text-muted-foreground transition-transform duration-200 flex-shrink-0 ${
                         isOpen ? 'rotate-180' : ''
                       }`}
                     />
@@ -91,16 +95,11 @@ export function FAQ() {
                       isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                     }`}
                   >
-                    <div className="px-4 sm:px-6 pb-4 sm:pb-5 pt-0">
-                      <div className="w-full h-px bg-slate-200/50 dark:bg-slate-700/50 mb-3 sm:mb-4" />
-                      <p 
-                        className="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed"
-                        dangerouslySetInnerHTML={{
-                          __html: item.answer
-                            .replace(/\*\*(.*?)\*\*/g, '<strong class="text-slate-700 dark:text-slate-300">$1</strong>')
-                            .replace(/\n/g, '<br>')
-                        }}
-                      />
+                    <div className="px-5 sm:px-7 pb-5 sm:pb-6 pt-0">
+                      <div className="w-full h-px bg-gradient-to-r from-primary/[0.30] via-accent/[0.25] to-primary/[0.20] dark:bg-border mb-4 sm:mb-5" />
+                      <div className="text-sm sm:text-base text-muted-foreground leading-relaxed">
+                        <T context={`faq.answer${index + 1}`}>{item.answer.replace(/<br><br>/g, '\n\n').replace(/<br>/g, '\n')}</T>
+                      </div>
                     </div>
                   </div>
                 </div>

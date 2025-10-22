@@ -9,6 +9,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from './alert-dialog';
+import { useLanguagePreference, useTranslation } from '@/hooks/useTranslation';
 
 interface DeleteConfirmationDialogProps {
   isOpen: boolean;
@@ -31,6 +32,14 @@ export const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> =
   cancelText = "Cancel",
   isLoading = false,
 }) => {
+  const { language } = useLanguagePreference();
+  
+  const { text: deletingText } = useTranslation('Deleting...', {
+    context: 'status.deleting',
+    targetLang: language,
+    enabled: true,
+  });
+  
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
       <AlertDialogContent>
@@ -45,7 +54,7 @@ export const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> =
             disabled={isLoading}
             className="bg-destructive text-white hover:bg-destructive/90 dark:text-white"
           >
-            {isLoading ? 'Deleting...' : confirmText}
+            {isLoading ? deletingText : confirmText}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

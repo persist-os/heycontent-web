@@ -9,6 +9,7 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { Pencil, Save, X } from 'lucide-react'
 import { StatusConfig } from './fingerprintConfig'
+import { T } from '@/components/translation/T'
 
 interface StatusIndicatorProps {
   statusConfig: StatusConfig
@@ -66,7 +67,7 @@ export const ActionButtons = ({
           transition={{ type: "spring", stiffness: 400, damping: 20 }}
         >
           <Pencil className="w-3.5 h-3.5" />
-          <span className="text-xs font-medium">Edit</span>
+          <span className="text-xs font-medium"><T context="fingerprint.action.edit">Edit</T></span>
         </motion.button>
       ) : (
         <>
@@ -79,7 +80,7 @@ export const ActionButtons = ({
             transition={{ type: "spring", stiffness: 400, damping: 20 }}
           >
             <Save className="w-3.5 h-3.5" />
-            <span className="text-xs font-medium">{isSaving ? 'Saving...' : 'Save'}</span>
+            <span className="text-xs font-medium">{isSaving ? <T context="fingerprint.action.saving">Saving...</T> : <T context="fingerprint.action.save">Save</T>}</span>
           </motion.button>
           <motion.button
             onClick={onCancel}
@@ -90,7 +91,7 @@ export const ActionButtons = ({
             transition={{ type: "spring", stiffness: 400, damping: 20 }}
           >
             <X className="w-3.5 h-3.5" />
-            <span className="text-xs font-medium">Cancel</span>
+            <span className="text-xs font-medium"><T context="fingerprint.action.cancel">Cancel</T></span>
           </motion.button>
         </>
       )}

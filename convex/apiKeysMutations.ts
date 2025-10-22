@@ -10,17 +10,14 @@ export const insert_api_key = mutation({
     rate_tier: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Find all existing API keys for this user and clientType
+    // Use indexed query for fast lookups
     const existingKeys = await ctx.db
       .query("api_keys")
-      .filter(q => q.eq(q.field("user_id"), args.user_id))
-      // .filter(q => q.eq(q.field("clientType"), args.clientType)) // 👈 COMMENTED OUT: Testing single session (no account sharing)
+      .withIndex("by_user_id", (q) => q.eq("user_id", args.user_id))
       .collect();
     
-    // Delete only existing keys for this user and clientType
-    for (const key of existingKeys) {
-      await ctx.db.delete(key._id);
-    }
+    // Atomic delete: Use Promise.all for concurrent deletes
+    await Promise.all(existingKeys.map(key => ctx.db.delete(key._id)));
     
     // Insert the new API key
     await ctx.db.insert("api_keys", {

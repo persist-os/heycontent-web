@@ -33,6 +33,7 @@ import {
 } from '@/types/fingerprint-schema'
 import { validateFieldValue } from '@/types/fingerprint-schema'
 import { useOptimizedAuth } from '@/app/dashboard/thinking_lab/components/notepad/hooks/useOptimizedAuth'
+import { T } from '@/components/translation/T'
 
 type PageProps = {
   params: Promise<{ projectId: string }>
@@ -260,25 +261,29 @@ export default function EditFingerprintPage(props: PageProps) {
   return (
     <div className="mx-auto max-w-3xl p-4 space-y-6">
       <div className="space-y-1">
-        <h1 className="text-xl font-semibold">Fill missing fingerprint fields</h1>
+        <h1 className="text-xl font-semibold"><T context="fingerprint.edit.title">Fill missing fingerprint fields</T></h1>
         {completion && (
-          <p className="text-sm text-muted-foreground">Completion: {completion.completion_percentage}%</p>
+          <p className="text-sm text-muted-foreground">
+            <T context="fingerprint.edit.completion">Completion</T>: {completion.completion_percentage}%
+          </p>
         )}
       </div>
 
       {loading && (
-        <div className="text-sm text-muted-foreground">Loading…</div>
+        <div className="text-sm text-muted-foreground"><T context="fingerprint.edit.loading">Loading…</T></div>
       )}
 
       {!loading && (
         <>
           <section className="space-y-2">
-            <label htmlFor="quickfill" className="text-sm font-medium">Quick fill</label>
+            <label htmlFor="quickfill" className="text-sm font-medium">
+              <T context="fingerprint.edit.quickfill.label">Quick fill</T>
+            </label>
             <textarea
               id="quickfill"
               className="w-full rounded border border-gray-300 p-2 text-sm"
               rows={4}
-              placeholder="Paste notes or describe your project. We’ll suggest only the missing fields."
+              placeholder="Paste notes or describe your project. We'll suggest only the missing fields."
               value={quickFillText}
               onChange={(e) => setQuickFillText(e.target.value)}
             />
@@ -289,7 +294,7 @@ export default function EditFingerprintPage(props: PageProps) {
                 className="px-3 py-1.5 text-sm rounded bg-black text-white disabled:opacity-50"
                 disabled={!quickFillText.trim() || !userId}
               >
-                Fill missing fields
+                <T context="fingerprint.edit.button.quickfill">Fill missing fields</T>
               </button>
             </div>
             {quickFillError && (
@@ -298,9 +303,13 @@ export default function EditFingerprintPage(props: PageProps) {
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-sm font-medium">Review remaining fields</h2>
+            <h2 className="text-sm font-medium">
+              <T context="fingerprint.edit.review.title">Review remaining fields</T>
+            </h2>
             {missingFields.length === 0 && (
-              <p className="text-sm text-muted-foreground">No missing fields. You can save or skip.</p>
+              <p className="text-sm text-muted-foreground">
+                <T context="fingerprint.edit.review.no_missing">No missing fields. You can save or skip.</T>
+              </p>
             )}
             <div className="space-y-3">
               {missingFields.map(field => {
@@ -318,7 +327,7 @@ export default function EditFingerprintPage(props: PageProps) {
                 return (
                   <div key={field.name} className="space-y-1">
                     <label htmlFor={inputId} className="text-sm font-medium">
-                      {field.name}
+                      <T context={`fingerprint.field.${field.name}.label`}>{field.name}</T>
                     </label>
                     {field.type === 'boolean' ? (
                       <select
@@ -327,9 +336,9 @@ export default function EditFingerprintPage(props: PageProps) {
                         value={currentRaw || ''}
                         onChange={(e) => handleManualChange(field, e.target.value)}
                       >
-                        <option value="">Select…</option>
-                        <option value="true">True</option>
-                        <option value="false">False</option>
+                        <option value=""><T context="fingerprint.field.select">Select…</T></option>
+                        <option value="true"><T context="fingerprint.field.true">True</T></option>
+                        <option value="false"><T context="fingerprint.field.false">False</T></option>
                       </select>
                     ) : field.validation?.enum ? (
                       <select
@@ -338,9 +347,11 @@ export default function EditFingerprintPage(props: PageProps) {
                         value={currentRaw}
                         onChange={(e) => handleManualChange(field, e.target.value)}
                       >
-                        <option value="">Select…</option>
+                        <option value=""><T context="fingerprint.field.select">Select…</T></option>
                         {field.validation.enum.map(opt => (
-                          <option key={opt} value={opt}>{opt}</option>
+                          <option key={opt} value={opt}>
+                            <T context={`fingerprint.enum.${opt}`}>{opt}</T>
+                          </option>
                         ))}
                       </select>
                     ) : (
@@ -353,7 +364,13 @@ export default function EditFingerprintPage(props: PageProps) {
                         type={field.type === 'number' ? 'number' : 'text'}
                       />
                     )}
-                    <p className="text-xs text-muted-foreground">{field.description}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {field.translationKey ? (
+                        <T context={field.translationKey}>{field.description}</T>
+                      ) : (
+                        field.description
+                      )}
+                    </p>
                   </div>
                 )
               })}
@@ -366,14 +383,14 @@ export default function EditFingerprintPage(props: PageProps) {
               onClick={handleSkip}
               className="px-3 py-1.5 text-sm rounded border"
             >
-              Skip for now
+              <T context="fingerprint.edit.button.skip">Skip for now</T>
             </button>
             <button
               type="button"
               onClick={handleSave}
               className="px-3 py-1.5 text-sm rounded bg-black text-white"
             >
-              Save
+              <T context="fingerprint.edit.button.save">Save</T>
             </button>
           </div>
           {saveError && (

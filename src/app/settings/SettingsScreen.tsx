@@ -11,7 +11,8 @@ import FriendsTab from './tabs/FriendsTab'
 import { handleSignOut } from './utils'
 import SubscriptionOverview from './tabs/subscription/subscription-overview'
 import { getFirebaseAuth } from '@/app/lib/firebase'
-import { onAuthStateChanged } from 'firebase/auth'
+import { authStateManager } from '@/app/lib/auth-state-manager'
+import { T } from '@/components/translation/T'
 
 const SettingsScreen = () => {
   const router = useRouter()
@@ -64,14 +65,8 @@ const SettingsScreen = () => {
   }, [])
 
   useEffect(() => {
-    let auth
-    try {
-      auth = getFirebaseAuth()
-    } catch (e) {
-      auth = null
-    }
-    if (!auth) return
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    // Use centralized auth state manager to prevent multiple listeners
+    const unsubscribe = authStateManager.subscribe((firebaseUser) => {
       setUserId(firebaseUser?.uid)
       setUserEmail(firebaseUser?.email)
       if (firebaseUser) {
@@ -96,28 +91,30 @@ const SettingsScreen = () => {
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200/50 dark:border-blue-800/30 rounded-2xl p-6">
               <div className="space-y-4">
                 <div className="flex items-baseline gap-3">
-                  <h2 className="text-2xl font-light tracking-tight text-foreground">Welcome to HeyContent</h2>
+                  <h2 className="text-2xl font-light tracking-tight text-foreground">
+                    <T context="heading.welcome">Welcome to HeyContent</T>
+                  </h2>
                   <span className="text-lg text-muted-foreground">✨</span>
                 </div>
                 <p className="text-muted-foreground leading-relaxed">
-                  Your intelligent content companion is ready. Let's get you set up.
+                  <T context="settings.welcome.subtitle">Your intelligent content companion is ready. Let's get you set up.</T>
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
                   <div className="flex items-center gap-3 text-sm text-muted-foreground">
                     <div className="w-1.5 h-1.5 rounded-full bg-blue-400"></div>
-                    <span>Complete your profile</span>
+                    <span><T context="settings.welcome.step">Complete your profile</T></span>
                   </div>
                   <div className="flex items-center gap-3 text-sm text-muted-foreground">
                     <div className="w-1.5 h-1.5 rounded-full bg-blue-400"></div>
-                    <span>Choose your subscription</span>
+                    <span><T context="settings.welcome.step">Choose your subscription</T></span>
                   </div>
                   <div className="flex items-center gap-3 text-sm text-muted-foreground">
                     <div className="w-1.5 h-1.5 rounded-full bg-blue-400"></div>
-                    <span>Connect your platforms</span>
+                    <span><T context="settings.welcome.step">Connect your platforms</T></span>
                   </div>
                   <div className="flex items-center gap-3 text-sm text-muted-foreground">
                     <div className="w-1.5 h-1.5 rounded-full bg-blue-400"></div>
-                    <span>Configure preferences</span>
+                    <span><T context="settings.welcome.step">Configure preferences</T></span>
                   </div>
                 </div>
               </div>
@@ -129,8 +126,12 @@ const SettingsScreen = () => {
         <div className="py-8 sm:py-12">
           <div className="flex items-center justify-between">
             <div className="space-y-2">
-              <h1 className="text-4xl font-light tracking-tight text-foreground">Settings</h1>
-              <p className="text-lg text-muted-foreground">Manage your account and preferences</p>
+              <h1 className="text-4xl font-light tracking-tight text-foreground">
+                <T context="heading.settings">Settings</T>
+              </h1>
+              <p className="text-lg text-muted-foreground">
+                <T context="settings.subtitle">Manage your account and preferences</T>
+              </p>
             </div>
             <Button
               onClick={() => handleSignOut(router)}
@@ -138,7 +139,9 @@ const SettingsScreen = () => {
               className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors duration-200"
             >
               <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline font-medium">Sign out</span>
+              <span className="hidden sm:inline font-medium">
+                <T context="button.signout">Sign out</T>
+              </span>
             </Button>
           </div>
         </div>
@@ -163,9 +166,11 @@ const SettingsScreen = () => {
                 }`}
               >
                 <div className="space-y-1">
-                  <div className="font-medium text-sm">{tab.label}</div>
+                  <div className="font-medium text-sm">
+                    <T context={`settings.tab.${tab.id}`}>{tab.label}</T>
+                  </div>
                   <div className="text-xs text-muted-foreground group-hover:text-muted-foreground/80 transition-colors duration-200">
-                    {tab.description}
+                    <T context={`settings.tab.${tab.id}.description`}>{tab.description}</T>
                   </div>
                 </div>
                 {activeTab === tab.id && (
@@ -210,9 +215,11 @@ const SettingsScreen = () => {
               {/* Imports Section */}
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <h2 className="text-2xl font-semibold">Import External Data</h2>
+                  <h2 className="text-2xl font-semibold">
+                    <T context="settings.imports.title">Import External Data</T>
+                  </h2>
                   <p className="text-muted-foreground">
-                    Import your data from external platforms to enhance your Crystal Dam
+                    <T context="settings.imports.subtitle">Import your data from external platforms to enhance your Crystal Dam</T>
                   </p>
                 </div>
 
@@ -256,9 +263,11 @@ const SettingsScreen = () => {
                 <div className="border border-dashed border-border rounded-lg p-6 opacity-60">
                   <div className="flex items-center justify-between">
                     <div className="space-y-2">
-                      <h3 className="text-lg font-semibold">More Import Options Coming Soon</h3>
+                      <h3 className="text-lg font-semibold">
+                        <T context="settings.imports.coming_soon">More Import Options Coming Soon</T>
+                      </h3>
                       <p className="text-sm text-muted-foreground">
-                        We're working on additional import options for other platforms.
+                        <T context="settings.imports.coming_soon.subtitle">We're working on additional import options for other platforms.</T>
                       </p>
                     </div>
                   </div>

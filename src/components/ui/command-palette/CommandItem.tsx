@@ -1,6 +1,7 @@
 import { ChevronRight } from 'lucide-react';
 import { NavigationCommand } from '@/app/types/command';
 import { CommandItemProps } from './types';
+import { T } from '@/components/translation';
 
 function highlight(text: string, query: string) {
   if (!query) return text;
@@ -36,7 +37,9 @@ export function CommandItem({ command, isActive, onSelect, searchQuery }: Comman
       <div className="flex-1">
         <div className="flex items-center gap-2">
           <span className="text-base font-medium">
-            {searchQuery ? highlight(command.label, searchQuery) : command.label}
+            {searchQuery ? highlight(command.label, searchQuery) : (
+              <T context={`command_palette.command.${command.id}.label`}>{command.label}</T>
+            )}
           </span>
           {command.shortcut && (
             <span className="text-xs text-muted-foreground">
@@ -51,7 +54,9 @@ export function CommandItem({ command, isActive, onSelect, searchQuery }: Comman
         </div>
         {command.description && (
           <p className="text-sm text-muted-foreground">
-            {searchQuery ? highlight(command.description, searchQuery) : command.description}
+            {searchQuery ? highlight(command.description, searchQuery) : (
+              <T context={`command_palette.command.${command.id}.description`}>{command.description}</T>
+            )}
           </p>
         )}
       </div>

@@ -8,6 +8,7 @@
 'use client'
 
 import React from 'react'
+import { T } from '@/components/translation'
 
 export function WidgetGenerationLoader() {
   return (
@@ -17,10 +18,10 @@ export function WidgetGenerationLoader() {
         {/* Header */}
         <div className="space-y-3">
           <h1 className="text-4xl font-light tracking-tight text-foreground">
-            Generating
+            <T context="loading.generating">Generating</T>
           </h1>
           <p className="text-lg text-muted-foreground font-light">
-            Your project constellation
+            <T context="loading.constellation">Your project constellation</T>
           </p>
         </div>
 

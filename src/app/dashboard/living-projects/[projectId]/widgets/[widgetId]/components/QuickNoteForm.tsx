@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { getApiKey } from '@/app/lib/api-helpers';
 import toast from 'react-hot-toast';
+import { T, TButton } from '@/components/translation';
 
 interface QuickNoteFormProps {
   userId: string;

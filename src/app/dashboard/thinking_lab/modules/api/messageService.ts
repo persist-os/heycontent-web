@@ -54,9 +54,9 @@ export async function transmitMessageWithContext(params: MessageTransmissionRequ
     }
   }
   if (!userId) {
-    // Retry flow specific to auth timing issues
+    // Retry flow specific to auth timing issues with longer timeout
     onStatusUpdate?.('Waiting for authentication…');
-    const readyAgain = await waitForAuthReady(3, 250);
+    const readyAgain = await waitForAuthReady(8, 300);
     if (!readyAgain) {
       throw new AuthenticationError('Authentication state not ready. Please wait a moment and try again.');
     }

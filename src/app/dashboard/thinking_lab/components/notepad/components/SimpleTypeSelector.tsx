@@ -14,7 +14,7 @@ import {
 import { SharedDropdown } from './SharedDropdown'
 import { NoteType } from '../../../../notes/types'
 import type { Id } from "@/convex/_generated/dataModel"
-
+import { T } from '@/components/translation'
 interface SimpleTypeSelectorProps {
   noteId: string | Id<"notes">
   currentType: NoteType
@@ -24,8 +24,8 @@ interface SimpleTypeSelectorProps {
 }
 
 const TYPE_CONFIG: Record<NoteType, { 
-  label: string 
-  description: string 
+  label: string
+  description: string
   color: string 
   icon: React.ReactNode 
 }> = {
@@ -95,8 +95,8 @@ export function SimpleTypeSelector({
   
   const options = Object.entries(TYPE_CONFIG).map(([type, config]) => ({
     value: type,
-    label: config.label,
-    description: config.description,
+    label: <T context={`note.type.${type}.label`}>{config.label}</T>,
+    description: <T context={`note.type.${type}.description`}>{config.description}</T>,
     color: config.color,
     icon: config.icon
   }))
@@ -106,7 +106,7 @@ export function SimpleTypeSelector({
       value={currentType}
       options={options}
       onSelect={(value) => onTypeChange(value as NoteType)}
-      placeholder="Select type"
+      placeholder={<T context="note.type.placeholder">Select type</T>}
       isMobile={isMobile}
       width={isMobile ? "w-24 max-w-24" : "w-28 max-w-28 lg:w-32 lg:max-w-32"}
       triggerClassName="min-w-0 flex-shrink-0 h-8"

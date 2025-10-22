@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { getFirebaseAuth } from '@/app/lib/firebase'
-import { onAuthStateChanged } from 'firebase/auth'
+import { authStateManager } from '@/app/lib/auth-state-manager'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -21,15 +21,8 @@ export default function DebugTab() {
   const [convexResult, setConvexResult] = useState<any>(null)
 
   useEffect(() => {
-    let auth;
-    try {
-      auth = getFirebaseAuth();
-    } catch (e) {
-      auth = null;
-    }
-    if (!auth) return;
-    const user = auth.currentUser;
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    // Use centralized auth state manager to prevent multiple listeners
+    const unsubscribe = authStateManager.subscribe(async (user) => {
       setUser(user)
       if (user) {
         try {
@@ -43,7 +36,7 @@ export default function DebugTab() {
         setToken(null)
       }
     })
-
+    
     return () => unsubscribe()
   }, [])
 

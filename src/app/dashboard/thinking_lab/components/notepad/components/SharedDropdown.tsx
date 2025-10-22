@@ -6,8 +6,8 @@ import { ChevronDown } from 'lucide-react'
 
 interface DropdownOption {
   value: string
-  label: string
-  description?: string
+  label: string | React.ReactNode
+  description?: string | React.ReactNode
   color?: string
   icon?: React.ReactNode
   isSelected?: boolean
@@ -17,7 +17,7 @@ interface SharedDropdownProps {
   value: string
   options: DropdownOption[]
   onSelect: (value: string) => void
-  placeholder?: string
+  placeholder?: string | React.ReactNode
   disabled?: boolean
   isMobile?: boolean
   className?: string
@@ -121,10 +121,10 @@ export function SharedDropdown({
           ref={buttonRef}
           onClick={handleToggle}
           disabled={disabled}
-          className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-transparent hover:bg-muted/40 rounded-md transition-all duration-300 hover:scale-[1.02] disabled:pointer-events-none disabled:opacity-50 h-8 max-h-8 w-full max-w-full overflow-hidden ${triggerClassName}`}
+          className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-[hsl(var(--notepad-icon))] hover:text-foreground bg-transparent hover:bg-black/5 dark:hover:bg-white/5 rounded-md border border-[hsl(var(--notepad-border))] transition-all duration-200 disabled:pointer-events-none disabled:opacity-50 h-8 max-h-8 w-full max-w-full overflow-hidden ${triggerClassName}`}
         >
           {selectedOption?.color && (
-            <div className={`w-2.5 h-2.5 rounded-full ${selectedOption.color} transition-all duration-300 flex-shrink-0`} />
+            <div className={`w-2.5 h-2.5 rounded-full ${selectedOption.color} transition-all duration-200 flex-shrink-0`} />
           )}
           {selectedOption?.icon && (
             <div className="flex-shrink-0">
@@ -139,7 +139,7 @@ export function SharedDropdown({
             </span>
           </div>
           
-          <ChevronDown className={`w-3 h-3 transition-all duration-300 flex-shrink-0 ${isOpen ? 'rotate-180 text-foreground' : 'text-muted-foreground/60'}`} />
+          <ChevronDown className={`w-3 h-3 transition-all duration-200 flex-shrink-0 ${isOpen ? 'rotate-180 text-foreground' : 'text-[hsl(var(--notepad-icon))]/60'}`} />
         </button>
       </div>
       
@@ -148,7 +148,7 @@ export function SharedDropdown({
         createPortal(
           <div
             ref={dropdownRef}
-            className={`fixed ${dropdownWidth} border border-border/50 rounded-xl shadow-2xl z-[9999] backdrop-blur-md bg-background/95 overflow-hidden`}
+            className={`fixed ${dropdownWidth} border border-[hsl(var(--notepad-border))] rounded-xl shadow-2xl z-[9999] backdrop-blur-md bg-[hsl(var(--notepad-header-bg))] overflow-hidden`}
             style={{
               top: `${dropdownPosition.top}px`,
               left: `${dropdownPosition.left}px`,
@@ -163,29 +163,29 @@ export function SharedDropdown({
                     e.stopPropagation()
                     handleOptionSelect(option.value)
                   }}
-                  className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all duration-300 group border border-transparent hover:scale-[1.01] hover:bg-muted/60
+                  className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group border border-transparent hover:bg-black/5 dark:hover:bg-white/5
                     ${option.isSelected || option.value === value
-                      ? 'bg-muted/80 text-foreground border-border/40'
-                      : 'text-muted-foreground hover:text-foreground'
+                      ? 'bg-black/5 dark:bg-white/5 text-foreground border-[hsl(var(--notepad-border))]'
+                      : 'text-[hsl(var(--notepad-icon))] hover:text-foreground'
                     }
                   `}
                 >
                   {option.color && (
-                    <div className={`w-3 h-3 rounded-full ${option.color} transition-all duration-300 group-hover:scale-110`} />
+                    <div className={`w-3 h-3 rounded-full ${option.color} transition-all duration-200 flex-shrink-0`} />
                   )}
                   {option.icon && (
-                    <div className="flex-shrink-0 transition-all duration-300 group-hover:scale-110">
+                    <div className="flex-shrink-0 transition-all duration-200">
                       {option.icon}
                     </div>
                   )}
                   <div className="flex-1 text-left">
                     <div className="font-medium text-sm tracking-tight">{option.label}</div>
                     {option.description && (
-                      <div className="text-xs text-muted-foreground/70 mt-0.5 leading-tight">{option.description}</div>
+                      <div className="text-xs text-[hsl(var(--notepad-icon))]/70 mt-0.5 leading-tight">{option.description}</div>
                     )}
                   </div>
                   {(option.isSelected || option.value === value) && (
-                    <div className="w-2 h-2 rounded-full bg-primary/60" />
+                    <div className="w-2 h-2 rounded-full bg-accent" />
                   )}
                 </button>
               ))}

@@ -27,7 +27,7 @@ export async function publishCrystalFormationBriefing(
     coreInsight?: string;
     shardCount: number;
   }
-) {
+): Promise<Id<"briefing_events"> | null> {
   const now = Date.now();
   
   // Calculate initial position based on category
@@ -38,7 +38,7 @@ export async function publishCrystalFormationBriefing(
   };
   
   try {
-    await ctx.db.insert("briefing_events", {
+    const eventId = await ctx.db.insert("briefing_events", {
       userId: params.userId,
       type: "crystal_formation",
       category: "crystal",
@@ -89,9 +89,11 @@ export async function publishCrystalFormationBriefing(
       createdAt: now,
       updatedAt: now,
     });
+    
+    return eventId;
   } catch (error) {
     console.error("Failed to publish crystal formation briefing:", error);
-    // Don't throw - briefing is nice-to-have, don't break crystal formation
+    return null;
   }
 }
 
@@ -114,7 +116,7 @@ export async function publishWidgetCompletionBriefing(
     completedAt: number;
     summary?: string;
   }
-) {
+): Promise<Id<"briefing_events"> | null> {
   const now = Date.now();
   
   const initialPosition = {
@@ -124,7 +126,7 @@ export async function publishWidgetCompletionBriefing(
   };
   
   try {
-    await ctx.db.insert("briefing_events", {
+    const eventId = await ctx.db.insert("briefing_events", {
       userId: params.userId,
       type: "widget_job_complete",
       category: "widget",
@@ -168,8 +170,11 @@ export async function publishWidgetCompletionBriefing(
       createdAt: now,
       updatedAt: now,
     });
+    
+    return eventId;
   } catch (error) {
     console.error("Failed to publish widget completion briefing:", error);
+    return null;
   }
 }
 
@@ -269,7 +274,7 @@ export async function publishSystemIntelligenceBriefing(
     priority?: "critical" | "high" | "medium" | "low";
     metadata?: Record<string, any>;
   }
-) {
+): Promise<Id<"briefing_events"> | null> {
   const now = Date.now();
   
   const initialPosition = {
@@ -279,7 +284,7 @@ export async function publishSystemIntelligenceBriefing(
   };
   
   try {
-    await ctx.db.insert("briefing_events", {
+    const eventId = await ctx.db.insert("briefing_events", {
       userId: params.userId,
       type: params.alertType,
       category: "system",
@@ -321,8 +326,11 @@ export async function publishSystemIntelligenceBriefing(
       createdAt: now,
       updatedAt: now,
     });
+    
+    return eventId;
   } catch (error) {
     console.error("Failed to publish system intelligence briefing:", error);
+    return null;
   }
 }
 

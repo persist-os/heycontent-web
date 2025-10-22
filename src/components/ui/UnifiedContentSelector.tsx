@@ -20,6 +20,8 @@ import {
   Heart
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { T } from '@/components/translation';
+import { useLanguagePreference, useTranslation } from '@/hooks/useTranslation';
 
 // Unified content item interface using the platform router
 interface UnifiedContentItem {
@@ -69,12 +71,14 @@ interface UnifiedContentSelectorProps {
 const PLATFORM_CONFIGS = {
   notes: {
     key: 'notes',
+    labelKey: 'content_selector.platform.notes',
     label: 'Notes',
     icon: FileText,
     color: 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
   },
   conversations: {
     key: 'conversations', 
+    labelKey: 'content_selector.platform.chats',
     label: 'Chats',
     icon: MessageCircle,
     color: 'bg-green-500/10 text-green-600 dark:text-green-400'
@@ -103,6 +107,55 @@ export const UnifiedContentSelector: React.FC<UnifiedContentSelectorProps> = ({
   const [internalSearchTerm, setInternalSearchTerm] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState<'all' | keyof typeof PLATFORM_CONFIGS>('all');
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const { language } = useLanguagePreference();
+  
+  const { text: searchPlaceholder } = useTranslation('Search content...', {
+    context: 'content_selector.placeholder.search',
+    targetLang: language,
+    enabled: true,
+  });
+  
+  const { text: linkText } = useTranslation('Link', {
+    context: 'content_selector.button.link',
+    targetLang: language,
+    enabled: true,
+  });
+  
+  const { text: loadingText } = useTranslation('Loading content...', {
+    context: 'content_selector.status.loading',
+    targetLang: language,
+    enabled: true,
+  });
+  
+  const { text: noMatchingText } = useTranslation('No matching content found', {
+    context: 'content_selector.message.no_matching',
+    targetLang: language,
+    enabled: true,
+  });
+  
+  const { text: noContentText } = useTranslation('No content available', {
+    context: 'content_selector.message.no_content',
+    targetLang: language,
+    enabled: true,
+  });
+  
+  const { text: noAttachedText } = useTranslation('No items attached yet', {
+    context: 'content_selector.message.no_attached',
+    targetLang: language,
+    enabled: true,
+  });
+  
+  const { text: doneText } = useTranslation('Done', {
+    context: 'button.done',
+    targetLang: language,
+    enabled: true,
+  });
+  
+  const { text: allText } = useTranslation('All', {
+    context: 'content_selector.filter.all',
+    targetLang: language,
+    enabled: true,
+  });
 
   // Use external search term if provided, otherwise use internal
   const searchTerm = onSearchChange ? externalSearchTerm : internalSearchTerm;
@@ -268,7 +321,7 @@ export const UnifiedContentSelector: React.FC<UnifiedContentSelectorProps> = ({
               onClick={() => onSelect?.(item.id)}
               className="h-8 px-3 text-xs"
             >
-              Link
+              {linkText}
             </Button>
           ) : mode === 'attach' ? (
             <Button
@@ -295,7 +348,7 @@ export const UnifiedContentSelector: React.FC<UnifiedContentSelectorProps> = ({
       {/* Header - only show for link mode since Dialog mode has its own header */}
       {mode === 'link' && (
         <div className="flex items-center justify-between p-3 border-b border-border">
-          <h3 className="font-semibold text-sm">Link Content</h3>
+          <h3 className="font-semibold text-sm"><T context="content_selector.title.link">Link Content</T></h3>
           <button
             title="Close"
             onClick={onClose}
@@ -313,7 +366,7 @@ export const UnifiedContentSelector: React.FC<UnifiedContentSelectorProps> = ({
           <Input
             ref={searchInputRef}
             type="text"
-            placeholder="Search content..."
+            placeholder={searchPlaceholder}
             value={searchTerm}
             onChange={(e) => handleSearchChange(e.target.value)}
             className="pl-9"
@@ -334,7 +387,7 @@ export const UnifiedContentSelector: React.FC<UnifiedContentSelectorProps> = ({
             )}
           >
             <FileText className="w-3 h-3" />
-            <span className="hidden sm:inline">All</span>
+            <span className="hidden sm:inline">{allText}</span>
           </button>
           
           {Object.entries(PLATFORM_CONFIGS).map(([key, config]) => {
@@ -351,7 +404,9 @@ export const UnifiedContentSelector: React.FC<UnifiedContentSelectorProps> = ({
                 )}
               >
                 <IconComponent className="w-3 h-3" />
-                <span className="hidden sm:inline">{config.label}</span>
+                <span className="hidden sm:inline">
+                  <T context={config.labelKey}>{config.label}</T>
+                </span>
               </button>
             );
           })}
@@ -363,7 +418,7 @@ export const UnifiedContentSelector: React.FC<UnifiedContentSelectorProps> = ({
         {isLoading ? (
           <div className="p-6 text-center text-muted-foreground">
             <div className="animate-spin w-6 h-6 border-2 border-current border-t-transparent rounded-full mx-auto mb-2"></div>
-            Loading content...
+            {loadingText}
           </div>
         ) : mode === 'attach' && showAttachedSection ? (
           // Two-column layout for attach mode
@@ -372,14 +427,14 @@ export const UnifiedContentSelector: React.FC<UnifiedContentSelectorProps> = ({
             <div className="flex flex-col overflow-hidden">
               <div className="flex items-center justify-between mb-3 flex-shrink-0">
                 <h4 className="font-semibold text-sm text-muted-foreground">
-                  Available ({availableItems.length})
+                  <T context="content_selector.section.available">Available</T> ({availableItems.length})
                 </h4>
               </div>
               <div className="overflow-y-auto overflow-x-hidden max-h-[400px] scrollbar-hide">
                 <div className="space-y-2 pr-2">
                   {availableItems.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground text-sm">
-                      {searchTerm ? 'No matching content found' : 'No content available'}
+                      {searchTerm ? noMatchingText : noContentText}
                     </div>
                   ) : (
                     availableItems.map(item => renderContentItem(item, false))
@@ -392,14 +447,14 @@ export const UnifiedContentSelector: React.FC<UnifiedContentSelectorProps> = ({
             <div className="flex flex-col overflow-hidden">
               <div className="flex items-center justify-between mb-3 flex-shrink-0">
                 <h4 className="font-semibold text-sm text-muted-foreground">
-                  Attached ({attachedContentItems.length})
+                  <T context="content_selector.section.attached">Attached</T> ({attachedContentItems.length})
                 </h4>
               </div>
               <div className="overflow-y-auto overflow-x-hidden max-h-[400px] scrollbar-hide">
                 <div className="space-y-2 pr-2">
                   {attachedContentItems.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground text-sm">
-                      No items attached yet
+                      {noAttachedText}
                     </div>
                   ) : (
                     attachedContentItems.map(item => renderContentItem(item, true))
@@ -414,7 +469,7 @@ export const UnifiedContentSelector: React.FC<UnifiedContentSelectorProps> = ({
             <div className="p-3 space-y-2">
               {availableItems.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  {searchTerm ? 'No matching content found' : 'No content available'}
+                  {searchTerm ? noMatchingText : noContentText}
                 </div>
               ) : (
                 availableItems.map(item => renderContentItem(item, false))
@@ -428,7 +483,7 @@ export const UnifiedContentSelector: React.FC<UnifiedContentSelectorProps> = ({
       {mode === 'attach' && (
         <div className="flex justify-end p-3 border-t border-border">
           <Button onClick={onClose} variant="outline">
-            Done
+            {doneText}
           </Button>
         </div>
       )}
@@ -455,7 +510,7 @@ export const UnifiedContentSelector: React.FC<UnifiedContentSelectorProps> = ({
       <DialogContent className="max-w-7xl max-h-[90vh] flex flex-col w-[95vw]">
         <DialogHeader>
           <DialogTitle>
-            Manage Content
+            <T context="content_selector.title.manage">Manage Content</T>
           </DialogTitle>
         </DialogHeader>
         {SelectorContent}

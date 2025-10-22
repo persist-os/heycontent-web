@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { PricingCard } from './PricingCard';
 import { Button } from '../../../components/ui/button';
+import { T } from '@/components/translation';
 
 export function PricingTable() {
   const [showAnnual, setShowAnnual] = useState(false);
@@ -75,15 +76,15 @@ export function PricingTable() {
           onClick={() => setShowAnnual(false)}
           size="lg"
         >
-          Monthly
+          <T context="pricingTable.monthly">Monthly</T>
         </Button>
         <Button
           variant={showAnnual ? 'default' : 'outline'}
           onClick={() => setShowAnnual(true)}
           size="lg"
         >
-          Annual
-          <span className="ml-2 text-sm opacity-90">(Save 17%)</span>
+          <T context="pricingTable.annual">Annual</T>
+          <span className="ml-2 text-sm opacity-90">(<T context="pricingTable.save">Save 17%</T>)</span>
         </Button>
       </div>
 

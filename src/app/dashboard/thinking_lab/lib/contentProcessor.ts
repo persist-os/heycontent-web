@@ -65,17 +65,11 @@ export class ContentProcessor {
 
     // Handle content ID format @[contentId]@ (e.g., @[note:123]@, @[crystal:456]@, @[project:789]@)
     return content.replace(/@\[([^\]]+)\]@/g, (match, contentId) => {
-      console.log('🔗 Processing content link:', { contentId })
       
       // First try to find content in the resolved content from the message
       if (resolvedContent?.length) {
         const resolvedItem = resolvedContent.find(item => item.contentId === contentId)
         if (resolvedItem) {
-          console.log('🔗 Found resolved content:', { 
-            id: contentId, 
-            title: resolvedItem.title, 
-            type: resolvedItem.type 
-          })
           return this.createClickableLink(contentId, resolvedItem.title, resolvedItem.type)
         }
       }
@@ -84,17 +78,11 @@ export class ContentProcessor {
       const linkedContent = this.findContentById(contentId)
       if (linkedContent) {
         const title = linkedContent.title || 'Untitled'
-        console.log('🔗 Found linked content:', { 
-          id: contentId, 
-          title, 
-          type: linkedContent.type 
-        })
         
         return this.createClickableLink(contentId, title, linkedContent.type)
       }
       
       // If content not found, show a clean fallback
-      console.log('🔗 Content not found for ID:', contentId)
       return `<span class="text-muted-foreground italic">[Content not found]</span>`
     })
   }
@@ -104,14 +92,9 @@ export class ContentProcessor {
    * Used when backend sends processed content but we need to make it interactive
    */
   convertTitlesToClickableLinks(content: string): string {
-    console.log('🔗 Converting titles to clickable links:', {
-      contentPreview: content.substring(0, 200),
-      contentMapSize: this.contentMap.size
-    })
     
     // Replace titles in brackets with clickable links
     return content.replace(/\[([^\]]+)\]/g, (match, title) => {
-      console.log('🔗 Trying to match title:', title)
       
       // Clean the title for matching
       const cleanTitle = title.replace(/\n/g, ' ').trim()
@@ -124,22 +107,15 @@ export class ContentProcessor {
         for (const [key, value] of this.contentMap.entries()) {
           if (key.includes(cleanTitle) || cleanTitle.includes(key)) {
             linkedContent = value
-            console.log('🔗 Found partial match:', { title: cleanTitle, matchedKey: key })
             break
           }
         }
       }
       
       if (linkedContent) {
-        console.log('🔗 Converting title to clickable link:', { 
-          title: cleanTitle, 
-          type: linkedContent.type, 
-          id: linkedContent.id 
-        })
         return this.createClickableLink(linkedContent.id, title, linkedContent.type)
       }
-      
-      console.log('🔗 No match found for title:', cleanTitle)
+
       // If no match found, keep the original bracket format
       return match
     })
@@ -149,10 +125,6 @@ export class ContentProcessor {
    * Find content by ID with enhanced fallback strategies
    */
   private findContentById(contentId: string): LinkableContent | null {
-    console.log('🔗 Looking for content:', {
-      contentId,
-      availableContentCount: this.allContent.length
-    })
     
     // Try exact match first
     let linkedContent = this.allContent.find(item => item.id === contentId)
@@ -277,7 +249,7 @@ export class ContentClickHandler {
     switch (contentType) {
       case 'note':
         const noteId = contentId.startsWith('note:') ? contentId.replace('note:', '') : contentId
-        window.open(`/dashboard/notes?noteId=${noteId}&fromChat=true${chatIdParam}`, '_blank')
+        window.open(`/dashboard/thinking_lab?noteId=${noteId}&fromChat=true${chatIdParam}`, '_blank')
         break
       case 'crystal':
         const crystalId = contentId.replace('crystal:', '')
@@ -285,15 +257,14 @@ export class ContentClickHandler {
         break
       case 'project':
         const projectId = contentId.replace('project:', '')
-        window.open(`/dashboard/projects?projectId=${projectId}&fromChat=true${chatIdParam}`, '_blank')
+        window.open(`/dashboard/living-projects/${projectId}?fromChat=true${chatIdParam}`, '_blank')
         break
       case 'conversation':
-      case 'chat':
         const conversationId = contentId.replace(/^(chat|conversation):/, '')
         window.open(`/dashboard/thinking_lab?conversationId=${conversationId}&fromChat=true${chatIdParam}`, '_blank')
         break
       default:
-        console.log('Unknown content type clicked:', contentType, contentId)
+        // Unknown content type
     }
   }
 }

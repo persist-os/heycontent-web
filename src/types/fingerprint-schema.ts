@@ -12,6 +12,7 @@ export interface FingerprintField {
   type: 'string' | 'number' | 'boolean' | 'array' | 'object' | 'id';
   required: boolean;
   description: string;
+  translationKey?: string; // Key for progressive translation system
   validation?: {
     min?: number;
     max?: number;
@@ -27,19 +28,22 @@ export const FINGERPRINT_CORE_IDENTITY_FIELDS: FingerprintField[] = [
     name: 'projectId',
     type: 'id',
     required: true,
-    description: 'Reference to the parent project'
+    description: 'Reference to the parent project',
+    translationKey: 'fingerprint.field.projectId.description'
   },
   {
     name: 'userId',
     type: 'string',
     required: true,
-    description: 'Owner of this fingerprint'
+    description: 'Owner of this fingerprint',
+    translationKey: 'fingerprint.field.userId.description'
   },
   {
     name: 'name',
     type: 'string',
     required: true,
     description: 'Display name for the fingerprint',
+    translationKey: 'fingerprint.field.name.description',
     validation: { max: 200 }
   },
   {
@@ -47,6 +51,7 @@ export const FINGERPRINT_CORE_IDENTITY_FIELDS: FingerprintField[] = [
     type: 'string',
     required: false,
     description: 'Optional description',
+    translationKey: 'fingerprint.field.description.description',
     validation: { max: 1000 }
   }
 ];
@@ -58,6 +63,7 @@ export const FINGERPRINT_AI_NATURE_FIELDS: FingerprintField[] = [
     type: 'string',
     required: true,
     description: 'Project domain classification',
+    translationKey: 'fingerprint.field.domain.description',
     validation: {
       enum: ['academic', 'creative', 'business', 'skill_development', 'personal', 'professional']
     }
@@ -67,6 +73,7 @@ export const FINGERPRINT_AI_NATURE_FIELDS: FingerprintField[] = [
     type: 'number',
     required: true,
     description: 'Complexity level (1-10 scale)',
+    translationKey: 'fingerprint.field.complexity_level.description',
     validation: { min: 1, max: 10 },
     default: 1
   },
@@ -75,6 +82,7 @@ export const FINGERPRINT_AI_NATURE_FIELDS: FingerprintField[] = [
     type: 'string',
     required: true,
     description: 'How the project involves others',
+    translationKey: 'fingerprint.field.collaboration_style.description',
     validation: {
       enum: ['solo', 'small_team', 'large_group', 'community', 'distributed']
     },
@@ -85,6 +93,7 @@ export const FINGERPRINT_AI_NATURE_FIELDS: FingerprintField[] = [
     type: 'string',
     required: true,
     description: 'Expected timeframe for completion',
+    translationKey: 'fingerprint.field.time_horizon.description',
     validation: {
       enum: ['sprint', 'project', 'journey', 'lifestyle', 'ongoing']
     },
@@ -95,6 +104,7 @@ export const FINGERPRINT_AI_NATURE_FIELDS: FingerprintField[] = [
     type: 'string',
     required: true,
     description: 'Primary working pattern identified',
+    translationKey: 'fingerprint.field.primary_pattern.description',
     validation: {
       enum: ['iterative_creator', 'systematic_builder', 'exploratory_learner', 'collaborative_orchestrator']
     },
@@ -105,6 +115,7 @@ export const FINGERPRINT_AI_NATURE_FIELDS: FingerprintField[] = [
     type: 'array',
     required: false,
     description: 'Array of working style preferences',
+    translationKey: 'fingerprint.field.working_style.description',
     default: []
   }
 ];
@@ -116,6 +127,7 @@ export const FINGERPRINT_ARCHETYPE_FIELDS: FingerprintField[] = [
     type: 'string',
     required: false,
     description: 'How user approaches decisions',
+    translationKey: 'fingerprint.field.decision_making.description',
     default: ''
   },
   {
@@ -123,6 +135,7 @@ export const FINGERPRINT_ARCHETYPE_FIELDS: FingerprintField[] = [
     type: 'string',
     required: false,
     description: 'When and how user works best',
+    translationKey: 'fingerprint.field.energy_patterns.description',
     default: ''
   }
 ];
@@ -134,6 +147,7 @@ export const FINGERPRINT_INTENTIONS_FIELDS: FingerprintField[] = [
     type: 'string',
     required: false,
     description: 'The deep "why" behind the project',
+    translationKey: 'fingerprint.field.core_intention.description',
     default: ''
   },
   {
@@ -141,6 +155,7 @@ export const FINGERPRINT_INTENTIONS_FIELDS: FingerprintField[] = [
     type: 'string',
     required: false,
     description: 'What success looks and feels like',
+    translationKey: 'fingerprint.field.success_vision.description',
     default: ''
   },
   {
@@ -148,6 +163,7 @@ export const FINGERPRINT_INTENTIONS_FIELDS: FingerprintField[] = [
     type: 'string',
     required: false,
     description: 'What this creates for user/world',
+    translationKey: 'fingerprint.field.value_creation.description',
     default: ''
   },
   {
@@ -155,6 +171,7 @@ export const FINGERPRINT_INTENTIONS_FIELDS: FingerprintField[] = [
     type: 'array',
     required: false,
     description: 'How user wants to evolve through this project',
+    translationKey: 'fingerprint.field.personal_growth.description',
     default: []
   }
 ];
@@ -166,6 +183,7 @@ export const FINGERPRINT_TIMELINE_FIELDS: FingerprintField[] = [
     type: 'string',
     required: false,
     description: 'Natural working rhythm',
+    translationKey: 'fingerprint.field.natural_rhythm.description',
     validation: {
       enum: ['daily', 'weekly', 'monthly', 'seasonal', 'milestone_driven']
     },
@@ -176,6 +194,7 @@ export const FINGERPRINT_TIMELINE_FIELDS: FingerprintField[] = [
     type: 'array',
     required: false,
     description: 'Major project phases with details',
+    translationKey: 'fingerprint.field.key_phases.description',
     default: []
   },
   {
@@ -183,6 +202,7 @@ export const FINGERPRINT_TIMELINE_FIELDS: FingerprintField[] = [
     type: 'string',
     required: false,
     description: 'How structured vs flexible the approach is',
+    translationKey: 'fingerprint.field.flexibility_preference.description',
     validation: {
       enum: ['structured', 'adaptive', 'emergent']
     },
@@ -197,6 +217,7 @@ export const FINGERPRINT_OUTPUTS_FIELDS: FingerprintField[] = [
     type: 'array',
     required: false,
     description: 'Concrete outputs/deliverables',
+    translationKey: 'fingerprint.field.tangible_deliverables.description',
     default: []
   },
   {
@@ -204,6 +225,7 @@ export const FINGERPRINT_OUTPUTS_FIELDS: FingerprintField[] = [
     type: 'array',
     required: false,
     description: 'Intangible benefits and outcomes',
+    translationKey: 'fingerprint.field.intangible_benefits.description',
     default: []
   },
   {
@@ -211,6 +233,7 @@ export const FINGERPRINT_OUTPUTS_FIELDS: FingerprintField[] = [
     type: 'string',
     required: false,
     description: 'How progress will be measured',
+    translationKey: 'fingerprint.field.measurement_approach.description',
     default: ''
   },
   {
@@ -218,6 +241,7 @@ export const FINGERPRINT_OUTPUTS_FIELDS: FingerprintField[] = [
     type: 'string',
     required: false,
     description: 'Who the work will be shared with',
+    translationKey: 'fingerprint.field.sharing_intention.description',
     validation: {
       enum: ['private', 'selective', 'public', 'community']
     },
@@ -232,6 +256,7 @@ export const FINGERPRINT_INTERFACE_FIELDS: FingerprintField[] = [
     type: 'string',
     required: false,
     description: 'How much information to show at once',
+    translationKey: 'fingerprint.field.cognitive_load_preference.description',
     validation: {
       enum: ['minimal', 'rich', 'customizable']
     },
@@ -242,6 +267,7 @@ export const FINGERPRINT_INTERFACE_FIELDS: FingerprintField[] = [
     type: 'string',
     required: false,
     description: 'How dense the information display should be',
+    translationKey: 'fingerprint.field.information_density.description',
     validation: {
       enum: ['focused', 'contextual', 'comprehensive']
     },
@@ -252,6 +278,7 @@ export const FINGERPRINT_INTERFACE_FIELDS: FingerprintField[] = [
     type: 'array',
     required: false,
     description: 'What keeps the user motivated',
+    translationKey: 'fingerprint.field.motivation_style.description',
     default: []
   },
   {
@@ -259,6 +286,7 @@ export const FINGERPRINT_INTERFACE_FIELDS: FingerprintField[] = [
     type: 'string',
     required: false,
     description: 'How often to provide feedback/check-ins',
+    translationKey: 'fingerprint.field.feedback_frequency.description',
     validation: {
       enum: ['daily', 'weekly', 'monthly', 'milestone', 'as_needed']
     },
@@ -273,6 +301,7 @@ export const FINGERPRINT_EVOLUTION_FIELDS: FingerprintField[] = [
     type: 'number',
     required: false,
     description: 'How quickly to adapt (1-10)',
+    translationKey: 'fingerprint.field.learning_sensitivity.description',
     validation: { min: 1, max: 10 },
     default: 5
   },
@@ -281,6 +310,7 @@ export const FINGERPRINT_EVOLUTION_FIELDS: FingerprintField[] = [
     type: 'array',
     required: false,
     description: 'What triggers evolution suggestions',
+    translationKey: 'fingerprint.field.change_triggers.description',
     default: []
   },
   {
@@ -288,6 +318,7 @@ export const FINGERPRINT_EVOLUTION_FIELDS: FingerprintField[] = [
     type: 'array',
     required: false,
     description: 'What should rarely change',
+    translationKey: 'fingerprint.field.stability_zones.description',
     default: []
   },
   {
@@ -295,6 +326,7 @@ export const FINGERPRINT_EVOLUTION_FIELDS: FingerprintField[] = [
     type: 'array',
     required: false,
     description: 'What should evolve actively',
+    translationKey: 'fingerprint.field.growth_edges.description',
     default: []
   }
 ];
@@ -306,6 +338,7 @@ export const FINGERPRINT_AGENT_FIELDS: FingerprintField[] = [
     type: 'object',
     required: false,
     description: 'Morning AI behavior configuration',
+    translationKey: 'fingerprint.field.morning_persona.description',
     default: {
       energy_match: '',
       focus_style: '',
@@ -317,6 +350,7 @@ export const FINGERPRINT_AGENT_FIELDS: FingerprintField[] = [
     type: 'object',
     required: false,
     description: 'Evening AI behavior configuration',
+    translationKey: 'fingerprint.field.evening_persona.description',
     default: {
       reflection_approach: '',
       consolidation_style: '',
@@ -328,6 +362,7 @@ export const FINGERPRINT_AGENT_FIELDS: FingerprintField[] = [
     type: 'array',
     required: false,
     description: 'Contextual triggers for AI responses',
+    translationKey: 'fingerprint.field.event_triggers.description',
     default: []
   }
 ];
@@ -339,6 +374,7 @@ export const FINGERPRINT_PROMPT_FIELDS: FingerprintField[] = [
     type: 'string',
     required: false,
     description: 'Base AI personality derived from user',
+    translationKey: 'fingerprint.field.base_personality.description',
     default: ''
   },
   {
@@ -346,6 +382,7 @@ export const FINGERPRINT_PROMPT_FIELDS: FingerprintField[] = [
     type: 'string',
     required: false,
     description: 'AI voice specific to this project',
+    translationKey: 'fingerprint.field.project_voice.description',
     default: ''
   },
   {
@@ -353,6 +390,7 @@ export const FINGERPRINT_PROMPT_FIELDS: FingerprintField[] = [
     type: 'string',
     required: false,
     description: 'How AI generates questions',
+    translationKey: 'fingerprint.field.question_generation_style.description',
     default: ''
   },
   {
@@ -360,6 +398,7 @@ export const FINGERPRINT_PROMPT_FIELDS: FingerprintField[] = [
     type: 'string',
     required: false,
     description: 'How AI provides suggestions',
+    translationKey: 'fingerprint.field.suggestion_approach.description',
     default: ''
   },
   {
@@ -367,6 +406,7 @@ export const FINGERPRINT_PROMPT_FIELDS: FingerprintField[] = [
     type: 'string',
     required: false,
     description: 'How AI seeks clarification',
+    translationKey: 'fingerprint.field.clarification_method.description',
     default: ''
   }
 ];
@@ -378,6 +418,7 @@ export const FINGERPRINT_DYNAMIC_FIELDS: FingerprintField[] = [
     type: 'array',
     required: false,
     description: 'AI-generated custom dimensions',
+    translationKey: 'fingerprint.field.dynamic_dimensions.description',
     default: []
   }
 ];
@@ -389,6 +430,7 @@ export const FINGERPRINT_CONTEXT_FIELDS: FingerprintField[] = [
     type: 'array',
     required: false,
     description: 'User limitations and constraints',
+    translationKey: 'fingerprint.field.user_constraints.description',
     default: []
   },
   {
@@ -396,6 +438,7 @@ export const FINGERPRINT_CONTEXT_FIELDS: FingerprintField[] = [
     type: 'array',
     required: false,
     description: 'External factors that affect the project',
+    translationKey: 'fingerprint.field.external_dependencies.description',
     default: []
   },
   {
@@ -403,6 +446,7 @@ export const FINGERPRINT_CONTEXT_FIELDS: FingerprintField[] = [
     type: 'array',
     required: false,
     description: 'Available support and resources',
+    translationKey: 'fingerprint.field.support_systems.description',
     default: []
   },
   {
@@ -410,6 +454,7 @@ export const FINGERPRINT_CONTEXT_FIELDS: FingerprintField[] = [
     type: 'array',
     required: false,
     description: 'Potential challenges and obstacles',
+    translationKey: 'fingerprint.field.potential_obstacles.description',
     default: []
   }
 ];
@@ -420,19 +465,22 @@ export const FINGERPRINT_METADATA_FIELDS: FingerprintField[] = [
     name: 'created_at',
     type: 'number',
     required: true,
-    description: 'When fingerprint was created'
+    description: 'When fingerprint was created',
+    translationKey: 'fingerprint.field.created_at.description'
   },
   {
     name: 'last_evolution',
     type: 'number',
     required: true,
-    description: 'Last time fingerprint was evolved'
+    description: 'Last time fingerprint was evolved',
+    translationKey: 'fingerprint.field.last_evolution.description'
   },
   {
     name: 'intelligence_version',
     type: 'string',
     required: true,
     description: 'Version of intelligence schema',
+    translationKey: 'fingerprint.field.intelligence_version.description',
     default: '1.0'
   },
   {
@@ -440,6 +488,7 @@ export const FINGERPRINT_METADATA_FIELDS: FingerprintField[] = [
     type: 'string',
     required: true,
     description: 'Current fingerprint status',
+    translationKey: 'fingerprint.field.status.description',
     validation: {
       enum: ['discovering', 'active', 'evolving', 'completing', 'archived']
     },

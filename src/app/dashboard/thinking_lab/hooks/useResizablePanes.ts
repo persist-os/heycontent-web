@@ -12,6 +12,7 @@ interface UseResizablePanesResult {
     snapToRight: () => void
     startDrag: (e: React.MouseEvent) => void
     setSplitRatio: (ratio: number) => void
+    setPreferredRatio: (ratio: number) => void
   }
   styles: {
     leftPanelStyle: React.CSSProperties
@@ -22,43 +23,72 @@ interface UseResizablePanesResult {
 }
 
 export function useResizablePanes(initialRatio = 0.5): UseResizablePanesResult {
+  // Start with initialRatio to avoid hydration mismatch, then hydrate from localStorage
   const [splitRatio, setSplitRatio] = useState(initialRatio)
   const [isDragging, setIsDragging] = useState(false)
   const [isSnapping, setIsSnapping] = useState(false)
   const dragStartX = useRef<number>(0)
   const dragStartRatio = useRef<number>(0)
   const containerRef = useRef<HTMLDivElement>(null)
+  const preferredRatio = useRef<number>(initialRatio)
+  const hasHydrated = useRef(false)
+
+  // Hydrate from localStorage after mount to avoid hydration mismatch
+  useEffect(() => {
+    if (hasHydrated.current) return
+    hasHydrated.current = true
+    
+    try {
+      const stored = localStorage.getItem('thinking-lab-split-ratio')
+      if (stored) {
+        const storedRatio = parseFloat(stored)
+        setSplitRatio(storedRatio)
+        preferredRatio.current = storedRatio
+      }
+    } catch {
+      // Ignore localStorage errors
+    }
+  }, [])
+
+  // Helper function to persist ratio
+  const persistRatio = useCallback((ratio: number) => {
+    try {
+      localStorage.setItem('thinking-lab-split-ratio', ratio.toString())
+    } catch {
+      // Ignore localStorage errors
+    }
+  }, [])
 
   // Snap functions
   const snapToLeft = useCallback(() => {
     setIsSnapping(true)
     setSplitRatio(1.0) // Full left panel (100% width)
+    persistRatio(1.0)
     setTimeout(() => setIsSnapping(false), 300)
-  }, [])
+  }, [persistRatio])
 
   const snapToSplit = useCallback(() => {
     setIsSnapping(true)
-    setSplitRatio(0.5) // 50/50 split
+    setSplitRatio(preferredRatio.current) // Use preferred ratio instead of 50/50
+    persistRatio(preferredRatio.current)
     setTimeout(() => setIsSnapping(false), 300)
-  }, [])
+  }, [persistRatio])
 
   const snapToRight = useCallback(() => {
     setIsSnapping(true)
     setSplitRatio(0.0) // Full right panel (100% width)
+    persistRatio(0.0)
     setTimeout(() => setIsSnapping(false), 300)
+  }, [persistRatio])
+
+  // Set preferred ratio function
+  const setPreferredRatio = useCallback((ratio: number) => {
+    preferredRatio.current = ratio
   }, [])
 
-  // Drag handling
-  const startDrag = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
-    dragStartX.current = e.clientX
-    dragStartRatio.current = splitRatio
-    
-    // Add global mouse move/up listeners
-    document.addEventListener('mousemove', handleDrag)
-    document.addEventListener('mouseup', endDrag)
-  }, [splitRatio])
+  // Drag handling - use refs to avoid stale closures
+  const handleDragRef = useRef<(e: MouseEvent) => void>()
+  const endDragRef = useRef<() => void>()
 
   const handleDrag = useCallback((e: MouseEvent) => {
     if (!containerRef.current) return
@@ -75,17 +105,49 @@ export function useResizablePanes(initialRatio = 0.5): UseResizablePanesResult {
 
   const endDrag = useCallback(() => {
     setIsDragging(false)
-    document.removeEventListener('mousemove', handleDrag)
-    document.removeEventListener('mouseup', endDrag)
-  }, [handleDrag])
+    // Save the current ratio as preferred when user finishes dragging
+    const currentRatio = dragStartRatio.current + 
+      (typeof window !== 'undefined' ? 
+        ((window.event as MouseEvent)?.clientX - dragStartX.current) / 
+        (containerRef.current?.getBoundingClientRect().width || 1) 
+        : 0)
+    const finalRatio = Math.max(0.0, Math.min(1.0, currentRatio))
+    preferredRatio.current = finalRatio
+    // Persist ratio to localStorage for chat reopen functionality
+    persistRatio(finalRatio)
+    document.removeEventListener('mousemove', handleDragRef.current!)
+    document.removeEventListener('mouseup', endDragRef.current!)
+  }, [persistRatio])
+
+  // Update refs when functions change
+  useEffect(() => {
+    handleDragRef.current = handleDrag
+    endDragRef.current = endDrag
+  }, [handleDrag, endDrag])
+
+  // Drag handling
+  const startDrag = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+    dragStartX.current = e.clientX
+    dragStartRatio.current = splitRatio
+    
+    // Add global mouse move/up listeners using refs
+    document.addEventListener('mousemove', handleDragRef.current!)
+    document.addEventListener('mouseup', endDragRef.current!)
+  }, [splitRatio])
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      document.removeEventListener('mousemove', handleDrag)
-      document.removeEventListener('mouseup', endDrag)
+      if (handleDragRef.current) {
+        document.removeEventListener('mousemove', handleDragRef.current)
+      }
+      if (endDragRef.current) {
+        document.removeEventListener('mouseup', endDragRef.current)
+      }
     }
-  }, [handleDrag, endDrag])
+  }, [])
 
   // Calculate panel styles
   const leftPanelStyle = {
@@ -110,7 +172,7 @@ export function useResizablePanes(initialRatio = 0.5): UseResizablePanesResult {
 
   return {
     state: { splitRatio, isDragging, isSnapping },
-    actions: { snapToLeft, snapToSplit, snapToRight, startDrag, setSplitRatio },
+    actions: { snapToLeft, snapToSplit, snapToRight, startDrag, setSplitRatio, setPreferredRatio },
     styles: { leftPanelStyle, rightPanelStyle, dividerStyle },
     containerRef
   }

@@ -4,16 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { getFirebaseAuth } from '@/app/lib/firebase'
+import { authStateManager } from '@/app/lib/auth-state-manager'
 import { handleResendVerification } from '../utils'
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { onAuthStateChanged } from 'firebase/auth';
 import { Edit2, Save, X, Copy } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/app/context/auth-context'
 import { ReadOnlyField, ReadOnlyTextArea } from './account/ReadOnlyField'
 import { ProfileFields, ReferralFields, PersonaFields } from './account/FormSections'
 import { Skeleton } from '@/components/ui/skeleton'
+import LanguageSelector from '../components/LanguageSelector'
+import { T } from '@/components/translation/T'
 
 const MAX_PERSONA_LENGTH = 500
 const MAX_VISION_LENGTH = 500
@@ -95,14 +97,8 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
   const [userId, setUserId] = useState<string | undefined>()
   const [userEmail, setUserEmail] = useState<string | undefined>()
   useEffect(() => {
-    let auth
-    try {
-      auth = getFirebaseAuth()
-    } catch (e) {
-      auth = null
-    }
-    if (!auth) return
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    // Use centralized auth state manager to prevent multiple listeners
+    const unsubscribe = authStateManager.subscribe((firebaseUser) => {
       setUserId(firebaseUser?.uid)
       setUserEmail(firebaseUser?.email)
     })
@@ -172,8 +168,12 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <h2 className="text-2xl font-light tracking-tight text-foreground">Profile</h2>
-            <p className="text-muted-foreground">Your personal information and account details</p>
+            <h2 className="text-2xl font-light tracking-tight text-foreground">
+              <T context="settings.profile.title">Profile</T>
+            </h2>
+            <p className="text-muted-foreground">
+              <T context="settings.profile.subtitle">Your personal information and account details</T>
+            </p>
           </div>
           
           {!isEditMode ? (
@@ -183,7 +183,7 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
               className="text-muted-foreground hover:text-foreground transition-colors duration-200"
             >
               <Edit2 className="w-4 h-4 mr-2" />
-              Edit
+              <T context="button.edit">Edit</T>
             </Button>
           ) : (
             <div className="flex items-center gap-3">
@@ -194,7 +194,7 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
                 className="text-muted-foreground hover:text-foreground transition-colors duration-200"
               >
                 <X className="w-4 h-4 mr-2" />
-                Cancel
+                <T context="button.cancel">Cancel</T>
               </Button>
               <Button
                 onClick={(e) => handleProfileUpdate(e, formData, setIsUpdating, setFormData, updateUser, userId, userEmail, setIsEditMode, firebaseUser?.photoURL)}
@@ -202,7 +202,7 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
                 className="bg-foreground text-background hover:bg-foreground/90 transition-colors duration-200"
               >
                 <Save className="w-4 h-4 mr-2" />
-                {isUpdating ? 'Saving...' : 'Save Changes'}
+                {isUpdating ? <T context="button.saving">Saving...</T> : <T context="button.save_changes">Save Changes</T>}
               </Button>
             </div>
           )}
@@ -228,6 +228,12 @@ const AccountTab = ({ formData, setFormData, isUpdating, setIsUpdating, isResend
             <ReferralFields formData={formData} referrerName={referrerName} referrerLoading={referrerLoading} />
           </div>
         </form>
+      </div>
+
+      {/* Language Section */}
+      <div className="space-y-6">
+        <div className="h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
+        <LanguageSelector />
       </div>
 
     </div>

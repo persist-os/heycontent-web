@@ -11,7 +11,7 @@ import { useNotes } from '@/app/context/notes-context';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useContentManager, usePlatformContent } from '@/app/hooks/use-content';
-import { getCurrentUserId } from '@/app/lib/api-helpers';
+import { getCurrentUserIdSync } from '@/app/lib/api-helpers';
 import { useProjects } from '../../hooks/useProjects';
 import {
   AttachableItem,
@@ -28,21 +28,15 @@ interface ProjectItemsGridProps {
 }
 
 export function ProjectItemsGrid({ project }: ProjectItemsGridProps) {
-  const userId = getCurrentUserId();
+  const userId = getCurrentUserIdSync();
   const { notes } = useNotes();
-  const { removeItemFromProject } = useProjects(userId);
+  const { removeContentFromProject } = useProjects(userId || undefined);
   const router = useRouter();
   
   // State for overlay modals - social media overlays removed
 
   // Initialize content manager
-  const contentManager = useContentManager(userId);
-  
-  // Debug content manager
-  console.log('Content Manager Debug:', {
-    userId,
-    contentManager: !!contentManager,
-  });
+  const contentManager = useContentManager(userId || undefined);
 
   // Fetch conversations
   const conversations = useQuery(
@@ -54,37 +48,10 @@ export function ProjectItemsGrid({ project }: ProjectItemsGridProps) {
   const analysisContent: any[] = [];
   const analysisLoading = false;
   
-  // Debug content loading
-  console.log('Content Loading Debug:', {
-    userId,
-    analysisContent: analysisContent?.length || 0,
-    analysisLoading,
-    sampleAnalysis: analysisContent?.[0]?.id,
-    // Check if there are analysis items available but not attached
-    availableAnalysisCount: analysisContent?.length || 0,
-    sampleAnalysisData: analysisContent?.[0],
-    // Debug analysis content structure
-    analysisContentIds: analysisContent?.map(item => item.id) || [],
-    analysisContentTypes: analysisContent?.map(item => item.type) || [],
-    // Check if analysis items are being found
-    hasAnalysisItems: analysisContent && analysisContent.length > 0,
-  });
 
   // Convert project's attached items to unified format using the attachedItems data
   const attachedItems = useMemo(() => {
     const items = project.attachedItems as any;
-      console.log('ProjectItemsGrid Debug - Using attachedItems:', {
-    projectId: project._id,
-    attachedItems: project.attachedItems,
-    notes: project.attachedItems?.notes?.length || 0,
-    conversations: project.attachedItems?.conversations?.length || 0,
-    analysisItems: project.attachedItems?.analysisItems?.length || 0,
-    // Sample analysis items
-    sampleAnalysis: project.attachedItems?.analysisItems?.[0],
-    // Debug project analysis IDs
-    projectAnalysisIds: project.analysisIds || [],
-    projectAnalysisIdsLength: project.analysisIds?.length || 0,
-  });
 
     // Convert the attachedItems data to the expected format
     const convertedItems = {
@@ -98,7 +65,7 @@ export function ProjectItemsGrid({ project }: ProjectItemsGridProps) {
 
   // Navigation handlers for notes and conversations
   const handleNoteClick = (noteId: string) => {
-    router.push(`/dashboard/notes?noteId=${noteId}`);
+    router.push(`/dashboard/thinking_lab?noteId=${noteId}`);
   };
 
   const handleChatClick = (chatId: string) => {
@@ -111,17 +78,7 @@ export function ProjectItemsGrid({ project }: ProjectItemsGridProps) {
     
     const confirmed = window.confirm('Are you sure you want to remove this note from the project?');
     if (confirmed) {
-      try {
-        // Remove the note from the project
-        const success = await removeItemFromProject(project._id, 'note', noteId);
-        if (success) {
-          console.log('Note removed from project successfully');
-        } else {
-          console.error('Failed to remove note from project');
-        }
-      } catch (error) {
-        console.error('Error removing note from project:', error);
-      }
+      await removeContentFromProject(project._id, 'note', noteId);
     }
   };
 
@@ -130,7 +87,6 @@ export function ProjectItemsGrid({ project }: ProjectItemsGridProps) {
   // Gmail-related functions removed
 
   const handleAnalysisClick = (item: any) => {
-    console.log('Analysis item clicked:', item);
     // For now, just log the click. You can add navigation or modal opening here later
   };
 
@@ -140,34 +96,6 @@ export function ProjectItemsGrid({ project }: ProjectItemsGridProps) {
     ...(attachedItems.conversations || []).map(item => ({ ...item, itemType: 'conversation' as const })),
   ];
 
-  console.log('All Items Debug:', {
-    totalItems: allItems.length,
-    itemsByType: allItems.reduce((acc, item) => {
-      acc[item.itemType] = (acc[item.itemType] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>),
-    sampleItems: allItems.slice(0, 3).map(item => ({ 
-      id: item._id || item.id, 
-      type: item.itemType, 
-      title: item.title || item.subject || item.data?.caption || 'Untitled' 
-    })),
-    // Check available analysis content
-    availableAnalysisContent: analysisContent?.length || 0,
-    sampleAvailableAnalysis: analysisContent?.[0],
-    // Debug analysis content structure
-    analysisContentIds: analysisContent?.map(item => item.id) || [],
-    analysisContentTypes: analysisContent?.map(item => item.type) || [],
-    // Debug attachedItems structure
-    attachedItemsKeys: Object.keys(attachedItems),
-    attachedItemsAnalysis: attachedItems.analysis,
-    attachedItemsAnalysisLength: attachedItems.analysis?.length || 0,
-    // Debug raw project data
-    rawProjectData: {
-      analysisIds: project.analysisIds,
-      attachedItemsKeys: Object.keys(project.attachedItems || {}),
-      attachedItemsAnalysisItems: project.attachedItems?.analysisItems,
-    },
-  });
 
 
 
@@ -268,14 +196,10 @@ export function ProjectItemsGrid({ project }: ProjectItemsGridProps) {
             // Social media item types removed
 
             if (item.itemType === 'analysis') {
-              console.log('Rendering analysis item:', item);
               const attachableItem = createAttachableItem(item, 'analysis');
-              console.log('Created attachable item:', attachableItem);
               const analysisData = processAnalysisData(attachableItem);
-              console.log('Processed analysis data:', analysisData);
-              
+
               const { title, summary, type, timestamp, status } = analysisData;
-              console.log('Analysis item details:', { title, summary, type, timestamp, status });
               
               return (
                 <div

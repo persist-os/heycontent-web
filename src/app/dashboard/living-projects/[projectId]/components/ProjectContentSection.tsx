@@ -13,6 +13,7 @@ import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
 import { cn } from '@/lib/utils';
+import { ContentCard, ContentCardData } from '@/components/command-palette';
 import { 
   ChevronDown, 
   ChevronUp, 
@@ -26,7 +27,6 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ContentTypeTabs } from './ContentTypeTabs';
-import { UnifiedContentCard } from './UnifiedContentCard';
 import { ProjectContentItem, ContentTypeFilter } from '@/convex/projectContentQueries';
 
 interface ProjectContentSectionProps {
@@ -87,21 +87,21 @@ export function ProjectContentSection({
     setIsSearchVisible(false);
   }, [activeTab]);
 
-  // Handle content actions
-  const handleContentOpen = (contentId: string, contentType: string) => {
-    // Navigation logic implemented in UnifiedContentCard
-    console.log(`Opening ${contentType} with ID: ${contentId}`);
-  };
+  // Convert ProjectContentItem to ContentCardData
+  const convertToCardData = (item: ProjectContentItem): ContentCardData => {
+    return {
+      id: item.id,
+      type: item.type as any,
+      title: item.title,
+      content: item.preview,
+      metadata: item.metadata
+    }
+  }
 
-  const handleContentEdit = (contentId: string, contentType: string) => {
-    // Edit logic will be implemented with mutations
-    console.log(`Editing ${contentType} with ID: ${contentId}`);
-  };
-
-  const handleContentDelete = (contentId: string, contentType: string) => {
-    // Delete logic will be implemented with mutations
-    console.log(`Deleting ${contentType} with ID: ${contentId}`);
-  };
+  // Handle card click
+  const handleCardClick = (content: ContentCardData) => {
+    console.log(`Opening ${content.type} with ID: ${content.id}`)
+  }
 
   // Get content type icon
   const getContentTypeIcon = (type: string) => {
@@ -184,25 +184,21 @@ export function ProjectContentSection({
     return (
       <div 
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-6"
-        role="grid"
         aria-label={`Project content: ${displayData.length} items`}
       >
         <AnimatePresence>
           {displayData.map((content: ProjectContentItem, index: number) => (
             <motion.div
               key={content.id}
-              role="gridcell"
-              aria-label={`${content.type} content item`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ delay: index * 0.05 }}
             >
-              <UnifiedContentCard
-                content={content}
-                onOpen={handleContentOpen}
-                onEdit={handleContentEdit}
-                onDelete={handleContentDelete}
+              <ContentCard
+                content={convertToCardData(content)}
+                onClick={handleCardClick}
+                showMetadata={true}
               />
             </motion.div>
           ))}
@@ -225,9 +221,10 @@ export function ProjectContentSection({
     <div className={cn("border-t border-border/20", className)}>
       {/* Collapsible Header with enhanced accessibility */}
       <button
+        type="button"
         onClick={onToggle}
         className="w-full px-6 py-4 flex items-center justify-between bg-background hover:bg-muted/20 transition-colors group focus:outline-none focus:ring-2 focus:ring-accent/20 focus:ring-offset-2"
-        aria-expanded={isOpen}
+        aria-expanded={isOpen ? "true" : "false"}
         aria-controls="project-content-section"
         aria-describedby="project-content-description"
       >
@@ -252,7 +249,7 @@ export function ProjectContentSection({
             }}
             className="p-2 rounded-lg hover:bg-muted/30 transition-colors focus:outline-none focus:ring-2 focus:ring-accent/20"
             aria-label={`${isSearchVisible ? 'Hide' : 'Show'} search`}
-            aria-expanded={isSearchVisible}
+            aria-expanded={isSearchVisible ? "true" : "false"}
           >
             <Search className="w-4 h-4 text-muted-foreground" />
           </button>

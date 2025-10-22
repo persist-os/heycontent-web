@@ -16,11 +16,14 @@ import { SearchHelp } from './command-palette/SearchHelp';
 import { ActiveFilters } from './command-palette/ActiveFilters';
 import { CommandHistory } from './command-palette/types';
 import { FeedbackModal } from './feedback-modal';
+import { T } from '@/components/translation';
+import { useLanguagePreference, useTranslation } from '@/hooks/useTranslation';
 
 export function CommandPalette() {
   const pathname = usePathname();
   const { isInlineReplyActive } = useInlineReply();
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const { language } = useLanguagePreference();
   const {
     isOpen,
     setIsOpen,
@@ -40,6 +43,14 @@ export function CommandPalette() {
   const inputRef = useRef<HTMLInputElement>(null);
   const isSlashCommand = input.startsWith('/');
   const router = useRouter();
+
+  // Get translated placeholder text
+  const { text: placeholderText } = useTranslation('Type / for commands or search...', {
+    context: 'command_palette.placeholder',
+    targetLang: language,
+    enabled: true,
+  });
+
 
   // Listen for feedback modal events
   useEffect(() => {
@@ -89,7 +100,7 @@ export function CommandPalette() {
     return (
       <div className="border-t border-border">
         <div className="px-4 py-2 text-xs font-medium text-muted-foreground">
-          Available Commands
+          <T context="command_palette.section.available_commands">Available Commands</T>
         </div>
         {availableCommands.map((cmd, index) => (
           <button
@@ -123,14 +134,14 @@ export function CommandPalette() {
     ));
     const contentResults = results.filter((r): r is SearchResult => 'type' in r && (
       r.type === 'conversation' || r.type === 'note' || r.type === 'analytics' || 
-      r.type === 'insight' || r.type === 'audience' || r.type === 'partnership'
+      r.type === 'audience' || r.type === 'conversation_history'
     ));
 
     return (
       <div className="py-2">
         <div className="mb-4">
           <div className="px-4 py-1 text-xs font-medium text-muted-foreground">
-            Ask Content
+            <T context="command_palette.section.ask_content">Ask Content</T>
           </div>
           <button
             className="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-accent/10 transition-colors"
@@ -142,10 +153,10 @@ export function CommandPalette() {
             <Send className="w-5 h-5 text-primary" />
             <div className="flex-1">
               <div className="text-base font-medium text-primary">
-                Ask Content "{input}"
+                <T context="command_palette.action.ask_content">Ask Content</T> "{input}"
               </div>
               <p className="text-sm text-muted-foreground">
-                Start a conversation about your content
+                <T context="command_palette.help.start_conversation">Start a conversation about your content</T>
               </p>
             </div>
           </button>
@@ -154,7 +165,7 @@ export function CommandPalette() {
         {commands.length > 0 && (
           <div className="mb-4">
             <div className="px-4 py-1 text-xs font-medium text-muted-foreground">
-              Commands
+              <T context="command_palette.section.commands">Commands</T>
             </div>
             {commands.map((command, index) => (
               <CommandItem
@@ -171,7 +182,7 @@ export function CommandPalette() {
         {contentResults.length > 0 && (
           <div>
             <div className="px-4 py-1 text-xs font-medium text-muted-foreground">
-              Content
+              <T context="command_palette.section.content">Content</T>
             </div>
             {contentResults.map((result, index) => (
               <SearchResultItem
@@ -197,13 +208,13 @@ export function CommandPalette() {
     <>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-5xl min-h-[700px] max-h-[90vh] w-full p-0 bg-background rounded-2xl shadow-2xl border border-border flex flex-col overflow-hidden">
-          <DialogTitle className="sr-only">Command Palette</DialogTitle>
+          <DialogTitle className="sr-only"><T context="command_palette.title">Command Palette</T></DialogTitle>
           <div className="flex items-center px-4 pt-4 pb-2 border-b border-border">
             <Search className="w-5 h-5 text-muted-foreground mr-2" />
             <input
               ref={inputRef}
               className="flex-1 bg-transparent outline-none text-lg py-2"
-              placeholder="Type / for commands or search..."
+              placeholder={placeholderText}
               value={input}
               onChange={(e) => {
                 setInput(e.target.value);
@@ -223,7 +234,9 @@ export function CommandPalette() {
             {isSearching && input && (
               <div className="px-4 py-8 text-center">
                 <div className="animate-spin w-6 h-6 border-2 border-accent border-t-transparent rounded-full mx-auto mb-2"></div>
-                <p className="text-sm text-muted-foreground">Searching your content...</p>
+                <p className="text-sm text-muted-foreground">
+                  <T context="command_palette.status.searching">Searching your content...</T>
+                </p>
               </div>
             )}
 
@@ -235,7 +248,7 @@ export function CommandPalette() {
               <div className="py-2 border-b border-border">
                 <div className="px-4 py-1 text-xs font-medium text-muted-foreground flex items-center gap-1">
                   <Clock className="w-3 h-3" />
-                  Recent
+                  <T context="command_palette.section.recent">Recent</T>
                 </div>
                 {recentCommands.map((command: CommandType, index: number) => (
                   <CommandItem
@@ -256,7 +269,7 @@ export function CommandPalette() {
                   {commandGroups.map((group) => (
                     <div key={group.category} className="mb-4">
                       <div className="px-4 py-1 text-xs font-medium text-muted-foreground">
-                        {group.title}
+                        <T context={`command_palette.section.${group.category}`}>{group.title}</T>
                       </div>
                       {group.commands.map((command: CommandType, index: number) => (
                         <CommandItem
@@ -274,7 +287,7 @@ export function CommandPalette() {
                   <div className="py-2 border-t border-border">
                     <div className="px-4 py-1 text-xs font-medium text-muted-foreground flex items-center gap-1">
                       <History className="w-3 h-3" />
-                      History
+                      <T context="command_palette.section.history">History</T>
                     </div>
                     {history.slice(0, 5).map((item: CommandHistory, index: number) => (
                       <CommandItem
@@ -291,10 +304,10 @@ export function CommandPalette() {
           </div>
 
           <div className="px-4 py-2 border-t border-border text-xs text-muted-foreground">
-            Type <kbd className="px-1 py-0.5 bg-muted rounded">/</kbd> for commands •{' '}
-            <kbd className="px-1 py-0.5 bg-muted rounded">↑↓</kbd> to navigate •{' '}
-            <kbd className="px-1 py-0.5 bg-muted rounded">Enter</kbd> to select •{' '}
-            <kbd className="px-1 py-0.5 bg-muted rounded">type:</kbd> to filter
+            <T context="command_palette.help.footer">Type</T> <kbd className="px-1 py-0.5 bg-muted rounded">/</kbd> <T context="command_palette.help.for_commands">for commands</T> •{' '}
+            <kbd className="px-1 py-0.5 bg-muted rounded">↑↓</kbd> <T context="command_palette.help.to_navigate">to navigate</T> •{' '}
+            <kbd className="px-1 py-0.5 bg-muted rounded">Enter</kbd> <T context="command_palette.help.to_select">to select</T> •{' '}
+            <kbd className="px-1 py-0.5 bg-muted rounded">type:</kbd> <T context="command_palette.help.to_filter">to filter</T>
           </div>
         </DialogContent>
       </Dialog>
