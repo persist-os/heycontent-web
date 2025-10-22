@@ -273,19 +273,42 @@ app.post("/api/api-keys", async (c) => {
   if (!user_id || !key_hash) {
     return c.json({ error: "Missing user_id or key_hash" }, 400);
   }
-  try {
-    await ctx.runMutation(api.apiKeysMutations.insert_api_key, {
-      user_id,
-      key_hash,
-      scopes,
-      rate_tier,
-      clientType: clientType || "web", // Default to "web" if not specified
-    });
-    return c.json({ success: true }, 201); // 201 Created status
-  } catch (error) {
-    console.error("Failed to create API key:", error);
-    return c.json({ success: false, error: "Failed to create API key" }, 500);
+  
+  // Retry logic with exponential backoff for OCC conflicts
+  const maxRetries = 3;
+  let lastError;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      await ctx.runMutation(api.apiKeysMutations.insert_api_key, {
+        user_id,
+        key_hash,
+        scopes,
+        rate_tier,
+        clientType: clientType || "web",
+      });
+      return c.json({ success: true }, 201);
+    } catch (error: any) {
+      lastError = error;
+      
+      // Check if it's an OCC error (Convex error code 1)
+      const isOCCError = error?.message?.includes("changed while this mutation was being run") ||
+                         error?.message?.includes("https://docs.convex.dev/error#1");
+      
+      if (isOCCError && attempt < maxRetries - 1) {
+        // Exponential backoff: 50ms, 100ms, 200ms
+        const delay = 50 * Math.pow(2, attempt);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      
+      // Non-OCC error or final attempt - fail
+      break;
+    }
   }
+  
+  console.error("Failed to create API key after retries:", lastError);
+  return c.json({ success: false, error: "Failed to create API key" }, 500);
 });
 
 // Validate API key

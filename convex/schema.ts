@@ -380,7 +380,9 @@ export default defineSchema({
     rate_tier: v.optional(v.string()),
     scopes: v.optional(v.array(v.string())),
     status: v.optional(v.string()),
-  }),
+  })
+    .index("by_user_id", ["user_id"])
+    .index("by_user_and_client", ["user_id", "clientType"]),
 
   // Rate Limits
   rate_limits: defineTable({

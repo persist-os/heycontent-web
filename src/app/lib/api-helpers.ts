@@ -128,8 +128,17 @@ export async function waitForAuthReady(retries: number = 10, interval: number = 
 
 /**
  * Get API key from cookies or request a new one
+ * Implements request deduplication to prevent React StrictMode double-calls
  */
+let apiKeyRequestPromise: Promise<string | null> | null = null;
+
 export async function getApiKey(): Promise<string | null> {
+  // Request deduplication: Reuse in-flight request if exists
+  if (apiKeyRequestPromise) {
+    return apiKeyRequestPromise;
+  }
+  
+  apiKeyRequestPromise = (async () => {
   let needsRefresh = false;
   try {
     const storedApiKey = Cookies.get('apiKey');
@@ -251,6 +260,14 @@ export async function getApiKey(): Promise<string | null> {
       throw error;
     }
     throw new APIError('No valid API key available. Please contact support.');
+  }
+  })();
+  
+  try {
+    return await apiKeyRequestPromise;
+  } finally {
+    // Clear promise after completion to allow future requests
+    apiKeyRequestPromise = null;
   }
 }
 
