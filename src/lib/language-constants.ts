@@ -66,6 +66,6 @@ export const LANGUAGES = [
 ] as const;
 
 export const POPULAR_LANGUAGES = [
-  'en', 'es', 'zh', 'hi', 'ar', 'fr', 'pt', 'ru', 'ja', 'ko', 'de', 'it'
+  'en', 'ko', 'es', 'zh', 'hi', 'ar', 'fr', 'pt', 'ru', 'ja', 'de', 'it'
 ] as const;
 

@@ -73,8 +73,8 @@ export function LanguageToggle() {
             <span className="sr-only">Toggle language</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-[240px] max-h-[500px] overflow-hidden flex flex-col">
-          <div className="px-2 py-2 sticky top-0 bg-background">
+        <DropdownMenuContent align="end" className="min-w-[240px] max-h-[600px] flex flex-col">
+          <div className="px-2 py-2 sticky top-0 bg-background z-10 border-b">
             <div className="relative">
               <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -87,13 +87,13 @@ export function LanguageToggle() {
             </div>
           </div>
           
-          {!searchQuery && (
-            <>
-              <div className="px-2 py-1 text-xs font-medium text-muted-foreground">Popular</div>
-              <div className="overflow-y-auto max-h-[180px]">
+          <div className="overflow-y-auto flex-1">
+            {!searchQuery && (
+              <>
+                <div className="px-2 py-2 text-xs font-medium text-muted-foreground sticky top-0 bg-background">Popular</div>
                 {popularLanguages.map((lang) => (
                   <DropdownMenuItem 
-                    key={lang.code}
+                    key={`popular-${lang.code}`}
                     onClick={() => {
                       setLanguage(lang.code).catch(err => {
                         console.error('[LanguageToggle] Failed to set language:', err);
@@ -108,13 +108,11 @@ export function LanguageToggle() {
                     )}
                   </DropdownMenuItem>
                 ))}
-              </div>
-              <DropdownMenuSeparator />
-              <div className="px-2 py-1 text-xs font-medium text-muted-foreground">All Languages</div>
-            </>
-          )}
-          
-          <div className="overflow-y-auto flex-1">
+                <DropdownMenuSeparator />
+                <div className="px-2 py-2 text-xs font-medium text-muted-foreground sticky top-0 bg-background">All Languages ({LANGUAGES.length - popularLanguages.length} more)</div>
+              </>
+            )}
+            
             {filteredLanguages.map((lang) => {
               if (!searchQuery && POPULAR_LANGUAGES.includes(lang.code as typeof POPULAR_LANGUAGES[number])) {
                 return null

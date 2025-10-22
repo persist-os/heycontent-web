@@ -11,7 +11,7 @@ import { useNotes } from '@/app/context/notes-context';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useContentManager, usePlatformContent } from '@/app/hooks/use-content';
-import { getCurrentUserId } from '@/app/lib/api-helpers';
+import { getCurrentUserIdSync } from '@/app/lib/api-helpers';
 import { useProjects } from '../../hooks/useProjects';
 import {
   AttachableItem,
@@ -28,15 +28,15 @@ interface ProjectItemsGridProps {
 }
 
 export function ProjectItemsGrid({ project }: ProjectItemsGridProps) {
-  const userId = getCurrentUserId();
+  const userId = getCurrentUserIdSync();
   const { notes } = useNotes();
-  const { removeItemFromProject } = useProjects(userId);
+  const { removeContentFromProject } = useProjects(userId || undefined);
   const router = useRouter();
   
   // State for overlay modals - social media overlays removed
 
   // Initialize content manager
-  const contentManager = useContentManager(userId);
+  const contentManager = useContentManager(userId || undefined);
 
   // Fetch conversations
   const conversations = useQuery(
@@ -52,9 +52,6 @@ export function ProjectItemsGrid({ project }: ProjectItemsGridProps) {
   // Convert project's attached items to unified format using the attachedItems data
   const attachedItems = useMemo(() => {
     const items = project.attachedItems as any;
-
-    // Convert the attachedItems data to the expected format
-    const convertedItems = {
 
     // Convert the attachedItems data to the expected format
     const convertedItems = {
@@ -81,16 +78,7 @@ export function ProjectItemsGrid({ project }: ProjectItemsGridProps) {
     
     const confirmed = window.confirm('Are you sure you want to remove this note from the project?');
     if (confirmed) {
-      try {
-        // Remove the note from the project
-        const success = await removeItemFromProject(project._id, 'note', noteId);
-        if (success) {
-        } else {
-          console.error('Failed to remove note from project');
-        }
-      } catch (error) {
-        console.error('Error removing note from project:', error);
-      }
+      await removeContentFromProject(project._id, 'note', noteId);
     }
   };
 

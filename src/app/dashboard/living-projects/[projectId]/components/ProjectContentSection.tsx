@@ -221,9 +221,10 @@ export function ProjectContentSection({
     <div className={cn("border-t border-border/20", className)}>
       {/* Collapsible Header with enhanced accessibility */}
       <button
+        type="button"
         onClick={onToggle}
         className="w-full px-6 py-4 flex items-center justify-between bg-background hover:bg-muted/20 transition-colors group focus:outline-none focus:ring-2 focus:ring-accent/20 focus:ring-offset-2"
-        aria-expanded={String(isOpen)}
+        aria-expanded={isOpen ? "true" : "false"}
         aria-controls="project-content-section"
         aria-describedby="project-content-description"
       >
@@ -248,7 +249,7 @@ export function ProjectContentSection({
             }}
             className="p-2 rounded-lg hover:bg-muted/30 transition-colors focus:outline-none focus:ring-2 focus:ring-accent/20"
             aria-label={`${isSearchVisible ? 'Hide' : 'Show'} search`}
-            aria-expanded={String(isSearchVisible)}
+            aria-expanded={isSearchVisible ? "true" : "false"}
           >
             <Search className="w-4 h-4 text-muted-foreground" />
           </button>

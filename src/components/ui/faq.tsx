@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { T } from '@/components/translation'
+
 const faqData = [
   {
     question: "What's available right now?",
