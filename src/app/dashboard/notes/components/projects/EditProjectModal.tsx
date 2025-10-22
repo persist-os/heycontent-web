@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { T } from '@/components/translation/T';
+import { BaseModal } from '@/components/ui/base-modal';
 import { ProjectWithItems } from '../../types/project';
 
 interface EditProjectModalProps {
@@ -32,8 +32,7 @@ export function EditProjectModal({
     setDescription(project.description || '');
   }, [project]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleConfirm = async () => {
     if (!name.trim()) return;
 
     try {
@@ -53,66 +52,58 @@ export function EditProjectModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Edit Project</DialogTitle>
-          <DialogDescription>
-            Update your project name and description.
-          </DialogDescription>
-        </DialogHeader>
+    <BaseModal
+      isOpen={isOpen}
+      onClose={handleClose}
+      onConfirm={handleConfirm}
+      onCancel={handleClose}
+      title="Edit Project"
+      titleContext="project.modal.title.edit"
+      description="Update your project name and description."
+      descriptionContext="project.modal.description.edit"
+      confirmText="Update Project"
+      confirmContext="button.update_project"
+      cancelText="Cancel"
+      cancelContext="button.cancel"
+      isLoading={isUpdating}
+      loadingText="Updating..."
+      loadingContext="button.updating"
+      maxWidth="md"
+    >
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="edit-project-name" className="text-sm font-medium text-foreground/90">
+            <T context="project.modal.label.name">Project Name</T>
+          </Label>
+          <Input
+            id="edit-project-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Enter project name..."
+            disabled={isUpdating}
+            className="text-base py-3 border-border/50 focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-colors duration-300"
+            autoFocus
+          />
+        </div>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="edit-project-name">Project Name</Label>
-            <Input
-              id="edit-project-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter project name..."
-              disabled={isUpdating}
-              autoFocus
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="edit-project-description">Description (optional)</Label>
-            <Textarea
-              id="edit-project-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe your project..."
-              disabled={isUpdating}
-              rows={3}
-            />
-          </div>
-          
-          <div className="flex justify-end gap-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              disabled={isUpdating}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={!name.trim() || isUpdating}
-              className="flex items-center gap-2"
-            >
-              {isUpdating ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                'Update Project'
-              )}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+        <div className="space-y-2">
+          <Label htmlFor="edit-project-description" className="text-sm font-medium text-foreground/90">
+            <T context="project.modal.label.description">Description</T>
+            <span className="text-muted-foreground/60 ml-2 font-normal">
+              <T context="project.modal.label.optional">optional</T>
+            </span>
+          </Label>
+          <Textarea
+            id="edit-project-description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Describe your project..."
+            disabled={isUpdating}
+            className="text-base min-h-[90px] resize-none border-border/50 focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-colors duration-300"
+            rows={3}
+          />
+        </div>
+      </div>
+    </BaseModal>
   );
 } 

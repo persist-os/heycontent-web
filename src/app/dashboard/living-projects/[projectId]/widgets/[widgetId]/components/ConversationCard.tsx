@@ -30,13 +30,20 @@ export function ConversationCard({ conversation, onClick }: ConversationCardProp
 
   return (
     <div
-      className="border border-border/50 hover:border-border transition-all duration-300 cursor-pointer group"
+      className="
+        bg-card/50 backdrop-blur-sm
+        border border-border/40
+        rounded-2xl
+        hover:bg-card/80 hover:border-border/60 hover:shadow-lg hover:shadow-primary/5
+        transition-all duration-300
+        cursor-pointer group
+      "
       onClick={onClick}
     >
       <div className="p-6 space-y-4">
         {/* Title and Preview */}
         <div className="space-y-3">
-          <h3 className="text-xl font-light tracking-tight text-foreground group-hover:text-foreground/80 transition-colors">
+          <h3 className="text-xl font-light tracking-tight text-foreground group-hover:text-foreground transition-colors">
             {conversation.title || 'Untitled Conversation'}
           </h3>
           
@@ -69,7 +76,11 @@ export function ConversationCard({ conversation, onClick }: ConversationCardProp
 
         {/* Expandable Metadata */}
         {showMetadata && (
-          <div className="pt-4 space-y-3 border-t border-border/30">
+          <div className="
+            pt-4 space-y-3 border-t border-border/30
+            bg-muted/10 backdrop-blur-sm
+            rounded-xl p-4 -mx-2
+          ">
             <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
               <div>
                 <span className="text-muted-foreground">Started</span>
@@ -101,7 +112,7 @@ export function ConversationCard({ conversation, onClick }: ConversationCardProp
             {conversation.participants && conversation.participants.length > 0 && (
               <div className="pt-2">
                 <span className="text-sm text-muted-foreground">Participants</span>
-                <p className="text-xs text-foreground/60 mt-1">{conversation.participants.length} people</p>
+                <p className="text-xs text-foreground mt-1">{conversation.participants.length} people</p>
               </div>
             )}
           </div>

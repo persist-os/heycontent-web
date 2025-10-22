@@ -2,6 +2,7 @@ import React from 'react';
 import { OperationState } from '../hooks/useOperationState';
 import { RefinementState } from '../hooks/useRefinementState';
 import { useRotatingLoadingMessage } from '../../../../lib/loading-messages';
+import { T } from '@/components/translation/T';
 
 interface CommandPaletteFooterProps {
   operationState: OperationState;
@@ -22,7 +23,11 @@ export function CommandPaletteFooter({
             <span>{loadingMessage}</span>
           ) : (
             <span className="text-green-600 dark:text-green-400">
-              {operationState.operationType === 'generation' ? 'Content added to your note!' : 'Text successfully refined!'}
+              {operationState.operationType === 'generation' ? (
+                <T context="commandpalette.success">Content added to your note!</T>
+              ) : (
+                <T context="commandpalette.success">Text successfully refined!</T>
+              )}
             </span>
           )}
         </div>
@@ -34,15 +39,15 @@ export function CommandPaletteFooter({
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1">
             <kbd className="px-1 py-0.5 bg-muted rounded text-xs">↵</kbd>
-            accept
+            <T context="commandpalette.shortcut">accept</T>
           </span>
           <span className="flex items-center gap-1">
             <kbd className="px-1 py-0.5 bg-muted rounded text-xs">r</kbd>
-            retry
+            <T context="commandpalette.shortcut">retry</T>
           </span>
           <span className="flex items-center gap-1">
             <kbd className="px-1 py-0.5 bg-muted rounded text-xs">⌫</kbd>
-            back
+            <T context="commandpalette.shortcut">back</T>
           </span>
         </div>
       );
@@ -52,11 +57,11 @@ export function CommandPaletteFooter({
       <div className="flex items-center gap-3">
         <span className="flex items-center gap-1">
           <kbd className="px-1 py-0.5 bg-muted rounded text-xs">↑↓</kbd>
-          to navigate
+          <T context="commandpalette.shortcut">to navigate</T>
         </span>
         <span className="flex items-center gap-1">
           <kbd className="px-1 py-0.5 bg-muted rounded text-xs">↵</kbd>
-          to select
+          <T context="commandpalette.shortcut">to select</T>
         </span>
       </div>
     );
@@ -64,9 +69,9 @@ export function CommandPaletteFooter({
 
   const getEscapeText = () => {
     if (refinementState.showInternalPreview) {
-      return 'back / close';
+      return <T context="commandpalette.shortcut">back / close</T>;
     }
-    return 'to close';
+    return <T context="commandpalette.shortcut">to close</T>;
   };
 
   return (

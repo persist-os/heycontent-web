@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { Note, NoteType } from '../types/index';
-import { CentralizedHeader, createSaveAction, createStarAction, createLightbulbAction } from '@/components/ui/centralized-header';
-import { Sparkles, Share2 } from 'lucide-react';
+import { Lightbulb, Star, Share2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface NoteHeaderProps {
   note: Note;
@@ -32,57 +32,62 @@ export function NoteHeader({
   notes = [],
   onShare
 }: NoteHeaderProps) {
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-
-  // Generate breadcrumb for navigation stack (show last 2-3 notes)
-  const getBreadcrumb = () => {
-    if (!canNavigateBack || navigationStack.length === 0) {
-      return [];
-    }
-
-    const recentStack = navigationStack.slice(-2); // Show last 2 notes in the stack
-    return recentStack.map(entry => {
-      const stackNote = notes.find(n => String(n._id) === entry.noteId);
-      return {
-        label: stackNote ? (stackNote.title || 'Untitled') : 'Unknown',
-        onClick: () => onBack()
-      };
+  const handleToggleType = () => {
+    onUpdate(String(note._id), { 
+      type: note.type === 'idea_bank' ? 'content_script' : 'idea_bank' as NoteType 
     });
   };
 
-  // Create share action
-  const createShareAction = () => ({
-    id: 'share',
-    icon: Share2,
-    label: 'Share note',
-    onClick: onShare || (() => {}),
-    disabled: !onShare,
-    variant: 'ghost' as const,
-  });
-
-  // Create actions (removed save button)
-  const rightActions = [
-    createShareAction(),
-    createLightbulbAction(
-      note.type === 'idea_bank',
-      () => onUpdate(String(note._id), { type: note.type === 'idea_bank' ? 'content_script' : 'idea_bank' as NoteType })
-    ),
-    createStarAction(
-      note.important,
-      () => onUpdate(String(note._id), { important: !note.important })
-    )
-  ];
+  const handleToggleImportant = () => {
+    onUpdate(String(note._id), { important: !note.important });
+  };
 
   return (
-    <CentralizedHeader
-      title="Files"
-      showBackButton={false}
-      backButtonContext={backButtonContext}
-      onBack={onBack}
-      breadcrumbs={getBreadcrumb()}
-      rightActions={rightActions}
-      showThemeToggle={false}
-      variant="elevated"
-    />
+    <div className="sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border/30">
+      {/* Compact action bar */}
+      <div className="px-4 sm:px-6 py-2 flex items-center justify-end gap-2">
+        {/* Share button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onShare}
+          disabled={!onShare}
+          className="h-8 w-8 rounded-lg hover:bg-muted/50 transition-colors shrink-0"
+          title="Share note"
+        >
+          <Share2 className="h-4 w-4" />
+        </Button>
+
+        {/* Idea bank toggle */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleToggleType}
+          className={`h-8 w-8 rounded-lg transition-colors shrink-0 ${
+            note.type === 'idea_bank'
+              ? 'text-blue-400/80 hover:text-blue-400 hover:bg-blue-400/10'
+              : 'text-muted-foreground hover:text-blue-400/60 hover:bg-muted/50'
+          }`}
+          title={note.type === 'idea_bank' ? 'Idea Bank' : 'Make Idea Bank'}
+        >
+          <Lightbulb className="h-4 w-4" />
+        </Button>
+
+        {/* Important/star toggle */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleToggleImportant}
+          className={`h-8 w-8 rounded-lg transition-colors shrink-0 ${
+            note.important
+              ? 'text-amber-400/80 hover:text-amber-400 hover:bg-amber-400/10'
+              : 'text-muted-foreground hover:text-amber-400/60 hover:bg-muted/50'
+          }`}
+          title={note.important ? 'Important' : 'Mark as important'}
+        >
+          <Star className={`h-4 w-4 ${note.important ? 'fill-current' : ''}`} />
+        </Button>
+      </div>
+    </div>
   );
 }

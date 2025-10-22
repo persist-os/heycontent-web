@@ -12,9 +12,13 @@ interface UseNotepadHandlersProps {
   state: NotepadState
   refs: NotepadRefs
   setters: {
+    setIsEditingTitle: (editing: boolean) => void
     setIsNewNote: (isNew: boolean) => void
     setCurrentNoteId: (id: string | Id<"notes"> | null) => void
     setContent: (content: string) => void
+    setTitle: (title: string) => void
+    setRefinementPreview: (preview: string | null) => void
+    setIsRefining: (refining: boolean) => void
   }
   contextData: {
     updateNote: (noteId: string | Id<"notes">, updates: NoteUpdate) => Promise<Note | null>

@@ -4,6 +4,7 @@ import { api } from '@/convex/_generated/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 import { StarCard } from './StarCard';
+import { T } from '@/components/translation';
 
 interface StarsViewProps {
   userId?: string;
@@ -22,7 +23,9 @@ export const StarsView: React.FC<StarsViewProps> = ({ userId }) => {
     return (
       <div className="space-y-4">
         <div className="text-center py-12">
-          <p className="text-muted-foreground">Please log in to view your stars</p>
+          <p className="text-muted-foreground">
+            <T context="stars.login_required">Please log in to view your stars</T>
+          </p>
         </div>
       </div>
     );
@@ -52,24 +55,26 @@ export const StarsView: React.FC<StarsViewProps> = ({ userId }) => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-light text-foreground">Star Organisms</h2>
+        <h2 className="text-2xl font-light text-foreground"><T context="stars.heading">Stars</T></h2>
         <p className="text-sm text-muted-foreground font-light">
-          {sortedProjects.length} {sortedProjects.length === 1 ? 'star' : 'stars'} • {sortedProjects.filter(p => p.hasFingerprintId).length} intelligent • {sortedProjects.reduce((sum, p) => sum + p.totalContent, 0)} total content
+          {sortedProjects.length} <T context={`stars.count.star${sortedProjects.length === 1 ? '' : 's'}`}>{sortedProjects.length === 1 ? 'star' : 'stars'}</T> • {sortedProjects.filter(p => p.hasFingerprintId).length} <T context="stars.metadata.intelligent">intelligent</T> • {sortedProjects.reduce((sum, p) => sum + p.totalContent, 0)} <T context="stars.metadata.total_content">total content</T>
         </p>
       </div>
 
       {/* Projects Grid */}
       {sortedProjects.length === 0 ? (
         <div className="border border-border/50 rounded-xl p-12 text-center">
-          <h3 className="text-lg font-medium text-foreground mb-2">No Stars Yet</h3>
+          <h3 className="text-lg font-medium text-foreground mb-2">
+            <T context="stars.empty.title">No Stars Yet</T>
+          </h3>
           <p className="text-muted-foreground font-light mb-6">
-            Create your first project to birth a star organism
+            <T context="stars.empty.description">Create your first project to birth a star</T>
           </p>
           <button
             onClick={() => router.push('/dashboard/living-projects')}
             className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
           >
-            Create First Star →
+            <T context="stars.empty.action">Create First Star →</T>
           </button>
         </div>
       ) : (

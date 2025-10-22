@@ -4,6 +4,7 @@ import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Badge } from '../../../components/ui/badge';
 import { Check } from 'lucide-react';
+import { T } from '@/components/translation';
 
 interface PricingCardProps {
   name: string;
@@ -38,21 +39,25 @@ export function PricingCard({
       {popular && (
         <div className="absolute -top-4 left-0 right-0 flex justify-center">
           <Badge className="bg-primary text-primary-foreground px-4 py-1">
-            Most Popular
+            <T context="pricingCard.mostPopular">Most Popular</T>
           </Badge>
         </div>
       )}
       
       <CardHeader className="text-center pb-8 pt-6">
-        <CardTitle className="text-2xl font-bold">{name}</CardTitle>
+        <CardTitle className="text-2xl font-bold">
+          <T context={`pricingCard.${name.toLowerCase()}.name`}>{name}</T>
+        </CardTitle>
         <div className="mt-4">
           <span className="text-5xl font-bold">{displayPrice}</span>
           {displaySubtext && (
-            <span className="text-muted-foreground text-lg ml-2">{displaySubtext}</span>
+            <span className="text-muted-foreground text-lg ml-2">
+              <T context={`pricingCard.${showAnnual ? 'year' : 'month'}`}>{displaySubtext}</T>
+            </span>
           )}
         </div>
         <CardDescription className="mt-4 text-base">
-          {description}
+          <T context={`pricingCard.${name.toLowerCase()}.description`}>{description}</T>
         </CardDescription>
       </CardHeader>
       
@@ -61,7 +66,9 @@ export function PricingCard({
           {features.map((feature, index) => (
             <li key={index} className="flex items-start gap-3">
               <Check className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-              <span className="text-sm">{feature}</span>
+              <span className="text-sm">
+                <T context={`pricingCard.${name.toLowerCase()}.feature${index + 1}`}>{feature}</T>
+              </span>
             </li>
           ))}
         </ul>
@@ -74,7 +81,7 @@ export function PricingCard({
             className="w-full"
             variant={popular ? 'default' : 'outline'}
           >
-            {ctaText}
+            <T context={`pricingCard.${name.toLowerCase()}.cta`}>{ctaText}</T>
           </Button>
         </Link>
       </CardFooter>

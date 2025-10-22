@@ -2,6 +2,7 @@ import React from 'react';
 import { Card } from './card';
 import { AutoScalingText } from './auto-scaling-text';
 import { cn } from '@/lib/utils';
+import { T } from '@/components/translation';
 
 interface InsightCardProps {
   title: string;
@@ -68,7 +69,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
           'font-medium text-foreground group-hover:text-primary leading-tight transition-colors duration-300 line-clamp-2 flex-shrink-0',
           variant === 'compact' ? 'text-sm mb-2' : 'text-sm sm:text-base mb-2'
         )}>
-          {title}
+          <T context="insight.title">{title}</T>
         </h3>
         
         {/* Description with auto-scaling text */}
@@ -78,6 +79,8 @@ export const InsightCard: React.FC<InsightCardProps> = ({
             maxFontSize={maxFontSize}
             minFontSize={minFontSize}
             responsive={responsive}
+            enableTranslation={true}
+            context="insight.description"
           />
         </div>
 

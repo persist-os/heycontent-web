@@ -8,6 +8,7 @@ import { CopyButton } from '@/components/ui/copy-button'
 import React, { useState, useEffect } from 'react'
 import { ContentRenderer } from './ContentRenderer'
 import { FileAttachmentRenderer } from '@/components/ui/FileAttachmentRenderer'
+import { useTranslation } from '@/hooks/useTranslation'
 
 interface MessageBubbleProps {
   message: Message
@@ -47,6 +48,14 @@ export function MessageBubble({
   const isUser = message.role === 'user'
   const [selectedText, setSelectedText] = useState('')
   const [showQuoteButton, setShowQuoteButton] = useState(false)
+  
+  // Translations for tooltips
+  const { text: quoteTooltip } = useTranslation(`Quote "${selectedText.slice(0, 30)}..."`, {
+    context: 'message.quote_selection'
+  })
+  const { text: sendToNotepadTooltip } = useTranslation('Send full message to notepad', {
+    context: 'message.quote_to_notepad'
+  })
 
   // Minimal selection detection - don't interfere with native behavior
   useEffect(() => {
@@ -87,7 +96,7 @@ export function MessageBubble({
           <button
             onClick={handleQuoteText}
             className="hover:bg-primary/90 transition-all duration-200 transform hover:scale-105"
-            title={`Quote "${selectedText.slice(0, 30)}..."`}
+            title={quoteTooltip}
           >
             <Quote className="w-4 h-4" />
           </button>
@@ -155,7 +164,7 @@ export function MessageBubble({
           <button
             onClick={() => onQuoteToNotepad(message.content)}
             className="w-8 h-8 p-2 hover:bg-background/80 rounded opacity-70 hover:opacity-100 flex items-center justify-center"
-            title="Send full message to notepad"
+            title={sendToNotepadTooltip}
           >
             <Quote className="w-5 h-5" />
           </button>

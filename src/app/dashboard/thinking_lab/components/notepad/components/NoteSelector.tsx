@@ -4,6 +4,8 @@ import React from 'react'
 import { Plus, FileText } from 'lucide-react'
 import { SharedDropdown } from './SharedDropdown'
 import type { Id } from "@/convex/_generated/dataModel"
+import { T } from '@/components/translation'
+import { useTranslation } from '@/hooks/useTranslation'
 
 interface NoteSelectorProps {
   currentNoteId: string | Id<"notes"> | null
@@ -20,6 +22,10 @@ export function NoteSelector({
   onSwitchNote,
   isMobile = false 
 }: NoteSelectorProps) {
+  const { text: placeholderText } = useTranslation('Select note', {
+    context: 'selector.note'
+  });
+  
   const maxNotesToShow = isMobile ? 6 : 8
 
   // Ensure the current note is always included in the options
@@ -48,14 +54,14 @@ export function NoteSelector({
   const options = [
     {
       value: 'new',
-      label: 'Start new note',
-      description: 'Create a fresh note',
+      label: <T context="note_selector.new">Start new note</T>,
+      description: <T context="note_selector.new_desc">Create a fresh note</T>,
       icon: <Plus className="w-3.5 h-3.5" />,
       color: 'bg-blue-500/80'
     },
     ...notesToShow.map((note, index) => ({
       value: note._id,
-      label: note.title || 'Untitled',
+      label: note.title || <T context="note_selector.untitled">Untitled</T>,
       description: note.type?.replace('_', ' ') || 'idea bank',
       icon: <FileText className="w-3.5 h-3.5" />,
       color: index % 3 === 0 ? 'bg-blue-500/80' : 
@@ -80,7 +86,7 @@ export function NoteSelector({
       value={selectedValue}
       options={options}
       onSelect={handleSelect}
-      placeholder="Select note"
+      placeholder={placeholderText}
       isMobile={isMobile}
       width={isMobile ? "w-36 max-w-36" : "w-44 max-w-44 lg:w-48 lg:max-w-48"}
       triggerClassName="min-w-0 flex-shrink-0 h-8"

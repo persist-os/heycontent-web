@@ -6,6 +6,7 @@ import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { toast } from 'sonner';
+import { T } from '@/components/translation';
 
 interface CrystalsViewProps {
   recentCrystals?: any[]; // Legacy prop for fallback
@@ -49,6 +50,7 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
   };
 
   const handleDelete = async () => {
+    // Note: confirm() dialog cannot be easily translated, consider custom modal in future
     if (!confirm('Are you sure you want to delete this crystal? This action cannot be undone.')) {
       return;
     }
@@ -191,7 +193,7 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
               </h4>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span className="px-2 py-1 bg-muted/30 rounded-full">
-                  {getTypeLabel(crystal.crystal_type)}
+                  <T context={`crystal.type.${crystal.crystal_type}`}>{getTypeLabel(crystal.crystal_type)}</T>
                 </span>
                 <span>•</span>
                 <span>{crystal.dimension}</span>
@@ -200,7 +202,7 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
             <div className="flex items-center gap-2 flex-shrink-0">
               {crystal.stability_trend && getStabilityIcon(crystal.stability_trend)}
               <span className={`text-xs px-2 py-1 rounded-full border ${getConfidenceColor(crystal.confidence_score)}`}>
-                {crystal.confidence_score?.replace('_', ' ')}
+                <T context={`crystal.confidence.${crystal.confidence_score}`}>{crystal.confidence_score?.replace('_', ' ')}</T>
               </span>
               
               {/* Edit/Delete Actions */}
@@ -253,7 +255,7 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
         {(crystal.core_insight || crystal.stable_trait) && (
           <div className="space-y-2 border-l-2 border-blue-400/30 pl-4">
             <h5 className="text-xs font-medium text-foreground uppercase tracking-wide">
-              Key Insight
+              <T context="crystal.section.key_insight">Key Insight</T>
             </h5>
             {isEditing ? (
               <textarea
@@ -276,13 +278,13 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1">
               <Users className="w-3 h-3" />
-              {crystal.observation_count} observations
+              {crystal.observation_count} <T context="crystal.metadata.observations">observations</T>
             </span>
-            <span>{crystal.time_span_days} days</span>
+            <span>{crystal.time_span_days} <T context="crystal.metadata.days">days</T></span>
             {crystal.usage_count > 0 && (
               <span className="flex items-center gap-1">
                 <Eye className="w-3 h-3" />
-                Used {crystal.usage_count}x
+                <T context="crystal.metadata.used">Used</T> {crystal.usage_count}x
               </span>
             )}
           </div>
@@ -294,7 +296,7 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
                 crystal.evidence_strength === 'moderate' ? 'bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300' :
                 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
               }`}>
-                {crystal.evidence_strength} evidence
+                <T context={`crystal.evidence_strength.${crystal.evidence_strength}`}>{crystal.evidence_strength}</T> <T context="crystal.metadata.evidence">evidence</T>
               </span>
             )}
           </div>
@@ -313,7 +315,7 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
                   <ChevronDown className="w-3 h-3" /> : 
                   <ChevronRight className="w-3 h-3" />
                 }
-                Evolution History ({crystal.evolution_history.length})
+                <T context="crystal.section.evolution_history">Evolution History</T> ({crystal.evolution_history.length})
               </button>
               
               {expandedSection === 'evolution' && (
@@ -351,7 +353,10 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
                       onClick={() => setShowAllEvolution(!showAllEvolution)}
                       className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 ml-5"
                     >
-                      {showAllEvolution ? 'Show less' : `Show all ${crystal.evolution_history.length} events`}
+                      {showAllEvolution ? 
+                        <T context="crystal.action.show_less">Show less</T> : 
+                        <><T context="crystal.action.show_all">Show all</T> {crystal.evolution_history.length} <T context="crystal.metadata.events">events</T></>
+                      }
                     </button>
                   )}
                 </div>
@@ -370,7 +375,7 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
                   <ChevronDown className="w-3 h-3" /> : 
                   <ChevronRight className="w-3 h-3" />
                 }
-                What This Means ({crystal.behavioral_implications.length})
+                <T context="crystal.section.what_this_means">What This Means</T> ({crystal.behavioral_implications.length})
               </button>
               
               {expandedSection === 'implications' && (
@@ -399,7 +404,7 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
                   <ChevronDown className="w-3 h-3" /> : 
                   <ChevronRight className="w-3 h-3" />
                 }
-                Direct Quotes ({crystal.supporting_quotes.length})
+                <T context="crystal.section.direct_quotes">Direct Quotes</T> ({crystal.supporting_quotes.length})
               </button>
               
               {expandedSection === 'quotes' && (
@@ -425,8 +430,8 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
                   <ChevronDown className="w-3 h-3" /> : 
                   <ChevronRight className="w-3 h-3" />
                 }
-                Source Insights ({crystal.shardIds.length})
-                {shardsLoading && <span className="text-muted-foreground">Loading...</span>}
+                <T context="crystal.section.source_insights">Source Insights</T> ({crystal.shardIds.length})
+                {shardsLoading && <span className="text-muted-foreground"><T context="crystal.status.loading">Loading...</T></span>}
               </button>
               
               {expandedSection === 'shards' && hasShards && (
@@ -442,14 +447,14 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
                       <div className="space-y-1">
                         {shard.what_it_reveals && (
                           <div>
-                            <span className="text-xs font-medium text-foreground">Shows: </span>
+                            <span className="text-xs font-medium text-foreground"><T context="crystal.shard.shows">Shows:</T> </span>
                             <span className="text-xs text-muted-foreground">{shard.what_it_reveals}</span>
                           </div>
                         )}
                         
                         {shard.why_significant && (
                           <div>
-                            <span className="text-xs font-medium text-foreground">Why Important: </span>
+                            <span className="text-xs font-medium text-foreground"><T context="crystal.shard.why_important">Why Important:</T> </span>
                             <span className="text-xs text-muted-foreground">{shard.why_significant}</span>
                           </div>
                         )}
@@ -465,11 +470,11 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
                             shard.confidence_level === 'medium' ? 'bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300' :
                             'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
                           }`}>
-                            {shard.confidence_level}
+                            <T context={`crystal.shard.confidence.${shard.confidence_level}`}>{shard.confidence_level}</T>
                           </span>
                           {shard.source_type && (
                             <span className="text-xs text-muted-foreground">
-                              from {shard.source_type}
+                              <T context="crystal.shard.from">from</T> {shard.source_type}
                             </span>
                           )}
                         </div>
@@ -487,7 +492,10 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
                       onClick={() => setShowAllShards(!showAllShards)}
                       className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                     >
-                      {showAllShards ? 'Show less' : `Show more insights`}
+                      {showAllShards ? 
+                        <T context="crystal.action.show_less">Show less</T> : 
+                        <T context="crystal.action.show_more_insights">Show more insights</T>
+                      }
                     </button>
                   )}
                 </div>
@@ -506,7 +514,7 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
                   <ChevronDown className="w-3 h-3" /> : 
                   <ChevronRight className="w-3 h-3" />
                 }
-                Deep Analysis
+                <T context="crystal.section.deep_analysis">Deep Analysis</T>
               </button>
               
               {expandedSection === 'analysis' && (
@@ -560,13 +568,13 @@ export const CrystalsView: React.FC<CrystalsViewProps> = ({ recentCrystals }) =>
     <div className="space-y-6">
       <div className="space-y-2">
         <h3 className="text-2xl font-light tracking-tight text-foreground">
-          Knowledge Crystals
+          <T context="crystal.heading">Knowledge Crystals</T>
         </h3>
         <p className="text-muted-foreground leading-relaxed">
-          Consolidated patterns and behavioral insights from your interactions
+          <T context="crystal.description">Consolidated patterns and behavioral insights from your interactions</T>
           {displayCrystals.length > 0 && (
             <span className="ml-2 text-sm">
-              • {displayCrystals.length} crystal{displayCrystals.length !== 1 ? 's' : ''}
+              • {displayCrystals.length} <T context="crystal.count">crystal{displayCrystals.length !== 1 ? 's' : ''}</T>
             </span>
           )}
         </p>
@@ -603,7 +611,7 @@ export const CrystalsView: React.FC<CrystalsViewProps> = ({ recentCrystals }) =>
         </>
       ) : (
         <div className="text-center py-12 text-muted-foreground">
-          <p>No crystals found. Start a conversation to generate insights!</p>
+          <p><T context="crystal.empty_state">No crystals found. Start a conversation to generate insights!</T></p>
         </div>
       )}
     </div>

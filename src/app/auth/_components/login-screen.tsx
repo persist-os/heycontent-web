@@ -5,6 +5,7 @@ import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { getFirebaseAuth } from '@/app/lib/firebase';
 import { GoogleSignInButton } from '@/components/auth/google-signin-button';
+import { T } from '@/components/translation';
 
 import { Logo } from '@/components/ui/logo';
 import { motion } from "framer-motion";
@@ -140,18 +141,22 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, reason }) => {
           >
             <Logo className="h-12 mx-auto mb-4" />
           </motion.div>
-          <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
-          <p className="text-muted-foreground mt-2">Sign in to your account</p>
+          <h1 className="text-2xl font-bold text-foreground">
+            <T context="heading.auth.welcome-back">Welcome back</T>
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            <T context="message.auth.sign-in">Sign in to your account</T>
+          </p>
         </div>
         <div className="space-y-6 bg-background/80 backdrop-blur-sm shadow-xl rounded-2xl p-8 border border-border">
           {reason === 'session_expired' && (
             <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-xl text-yellow-800 dark:text-yellow-200 text-sm">
-              Your session has expired. Please sign in again.
+              <T context="message.auth.session-expired">Your session has expired. Please sign in again.</T>
             </div>
           )}
           {reason === 'logged_in_elsewhere' && (
             <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl text-blue-800 dark:text-blue-200 text-sm">
-              You've been logged out because you signed in from another device. Please sign in again.
+              <T context="message.auth.logged-in-elsewhere">You've been logged out because you signed in from another device. Please sign in again.</T>
             </div>
           )}
           
@@ -174,7 +179,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, reason }) => {
               <div className="w-full border-t border-border"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-background text-muted-foreground">or sign in with email</span>
+              <span className="px-2 bg-background text-muted-foreground">
+                <T context="message.auth.or-sign-in-email">or sign in with email</T>
+              </span>
             </div>
           </div>
 
@@ -183,7 +190,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, reason }) => {
             <summary className="cursor-pointer list-none">
               <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
                 <Mail className="w-4 h-4" />
-                <span>Use email and password</span>
+                <span>
+                  <T context="message.auth.use-email-password">Use email and password</T>
+                </span>
                 <svg 
                   className="w-4 h-4 transition-transform group-open:rotate-180" 
                   fill="none" 
@@ -197,7 +206,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, reason }) => {
             
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">
               <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Email</label>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              <T context="label.auth.email">Email</T>
+            </label>
             <div className="relative">
               <input
                 type="email"
@@ -212,7 +223,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, reason }) => {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Password</label>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              <T context="label.auth.password">Password</T>
+            </label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -239,11 +252,15 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, reason }) => {
                 className="w-full bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                 disabled={isLoading}
               >
-                {isLoading ? 'Signing in...' : 'Sign In'}
+                {isLoading ? (
+                  <T context="button.auth.signing-in">Signing in...</T>
+                ) : (
+                  <T context="button.auth.sign-in">Sign In</T>
+                )}
               </button>
               <div className="text-center">
                 <a href="/auth/forgot-password" className="text-sm text-blue-600 hover:text-blue-700 hover:underline">
-                  Forgot your password?
+                  <T context="link.auth.forgot-password">Forgot your password?</T>
                 </a>
               </div>
             </form>
@@ -252,7 +269,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, reason }) => {
           {/* Sign up link */}
           <div className="text-center pt-4 border-t border-border">
             <a href="/auth/register" className="text-sm text-muted-foreground hover:text-foreground">
-              Don't have an account? <span className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium">Sign up</span>
+              <T context="message.auth.no-account">Don't have an account?</T>{' '}
+              <span className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium">
+                <T context="link.auth.sign-up">Sign up</T>
+              </span>
             </a>
           </div>
         </div>

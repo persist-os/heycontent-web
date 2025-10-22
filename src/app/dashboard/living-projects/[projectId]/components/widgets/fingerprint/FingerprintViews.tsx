@@ -10,6 +10,7 @@ import { motion } from 'framer-motion'
 import { StatusIndicator, ActionButtons, ProgressBar } from './FingerprintComponents'
 import { StatusConfig, TABS, TabType } from './fingerprintConfig'
 import { GripVertical } from 'lucide-react'
+import { T } from '@/components/translation/T'
 
 interface CollapsedViewProps {
   fingerprint: any
@@ -46,7 +47,7 @@ export const CollapsedView = ({ fingerprint, statusConfig, completion, onExpand 
             {fingerprint.name}
           </motion.div>
           <div className="text-xs text-muted-foreground/60 font-light tracking-wide">
-            {completion}% formed
+            {completion}% <T context="fingerprint.collapsed.formed">formed</T>
           </div>
         </div>
       </div>
@@ -134,7 +135,7 @@ export const ExpandedView = ({
     initial={{ opacity: 0, scale: 0.96, y: 10 }}
     animate={{ opacity: 1, scale: 1, y: 0 }}
     transition={{ type: "spring", stiffness: 300, damping: 30 }}
-    className="cursor-grab bg-background/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-border/30 overflow-hidden relative"
+    className="cursor-grab bg-background/95 backdrop-blur-xl rounded-2xl border border-border/30 overflow-hidden relative"
     style={{ 
       width: `${modalSize.width}px`, 
       height: `${modalSize.height}px`,
@@ -150,7 +151,7 @@ export const ExpandedView = ({
             <div className="relative flex items-center gap-2">
               <StatusIndicator statusConfig={statusConfig} />
               <span className="text-xs font-medium text-muted-foreground/70 tracking-wide">
-                {statusConfig.label}
+                <T context={`fingerprint.status.${fingerprint.status || 'unknown'}`}>{statusConfig.label}</T>
               </span>
             </div>
             
@@ -216,8 +217,8 @@ export const ExpandedView = ({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 + index * 0.05 }}
         >
-          <div className="font-medium tracking-wide">{tab.label}</div>
-          <div className="text-xs text-muted-foreground/40 font-light">{tab.subtitle}</div>
+          <div className="font-medium tracking-wide"><T context={`fingerprint.tab.${tab.id}.label`}>{tab.label}</T></div>
+          <div className="text-xs text-muted-foreground/40 font-light"><T context={`fingerprint.tab.${tab.id}.subtitle`}>{tab.subtitle}</T></div>
           
           {activeTab === tab.id && (
             <motion.div 
@@ -258,14 +259,14 @@ export const ExpandedView = ({
       >
         <div className="flex items-center justify-between text-xs text-muted-foreground/40">
           <div>
-            DNA formed {new Date(fingerprint.created_at).toLocaleDateString('en-US', { 
+            <T context="fingerprint.footer.dna_formed">DNA formed</T> {new Date(fingerprint.created_at).toLocaleDateString('en-US', { 
               month: 'long', 
               day: 'numeric',
               year: 'numeric'
             })}
           </div>
           {fingerprint.intelligence_version && (
-            <div>Intelligence v{fingerprint.intelligence_version}</div>
+            <div><T context="fingerprint.footer.intelligence">Intelligence</T> v{fingerprint.intelligence_version}</div>
           )}
         </div>
       </motion.div>

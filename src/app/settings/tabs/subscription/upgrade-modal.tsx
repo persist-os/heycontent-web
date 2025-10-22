@@ -5,8 +5,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from '@/components/ui/button';
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/app/context/auth-context";
-import { getApiKey } from "@/app/lib/api-helpers";
+import { useQuery } from "convex/react";
+import { api } from "@/../convex/_generated/api";
 import { CheckoutForm } from './stripe-checkout';
+import * as apiHelpers from '@/app/lib/api-helpers';
 
 // Annual discount percentage
 const ANNUAL_DISCOUNT_PERCENT = 17;
@@ -49,48 +51,14 @@ export default function UpgradeModal({
   const { firebaseUser } = useAuth();
   const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">("monthly");
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [plans, setPlans] = useState<Record<string, BackendPlan> | null>(null);
-  const [loading, setLoading] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  // Fetch plans from our new API
-  useEffect(() => {
-    const fetchPlans = async () => {
-      if (!open) return;
-      
-      try {
-        setLoading(true);
-        const apiKey = await getApiKey();
-        if (!apiKey) {
-          throw new Error('No API key found. Please log in again.');
-        }
-        
-        const response = await fetch('/api/subscription/plans', {
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Failed to fetch plans: ${response.status} ${errorText}`);
-        }
-        
-        const responseData = await response.json();
-        
-        // Handle the nested data structure
-        const plansData = responseData.data || {};
-        setPlans(plansData);
-      } catch (error) {
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchPlans();
-  }, [open]);
+  // Fetch plans from Convex (cached, instant)
+  const convexPlans = useQuery(api.subscriptionPlansQueries.getAllPlans, {});
+  const plans = convexPlans || null;
+  const loading = convexPlans === undefined;
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -120,7 +88,7 @@ export default function UpgradeModal({
       
       // If no features, use the ones from the API response or create defaults
       if (features.length === 0 && intervalPlan.features) {
-        features = Object.values(intervalPlan.features).filter(f => typeof f === 'string');
+        features = Object.values(intervalPlan.features).filter((f): f is string => typeof f === 'string');
       }
       
       // If still no features, create default ones
@@ -134,7 +102,7 @@ export default function UpgradeModal({
       
       return {
         id,
-        name: plan.name || id.charAt(0).toUpperCase() + id.slice(1),
+        name: (plan as any).name || id.charAt(0).toUpperCase() + id.slice(1),
         price_id: intervalPlan.price_id || '',
         product_id: intervalPlan.product_id || '',
         currency: intervalPlan.currency || 'usd',
@@ -158,9 +126,9 @@ export default function UpgradeModal({
     
     // Handle free tier - create subscription via API
     if (planId === 'free') {
-      setLoading(true);
+      setIsProcessing(true);
       try {
-        const apiKey = await getApiKey();
+        const apiKey = await apiHelpers.getApiKey();
         if (!apiKey) {
           throw new Error('No API key found. Please log in again.');
         }
@@ -202,7 +170,7 @@ export default function UpgradeModal({
         console.error('Error creating free subscription:', error);
         // Handle error - could show a toast notification here
       } finally {
-        setLoading(false);
+        setIsProcessing(false);
       }
       return;
     }
@@ -212,14 +180,14 @@ export default function UpgradeModal({
     if (!priceId) {
       return;
     }
-    setLoading(true);
+    setIsProcessing(true);
     try {
       setSelectedPlanId(priceId);
       setShowCheckout(true);
       // Do not call onSelectPlan here; handle in checkout success/cancel
     } catch (error) {
     } finally {
-      setLoading(false);
+      setIsProcessing(false);
     }
   };
 
@@ -358,13 +326,13 @@ export default function UpgradeModal({
                     <Button
                       variant={selectedPlan === plan.id ? "default" : "outline"}
                       className="w-full mt-auto"
-                      disabled={loading}
+                      disabled={isProcessing}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleSelectPlan(plan.id);
                       }}
                     >
-                      {loading && selectedPlan === plan.id ? (
+                      {isProcessing && selectedPlan === plan.id ? (
                         <span className="flex items-center">
                           <Loader2 className="w-4 h-4 animate-spin mr-2" /> Processing...
                         </span>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { User, AtSign, Mail, ArrowLeft, ArrowRight } from 'lucide-react';
+import { T } from '@/components/translation';
 
 interface BasicInfoStepProps {
   name: string;
@@ -25,7 +26,9 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
   return (
     <div className="space-y-6">
       <div>
-        <label htmlFor="name" className="block text-sm font-medium text-foreground mb-2">Full Name</label>
+        <label htmlFor="name" className="block text-sm font-medium text-foreground mb-2">
+          <T context="label.auth.full-name">Full Name</T>
+        </label>
         <div className="relative">
           <input
             id="name"
@@ -41,7 +44,9 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
       </div>
 
       <div>
-        <label htmlFor="username" className="block text-sm font-medium text-foreground mb-2">Username</label>
+        <label htmlFor="username" className="block text-sm font-medium text-foreground mb-2">
+          <T context="label.auth.username">Username</T>
+        </label>
         <div className="relative">
           <input
             id="username"
@@ -57,7 +62,9 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
       </div>
 
       <div>
-        <label htmlFor="email" className="block text-sm font-medium text-foreground mb-2">Email</label>
+        <label htmlFor="email" className="block text-sm font-medium text-foreground mb-2">
+          <T context="label.auth.email">Email</T>
+        </label>
         <div className="relative">
           <input
             id="email"
@@ -79,7 +86,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
           className="flex-1 bg-secondary text-secondary-foreground py-3 rounded-xl hover:bg-secondary/80 transition-colors font-medium flex items-center justify-center"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
+          <T context="button.auth.back">Back</T>
         </button>
         <button
           type="button"
@@ -87,7 +94,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
           disabled={!name.trim() || !username.trim() || !email.trim()}
           className="flex-1 bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center"
         >
-          Continue
+          <T context="button.auth.continue">Continue</T>
           <ArrowRight className="w-4 h-4 ml-2" />
         </button>
       </div>

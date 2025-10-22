@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, Upload, X, MessageSquare, Bug, Lightbulb, Heart, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/app/context/auth-context';
 import { getApiKey } from '@/app/lib/api-helpers';
+import { T } from '@/components/translation';
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -146,14 +147,14 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MessageSquare className="w-5 h-5" />
-            Give Feedback
+            <T context="feedback.title">Give Feedback</T>
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
           {/* Feedback Type Selection */}
           <div className="space-y-3">
-            <Label>What type of feedback is this?</Label>
+            <Label><T context="feedback.type.label">What type of feedback is this?</T></Label>
             <div className="grid grid-cols-2 gap-3">
               {Object.entries(feedbackTypeConfig).map(([type, config]) => {
                 const Icon = config.icon;
@@ -170,9 +171,11 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                     <div className="flex items-center gap-3">
                       <Icon className={`w-5 h-5 ${config.color}`} />
                       <div className="text-left">
-                        <div className="font-medium">{config.label}</div>
+                        <div className="font-medium">
+                          <T context={`feedback.type.${type}.label`}>{config.label}</T>
+                        </div>
                         <div className="text-sm text-muted-foreground">
-                          {config.description}
+                          <T context={`feedback.type.${type}.description`}>{config.description}</T>
                         </div>
                       </div>
                     </div>
@@ -184,32 +187,32 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
 
           {/* Title Input */}
           <div className="space-y-2">
-            <Label htmlFor="feedback-title">Title *</Label>
+            <Label htmlFor="feedback-title"><T context="feedback.title.label">Title *</T></Label>
             <input
               id="feedback-title"
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Brief summary of your feedback"
+              placeholder={<T context="feedback.title.placeholder">Brief summary of your feedback</T>}
               className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
 
           {/* Description Input */}
           <div className="space-y-2">
-            <Label htmlFor="feedback-description">Description *</Label>
+            <Label htmlFor="feedback-description"><T context="feedback.description.label">Description *</T></Label>
             <Textarea
               id="feedback-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Please provide detailed feedback. What happened? What did you expect? How can we improve?"
+              placeholder={<T context="feedback.description.placeholder">Please provide detailed feedback. What happened? What did you expect? How can we improve?</T>}
               className="min-h-[120px] resize-none"
             />
           </div>
 
           {/* Screenshot Upload */}
           <div className="space-y-3">
-            <Label>Screenshots (optional)</Label>
+            <Label><T context="feedback.screenshots.label">Screenshots (optional)</T></Label>
             <div className="space-y-3">
               {/* Upload Button */}
               {screenshots.length < 3 && (
@@ -220,7 +223,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                   className="w-full"
                 >
                   <Upload className="w-4 h-4 mr-2" />
-                  Upload Screenshot
+                  <T context="feedback.screenshots.upload">Upload Screenshot</T>
                 </Button>
               )}
               
@@ -238,7 +241,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
               {screenshots.length > 0 && (
                 <div className="space-y-2">
                   <div className="text-sm text-muted-foreground">
-                    {screenshots.length}/3 screenshots
+                    <T context="feedback.screenshots.count">{screenshots.length}/3 screenshots</T>
                   </div>
                   <div className="grid grid-cols-1 gap-2">
                     {screenshots.map((file, index) => (
@@ -285,7 +288,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
             <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-md">
               <Heart className="w-4 h-4 text-green-500" />
               <span className="text-sm text-green-700">
-                Thank you for your feedback! We'll review it shortly.
+                <T context="feedback.success">Thank you for your feedback! We'll review it shortly.</T>
               </span>
             </div>
           )}
@@ -298,7 +301,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
               disabled={isSubmitting}
               className="flex-1"
             >
-              Cancel
+              <T context="feedback.cancel">Cancel</T>
             </Button>
             <Button
               onClick={handleSubmit}
@@ -308,10 +311,10 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Submitting...
+                  <T context="feedback.submitting">Submitting...</T>
                 </>
               ) : (
-                'Submit Feedback'
+                <T context="feedback.submit">Submit Feedback</T>
               )}
             </Button>
           </div>

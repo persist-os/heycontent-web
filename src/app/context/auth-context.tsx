@@ -7,8 +7,8 @@ declare global {
 }
 
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
-import { User, onAuthStateChanged } from 'firebase/auth';
-import { getFirebaseAuth } from '@/app/lib/firebase';
+import { User } from 'firebase/auth';
+import { authStateManager } from '@/app/lib/auth-state-manager';
 import { TokenRefreshService } from '@/app/lib/token-refresh-service';
 import { getValidToken, removeFirebaseToken } from '@/app/lib/firebase-token-manager';
 import { useAction } from 'convex/react';
@@ -34,6 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const isRedirecting = useRef(false);
   const lastUserId = useRef<string | null>(null);
+  const authInitialized = useRef(false);
 
   useEffect(() => {
     // Skip auth state changes on server side
@@ -42,24 +43,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     
+    // Prevent multiple initializations
+    if (authInitialized.current) {
+      return;
+    }
+    
     // Set the flag to indicate we're in a useEffect
     window.__FIREBASE_AUTH_IN_EFFECT = true;
+    authInitialized.current = true;
     
     let unsubscribe = () => {};
     try {
-      const auth = getFirebaseAuth();
       // Debug: log when auth instance is acquired
       if (window.__FIREBASE_DEBUG) {
         // eslint-disable-next-line no-console
-        console.log('[AUTH-CONTEXT] Firebase Auth instance acquired');
+        console.log('[AUTH-CONTEXT] Using centralized auth state manager');
       }
-      unsubscribe = onAuthStateChanged(
-        auth,
+      
+      // Use the centralized auth state manager to prevent multiple listeners
+      unsubscribe = authStateManager.subscribe(
         async (user) => {
           if (isRedirecting.current) return;
           if (window.__FIREBASE_DEBUG) {
             // eslint-disable-next-line no-console
-            console.log('[AUTH-CONTEXT] onAuthStateChanged fired. User:', user);
+            console.log('[AUTH-CONTEXT] Auth state changed. User:', user);
           }
           
           const previousUserId = lastUserId.current;
@@ -82,6 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setAuthLoading(false);
         }
       );
+      
     } catch (e) {
       setError('Firebase auth not initialized');
       setAuthLoading(false);
@@ -93,6 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       unsubscribe();
       window.__FIREBASE_AUTH_IN_EFFECT = false;
+      authInitialized.current = false;
     };
   }, []);
 

@@ -8,6 +8,7 @@ import { PricingFAQ } from './components/PricingFAQ';
 import Footer from '../../components/ui/Footer';
 import { Button } from '../../components/ui/button';
 import { Activity, Bell, Shield } from 'lucide-react';
+import { T } from '@/components/translation';
 
 // ISR: Revalidate every week for pricing updates
 export const revalidate = 604800;
@@ -91,16 +92,16 @@ export default function PricingPage() {
         <section className="pt-20 pb-12 px-4 sm:px-6 bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-background">
           <div className="max-w-6xl mx-auto text-center">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6">
-              Simple, Usage-Based Pricing
+              <T context="pricing.hero.heading">Simple, Usage-Based Pricing</T>
             </h1>
             <p className="text-xl sm:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto">
-              Pay only for what you use. Start free, scale as you grow.
+              <T context="pricing.hero.subheading">Pay only for what you use. Start free, scale as you grow.</T>
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/auth/register">
                 <Button size="lg" className="text-lg px-8">
-                  Start Free
-                  <span className="ml-2 text-sm opacity-80">No credit card required</span>
+                  <T context="pricing.hero.cta">Start Free</T>
+                  <span className="ml-2 text-sm opacity-80"><T context="pricing.hero.ctaSubtext">No credit card required</T></span>
                 </Button>
               </Link>
             </div>
@@ -118,10 +119,10 @@ export default function PricingPage() {
         <section className="py-16 px-4 sm:px-6 bg-slate-50 dark:bg-slate-900/30">
           <div className="max-w-5xl mx-auto">
             <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4">
-              What Counts as an API Call?
+              <T context="pricing.apiCalls.heading">What Counts as an API Call?</T>
             </h2>
             <p className="text-center text-muted-foreground mb-12 text-lg">
-              Clear, transparent usage tracking. No hidden charges.
+              <T context="pricing.apiCalls.subheading">Clear, transparent usage tracking. No hidden charges.</T>
             </p>
             <ApiCallBreakdown />
           </div>
@@ -131,37 +132,43 @@ export default function PricingPage() {
         <section className="py-16 px-4 sm:px-6">
           <div className="max-w-6xl mx-auto">
             <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4">
-              Stay in Control
+              <T context="pricing.control.heading">Stay in Control</T>
             </h2>
             <p className="text-center text-muted-foreground mb-12 text-lg">
-              Full transparency and control over your spending
+              <T context="pricing.control.subheading">Full transparency and control over your spending</T>
             </p>
             <div className="grid md:grid-cols-3 gap-8">
               <div className="text-center">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
                   <Activity className="w-8 h-8 text-primary" />
                 </div>
-                <h3 className="text-xl font-semibold mb-2">Real-Time Dashboard</h3>
+                <h3 className="text-xl font-semibold mb-2">
+                  <T context="pricing.control.feature1.title">Real-Time Dashboard</T>
+                </h3>
                 <p className="text-muted-foreground">
-                  Track your API usage minute-by-minute in your settings. Always know where you stand.
+                  <T context="pricing.control.feature1.description">Track your API usage minute-by-minute in your settings. Always know where you stand.</T>
                 </p>
               </div>
               <div className="text-center">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
                   <Bell className="w-8 h-8 text-primary" />
                 </div>
-                <h3 className="text-xl font-semibold mb-2">Monitor Your Usage</h3>
+                <h3 className="text-xl font-semibold mb-2">
+                  <T context="pricing.control.feature2.title">Monitor Your Usage</T>
+                </h3>
                 <p className="text-muted-foreground">
-                  Check your current usage anytime in your settings dashboard.
+                  <T context="pricing.control.feature2.description">Check your current usage anytime in your settings dashboard.</T>
                 </p>
               </div>
               <div className="text-center">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
                   <Shield className="w-8 h-8 text-primary" />
                 </div>
-                <h3 className="text-xl font-semibold mb-2">No Surprise Bills</h3>
+                <h3 className="text-xl font-semibold mb-2">
+                  <T context="pricing.control.feature3.title">No Surprise Bills</T>
+                </h3>
                 <p className="text-muted-foreground">
-                  Free tier has a hard cap. Paid tiers let you set spending limits. You're in control.
+                  <T context="pricing.control.feature3.description">Free tier has a hard cap. Paid tiers let you set spending limits. You're in control.</T>
                 </p>
               </div>
             </div>
@@ -172,10 +179,10 @@ export default function PricingPage() {
         <section className="py-16 px-4 sm:px-6 bg-slate-50 dark:bg-slate-900/30">
           <div className="max-w-4xl mx-auto">
             <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4">
-              Pricing FAQs
+              <T context="pricing.faq.heading">Pricing FAQs</T>
             </h2>
             <p className="text-center text-muted-foreground mb-12 text-lg">
-              Everything you need to know about HeyContext pricing
+              <T context="pricing.faq.subheading">Everything you need to know about HeyContext pricing</T>
             </p>
             <PricingFAQ />
           </div>
@@ -185,20 +192,20 @@ export default function PricingPage() {
         <section className="py-16 px-4 sm:px-6">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-              Ready to Get Started?
+              <T context="pricing.finalCta.heading">Ready to Get Started?</T>
             </h2>
             <p className="text-xl text-muted-foreground mb-8">
-              Start free. No credit card required. Upgrade anytime.
+              <T context="pricing.finalCta.subheading">Start free. No credit card required. Upgrade anytime.</T>
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/auth/register">
                 <Button size="lg" className="text-lg px-8">
-                  Start Free Now
+                  <T context="pricing.finalCta.cta1">Start Free Now</T>
                 </Button>
               </Link>
               <Link href="/compare">
                 <Button size="lg" variant="outline" className="text-lg px-8">
-                  Compare Plans
+                  <T context="pricing.finalCta.cta2">Compare Plans</T>
                 </Button>
               </Link>
             </div>

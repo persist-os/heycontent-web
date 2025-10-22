@@ -9,6 +9,7 @@ import BasicInfoStep from './BasicInfoStep';
 import PasswordStep from './PasswordStep';
 import StepIndicator from './StepIndicator';
 import Cookies from 'js-cookie';
+import { T } from '@/components/translation';
 
 interface RegistrationFormProps {
   onSuccess: (name: string) => void;
@@ -184,8 +185,12 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
         >
           <Logo className="h-12 mx-auto mb-4" />
         </motion.div>
-        <h1 className="text-2xl font-bold text-foreground">Create your account</h1>
-        <p className="text-muted-foreground mt-2">Join HeyContext today</p>
+        <h1 className="text-2xl font-bold text-foreground">
+          <T context="heading.auth.create-account">Create your account</T>
+        </h1>
+        <p className="text-muted-foreground mt-2">
+          <T context="message.auth.join-today">Join HeyContext today</T>
+        </p>
       </div>
 
       <StepIndicator currentStep={currentStep} />
@@ -232,7 +237,10 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
 
         <div className="text-center">
           <a href="/auth/login" className="text-sm text-muted-foreground hover:text-foreground">
-            Already have an account? <span className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium">Sign in</span>
+            <T context="message.auth.have-account">Already have an account?</T>{' '}
+            <span className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium">
+              <T context="link.auth.sign-in">Sign in</T>
+            </span>
           </a>
         </div>
       </form>

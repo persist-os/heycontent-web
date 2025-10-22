@@ -5,6 +5,7 @@ import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { toast } from 'sonner';
+import { T } from '@/components/translation';
 
 interface StardustViewProps {
   recentStardust?: any[]; // Legacy prop for fallback
@@ -96,7 +97,14 @@ const StardustCard: React.FC<StardustCardProps> = ({ stardust, userId }) => {
     }
   };
 
-  const formatConfidence = (confidence: number) => {
+  const formatConfidenceKey = (confidence: number) => {
+    if (confidence >= 0.8) return 'very_high';
+    if (confidence >= 0.7) return 'high';
+    if (confidence >= 0.5) return 'moderate';
+    return 'developing';
+  };
+  
+  const formatConfidenceLabel = (confidence: number) => {
     if (confidence >= 0.8) return 'Very High';
     if (confidence >= 0.7) return 'High';
     if (confidence >= 0.5) return 'Moderate';
@@ -180,13 +188,13 @@ const StardustCard: React.FC<StardustCardProps> = ({ stardust, userId }) => {
               )}
               <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                 <span className="px-2 py-1 bg-violet-500/10 text-violet-600 dark:text-violet-400 rounded-full font-medium">
-                  Stardust
+                  <T context="stardust.label">Stardust</T>
                 </span>
                 {stardust.lifecycleStage && (
                   <>
                     <span>•</span>
                     <span className={`px-2 py-1 rounded-full text-xs ${getLifecycleStageColor(stardust.lifecycleStage)}`}>
-                      {stardust.lifecycleStage}
+                      <T context={`stardust.lifecycle.${stardust.lifecycleStage}`}>{stardust.lifecycleStage}</T>
                     </span>
                   </>
                 )}
@@ -200,14 +208,16 @@ const StardustCard: React.FC<StardustCardProps> = ({ stardust, userId }) => {
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <span className={`text-xs px-2 py-1 rounded-full border ${getConfidenceColor(stardust.confidence)}`}>
-                {formatConfidence(stardust.confidence)}
+                <T context={`stardust.confidence.${formatConfidenceKey(stardust.confidence)}`}>
+                  {formatConfidenceLabel(stardust.confidence)}
+                </T>
               </span>
               
               {/* Promoted Badge */}
               {isPromoted && (
                 <span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 flex items-center gap-1">
                   <CheckCircle2 className="w-3 h-3" />
-                  Promoted
+                  <T context="stardust.status.promoted">Promoted</T>
                 </span>
               )}
               
@@ -273,23 +283,25 @@ const StardustCard: React.FC<StardustCardProps> = ({ stardust, userId }) => {
         <div className="flex items-center flex-wrap gap-2">
           {stardust.suggestedComplexity !== undefined && (
             <span className={`text-xs px-2 py-1 rounded-full ${getComplexityColor(String(stardust.suggestedComplexity))}`}>
-              Complexity: {stardust.suggestedComplexity}/10
+              <T context="stardust.metadata.complexity">Complexity:</T> {stardust.suggestedComplexity}/10
             </span>
           )}
           {stardust.suggestedTimeHorizon && (
             <span className="text-xs px-2 py-1 rounded-full bg-muted/50 text-foreground flex items-center gap-1">
               {getTimeHorizonIcon(stardust.suggestedTimeHorizon)}
-              {stardust.suggestedTimeHorizon.replace('_', ' ')}
+              <T context={`stardust.time_horizon.${stardust.suggestedTimeHorizon}`}>
+                {stardust.suggestedTimeHorizon.replace('_', ' ')}
+              </T>
             </span>
           )}
           {stardust.evidenceStrength && (
             <span className="text-xs px-2 py-1 rounded-full bg-muted/50 text-foreground">
-              {stardust.evidenceStrength} evidence
+              <T context={`stardust.evidence.${stardust.evidenceStrength}`}>{stardust.evidenceStrength}</T> <T context="stardust.metadata.evidence">evidence</T>
             </span>
           )}
           {stardust.detectionMethod && (
             <span className="text-xs px-2 py-1 rounded-full bg-muted/50 text-foreground">
-              {stardust.detectionMethod}
+              <T context={`stardust.detection.${stardust.detectionMethod}`}>{stardust.detectionMethod}</T>
             </span>
           )}
           {stardust.dimension && (
@@ -323,7 +335,7 @@ const StardustCard: React.FC<StardustCardProps> = ({ stardust, userId }) => {
                 title="View promoted project"
               >
                 <ExternalLink className="w-3 h-3" />
-                View Project
+                <T context="stardust.action.view_project">View Project</T>
               </a>
             )}
           </div>
@@ -333,10 +345,13 @@ const StardustCard: React.FC<StardustCardProps> = ({ stardust, userId }) => {
         {isPromoted && stardust.confidenceAtPromotion && (
           <div className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-950/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
             <div className="font-medium text-blue-700 dark:text-blue-300 mb-1">
-              Auto-promoted to project
+              <T context="stardust.promotion.auto_promoted">Auto-promoted to project</T>
             </div>
             <div>
-              Confidence at promotion: {formatConfidence(stardust.confidenceAtPromotion)}
+              <T context="stardust.promotion.confidence_at_promotion">Confidence at promotion:</T>{' '}
+              <T context={`stardust.confidence.${formatConfidenceKey(stardust.confidenceAtPromotion)}`}>
+                {formatConfidenceLabel(stardust.confidenceAtPromotion)}
+              </T>
             </div>
           </div>
         )}
@@ -387,14 +402,18 @@ export const StardustView: React.FC<StardustViewProps> = ({ recentStardust }) =>
     <div className="space-y-6">
       <div className="space-y-2">
         <h3 className="text-2xl font-light tracking-tight text-foreground">
-          Stardust
+          <T context="stardust.heading">Stardust</T>
         </h3>
         <p className="text-muted-foreground leading-relaxed">
-          Project potentials that evolve into star organisms
+          <T context="stardust.description">Project potentials that evolve into star organisms</T>
           {displayStardust.length > 0 && (
             <span className="ml-2 text-sm">
-              • {activeStardust.length} active stardust
-              {promotedStardust.length > 0 && ` • ${promotedStardust.length} promoted`}
+              • {activeStardust.length} <T context="stardust.count.active">active stardust</T>
+              {promotedStardust.length > 0 && (
+                <>
+                  {' • '}{promotedStardust.length} <T context="stardust.count.promoted">promoted</T>
+                </>
+              )}
             </span>
           )}
         </p>
@@ -427,7 +446,7 @@ export const StardustView: React.FC<StardustViewProps> = ({ recentStardust }) =>
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                  Active Stardust
+                  <T context="stardust.section.active">Active Stardust</T>
                 </h4>
                 <div className="h-px flex-1 bg-border/30" />
               </div>
@@ -444,7 +463,7 @@ export const StardustView: React.FC<StardustViewProps> = ({ recentStardust }) =>
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                  Promoted to Projects
+                  <T context="stardust.section.promoted">Promoted to Projects</T>
                 </h4>
                 <div className="h-px flex-1 bg-border/30" />
               </div>
@@ -460,7 +479,7 @@ export const StardustView: React.FC<StardustViewProps> = ({ recentStardust }) =>
         <div className="text-center py-12 space-y-3">
           <Sparkles className="w-12 h-12 text-muted-foreground/40 mx-auto" />
           <p className="text-muted-foreground">
-            No stardust detected yet. Continue adding content and the system will identify project potentials automatically!
+            <T context="stardust.empty_state">No stardust detected yet. Continue adding content and the system will identify project potentials automatically!</T>
           </p>
         </div>
       )}

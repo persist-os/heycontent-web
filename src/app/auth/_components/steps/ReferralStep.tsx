@@ -1,6 +1,7 @@
 import React from 'react';
 import { Key } from 'lucide-react';
 import { GoogleSignInButton } from '@/components/auth/google-signin-button';
+import { T } from '@/components/translation';
 
 interface ReferralStepProps {
   referralCode: string;
@@ -60,13 +61,17 @@ export const ReferralStep: React.FC<ReferralStepProps & { onGoogleSignInError?: 
               <div className="w-full border-t border-border"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-background text-muted-foreground">or create account with email</span>
+              <span className="px-2 bg-background text-muted-foreground">
+                <T context="message.auth.or-create-email">or create account with email</T>
+              </span>
             </div>
           </div>
         </>
       )}
       <div>
-        <label className="block text-sm font-medium text-foreground mb-2">Referral Code (optional)</label>
+        <label className="block text-sm font-medium text-foreground mb-2">
+          <T context="label.auth.referral-code">Referral Code (optional)</T>
+        </label>
         <div className="relative">
           <input
             type="text"
@@ -83,15 +88,19 @@ export const ReferralStep: React.FC<ReferralStepProps & { onGoogleSignInError?: 
           <Key className="w-5 h-5 text-muted-foreground absolute left-4 top-1/2 transform -translate-y-1/2" />
         </div>
         {checkReferralCode === undefined && referralCode && (
-          <div className="text-sm text-muted-foreground mt-1">Validating code...</div>
+          <div className="text-sm text-muted-foreground mt-1">
+            <T context="message.auth.validating-code">Validating code...</T>
+          </div>
         )}
         {referralCodeValid && checkReferralCode?.valid && (
           <div className="text-sm text-green-600 dark:text-green-400 mt-1">
-            ✓ Valid referral code {checkReferralCode.referrerName && `from ${checkReferralCode.referrerName}`}
+            <T context="message.auth.valid-referral">✓ Valid referral code</T> {checkReferralCode.referrerName && `from ${checkReferralCode.referrerName}`}
           </div>
         )}
         {!referralCodeValid && referralCode && checkReferralCode !== undefined && (
-          <div className="text-sm text-red-600 dark:text-red-400 mt-1">✗ Invalid referral code</div>
+          <div className="text-sm text-red-600 dark:text-red-400 mt-1">
+            <T context="error.auth.invalid-referral">✗ Invalid referral code</T>
+          </div>
         )}
       </div>
       <div className="flex gap-3">
@@ -101,14 +110,14 @@ export const ReferralStep: React.FC<ReferralStepProps & { onGoogleSignInError?: 
           disabled={!!referralCode && (!referralCodeValid || !referredById)}
           className="flex-1 bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
         >
-          Continue
+          <T context="button.auth.continue">Continue</T>
         </button>
         <button
           type="button"
           onClick={handleSkip}
           className="flex-1 bg-secondary text-secondary-foreground py-3 rounded-xl hover:bg-secondary/80 transition-colors font-medium"
         >
-          Skip
+          <T context="button.auth.skip">Skip</T>
         </button>
       </div>
     </div>

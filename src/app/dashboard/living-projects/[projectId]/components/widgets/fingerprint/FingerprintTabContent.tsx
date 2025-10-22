@@ -8,6 +8,7 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import { EditableTextField, EditableArrayField } from './FingerprintEditableFields'
+import { T } from '@/components/translation/T'
 
 const tabAnimation = {
   initial: { opacity: 0, y: 10 },
@@ -29,7 +30,7 @@ export const VisionTab = ({ fingerprint, isEditing, getFieldValue, updateField }
       {(getFieldValue('core_intention') || isEditing) && (
         <div className="lg:col-span-2">
           <div className="text-xs uppercase tracking-wide text-muted-foreground/50 mb-2">
-            Why This Matters
+            <T context="fingerprint.vision.why_matters">Why This Matters</T>
           </div>
           <EditableTextField
             value={getFieldValue('core_intention')}
@@ -45,7 +46,7 @@ export const VisionTab = ({ fingerprint, isEditing, getFieldValue, updateField }
       {(getFieldValue('success_vision') || isEditing) && (
         <div>
           <div className="text-xs uppercase tracking-wide text-muted-foreground/50 mb-2">
-            Success Looks Like
+            <T context="fingerprint.vision.success_looks_like">Success Looks Like</T>
           </div>
           <EditableTextField
             value={getFieldValue('success_vision')}
@@ -60,7 +61,7 @@ export const VisionTab = ({ fingerprint, isEditing, getFieldValue, updateField }
       {(getFieldValue('value_creation') || isEditing) && (
         <div>
           <div className="text-xs uppercase tracking-wide text-muted-foreground/50 mb-2">
-            The Impact
+            <T context="fingerprint.vision.impact">The Impact</T>
           </div>
           <EditableTextField
             value={getFieldValue('value_creation')}
@@ -78,7 +79,7 @@ export const VisionTab = ({ fingerprint, isEditing, getFieldValue, updateField }
       {((Array.isArray(getFieldValue('tangible_deliverables')) && getFieldValue('tangible_deliverables').length > 0) || isEditing) && (
         <div>
           <div className="text-xs uppercase tracking-wide text-muted-foreground/50 mb-3">
-            What We're Creating
+            <T context="fingerprint.vision.what_creating">What We're Creating</T>
           </div>
           <EditableArrayField
             values={getFieldValue('tangible_deliverables') || []}
@@ -92,7 +93,7 @@ export const VisionTab = ({ fingerprint, isEditing, getFieldValue, updateField }
       {((Array.isArray(getFieldValue('personal_growth')) && getFieldValue('personal_growth').length > 0) || isEditing) && (
         <div>
           <div className="text-xs uppercase tracking-wide text-muted-foreground/50 mb-2">
-            Growing Through This
+            <T context="fingerprint.vision.growing_through">Growing Through This</T>
           </div>
           {isEditing ? (
             <EditableArrayField
@@ -128,7 +129,7 @@ const EditableField = ({
   capitalize = false,
   placeholder
 }: { 
-  label: string
+  label: React.ReactNode
   value: string | number
   field: string
   isEditing: boolean
@@ -175,7 +176,7 @@ export const DNATab = ({ fingerprint, isEditing, getFieldValue, updateField }: T
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       {(getFieldValue('primary_pattern') || isEditing) && (
         <EditableField 
-          label="Working Pattern" 
+          label={<T context="fingerprint.dna.working_pattern">Working Pattern</T>}
           value={getFieldValue('primary_pattern')} 
           field="primary_pattern"
           isEditing={isEditing}
@@ -186,7 +187,7 @@ export const DNATab = ({ fingerprint, isEditing, getFieldValue, updateField }: T
       )}
       {(getFieldValue('collaboration_style') || isEditing) && (
         <EditableField 
-          label="Team Style" 
+          label={<T context="fingerprint.dna.team_style">Team Style</T>}
           value={getFieldValue('collaboration_style')} 
           field="collaboration_style"
           isEditing={isEditing}
@@ -197,7 +198,7 @@ export const DNATab = ({ fingerprint, isEditing, getFieldValue, updateField }: T
       )}
       {(getFieldValue('complexity_level') || isEditing) && (
         <EditableField 
-          label="Complexity" 
+          label={<T context="fingerprint.dna.complexity">Complexity</T>}
           value={isEditing ? getFieldValue('complexity_level') : `Level ${getFieldValue('complexity_level')}/10`} 
           field="complexity_level"
           isEditing={isEditing}
@@ -207,7 +208,7 @@ export const DNATab = ({ fingerprint, isEditing, getFieldValue, updateField }: T
       )}
       {(getFieldValue('sharing_intention') || isEditing) && (
         <EditableField 
-          label="Sharing" 
+          label={<T context="fingerprint.dna.sharing">Sharing</T>}
           value={getFieldValue('sharing_intention')} 
           field="sharing_intention"
           isEditing={isEditing}
@@ -223,7 +224,7 @@ export const DNATab = ({ fingerprint, isEditing, getFieldValue, updateField }: T
       {(getFieldValue('decision_making') || isEditing) && (
         <div>
           <div className="text-xs uppercase tracking-wide text-muted-foreground/50 mb-2">
-            How You Decide
+            <T context="fingerprint.dna.how_decide">How You Decide</T>
           </div>
           <EditableTextField
             value={getFieldValue('decision_making')}
@@ -238,7 +239,7 @@ export const DNATab = ({ fingerprint, isEditing, getFieldValue, updateField }: T
       {(getFieldValue('energy_patterns') || isEditing) && (
         <div>
           <div className="text-xs uppercase tracking-wide text-muted-foreground/50 mb-2">
-            When You Work Best
+            <T context="fingerprint.dna.work_best">When You Work Best</T>
           </div>
           <EditableTextField
             value={getFieldValue('energy_patterns')}
@@ -254,7 +255,7 @@ export const DNATab = ({ fingerprint, isEditing, getFieldValue, updateField }: T
     {((Array.isArray(getFieldValue('working_style')) && getFieldValue('working_style').length > 0) || isEditing) && (
       <div className="pt-4 border-t border-border/10">
         <div className="text-xs uppercase tracking-wide text-muted-foreground/50 mb-2">
-          Your Styles
+          <T context="fingerprint.dna.your_styles">Your Styles</T>
         </div>
         {isEditing ? (
           <EditableArrayField
@@ -285,7 +286,7 @@ export const TimelineTab = ({ fingerprint, isEditing, getFieldValue, updateField
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       {(getFieldValue('time_horizon') || isEditing) && (
         <EditableField 
-          label="Timeframe" 
+          label={<T context="fingerprint.timeline.timeframe">Timeframe</T>}
           value={getFieldValue('time_horizon')} 
           field="time_horizon"
           isEditing={isEditing}
@@ -296,7 +297,7 @@ export const TimelineTab = ({ fingerprint, isEditing, getFieldValue, updateField
       )}
       {(getFieldValue('natural_rhythm') || isEditing) && (
         <EditableField 
-          label="Rhythm" 
+          label={<T context="fingerprint.timeline.rhythm">Rhythm</T>}
           value={getFieldValue('natural_rhythm')} 
           field="natural_rhythm"
           isEditing={isEditing}
@@ -307,7 +308,7 @@ export const TimelineTab = ({ fingerprint, isEditing, getFieldValue, updateField
       )}
       {(getFieldValue('flexibility_preference') || isEditing) && (
         <EditableField 
-          label="Flexibility" 
+          label={<T context="fingerprint.timeline.flexibility">Flexibility</T>}
           value={getFieldValue('flexibility_preference')} 
           field="flexibility_preference"
           isEditing={isEditing}
@@ -318,7 +319,7 @@ export const TimelineTab = ({ fingerprint, isEditing, getFieldValue, updateField
       )}
       {(getFieldValue('feedback_frequency') || isEditing) && (
         <EditableField 
-          label="Check-ins" 
+          label={<T context="fingerprint.timeline.checkins">Check-ins</T>}
           value={getFieldValue('feedback_frequency')} 
           field="feedback_frequency"
           isEditing={isEditing}
@@ -333,7 +334,7 @@ export const TimelineTab = ({ fingerprint, isEditing, getFieldValue, updateField
       {(getFieldValue('measurement_approach') || isEditing) && (
         <div>
           <div className="text-xs uppercase tracking-wide text-muted-foreground/50 mb-2">
-            How to Measure Progress
+            <T context="fingerprint.timeline.measure_progress">How to Measure Progress</T>
           </div>
           <EditableTextField
             value={getFieldValue('measurement_approach')}
@@ -348,7 +349,7 @@ export const TimelineTab = ({ fingerprint, isEditing, getFieldValue, updateField
       {((Array.isArray(getFieldValue('intangible_benefits')) && getFieldValue('intangible_benefits').length > 0) || isEditing) && (
         <div>
           <div className="text-xs uppercase tracking-wide text-muted-foreground/50 mb-3">
-            Beyond Deliverables
+            <T context="fingerprint.timeline.beyond_deliverables">Beyond Deliverables</T>
           </div>
           <EditableArrayField
             values={getFieldValue('intangible_benefits') || []}
@@ -367,7 +368,7 @@ export const PreferencesTab = ({ fingerprint, isEditing, getFieldValue, updateFi
     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
       {(getFieldValue('cognitive_load_preference') || isEditing) && (
         <EditableField 
-          label="Cognitive Load" 
+          label={<T context="fingerprint.preferences.cognitive_load">Cognitive Load</T>}
           value={getFieldValue('cognitive_load_preference')} 
           field="cognitive_load_preference"
           isEditing={isEditing}
@@ -378,7 +379,7 @@ export const PreferencesTab = ({ fingerprint, isEditing, getFieldValue, updateFi
       )}
       {(getFieldValue('information_density') || isEditing) && (
         <EditableField 
-          label="Info Density" 
+          label={<T context="fingerprint.preferences.info_density">Info Density</T>}
           value={getFieldValue('information_density')} 
           field="information_density"
           isEditing={isEditing}
@@ -389,7 +390,7 @@ export const PreferencesTab = ({ fingerprint, isEditing, getFieldValue, updateFi
       )}
       {(getFieldValue('learning_sensitivity') || isEditing) && (
         <EditableField 
-          label="Adaptivity" 
+          label={<T context="fingerprint.preferences.adaptivity">Adaptivity</T>}
           value={isEditing ? getFieldValue('learning_sensitivity') : `${getFieldValue('learning_sensitivity')}/10`} 
           field="learning_sensitivity"
           isEditing={isEditing}
@@ -402,7 +403,7 @@ export const PreferencesTab = ({ fingerprint, isEditing, getFieldValue, updateFi
     {((Array.isArray(getFieldValue('motivation_style')) && getFieldValue('motivation_style').length > 0) || isEditing) && (
       <div className="pt-4 border-t border-border/10">
         <div className="text-xs uppercase tracking-wide text-muted-foreground/50 mb-2">
-          What Motivates You
+          <T context="fingerprint.preferences.what_motivates">What Motivates You</T>
         </div>
         {isEditing ? (
           <EditableArrayField

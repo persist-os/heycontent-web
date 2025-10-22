@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Id } from '@/convex/_generated/dataModel'
 import { useMutation } from 'convex/react'
@@ -16,9 +16,19 @@ export default function ProjectDiscoveryPage() {
   const [projectId, setProjectId] = useState<Id<"projects"> | undefined>()
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  
+  // Guard ref to prevent duplicate creation attempts
+  const creationAttemptedRef = useRef(false)
 
-  const mode = searchParams.get('mode')
-  const existingProjectId = searchParams.get('projectId') as Id<"projects"> | null
+  // Extract primitive values from searchParams to avoid object reference changes
+  const mode = useMemo(() => searchParams.get('mode'), [searchParams])
+  const existingProjectId = useMemo(() => searchParams.get('projectId') as Id<"projects"> | null, [searchParams])
+  const name = useMemo(() => searchParams.get('name'), [searchParams])
+  const description = useMemo(() => searchParams.get('description'), [searchParams])
+  const noteIds = useMemo(() => searchParams.get('noteIds')?.split(',').filter(id => id.trim()) || [], [searchParams])
+  const conversationIds = useMemo(() => searchParams.get('conversationIds')?.split(',').filter(id => id.trim()) || [], [searchParams])
+  const crystalIds = useMemo(() => searchParams.get('crystalIds')?.split(',').filter(id => id.trim()) || [], [searchParams])
+  const shardIds = useMemo(() => searchParams.get('shardIds')?.split(',').filter(id => id.trim()) || [], [searchParams])
 
   useEffect(() => {
     // If we already have a projectId, use it
@@ -28,21 +38,15 @@ export default function ProjectDiscoveryPage() {
     }
 
     // If mode is 'create', create the project first
-    if (mode === 'create' && !isCreating && !projectId) {
-      const name = searchParams.get('name')
-      const description = searchParams.get('description')
-      
-      // Parse content IDs from URL parameters
-      const noteIds = searchParams.get('noteIds')?.split(',').filter(id => id.trim()) || []
-      const conversationIds = searchParams.get('conversationIds')?.split(',').filter(id => id.trim()) || []
-      const crystalIds = searchParams.get('crystalIds')?.split(',').filter(id => id.trim()) || []
-      const shardIds = searchParams.get('shardIds')?.split(',').filter(id => id.trim()) || []
-
+    // Use ref guard to prevent duplicate creation attempts
+    if (mode === 'create' && !isCreating && !projectId && !creationAttemptedRef.current) {
       if (!name) {
         setError('Project name is required')
         return
       }
 
+      // Set guard immediately to prevent re-entry
+      creationAttemptedRef.current = true
       setIsCreating(true)
       
       getCurrentUserId()
@@ -66,12 +70,14 @@ export default function ProjectDiscoveryPage() {
         .catch(err => {
           console.error('Failed to create project:', err)
           setError('Failed to create project')
+          // Reset guard on error to allow retry
+          creationAttemptedRef.current = false
         })
         .finally(() => {
           setIsCreating(false)
         })
     }
-  }, [mode, existingProjectId, searchParams, createProject, router, isCreating, projectId])
+  }, [mode, existingProjectId, name, description, noteIds, conversationIds, crystalIds, shardIds, createProject, router, isCreating, projectId])
 
   if (error) {
     return (

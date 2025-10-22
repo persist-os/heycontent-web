@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { Sparkles, Wand2, Loader2, Save, Share2 } from 'lucide-react'
+import { useTranslation } from '@/hooks/useTranslation'
 
 interface ActionButtonsProps {
   onTriggerCommandPalette: () => void
@@ -28,19 +29,36 @@ export function ActionButtons({
   isReadOnly = false,
   notePermission = null
 }: ActionButtonsProps) {
-  // Minimum 44px touch targets for accessibility
-  const buttonSize = isMobile ? "p-3" : "p-3" // 44px minimum (p-3 = 12px padding * 2 + 20px icon = 44px)
-  const iconSize = isMobile ? "w-5 h-5" : "w-5 h-5" // 20px icons
-  const gap = isMobile ? "gap-2" : "gap-3"
+  // Smaller buttons for compact header layout
+  const buttonSize = isMobile ? "p-2" : "p-2" // Smaller padding (p-2 = 8px padding * 2 + 16px icon = 32px)
+  const iconSize = isMobile ? "w-4 h-4" : "w-4 h-4" // 16px icons
+  const gap = isMobile ? "gap-1" : "gap-2"
+  
+  // Translations for button titles
+  const { text: aiAssistantTitle } = useTranslation('AI Assistant (⌘K)', {
+    context: 'notepad.actions.ai_assistant'
+  })
+  const { text: generateSmartTagsTitle } = useTranslation('Generate smart tags', {
+    context: 'notepad.actions.generate_tags'
+  })
+  const { text: saveNoteTitle } = useTranslation('Save note', {
+    context: 'notepad.actions.save'
+  })
+  const { text: shareNoteTitle } = useTranslation('Share note', {
+    context: 'notepad.actions.share'
+  })
+  const { text: readOnlyTitle } = useTranslation('Read-only note', {
+    context: 'notepad.status.read_only'
+  })
 
   return (
-    <div className={`flex items-center ${gap} flex-shrink-0 h-12`}>
+    <div className={`flex items-center ${gap} flex-shrink-0 h-8`}>
       {/* AI Assistant Button (Sparkles) */}
       <button
         onClick={isReadOnly ? undefined : onTriggerCommandPalette}
         disabled={isReadOnly}
-        className={`${buttonSize} text-muted-foreground hover:text-foreground hover:bg-muted/30 rounded transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
-        title={isReadOnly ? "Read-only note" : "AI Assistant (⌘K)"}
+        className={`${buttonSize} text-[hsl(var(--notepad-icon))] hover:text-[hsl(var(--notepad-icon-hover))] hover:bg-black/5 dark:hover:bg-white/5 rounded-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
+        title={isReadOnly ? readOnlyTitle : aiAssistantTitle}
       >
         <Sparkles className={iconSize} />
       </button>
@@ -50,8 +68,8 @@ export function ActionButtons({
         <button
           onClick={() => !isGeneratingMetadata && !isReadOnly && onGenerateMetadata()}
           disabled={isGeneratingMetadata || isReadOnly}
-          className={`${buttonSize} text-muted-foreground hover:text-foreground hover:bg-muted/30 rounded transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
-          title={isReadOnly ? "Read-only note" : "Generate smart tags"}
+          className={`${buttonSize} text-[hsl(var(--notepad-icon))] hover:text-[hsl(var(--notepad-icon-hover))] hover:bg-black/5 dark:hover:bg-white/5 rounded-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
+          title={isReadOnly ? readOnlyTitle : generateSmartTagsTitle}
         >
           {isGeneratingMetadata ? (
             <Loader2 className={`${iconSize} animate-spin`} />
@@ -65,8 +83,8 @@ export function ActionButtons({
       <button
         onClick={() => !isCreating && !isReadOnly && onSaveNote()}
         disabled={isCreating || isReadOnly}
-        className={`${buttonSize} text-muted-foreground hover:text-foreground hover:bg-muted/30 rounded transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
-        title={isReadOnly ? "Read-only note" : "Save note"}
+        className={`${buttonSize} text-[hsl(var(--notepad-icon))] hover:text-[hsl(var(--notepad-icon-hover))] hover:bg-black/5 dark:hover:bg-white/5 rounded-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
+        title={isReadOnly ? readOnlyTitle : saveNoteTitle}
       >
         {isCreating ? (
           <Loader2 className={`${iconSize} animate-spin`} />
@@ -79,10 +97,10 @@ export function ActionButtons({
       {onShare && (
         <button
           onClick={onShare}
-          className={`${buttonSize} text-muted-foreground hover:text-foreground hover:bg-muted/30 rounded transition-colors duration-200 group`}
-          title="Share note"
+          className={`${buttonSize} text-[hsl(var(--notepad-icon))] hover:text-[hsl(var(--notepad-icon-hover))] hover:bg-black/5 dark:hover:bg-white/5 rounded-md transition-all duration-200 group`}
+          title={shareNoteTitle}
         >
-          <Share2 className={`${iconSize} group-hover:text-primary transition-colors duration-200`} />
+          <Share2 className={iconSize} />
         </button>
       )}
     </div>

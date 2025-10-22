@@ -4,6 +4,8 @@ import React from 'react';
 import { Search, Plus, Filter, FolderPlus, Folder, Users, Share2, FileText, Star, Clock } from 'lucide-react';
 import { FilterType } from './NotesTree.types';
 import { cn } from '@/lib/utils';
+import { T } from '@/components/translation';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface NotesTreeHeaderProps {
   searchTerm: string;
@@ -46,17 +48,22 @@ export function NotesTreeHeader({
   sharedNotesCount,
   mySharedContentCount
 }: NotesTreeHeaderProps) {
+  const { text: searchPlaceholder } = useTranslation('Search notes...', {
+    sourceLang: 'en',
+    context: 'notes.search.placeholder'
+  });
+  
   return (
-    <div className="border-b border-border/30 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
-      <div className="pt-12 p-4 sm:p-6">
+    <div className="border-b border-border/30 bg-gradient-to-b from-card/80 via-background/80 to-background/60 backdrop-blur-md sticky top-0 left-0 right-0 z-10 shadow-sm shadow-primary/5 w-full overflow-hidden">
+      <div className="pt-12 px-4 sm:px-6 pb-4 sm:pb-6 w-full max-w-6xl mx-auto safe-top">
         {/* Title and Action Buttons */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-center sm:justify-between gap-4 mb-4 sm:mb-6">
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl sm:text-3xl font-light tracking-tight text-center sm:text-left text-foreground">
-              Files
+              <T context="notes.header.title">Files</T>
             </h1>
-            <p className="text-muted-foreground/70 mt-1 text-sm sm:text-base text-center sm:text-left">
-              Your thoughts, organized and accessible
+            <p className="text-muted-foreground mt-1 text-sm sm:text-base text-center sm:text-left">
+              <T context="notes.header.subtitle">Your thoughts, organized and accessible</T>
             </p>
           </div>
         
@@ -65,41 +72,41 @@ export function NotesTreeHeader({
             <button
               onClick={onCreateFolder}
               disabled={isCreatingFolder}
-              className="flex items-center justify-center gap-2 border border-border hover:bg-muted/30 text-foreground px-4 py-3 sm:py-2.5 rounded-lg transition-colors disabled:opacity-50 text-sm font-medium min-h-[44px] sm:min-h-0"
+              className="flex items-center justify-center gap-2 border border-accent/20 hover:bg-accent/5 hover:border-accent/30 text-foreground px-4 py-3 sm:py-2.5 rounded-lg transition-all disabled:opacity-50 text-sm font-medium min-h-[44px] sm:min-h-0"
             >
               {isCreatingFolder ? (
                 <div className="w-4 h-4 border-2 border-foreground/30 border-t-foreground rounded-full animate-spin" />
               ) : (
                 <Folder className="w-4 h-4" />
               )}
-              <span className="hidden sm:inline">New Folder</span>
-              <span className="sm:hidden">Folder</span>
+              <span className="hidden sm:inline"><T context="button.new-folder">New Folder</T></span>
+              <span className="sm:hidden"><T context="button.folder">Folder</T></span>
             </button>
             <button
               onClick={onCreateProject}
               disabled={isCreatingProject}
-              className="flex items-center justify-center gap-2 border border-border hover:bg-muted/30 text-foreground px-4 py-3 sm:py-2.5 rounded-lg transition-colors disabled:opacity-50 text-sm font-medium min-h-[44px] sm:min-h-0"
+              className="flex items-center justify-center gap-2 border border-primary/20 hover:bg-primary/5 hover:border-primary/30 text-foreground px-4 py-3 sm:py-2.5 rounded-lg transition-all disabled:opacity-50 text-sm font-medium min-h-[44px] sm:min-h-0"
             >
               {isCreatingProject ? (
                 <div className="w-4 h-4 border-2 border-foreground/30 border-t-foreground rounded-full animate-spin" />
               ) : (
                 <FolderPlus className="w-5 h-5" />
               )}
-              <span className="hidden sm:inline">New Project</span>
-              <span className="sm:hidden">Project</span>
+              <span className="hidden sm:inline"><T context="button.new-project">New Project</T></span>
+              <span className="sm:hidden"><T context="button.project">Project</T></span>
             </button>
             <button
               onClick={onCreateNote}
               disabled={isCreatingNote}
-              className="flex items-center justify-center gap-2 bg-foreground text-background px-4 py-3 sm:py-2.5 rounded-lg hover:bg-foreground/90 transition-colors disabled:opacity-50 text-sm font-medium min-h-[44px] sm:min-h-0"
+              className="flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground px-4 py-3 sm:py-2.5 rounded-lg hover:from-primary/90 hover:to-primary/80 transition-all disabled:opacity-50 text-sm font-medium min-h-[44px] sm:min-h-0 shadow-md shadow-primary/20"
             >
               {isCreatingNote ? (
-                <div className="w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
               ) : (
                 <Plus className="w-4 h-4" />
               )}
-              <span className="hidden sm:inline">New Note</span>
-              <span className="sm:hidden">Note</span>
+              <span className="hidden sm:inline"><T context="button.new-note">New Note</T></span>
+              <span className="sm:hidden"><T context="button.note">Note</T></span>
             </button>
           </div>
         </div>
@@ -107,19 +114,19 @@ export function NotesTreeHeader({
         {/* Search Bar */}
         <div className="mb-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground/50 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-primary/40 w-4 h-4" />
             <input
               type="text"
-              placeholder="Search notes..."
+              placeholder={searchPlaceholder}
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 sm:py-2.5 bg-muted/20 border-0 rounded-lg text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:bg-muted/30 transition-colors text-base sm:text-sm"
+              className="w-full pl-10 pr-4 py-3 sm:py-2.5 bg-gradient-to-r from-muted/20 via-primary/5 to-muted/20 border border-border/50 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:bg-primary/5 focus:border-primary/30 transition-all text-base sm:text-sm"
             />
           </div>
         </div>
         
         {/* Filter Buttons - Horizontal scroll on mobile */}
-        <div className="overflow-x-auto scrollbar-hide">
+        <div className="overflow-x-auto scrollbar-hide -mx-4 sm:mx-0 px-4 sm:px-0">
           <div className="flex items-center gap-2 pb-2 min-w-max">
             {filterOptions.map(({ key, label, icon: Icon }) => {
               const count = key === 'folders' ? foldersCount : 
@@ -127,34 +134,56 @@ export function NotesTreeHeader({
                           key === 'my-shared' ? mySharedContentCount : 
                           undefined;
               
+              const gradientClasses = selectedFilter === key 
+                ? key === 'important' ? "bg-gradient-to-r from-amber-500 to-amber-400 text-white shadow-md shadow-amber-500/30" :
+                  key === 'recent' ? "bg-gradient-to-r from-orange-500 to-orange-400 text-white shadow-md shadow-orange-500/30" :
+                  key === 'folders' ? "bg-gradient-to-r from-indigo-500 to-indigo-400 text-white shadow-md shadow-indigo-500/30" :
+                  key === 'projects' ? "bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-md shadow-blue-500/30" :
+                  key === 'shared' ? "bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-md shadow-blue-500/30" :
+                  key === 'my-shared' ? "bg-gradient-to-r from-green-500 to-green-400 text-white shadow-md shadow-green-500/30" :
+                  "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-md shadow-primary/20"
+                : "text-muted-foreground hover:text-foreground";
+              
+              const hoverClasses = selectedFilter !== key 
+                ? key === 'important' ? "hover:bg-amber-500/5 hover:border-amber-500/20" :
+                  key === 'recent' ? "hover:bg-orange-500/5 hover:border-orange-500/20" :
+                  key === 'folders' ? "hover:bg-indigo-500/5 hover:border-indigo-500/20" :
+                  key === 'projects' ? "hover:bg-blue-500/5 hover:border-blue-500/20" :
+                  key === 'shared' ? "hover:bg-blue-500/5 hover:border-blue-500/20" :
+                  key === 'my-shared' ? "hover:bg-green-500/5 hover:border-green-500/20" :
+                  "hover:bg-primary/5 hover:border-primary/20"
+                : "";
+              
               return (
                 <button
                   key={key}
                   onClick={() => onFilterChange(key)}
                   className={cn(
-                    "flex items-center gap-2 px-3 py-2 sm:py-1.5 text-sm font-medium rounded-lg transition-colors relative whitespace-nowrap min-h-[44px] sm:min-h-0",
-                    selectedFilter === key
-                      ? "bg-foreground text-background"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                    "flex items-center gap-2 px-3 py-2 sm:py-1.5 text-sm font-medium rounded-lg transition-all relative whitespace-nowrap min-h-[44px] sm:min-h-0",
+                    selectedFilter !== key && "border border-border/50",
+                    gradientClasses,
+                    hoverClasses
                   )}
                 >
                   <Icon className={cn("w-4 h-4 flex-shrink-0", key === 'projects' && "w-5 h-5")} />
-                  <span className="hidden sm:inline">{label}</span>
+                  <span className="hidden sm:inline">
+                    <T context={`notes.filter.${key}`}>{label}</T>
+                  </span>
                   <span className="sm:hidden">
-                    {key === 'all' ? 'All' : 
-                     key === 'important' ? 'Starred' :
-                     key === 'recent' ? 'Recent' :
-                     key === 'folders' ? 'Folders' :
-                     key === 'projects' ? 'Projects' :
-                     key === 'shared' ? 'Shared' :
-                     'My Shared'}
+                    {key === 'all' ? <T context="notes.filter.all">All</T> : 
+                     key === 'important' ? <T context="notes.filter.starred">Starred</T> :
+                     key === 'recent' ? <T context="notes.filter.recent">Recent</T> :
+                     key === 'folders' ? <T context="notes.filter.folders">Folders</T> :
+                     key === 'projects' ? <T context="notes.filter.projects">Projects</T> :
+                     key === 'shared' ? <T context="notes.filter.shared">Shared</T> :
+                     <T context="notes.filter.my-shared">My Shared</T>}
                   </span>
                   {count && count > 0 && (
                     <span className={cn(
                       "text-xs px-1.5 py-0.5 rounded-full font-medium flex-shrink-0",
                       selectedFilter === key
-                        ? "bg-background/20 text-background"
-                        : "bg-muted text-muted-foreground"
+                        ? "bg-white/20 text-white"
+                        : "bg-muted/50 text-muted-foreground"
                     )}>
                       {count}
                     </span>

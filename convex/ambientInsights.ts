@@ -10,10 +10,20 @@ export interface Insight {
   recommendation: string;
 }
 
+// Type for custom command prompts
+export interface CustomCommandPrompt {
+  id: string;
+  label: string;
+  category: string;
+  noteType?: string;
+}
+
 // Type for the stored document
 export interface AmbientInsightsDocument extends Doc<'ambientInsights'> {
   userId: string;
   data: Insight[];
+  greetings?: string[];
+  customCommandPrompts?: CustomCommandPrompt[];
   createdAt: number;
   updatedAt: number;
 }
@@ -65,12 +75,14 @@ export const createInsights = mutation({
         recommendation: v.string(),
       })
     ),
+    greetings: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args): Promise<Id<'ambientInsights'>> => {
     const now = Date.now();
     const insightsId = await ctx.db.insert('ambientInsights', {
       userId: args.userId,
       data: args.insights,
+      greetings: args.greetings,
       createdAt: now,
       updatedAt: now,
     });
@@ -106,13 +118,15 @@ export const createNewInsightsDocument = internalMutation({
         category: v.string(),
         recommendation: v.string(),
       })
-    )) 
+    )),
+    greetings: v.optional(v.array(v.string()))
   },
   handler: async (ctx, args): Promise<Id<'ambientInsights'>> => {
     const now = Date.now();
     return await ctx.db.insert('ambientInsights', {
       userId: args.userId,
       data: args.insights || [],
+      greetings: args.greetings || [],
       createdAt: now,
       updatedAt: now,
     });
@@ -224,5 +238,61 @@ export const getUserDataBundle = query({
       crystalShards,
       projects,
     };
+  },
+});
+
+/**
+ * Get custom command prompts for a user
+ */
+export const getCustomCommandPrompts = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args): Promise<CustomCommandPrompt[]> => {
+    const insights = await ctx.db
+      .query('ambientInsights')
+      .withIndex('by_userId', q => q.eq('userId', args.userId))
+      .order('desc')
+      .first();
+    
+    return insights?.customCommandPrompts || [];
+  },
+});
+
+/**
+ * Update custom command prompts for a user
+ * Creates new insights document if none exists
+ */
+export const updateCustomCommandPrompts = mutation({
+  args: {
+    userId: v.string(),
+    customCommandPrompts: v.array(v.object({
+      id: v.string(),
+      label: v.string(),
+      category: v.string(),
+      noteType: v.optional(v.string()),
+    })),
+  },
+  handler: async (ctx, args): Promise<void> => {
+    const existing = await ctx.db
+      .query('ambientInsights')
+      .withIndex('by_userId', q => q.eq('userId', args.userId))
+      .order('desc')
+      .first();
+    
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        customCommandPrompts: args.customCommandPrompts,
+        updatedAt: Date.now(),
+      });
+    } else {
+      const now = Date.now();
+      await ctx.db.insert('ambientInsights', {
+        userId: args.userId,
+        data: [],
+        greetings: [],
+        customCommandPrompts: args.customCommandPrompts,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
   },
 });

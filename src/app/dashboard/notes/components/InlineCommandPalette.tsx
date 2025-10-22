@@ -2,8 +2,13 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from "framer-motion";
-import { Loader2, ArrowRight } from 'lucide-react';
+import { Loader2, ArrowRight, Sparkles } from 'lucide-react';
 import { useNotes } from '@/app/context/notes-context';
+import { useAuth } from '@/app/context/auth-context';
+import { useLanguageContext } from '@/app/context/language-context';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import { T } from '@/components/translation/T';
 import { 
   getCommandsForNoteType, 
   NoteType
@@ -58,6 +63,68 @@ export function InlineCommandPalette({
   
   const menuRef = useRef<HTMLDivElement>(null);
   const { setActiveNoteId } = useNotes();
+  const { firebaseUser } = useAuth();
+  const { language } = useLanguageContext();
+
+  // Fetch custom command prompts from Convex
+  const customPrompts = useQuery(
+    api.ambientInsights.getCustomCommandPrompts,
+    firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
+  );
+
+  // Fetch translations for all command labels
+  const allCommandLabels = React.useMemo(() => {
+    const labels: string[] = [];
+    
+    // Get all possible command labels to pre-fetch translations
+    const allNoteTypes = Object.keys(NOTE_TYPE_ICONS) as NoteType[];
+    for (const nt of allNoteTypes) {
+      const { typeSpecificCommands, universalCommands } = getCommandsForNoteType(nt);
+      labels.push(...typeSpecificCommands.map(cmd => cmd.label));
+      labels.push(...universalCommands.map(cmd => cmd.label));
+    }
+    
+    // Add refinement command labels
+    const allRefinementNoteTypes = Object.keys(NOTE_TYPE_ICONS) as RefinementNoteType[];
+    for (const nt of allRefinementNoteTypes) {
+      const { allRefinements } = getRefinementCommandsForNoteType(nt);
+      labels.push(...allRefinements.map(cmd => cmd.label));
+    }
+    
+    // Deduplicate
+    return [...new Set(labels)];
+  }, []);
+
+  // Batch fetch translations from Convex cache
+  const translationResults = useQuery(
+    api.translationQueries.getBatchTranslations,
+    language !== 'en' ? {
+      texts: allCommandLabels,
+      sourceLang: 'en',
+      targetLang: language
+    } : 'skip'
+  );
+
+  // Create translation lookup map
+  const translationMap = React.useMemo(() => {
+    if (language === 'en' || !translationResults) {
+      return new Map<string, string>();
+    }
+    
+    const map = new Map<string, string>();
+    translationResults.forEach(result => {
+      if (result.translatedText) {
+        map.set(result.sourceText, result.translatedText);
+      }
+    });
+    return map;
+  }, [language, translationResults]);
+
+  // Helper function to get translated label
+  const getTranslatedLabel = (englishLabel: string): string => {
+    if (language === 'en') return englishLabel;
+    return translationMap.get(englishLabel) || englishLabel;
+  };
 
   // User input state for the header input
   const [userInput, setUserInput] = useState('');
@@ -103,6 +170,23 @@ export function InlineCommandPalette({
 
   // Get all available commands
   const getAllCommands = (): DisplayOption[] => {
+    const commands: DisplayOption[] = [];
+    
+    // Add custom prompts first (if in generation mode and prompts exist)
+    if (!refinementMode && customPrompts && customPrompts.length > 0) {
+      const relevantCustomPrompts = customPrompts.filter(prompt => 
+        !prompt.noteType || prompt.noteType === selectedNoteTypeForCommands || selectedNoteTypeForCommands === 'all'
+      );
+      
+      commands.push(...relevantCustomPrompts.map(prompt => ({
+        id: `custom-${prompt.id}`,
+        label: prompt.label,
+        icon: React.createElement(Sparkles, { className: "w-4 h-4" }),
+        action: () => handleSuggestionSelect(prompt.label),
+        category: prompt.category || 'Custom'
+      })));
+    }
+    
     if (refinementMode) {
       // Refinement mode - get refinement commands
       if (selectedNoteTypeForCommands === 'all') {
@@ -110,7 +194,7 @@ export function InlineCommandPalette({
         const { coreRefinements, noteSpecificRefinements, advancedRefinements } = 
           getRefinementsForNoteTypes(allNoteTypes);
         
-        return [
+        commands.push(...[
           ...coreRefinements,
           ...noteSpecificRefinements,
           ...advancedRefinements
@@ -120,27 +204,26 @@ export function InlineCommandPalette({
           icon: cmd.icon,
           action: () => handleSuggestionSelect(cmd.label),
           category: cmd.category
-        }));
+        })));
       } else {
         const { allRefinements } = getRefinementCommandsForNoteType(selectedNoteTypeForCommands);
-        return allRefinements.map(cmd => ({
+        commands.push(...allRefinements.map(cmd => ({
           id: cmd.id,
           label: cmd.label,
           icon: cmd.icon,
           action: () => handleSuggestionSelect(cmd.label),
           category: cmd.category
-        }));
+        })));
       }
     } else {
       // Generation mode - respect selectedNoteTypeForCommands
       if (selectedNoteTypeForCommands === 'all') {
         // Get commands from all note types
         const allNoteTypes = Object.keys(NOTE_TYPE_ICONS) as NoteType[];
-        const allCommands: DisplayOption[] = [];
         
         // Collect universal commands (only once)
         const { universalCommands } = getCommandsForNoteType(noteType as NoteType);
-        allCommands.push(...universalCommands.map(cmd => ({
+        commands.push(...universalCommands.map(cmd => ({
           id: cmd.id,
           label: cmd.label,
           icon: cmd.icon,
@@ -156,12 +239,14 @@ export function InlineCommandPalette({
           collaboration_note: { label: 'People' },
           reflection_journal: { label: 'Reflection' },
           task_checklist: { label: 'Tasks' },
-          email_draft: { label: 'Messages' }
+          email_draft: { label: 'Messages' },
+          project: { label: 'Projects' },
+          idea: { label: 'Ideas' }
         };
         
         for (const nt of allNoteTypes) {
           const { typeSpecificCommands } = getCommandsForNoteType(nt);
-          allCommands.push(...typeSpecificCommands.map(cmd => ({
+          commands.push(...typeSpecificCommands.map(cmd => ({
             id: `${nt}-${cmd.id}`,
             label: `${NOTE_TYPE_CONFIG[nt].label}: ${cmd.label}`,
             icon: cmd.icon,
@@ -169,13 +254,11 @@ export function InlineCommandPalette({
             category: `${NOTE_TYPE_CONFIG[nt].label} Commands`
           })));
         }
-        
-        return allCommands;
       } else {
         // Get commands for specific note type
         const { typeSpecificCommands, universalCommands } = getCommandsForNoteType(selectedNoteTypeForCommands as NoteType);
         
-        return [
+        commands.push(...[
           ...typeSpecificCommands.map(cmd => ({
             id: cmd.id,
             label: cmd.label,
@@ -190,9 +273,11 @@ export function InlineCommandPalette({
             action: () => handleSuggestionSelect(cmd.label),
             category: cmd.category
           }))
-        ];
+        ]);
       }
     }
+    
+    return commands;
   };
 
   // Filter commands based on user input
@@ -214,7 +299,10 @@ export function InlineCommandPalette({
   const handleSuggestionSelect = (suggestion: string) => {
     // Remove "..." from the end of suggestions
     const cleanSuggestion = suggestion.replace(/\.\.\.\s*$/, '');
-    setUserInput(cleanSuggestion);
+    
+    // Translate the suggestion to the user's current language
+    const translatedSuggestion = getTranslatedLabel(cleanSuggestion);
+    setUserInput(translatedSuggestion);
     
     // Focus the input so user can edit if needed
     setTimeout(() => {
@@ -426,7 +514,7 @@ export function InlineCommandPalette({
               <div className="p-4 flex items-center justify-center">
                               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                <span>Waiting for refined text...</span>
+                <span><T context="commandpalette.status">Waiting for refined text...</T></span>
               </div>
               </div>
             )}
@@ -435,22 +523,26 @@ export function InlineCommandPalette({
           <div className="p-4 flex items-center justify-center">
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
               <Loader2 className="w-5 h-5 animate-spin text-primary" />
-              <span>Refining your text...</span>
+              <span><T context="commandpalette.status">Refining your text...</T></span>
             </div>
           </div>
         ) : (
           <div className="py-2">
             {filteredCommands.length === 0 && userInput.trim() ? (
               <div className="p-4 text-center">
-                <p className="text-sm text-muted-foreground mb-2">No preset commands found for "{userInput}"</p>
-                <p className="text-xs text-muted-foreground">The input field above will execute your custom {refinementMode ? 'refinement' : 'prompt'}</p>
+                <p className="text-sm text-muted-foreground mb-2">
+                  <T context="commandpalette.empty">No preset commands found for</T> "{userInput}"
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  <T context="commandpalette.hint">The input field above will execute your custom</T> {refinementMode ? <T context="commandpalette.refinement">refinement</T> : <T context="commandpalette.prompt">prompt</T>}
+                </p>
               </div>
             ) : (
               Object.entries(groupedCommands).map(([category, commands]) => (
                 <div key={category} className="mb-3 last:mb-0">
                   <div className="px-3 py-1">
                     <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      {category}
+                      <T context="commandpalette.category">{category}</T>
                     </h3>
                   </div>
                   <div className="space-y-0.5">
@@ -498,7 +590,7 @@ export function InlineCommandPalette({
                           <span className={`text-sm font-medium ${
                             isOptionCompleted ? 'font-semibold' : ''
                           }`}>
-                            {option.label}
+                            <T context="commandpalette.command">{option.label}</T>
                           </span>
                           {isSelected && !isDisabled && !isOptionLoading && !isOptionCompleted && (
                             <ArrowRight className="w-3 h-3 ml-auto text-primary" />

@@ -8,6 +8,8 @@ import { useAuth } from '@/app/context/auth-context'
 import { DeleteProjectModal } from '../[projectId]/components/DeleteProjectModal'
 import { formatDistanceToNow } from '../[projectId]/components/utils/dateFormatting'
 import { getProjectStatus, getCardDimensions } from '../[projectId]/components/utils/widgetStyling'
+import { T } from '@/components/translation/T'
+import { useTranslation } from '@/hooks/useTranslation'
 
 interface Project {
   _id: string
@@ -118,6 +120,10 @@ export function ProjectStar({
   const scaleOpacity = Math.min(1, Math.max(0.6, scale))
   const finalOpacity = baseOpacity * scaleOpacity
 
+  // Translated tooltips
+  const { text: moreOptionsText } = useTranslation('More options', { targetLang: 'en', context: 'project.tooltip.more_options' })
+  const { text: deleteText } = useTranslation('Delete', { targetLang: 'en', context: 'project.action.delete' })
+
   return (
     <div
       className="absolute cursor-pointer group transition-all duration-300 ease-out will-change-transform"
@@ -164,7 +170,7 @@ export function ProjectStar({
                 {scale > 0.8 && (
                   <div className="relative" ref={menuRef}>
                     <button
-                      title="More options"
+                      title={moreOptionsText}
                       onClick={handleMenuClick}
                       className="p-1 hover:bg-muted/50 rounded-md transition-colors opacity-0 group-hover:opacity-100"
                       disabled={isDeleting}
@@ -180,7 +186,7 @@ export function ProjectStar({
                           className="w-full px-2 py-1.5 text-left text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 flex items-center gap-1.5 transition-colors"
                         >
                           <Trash2 className="w-2.5 h-2.5" />
-                          Delete
+                          <T context="project.action.delete">Delete</T>
                         </button>
                       </div>
                     )}
@@ -222,7 +228,11 @@ export function ProjectStar({
               <div className="flex items-center justify-between text-xs">
                 <div className="space-y-1">
                   <div className="text-muted-foreground/60">
-                    {hasFingerprint ? 'Intelligence active' : 'Awaiting discovery'}
+                    {hasFingerprint ? (
+                      <T context="project.status.intelligence_active">Intelligence active</T>
+                    ) : (
+                      <T context="project.status.awaiting_discovery">Awaiting discovery</T>
+                    )}
                   </div>
                   <div className="text-muted-foreground/50 font-mono">
                     {formatDistanceToNow(new Date(hasFingerprint ? project.updatedAt : project.createdAt), { short: true })}
@@ -231,7 +241,11 @@ export function ProjectStar({
                 {showFullDetails && (
                   <div className="text-right space-y-1">
                     <div className="text-muted-foreground/80">
-                      {hasFingerprint ? 'Explore' : 'Begin'}
+                      {hasFingerprint ? (
+                        <T context="project.action.explore">Explore</T>
+                      ) : (
+                        <T context="project.action.begin">Begin</T>
+                      )}
                     </div>
                     <div className="text-muted-foreground/50 font-mono text-xs">
                       v{importance.toFixed(1)}

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { X } from 'lucide-react';
+import { T } from '@/components/translation';
 
 interface ContentOverlayProps {
   children: React.ReactNode;
@@ -42,6 +43,7 @@ export const ContentOverlay: React.FC<ContentOverlayProps> = ({
                 title="Close"
                 onClick={onClose}
                 className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+                aria-label="Close"
               >
                 <X className="w-6 h-6" />
               </button>

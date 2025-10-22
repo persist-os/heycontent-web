@@ -104,6 +104,13 @@ export default defineSchema({
       category: v.string(),
       recommendation: v.string(),
     })),
+    greetings: v.optional(v.array(v.string())),
+    customCommandPrompts: v.optional(v.array(v.object({
+      id: v.string(),
+      label: v.string(),
+      category: v.string(),
+      noteType: v.optional(v.string()),
+    }))),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -373,7 +380,9 @@ export default defineSchema({
     rate_tier: v.optional(v.string()),
     scopes: v.optional(v.array(v.string())),
     status: v.optional(v.string()),
-  }),
+  })
+    .index("by_user_id", ["user_id"])
+    .index("by_user_and_client", ["user_id", "clientType"]),
 
   // Rate Limits
   rate_limits: defineTable({
@@ -966,6 +975,7 @@ export default defineSchema({
     showPersonaToFriends: v.boolean(), // TODO: Rename to showCrystalsToFriends or remove entirely
     allowFriendRequests: v.boolean(),
     friendRequestNotifications: v.boolean(),
+    language: v.optional(v.string()), // ISO 639-1 language code (e.g., "ko", "ja", "es")
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -1746,6 +1756,7 @@ export default defineSchema({
       threshold: v.number(),
       limit: v.number(),
       content_types: v.array(v.string()),
+      // Allow both nested and flat structures for backward compatibility
       shard_params: v.optional(v.object({
         limit: v.number(),
         dimensions: v.union(v.null(), v.array(v.string())),
@@ -1753,6 +1764,9 @@ export default defineSchema({
         keywords: v.union(v.null(), v.array(v.string())),
         tags: v.union(v.null(), v.array(v.string())),
       })),
+      // Flat structure (for Convergence-generated configs)
+      shard_limit: v.optional(v.number()),
+      shard_confidence: v.optional(v.number()),
     }),
     
     // Thompson Sampling parameters (Beta distribution)
@@ -1792,6 +1806,7 @@ export default defineSchema({
       threshold: v.number(),
       limit: v.number(),
       content_types: v.array(v.string()),
+      // Allow both nested and flat structures for backward compatibility
       shard_params: v.optional(v.object({
         limit: v.number(),
         dimensions: v.union(v.null(), v.array(v.string())),
@@ -1799,6 +1814,9 @@ export default defineSchema({
         keywords: v.union(v.null(), v.array(v.string())),
         tags: v.union(v.null(), v.array(v.string())),
       })),
+      // Flat structure (for Convergence-generated configs)
+      shard_limit: v.optional(v.number()),
+      shard_confidence: v.optional(v.number()),
     }),
     
     // All arms' state at decision time (for analysis)
@@ -2097,19 +2115,179 @@ export default defineSchema({
     .index("by_user_active", ["userId", "active"]),
 
   // ============================================================================
-  // CONVERGENCE OPTIMIZATION CONFIGS - Optimized parameters for MAB and tool workflows
+  // CONVERGENCE STORAGE SYSTEM
   // ============================================================================
-  
+  // Complete RL + Optimization pipeline for self-learning tool workflows
+  // 
+  // Flow: Experiments → Configs → Production → RL Feedback → Loop Closes
+  //
+  // 1. convergence_optimization_experiments: Test workflow candidates
+  // 2. convergence_optimization_runs: Run metadata and summaries  
+  // 3. convergence_configs: Winners promoted to production (INTERFACE to agents)
+  // 4. convergence_rl_training_data: Production feedback for next iteration
+  // ============================================================================
+
+  // ============================================================================
+  // RL TRAINING DATA - Agent Episodes & Evolution
+  // ============================================================================
   /**
-   * Convergence Configs - Store Convergence-optimized configurations
+   * Stores RL training data: episodes, trajectories, agent legacies
    * 
-   * Universal storage for any system optimized by The Convergence framework:
-   * - MAB parameters (context enrichment, crystal thresholds, intelligence triggers)
-   * - Tool workflow bundles (Reddit tools, search tools, extraction tools)
-   * - Any other parameter combinations requiring optimization
+   * Purpose:
+   * - Capture agent interactions for RL policy training
+   * - Track agent evolution across stations/tasks
+   * - Feed production signals back into Convergence optimization
    * 
-   * Each system gets multiple configs ranked by performance score.
-   * Systems load top N configs dynamically instead of using hardcoded values.
+   * NOT for config optimization - that's in optimization_experiments
+   * This is for AGENT learning and evolution tracking
+   */
+  convergence_rl_training_data: defineTable({
+    // === IDENTIFICATION ===
+    rl_key: v.string(),              // "episode:agent_123:station_web_001"
+    rl_record_type: v.union(         // What kind of RL data
+      v.literal("episode"),          // Single RL interaction (S, A, R, S')
+      v.literal("trajectory"),       // Sequence of episodes
+      v.literal("agent_legacy"),     // Agent's learned knowledge
+      v.literal("training_run")      // RL policy training session
+    ),
+    
+    // === AGENT CONTEXT (denormalized for fast queries) ===
+    agent_id: v.string(),                    // Which agent
+    civilization_id: v.optional(v.string()), // Multi-agent evolution group
+    station: v.optional(v.string()),         // "web_playground", "research_library"
+    
+    // === PERFORMANCE METRICS (denormalized hot path) ===
+    reward_score: v.optional(v.number()),    // RL reward (0-1)
+    fitness_score: v.optional(v.number()),   // Overall fitness
+    episode_timestamp: v.number(),           // When this occurred
+    success: v.optional(v.boolean()),        // Episode success flag
+    
+    // === FULL PAYLOAD ===
+    rl_episode_data: v.any(),               // Complete RLEpisode/Trajectory/Legacy
+    
+    // === METADATA ===
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_rl_key", ["rl_key"])
+    .index("by_agent", ["agent_id", "rl_record_type"])
+    .index("by_agent_reward", ["agent_id", "reward_score"])
+    .index("by_agent_station", ["agent_id", "station"])
+    .index("by_timestamp", ["episode_timestamp"]),
+
+  // ============================================================================
+  // OPTIMIZATION EXPERIMENTS - Config Testing & Evolution
+  // ============================================================================
+  /**
+   * Experiment data from optimization runs
+   * 
+   * Purpose:
+   * - Record every config test (test_case × config)
+   * - Track evolution progress (generations, mutations)
+   * - Full audit trail of what was tested and how it performed
+   * - Feeds into convergence_configs (winners get promoted)
+   * 
+   * This is the RAW DATA that generates production configs
+   */
+  convergence_optimization_experiments: defineTable({
+    // === IDENTIFICATION ===
+    experiment_id: v.string(),              // Unique experiment ID
+    optimization_run_id: v.string(),        // Links to parent run
+    
+    // === SYSTEM CONTEXT ===
+    system_name: v.string(),                // "context_enrichment_mab", "azure_o4_mini"
+    algorithm_name: v.string(),             // "mab_evolution", "grid_search", "bayesian"
+    
+    // === EXPERIMENT DETAILS ===
+    test_case_id: v.string(),               // Which test case
+    tested_config: v.any(),                 // The config being tested
+    generation_number: v.optional(v.number()), // For evolutionary algorithms
+    
+    // === RESULTS (denormalized for queries) ===
+    experiment_score: v.number(),           // Performance (0-1)
+    test_passed: v.boolean(),               // Success flag
+    
+    // === DETAILED METRICS ===
+    latency_ms: v.optional(v.number()),     // Timing
+    cost_usd: v.optional(v.number()),       // API/compute cost
+    full_metrics: v.optional(v.any()),      // Additional metrics
+    
+    // === AUDIT TRAIL ===
+    session_id: v.optional(v.string()),     // Session that ran this
+    experiment_timestamp: v.number(),       // When experiment ran
+    
+    createdAt: v.number(),
+  })
+    .index("by_run", ["optimization_run_id"])
+    .index("by_system", ["system_name"])
+    .index("by_system_score", ["system_name", "experiment_score"])
+    .index("by_run_generation", ["optimization_run_id", "generation_number"])
+    .index("by_timestamp", ["experiment_timestamp"]),
+
+  // ============================================================================
+  // OPTIMIZATION RUNS - High-level run metadata
+  // ============================================================================
+  /**
+   * Summary of each optimization run
+   * 
+   * Purpose:
+   * - Track optimization progress and completion
+   * - Aggregate stats across all experiments in run
+   * - Link to winning configs promoted to production
+   * - Dashboard queries (recent runs, best performers)
+   */
+  convergence_optimization_runs: defineTable({
+    // === IDENTIFICATION ===
+    run_id: v.string(),
+    system_name: v.string(),
+    algorithm_name: v.string(),
+    
+    // === TIMING ===
+    run_started_at: v.number(),
+    run_completed_at: v.optional(v.number()),
+    total_duration_ms: v.optional(v.number()),
+    
+    // === AGGREGATED RESULTS (denormalized for dashboards) ===
+    total_experiments_run: v.number(),
+    best_experiment_score: v.number(),
+    avg_experiment_score: v.number(),
+    experiments_by_generation: v.optional(v.any()), // Evolution tracking
+    
+    // === WINNER REFERENCES ===
+    winning_config_id: v.optional(v.id("convergence_configs")), // Promoted config
+    winning_config_snapshot: v.optional(v.any()),               // Best config found
+    
+    // === EVOLUTION METADATA ===
+    total_generations: v.optional(v.number()),     // For evolutionary algorithms
+    convergence_achieved: v.optional(v.boolean()), // Did it converge?
+    
+    createdAt: v.number(),
+  })
+    .index("by_run_id", ["run_id"])
+    .index("by_system", ["system_name"])
+    .index("by_best_score", ["system_name", "best_experiment_score"]),
+
+  // ============================================================================
+  // PRODUCTION CONFIGS - Winners for Agent Use (INTERFACE)
+  // ============================================================================
+  /**
+   * Convergence Configs - Production-ready optimized configurations
+   * 
+   * THIS IS THE INTERFACE between Convergence and HeyContext agents
+   * 
+   * Purpose:
+   * - Store winning configs promoted from optimization runs
+   * - Enable vector search for contextual config retrieval
+   * - Track production usage and success rates
+   * - Feed RL signals back into next optimization cycle
+   * 
+   * Systems:
+   * - MAB parameters (context enrichment, crystal thresholds)
+   * - Tool workflow bundles (Reddit tools, search tools)
+   * - AI model configs (Azure O1, temperature settings)
+   * - Any parameter combinations requiring optimization
+   * 
+   * Agents fetch these via vector search based on context
    */
   convergence_configs: defineTable({
     // System identification
@@ -2118,6 +2296,10 @@ export default defineSchema({
     
     // Configuration data
     params: v.any(),  // The actual configuration (flexible structure)
+    
+    // Vector search (optional - for context-based retrieval)
+    contextTag: v.optional(v.string()),        // Hybrid context tag (deterministic + semantic)
+    embedding: v.optional(v.array(v.number())), // Vector embedding for similarity search
     
     // Performance metrics
     score: v.number(),              // Overall performance score (0-1)
@@ -2137,6 +2319,7 @@ export default defineSchema({
     status: v.string(),  // Flexible string instead of union
     deployed_at: v.optional(v.number()),
     archived_at: v.optional(v.number()),
+    promotion_id: v.optional(v.string()),     // Idempotency key for config promotion
     
     // Usage tracking
     usage_count: v.optional(v.number()),      // Times this config was used
@@ -2146,11 +2329,6 @@ export default defineSchema({
     // Version control
     version: v.string(),                      // Config version (for rollback)
     replaces_config_id: v.optional(v.string()), // Previous config it replaces
-    
-    // Vector search support
-    embedding: v.optional(v.array(v.float64())),  // 768-dim embedding for contextual retrieval
-    contextTag: v.optional(v.string()),           // Combined tag: "ctx_abc123_high_confidence"
-    
     // RL tracking
     rl_episodes: v.optional(v.number()),      // Episodes recorded for RL
     rl_reward_sum: v.optional(v.number()),    // Accumulated reward scores
@@ -2169,7 +2347,7 @@ export default defineSchema({
     .vectorIndex("by_embedding", {
       vectorField: "embedding",
       dimensions: 768,
-      filterFields: ["system_name", "status"]
+      filterFields: ["system_name", "status"],
     }),
   // Convergence Storage - Generic key-value storage for Convergence framework
   convergence_storage: defineTable({
@@ -2182,5 +2360,94 @@ export default defineSchema({
   .index("by_key", ["key"])
   .index("by_created_at", ["created_at"]),
 
+  // Translations - Progressive translation cache for all languages
+  translations: defineTable({
+    // Cache key
+    sourceText: v.string(),           // Original text (usually English)
+    sourceTextHash: v.string(),       // SHA-256 hash for fast lookup
+    sourceLang: v.string(),           // ISO 639-1 code (e.g., "en")
+    targetLang: v.string(),           // ISO 639-1 code (e.g., "ko", "ja", "es")
+    
+    // Translation
+    translatedText: v.string(),       // The translated text
+    translationMethod: v.union(       // How it was translated
+      v.literal("ai"),                // AI-generated (Gemini)
+      v.literal("manual"),            // Manually entered
+      v.literal("edited")             // AI-generated, then manually edited
+    ),
+    
+    // Context (helps with context-aware translation)
+    context: v.optional(v.string()),  // Where it's used (e.g., "button.save", "heading.welcome")
+    componentPath: v.optional(v.string()), // Component path for tracking
+    
+    // Usage tracking
+    usageCount: v.number(),           // How many times requested
+    firstUsedAt: v.number(),          // When first user encountered this
+    lastUsedAt: v.number(),           // Most recent request
+    
+    // Quality control
+    verified: v.boolean(),            // Manually verified/approved
+    needsReview: v.optional(v.boolean()), // Flagged for review
+    version: v.number(),              // For translation updates/improvements
+    
+    // Metadata
+    translatedBy: v.optional(v.string()), // userId who first triggered or manually edited
+    reviewedBy: v.optional(v.string()),   // userId who verified
+    notes: v.optional(v.string()),        // Admin notes about translation
+    
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_hash_and_lang", ["sourceTextHash", "targetLang"])
+    .index("by_source_and_lang", ["sourceText", "targetLang"])
+    .index("by_usage", ["usageCount"])
+    .index("by_target_lang", ["targetLang"])
+    .index("by_verification", ["verified", "targetLang"])
+    .index("by_needs_review", ["needsReview"])
+    .index("by_version", ["sourceTextHash", "targetLang", "version"]),
+
+  // Subscription Plans - Static plan data cached from Stripe
+  subscription_plans: defineTable({
+    // Plan identification
+    planKey: v.string(),              // "free", "basic", "pro"
+    planName: v.string(),             // "Free", "Basic", "Pro"
+    
+    // Interval-specific pricing
+    interval: v.union(
+      v.literal("month"),
+      v.literal("year")
+    ),
+    
+    // Stripe integration
+    priceId: v.string(),              // Stripe price ID (flat fee)
+    productId: v.string(),            // Stripe product ID
+    meteredPriceId: v.optional(v.string()), // Stripe metered price ID (usage-based)
+    
+    // Pricing
+    amount: v.number(),               // Price in cents
+    currency: v.string(),             // "usd", "eur", etc.
+    
+    // Usage limits
+    includedRequests: v.number(),     // Included API requests per period
+    overage: v.number(),              // Overage price per request (0 for free tier)
+    
+    // Features
+    features: v.array(v.string()),    // List of feature descriptions
+    
+    // Metering configuration
+    isMetered: v.boolean(),           // Whether this plan has usage-based billing
+    
+    // Metadata
+    active: v.boolean(),              // Whether this plan is available for signup
+    sortOrder: v.number(),            // Display order (0 = first)
+    
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    lastSyncedAt: v.number(),         // When plan was last synced from backend
+  })
+    .index("by_plan_key", ["planKey"])
+    .index("by_plan_key_interval", ["planKey", "interval"])
+    .index("by_active", ["active", "sortOrder"])
+    .index("by_price_id", ["priceId"]),
 });
 

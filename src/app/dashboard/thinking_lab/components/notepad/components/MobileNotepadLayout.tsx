@@ -56,7 +56,7 @@ export function MobileNotepadLayout({
 }: MobileNotepadLayoutProps) {
   
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-[hsl(var(--notepad-bg))]">
       {/* Header */}
       <NotepadHeader
         note={note}

@@ -4,7 +4,7 @@
  * System Debug Info Component
  * 
  * Displays comprehensive system information about crystal formation,
- * migration tracking, and debug data. Extracted for modularity.
+ * formation runs, and debug data. Extracted for modularity.
  */
 
 import React from 'react';
@@ -15,13 +15,6 @@ interface SystemDebugInfoProps {
   crystalStats?: CrystalStats;
   formationStatus?: FormationStatus;
   formationEligibility?: FormationEligibility;
-  needsMigration: boolean;
-  contentProcessed?: {
-    conversations: number;
-    notes: number;
-    totalItems: number;
-  };
-  migrationAttempts?: number;
   formationRuns?: any[];
 }
 
@@ -29,9 +22,6 @@ export const SystemDebugInfo: React.FC<SystemDebugInfoProps> = ({
   crystalStats,
   formationStatus,
   formationEligibility,
-  needsMigration,
-  contentProcessed,
-  migrationAttempts = 0,
   formationRuns = []
 }) => {
   const [showDebugInfo, setShowDebugInfo] = React.useState(false);
@@ -64,7 +54,7 @@ export const SystemDebugInfo: React.FC<SystemDebugInfoProps> = ({
           {/* Current Status */}
           <div>
             <h4 className="font-medium text-sm text-foreground mb-3">Current Status</h4>
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="grid grid-cols-3 gap-3 text-sm">
               <div className="bg-muted/20 rounded-lg p-3">
                 <div className="text-muted-foreground mb-1">Total Shards</div>
                 <div className="text-foreground font-medium">{formationEligibility?.shardCount || 0}</div>
@@ -77,45 +67,8 @@ export const SystemDebugInfo: React.FC<SystemDebugInfoProps> = ({
                 <div className="text-muted-foreground mb-1">Formation Eligible</div>
                 <div className="text-foreground font-medium">{formationEligibility?.eligible ? 'Yes' : 'No'}</div>
               </div>
-              <div className="bg-muted/20 rounded-lg p-3">
-                <div className="text-muted-foreground mb-1">Migration Status</div>
-                <div className="text-foreground font-medium">{needsMigration ? 'Needed' : 'Complete'}</div>
-              </div>
             </div>
           </div>
-
-          {/* Migration Tracking Metadata */}
-          {!needsMigration && (
-            <div className="pt-3 border-t border-border/20">
-              <h4 className="font-medium text-sm text-foreground mb-3">Migration Tracking</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Migration Type</span>
-                  <span className="text-foreground font-medium">crystal_initial_generation</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Total Attempts</span>
-                  <span className="text-foreground font-medium">{migrationAttempts}</span>
-                </div>
-                {contentProcessed && (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Conversations Processed</span>
-                      <span className="text-foreground font-medium">{contentProcessed.conversations || 0}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Notes Processed</span>
-                      <span className="text-foreground font-medium">{contentProcessed.notes || 0}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Total Items</span>
-                      <span className="text-foreground font-medium">{contentProcessed.totalItems || 0}</span>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Formation Runs History */}
           {formationRuns.length > 0 && (

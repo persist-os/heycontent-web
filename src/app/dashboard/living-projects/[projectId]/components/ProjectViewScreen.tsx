@@ -7,6 +7,7 @@ import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { api } from '@/convex/_generated/api'
 import { useProjectFingerprint } from '@/app/dashboard/living-projects/hooks/useProjectFingerprint'
 import { useAnalytics } from '@/hooks/useAnalytics'
+import { T } from '@/components/translation'
 import { 
   ArrowLeft,
   MoreHorizontal,
@@ -15,15 +16,15 @@ import {
   Trash2,
   LayoutGrid,
   List,
-  FileText
+  FileText,
+  Plus
 } from 'lucide-react'
 import { ConstellationTransition } from '@/app/dashboard/living-projects/components/widgets/ConstellationTransition'
 import { DeleteProjectModal } from './DeleteProjectModal'
 import { WidgetConfig } from '@/types/projectWidgets'
 import { useWidgetGeneration } from './hooks/useWidgetGeneration'
 import { useProjectActions } from './hooks/useProjectActions'
-import { WidgetDetailsPanel } from './widgets/WidgetDetailsPanel'
-import { ContentDetailsPanel } from './widgets/ContentDetailsPanel'
+import { UnifiedDetailsPanel, usePanelInstances } from './widgets/unified-panel/UnifiedDetailsPanel'
 import { WidgetGenerationLoader } from './widgets/WidgetGenerationLoader'
 import { ConstellationCanvas } from './widgets/ConstellationCanvas'
 import { formatDistanceToNow } from './utils/dateFormatting'
@@ -45,17 +46,20 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   const [userId, setUserId] = useState<string | null>(null)
   const [showTransition, setShowTransition] = useState(false)
   const [highlightedWidget, setHighlightedWidget] = useState<string | null>(null)
-  const [selectedWidget, setSelectedWidget] = useState<WidgetConfig | null>(null)
-  const [showWidgetPanel, setShowWidgetPanel] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showProjectContentPanel, setShowProjectContentPanel] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>("constellation")
-  const [widgetPanelWidth, setWidgetPanelWidth] = useState(384) // Default 24rem
-  const [selectedContent, setSelectedContent] = useState<{ item: any; type: 'note' | 'conversation' | 'crystal' | 'shard' } | null>(null)
-  const [contentPanelWidth, setContentPanelWidth] = useState(448) // Default 28rem
   const menuRef = useRef<HTMLDivElement>(null)
+  
+  // Unified panel management (replaces separate widget/content panel state)
+  const {
+    instances: panelInstances,
+    openPanel,
+    updateInstance,
+    closeInstance
+  } = usePanelInstances()
 
   // Track project open
   useEffect(() => {
@@ -107,12 +111,12 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
       (item._contentId || item._id) === id
     )
     if (contentItem) {
-      setSelectedContent({ item: contentItem, type: type as 'note' | 'conversation' | 'crystal' | 'shard' })
-      // Close widget panel if open (mutual exclusion)
-      if (showWidgetPanel) {
-        setShowWidgetPanel(false)
-        setSelectedWidget(null)
+      // Open unified panel at content position (center of viewport)
+      const position = {
+        x: window.innerWidth / 2 - 200,
+        y: window.innerHeight / 2 - 150
       }
+      openPanel(contentItem, type as 'note' | 'conversation' | 'crystal' | 'shard', position)
     }
   };
 
@@ -143,14 +147,14 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   const { executeWidget, isRunning: isWidgetRunning, lastResult } = useWidgetRunner()
   const [runningWidgetId, setRunningWidgetId] = useState<string | null>(null)
 
-  // Event handlers - with mutual exclusion (closes content panel)
+  // Event handlers - unified panel opens at widget/content position
   const handleWidgetClick = (widget: WidgetConfig) => {
-    setSelectedWidget(widget)
-    setShowWidgetPanel(true)
-    // Close content panel if open (mutual exclusion)
-    if (selectedContent) {
-      setSelectedContent(null)
+    // Open panel at widget position (center of viewport as fallback)
+    const position = {
+      x: window.innerWidth / 2 - 200,
+      y: window.innerHeight / 2 - 150
     }
+    openPanel(widget, 'widget', position)
   }
 
   const handleWidgetHover = (widgetId: string | null) => {
@@ -163,7 +167,7 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
       
       // Find widget by Convex ID
       const widget = projectWidgets?.widgets.find(
-        (w: any) => w._id === widgetId  // ✅ Use Convex ID (_id)
+        (w: any) => w._id === widgetId
       ) as WidgetConfig | undefined
       
       if (!widget) {
@@ -172,17 +176,20 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
       }
 
       const result = await executeWidget({
-        widgetId,  // ✅ Already Convex ID from FloatingWidgetCard
+        widgetId,
         projectId
       })
 
       if (result) {
-        // Success! Open the details panel to show the output
+        // Success! Open the panel to show the output
         console.log('Widget executed successfully:', result)
         
-        // Set selected widget and open panel
-        setSelectedWidget(widget)
-        setShowWidgetPanel(true)
+        // Open panel at center of viewport
+        const position = {
+          x: window.innerWidth / 2 - 200,
+          y: window.innerHeight / 2 - 150
+        }
+        openPanel(widget, 'widget', position)
       }
     } catch (error) {
       console.error('Failed to run widget:', error)
@@ -219,14 +226,18 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
             title="Go back"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back
+            <T context="button.back">Back</T>
           </button>
           
           <div className="flex items-center justify-center py-20">
             <div className="text-center space-y-4">
               <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-pulse mx-auto" />
-              <h2 className="text-xl font-light text-foreground">Loading project</h2>
-              <p className="text-muted-foreground/60 text-sm">Preparing your project intelligence...</p>
+              <h2 className="text-xl font-light text-foreground">
+                <T context="loading.project">Loading project</T>
+              </h2>
+              <p className="text-muted-foreground/60 text-sm">
+                <T context="loading.description">Preparing your project intelligence...</T>
+              </p>
             </div>
           </div>
         </div>
@@ -253,31 +264,43 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
                 title="Back to projects"
               >
                 <ArrowLeft className="w-4 h-4" />
-                Back to projects
+                <T context="button.back_to_projects">Back to projects</T>
               </button>
 
               {/* Project info */}
               <div className="flex-1 text-center px-8">
                 <h1 className="text-2xl font-medium text-foreground mb-1">
-                  {project?.name || 'Project Dashboard'}
+                  {project?.name || <T context="project.default_title">Project Dashboard</T>}
                 </h1>
                 <p className="text-sm text-muted-foreground/70">
-                  {project?.description || 'AI-powered project management and insights'}
+                  {project?.description || <T context="project.default_description">AI-powered project management and insights</T>}
                 </p>
                 <div className="text-xs text-muted-foreground/60 mt-2">
                   {isGenerating ? (
                     <span className="flex items-center justify-center gap-2">
                       <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                      Generating widgets...
+                      <T context="status.generating">Generating widgets...</T>
                     </span>
                   ) : (
-                    `Active: ${projectWidgets?.widgets?.length || 0} widgets • ${projectWidgets?.categories?.length || 0} categories`
+                    <>
+                      <T context="status.active">Active</T>: {projectWidgets?.widgets?.length || 0} <T context="label.widgets">widgets</T> • {projectWidgets?.categories?.length || 0} <T context="label.categories">categories</T>
+                    </>
                   )}
                 </div>
               </div>
 
-              {/* View Mode Toggle and Menu */}
+              {/* Actions */}
               <div className="flex items-center gap-3">
+                {/* Add Content Button - Prominent */}
+                <button
+                  onClick={() => setShowProjectContentPanel(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md font-medium"
+                  title="Add content to project"
+                >
+                  <Plus className="w-4 h-4" />
+                  <T context="button.add_content">Add Content</T>
+                </button>
+
                 {/* View Mode Toggle */}
                 <div className="flex items-center bg-muted/20 rounded-lg p-1">
                   <button
@@ -290,7 +313,7 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
                     )}
                   >
                     <LayoutGrid className="w-4 h-4" />
-                    Constellation
+                    <T context="view.constellation">Constellation</T>
                   </button>
                   <button
                     onClick={() => handleViewModeToggle("grid")}
@@ -302,7 +325,7 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
                     )}
                   >
                     <List className="w-4 h-4" />
-                    Grid View
+                    <T context="view.grid">Grid View</T>
                     {project && (
                       <span className="ml-1 text-xs bg-muted/50 px-2 py-0.5 rounded-full">
                         {(projectWidgets?.widgets?.length || 0) + ((project as any)?.contentItems?.length || 0)}
@@ -331,7 +354,7 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
                         className="w-full px-3 py-2 text-left text-sm hover:bg-muted/50 flex items-center gap-2 transition-colors"
                       >
                         <FileText className="w-4 h-4" />
-                        Manage content
+                        <T context="menu.manage_content">Manage content</T>
                       </button>
                       <div className="border-t border-border/20 my-1" />
                       <button
@@ -342,7 +365,7 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
                         className="w-full px-3 py-2 text-left text-sm hover:bg-muted/50 flex items-center gap-2 transition-colors"
                       >
                         <Edit3 className="w-4 h-4" />
-                        Resume Discovery
+                        <T context="menu.resume_discovery">Resume Discovery</T>
                       </button>
                       <button
                         onClick={() => {
@@ -353,7 +376,7 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
                         className="w-full px-3 py-2 text-left text-sm hover:bg-muted/50 flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <RefreshCw className="w-4 h-4" />
-                        {isGenerating ? 'Generating...' : 'Regenerate widgets'}
+                        {isGenerating ? <T context="menu.generating">Generating...</T> : <T context="menu.regenerate_widgets">Regenerate widgets</T>}
                       </button>
                       <div className="border-t border-border/20 my-1" />
                       <button
@@ -364,7 +387,7 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
                         className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 flex items-center gap-2 transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
-                        Delete project
+                        <T context="menu.delete_project">Delete project</T>
                       </button>
                     </div>
                   )}
@@ -376,6 +399,7 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
 
         {/* Content */}
         <div className="relative">
+
           {viewMode === "constellation" && (
             <>
               {isGenerating ? (
@@ -388,23 +412,22 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
                   onWidgetClick={handleWidgetClick}
                   onWidgetHover={handleWidgetHover}
                   highlightedWidget={highlightedWidget}
-                  showWidgetPanel={showWidgetPanel}
                   onWidgetRun={handleWidgetRun}
                   runningWidgetId={runningWidgetId}
-                  selectedWidget={selectedWidget}
                   contentItems={(project as any)?.contentItems || []}
                   storedLayout={(project as any)?.constellationLayout}
                   onContentOpen={handleContentOpen}
                   onLayoutReset={handleLayoutReset}
-                  widgetPanelWidth={widgetPanelWidth}
-                  selectedContent={selectedContent}
-                  contentPanelWidth={contentPanelWidth}
                 />
               ) : (
                 <div className="flex items-center justify-center h-64">
                   <div className="text-center">
-                    <div className="text-muted-foreground mb-2">No fingerprint available</div>
-                    <div className="text-sm text-muted-foreground">Please complete the project discovery process</div>
+                    <div className="text-muted-foreground mb-2">
+                      <T context="error.no_fingerprint">No fingerprint available</T>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      <T context="error.complete_discovery">Please complete the project discovery process</T>
+                    </div>
                   </div>
                 </div>
               )}
@@ -422,9 +445,11 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
                   <div className="p-6 border-b border-border">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h2 className="text-xl font-semibold text-foreground">Project Items</h2>
+                        <h2 className="text-xl font-semibold text-foreground">
+                          <T context="grid.title">Project Items</T>
+                        </h2>
                         <p className="text-sm text-muted-foreground">
-                          All your widgets, notes, conversations, crystals, and shards in a structured view
+                          <T context="grid.description">All your widgets, notes, conversations, crystals, and shards in a structured view</T>
                         </p>
                       </div>
                       <button
@@ -432,7 +457,7 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
                         className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-2"
                       >
                         <LayoutGrid className="w-4 h-4" />
-                        Back to Constellation
+                        <T context="button.back_to_constellation">Back to Constellation</T>
                       </button>
                     </div>
                   </div>
@@ -473,26 +498,12 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
         isDeleting={isDeleting}
       />
 
-      <WidgetDetailsPanel
-        widget={selectedWidget}
-        isOpen={showWidgetPanel}
-        onClose={() => {
-          setShowWidgetPanel(false)
-          setSelectedWidget(null)
-        }}
+      {/* Unified Details Panel - handles widgets, notes, conversations, crystals, shards */}
+      <UnifiedDetailsPanel
+        instances={panelInstances}
+        onInstanceUpdate={updateInstance}
+        onInstanceClose={closeInstance}
         projectId={projectId}
-        width={widgetPanelWidth}
-        onWidthChange={setWidgetPanelWidth}
-      />
-
-      <ContentDetailsPanel
-        item={selectedContent?.item || null}
-        itemType={selectedContent?.type || null}
-        isOpen={!!selectedContent}
-        onClose={() => setSelectedContent(null)}
-        projectId={projectId}
-        width={contentPanelWidth}
-        onWidthChange={setContentPanelWidth}
       />
 
       {/* Project Content Management Panel */}

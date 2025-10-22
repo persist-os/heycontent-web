@@ -14,6 +14,8 @@ import { useAuth } from '@/app/context/auth-context';
 import { getPopularTags } from '../utils/tag-utils';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { T } from '@/components/translation';
+import { useTranslation } from '@/hooks/useTranslation';
 import {
   DndContext,
   DragEndEvent,
@@ -63,7 +65,13 @@ function CreateProjectDropZone({ isVisible, isDraggedOver }: { isVisible: boolea
       )}
     >
       <Plus className="w-5 h-5" />
-      <span>{isDraggedOver ? "Drop to create new project" : "Create New Project"}</span>
+      <span>
+        {isDraggedOver ? (
+          <T context="notes.drag.drop-to-create-project">Drop to create new project</T>
+        ) : (
+          <T context="button.create-new-project">Create New Project</T>
+        )}
+      </span>
     </div>
   );
 }
@@ -326,12 +334,12 @@ export function NotesGrid({
   const showingAll = selectedTypeFilter === 'all';
   const showingProjectsOnly = selectedTypeFilter === 'projects';
 
-  // Note types for filter buttons
+  // Note types for filter buttons - translations will be handled inline
   const noteTypes = [
-    { key: 'all', label: 'All', color: 'bg-gray-400' },
-    { key: 'idea_bank', label: 'Ideas', color: 'bg-primary' },
-    { key: 'content_script', label: 'Content', color: 'bg-primary' },
-    { key: 'projects', label: 'Projects', color: 'bg-accent' },
+    { key: 'all', label: 'All', context: 'notes.filter.all', color: 'bg-gray-400' },
+    { key: 'idea_bank', label: 'Ideas', context: 'notes.filter.ideas', color: 'bg-primary' },
+    { key: 'content_script', label: 'Content', context: 'notes.filter.content', color: 'bg-primary' },
+    { key: 'projects', label: 'Projects', context: 'notes.filter.projects', color: 'bg-accent' },
   ];
 
   // Helper function to render the appropriate card component
@@ -414,17 +422,21 @@ export function NotesGrid({
               <div className="lg:col-span-2">
                 <div className="flex items-baseline gap-3 sm:gap-6 mb-2">
                   <h1 className="text-3xl sm:text-4xl lg:text-5xl font-light tracking-tight text-foreground">
-                    Files
+                    <T context="notes.header.title">Files</T>
                   </h1>
                   <div className="h-px bg-gradient-to-r from-border/50 to-transparent flex-1 mb-2 sm:mb-3" />
                 </div>
                 <h2 className="text-base sm:text-lg font-light text-muted-foreground ml-1 sm:ml-2 tracking-wide">
-                  Your thoughts and ideas
+                  <T context="notes.header.subtitle-grid">Your thoughts and ideas</T>
                 </h2>
               </div>
               <div className="flex flex-col items-start lg:items-end gap-2 sm:gap-4">
                 <div className="text-sm font-light text-muted-foreground">
-                  {totalItems} {totalItems === 1 ? 'item' : 'items'}
+                  {totalItems} {totalItems === 1 ? (
+                    <T context="notes.count.item">item</T>
+                  ) : (
+                    <T context="notes.count.items">items</T>
+                  )}
                 </div>
               </div>
             </div>
@@ -468,7 +480,9 @@ export function NotesGrid({
                       "w-1.5 h-1.5 rounded-full transition-all duration-300",
                       selectedTypeFilter === type.key ? type.color : "bg-muted-foreground/30"
                     )} />
-                    <span className="tracking-wide text-xs sm:text-sm">{type.label}</span>
+                    <span className="tracking-wide text-xs sm:text-sm">
+                      <T context={type.context}>{type.label}</T>
+                    </span>
                   </div>
                   {selectedTypeFilter === type.key && (
                     <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-foreground to-transparent" />
@@ -485,7 +499,7 @@ export function NotesGrid({
             <div className="max-w-5xl mx-auto">
               <div className="flex items-center gap-4 mb-4">
                 <h3 className="text-sm font-light text-muted-foreground tracking-wide">
-                  Explore by topic
+                  <T context="notes.explore-by-topic">Explore by topic</T>
                 </h3>
                 <div className="h-px bg-gradient-to-r from-border/30 to-transparent flex-1" />
                 {selectedTagFilter && (
@@ -494,7 +508,7 @@ export function NotesGrid({
                     className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors duration-200"
                   >
                     <X className="w-3 h-3" />
-                    Clear filter
+                    <T context="notes.clear-filter">Clear filter</T>
                   </button>
                 )}
               </div>
@@ -533,24 +547,26 @@ export function NotesGrid({
               </div>
               <div className="space-y-3">
                 <h3 className="text-2xl font-light text-foreground tracking-tight">
-                  {searchTerm || (selectedTypeFilter !== 'all' && selectedTypeFilter !== 'projects') || selectedTagFilter
-                    ? `Nothing found` 
-                    : showingProjectsOnly 
-                    ? 'Your first project awaits'
-                    : showingAll
-                    ? 'Begin your creative journey'
-                    : 'Start capturing ideas'
-                  }
+                  {searchTerm || (selectedTypeFilter !== 'all' && selectedTypeFilter !== 'projects') || selectedTagFilter ? (
+                    <T context="notes.empty.nothing-found">Nothing found</T>
+                  ) : showingProjectsOnly ? (
+                    <T context="notes.empty.first-project">Your first project awaits</T>
+                  ) : showingAll ? (
+                    <T context="notes.empty.begin-journey">Begin your creative journey</T>
+                  ) : (
+                    <T context="notes.empty.start-capturing">Start capturing ideas</T>
+                  )}
                 </h3>
                 <p className="text-muted-foreground font-light leading-relaxed">
-                  {searchTerm || (selectedTypeFilter !== 'all' && selectedTypeFilter !== 'projects') || selectedTagFilter
-                    ? "Try a different search term or adjust your filters to discover content."
-                    : showingProjectsOnly 
-                    ? 'Organize your notes, conversations, and content into meaningful projects.'
-                    : showingAll
-                    ? 'Transform your thoughts into organized, AI-enhanced notes and projects.'
-                    : 'Capture insights, ideas, and inspirations with AI-powered organization.'
-                  }
+                  {searchTerm || (selectedTypeFilter !== 'all' && selectedTypeFilter !== 'projects') || selectedTagFilter ? (
+                    <T context="notes.empty.try-different">Try a different search term or adjust your filters to discover content.</T>
+                  ) : showingProjectsOnly ? (
+                    <T context="notes.empty.organize-content">Organize your notes, conversations, and content into meaningful projects.</T>
+                  ) : showingAll ? (
+                    <T context="notes.empty.transform-thoughts">Transform your thoughts into organized, AI-enhanced notes and projects.</T>
+                  ) : (
+                    <T context="notes.empty.capture-insights">Capture insights, ideas, and inspirations with AI-powered organization.</T>
+                  )}
                 </p>
               </div>
               <button
@@ -561,12 +577,14 @@ export function NotesGrid({
                 {isCreatingNote ? (
                   <>
                     <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                    Creating...
+                    <T context="button.creating">Creating...</T>
                   </>
                 ) : (
                   <>
                     <Plus className="w-4 h-4" />
-                    Create {showingProjectsOnly ? 'Project' : showingAll ? 'Something New' : 'Note'}
+                    <T context={showingProjectsOnly ? 'button.create-project' : showingAll ? 'button.create-something-new' : 'button.create-note'}>
+                      {showingProjectsOnly ? 'Create Project' : showingAll ? 'Create Something New' : 'Create Note'}
+                    </T>
                   </>
                 )}
               </button>
@@ -640,6 +658,7 @@ export function NotesGrid({
           disabled={isCreatingNote}
           className="fixed bottom-8 right-8 w-16 h-16 bg-primary/90 text-primary-foreground rounded-2xl backdrop-blur-sm hover:bg-primary hover:scale-[1.05] transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-xl z-50 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation border border-primary/20"
           title={isCreatingNote ? "Creating..." : "Create new item"}
+          aria-label={isCreatingNote ? "Creating..." : "Create new item"}
         >
           {isCreatingNote ? (
             <div className="w-5 h-5 border-2 border-primary-foreground/80 border-t-transparent rounded-full animate-spin"></div>

@@ -17,6 +17,7 @@ import { TreeNodeRenderer } from './TreeNodeComponents';
 import { useNotesTreeStructure } from './useNotesTreeStructure';
 import { useNotesTreeDragDrop } from './useNotesTreeDragDrop';
 import { Note } from '../types';
+import { T } from '@/components/translation';
 
 export function NotesTree({
   notes,
@@ -169,13 +170,13 @@ export function NotesTree({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
         <div className="max-w-6xl mx-auto p-6">
           <div className="animate-pulse space-y-6">
-            <div className="h-12 bg-muted/30 rounded-lg w-full" />
+            <div className="h-12 bg-gradient-to-r from-primary/5 via-muted/30 to-accent/5 rounded-lg w-full" />
             <div className="space-y-3">
               {[1, 2, 3, 4, 5].map(i => (
-                <div key={i} className="h-8 bg-muted/20 rounded-md" />
+                <div key={i} className="h-8 bg-gradient-to-r from-muted/20 via-primary/3 to-transparent rounded-md" />
               ))}
             </div>
           </div>
@@ -191,44 +192,49 @@ export function NotesTree({
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="min-h-screen bg-background">
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <NotesTreeHeader
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            selectedFilter={selectedFilter}
-            onFilterChange={setSelectedFilter}
-            onCreateNote={handleCreateNote}
-            onCreateProject={() => setShowCreateProjectModal(true)}
-            onCreateFolder={() => setShowCreateFolderModal(true)}
-            isCreatingNote={isCreatingNote}
-            isCreatingProject={isCreatingProject}
-            isCreatingFolder={isCreatingFolder}
-            foldersCount={folders?.length}
-            sharedNotesCount={sharedNotes?.length}
-            mySharedContentCount={mySharedContent?.length}
-          />
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+        {/* Header - Full Width */}
+        <NotesTreeHeader
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          selectedFilter={selectedFilter}
+          onFilterChange={setSelectedFilter}
+          onCreateNote={handleCreateNote}
+          onCreateProject={() => setShowCreateProjectModal(true)}
+          onCreateFolder={() => setShowCreateFolderModal(true)}
+          isCreatingNote={isCreatingNote}
+          isCreatingProject={isCreatingProject}
+          isCreatingFolder={isCreatingFolder}
+          foldersCount={folders?.length}
+          sharedNotesCount={sharedNotes?.length}
+          mySharedContentCount={mySharedContent?.length}
+        />
 
-          {/* Tree content */}
+        {/* Tree content */}
+        <div className="max-w-6xl mx-auto">
           <div className="p-4 sm:p-6 pb-safe">
             {treeStructure.length === 0 ? (
               <div className="text-center py-12 sm:py-20">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-muted/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-muted-foreground/40" />
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-primary/10 via-accent/5 to-primary/5 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary/5">
+                  <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-primary/60" />
                 </div>
                 <h3 className="text-base sm:text-lg font-medium text-foreground mb-2">
-                  {searchTerm || selectedFilter !== 'all' ? 'No notes found' : 'No notes yet'}
+                  {searchTerm || selectedFilter !== 'all' ? (
+                    <T context="notes.empty.no-results">No notes found</T>
+                  ) : (
+                    <T context="notes.empty.no-notes">No notes yet</T>
+                  )}
                 </h3>
-                <p className="text-sm sm:text-base text-muted-foreground/70 max-w-sm mx-auto px-4">
-                  {selectedFilter === 'shared' 
-                    ? 'No notes have been shared with you yet'
-                    : selectedFilter === 'my-shared'
-                    ? 'You haven\'t shared any notes with others yet'
-                    : searchTerm || selectedFilter !== 'all' 
-                    ? 'Try adjusting your search or filter criteria'
-                    : 'Create your first note to get started with organizing your thoughts'
-                  }
+                <p className="text-sm sm:text-base text-muted-foreground max-w-sm mx-auto px-4">
+                  {selectedFilter === 'shared' ? (
+                    <T context="notes.empty.no-shared">No notes have been shared with you yet</T>
+                  ) : selectedFilter === 'my-shared' ? (
+                    <T context="notes.empty.no-my-shared">You haven't shared any notes with others yet</T>
+                  ) : searchTerm || selectedFilter !== 'all' ? (
+                    <T context="notes.empty.adjust-filter">Try adjusting your search or filter criteria</T>
+                  ) : (
+                    <T context="notes.empty.get-started">Create your first note to get started with organizing your thoughts</T>
+                  )}
                 </p>
               </div>
             ) : (
@@ -260,11 +266,11 @@ export function NotesTree({
       {/* Drag Overlay */}
       <DragOverlay>
         {draggedNote ? (
-          <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+            <div className="bg-card/95 backdrop-blur-xl border border-primary/30 rounded-lg p-3 shadow-2xl shadow-primary/20">
             <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-muted-foreground/60" />
-              <span className="text-sm font-medium">
-                {draggedNote.title || 'Untitled'}
+              <FileText className="w-4 h-4 text-primary/70" />
+              <span className="text-sm font-medium text-foreground">
+                {draggedNote.title || <T context="notes.untitled">Untitled</T>}
               </span>
               {draggedNote.important && (
                 <Star className="w-3 h-3 text-amber-500 fill-current" />
