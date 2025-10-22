@@ -27,6 +27,7 @@ export interface UnifiedActionsReturn {
   isUpdating: boolean
   isDeleting: boolean
   error: string | null
+  lastResult: any | null
 }
 
 /**
@@ -35,7 +36,7 @@ export interface UnifiedActionsReturn {
  */
 export function useUnifiedActions(projectId: string): UnifiedActionsReturn {
   const router = useRouter()
-  const { executeWidget, isRunning } = useWidgetRunner()
+  const { executeWidget, isRunning, lastResult } = useWidgetRunner()
   const [isUpdating, setIsUpdating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -220,7 +221,8 @@ export function useUnifiedActions(projectId: string): UnifiedActionsReturn {
     isRunning,
     isUpdating,
     isDeleting,
-    error
+    error,
+    lastResult
   }
 }
 

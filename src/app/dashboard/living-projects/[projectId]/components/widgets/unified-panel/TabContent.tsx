@@ -6,6 +6,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   FileText,
   Layers,
@@ -32,6 +33,7 @@ import { Badge } from '@/components/ui/badge'
 import { TabContentProps, MetadataField } from '@/app/dashboard/living-projects/types/unifiedDetailsPanel'
 import { getItemPreview } from './panelConfig'
 import { useUnifiedActions } from './useUnifiedActions'
+import { launchThinkingLabWithOutput } from '@/app/dashboard/living-projects/utils/thinkingLabLauncher'
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
@@ -272,11 +274,18 @@ export const MetadataTab = ({ item, itemType }: TabContentProps) => {
  * Actions Tab - Available actions for the item
  */
 export const ActionsTab = ({ item, itemType, projectId, onClose }: TabContentProps) => {
+  const router = useRouter()
   const actions = useUnifiedActions(projectId)
 
   const hasRunAction = itemType === 'widget'
   const hasEditAction = ['widget', 'note', 'conversation'].includes(itemType)
   const hasDeleteAction = ['widget', 'note', 'conversation'].includes(itemType)
+  
+  // Check if we have a widget output available (from just-run result OR existing output)
+  const hasWidgetOutput = itemType === 'widget' && (
+    (actions.lastResult?.note_id) || 
+    (item.latestOutput?.noteId)
+  )
 
   return (
     <div className="space-y-3">
@@ -297,6 +306,32 @@ export const ActionsTab = ({ item, itemType, projectId, onClose }: TabContentPro
               <T context="panel.actions.run">Run Widget</T>
             </>
           )}
+        </Button>
+      )}
+
+      {hasWidgetOutput && (
+        <Button
+          onClick={() => {
+            // Use fresh result if available, otherwise use existing output
+            if (actions.lastResult?.note_id) {
+              launchThinkingLabWithOutput(
+                router,
+                {
+                  noteId: actions.lastResult.note_id,
+                  outputId: actions.lastResult.output_id
+                },
+                projectId,
+                item._id
+              )
+            } else {
+              actions.handleLaunchLab(item, itemType)
+            }
+            onClose()
+          }}
+          className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+        >
+          <Sparkles className="w-4 h-4 mr-2" />
+          <T context="panel.actions.go_to_lab">Go to Thinking Lab</T>
         </Button>
       )}
 

@@ -98,6 +98,12 @@ export function useTranslation(
       }
 
       const data = await response.json();
+      
+      // Check if translation was successful and has valid text
+      if (!data.success || !data.translatedText) {
+        throw new Error(data.error || 'Translation failed - no text returned');
+      }
+      
       const translatedText = data.translatedText;
 
       // Smooth transition to translated text
@@ -109,7 +115,7 @@ export function useTranslation(
         retryCount: 0,
       });
 
-      // Save to Convex cache
+      // Save to Convex cache - only save if we have valid translated text
       await saveTranslation({
         sourceText,
         sourceLang,

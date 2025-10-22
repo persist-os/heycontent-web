@@ -356,6 +356,13 @@ export function FullThinkingLab({
     resizableActionsRef.current = resizable.actions
   }, [resizable.actions])
   
+  // Force split view when coming from widget (ignore localStorage)
+  React.useEffect(() => {
+    if (widgetOutputId) {
+      resizable.actions.setSplitRatio(0.65)
+    }
+  }, [widgetOutputId, resizable.actions])
+  
   // Close chat function - only closes the chat panel, does NOT clear messages
   const closeChat = React.useCallback(() => {
     // Simply snap to full notepad view (close chat panel)
