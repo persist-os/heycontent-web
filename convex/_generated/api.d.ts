@@ -20,6 +20,7 @@ import type * as apiKeysQueries from "../apiKeysQueries.js";
 import type * as auth from "../auth.js";
 import type * as backgroundJobs from "../backgroundJobs.js";
 import type * as briefingRoomHelpers from "../briefingRoomHelpers.js";
+import type * as briefingRoomInternal from "../briefingRoomInternal.js";
 import type * as briefingRoomMutations from "../briefingRoomMutations.js";
 import type * as briefingRoomQueries from "../briefingRoomQueries.js";
 import type * as briefingRoomTestData from "../briefingRoomTestData.js";
@@ -138,6 +139,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   backgroundJobs: typeof backgroundJobs;
   briefingRoomHelpers: typeof briefingRoomHelpers;
+  briefingRoomInternal: typeof briefingRoomInternal;
   briefingRoomMutations: typeof briefingRoomMutations;
   briefingRoomQueries: typeof briefingRoomQueries;
   briefingRoomTestData: typeof briefingRoomTestData;

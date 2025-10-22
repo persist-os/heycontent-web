@@ -44,6 +44,7 @@ app.use('*', async (c, next) => {
   else if (path.includes('/subscription') || path.includes('/stripe')) domain = 'subscription';
   else if (path.includes('/feedback')) domain = 'feedback';
   else if (path.includes('/backgroundJobs') || path.includes('/background')) domain = 'background_jobs';
+  else if (path.includes('/briefing')) domain = 'briefing';
   
   console.log(`🔵 [${domain.toUpperCase()}] ${method} ${path} - START`);
   
@@ -5063,6 +5064,93 @@ app.get("/api/convergence/storage/stats/:system_name", async (c) => {
     return c.json({ 
       success: false,
       error: error.message || "Failed to get system optimization stats"
+    }, 500);
+  }
+});
+
+// ============================================================================
+// BRIEFING ROOM ENDPOINTS
+// ============================================================================
+
+/**
+ * Publish system intelligence briefing
+ */
+app.post("/api/briefing/publishSystemIntelligence", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { userId, alertType, title, description, priority, metadata } = body;
+    
+    const eventId = await c.env.runMutation(internal.briefingRoomInternal.publishSystemIntelligenceBriefing, {
+      userId,
+      alertType,
+      title,
+      description,
+      priority: priority || "medium",
+      metadata: metadata || {},
+    });
+    
+    return c.json({ success: true, data: eventId });
+  } catch (error: any) {
+    console.error("[BRIEFING] Publish system intelligence error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to publish system intelligence briefing"
+    }, 500);
+  }
+});
+
+/**
+ * Publish crystal formation briefing
+ */
+app.post("/api/briefing/publishCrystalFormation", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { userId, crystalId, crystalName, crystalType, confidenceScore, coreInsight, shardCount } = body;
+    
+    const eventId = await c.env.runMutation(internal.briefingRoomInternal.publishCrystalFormationBriefing, {
+      userId,
+      crystalId,
+      crystalName,
+      crystalType,
+      confidenceScore,
+      coreInsight,
+      shardCount,
+    });
+    
+    return c.json({ success: true, data: eventId });
+  } catch (error: any) {
+    console.error("[BRIEFING] Publish crystal formation error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to publish crystal formation briefing"
+    }, 500);
+  }
+});
+
+/**
+ * Publish widget completion briefing
+ */
+app.post("/api/briefing/publishWidgetCompletion", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { userId, widgetId, widgetTitle, widgetType, completedAt, summary, projectId } = body;
+    
+    const eventId = await c.env.runMutation(internal.briefingRoomInternal.publishWidgetCompletionBriefing, {
+      userId,
+      widgetId,
+      widgetTitle,
+      widgetType,
+      completedAt,
+      summary,
+      projectId,
+    });
+    
+    return c.json({ success: true, data: eventId });
+  } catch (error: any) {
+    console.error("[BRIEFING] Publish widget completion error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to publish widget completion briefing"
     }, 500);
   }
 });

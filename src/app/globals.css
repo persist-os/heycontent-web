@@ -61,41 +61,41 @@
     --chart-4: 210 100% 50%; /* Medium navy */
     --chart-5: 210 100% 80%; /* Very light blue */
 
-    /* Content Type Colors - Vibrant & Unique (Light Mode) */
-    /* Notes: Blue quantum field - knowledge crystallization */
-    --note-primary: 217 91% 60%; /* Vibrant blue */
+    /* Content Type Colors - Quantum Aesthetics */
+    /* Note: Blue quantum field - knowledge crystallization */
+    --note-primary: 217 91% 60%; /* Sky blue */
     --note-bg: 217 91% 97%; /* Very light blue background */
-    --note-border: 217 91% 85%; /* Light blue border */
-    --note-text: 217 91% 25%; /* Dark blue text */
-    --note-accent: 217 91% 50%; /* Medium blue accent */
+    --note-border: 217 91% 70%; /* Light blue border */
+    --note-text: 217 91% 20%; /* Dark blue text for contrast */
+    --note-glow: 217 91% 60%; /* Sky blue glow */
 
-    /* Conversations: Emerald consciousness - temporal dialogue */
-    --conversation-primary: 160 84% 52%; /* Vibrant emerald */
-    --conversation-bg: 160 84% 97%; /* Very light emerald background */
-    --conversation-border: 160 84% 85%; /* Light emerald border */
-    --conversation-text: 160 84% 25%; /* Dark emerald text */
-    --conversation-accent: 160 84% 45%; /* Medium emerald accent */
+    /* Conversation: Emerald consciousness - temporal dialogue */
+    --conversation-primary: 156 73% 55%; /* Emerald */
+    --conversation-bg: 156 73% 97%; /* Very light emerald background */
+    --conversation-border: 156 73% 65%; /* Light emerald border */
+    --conversation-text: 156 73% 20%; /* Dark emerald text */
+    --conversation-glow: 156 73% 55%; /* Emerald glow */
 
-    /* Crystals: Violet consciousness - crystallized intelligence */
-    --crystal-primary: 270 95% 65%; /* Vibrant violet */
-    --crystal-bg: 270 95% 97%; /* Very light violet background */
-    --crystal-border: 270 95% 85%; /* Light violet border */
-    --crystal-text: 270 95% 30%; /* Dark violet text */
-    --crystal-accent: 270 95% 55%; /* Medium violet accent */
+    /* Crystal: Violet consciousness - crystallized intelligence */
+    --crystal-primary: 271 91% 65%; /* Violet */
+    --crystal-bg: 271 91% 97%; /* Very light violet background */
+    --crystal-border: 271 91% 75%; /* Light violet border */
+    --crystal-text: 271 91% 25%; /* Dark violet text */
+    --crystal-glow: 271 91% 65%; /* Violet glow */
 
-    /* Shards: Amber energy - quantum fragments */
-    --shard-primary: 38 92% 58%; /* Vibrant amber */
-    --shard-bg: 38 92% 96%; /* Very light amber background */
-    --shard-border: 38 92% 85%; /* Light amber border */
-    --shard-text: 38 92% 30%; /* Dark amber text */
-    --shard-accent: 38 92% 50%; /* Medium amber accent */
+    /* Shard: Amber energy - quantum fragments */
+    --shard-primary: 38 92% 60%; /* Amber */
+    --shard-bg: 38 92% 97%; /* Very light amber background */
+    --shard-border: 38 92% 70%; /* Light amber border */
+    --shard-text: 38 92% 25%; /* Dark amber text */
+    --shard-glow: 38 92% 60%; /* Amber glow */
 
-    /* Widgets: Sky blue - AI tools and actions */
-    --widget-primary: 199 89% 55%; /* Vibrant sky blue */
+    /* Widget: Sky blue - AI tools and actions */
+    --widget-primary: 199 89% 58%; /* Sky blue */
     --widget-bg: 199 89% 97%; /* Very light sky background */
-    --widget-border: 199 89% 85%; /* Light sky border */
-    --widget-text: 199 89% 25%; /* Dark sky text */
-    --widget-accent: 199 89% 48%; /* Medium sky accent */
+    --widget-border: 199 89% 68%; /* Light sky border */
+    --widget-text: 199 89% 20%; /* Dark sky text */
+    --widget-glow: 199 89% 58%; /* Sky glow */
   }
 
   .dark {
@@ -144,41 +144,41 @@
     --chat-accent: 210 100% 80%; /* Navy blue for chat UI elements in dark mode */
     --chat-accent-light: 210 100% 10%; /* Dark blue for chat backgrounds in dark mode */
 
-    /* Content Type Colors - Vibrant & Unique (Dark Mode) */
-    /* Notes: Blue quantum field - knowledge crystallization */
-    --note-primary: 217 91% 70%; /* Lighter vibrant blue for dark mode */
-    --note-bg: 217 91% 12%; /* Dark blue background */
-    --note-border: 217 91% 25%; /* Medium blue border */
-    --note-text: 217 91% 85%; /* Light blue text */
-    --note-accent: 217 91% 60%; /* Bright blue accent */
+    /* Content Type Colors - Quantum Aesthetics - Dark Mode */
+    /* Note: Blue quantum field - knowledge crystallization */
+    --note-primary: 217 91% 65%; /* Brighter sky blue for dark */
+    --note-bg: 217 91% 8%; /* Very dark blue background */
+    --note-border: 217 91% 30%; /* Medium blue border */
+    --note-text: 217 91% 85%; /* Light blue text for contrast */
+    --note-glow: 217 91% 60%; /* Sky blue glow */
 
-    /* Conversations: Emerald consciousness - temporal dialogue */
-    --conversation-primary: 160 84% 65%; /* Lighter emerald */
-    --conversation-bg: 160 84% 12%; /* Dark emerald background */
-    --conversation-border: 160 84% 25%; /* Medium emerald border */
-    --conversation-text: 160 84% 85%; /* Light emerald text */
-    --conversation-accent: 160 84% 55%; /* Bright emerald accent */
+    /* Conversation: Emerald consciousness - temporal dialogue */
+    --conversation-primary: 156 73% 60%; /* Brighter emerald */
+    --conversation-bg: 156 73% 8%; /* Very dark emerald background */
+    --conversation-border: 156 73% 35%; /* Medium emerald border */
+    --conversation-text: 156 73% 85%; /* Light emerald text */
+    --conversation-glow: 156 73% 55%; /* Emerald glow */
 
-    /* Crystals: Violet consciousness - crystallized intelligence */
-    --crystal-primary: 270 95% 75%; /* Lighter violet */
-    --crystal-bg: 270 95% 12%; /* Dark violet background */
-    --crystal-border: 270 95% 30%; /* Medium violet border */
-    --crystal-text: 270 95% 85%; /* Light violet text */
-    --crystal-accent: 270 95% 65%; /* Bright violet accent */
+    /* Crystal: Violet consciousness - crystallized intelligence */
+    --crystal-primary: 271 91% 70%; /* Brighter violet */
+    --crystal-bg: 271 91% 8%; /* Very dark violet background */
+    --crystal-border: 271 91% 35%; /* Medium violet border */
+    --crystal-text: 271 91% 85%; /* Light violet text */
+    --crystal-glow: 271 91% 65%; /* Violet glow */
 
-    /* Shards: Amber energy - quantum fragments */
-    --shard-primary: 38 92% 70%; /* Lighter amber */
-    --shard-bg: 38 92% 12%; /* Dark amber background */
-    --shard-border: 38 92% 28%; /* Medium amber border */
+    /* Shard: Amber energy - quantum fragments */
+    --shard-primary: 38 92% 65%; /* Brighter amber */
+    --shard-bg: 38 92% 8%; /* Very dark amber background */
+    --shard-border: 38 92% 35%; /* Medium amber border */
     --shard-text: 38 92% 85%; /* Light amber text */
-    --shard-accent: 38 92% 60%; /* Bright amber accent */
+    --shard-glow: 38 92% 60%; /* Amber glow */
 
-    /* Widgets: Sky blue - AI tools and actions */
-    --widget-primary: 199 89% 70%; /* Lighter sky blue */
-    --widget-bg: 199 89% 12%; /* Dark sky background */
-    --widget-border: 199 89% 25%; /* Medium sky border */
+    /* Widget: Sky blue - AI tools and actions */
+    --widget-primary: 199 89% 63%; /* Brighter sky blue */
+    --widget-bg: 199 89% 8%; /* Very dark sky background */
+    --widget-border: 199 89% 32%; /* Medium sky border */
     --widget-text: 199 89% 85%; /* Light sky text */
-    --widget-accent: 199 89% 60%; /* Bright sky accent */
+    --widget-glow: 199 89% 58%; /* Sky glow */
   }
 }
 

@@ -7,42 +7,70 @@
 
 // Language name mapping - matches Python LANGUAGE_NAMES
 export const LANGUAGE_NAMES: Record<string, string> = {
-  ko: "Korean",
-  ja: "Japanese",
-  zh: "Chinese (Simplified)",
-  "zh-TW": "Chinese (Traditional)",
+  // European Languages
+  en: "English",
   es: "Spanish",
   fr: "French",
   de: "German",
   it: "Italian",
   pt: "Portuguese",
   ru: "Russian",
-  ar: "Arabic",
-  hi: "Hindi",
-  th: "Thai",
-  vi: "Vietnamese",
-  id: "Indonesian",
-  tr: "Turkish",
   pl: "Polish",
   nl: "Dutch",
-  sv: "Swedish",
-  no: "Norwegian",
-  da: "Danish",
-  fi: "Finnish",
   cs: "Czech",
   hu: "Hungarian",
   ro: "Romanian",
   uk: "Ukrainian",
   el: "Greek",
-  he: "Hebrew",
-  fa: "Persian",
+  
+  // Northern European Languages
+  sv: "Swedish",
+  no: "Norwegian",
+  da: "Danish",
+  fi: "Finnish",
+  is: "Icelandic",
+  et: "Estonian",
+  lv: "Latvian",
+  lt: "Lithuanian",
+  
+  // Asian Languages - East Asia
+  zh: "Chinese (Simplified)",
+  "zh-TW": "Chinese (Traditional)",
+  ja: "Japanese",
+  ko: "Korean",
+  mn: "Mongolian",
+  
+  // Asian Languages - Southeast Asia
+  th: "Thai",
+  vi: "Vietnamese",
+  id: "Indonesian",
+  ms: "Malay",
+  fil: "Filipino",
+  my: "Burmese",
+  km: "Khmer",
+  lo: "Lao",
+  
+  // Asian Languages - South Asia
+  hi: "Hindi",
   bn: "Bengali",
   ta: "Tamil",
   te: "Telugu",
   mr: "Marathi",
   ur: "Urdu",
-  ms: "Malay",
-  fil: "Filipino",
+  pa: "Punjabi",
+  ne: "Nepali",
+  si: "Sinhala",
+  
+  // Asian Languages - Central & West Asia
+  ar: "Arabic",
+  tr: "Turkish",
+  fa: "Persian",
+  he: "Hebrew",
+  hy: "Armenian",
+  az: "Azerbaijani",
+  kk: "Kazakh",
+  uz: "Uzbek",
+  ps: "Pashto",
 };
 
 /**

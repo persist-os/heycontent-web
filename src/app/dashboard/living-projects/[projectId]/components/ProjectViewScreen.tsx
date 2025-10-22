@@ -24,8 +24,7 @@ import { DeleteProjectModal } from './DeleteProjectModal'
 import { WidgetConfig } from '@/types/projectWidgets'
 import { useWidgetGeneration } from './hooks/useWidgetGeneration'
 import { useProjectActions } from './hooks/useProjectActions'
-import { WidgetDetailsPanel } from './widgets/WidgetDetailsPanel'
-import { ContentDetailsPanel } from './widgets/ContentDetailsPanel'
+import { UnifiedDetailsPanel, usePanelInstances } from './widgets/unified-panel/UnifiedDetailsPanel'
 import { WidgetGenerationLoader } from './widgets/WidgetGenerationLoader'
 import { ConstellationCanvas } from './widgets/ConstellationCanvas'
 import { formatDistanceToNow } from './utils/dateFormatting'
@@ -47,17 +46,20 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   const [userId, setUserId] = useState<string | null>(null)
   const [showTransition, setShowTransition] = useState(false)
   const [highlightedWidget, setHighlightedWidget] = useState<string | null>(null)
-  const [selectedWidget, setSelectedWidget] = useState<WidgetConfig | null>(null)
-  const [showWidgetPanel, setShowWidgetPanel] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showProjectContentPanel, setShowProjectContentPanel] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>("constellation")
-  const [widgetPanelWidth, setWidgetPanelWidth] = useState(384) // Default 24rem
-  const [selectedContent, setSelectedContent] = useState<{ item: any; type: 'note' | 'conversation' | 'crystal' | 'shard' } | null>(null)
-  const [contentPanelWidth, setContentPanelWidth] = useState(448) // Default 28rem
   const menuRef = useRef<HTMLDivElement>(null)
+  
+  // Unified panel management (replaces separate widget/content panel state)
+  const {
+    instances: panelInstances,
+    openPanel,
+    updateInstance,
+    closeInstance
+  } = usePanelInstances()
 
   // Track project open
   useEffect(() => {
@@ -109,12 +111,12 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
       (item._contentId || item._id) === id
     )
     if (contentItem) {
-      setSelectedContent({ item: contentItem, type: type as 'note' | 'conversation' | 'crystal' | 'shard' })
-      // Close widget panel if open (mutual exclusion)
-      if (showWidgetPanel) {
-        setShowWidgetPanel(false)
-        setSelectedWidget(null)
+      // Open unified panel at content position (center of viewport)
+      const position = {
+        x: window.innerWidth / 2 - 200,
+        y: window.innerHeight / 2 - 150
       }
+      openPanel(contentItem, type as 'note' | 'conversation' | 'crystal' | 'shard', position)
     }
   };
 
@@ -145,14 +147,14 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   const { executeWidget, isRunning: isWidgetRunning, lastResult } = useWidgetRunner()
   const [runningWidgetId, setRunningWidgetId] = useState<string | null>(null)
 
-  // Event handlers - with mutual exclusion (closes content panel)
+  // Event handlers - unified panel opens at widget/content position
   const handleWidgetClick = (widget: WidgetConfig) => {
-    setSelectedWidget(widget)
-    setShowWidgetPanel(true)
-    // Close content panel if open (mutual exclusion)
-    if (selectedContent) {
-      setSelectedContent(null)
+    // Open panel at widget position (center of viewport as fallback)
+    const position = {
+      x: window.innerWidth / 2 - 200,
+      y: window.innerHeight / 2 - 150
     }
+    openPanel(widget, 'widget', position)
   }
 
   const handleWidgetHover = (widgetId: string | null) => {
@@ -165,7 +167,7 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
       
       // Find widget by Convex ID
       const widget = projectWidgets?.widgets.find(
-        (w: any) => w._id === widgetId  // ✅ Use Convex ID (_id)
+        (w: any) => w._id === widgetId
       ) as WidgetConfig | undefined
       
       if (!widget) {
@@ -174,17 +176,20 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
       }
 
       const result = await executeWidget({
-        widgetId,  // ✅ Already Convex ID from FloatingWidgetCard
+        widgetId,
         projectId
       })
 
       if (result) {
-        // Success! Open the details panel to show the output
+        // Success! Open the panel to show the output
         console.log('Widget executed successfully:', result)
         
-        // Set selected widget and open panel
-        setSelectedWidget(widget)
-        setShowWidgetPanel(true)
+        // Open panel at center of viewport
+        const position = {
+          x: window.innerWidth / 2 - 200,
+          y: window.innerHeight / 2 - 150
+        }
+        openPanel(widget, 'widget', position)
       }
     } catch (error) {
       console.error('Failed to run widget:', error)
@@ -407,17 +412,12 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
                   onWidgetClick={handleWidgetClick}
                   onWidgetHover={handleWidgetHover}
                   highlightedWidget={highlightedWidget}
-                  showWidgetPanel={showWidgetPanel}
                   onWidgetRun={handleWidgetRun}
                   runningWidgetId={runningWidgetId}
-                  selectedWidget={selectedWidget}
                   contentItems={(project as any)?.contentItems || []}
                   storedLayout={(project as any)?.constellationLayout}
                   onContentOpen={handleContentOpen}
                   onLayoutReset={handleLayoutReset}
-                  widgetPanelWidth={widgetPanelWidth}
-                  selectedContent={selectedContent}
-                  contentPanelWidth={contentPanelWidth}
                 />
               ) : (
                 <div className="flex items-center justify-center h-64">
@@ -498,26 +498,12 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
         isDeleting={isDeleting}
       />
 
-      <WidgetDetailsPanel
-        widget={selectedWidget}
-        isOpen={showWidgetPanel}
-        onClose={() => {
-          setShowWidgetPanel(false)
-          setSelectedWidget(null)
-        }}
+      {/* Unified Details Panel - handles widgets, notes, conversations, crystals, shards */}
+      <UnifiedDetailsPanel
+        instances={panelInstances}
+        onInstanceUpdate={updateInstance}
+        onInstanceClose={closeInstance}
         projectId={projectId}
-        width={widgetPanelWidth}
-        onWidthChange={setWidgetPanelWidth}
-      />
-
-      <ContentDetailsPanel
-        item={selectedContent?.item || null}
-        itemType={selectedContent?.type || null}
-        isOpen={!!selectedContent}
-        onClose={() => setSelectedContent(null)}
-        projectId={projectId}
-        width={contentPanelWidth}
-        onWidthChange={setContentPanelWidth}
       />
 
       {/* Project Content Management Panel */}

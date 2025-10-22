@@ -8,6 +8,7 @@ import { InsightCard } from '@/components/ui/insight-card';
 import { LoadingGrid } from '@/components/ui/loading-grid';
 import { CenterContainer, ContentWrapper } from '@/components/ui/layout';
 import { RefreshCw, Users, BarChart3, TrendingUp, Lightbulb, Target, Calendar, Zap } from 'lucide-react';
+import { T, TButton } from '@/components/translation';
 
 // Type for the Convex response
 type ConvexInsight = {
@@ -337,7 +338,7 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
       {/* Header with dynamic greeting and Refresh button */}
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg sm:text-xl lg:text-2xl font-light text-foreground pr-6">
-          {selectedGreeting}
+          <T context="ambient_insights.greeting">{selectedGreeting}</T>
         </h2>
         <Button
           onClick={handleRefresh}
@@ -347,7 +348,9 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
           className="flex items-center gap-2 text-xs sm:text-sm"
         >
           <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span className="hidden sm:inline">Refresh</span>
+          <span className="hidden sm:inline">
+            <T context="button.refresh">Refresh</T>
+          </span>
           <span className="sm:hidden">↻</span>
         </Button>
       </div>

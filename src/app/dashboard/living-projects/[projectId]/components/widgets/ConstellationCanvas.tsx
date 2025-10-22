@@ -28,17 +28,12 @@ interface ConstellationCanvasProps {
   onWidgetClick: (widget: WidgetConfig) => void
   onWidgetHover: (widgetId: string | null) => void
   highlightedWidget: string | null
-  showWidgetPanel: boolean
   onWidgetRun?: (widgetId: string) => void
   runningWidgetId?: string | null
-  selectedWidget?: WidgetConfig | null
   contentItems?: any[]
   storedLayout?: any
   onContentOpen?: (id: string, type: string) => void
   onLayoutReset?: () => void
-  widgetPanelWidth?: number
-  selectedContent?: { item: any; type: 'note' | 'conversation' | 'crystal' | 'shard' } | null
-  contentPanelWidth?: number
 }
 
 export function ConstellationCanvas({
@@ -48,24 +43,18 @@ export function ConstellationCanvas({
   onWidgetClick,
   onWidgetHover,
   highlightedWidget,
-  showWidgetPanel,
   onWidgetRun,
   runningWidgetId,
-  selectedWidget,
   contentItems,
   storedLayout,
   onContentOpen,
-  onLayoutReset,
-  widgetPanelWidth = 384,
-  selectedContent,
-  contentPanelWidth = 448
+  onLayoutReset
 }: ConstellationCanvasProps) {
   const { trackWidgetOpen } = useAnalytics()
   const [viewportSize, setViewportSize] = useState({
     width: typeof window !== 'undefined' ? window.innerWidth : 1200,
     height: typeof window !== 'undefined' ? window.innerHeight : 800
   })
-  const [showAttachmentPanel, setShowAttachmentPanel] = useState(false)
   
   // Handle content card click - delegate to parent
   const handleContentOpen = useCallback((id: string, type: string) => {
@@ -138,13 +127,9 @@ export function ConstellationCanvas({
     focusOnPoint(x, y)
   }, [focusOnPoint])
 
-  // Calculate total panel width
-  const totalPanelWidth = (showWidgetPanel ? widgetPanelWidth : 0) + (selectedContent ? contentPanelWidth : 0)
-  
   return (
     <div 
       className="relative h-screen bg-gradient-to-br from-background via-primary/5 to-muted/30 overflow-hidden transition-all duration-300"
-      style={{ width: `calc(100vw - ${totalPanelWidth}px)` }}
     >
       {/* Widget Constellation Canvas */}
       <div
@@ -225,7 +210,7 @@ export function ConstellationCanvas({
                   y={position.y}
                   size={position.size}
                   importance={position.importance}
-                  isHighlighted={selectedContent?.item?._id === contentItem._id || highlightedWidget === position.id}
+                  isHighlighted={highlightedWidget === position.id}
                   scale={transform.scale}
                   onOpen={handleContentOpen}
                 />
@@ -286,8 +271,8 @@ export function ConstellationCanvas({
         </div>
       )}
 
-      {/* Minimap - Bottom Right with responsive positioning */}
-      <div className="absolute bottom-4 right-4 z-10 max-sm:bottom-2 max-sm:right-2">
+      {/* Minimap - Top Right with responsive positioning to prevent cutoff */}
+      <div className="absolute top-20 right-4 z-10 max-sm:top-16 max-sm:right-2">
         <ConstellationMinimap
           positions={layout.positions}
           canvasWidth={layout.canvasWidth}
@@ -310,19 +295,7 @@ export function ConstellationCanvas({
         </div>
       )}
 
-      {/* Content Attachment Panel for Selected Widget */}
-      {selectedWidget && userId && showAttachmentPanel && (
-        <ContentAttachmentPanel
-          widgetId={selectedWidget._id}
-          userId={userId}
-          isOpen={showAttachmentPanel}
-          onClose={() => setShowAttachmentPanel(false)}
-          attachedNoteIds={(selectedWidget as any).noteIds || []}
-          attachedConversationIds={(selectedWidget as any).conversationIds || []}
-          attachedCrystalIds={(selectedWidget as any).crystalIds || []}
-          attachedShardIds={(selectedWidget as any).shardIds || []}
-        />
-      )}
+      {/* Content Attachment Panel is now handled in unified panel Actions tab */}
     </div>
   )
 }

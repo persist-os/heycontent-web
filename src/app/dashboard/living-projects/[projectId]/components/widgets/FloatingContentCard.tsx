@@ -84,63 +84,63 @@ export function FloatingContentCard({
   const scaleOpacity = Math.min(1, Math.max(0.55, scale || 1))
   const finalOpacity = Math.max(0.15, Math.min(1, baseOpacity * scaleOpacity))
 
-  // Type-specific quantum styling with consciousness themes
+  // Type-specific quantum styling with consciousness themes - using globals.css colors
   const getTypeStyling = () => {
     switch (itemType) {
       case 'note':
         return {
           icon: FileText,
           // Knowledge crystallization - blue quantum field
-          bgGradient: 'from-blue-500/10 via-sky-400/5 to-cyan-500/10',
-          borderGradient: 'from-blue-400/40 via-sky-300/30 to-cyan-400/40',
-          glowColor: 'shadow-blue-500/20',
-          accentColor: 'bg-blue-500/20',
-          textColor: 'text-blue-900 dark:text-blue-100',
-          metaColor: 'text-blue-700/80 dark:text-blue-300/80',
-          iconColor: 'text-blue-600 dark:text-blue-400',
-          pulseColor: 'bg-blue-400',
+          bgGradient: 'from-[hsl(var(--note-bg))]/60 via-[hsl(var(--note-bg))]/30 to-[hsl(var(--note-bg))]/60',
+          borderGradient: 'from-[hsl(var(--note-border))]/60 via-[hsl(var(--note-primary))]/40 to-[hsl(var(--note-border))]/60',
+          glowColor: 'shadow-[hsl(var(--note-glow))]/30',
+          accentColor: 'bg-[hsl(var(--note-primary))]/20',
+          textColor: 'text-[hsl(var(--note-text))]',
+          metaColor: 'text-[hsl(var(--note-text))]/80',
+          iconColor: 'text-[hsl(var(--note-primary))]',
+          pulseColor: 'bg-[hsl(var(--note-primary))]',
           quantum: 'knowledge'
         }
       case 'conversation':
         return {
           icon: MessageCircle,
           // Temporal dialogue streams - emerald consciousness
-          bgGradient: 'from-emerald-500/10 via-green-400/5 to-teal-500/10',
-          borderGradient: 'from-emerald-400/40 via-green-300/30 to-teal-400/40',
-          glowColor: 'shadow-emerald-500/20',
-          accentColor: 'bg-emerald-500/20',
-          textColor: 'text-emerald-900 dark:text-emerald-100',
-          metaColor: 'text-emerald-700/80 dark:text-emerald-300/80',
-          iconColor: 'text-emerald-600 dark:text-emerald-400',
-          pulseColor: 'bg-emerald-400',
+          bgGradient: 'from-[hsl(var(--conversation-bg))]/60 via-[hsl(var(--conversation-bg))]/30 to-[hsl(var(--conversation-bg))]/60',
+          borderGradient: 'from-[hsl(var(--conversation-border))]/60 via-[hsl(var(--conversation-primary))]/40 to-[hsl(var(--conversation-border))]/60',
+          glowColor: 'shadow-[hsl(var(--conversation-glow))]/30',
+          accentColor: 'bg-[hsl(var(--conversation-primary))]/20',
+          textColor: 'text-[hsl(var(--conversation-text))]',
+          metaColor: 'text-[hsl(var(--conversation-text))]/80',
+          iconColor: 'text-[hsl(var(--conversation-primary))]',
+          pulseColor: 'bg-[hsl(var(--conversation-primary))]',
           quantum: 'dialogue'
         }
       case 'crystal':
         return {
           icon: Gem,
           // Crystallized intelligence - violet consciousness
-          bgGradient: 'from-violet-500/10 via-purple-400/5 to-fuchsia-500/10',
-          borderGradient: 'from-violet-400/40 via-purple-300/30 to-fuchsia-400/40',
-          glowColor: 'shadow-violet-500/20',
-          accentColor: 'bg-violet-500/20',
-          textColor: 'text-violet-900 dark:text-violet-100',
-          metaColor: 'text-violet-700/80 dark:text-violet-300/80',
-          iconColor: 'text-violet-600 dark:text-violet-400',
-          pulseColor: 'bg-violet-400',
+          bgGradient: 'from-[hsl(var(--crystal-bg))]/60 via-[hsl(var(--crystal-bg))]/30 to-[hsl(var(--crystal-bg))]/60',
+          borderGradient: 'from-[hsl(var(--crystal-border))]/60 via-[hsl(var(--crystal-primary))]/40 to-[hsl(var(--crystal-border))]/60',
+          glowColor: 'shadow-[hsl(var(--crystal-glow))]/30',
+          accentColor: 'bg-[hsl(var(--crystal-primary))]/20',
+          textColor: 'text-[hsl(var(--crystal-text))]',
+          metaColor: 'text-[hsl(var(--crystal-text))]/80',
+          iconColor: 'text-[hsl(var(--crystal-primary))]',
+          pulseColor: 'bg-[hsl(var(--crystal-primary))]',
           quantum: 'crystal'
         }
       case 'shard':
         return {
           icon: Sparkles,
           // Quantum fragments - amber energy
-          bgGradient: 'from-amber-500/10 via-orange-400/5 to-yellow-500/10',
-          borderGradient: 'from-amber-400/40 via-orange-300/30 to-yellow-400/40',
-          glowColor: 'shadow-amber-500/20',
-          accentColor: 'bg-amber-500/20',
-          textColor: 'text-amber-900 dark:text-amber-100',
-          metaColor: 'text-amber-700/80 dark:text-amber-300/80',
-          iconColor: 'text-amber-600 dark:text-amber-400',
-          pulseColor: 'bg-amber-400',
+          bgGradient: 'from-[hsl(var(--shard-bg))]/60 via-[hsl(var(--shard-bg))]/30 to-[hsl(var(--shard-bg))]/60',
+          borderGradient: 'from-[hsl(var(--shard-border))]/60 via-[hsl(var(--shard-primary))]/40 to-[hsl(var(--shard-border))]/60',
+          glowColor: 'shadow-[hsl(var(--shard-glow))]/30',
+          accentColor: 'bg-[hsl(var(--shard-primary))]/20',
+          textColor: 'text-[hsl(var(--shard-text))]',
+          metaColor: 'text-[hsl(var(--shard-text))]/80',
+          iconColor: 'text-[hsl(var(--shard-primary))]',
+          pulseColor: 'bg-[hsl(var(--shard-primary))]',
           quantum: 'shard'
         }
     }

@@ -444,6 +444,29 @@ export function ChatInput({
     context: `chat.placeholder`,
   })
 
+  // Translate aria-labels
+  const { text: clearReplyLabel } = useTextTranslation('Clear reply', {
+    context: 'chat.aria.clear_reply',
+  })
+  const { text: removeFileLabel } = useTextTranslation('Remove file', {
+    context: 'chat.aria.remove_file',
+  })
+  const { text: selectFilesLabel } = useTextTranslation('Select files to attach', {
+    context: 'chat.aria.select_files',
+  })
+  const { text: attachFilesLabel } = useTextTranslation('Attach files', {
+    context: 'chat.aria.attach_files',
+  })
+  const { text: sendMessageLabel } = useTextTranslation('Send message', {
+    context: 'chat.aria.send_message',
+  })
+  const { text: notepadIncludedTooltip } = useTextTranslation('Notepad included in messages - Click to exclude', {
+    context: 'chat.notepad.tooltip.included',
+  })
+  const { text: notepadExcludedTooltip } = useTextTranslation('Notepad excluded from messages - Click to include', {
+    context: 'chat.notepad.tooltip.excluded',
+  })
+
   return (
     <div className="shrink-0 bg-background relative">
       {authStatus === 'waiting' && (
@@ -499,7 +522,7 @@ export function ChatInput({
                   onClearReference?.()
                 }}
                 className="text-muted-foreground hover:text-foreground p-1.5 rounded-full hover:bg-muted flex-shrink-0 transition-colors"
-                aria-label="Clear reply"
+                aria-label={clearReplyLabel}
               >
                 <span className="text-base font-medium">×</span>
               </button>
@@ -524,7 +547,7 @@ export function ChatInput({
                   onClearReference?.()
                 }}
                 className="text-muted-foreground hover:text-foreground p-1 rounded transition-colors"
-                aria-label="Clear reply"
+                aria-label={clearReplyLabel}
               >
                 <span className="text-sm">×</span>
               </button>
@@ -579,7 +602,7 @@ export function ChatInput({
                           <button
                             onClick={() => removeFileAttachment(index)}
                             className="bg-black/50 text-white hover:bg-black/70 w-11 h-11 rounded-full transition-colors flex items-center justify-center"
-                            aria-label="Remove file"
+                            aria-label={removeFileLabel}
                           >
                             <X className="w-5 h-5" />
                           </button>
@@ -609,7 +632,7 @@ export function ChatInput({
                           <button
                             onClick={() => removeFileAttachment(index)}
                             className="bg-black/50 text-white hover:bg-black/70 w-11 h-11 rounded-full transition-colors flex items-center justify-center"
-                            aria-label="Remove file"
+                            aria-label={removeFileLabel}
                           >
                             <X className="w-5 h-5" />
                           </button>
@@ -630,7 +653,7 @@ export function ChatInput({
                         <button
                           onClick={() => removeFileAttachment(index)}
                           className="text-muted-foreground hover:text-foreground w-11 h-11 rounded transition-colors flex items-center justify-center"
-                          aria-label="Remove file"
+                          aria-label={removeFileLabel}
                         >
                           <X className="w-5 h-5" />
                         </button>
@@ -689,7 +712,7 @@ export function ChatInput({
                   onChange={handleFileInputChange}
                   className="hidden"
                   accept="image/*,.pdf,.doc,.docx,.txt,.csv,.xlsx,.xls"
-                  aria-label="Select files to attach"
+                  aria-label={selectFilesLabel}
                 />
                 {/* Character count */}
                 {!isLoading && (
@@ -708,7 +731,7 @@ export function ChatInput({
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isLoading || disabled || isUploading}
                     className="w-11 h-11 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    aria-label="Attach files"
+                    aria-label={attachFilesLabel}
                   >
                     {isUploading ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
@@ -729,8 +752,8 @@ export function ChatInput({
                         : 'text-muted-foreground hover:text-foreground'
                     }`}
                     title={includeNotepadInMessages 
-                      ? 'Notepad included in messages - Click to exclude'
-                      : 'Notepad excluded from messages - Click to include'
+                      ? notepadIncludedTooltip
+                      : notepadExcludedTooltip
                     }
                   >
                     <NotepadIcon className={`w-5 h-5 ${!includeNotepadInMessages ? 'opacity-50' : ''}`} />
@@ -746,7 +769,7 @@ export function ChatInput({
                 {/* Send button */}
                 <button
                   type="submit"
-                  aria-label="Send message"
+                  aria-label={sendMessageLabel}
                   disabled={isLoading || (!currentInput.trim() && fileAttachments.length === 0) || isAtLimit || disabled}
                   className={`w-11 h-11 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                     isLoading || (!currentInput.trim() && fileAttachments.length === 0) || isAtLimit || disabled

@@ -160,23 +160,44 @@ export default function WidgetDashboardPage() {
       />
 
       {/* Main Content - New Layout */}
-      <div className="max-w-[1600px] mx-auto px-8 py-12" style={{ marginLeft: '120px' }}>
+      <div className="max-w-[1600px] mx-auto px-8 py-12 ml-[120px]">
         {/* Widget Metadata Bar */}
-        <div className="flex items-start gap-12 pb-12 mb-12 border-b border-border/30">
+        <div className="
+          flex items-start gap-12 pb-12 mb-12
+          border-b border-border/30
+        ">
           <div className="flex-1 grid grid-cols-3 gap-8">
-            <div>
+            <div className="
+              bg-card/50 backdrop-blur-sm
+              border border-border/40
+              rounded-2xl p-6
+              hover:bg-card/80 hover:border-border/60
+              transition-all duration-300
+            ">
               <span className="text-sm text-muted-foreground">
                 <T context="widget.status">Status</T>
               </span>
               <p className="text-lg font-light text-foreground mt-1 capitalize">{status}</p>
             </div>
-            <div>
+            <div className="
+              bg-card/50 backdrop-blur-sm
+              border border-border/40
+              rounded-2xl p-6
+              hover:bg-card/80 hover:border-border/60
+              transition-all duration-300
+            ">
               <span className="text-sm text-muted-foreground">
                 <T context="widget.last_run">Last Run</T>
               </span>
               <p className="text-lg font-light text-foreground mt-1">{lastRun}</p>
             </div>
-            <div>
+            <div className="
+              bg-primary/10 backdrop-blur-sm
+              border border-primary/20
+              rounded-2xl p-6
+              hover:bg-primary/15 hover:border-primary/30
+              transition-all duration-300
+            ">
               <span className="text-sm text-muted-foreground">
                 <T context="widget.total_outputs">Total Outputs</T>
               </span>
@@ -200,7 +221,13 @@ export default function WidgetDashboardPage() {
 
             <div className="space-y-4">
               {!outputs || outputs.length === 0 ? (
-                <div className="border border-dashed border-border/50 rounded p-16 text-center">
+                <div className="
+                  bg-primary/5 backdrop-blur-sm
+                  border border-dashed border-primary/30
+                  rounded-2xl p-16 text-center
+                  hover:bg-primary/10 hover:border-primary/40
+                  transition-all duration-300
+                ">
                   <p className="text-base text-muted-foreground mb-8 leading-relaxed">
                     <T context="widget.empty_state">Run this widget to generate your first output</T>
                   </p>
@@ -208,7 +235,11 @@ export default function WidgetDashboardPage() {
                     onClick={handleRunWidget}
                     disabled={isRunning}
                     variant="outline"
-                    className="hover:bg-muted/50 transition-colors duration-300"
+                    className="
+                      bg-primary text-primary-foreground
+                      hover:bg-primary/90
+                      transition-all duration-300
+                    "
                   >
                     <T context="button.run_widget_now">Run Widget Now</T>
                   </Button>

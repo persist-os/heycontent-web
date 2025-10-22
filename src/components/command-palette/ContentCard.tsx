@@ -75,8 +75,8 @@ export function ContentCard({
           bgColor: 'bg-[hsl(var(--note-bg))]',
           borderColor: 'border-[hsl(var(--note-border))]',
           textColor: 'text-[hsl(var(--note-text))]',
-          accentColor: 'bg-[hsl(var(--note-accent))]/20',
-          glowColor: 'hover:shadow-[hsl(var(--note-primary))]/20'
+          accentColor: 'bg-[hsl(var(--note-primary))]/20',
+          glowColor: 'hover:shadow-[hsl(var(--note-glow))]/20'
         }
       case 'crystal':
         return {
@@ -88,8 +88,8 @@ export function ContentCard({
           bgColor: 'bg-[hsl(var(--crystal-bg))]',
           borderColor: 'border-[hsl(var(--crystal-border))]',
           textColor: 'text-[hsl(var(--crystal-text))]',
-          accentColor: 'bg-[hsl(var(--crystal-accent))]/20',
-          glowColor: 'hover:shadow-[hsl(var(--crystal-primary))]/20'
+          accentColor: 'bg-[hsl(var(--crystal-primary))]/20',
+          glowColor: 'hover:shadow-[hsl(var(--crystal-glow))]/20'
         }
       case 'shard':
         return {
@@ -101,8 +101,8 @@ export function ContentCard({
           bgColor: 'bg-[hsl(var(--shard-bg))]',
           borderColor: 'border-[hsl(var(--shard-border))]',
           textColor: 'text-[hsl(var(--shard-text))]',
-          accentColor: 'bg-[hsl(var(--shard-accent))]/20',
-          glowColor: 'hover:shadow-[hsl(var(--shard-primary))]/20'
+          accentColor: 'bg-[hsl(var(--shard-primary))]/20',
+          glowColor: 'hover:shadow-[hsl(var(--shard-glow))]/20'
         }
       case 'conversation':
         return {
@@ -114,8 +114,8 @@ export function ContentCard({
           bgColor: 'bg-[hsl(var(--conversation-bg))]',
           borderColor: 'border-[hsl(var(--conversation-border))]',
           textColor: 'text-[hsl(var(--conversation-text))]',
-          accentColor: 'bg-[hsl(var(--conversation-accent))]/20',
-          glowColor: 'hover:shadow-[hsl(var(--conversation-primary))]/20'
+          accentColor: 'bg-[hsl(var(--conversation-primary))]/20',
+          glowColor: 'hover:shadow-[hsl(var(--conversation-glow))]/20'
         }
       case 'widget':
         return {
@@ -127,8 +127,8 @@ export function ContentCard({
           bgColor: 'bg-[hsl(var(--widget-bg))]',
           borderColor: 'border-[hsl(var(--widget-border))]',
           textColor: 'text-[hsl(var(--widget-text))]',
-          accentColor: 'bg-[hsl(var(--widget-accent))]/20',
-          glowColor: 'hover:shadow-[hsl(var(--widget-primary))]/20'
+          accentColor: 'bg-[hsl(var(--widget-primary))]/20',
+          glowColor: 'hover:shadow-[hsl(var(--widget-glow))]/20'
         }
       default:
         return {
@@ -222,12 +222,12 @@ export function ContentCard({
 
   if (variant === 'compact') {
     return (
-      <motion.div
+      <motion.button
         onClick={handleClick}
         whileHover={{ scale: 1.01 }}
         whileTap={{ scale: 0.99 }}
         className={cn(
-          'w-full cursor-pointer text-left px-4 py-3 rounded-xl border transition-all duration-200',
+          'w-full text-left px-4 py-3 rounded-xl border transition-all duration-200',
           'backdrop-blur-md shadow-lg',
           'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
           config.bgGradient,
@@ -251,26 +251,26 @@ export function ContentCard({
             )}
           </div>
           {ActionIcon && (
-            <button
+            <div
               onClick={handleAction}
-              className={cn('p-1.5 hover:bg-background/30 rounded-lg transition-colors', config.accentColor)}
+              className={cn('p-1.5 hover:bg-background/30 rounded-lg transition-colors cursor-pointer', config.accentColor)}
               title={actionLabel}
             >
               <ActionIcon className={cn('w-4 h-4', config.iconColor)} />
-            </button>
+            </div>
           )}
         </div>
-      </motion.div>
+      </motion.button>
     )
   }
 
   return (
-    <motion.div
+    <motion.button
       onClick={handleClick}
       whileHover={{ y: -2 }}
       whileTap={{ scale: 0.98 }}
       className={cn(
-        'group relative w-full cursor-pointer text-left px-4 py-3.5 rounded-xl border transition-all duration-300',
+        'group relative w-full text-left px-4 py-3.5 rounded-xl border transition-all duration-300',
         'backdrop-blur-md shadow-lg',
         'hover:shadow-xl',
         'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
@@ -346,13 +346,13 @@ export function ContentCard({
 
             {/* Action Button with accent styling */}
             {ActionIcon && (
-              <button
+              <div
                 onClick={handleAction}
-                className={cn('p-1.5 rounded-md transition-all duration-200 hover:scale-110', config.accentColor)}
+                className={cn('p-1.5 rounded-md transition-all duration-200 hover:scale-110 cursor-pointer', config.accentColor)}
                 title={actionLabel}
               >
                 <ActionIcon className={cn('w-4 h-4', config.iconColor)} />
-              </button>
+              </div>
             )}
           </div>
 
@@ -376,7 +376,7 @@ export function ContentCard({
 
       {/* Holographic effect on hover */}
       <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none bg-gradient-to-br from-white/5 via-transparent to-white/10" />
-    </motion.div>
+    </motion.button>
   )
 }
 

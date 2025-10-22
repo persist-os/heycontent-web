@@ -172,9 +172,7 @@ export const DashboardNav = memo(function DashboardNav() {
       
       if (response.ok) {
         const data = await response.json();
-        console.log('Chat history API response:', data);
         if (data.conversations) {
-          console.log('Recent chats data:', data.conversations);
           setRecentChats(data.conversations);
         }
       }

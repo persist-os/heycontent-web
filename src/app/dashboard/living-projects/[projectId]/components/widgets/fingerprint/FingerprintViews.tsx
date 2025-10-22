@@ -135,7 +135,7 @@ export const ExpandedView = ({
     initial={{ opacity: 0, scale: 0.96, y: 10 }}
     animate={{ opacity: 1, scale: 1, y: 0 }}
     transition={{ type: "spring", stiffness: 300, damping: 30 }}
-    className="cursor-grab bg-background/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-border/30 overflow-hidden relative"
+    className="cursor-grab bg-background/95 backdrop-blur-xl rounded-2xl border border-border/30 overflow-hidden relative"
     style={{ 
       width: `${modalSize.width}px`, 
       height: `${modalSize.height}px`,

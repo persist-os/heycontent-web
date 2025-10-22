@@ -5,15 +5,6 @@ import { getValidToken, isTokenExpired } from '@/app/lib/firebase-token-manager'
 import Cookies from 'js-cookie';
 import { AuthenticationError, ServiceUnavailableError, APIError } from './errors';
 
-// Centralized debug utilities (development-only)
-const DEBUG = process.env.NODE_ENV === 'development';
-const timestamp = () => new Date().toISOString();
-const debugLog = {
-  info: (...args: any[]) => { if (DEBUG) console.info('[api-helpers]', timestamp(), ...args); },
-  log: (...args: any[]) => { if (DEBUG) console.log('[api-helpers]', timestamp(), ...args); },
-  warn: (...args: any[]) => { if (DEBUG) console.warn('[api-helpers]', timestamp(), ...args); },
-  error: (...args: any[]) => { if (DEBUG) console.error('[api-helpers]', timestamp(), ...args); },
-};
 const now = () => Date.now();
 let authInitializedAt: number | null = null;
 let lastAuthUid: string | null = null;
@@ -28,38 +19,29 @@ export function isAuthReady(): Promise<boolean> {
     try {
       // Import auth state manager dynamically to avoid circular dependencies
       const { authStateManager } = await import('./auth-state-manager');
-      
-      debugLog.log('isAuthReady: using centralized auth state manager', { 
-        isReady: authStateManager.isReady(),
-        currentUser: Boolean(authStateManager.getCurrentUser())
-      });
-      
+
       if (authStateManager.isReady()) {
         // Auth is already ready
         if (authInitializedAt === null) {
           authInitializedAt = now();
           lastAuthUid = authStateManager.getCurrentUser()?.uid ?? null;
-          debugLog.info('Auth state already ready', { uid: lastAuthUid, readyAt: authInitializedAt });
         }
         resolve(true);
         return;
       }
-      
+
       // Wait for auth to be ready
       try {
         await authStateManager.waitForReady();
         if (authInitializedAt === null) {
           authInitializedAt = now();
           lastAuthUid = authStateManager.getCurrentUser()?.uid ?? null;
-          debugLog.info('Auth state transitioned to ready', { uid: lastAuthUid, readyAt: authInitializedAt });
         }
         resolve(true);
       } catch (error) {
-        debugLog.warn('isAuthReady: Failed to wait for auth ready', { error: String(error) });
         resolve(false);
       }
     } catch (error) {
-      debugLog.warn('isAuthReady: Firebase Auth not available', { error: String(error) });
       resolve(false); // Auth not available
     }
   });
@@ -75,17 +57,10 @@ export async function waitForAuthState(retries: number = 10, interval: number = 
     try {
       // Import auth state manager dynamically to avoid circular dependencies
       const { authStateManager } = await import('./auth-state-manager');
-      
-      debugLog.log('waitForAuthState: attempt', { 
-        attempt: i + 1, 
-        isReady: authStateManager.isReady(),
-        currentUser: Boolean(authStateManager.getCurrentUser())
-      });
-      
+
       if (authStateManager.isReady()) {
         const user = authStateManager.getCurrentUser();
         if (user !== null) {
-          debugLog.info('waitForAuthState: user detected', { uid: user.uid });
           return user;
         }
       } else {
@@ -93,7 +68,6 @@ export async function waitForAuthState(retries: number = 10, interval: number = 
         await authStateManager.waitForReady();
         const user = authStateManager.getCurrentUser();
         if (user !== null) {
-          debugLog.info('waitForAuthState: user detected after wait', { uid: user.uid });
           return user;
         }
       }
@@ -104,7 +78,6 @@ export async function waitForAuthState(retries: number = 10, interval: number = 
       }
     } catch (error) {
       // Auth not available, don't retry
-      debugLog.warn('waitForAuthState: auth not available, aborting retries', { error: String(error) });
       break;
     }
   }
@@ -195,7 +168,6 @@ export async function getApiKey(): Promise<string | null> {
       
       // Only remove the API key if we are sure the user does not match
       if (!isValid || (auth.currentUser && !userMatches)) {
-        debugLog.info('API key mismatch or invalid, removing and refreshing');
         Cookies.remove('apiKey');
         needsRefresh = true;
       } else if (isValid && !auth.currentUser) {
@@ -254,7 +226,6 @@ export async function getApiKey(): Promise<string | null> {
             Cookies.set('apiKey', JSON.stringify(apiKeyValue), { expires: 7, sameSite: 'Lax', secure: process.env.NODE_ENV === 'production', path: '/' });
             return apiKeyValue;
           } else {
-            debugLog.warn('Received invalid or temporary API key from backend', { apiKeyValue });
             Cookies.remove('apiKey');
             throw new AuthenticationError('Invalid or temporary API key received');
           }
@@ -271,7 +242,6 @@ export async function getApiKey(): Promise<string | null> {
         if (apiError instanceof AuthenticationError || apiError instanceof ServiceUnavailableError || apiError instanceof APIError) {
           throw apiError;
         }
-        debugLog.error('Error requesting API key from backend', { error: String(apiError) });
         throw new APIError('Error requesting API key from backend');
       }
     }
@@ -280,7 +250,6 @@ export async function getApiKey(): Promise<string | null> {
     if (error instanceof AuthenticationError || error instanceof ServiceUnavailableError || error instanceof APIError) {
       throw error;
     }
-    debugLog.error('Error getting API key', { error: String(error) });
     throw new APIError('No valid API key available. Please contact support.');
   }
 }
@@ -292,7 +261,6 @@ export async function getApiKey(): Promise<string | null> {
  */
 export async function getCurrentUserId(): Promise<string> {
   const t0 = now();
-  debugLog.info('getCurrentUserId: start');
   // Enhanced cookie extraction with validation
   const extractUserIdFromKey = (value: string): string | null => {
     const parts = value.split('_');
@@ -306,55 +274,42 @@ export async function getCurrentUserId(): Promise<string> {
 
   // Try to extract from API key cookie with improved robustness
   const apiKey = Cookies.get('apiKey');
-  debugLog.log('getCurrentUserId: cookie read', { present: Boolean(apiKey), length: apiKey ? apiKey.length : 0 });
   if (apiKey) {
     // Try parsing JSON-wrapped key first
     try {
       const parsedApiKey = JSON.parse(apiKey);
-      debugLog.log('getCurrentUserId: cookie JSON parse success', { type: typeof parsedApiKey });
       if (typeof parsedApiKey === 'string') {
         const fromParsed = extractUserIdFromKey(parsedApiKey);
         if (fromParsed) {
-          debugLog.info('getCurrentUserId: extracted uid from parsed cookie', { uid: fromParsed, ms: now() - t0 });
           return fromParsed;
         }
       }
     } catch (_) {
       // Ignore parse errors; try raw cookie value
-      debugLog.warn('getCurrentUserId: cookie JSON parse failed, trying raw value');
     }
 
     const fromRaw = extractUserIdFromKey(apiKey);
     if (fromRaw) {
-      debugLog.info('getCurrentUserId: extracted uid from raw cookie', { uid: fromRaw, ms: now() - t0 });
       return fromRaw;
     }
   }
 
-  // Fallback: wait for Firebase auth to be ready and user to be loaded
-  try {
-    const tAuthWaitStart = now();
-    const authReady = await isAuthReady();
-    const waitedMs = now() - tAuthWaitStart;
-    const sinceInitMs = authInitializedAt ? now() - authInitializedAt : null;
-    debugLog.log('getCurrentUserId: auth readiness result', { authReady, waitedMs, sinceAuthInitializedMs: sinceInitMs });
+    // Fallback: wait for Firebase auth to be ready and user to be loaded
+    try {
+      const authReady = await isAuthReady();
     if (authReady) {
       // Wait for user to be loaded (not just auth system initialized)
       const currentUser = await waitForAuthState();
-      debugLog.log('getCurrentUserId: auth state', { hasUser: Boolean(currentUser), uid: currentUser?.uid ?? null });
       const uid = currentUser?.uid;
       if (typeof uid === 'string' && uid.length > 0) {
-        debugLog.info('getCurrentUserId: extracted uid from user state', { uid, ms: now() - t0 });
         return uid;
       }
     }
   } catch (_) {
     // Auth may be unavailable in some environments; continue to throw below
-    debugLog.warn('getCurrentUserId: auth unavailable during fallback');
   }
 
   // Runtime contract: must return string UID
-  debugLog.error('getCurrentUserId: failed to determine uid', { ms: now() - t0 });
   throw new AuthenticationError('User identification required. Please sign in again!');
 }
 

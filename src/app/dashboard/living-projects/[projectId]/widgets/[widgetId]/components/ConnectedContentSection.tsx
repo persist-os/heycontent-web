@@ -73,14 +73,24 @@ export function ConnectedContentSection({
           </span>
         </div>
 
-        <div className="border border-dashed border-border/50 rounded p-16 text-center">
+        <div className="
+          bg-primary/5 backdrop-blur-sm
+          border border-dashed border-primary/30
+          rounded-2xl p-16 text-center
+          hover:bg-primary/10 hover:border-primary/40
+          transition-all duration-300
+        ">
           <p className="text-base text-muted-foreground mb-8 max-w-lg mx-auto leading-relaxed">
             <T context="widget.link_content_description">Link notes, conversations, crystals, and shards to this widget to build context and maintain connections across your work.</T>
           </p>
           <Button
             onClick={onAddContent}
             variant="outline"
-            className="hover:bg-muted/50 transition-colors duration-300"
+            className="
+              bg-primary text-primary-foreground
+              hover:bg-primary/90
+              transition-all duration-300
+            "
           >
             <T context="button.add_content">Add Content</T>
           </Button>
@@ -218,10 +228,24 @@ export function ConnectedContentSection({
                 {connectedCrystals?.map((crystal) => (
                   <div
                     key={crystal._id}
-                    className="border border-border/40 rounded-2xl p-5 hover:bg-muted/20 hover:border-border/60 transition-all duration-200 group cursor-pointer"
+                    className="
+                      bg-card/50 backdrop-blur-sm
+                      border border-border/40
+                      rounded-2xl p-5
+                      hover:bg-card/80 hover:border-border/60 hover:shadow-lg hover:shadow-primary/5
+                      transition-all duration-300
+                      group cursor-pointer
+                    "
                   >
                     <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-purple-500/20 transition-colors">
+                      <div className="
+                        w-12 h-12 rounded-2xl
+                        bg-purple-500/10 backdrop-blur-sm
+                        border border-purple-500/20
+                        flex items-center justify-center flex-shrink-0
+                        group-hover:bg-purple-500/20 group-hover:border-purple-500/30
+                        transition-all duration-300
+                      ">
                         <Sparkles className="w-6 h-6 text-purple-500" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -271,10 +295,24 @@ export function ConnectedContentSection({
                 {connectedShards?.map((shard) => (
                   <div
                     key={shard._id}
-                    className="border border-border/40 rounded-2xl p-5 hover:bg-muted/20 hover:border-border/60 transition-all duration-200 group cursor-pointer"
+                    className="
+                      bg-card/50 backdrop-blur-sm
+                      border border-border/40
+                      rounded-2xl p-5
+                      hover:bg-card/80 hover:border-border/60 hover:shadow-lg hover:shadow-primary/5
+                      transition-all duration-300
+                      group cursor-pointer
+                    "
                   >
                     <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-500/20 transition-colors">
+                      <div className="
+                        w-12 h-12 rounded-2xl
+                        bg-blue-500/10 backdrop-blur-sm
+                        border border-blue-500/20
+                        flex items-center justify-center flex-shrink-0
+                        group-hover:bg-blue-500/20 group-hover:border-blue-500/30
+                        transition-all duration-300
+                      ">
                         <Zap className="w-6 h-6 text-blue-500" />
                       </div>
                       <div className="flex-1 min-w-0">

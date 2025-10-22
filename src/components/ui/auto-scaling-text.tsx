@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { cn } from '@/lib/utils';
 import './auto-scaling-text.css';
+import { useTranslation } from '@/hooks/useTranslation';
+import { useLanguageContext } from '@/app/context/language-context';
 
 interface AutoScalingTextProps {
   text: string;
@@ -9,6 +11,8 @@ interface AutoScalingTextProps {
   minFontSize?: number;
   containerClassName?: string;
   responsive?: boolean;
+  context?: string;
+  enableTranslation?: boolean;
 }
 
 /**
@@ -27,10 +31,24 @@ export const AutoScalingText: React.FC<AutoScalingTextProps> = ({
   maxFontSize,
   minFontSize,
   containerClassName = '',
-  responsive = true
+  responsive = true,
+  context,
+  enableTranslation = false
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLParagraphElement>(null);
+  
+  // Translation logic
+  const { language } = useLanguageContext();
+  const { text: translatedText, isTranslating } = useTranslation(text, {
+    sourceLang: 'en',
+    targetLang: language,
+    context,
+    enabled: enableTranslation && language !== 'en'
+  });
+  
+  // Use translated text if translation is enabled, otherwise use original
+  const displayText = enableTranslation ? translatedText : text;
   
   // Calculate responsive font sizes based on screen and container dimensions
   const getResponsiveFontSizes = useCallback(() => {
@@ -153,7 +171,7 @@ export const AutoScalingText: React.FC<AutoScalingTextProps> = ({
       clearTimeout(resizeTimeoutId);
       resizeObserver.disconnect();
     };
-  }, [text, adjustFontSize]);
+  }, [displayText, adjustFontSize]);
 
   return (
     <div 
@@ -168,7 +186,7 @@ export const AutoScalingText: React.FC<AutoScalingTextProps> = ({
           className
         )}
       >
-        {text}
+        {displayText}
       </p>
     </div>
   );

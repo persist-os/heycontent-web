@@ -32,7 +32,11 @@ export function WidgetHeader({
   const router = useRouter()
 
   return (
-    <div className="border-b border-border/30">
+    <div className="
+      bg-card/80 backdrop-blur-lg
+      border-b border-border/30
+      shadow-sm shadow-primary/5
+    ">
       <div className="max-w-[1600px] mx-auto px-8 py-12">
         <div className="flex items-start justify-between gap-8">
           {/* Left: Title & Metadata */}
@@ -40,7 +44,13 @@ export function WidgetHeader({
             <div>
               <button
                 onClick={() => router.push(`/dashboard/living-projects/${projectId}`)}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300 mb-6 block"
+                className="
+                  text-sm text-muted-foreground 
+                  hover:text-foreground hover:bg-primary/5
+                  transition-all duration-300
+                  px-3 py-1.5 rounded-lg
+                  mb-6 block
+                "
               >
                 <T context="navigation.back">← Back to Project</T>
               </button>
@@ -51,7 +61,11 @@ export function WidgetHeader({
                 <h1 className="text-5xl font-light tracking-tight text-foreground">
                   <T context="widget.title">{widget.title}</T>
                 </h1>
-                <span className="text-sm text-muted-foreground">
+                <span className="
+                  text-sm text-muted-foreground
+                  bg-primary/10 px-3 py-1 rounded-full
+                  border border-primary/20
+                ">
                   {widget.widget_type}
                 </span>
               </div>
@@ -67,7 +81,11 @@ export function WidgetHeader({
             <Button
               onClick={onOpenInLab}
               variant="ghost"
-              className="text-muted-foreground hover:text-foreground transition-colors duration-300"
+              className="
+                text-muted-foreground 
+                hover:text-foreground hover:bg-primary/5
+                transition-all duration-300
+              "
             >
               <T context="button.open_lab">Open in Lab</T>
             </Button>
@@ -75,7 +93,10 @@ export function WidgetHeader({
               onClick={onRunWidget}
               disabled={isRunning}
               variant="outline"
-              className="hover:bg-muted/50 transition-colors duration-300"
+              className="
+                hover:bg-primary/5 hover:border-primary/30
+                transition-all duration-300
+              "
             >
               {isRunning ? (
                 <>
