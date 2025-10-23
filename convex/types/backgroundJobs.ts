@@ -17,7 +17,8 @@ export const jobTypeValidator = v.union(
   v.literal("stardust_stream_detection"),
   v.literal("convergence_optimization"),
   v.literal("evolution_mab_reward"),
-  v.literal("formation_mab_reward")
+  v.literal("formation_mab_reward"),
+  v.literal("stardust_promotion")
 );
 
 // Job status validator - matches Python JobStatus enum
@@ -37,7 +38,7 @@ export const jobPriorityValidator = v.union(
 );
 
 // Type exports for TypeScript code
-export type JobType = "shard_extraction" | "crystal_formation" | "intelligence_analysis" | "chatgpt_import" | "context_enrichment_feedback" | "stardust_stream_detection" | "convergence_optimization" | "evolution_mab_reward" | "formation_mab_reward";
+export type JobType = "shard_extraction" | "crystal_formation" | "intelligence_analysis" | "chatgpt_import" | "context_enrichment_feedback" | "stardust_stream_detection" | "convergence_optimization" | "evolution_mab_reward" | "formation_mab_reward" | "stardust_promotion";
 export type JobStatus = "queued" | "running" | "completed" | "failed";
 export type JobPriority = "low" | "normal" | "high" | "urgent";
 

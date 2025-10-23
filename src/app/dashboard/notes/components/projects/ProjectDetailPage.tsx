@@ -15,6 +15,7 @@ import { UnifiedContentSelector } from '@/components/ui/UnifiedContentSelector';
 import { ProjectItemsGrid } from './ProjectItemsGrid';
 import { EditProjectModal } from './EditProjectModal';
 import toast from 'react-hot-toast';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 
 interface ProjectDetailPageProps {
   projectId: Id<"projects">;
@@ -31,6 +32,7 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
   
   const [showAttachmentPanel, setShowAttachmentPanel] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isCreatingNote, setIsCreatingNote] = useState(false);
@@ -119,17 +121,11 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
 
   const handleDelete = async () => {
     if (!project) return;
-    
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${project.name}"? This action cannot be undone.`
-    );
-    
-    if (confirmed) {
-      const success = await deleteProject(projectId);
-      if (success) {
-        router.push('/dashboard/notes');
-      }
+    const success = await deleteProject(projectId);
+    if (success) {
+      router.push('/dashboard/notes');
     }
+    setShowDeleteConfirm(false);
   };
 
   const handleUpdateProject = async (name: string, description?: string) => {
@@ -305,7 +301,7 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
                   Edit Project
                 </button>
                 <button
-                  onClick={handleDelete}
+                  onClick={() => setShowDeleteConfirm(true)}
                   className="text-sm font-light text-destructive/70 hover:text-destructive transition-colors tracking-wide"
                 >
                   Delete
@@ -395,6 +391,22 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
           </div>
         </div>
       </button>
+
+      <ConfirmationModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title="Delete Project"
+        titleContext="project.delete_confirm.title"
+        description={`Are you sure you want to delete "${project.name}"? This action cannot be undone.`}
+        descriptionContext="project.delete_confirm.description"
+        confirmText="Delete"
+        confirmContext="button.delete"
+        cancelText="Cancel"
+        cancelContext="button.cancel"
+        variant="destructive"
+        isLoading={isDeleting}
+      />
     </div>
   );
 } 

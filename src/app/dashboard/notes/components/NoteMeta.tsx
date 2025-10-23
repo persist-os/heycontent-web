@@ -204,14 +204,27 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onTagsChange, onEditin
               {tagSuggestions.map((tag) => (
                 <button
                   key={tag}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
+                  onClick={() => {
                     addTag(tag);
                     setNewTag('');
                     setShowTagInput(false);
                   }}
+                  onMouseDown={(e) => {
+                    // Prevent input blur ONLY on mouse interaction
+                    e.preventDefault();
+                  }}
+                  onKeyDown={(e) => {
+                    // Full keyboard support
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      addTag(tag);
+                      setNewTag('');
+                      setShowTagInput(false);
+                    }
+                  }}
                   className="px-2.5 py-1 text-xs font-medium text-white bg-accent hover:bg-accent/90 rounded-md transition-all duration-200 whitespace-nowrap"
                   title={`Add "${tag}"`}
+                  tabIndex={0}
                 >
                   {tag}
                 </button>

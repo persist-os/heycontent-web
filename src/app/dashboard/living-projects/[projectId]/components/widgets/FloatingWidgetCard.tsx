@@ -10,10 +10,16 @@
 import React from 'react'
 import { WidgetConfig } from '@/types/projectWidgets'
 import { getWidgetThemeClasses } from '../utils/widgetStyling'
-import { PlayCircle } from 'lucide-react'
+import { PlayCircle, Clock } from 'lucide-react'
+import { WidgetScheduleControls } from './WidgetScheduleControls'
 
 interface FloatingWidgetCardProps {
-  widget: WidgetConfig
+  widget: WidgetConfig & {
+    _id: string
+    scheduleEnabled?: boolean
+    nextScheduledRun?: number | null
+    scheduleFrequency?: string
+  }
   x: number
   y: number
   size: 'small' | 'medium' | 'large'
@@ -24,6 +30,7 @@ interface FloatingWidgetCardProps {
   onHover?: (widgetId: string | null) => void
   onRun?: (widgetId: string) => void
   isRunning?: boolean
+  projectId?: string
 }
 
 /**
@@ -41,7 +48,8 @@ export function FloatingWidgetCard({
   onClick,
   onHover,
   onRun,
-  isRunning = false
+  isRunning = false,
+  projectId = ''
 }: FloatingWidgetCardProps) {
   // Dynamic sizing based on zoom level and content
   const getCardDimensions = () => {
@@ -58,33 +66,40 @@ export function FloatingWidgetCard({
     // Scale up dimensions based on zoom level for better readability
     const zoomMultiplier = Math.max(0.8, scale * 0.8) // Subtle scaling with zoom
     
+    // Round to nearest pixel to prevent subpixel blur
     return {
-      width: baseSize.width * zoomMultiplier,
-      minHeight: baseSize.minHeight * zoomMultiplier
+      width: Math.round(baseSize.width * zoomMultiplier),
+      minHeight: Math.round(baseSize.minHeight * zoomMultiplier)
     }
   }
 
   const { width, minHeight } = getCardDimensions()
+
+  // Counter-scale to maintain native resolution when parent canvas is scaled
+  const counterScale = 1 / Math.max(0.5, Math.min(2, scale)) // Clamp for safety
 
   // Show different levels of detail based on zoom
   const showDescription = scale > 0.8
   const showMetadata = scale > 1.0
   const showFullDetails = scale > 1.4
 
-  // Calculate opacity based on importance and scale
-  const baseOpacity = Math.max(0.7, importance)
-  const scaleOpacity = Math.min(1, Math.max(0.6, scale))
-  const finalOpacity = baseOpacity * scaleOpacity
+  // Calculate opacity based on importance and scale - use discrete steps to reduce GPU compositing
+  const baseOpacity = importance > 0.8 ? 1 : importance > 0.5 ? 0.9 : 0.8
+  const scaleOpacity = scale > 1.2 ? 1 : scale > 0.8 ? 0.95 : 0.9
+  const finalOpacity = Math.round(baseOpacity * scaleOpacity * 100) / 100 // Round to 2 decimals
 
   return (
     <div
       className="absolute cursor-pointer group transition-all duration-300 ease-out will-change-transform"
       style={{
-        left: `${x - width/2}px`,
-        top: `${y - minHeight/2}px`,
+        left: `${Math.round(x - width/2)}px`,
+        top: `${Math.round(y - minHeight/2)}px`,
         width: `${width}px`,
         minHeight: `${minHeight}px`,
-        opacity: finalOpacity
+        opacity: finalOpacity,
+        backfaceVisibility: 'hidden',
+        WebkitFontSmoothing: 'antialiased',
+        transformOrigin: 'center center'
       }}
       onClick={onClick}
       onMouseEnter={() => onHover?.(widget.widget_id)}
@@ -92,20 +107,24 @@ export function FloatingWidgetCard({
     >
       {/* Main Card */}
       <div className={`
-        relative w-full rounded-xl border-2 backdrop-blur-sm
+        relative w-full rounded-xl bg-card/90
         transition-all duration-300 ease-out
         hover:scale-[1.02] hover:z-10
-        ${getWidgetThemeClasses(widget.theme)}
-        ${isHighlighted ? 'ring-2 ring-blue-400/60 scale-[1.01]' : 'ring-1 ring-border/50'}
-      `} style={{ minHeight: `${minHeight}px` }}>
-        {/* Subtle border glow effect */}
-        <div className={`
-          absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300
-          bg-gradient-to-br from-white/5 via-transparent to-white/5
-        `} />
-
-        {/* Content */}
-        <div className="relative p-6 flex flex-col h-full">
+        ${isHighlighted ? 'ring-2 ring-blue-400/60 scale-[1.01]' : ''}
+      `} style={{ 
+        minHeight: `${minHeight}px`,
+        backfaceVisibility: 'hidden',
+        transform: 'translateZ(0)'
+      }}>
+        {/* Counter-scale wrapper to maintain native resolution */}
+        <div style={{
+          transform: `scale(${counterScale})`,
+          transformOrigin: 'center center',
+          width: '100%',
+          height: '100%'
+        }}>
+          {/* Content */}
+          <div className="relative p-6 flex flex-col h-full">
           {/* Widget Header */}
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
@@ -148,24 +167,37 @@ export function FloatingWidgetCard({
             
             {/* Run Widget Button - shown at medium zoom and above */}
             {onRun && scale > 0.8 && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation() // Prevent card click
-                  onRun(widget._id)  // ✅ Use Convex ID (_id)
-                }}
-                disabled={isRunning}
-                className={`
-                  w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg
-                  text-sm font-medium transition-all duration-200
-                  ${isRunning 
-                    ? 'bg-muted text-muted-foreground cursor-not-allowed' 
-                    : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 active:scale-[0.98]'
-                  }
-                `}
-              >
-                <PlayCircle className={`w-4 h-4 ${isRunning ? 'animate-pulse' : ''}`} />
-                <span>{isRunning ? 'Running...' : 'Run Widget'}</span>
-              </button>
+              <div className="space-y-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation() // Prevent card click
+                    onRun(widget._id)  // ✅ Use Convex ID (_id)
+                  }}
+                  disabled={isRunning}
+                  className={`
+                    w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg
+                    text-sm font-medium transition-all duration-200
+                    ${isRunning 
+                      ? 'bg-muted text-muted-foreground cursor-not-allowed' 
+                      : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 active:scale-[0.98]'
+                    }
+                  `}
+                >
+                  <PlayCircle className={`w-4 h-4 ${isRunning ? 'animate-pulse' : ''}`} />
+                  <span>{isRunning ? 'Running...' : 'Run Widget'}</span>
+                </button>
+
+                {scale > 0.9 && projectId && (
+                  <WidgetScheduleControls 
+                    widgetId={widget._id}
+                    projectId={projectId}
+                    isScheduled={widget.scheduleEnabled}
+                    nextScheduledRun={widget.nextScheduledRun}
+                    frequency={widget.scheduleFrequency}
+                    className="justify-center"
+                  />
+                )}
+              </div>
             )}
             {showMetadata && (
               <>
@@ -201,6 +233,7 @@ export function FloatingWidgetCard({
             ${isHighlighted ? 'opacity-100' : 'opacity-60'}
           `}
         />
+        </div>
       </div>
     </div>
   )

@@ -14,6 +14,7 @@ import { AuthenticationError } from '@/app/lib/errors';
 export interface WidgetRunRequest {
   widgetId: string;
   projectId: string;
+  executionPrompt?: string;  // Optional custom user prompt for widget execution
 }
 
 /**
@@ -28,6 +29,7 @@ export interface WidgetRunResponse {
     priority: number;
   }>;
   opening_message?: string;  // AI's first conversational message to start the dialogue
+  execution_prompt?: string;  // User's custom prompt that was used for execution
   user_id: string;
 }
 
@@ -44,6 +46,7 @@ export interface WidgetOutputData {
     text: string;
     priority: number;
   }>;
+  executionPrompt?: string;  // User's custom prompt that was used for execution
   createdAt: number;
 }
 
@@ -57,7 +60,7 @@ export interface WidgetOutputData {
  * @throws {Error} If execution fails
  */
 export async function runWidget(params: WidgetRunRequest): Promise<WidgetRunResponse> {
-  const { widgetId, projectId } = params;
+  const { widgetId, projectId, executionPrompt } = params;
 
   // Auth readiness and userId resolution
   let userId: string | null = null;
@@ -88,13 +91,20 @@ export async function runWidget(params: WidgetRunRequest): Promise<WidgetRunResp
     });
 
     // Call Next.js API route (thin wrapper that forwards to backend)
+    const requestBody: any = {
+      user_id: userId,
+      widget_id: widgetId,
+      project_id: projectId
+    };
+    
+    // Add execution_prompt if provided
+    if (executionPrompt) {
+      requestBody.execution_prompt = executionPrompt;
+    }
+    
     const response = await fetchWithApiKey('/api/widgets/run', {
       method: 'POST',
-      body: JSON.stringify({
-        user_id: userId,
-        widget_id: widgetId,
-        project_id: projectId
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {

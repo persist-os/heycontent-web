@@ -756,6 +756,20 @@ export default defineSchema({
       v.literal("failed")
     )),
     
+    // Scheduling configuration
+    scheduleEnabled: v.optional(v.boolean()),
+    scheduleFrequency: v.optional(v.union(
+      v.literal("manual"),
+      v.literal("hourly"),
+      v.literal("daily"),
+      v.literal("weekly"),
+      v.literal("monthly")
+    )),
+    nextScheduledRun: v.optional(v.number()),
+    lastScheduledRun: v.optional(v.number()),
+    scheduledRunCount: v.optional(v.number()),
+    requiresApproval: v.optional(v.boolean()),
+    
     // Metadata
     status: v.union(
       v.literal("active"),
@@ -771,7 +785,8 @@ export default defineSchema({
   .index("by_category", ["projectId", "category"])
   .index("by_status", ["projectId", "status"])
   .index("by_widget_id", ["projectId", "widget_id"]) // For legacy lookups
-  .index("by_created", ["createdAt"]),
+  .index("by_created", ["createdAt"])
+  .index("by_schedule", ["nextScheduledRun", "scheduleEnabled"]),
 
   // ============================================================================
   // PROJECT WIDGET LAYOUTS - Layout configuration and categories
@@ -864,17 +879,25 @@ export default defineSchema({
     // Content
     noteId: v.string(),  // Reference to created note
     openingMessage: v.optional(v.string()),  // AI's first conversational message to start the dialogue
+    executionPrompt: v.optional(v.string()),  // User's custom prompt for widget execution
     prompts: v.array(v.object({
       text: v.string(),
       priority: v.number(),
     })),
+    
+    // Feedback
+    userRating: v.optional(v.union(v.literal(1), v.literal(0))),  // 1 = thumbs up, 0 = thumbs down
+    feedbackText: v.optional(v.string()),  // Optional text feedback for thumbs down
+    ratedAt: v.optional(v.number()),  // Timestamp of rating
     
     // Metadata
     createdAt: v.number(),
   })
     .index("by_widget", ["widgetId"])
     .index("by_project", ["projectId"])
-    .index("by_output_id", ["outputId"]),
+    .index("by_output_id", ["outputId"])
+    .index("by_rating", ["widgetId", "userRating"])  // For analyzing widget quality
+    .index("by_user", ["userId"]),
 
   // Conversation Summaries - Real-time conversation analysis
   conversation_summaries: defineTable({
@@ -1279,15 +1302,7 @@ export default defineSchema({
       // === PROJECT SUGGESTIONS (FOR PROMOTION) ===
       suggestedProjectName: v.string(),
       suggestedProjectDescription: v.string(),
-      suggestedDomain: v.union(
-        v.literal("academic"),
-        v.literal("creative"),
-        v.literal("business"),
-        v.literal("skill_development"),
-        v.literal("personal"),
-        v.literal("technical"),
-        v.literal("unknown")
-      ),
+      suggestedDomain: v.string(),  // No longer hardcoded, any string is valid
       suggestedComplexity: v.number(),  // Complexity (0-10)
       suggestedTimeHorizon: v.string(),  // Time horizon estimate
       

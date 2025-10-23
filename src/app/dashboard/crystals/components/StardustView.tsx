@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Sparkles, TrendingUp, Calendar, Zap, Edit3, Trash2, Save, X, CheckCircle2, ExternalLink } from 'lucide-react';
+import { Sparkles, TrendingUp, Calendar, Zap, Edit3, Trash2, Save, X, CheckCircle2, ExternalLink, Rocket } from 'lucide-react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { toast } from 'sonner';
 import { T } from '@/components/translation';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 
 interface StardustViewProps {
   recentStardust?: any[]; // Legacy prop for fallback
@@ -18,6 +19,7 @@ interface StardustCardProps {
 
 const StardustCard: React.FC<StardustCardProps> = ({ stardust, userId }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editedStardust, setEditedStardust] = useState({
     suggestedProjectName: stardust.suggestedProjectName || '',
     suggestedProjectDescription: stardust.suggestedProjectDescription || '',
@@ -28,13 +30,10 @@ const StardustCard: React.FC<StardustCardProps> = ({ stardust, userId }) => {
   const deleteStardust = useMutation(api.stardustMutations.deleteStardust);
   
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this stardust? This action cannot be undone.')) {
-      return;
-    }
-
     try {
       await deleteStardust({ stardustId: stardust._id });
       toast.success('Stardust deleted successfully');
+      setShowDeleteConfirm(false);
     } catch (error) {
       console.error('Error deleting stardust:', error);
       toast.error('Failed to delete stardust');
@@ -64,6 +63,20 @@ const StardustCard: React.FC<StardustCardProps> = ({ stardust, userId }) => {
       suggestedProjectDescription: stardust.suggestedProjectDescription || '',
     });
     setIsEditing(false);
+  };
+
+  const handleManualPromotion = () => {
+    // Navigate to project-discovery with stardust pre-fill
+    const shardIds = (stardust.sourceShardIds || []).join(',');
+    const params = new URLSearchParams({
+      mode: 'create',
+      name: stardust.suggestedProjectName || stardust.name,
+      description: stardust.suggestedProjectDescription || stardust.description || '',
+      stardustId: stardust._id,
+      ...(shardIds && { shardIds })
+    });
+    
+    window.location.href = `/dashboard/living-projects/project-discovery?${params}`;
   };
 
   const formatTimestamp = (timestamp: number) => {
@@ -251,7 +264,7 @@ const StardustCard: React.FC<StardustCardProps> = ({ stardust, userId }) => {
                         <Edit3 className="h-3.5 w-3.5" />
                       </button>
                       <button
-                        onClick={handleDelete}
+                        onClick={() => setShowDeleteConfirm(true)}
                         className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
                         title="Delete stardust"
                       >
@@ -276,6 +289,20 @@ const StardustCard: React.FC<StardustCardProps> = ({ stardust, userId }) => {
             <p className="text-muted-foreground leading-relaxed text-sm">
               {stardust.suggestedProjectDescription || stardust.description}
             </p>
+          )}
+          
+          {/* Manual Promotion Button */}
+          {!isPromoted && stardust.confidence >= 0.5 && !isEditing && (
+            <div className="mt-3">
+              <button
+                onClick={handleManualPromotion}
+                className="w-full px-4 py-2.5 bg-violet-500 hover:bg-violet-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
+                title="Promote this stardust to a project"
+              >
+                <Rocket className="w-4 h-4" />
+                <T context="stardust.action.promote">Promote to Project</T>
+              </button>
+            </div>
           )}
         </div>
 
@@ -356,6 +383,21 @@ const StardustCard: React.FC<StardustCardProps> = ({ stardust, userId }) => {
           </div>
         )}
       </div>
+
+      <ConfirmationModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title="Delete Stardust"
+        titleContext="stardust.delete_confirm.title"
+        description="Are you sure you want to delete this stardust? This action cannot be undone."
+        descriptionContext="stardust.delete_confirm.description"
+        confirmText="Delete"
+        confirmContext="button.delete"
+        cancelText="Cancel"
+        cancelContext="button.cancel"
+        variant="destructive"
+      />
     </div>
   );
 };

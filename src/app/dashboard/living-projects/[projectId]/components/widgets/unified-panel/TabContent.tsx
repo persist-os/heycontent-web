@@ -38,6 +38,7 @@ import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { T } from '@/components/translation/T'
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal'
 
 /**
  * Overview Tab - Content preview and primary information
@@ -276,6 +277,7 @@ export const MetadataTab = ({ item, itemType }: TabContentProps) => {
 export const ActionsTab = ({ item, itemType, projectId, onClose }: TabContentProps) => {
   const router = useRouter()
   const actions = useUnifiedActions(projectId)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const hasRunAction = itemType === 'widget'
   const hasEditAction = ['widget', 'note', 'conversation'].includes(itemType)
@@ -356,28 +358,47 @@ export const ActionsTab = ({ item, itemType, projectId, onClose }: TabContentPro
       )}
 
       {hasDeleteAction && (
-        <Button
-          onClick={() => {
-            if (confirm('Are you sure you want to delete this item?')) {
-              actions.handleDelete(item, itemType).then(() => onClose())
-            }
-          }}
-          variant="outline"
-          className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
-          disabled={actions.isDeleting}
-        >
-          {actions.isDeleting ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              <T context="panel.actions.deleting">Deleting...</T>
-            </>
-          ) : (
-            <>
-              <Trash2 className="w-4 h-4 mr-2" />
-              <T context="panel.actions.delete">Delete</T>
-            </>
-          )}
-        </Button>
+        <>
+          <Button
+            onClick={() => setShowDeleteConfirm(true)}
+            variant="outline"
+            className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+            disabled={actions.isDeleting}
+          >
+            {actions.isDeleting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <T context="panel.actions.deleting">Deleting...</T>
+              </>
+            ) : (
+              <>
+                <Trash2 className="w-4 h-4 mr-2" />
+                <T context="panel.actions.delete">Delete</T>
+              </>
+            )}
+          </Button>
+
+          <ConfirmationModal
+            isOpen={showDeleteConfirm}
+            onClose={() => setShowDeleteConfirm(false)}
+            onConfirm={() => {
+              actions.handleDelete(item, itemType).then(() => {
+                setShowDeleteConfirm(false)
+                onClose()
+              })
+            }}
+            title="Delete Item"
+            titleContext="panel.delete_confirm.title"
+            description="Are you sure you want to delete this item? This action cannot be undone."
+            descriptionContext="panel.delete_confirm.description"
+            confirmText="Delete"
+            confirmContext="button.delete"
+            cancelText="Cancel"
+            cancelContext="button.cancel"
+            variant="destructive"
+            isLoading={actions.isDeleting}
+          />
+        </>
       )}
     </div>
   )

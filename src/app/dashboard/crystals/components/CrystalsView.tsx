@@ -7,6 +7,7 @@ import { api } from '@/convex/_generated/api';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { toast } from 'sonner';
 import { T } from '@/components/translation';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 
 interface CrystalsViewProps {
   recentCrystals?: any[]; // Legacy prop for fallback
@@ -21,6 +22,7 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
   const [showAllEvolution, setShowAllEvolution] = useState(false);
   const [showAllShards, setShowAllShards] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editedCrystal, setEditedCrystal] = useState({
     ...crystal,
     core_insight: crystal.core_insight || crystal.stable_trait
@@ -50,11 +52,6 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
   };
 
   const handleDelete = async () => {
-    // Note: confirm() dialog cannot be easily translated, consider custom modal in future
-    if (!confirm('Are you sure you want to delete this crystal? This action cannot be undone.')) {
-      return;
-    }
-
     try {
       const result = await batchMutateCrystalData({
         table: "crystals",
@@ -66,6 +63,7 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
 
       if (result.success) {
         toast.success('Crystal deleted successfully');
+        setShowDeleteConfirm(false);
       } else {
         toast.error('Failed to delete crystal');
       }
@@ -234,7 +232,7 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
                       <Edit3 className="h-3.5 w-3.5" />
                     </button>
                     <button
-                      onClick={handleDelete}
+                      onClick={() => setShowDeleteConfirm(true)}
                       className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
                       title="Delete crystal"
                     >
@@ -526,6 +524,21 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
           )}
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title="Delete Crystal"
+        titleContext="crystal.delete_confirm.title"
+        description="Are you sure you want to delete this crystal? This action cannot be undone."
+        descriptionContext="crystal.delete_confirm.description"
+        confirmText="Delete"
+        confirmContext="button.delete"
+        cancelText="Cancel"
+        cancelContext="button.cancel"
+        variant="destructive"
+      />
     </div>
   );
 };

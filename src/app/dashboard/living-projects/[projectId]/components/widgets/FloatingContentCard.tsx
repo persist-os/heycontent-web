@@ -66,23 +66,27 @@ export function FloatingContentCard({
     const baseSize = baseSizes[size] || baseSizes.medium
     const zoomMultiplier = Math.max(0.85, scale * 0.85)
     
+    // Round to nearest pixel to prevent subpixel blur
     return {
-      width: baseSize.width * zoomMultiplier,
-      minHeight: baseSize.minHeight * zoomMultiplier
+      width: Math.round(baseSize.width * zoomMultiplier),
+      minHeight: Math.round(baseSize.minHeight * zoomMultiplier)
     }
   }
 
   const { width, minHeight } = getCardDimensions()
+
+  // Counter-scale to maintain native resolution when parent canvas is scaled
+  const counterScale = 1 / Math.max(0.5, Math.min(2, scale)) // Clamp for safety
 
   // Progressive detail revelation based on zoom (quantum observation)
   const showPreview = scale > 0.7
   const showMetadata = scale > 0.9
   const showRichData = scale > 1.2
 
-  // Calculate opacity with quantum superposition effect
-  const baseOpacity = Math.max(0.65, (importance || 0.5) * 0.85)
-  const scaleOpacity = Math.min(1, Math.max(0.55, scale || 1))
-  const finalOpacity = Math.max(0.15, Math.min(1, baseOpacity * scaleOpacity))
+  // Calculate opacity with discrete steps to reduce GPU compositing overhead
+  const baseOpacity = (importance || 0.5) > 0.7 ? 0.95 : (importance || 0.5) > 0.4 ? 0.85 : 0.75
+  const scaleOpacity = scale > 1.0 ? 1 : scale > 0.7 ? 0.9 : 0.85
+  const finalOpacity = Math.round(baseOpacity * scaleOpacity * 100) / 100 // Round to 2 decimals
 
   // Type-specific quantum styling with consciousness themes - using globals.css colors
   const getTypeStyling = () => {
@@ -217,24 +221,40 @@ export function FloatingContentCard({
     <div
       className="absolute cursor-pointer group will-change-transform"
       style={{
-        left: `${x - width/2}px`,
-        top: `${y - minHeight/2}px`,
+        left: `${Math.round(x - width/2)}px`,
+        top: `${Math.round(y - minHeight/2)}px`,
         width: `${width}px`,
         minHeight: `${minHeight}px`,
         opacity: finalOpacity,
-        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+        backfaceVisibility: 'hidden',
+        WebkitFontSmoothing: 'antialiased',
+        transformOrigin: 'center center'
       }}
       onClick={handleCardClick}
     >
       {/* Quantum field container */}
-      <div className={`
-        relative w-full h-full rounded-xl backdrop-blur-md
-        transition-all duration-500 ease-out
-        hover:scale-[1.04] hover:z-20
-        bg-gradient-to-br ${styling.bgGradient}
-        ${isHighlighted ? 'ring-2 ring-white/40 dark:ring-white/30 scale-[1.02]' : ''}
-        ${styling.glowColor} shadow-lg
-      `}>
+      {/* <div 
+        className={`
+          relative w-full h-full rounded-xl
+          transition-all duration-500 ease-out
+          hover:scale-[1.04] hover:z-20
+          bg-gradient-to-br ${styling.bgGradient}
+          ${isHighlighted ? 'ring-2 ring-white/40 dark:ring-white/30 scale-[1.02]' : ''}
+          ${styling.glowColor} shadow-lg
+        `}
+        style={{
+          backfaceVisibility: 'hidden',
+          transform: 'translateZ(0)'
+        }}
+      > */}
+        {/* Counter-scale wrapper to maintain native resolution */}
+        <div style={{
+          transform: `scale(${counterScale})`,
+          transformOrigin: 'center center',
+          width: '100%',
+          height: '100%'
+        }}>
         
         {/* Animated gradient border */}
         <div className={`
@@ -243,7 +263,6 @@ export function FloatingContentCard({
         `} style={{ padding: '1.5px' }}>
           <div className={`
             w-full h-full rounded-xl bg-gradient-to-br ${styling.bgGradient}
-            backdrop-blur-md
           `} />
         </div>
 
@@ -387,12 +406,12 @@ export function FloatingContentCard({
         }} />
 
         {/* Quantum glow effect */}
-        <div className={`
+        {/* <div className={`
           absolute -inset-1 rounded-xl blur-xl ${styling.glowColor}
           opacity-0 group-hover:opacity-30 transition-opacity duration-700
           pointer-events-none -z-10
-        `} />
+        `} /> */}
+        </div>
       </div>
-    </div>
   )
 }

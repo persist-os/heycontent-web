@@ -17,6 +17,10 @@ export interface WidgetOutput {
     priority: number
   }>
   openingMessage?: string  // AI's first conversational message to start the dialogue
+  executionPrompt?: string // User's custom prompt for widget execution
+  userRating?: 0 | 1       // 1 = thumbs up, 0 = thumbs down
+  feedbackText?: string    // Optional text feedback for thumbs down
+  ratedAt?: number         // Timestamp of rating
   createdAt: number
 }
 

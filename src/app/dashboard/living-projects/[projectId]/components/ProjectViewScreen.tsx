@@ -1,10 +1,11 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import { useQuery } from 'convex/react'
+import { useQuery, useMutation } from 'convex/react'
 import { useRouter } from 'next/navigation'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { api } from '@/convex/_generated/api'
+import { Id } from '@/convex/_generated/dataModel'
 import { useProjectFingerprint } from '@/app/dashboard/living-projects/hooks/useProjectFingerprint'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { T } from '@/components/translation'
@@ -94,6 +95,8 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
     projectId ? { projectId: projectId as any } : 'skip'
   )
 
+  const clearConstellationLayout = useMutation(api.projectsMutations.clearConstellationLayout)
+
   const { fingerprint: currentFingerprint } = useProjectFingerprint(projectId as any)
   
   // Business logic hooks
@@ -125,18 +128,10 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
     if (!userId) return;
     
     try {
-      // Clear the stored layout
-      await fetch('/api/convex', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'runMutation',
-          name: 'projectsMutations:clearConstellationLayout',
-          args: { projectId, userId }
-        })
-      });
-      
-      console.log('Layout reset successfully');
+      await clearConstellationLayout({
+        projectId: projectId as Id<'projects'>,
+        userId,
+      })
     } catch (error) {
       console.error('Failed to reset layout:', error);
     }
@@ -182,7 +177,6 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
 
       if (result) {
         // Success! Open the panel to show the output
-        console.log('Widget executed successfully:', result)
         
         // Open panel at center of viewport
         const position = {

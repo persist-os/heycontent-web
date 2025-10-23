@@ -22,6 +22,7 @@ import {
   processAnalysisData,
   getAnalysisTypeColor,
 } from '../../utils/project-items';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 
 interface ProjectItemsGridProps {
   project: ProjectWithItems;
@@ -32,6 +33,8 @@ export function ProjectItemsGrid({ project }: ProjectItemsGridProps) {
   const { notes } = useNotes();
   const { removeContentFromProject } = useProjects(userId || undefined);
   const router = useRouter();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [pendingDeleteNoteId, setPendingDeleteNoteId] = useState<string | null>(null);
   
   // State for overlay modals - social media overlays removed
 
@@ -75,11 +78,15 @@ export function ProjectItemsGrid({ project }: ProjectItemsGridProps) {
   // Delete handler for notes
   const handleNoteDelete = async (noteId: string) => {
     if (!project) return;
-    
-    const confirmed = window.confirm('Are you sure you want to remove this note from the project?');
-    if (confirmed) {
-      await removeContentFromProject(project._id, 'note', noteId);
-    }
+    setPendingDeleteNoteId(noteId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmNoteDelete = async () => {
+    if (!project || !pendingDeleteNoteId) return;
+    await removeContentFromProject(project._id, 'note', pendingDeleteNoteId);
+    setShowDeleteConfirm(false);
+    setPendingDeleteNoteId(null);
   };
 
   // Social media overlay handlers removed
@@ -284,6 +291,24 @@ export function ProjectItemsGrid({ project }: ProjectItemsGridProps) {
       </div>
 
       {/* Social media overlay modals removed */}
+      
+      <ConfirmationModal
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          setShowDeleteConfirm(false);
+          setPendingDeleteNoteId(null);
+        }}
+        onConfirm={confirmNoteDelete}
+        title="Remove Note"
+        titleContext="project.remove_note.title"
+        description="Are you sure you want to remove this note from the project?"
+        descriptionContext="project.remove_note.description"
+        confirmText="Remove"
+        confirmContext="button.remove"
+        cancelText="Cancel"
+        cancelContext="button.cancel"
+        variant="destructive"
+      />
     </>
   );
 } 

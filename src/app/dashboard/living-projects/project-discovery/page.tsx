@@ -12,6 +12,7 @@ export default function ProjectDiscoveryPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const createProject = useMutation(api.projectsMutations.createProject)
+  const promoteStardustMutation = useMutation(api.stardustMutations.promoteStardust)
   
   const [projectId, setProjectId] = useState<Id<"projects"> | undefined>()
   const [isCreating, setIsCreating] = useState(false)
@@ -29,6 +30,7 @@ export default function ProjectDiscoveryPage() {
   const conversationIds = useMemo(() => searchParams.get('conversationIds')?.split(',').filter(id => id.trim()) || [], [searchParams])
   const crystalIds = useMemo(() => searchParams.get('crystalIds')?.split(',').filter(id => id.trim()) || [], [searchParams])
   const shardIds = useMemo(() => searchParams.get('shardIds')?.split(',').filter(id => id.trim()) || [], [searchParams])
+  const stardustId = useMemo(() => searchParams.get('stardustId') as Id<"stardust"> | null, [searchParams])
 
   useEffect(() => {
     // If we already have a projectId, use it
@@ -64,6 +66,19 @@ export default function ProjectDiscoveryPage() {
         })
         .then(newProjectId => {
           setProjectId(newProjectId)
+          
+          // Mark stardust as promoted if created from stardust
+          if (stardustId && newProjectId) {
+            promoteStardustMutation({ 
+              stardustId, 
+              projectId: newProjectId,
+              confidenceAtPromotion: 0.7  // Default confidence
+            }).catch(err => {
+              console.error('Failed to mark stardust as promoted:', err);
+              // Don't fail the project creation if promotion marking fails
+            });
+          }
+          
           // Update URL to reflect the created project
           router.replace(`/dashboard/living-projects/project-discovery?projectId=${newProjectId}`)
         })
@@ -77,7 +92,7 @@ export default function ProjectDiscoveryPage() {
           setIsCreating(false)
         })
     }
-  }, [mode, existingProjectId, name, description, noteIds, conversationIds, crystalIds, shardIds, createProject, router, isCreating, projectId])
+  }, [mode, existingProjectId, name, description, noteIds, conversationIds, crystalIds, shardIds, stardustId, createProject, promoteStardustMutation, router, isCreating, projectId])
 
   if (error) {
     return (

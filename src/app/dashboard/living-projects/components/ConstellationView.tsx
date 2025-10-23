@@ -310,14 +310,28 @@ export function ConstellationView() {
         </div>
       </div>
 
-      {/* New Project Button - Top Right with accent */}
-      <div className="absolute top-6 right-6 z-10">
+      {/* Top Right Controls */}
+      <div className="absolute top-6 right-6 z-10 flex flex-col items-end gap-4">
+        {/* New Project Button */}
         <Button
           onClick={() => setShowCreateModal(true)}
           className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-xl shadow-primary/20 ring-1 ring-primary/30"
         >
           <T context="constellation.button.new_project">New Project</T>
         </Button>
+        
+        {/* Minimap */}
+        <div className="bg-background/80 backdrop-blur-sm border border-border/40 rounded-lg shadow-xl overflow-hidden">
+          <ConstellationMinimap
+            positions={layout.positions}
+            canvasWidth={layout.canvasWidth}
+            canvasHeight={layout.canvasHeight}
+            viewportWidth={viewportSize.width}
+            viewportHeight={viewportSize.height}
+            currentTransform={transform}
+            onViewportClick={handleMinimapClick}
+          />
+        </div>
       </div>
 
       {/* Navigation Controls */}
@@ -329,18 +343,6 @@ export function ConstellationView() {
         className="absolute bottom-6 left-20 z-10"
       />
 
-      {/* Minimap with responsive positioning */}
-      <div className="absolute bottom-6 right-6 z-10 max-sm:bottom-2 max-sm:right-2">
-        <ConstellationMinimap
-          positions={layout.positions}
-          canvasWidth={layout.canvasWidth}
-          canvasHeight={layout.canvasHeight}
-          viewportWidth={viewportSize.width}
-          viewportHeight={viewportSize.height}
-          currentTransform={transform}
-          onViewportClick={handleMinimapClick}
-        />
-      </div>
 
       {/* Stats Overlay - Bottom Center with color variety */}
       <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 z-10 pointer-events-none">

@@ -22,6 +22,9 @@ const operationSchema = v.object({
       priority: v.number(),
     }))),
     openingMessage: v.optional(v.string()),  // AI's first conversational message
+    executionPrompt: v.optional(v.string()),  // User's custom prompt for widget execution
+    userRating: v.optional(v.union(v.literal(1), v.literal(0))),  // 1 = thumbs up, 0 = thumbs down
+    feedbackText: v.optional(v.string()),  // Optional text feedback
   })),
   id: v.optional(v.id("widget_outputs")),
   outputId: v.optional(v.string()), // For delete by outputId
@@ -75,6 +78,7 @@ export const batchMutateWidgetOutputs = mutation({
               noteId: op.data.noteId!,
               prompts: op.data.prompts || [],
               openingMessage: op.data.openingMessage,
+              executionPrompt: op.data.executionPrompt,
               createdAt: Date.now(),
             });
             break;
@@ -91,6 +95,12 @@ export const batchMutateWidgetOutputs = mutation({
             const updateData: any = {};
             if (op.data.prompts) updateData.prompts = op.data.prompts;
             if (op.data.noteId) updateData.noteId = op.data.noteId;
+            if (op.data.executionPrompt !== undefined) updateData.executionPrompt = op.data.executionPrompt;
+            if (op.data.userRating !== undefined) {
+              updateData.userRating = op.data.userRating;
+              updateData.ratedAt = Date.now();
+            }
+            if (op.data.feedbackText !== undefined) updateData.feedbackText = op.data.feedbackText;
             await ctx.db.patch(op.id, updateData);
             resultId = op.id;
             break;

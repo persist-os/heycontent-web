@@ -9,6 +9,9 @@
 import React from 'react'
 import { Button } from '@/components/ui/button'
 import { FileText, MessageSquare, Calendar, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react'
+import { ThumbRating } from '@/components/ui/thumb-rating'
+import { useMutation } from 'convex/react'
+import { api } from '@/convex/_generated/api'
 import type { WidgetOutput } from '../types'
 import { T, TButton } from '@/components/translation'
 
@@ -43,6 +46,22 @@ export function WidgetOutputCard({
 
   const promptCount = output.prompts?.length || 0
   const hasNote = output.noteId
+  
+  // Mutation for rating the widget output
+  const rateOutput = useMutation('widget_outputs:rateWidgetOutput')
+  
+  const handleRate = async (rating: 1 | 0, feedbackText?: string) => {
+    try {
+      await rateOutput({
+        outputId: output.outputId,
+        userId: output.userId,
+        rating,
+        feedbackText
+      })
+    } catch (error) {
+      console.error('Failed to rate widget output:', error)
+    }
+  }
 
   return (
     <div className="
@@ -91,6 +110,15 @@ export function WidgetOutputCard({
                         <T context="widget.generated_note">+ generated note</T>
                       </span>
                     )}
+                    <div className="flex items-center gap-1">
+                      <ThumbRating 
+                        value={output.userRating} 
+                        onRate={handleRate}
+                        feedbackText={output.feedbackText}
+                        disabled={output.userRating !== undefined}
+                        size="sm"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

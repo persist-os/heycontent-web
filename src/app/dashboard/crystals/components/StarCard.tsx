@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { Edit3, Trash2, Save, X, ExternalLink } from 'lucide-react';
 import { T } from '@/components/translation';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 
 interface StarCardProps {
   project: {
@@ -27,6 +28,7 @@ interface StarCardProps {
 export const StarCard: React.FC<StarCardProps> = ({ project }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editedProject, setEditedProject] = useState({
     name: project.name,
     description: project.description || '',
@@ -81,10 +83,6 @@ export const StarCard: React.FC<StarCardProps> = ({ project }) => {
   };
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this star? This will remove the project but keep all associated content (notes, crystals, etc.). This action cannot be undone.')) {
-      return;
-    }
-
     try {
       const userId = await getCurrentUserId();
       if (!userId) {
@@ -98,6 +96,7 @@ export const StarCard: React.FC<StarCardProps> = ({ project }) => {
       });
 
       toast.success('Star deleted successfully');
+      setShowDeleteConfirm(false);
     } catch (error) {
       console.error('Error deleting star:', error);
       toast.error('Failed to delete star');
@@ -147,7 +146,7 @@ export const StarCard: React.FC<StarCardProps> = ({ project }) => {
                   <Edit3 className="h-3.5 w-3.5" />
                 </button>
                 <button
-                  onClick={handleDelete}
+                  onClick={() => setShowDeleteConfirm(true)}
                   className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors"
                   title="Delete star"
                 >
@@ -302,6 +301,21 @@ export const StarCard: React.FC<StarCardProps> = ({ project }) => {
           </span>
         )}
       </div>
+
+      <ConfirmationModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title="Delete Star"
+        titleContext="star.delete_confirm.title"
+        description="Are you sure you want to delete this star? This will remove the project but keep all associated content (notes, crystals, etc.). This action cannot be undone."
+        descriptionContext="star.delete_confirm.description"
+        confirmText="Delete"
+        confirmContext="button.delete"
+        cancelText="Cancel"
+        cancelContext="button.cancel"
+        variant="destructive"
+      />
     </div>
   );
 };
