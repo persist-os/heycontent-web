@@ -195,15 +195,7 @@ export const getStardustByLifecycleStage = query({
 export const getStardustByDomain = query({
   args: {
     userId: v.string(),
-    domain: v.union(
-      v.literal("academic"),
-      v.literal("creative"),
-      v.literal("business"),
-      v.literal("skill_development"),
-      v.literal("personal"),
-      v.literal("technical"),
-      v.literal("unknown")
-    ),
+    domain: v.string(),  // Flexible domain as string
   },
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
