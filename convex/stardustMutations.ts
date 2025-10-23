@@ -1,5 +1,5 @@
 /**
- * Stardust Mutations
+ * Stardust Mutations - Crystal Pattern (v.any() + Schema Validation)
  * 
  * Mutations for managing stardust (parallel species to crystals).
  * Stardust represents "What You Do" - concrete project potentials that evolve into star organisms.
@@ -9,88 +9,74 @@
  * - Code-based detection (zero LLM cost)
  * - Flows through crystal dam alongside shards
  * - Evolves into star organisms (projects)
+ * 
+ * 🏗️ ARCHITECTURE PATTERN:
+ * - Follows Crystal atomic mutation pattern (crystalAtomicMutations.ts)
+ * - Uses v.any() in mutation args (no rigid validators)
+ * - Schema validates at insert/patch time (single source of truth)
+ * - HTTP layer does direct passthrough (no field mapping)
+ * - Benefits: Zero validator errors, works with any naming convention
  */
 
 import { mutation } from "./_generated/server";
 import { v } from "convex/values";
-import {
-  stardustCreateValidator,
-  stardustUpdateValidator,
-  stardustLifecycleStageValidator,
-} from "./types/stardust";
 
 
 /**
  * Create a new stardust
  */
 export const createStardust = mutation({
-  args: stardustCreateValidator.fields,
+  args: {
+    stardustData: v.any(),
+  },
   returns: v.id("stardust"),
-  handler: async (ctx, args) => {
+  handler: async (ctx, { stardustData }) => {
     const now = Date.now();
     
-    const stardustId = await ctx.db.insert("stardust", {
-      userId: args.userId,
-      stardust_id: args.stardust_id,
-      name: args.name,
-      description: args.description,
-      keywords: args.keywords,
-      dimension: args.dimension,
-      detected_at: now,
-      detection_method: args.detection_method || "code_based",
-      confidence: args.confidence,
-      evidence_strength: args.evidence_strength,
-      source_shard_ids: args.source_shard_ids,
-      shard_count: args.shard_count,
-      related_note_ids: args.related_note_ids,
-      related_conversation_ids: args.related_conversation_ids,
-      lifecycleStage: args.lifecycleStage || "embryo",
-      health: args.health ?? 0.5,
-      energy: args.energy ?? 0.5,
-      suggested_project_name: args.suggested_project_name,
-      suggested_project_description: args.suggested_project_description,
-      suggested_domain: args.suggested_domain,
-      suggested_complexity: args.suggested_complexity,
-      suggested_time_horizon: args.suggested_time_horizon,
+    // Add required fields and defaults - Crystal Pattern
+    const completeData = {
+      ...stardustData,
+      detected_at: stardustData.detected_at ?? now,
+      detection_method: stardustData.detection_method ?? "code_based",
+      lifecycleStage: stardustData.lifecycleStage ?? "embryo",
+      health: stardustData.health ?? 0.5,
+      energy: stardustData.energy ?? 0.5,
       promoted: false,
-      promoted_at: undefined,
-      promoted_to_project_id: undefined,
-      confidence_at_promotion: undefined,
+      related_crystal_ids: stardustData.related_crystal_ids ?? [],
+      symbiotic_pairs: stardustData.symbiotic_pairs ?? [],
       createdAt: now,
       updatedAt: now,
-      lastEvolution: undefined,
-      related_crystal_ids: [],
-      symbiotic_pairs: [],
-    });
+    };
     
-    return stardustId;
+    return await ctx.db.insert("stardust", completeData);
   },
 });
 
 
 /**
- * Update a stardust (e.g., add more shards, update confidence, evolve lifecycle)
+ * Update a stardust - Crystal Pattern (v.any() + schema validation)
+ * 
+ * Following established Crystal atomic mutation pattern.
  */
 export const updateStardust = mutation({
   args: {
     stardustId: v.id("stardust"),
-    updates: stardustUpdateValidator,
+    updates: v.any(),
   },
   returns: v.id("stardust"),
-  handler: async (ctx, args) => {
-    const updateData: any = {
-      ...args.updates,
-      updatedAt: Date.now(),
+  handler: async (ctx, { stardustId, updates }) => {
+    const now = Date.now();
+    
+    const updateData = {
+      ...updates,
+      updatedAt: now,
+      // Track lifecycle evolution if stage changed
+      ...(updates.lifecycleStage && { lastEvolution: now }),
     };
     
-    // Track lifecycle evolution
-    if (args.updates.lifecycleStage) {
-      updateData.lastEvolution = Date.now();
-    }
+    await ctx.db.patch(stardustId, updateData);
     
-    await ctx.db.patch(args.stardustId, updateData);
-    
-    return args.stardustId;
+    return stardustId;
   },
 });
 
@@ -136,71 +122,35 @@ export const deleteStardust = mutation({
 
 
 /**
- * Batch create multiple stardust (for efficient bulk operations)
+ * Batch create multiple stardust - Crystal Pattern (for efficient bulk operations)
+ * 
+ * Following Crystal Pattern: accepts any data structure, schema validates at insert
  */
 export const batchCreateStardust = mutation({
   args: {
-    stardustList: v.array(v.object({
-      userId: v.string(),
-      stardust_id: v.string(),
-      name: v.string(),
-      description: v.string(),
-      confidence: v.number(),
-      source_shard_ids: v.array(v.string()),
-      keywords: v.array(v.string()),
-      dimension: v.string(),
-      suggested_project_name: v.string(),
-      suggested_project_description: v.string(),
-      suggested_domain: v.string(),
-      suggested_complexity: v.number(),
-      suggested_time_horizon: v.string(),
-      related_note_ids: v.array(v.string()),
-      related_conversation_ids: v.array(v.string()),
-      shard_count: v.number(),
-      evidence_strength: v.string(),
-    })),
+    stardustList: v.array(v.any()),
   },
   returns: v.array(v.id("stardust")),
-  handler: async (ctx, args) => {
+  handler: async (ctx, { stardustList }) => {
     const now = Date.now();
     const createdIds: any[] = [];
     
-    for (const stardustData of args.stardustList) {
-      const stardustId = await ctx.db.insert("stardust", {
-        userId: stardustData.userId,
-        stardust_id: stardustData.stardust_id,
-        name: stardustData.name,
-        description: stardustData.description,
-        keywords: stardustData.keywords,
-        dimension: stardustData.dimension,
-        detected_at: now,
-        detection_method: "code_based",
-        confidence: stardustData.confidence,
-        evidence_strength: stardustData.evidence_strength,
-        source_shard_ids: stardustData.source_shard_ids,
-        shard_count: stardustData.shard_count,
-        related_note_ids: stardustData.related_note_ids,
-        related_conversation_ids: stardustData.related_conversation_ids,
-        lifecycleStage: "embryo",
-        health: 0.5,
-        energy: 0.5,
-        suggested_project_name: stardustData.suggested_project_name,
-        suggested_project_description: stardustData.suggested_project_description,
-        suggested_domain: stardustData.suggested_domain,
-        suggested_complexity: stardustData.suggested_complexity,
-        suggested_time_horizon: stardustData.suggested_time_horizon,
+    for (const stardustData of stardustList) {
+      const completeData = {
+        ...stardustData,
+        detected_at: stardustData.detected_at ?? now,
+        detection_method: stardustData.detection_method ?? "code_based",
+        lifecycleStage: stardustData.lifecycleStage ?? "embryo",
+        health: stardustData.health ?? 0.5,
+        energy: stardustData.energy ?? 0.5,
         promoted: false,
-        promoted_at: undefined,
-        promoted_to_project_id: undefined,
-        confidence_at_promotion: undefined,
+        related_crystal_ids: stardustData.related_crystal_ids ?? [],
+        symbiotic_pairs: stardustData.symbiotic_pairs ?? [],
         createdAt: now,
         updatedAt: now,
-        lastEvolution: undefined,
-        related_crystal_ids: [],
-        symbiotic_pairs: [],
-      });
+      };
       
-      createdIds.push(stardustId);
+      createdIds.push(await ctx.db.insert("stardust", completeData));
     }
     
     return createdIds;
@@ -210,11 +160,12 @@ export const batchCreateStardust = mutation({
 
 /**
  * Evolve stardust lifecycle stage (manual or automated evolution)
+ * Crystal Pattern: Accepts any string for lifecycle stage (schema validates)
  */
 export const evolveStardustLifecycle = mutation({
   args: {
     stardustId: v.id("stardust"),
-    newStage: stardustLifecycleStageValidator,
+    newStage: v.string(),
     healthDelta: v.optional(v.number()),
     energyDelta: v.optional(v.number()),
   },

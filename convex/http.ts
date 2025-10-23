@@ -4337,38 +4337,24 @@ app.post("/api/stardust/statistics", async (c) => {
 
 
 /**
- * Create a new stardust
+ * Create a new stardust - Crystal Pattern (direct passthrough)
+ * 
+ * Following established Crystal atomic pattern:
+ * - No manual field mapping
+ * - Direct passthrough to mutation
+ * - Schema validates at insert time
  */
 app.post("/api/stardust/create", async (c) => {
   try {
     const ctx = c.env;
-    const body = await c.req.json();
+    const requestBody = await c.req.json();
     
-    const stardustId = await ctx.runMutation(api.stardustMutations.createStardust, {
-      userId: body.userId,
-      stardustId: body.stardustId,
-      name: body.name,
-      description: body.description,
-      confidence: body.confidence,
-      sourceShardIds: body.sourceShardIds || [],
-      keywords: body.keywords || [],
-      dimension: body.dimension,
-      suggestedProjectName: body.suggestedProjectName,
-      suggestedProjectDescription: body.suggestedProjectDescription,
-      suggestedDomain: body.suggestedDomain,
-      suggestedComplexity: body.suggestedComplexity,
-      suggestedTimeHorizon: body.suggestedTimeHorizon,
-      relatedNoteIds: body.relatedNoteIds || [],
-      relatedConversationIds: body.relatedConversationIds || [],
-      shardCount: body.shardCount,
-      evidenceStrength: body.evidenceStrength,
-      lifecycleStage: body.lifecycleStage,
-      health: body.health,
-      energy: body.energy,
-      detectionMethod: body.detectionMethod,
-    });
+    const result = await ctx.runMutation(
+      api.stardustMutations.createStardust,
+      { stardustData: requestBody }
+    );
     
-    return c.json({ success: true, data: { stardustId } });
+    return c.json({ success: true, data: { stardustId: result } });
   } catch (error: any) {
     console.error("[STARDUST_CREATE] Error:", error);
     return c.json({ 
@@ -4380,19 +4366,19 @@ app.post("/api/stardust/create", async (c) => {
 
 
 /**
- * Update a stardust
+ * Update a stardust - Crystal Pattern (direct passthrough)
  */
 app.post("/api/stardust/update", async (c) => {
   try {
     const ctx = c.env;
-    const body = await c.req.json();
+    const requestBody = await c.req.json();
     
-    const stardustId = await ctx.runMutation(api.stardustMutations.updateStardust, {
-      stardustId: body.stardustId as Id<"stardust">,
-      updates: body.updates,
+    const result = await ctx.runMutation(api.stardustMutations.updateStardust, {
+      stardustId: requestBody.stardustId as Id<"stardust">,
+      updates: requestBody.updates,
     });
     
-    return c.json({ success: true, data: { stardustId } });
+    return c.json({ success: true, data: { stardustId: result } });
   } catch (error: any) {
     console.error("[STARDUST_UPDATE] Error:", error);
     return c.json({ 
