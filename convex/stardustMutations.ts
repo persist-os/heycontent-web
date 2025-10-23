@@ -30,15 +30,7 @@ export const createStardust = mutation({
     dimension: v.string(),
     suggestedProjectName: v.string(),
     suggestedProjectDescription: v.string(),
-    suggestedDomain: v.union(
-      v.literal("academic"),
-      v.literal("creative"),
-      v.literal("business"),
-      v.literal("skill_development"),
-      v.literal("personal"),
-      v.literal("technical"),
-      v.literal("unknown")
-    ),
+    suggestedDomain: v.string(),  // Flexible domain as string
     suggestedComplexity: v.number(),
     suggestedTimeHorizon: v.string(),
     relatedNoteIds: v.array(v.string()),
@@ -120,15 +112,7 @@ export const updateStardust = mutation({
       )),
       suggestedProjectName: v.optional(v.string()),
       suggestedProjectDescription: v.optional(v.string()),
-      suggestedDomain: v.optional(v.union(
-        v.literal("academic"),
-        v.literal("creative"),
-        v.literal("business"),
-        v.literal("skill_development"),
-        v.literal("personal"),
-        v.literal("technical"),
-        v.literal("unknown")
-      )),
+      suggestedDomain: v.optional(v.string()),  // Flexible domain as string
       suggestedComplexity: v.optional(v.number()),
       suggestedTimeHorizon: v.optional(v.string()),
       lifecycleStage: v.optional(v.union(
