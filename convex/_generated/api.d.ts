@@ -104,8 +104,10 @@ import type * as translationQueries from "../translationQueries.js";
 import type * as types_backgroundJobs from "../types/backgroundJobs.js";
 import type * as types_convergence from "../types/convergence.js";
 import type * as types_convergenceStorage from "../types/convergenceStorage.js";
+import type * as types_crystal from "../types/crystal.js";
 import type * as types_index from "../types/index.js";
 import type * as types_intelligenceBandit from "../types/intelligenceBandit.js";
+import type * as types_stardust from "../types/stardust.js";
 import type * as types_translation from "../types/translation.js";
 import type * as types_user from "../types/user.js";
 import type * as usageEvents from "../usageEvents.js";
@@ -120,6 +122,7 @@ import type * as webhookEvents from "../webhookEvents.js";
 import type * as widgetContentMutations from "../widgetContentMutations.js";
 import type * as widgetOutputsMutations from "../widgetOutputsMutations.js";
 import type * as widgetOutputsQueries from "../widgetOutputsQueries.js";
+import type * as widgets from "../widgets.js";
 import type * as widgetsMutations from "../widgetsMutations.js";
 import type * as widgetsQueries from "../widgetsQueries.js";
 
@@ -223,8 +226,10 @@ declare const fullApi: ApiFromModules<{
   "types/backgroundJobs": typeof types_backgroundJobs;
   "types/convergence": typeof types_convergence;
   "types/convergenceStorage": typeof types_convergenceStorage;
+  "types/crystal": typeof types_crystal;
   "types/index": typeof types_index;
   "types/intelligenceBandit": typeof types_intelligenceBandit;
+  "types/stardust": typeof types_stardust;
   "types/translation": typeof types_translation;
   "types/user": typeof types_user;
   usageEvents: typeof usageEvents;
@@ -239,6 +244,7 @@ declare const fullApi: ApiFromModules<{
   widgetContentMutations: typeof widgetContentMutations;
   widgetOutputsMutations: typeof widgetOutputsMutations;
   widgetOutputsQueries: typeof widgetOutputsQueries;
+  widgets: typeof widgets;
   widgetsMutations: typeof widgetsMutations;
   widgetsQueries: typeof widgetsQueries;
 }>;

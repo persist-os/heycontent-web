@@ -9,7 +9,6 @@
 import React from 'react'
 import { Button } from '@/components/ui/button'
 import { FileText, MessageSquare, Calendar, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react'
-import { ThumbRating } from '@/components/ui/thumb-rating'
 import { useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import type { WidgetOutput } from '../types'

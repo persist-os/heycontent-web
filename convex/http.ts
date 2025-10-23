@@ -2056,6 +2056,32 @@ app.post("/api/crystal/atomic-delete", async (c) => {
   }
 });
 
+/**
+ * Evolve crystal lifecycle stage
+ * Parallel to stardust lifecycle evolution
+ */
+app.post("/api/crystal/evolveLifecycle", async (c) => {
+  try {
+    const ctx = c.env;
+    const body = await c.req.json();
+    
+    const crystalId = await ctx.runMutation(api.crystalMutations.evolveCrystalLifecycle, {
+      crystalId: body.crystalId as Id<"crystals">,
+      newStage: body.newStage,
+      healthDelta: body.healthDelta,
+      energyDelta: body.energyDelta,
+    });
+    
+    return c.json({ success: true, data: { crystalId } });
+  } catch (error: any) {
+    console.error("[CRYSTAL_EVOLVE_LIFECYCLE] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to evolve crystal lifecycle"
+    }, 500);
+  }
+});
+
 // Formation query endpoint that mirrors queryFormation exactly
 app.post("/api/formation/query", async (c) => {
   const ctx = c.env;

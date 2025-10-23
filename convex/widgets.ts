@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 
@@ -142,7 +142,7 @@ export const listScheduled = query({
  * Process due widgets (internal use only)
  * This is called by a scheduled job to process all widgets that are due for execution
  */
-export const processDueWidgets = internal.mutation({
+export const processDueWidgets = internalMutation({
   args: {},
   handler: async (ctx) => {
     const now = Date.now();
@@ -200,7 +200,7 @@ export const processDueWidgets = internal.mutation({
 /**
  * Execute a widget (internal use only)
  */
-export const execute = internal.mutation({
+export const execute = internalMutation({
   args: {
     widgetId: v.string(),
     userId: v.string(),

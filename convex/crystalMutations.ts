@@ -1,13 +1,11 @@
-import { Infer, v } from "convex/values";
+import { v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
-import schema from "./schema";
-
-// TYPES
-const crystalShardValidator = schema.tables.crystal_shards.validator;
-export type crystal_shard = Infer<typeof crystalShardValidator>;
-const crystalValidator = schema.tables.crystals.validator;
-export type crystal = Infer<typeof crystalValidator>;
+import {
+  crystalShardUpdateValidator,
+  crystalUpdateValidator,
+  lifecycleStageValidator,
+} from "./types/crystal";
 
 /**
  * Single item mutation for crystal data (legacy function - use batch version for better performance)
@@ -70,115 +68,6 @@ export const mutateCrystalData = mutation({
         }
         return null;
     }
-});
-
-// Partial validators for update operations
-const crystalShardUpdateValidator = v.object({
-    // Core identification (never updated)
-    // userId: v.optional(v.string()),                 // Shouldn't change
-
-    // Source metadata (can be updated)
-    source: v.optional(v.string()),
-    sourceIds: v.optional(v.array(v.string())),
-    source_type: v.optional(v.union(v.literal("conversation"), v.literal("note"), v.literal("document"), v.literal("behavior_observation"))),
-    extraction_timestamp: v.optional(v.number()),
-    extraction_method: v.optional(v.union(v.literal("direct_quote"), v.literal("behavioral_inference"), v.literal("pattern_synthesis"))),
-
-    // Core revelation (can be updated)
-    dimension: v.optional(v.string()),
-    exact_quote: v.optional(v.string()),
-    what_it_reveals: v.optional(v.string()),
-    situation_context: v.optional(v.string()),
-    why_significant: v.optional(v.string()),
-
-    // Quality indicators (can be updated)
-    confidence_level: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
-    linguistic_intensity: v.optional(v.union(v.literal("weak"), v.literal("moderate"), v.literal("strong"))),
-    emotional_weight: v.optional(v.union(v.literal("neutral"), v.literal("mild"), v.literal("strong"))),
-    specificity: v.optional(v.union(v.literal("vague"), v.literal("specific"), v.literal("very_specific"))),
-
-    // Pattern connections (can be updated)
-    connects_to: v.optional(v.array(v.string())),
-    contradicts: v.optional(v.array(v.string())),
-    reinforces: v.optional(v.array(v.string())),
-
-    // Temporal data (can be updated)
-    temporal_context: v.optional(v.string()),
-    recency_weight: v.optional(v.union(v.literal("recent"), v.literal("moderate"), v.literal("old"))),
-
-    // Metadata (updatedAt should always be updated, createdAt never changes)
-    updatedAt: v.optional(v.number()),
-    last_referenced: v.optional(v.number()),
-    reference_count: v.optional(v.union(v.number(), v.literal("INCREMENT"))),
-});
-
-const crystalUpdateValidator = v.object({
-    // Core identification (some can be updated)
-    // userId: v.optional(v.string()),               // Shouldn't change
-    // crystal_id: v.optional(v.string()),          // Shouldn't change
-
-    // Crystal definition (can be updated)
-    name: v.optional(v.string()),
-    crystal_type: v.optional(v.union(
-        v.literal("stable_trait"),
-        v.literal("behavioral_pattern"),
-        v.literal("preference_cluster"),
-        v.literal("value_system"),
-        v.literal("contextual_adaptation"),
-        v.literal("growth_trajectory"),
-        v.literal("contradiction_resolution")
-    )),
-    dimension: v.optional(v.string()),
-    secondary_dimensions: v.optional(v.array(v.string())),
-
-    // Consolidated insight (can be updated)
-    description: v.optional(v.string()),
-    core_insight: v.optional(v.string()),
-    detailed_analysis: v.optional(v.string()),
-
-    // Supporting evidence (can be updated)
-    shardIds: v.optional(v.array(v.id("crystal_shards"))),
-    supporting_quotes: v.optional(v.array(v.string())),
-
-    // Confidence & reliability (can be updated)
-    confidence_score: v.optional(v.union(v.literal("developing"), v.literal("moderate"), v.literal("high"), v.literal("very_high"))),
-    evidence_strength: v.optional(v.union(v.literal("weak"), v.literal("moderate"), v.literal("strong"), v.literal("overwhelming"))),
-    consistency_rating: v.optional(v.union(v.literal("inconsistent"), v.literal("mostly_consistent"), v.literal("very_consistent"))),
-    observation_count: v.optional(v.number()),
-    time_span_days: v.optional(v.number()),
-
-    // Pattern metadata (can be updated)
-    tags: v.optional(v.array(v.string())),
-    behavioral_implications: v.optional(v.array(v.string())),
-    interaction_guidance: v.optional(v.array(v.string())),
-
-    // Contradictions & nuance (can be updated)
-    contradicting_shards: v.optional(v.array(v.id("crystal_shards"))),
-    contradiction_analysis: v.optional(v.string()),
-
-    // Evolution tracking (can be updated)
-    evolution_history: v.optional(v.array(v.object({
-        timestamp: v.number(),
-        change_type: v.union(v.literal("strengthened"), v.literal("weakened"), v.literal("refined"), v.literal("contradicted"), v.literal("created"), v.literal("merged_at_limit")),
-        description: v.string(),
-        triggering_shard_id: v.string() // Relaxed validation for temp IDs
-    }))),
-    stability_trend: v.optional(v.union(v.literal("strengthening"), v.literal("stable"), v.literal("weakening"), v.literal("evolving"))),
-    last_evolution: v.optional(v.number()),
-
-    // Cross-crystal relationships (can be updated)
-    related_crystals: v.optional(v.array(v.id("crystals"))),
-    conflicting_crystals: v.optional(v.array(v.id("crystals"))),
-
-    // Utilization metadata (can be updated)
-    usage_count: v.optional(v.union(v.number(), v.literal("INCREMENT"))),
-    usage_frequency: v.optional(v.number()),
-    last_used: v.optional(v.number()),
-
-    // Metadata (updatedAt should be updated, createdAt never changes)
-    updatedAt: v.optional(v.number()),
-    next_review_due: v.optional(v.number()),
-    review_priority: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
 });
 
 /**
@@ -342,4 +231,50 @@ export const batchMutateCrystalData = mutation({
             failedOperations,
         };
     }
+});
+
+/**
+ * Evolve crystal lifecycle stage
+ * Parallel to evolveStardustLifecycle - crystals now have lifecycle management
+ * 
+ * Lifecycle stages:
+ * - embryo: Newly formed from shards
+ * - juvenile: Building evidence and confidence
+ * - mature: Well-established pattern
+ * - elder: Long-standing, deeply understood trait
+ */
+export const evolveCrystalLifecycle = mutation({
+  args: {
+    crystalId: v.id("crystals"),
+    newStage: lifecycleStageValidator,
+    healthDelta: v.optional(v.number()),
+    energyDelta: v.optional(v.number()),
+  },
+  returns: v.id("crystals"),
+  handler: async (ctx, args) => {
+    const crystal = await ctx.db.get(args.crystalId);
+    if (!crystal) {
+      throw new Error("Crystal not found");
+    }
+    
+    const updateData: any = {
+      lifecycleStage: args.newStage,
+      lastEvolution: Date.now(),
+      updatedAt: Date.now(),
+    };
+    
+    // Apply health delta if provided (clamp to 0-1 range)
+    if (args.healthDelta !== undefined && crystal.health !== undefined) {
+      updateData.health = Math.max(0, Math.min(1, crystal.health + args.healthDelta));
+    }
+    
+    // Apply energy delta if provided (clamp to 0-1 range)
+    if (args.energyDelta !== undefined && crystal.energy !== undefined) {
+      updateData.energy = Math.max(0, Math.min(1, crystal.energy + args.energyDelta));
+    }
+    
+    await ctx.db.patch(args.crystalId, updateData);
+    
+    return args.crystalId;
+  },
 });

@@ -1171,15 +1171,7 @@ export default defineSchema({
 
     // === CRYSTAL DEFINITION (CORE REQUIRED FIELDS) ===
     name: v.string(),                       // REQUIRED: "Morning Productivity Pattern", "Direct Communication Preference"
-    crystal_type: v.union(
-        v.literal("stable_trait"),            // Enduring personality characteristic
-        v.literal("behavioral_pattern"),      // How they consistently act
-        v.literal("preference_cluster"),      // Related preferences that group together
-        v.literal("value_system"),           // Core beliefs and values
-        v.literal("contextual_adaptation"),  // How they adapt to different situations
-        v.literal("growth_trajectory"),      // How they're evolving over time
-        v.literal("contradiction_resolution") // How they handle internal conflicts
-    ),
+    crystal_type: v.string(),                 // Flexible crystal type - allow any string to accommodate new types from AI
     dimension: v.string(),                  // REQUIRED: Primary identity dimension
     
     // === PROJECT & WIDGET CONTEXT ===
@@ -1202,6 +1194,15 @@ export default defineSchema({
     consistency_rating: v.optional(v.string()), // Flexible string field for consistency rating
     observation_count: v.optional(v.number()), // Optional: Number of times we've observed this pattern
     time_span_days: v.optional(v.number()),    // Optional: How long we've been observing this pattern
+
+    // === LIFECYCLE MANAGEMENT (LLM-DRIVEN, FLEXIBLE) ===
+    // Flexible string - LLM can generate any stage name
+    // Common stages: embryo, juvenile, mature, transcendent, archived
+    lifecycleStage: v.optional(v.string()),
+    lifecycle_stage: v.optional(v.string()),  // Backend compatibility field
+    health: v.optional(v.number()),  // 0-1
+    energy: v.optional(v.number()),  // 0-1
+    lastEvolution: v.optional(v.number()),  // Unix timestamp
 
     // === PATTERN METADATA (ALL OPTIONAL) ===
     tags: v.optional(v.array(v.string())),  // Optional: Semantic tags for retrieval
@@ -1253,6 +1254,7 @@ export default defineSchema({
       .index("by_type", ["userId","crystal_type"])
       .index("by_usage", ["userId", "usage_frequency"])
     .index("by_review_due", ["userId", "next_review_due"])
+    .index("by_lifecycle", ["userId", "lifecycleStage"])
     .index("by_project", ["projectId"])
     .index("by_user_project", ["userId", "projectId"])
     .index("by_widget", ["widgetId"]),
@@ -1264,7 +1266,7 @@ export default defineSchema({
     stardust: defineTable({
       // === CORE IDENTIFICATION ===
       userId: v.string(),
-      stardustId: v.string(),  // Unique stardust identifier
+      stardust_id: v.string(),  // Unique stardust identifier
       
       // === STARDUST DEFINITION ===
       name: v.string(),  // Generated from keywords
@@ -1273,44 +1275,36 @@ export default defineSchema({
       dimension: v.string(),  // Primary dimension (inherited from shards)
       
       // === DETECTION METADATA ===
-      detectedAt: v.number(),  // Unix timestamp when detected
-      detectionMethod: v.string(),  // Detection algorithm used (default: "code_based")
+      detected_at: v.number(),  // Unix timestamp when detected
+      detection_method: v.string(),  // Detection algorithm used (default: "code_based")
       confidence: v.number(),  // Detection confidence (0-1)
-      evidenceStrength: v.union(
-        v.literal("weak"),
-        v.literal("moderate"),
-        v.literal("strong")
-      ),
+      evidence_strength: v.string(),  // Flexible string (no hardcoded categories)
       
       // === SOURCE TRACKING ===
-      sourceShardIds: v.array(v.string()),  // Shards that formed this stardust
-      shardCount: v.number(),  // Number of shards
-      relatedNoteIds: v.array(v.string()),  // Notes contributing to this stardust
-      relatedConversationIds: v.array(v.string()),  // Conversations contributing
+      source_shard_ids: v.array(v.string()),  // Shards that formed this stardust
+      shard_count: v.number(),  // Number of shards
+      related_note_ids: v.array(v.string()),  // Notes contributing to this stardust
+      related_conversation_ids: v.array(v.string()),  // Conversations contributing
       
-      // === LIFECYCLE STAGE ===
-      lifecycleStage: v.union(
-        v.literal("embryo"),      // Just detected from content patterns
-        v.literal("juvenile"),    // Gaining evidence and definition
-        v.literal("mature"),      // Ready for promotion to project
-        v.literal("elder"),       // Long-standing potential
-        v.literal("transcendent") // Achieved project status (promoted)
-      ),
+      // === LIFECYCLE STAGE (LLM-DRIVEN, FLEXIBLE) ===
+      // Flexible string - LLM can generate any stage name
+      // Common stages: embryo, juvenile, mature, ghost, transcendent, archived
+      lifecycleStage: v.string(),
       health: v.number(),  // Organism health (0-1)
       energy: v.number(),  // Energy level for evolution
       
       // === PROJECT SUGGESTIONS (FOR PROMOTION) ===
-      suggestedProjectName: v.string(),
-      suggestedProjectDescription: v.string(),
-      suggestedDomain: v.string(),  // No longer hardcoded, any string is valid
-      suggestedComplexity: v.number(),  // Complexity (0-10)
-      suggestedTimeHorizon: v.string(),  // Time horizon estimate
+      suggested_project_name: v.string(),
+      suggested_project_description: v.string(),
+      suggested_domain: v.string(),  // No longer hardcoded, any string is valid
+      suggested_complexity: v.number(),  // Complexity (0-10)
+      suggested_time_horizon: v.string(),  // Time horizon estimate
       
       // === PROMOTION TRACKING ===
       promoted: v.boolean(),  // Has been promoted to star organism/project
-      promotedAt: v.optional(v.number()),  // When promoted
-      promotedToProjectId: v.optional(v.id("projects")),  // Project ID created from this
-      confidenceAtPromotion: v.optional(v.number()),  // Confidence when promoted
+      promoted_at: v.optional(v.number()),  // When promoted
+      promoted_to_project_id: v.optional(v.id("projects")),  // Project ID created from this
+      confidence_at_promotion: v.optional(v.number()),  // Confidence when promoted
       
       // === TEMPORAL METADATA ===
       createdAt: v.number(),
@@ -1318,15 +1312,15 @@ export default defineSchema({
       lastEvolution: v.optional(v.number()),  // Last lifecycle evolution
       
       // === SYMBIOTIC RELATIONSHIPS (FUTURE) ===
-      relatedCrystalIds: v.array(v.string()),  // Crystals providing wisdom to this star
-      symbioticPairs: v.array(v.string()),  // Star-crystal symbiotic relationships
+      related_crystal_ids: v.array(v.string()),  // Crystals providing wisdom to this star
+      symbiotic_pairs: v.array(v.string()),  // Star-crystal symbiotic relationships
     })
       .index("by_user", ["userId"])
       .index("by_confidence", ["userId", "confidence"])
       .index("by_promoted", ["userId", "promoted"])
-      .index("by_detected", ["userId", "detectedAt"])
+      .index("by_detected", ["userId", "detected_at"])
       .index("by_lifecycle", ["userId", "lifecycleStage"])
-      .index("by_domain", ["userId", "suggestedDomain"]),
+      .index("by_domain", ["userId", "suggested_domain"]),
     
     crystal_formation_runs: defineTable({
       userId: v.string(),
