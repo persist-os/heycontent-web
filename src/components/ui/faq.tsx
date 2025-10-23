@@ -11,7 +11,7 @@ const faqData = [
   },
   {
     question: "Where is this headed?",
-    answer: "Your system will dream while you sleep. It'll discover connections between your work patterns, suggest experiments based on your behavior, and wake you up to insights you never noticed.<br><br>Your AI companions will develop personalities and teach each other new skills. Tools will automatically learn the perfect combinations for any task. Everything becomes more intelligent the more you use it."
+    answer: "Background processing runs continuously, discovering connections between your work patterns and suggesting experiments based on your behavior. You'll wake up to fresh insights and patterns you hadn't noticed before.<br><br>Multiple AI agents will specialize and coordinate, sharing learned strategies and adapting their approaches. The system will optimize tool combinations automatically. Everything gets smarter through continued use."
   },
   {
     question: "How is this different from ChatGPT or Claude?",
