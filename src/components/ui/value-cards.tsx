@@ -51,28 +51,28 @@ export function ValueCards() {
             <div className="space-y-5 sm:space-y-6">
               <div className="group p-5 rounded-xl bg-gradient-to-br from-card/70 via-primary/[0.06] to-accent/[0.05] dark:bg-card/20 backdrop-blur-lg hover:backdrop-blur-xl hover:bg-gradient-to-br hover:from-card/80 hover:via-primary/[0.08] hover:to-accent/[0.07] dark:hover:bg-primary/[0.05] border border-primary/[0.25] dark:border-primary/[0.10] hover:border-accent/[0.35] dark:hover:border-primary/[0.15] shadow-lg shadow-primary/[0.15] hover:shadow-xl hover:shadow-accent/[0.25] dark:shadow-primary/[0.05] dark:hover:shadow-primary/[0.10] transition-all duration-300 cursor-pointer hover:scale-[1.02] active:scale-[0.98]">
                 <h3 className="text-base sm:text-lg font-medium text-foreground mb-2 group-hover:text-primary transition-all duration-200 group-hover:translate-x-0.5">
-                  Deep Personal Insights
+                  <T context="valueCards.currentFeature1.title">Deep Personal Insights</T>
                 </h3>
                 <p className="text-sm sm:text-base text-muted-foreground leading-relaxed group-hover:text-foreground/80 transition-all duration-200 group-hover:translate-x-1">
-                  Every conversation and note you create reveals pieces of who you are. Your system quietly collects these insights, building a rich understanding of your thinking patterns and preferences.
+                  <T context="valueCards.currentFeature1.description">Every conversation and note you create reveals pieces of who you are. Your system quietly collects these insights, building a rich understanding of your thinking patterns and preferences.</T>
                 </p>
               </div>
 
               <div className="group p-5 rounded-xl bg-gradient-to-br from-card/70 via-primary/[0.06] to-accent/[0.05] dark:bg-card/20 backdrop-blur-lg hover:backdrop-blur-xl hover:bg-gradient-to-br hover:from-card/80 hover:via-primary/[0.08] hover:to-accent/[0.07] dark:hover:bg-primary/[0.05] border border-primary/[0.25] dark:border-primary/[0.10] hover:border-accent/[0.35] dark:hover:border-primary/[0.15] shadow-lg shadow-primary/[0.15] hover:shadow-xl hover:shadow-accent/[0.25] dark:shadow-primary/[0.05] dark:hover:shadow-primary/[0.10] transition-all duration-300 cursor-pointer hover:scale-[1.02] active:scale-[0.98]">
                 <h3 className="text-base sm:text-lg font-medium text-foreground mb-2 group-hover:text-primary transition-all duration-200 group-hover:translate-x-0.5">
-                  AI Companions That Know You
+                  <T context="valueCards.currentFeature2.title">AI Companions That Know You</T>
                 </h3>
                 <p className="text-sm sm:text-base text-muted-foreground leading-relaxed group-hover:text-foreground/80 transition-all duration-200 group-hover:translate-x-1">
-                  Start with an intelligent conversation that uncovers your goals and working style. Custom AI assistants are then created specifically for you, designed to help exactly how you need.
+                  <T context="valueCards.currentFeature2.description">Start with an intelligent conversation that uncovers your goals and working style. Custom AI assistants are then created specifically for you, designed to help exactly how you need.</T>
                 </p>
               </div>
 
               <div className="group p-5 rounded-xl bg-gradient-to-br from-card/70 via-primary/[0.06] to-accent/[0.05] dark:bg-card/20 backdrop-blur-lg hover:backdrop-blur-xl hover:bg-gradient-to-br hover:from-card/80 hover:via-primary/[0.08] hover:to-accent/[0.07] dark:hover:bg-primary/[0.05] border border-primary/[0.25] dark:border-primary/[0.10] hover:border-accent/[0.35] dark:hover:border-primary/[0.15] shadow-lg shadow-primary/[0.15] hover:shadow-xl hover:shadow-accent/[0.25] dark:shadow-primary/[0.05] dark:hover:shadow-primary/[0.10] transition-all duration-300 cursor-pointer hover:scale-[1.02] active:scale-[0.98]">
                 <h3 className="text-base sm:text-lg font-medium text-foreground mb-2 group-hover:text-primary transition-all duration-200 group-hover:translate-x-0.5">
-                  Your Work Grows Smarter
+                  <T context="valueCards.currentFeature3.title">Your Work Grows Smarter</T>
                 </h3>
                 <p className="text-sm sm:text-base text-muted-foreground leading-relaxed group-hover:text-foreground/80 transition-all duration-200 group-hover:translate-x-1">
-                  Your work isn't static—it learns and evolves. As you work, it develops its own understanding of what matters most to you, creating tools and insights tailored to your unique approach.
+                  <T context="valueCards.currentFeature3.description">Your work isn't static—it learns and evolves. As you work, it develops its own understanding of what matters most to you, creating tools and insights tailored to your unique approach.</T>
                 </p>
               </div>
             </div>
@@ -92,28 +92,28 @@ export function ValueCards() {
             <div className="space-y-5 sm:space-y-6">
               <div className="group p-5 rounded-xl bg-gradient-to-br from-card/60 via-secondary to-accent/[0.05] dark:bg-card/15 backdrop-blur-lg hover:backdrop-blur-xl opacity-80 hover:opacity-100 hover:bg-gradient-to-br hover:from-secondary hover:via-accent/[0.07] hover:to-primary/[0.06] dark:hover:bg-card/30 border border-border dark:border-border/20 hover:border-accent/[0.30] dark:hover:border-accent/[0.15] shadow-lg shadow-muted/[0.15] hover:shadow-xl hover:shadow-accent/[0.25] dark:shadow-muted/[0.05] dark:hover:shadow-accent/[0.05] transition-all duration-300 cursor-pointer hover:scale-[1.02] active:scale-[0.98]">
                 <h3 className="text-base sm:text-lg font-medium text-foreground/70 mb-2 group-hover:text-accent transition-all duration-200 group-hover:translate-x-0.5">
-                  Dream Reports
+                  <T context="valueCards.futureFeature1.title">Dream Reports</T>
                 </h3>
                 <p className="text-sm sm:text-base text-muted-foreground/90 leading-relaxed group-hover:text-foreground/70 transition-all duration-200 group-hover:translate-x-1">
-                  Wake up to magical insights your system discovered overnight. While you sleep, it explores connections between your projects, habits, and dreams to reveal surprising patterns you never noticed.
+                  <T context="valueCards.futureFeature1.description">Wake up to magical insights your system discovered overnight. While you sleep, it explores connections between your projects, habits, and dreams to reveal surprising patterns you never noticed.</T>
                 </p>
               </div>
 
               <div className="group p-5 rounded-xl bg-gradient-to-br from-card/60 via-secondary to-accent/[0.05] dark:bg-card/15 backdrop-blur-lg hover:backdrop-blur-xl opacity-80 hover:opacity-100 hover:bg-gradient-to-br hover:from-secondary hover:via-accent/[0.07] hover:to-primary/[0.06] dark:hover:bg-card/30 border border-border dark:border-border/20 hover:border-accent/[0.30] dark:hover:border-accent/[0.15] shadow-lg shadow-muted/[0.15] hover:shadow-xl hover:shadow-accent/[0.25] dark:shadow-muted/[0.05] dark:hover:shadow-accent/[0.05] transition-all duration-300 cursor-pointer hover:scale-[1.02] active:scale-[0.98]">
                 <h3 className="text-base sm:text-lg font-medium text-foreground/70 mb-2 group-hover:text-accent transition-all duration-200 group-hover:translate-x-0.5">
-                  Living Intelligence
+                  <T context="valueCards.futureFeature2.title">Living Intelligence</T>
                 </h3>
                 <p className="text-sm sm:text-base text-muted-foreground/90 leading-relaxed group-hover:text-foreground/70 transition-all duration-200 group-hover:translate-x-1">
-                  Your agents develop personalities and work together as a team. They teach each other new skills, coordinate complex tasks, and even make their own decisions about how to help you better.
+                  <T context="valueCards.futureFeature2.description">Your agents develop personalities and work together as a team. They teach each other new skills, coordinate complex tasks, and even make their own decisions about how to help you better.</T>
                 </p>
               </div>
 
               <div className="group p-5 rounded-xl bg-gradient-to-br from-card/60 via-secondary to-accent/[0.05] dark:bg-card/15 backdrop-blur-lg hover:backdrop-blur-xl opacity-80 hover:opacity-100 hover:bg-gradient-to-br hover:from-secondary hover:via-accent/[0.07] hover:to-primary/[0.06] dark:hover:bg-card/30 border border-border dark:border-border/20 hover:border-accent/[0.30] dark:hover:border-accent/[0.15] shadow-lg shadow-muted/[0.15] hover:shadow-xl hover:shadow-accent/[0.25] dark:shadow-muted/[0.05] dark:hover:shadow-accent/[0.05] transition-all duration-300 cursor-pointer hover:scale-[1.02] active:scale-[0.98]">
                 <h3 className="text-base sm:text-lg font-medium text-foreground/70 mb-2 group-hover:text-accent transition-all duration-200 group-hover:translate-x-0.5">
-                  Smart Tool Learning
+                  <T context="valueCards.futureFeature3.title">Smart Tool Learning</T>
                 </h3>
                 <p className="text-sm sm:text-base text-muted-foreground/90 leading-relaxed group-hover:text-foreground/70 transition-all duration-200 group-hover:translate-x-1">
-                  Every time your tools work on tasks, they learn what works best. Over time, they get smarter at choosing the perfect combination of tools for any job, making everything run smoother automatically.
+                  <T context="valueCards.futureFeature3.description">Every time your tools work on tasks, they learn what works best. Over time, they get smarter at choosing the perfect combination of tools for any job, making everything run smoother automatically.</T>
                 </p>
               </div>
             </div>
