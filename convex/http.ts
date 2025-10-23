@@ -4,6 +4,8 @@ import { ActionCtx } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import { cors } from "hono/cors";
 import { ConfigStatus } from "./types/convergence";
+import * as convergenceConfigMutations from "./convergenceConfigMutations";
+import * as convergenceConfigQueries from "./convergenceConfigQueries";
 
 /**
  * PARALLEL SYSTEM: Native Convex Actions + Hono Fallback
@@ -4769,6 +4771,123 @@ app.post("/api/convergence/configs/search-by-embedding", async (c) => {
 });
 
 // ============================================================================
+// CONVERGENCE PRESET CONFIGS
+// ============================================================================
+
+/**
+ * Get all preset configurations
+ */
+app.get("/api/convergence/preset-configs", async (c) => {
+  try {
+    const presets = await c.env.runQuery(api.convergencePresetQueries.getPresetConfigs, {});
+    
+    return c.json({
+      success: true,
+      data: presets
+    });
+  } catch (error) {
+    console.error("[CONVERGENCE] Get preset configs error:", error);
+    return c.json({
+      success: false,
+      error: "Failed to get preset configs"
+    }, 500);
+  }
+});
+
+/**
+ * Get a specific preset configuration by preset_id
+ */
+app.get("/api/convergence/preset-configs/:preset_id", async (c) => {
+  try {
+    const presetId = c.req.param("preset_id");
+    const preset = await c.env.runQuery(api.convergencePresetQueries.getPresetConfigById, {
+      preset_id: presetId
+    });
+    
+    if (!preset) {
+      return c.json({
+        success: false,
+        error: `Preset '${presetId}' not found`
+      }, 404);
+    }
+    
+    return c.json({
+      success: true,
+      data: preset
+    });
+  } catch (error) {
+    console.error("[CONVERGENCE] Get preset config error:", error);
+    return c.json({
+      success: false,
+      error: "Failed to get preset config"
+    }, 500);
+  }
+});
+
+/**
+ * Create a new preset configuration
+ */
+app.post("/api/convergence/preset-configs", async (c) => {
+  try {
+    const body = await c.req.json();
+    
+    const configId = await c.env.runMutation(api.convergencePresetMutations.createPresetConfig, body);
+    
+    return c.json({ success: true, data: { configId } });
+  } catch (error: any) {
+    console.error("[CONVERGENCE] Create preset config error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to create preset config"
+    }, 500);
+  }
+});
+
+/**
+ * Update a preset configuration
+ */
+app.patch("/api/convergence/preset-configs/:configId", async (c) => {
+  try {
+    const configId = c.req.param("configId") as Id<"convergence_preset_configs">;
+    const body = await c.req.json();
+    
+    await c.env.runMutation(api.convergencePresetMutations.updatePresetConfig, {
+      id: configId,
+      ...body
+    });
+    
+    return c.json({ success: true });
+  } catch (error: any) {
+    console.error("[CONVERGENCE] Update preset config error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to update preset config"
+    }, 500);
+  }
+});
+
+/**
+ * Delete a preset configuration
+ */
+app.delete("/api/convergence/preset-configs/:configId", async (c) => {
+  try {
+    const configId = c.req.param("configId") as Id<"convergence_preset_configs">;
+    
+    await c.env.runMutation(api.convergencePresetMutations.deletePresetConfig, {
+      id: configId
+    });
+    
+    return c.json({ success: true });
+  } catch (error: any) {
+    console.error("[CONVERGENCE] Delete preset config error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to delete preset config"
+    }, 500);
+  }
+});
+
+// ============================================================================
 // CONVERGENCE STORAGE ROUTES - RL Data, Experiments, Optimization Runs
 // ============================================================================
 
@@ -5186,6 +5305,269 @@ app.post("/api/briefing/publishWidgetCompletion", async (c) => {
     return c.json({ 
       success: false,
       error: error.message || "Failed to publish widget completion briefing"
+    }, 500);
+  }
+});
+
+// ============================================================================
+// CONVERGENCE CURRENT CONFIG
+// ============================================================================
+
+/**
+ * Get current config for a user
+ */
+app.get("/api/convergence/current-config/:user_id", async (c) => {
+  try {
+    const userId = c.req.param("user_id");
+    const currentConfig = await c.env.runQuery(api.convergenceCurrentConfigQueries.getCurrentConfig, {
+      user_id: userId
+    });
+    
+    return c.json({
+      success: true,
+      data: currentConfig
+    });
+  } catch (error) {
+    console.error("[CONVERGENCE] Get current config error:", error);
+    return c.json({
+      success: false,
+      error: "Failed to get current config"
+    }, 500);
+  }
+});
+
+/**
+ * Set current config for a user
+ */
+app.post("/api/convergence/current-config", async (c) => {
+  try {
+    const args = await c.req.json();
+    const configId = await c.env.runMutation(api.convergenceCurrentConfigMutations.setCurrentConfig, args);
+    
+    return c.json({
+      success: true,
+      data: configId
+    });
+  } catch (error) {
+    console.error("[CONVERGENCE] Set current config error:", error);
+    return c.json({
+      success: false,
+      error: "Failed to set current config"
+    }, 500);
+  }
+});
+
+/**
+ * Update current config status
+ */
+app.patch("/api/convergence/current-config/status", async (c) => {
+  try {
+    const args = await c.req.json();
+    await c.env.runMutation(api.convergenceCurrentConfigMutations.updateCurrentConfigStatus, args);
+    
+    return c.json({
+      success: true
+    });
+  } catch (error) {
+    console.error("[CONVERGENCE] Update current config status error:", error);
+    return c.json({
+      success: false,
+      error: "Failed to update current config status"
+    }, 500);
+  }
+});
+
+/**
+ * Clear current config for a user
+ */
+app.delete("/api/convergence/current-config/:user_id", async (c) => {
+  try {
+    const userId = c.req.param("user_id");
+    await c.env.runMutation(api.convergenceCurrentConfigMutations.clearCurrentConfig, {
+      user_id: userId
+    });
+    
+    return c.json({
+      success: true
+    });
+  } catch (error) {
+    console.error("[CONVERGENCE] Clear current config error:", error);
+    return c.json({
+      success: false,
+      error: "Failed to clear current config"
+    }, 500);
+  }
+});
+
+// ============================================================================
+// CONVERGENCE CONFIGS - Production Config Management
+// ============================================================================
+
+/**
+ * Create a new convergence config (winning configuration from optimization)
+ */
+app.post("/api/convergence/configs/create", async (c) => {
+  try {
+    const args = await c.req.json();
+    const configId = await c.env.runMutation(api.convergenceConfigMutations.createConvergenceConfig, args);
+    
+    return c.json({
+      success: true,
+      data: configId
+    });
+  } catch (error) {
+    console.error("[CONVERGENCE] Create config error:", error);
+    return c.json({
+      success: false,
+      error: "Failed to create convergence config"
+    }, 500);
+  }
+});
+
+/**
+ * Get convergence configs by system name
+ */
+app.get("/api/convergence/configs/system/:system_name", async (c) => {
+  try {
+    const systemName = c.req.param("system_name");
+    const status = c.req.query("status");
+    const limit = c.req.query("limit") ? parseInt(c.req.query("limit") as string) : undefined;
+    
+    const configs = await c.env.runQuery(api.convergenceConfigQueries.getConvergenceConfigsBySystem, {
+      system_name: systemName,
+      status,
+      limit
+    });
+    
+    return c.json({
+      success: true,
+      data: configs
+    });
+  } catch (error) {
+    console.error("[CONVERGENCE] Get configs by system error:", error);
+    return c.json({
+      success: false,
+      error: "Failed to get convergence configs"
+    }, 500);
+  }
+});
+
+/**
+ * Get best convergence config for a system
+ */
+app.get("/api/convergence/configs/system/:system_name/best", async (c) => {
+  try {
+    const systemName = c.req.param("system_name");
+    const config = await c.env.runQuery(api.convergenceConfigQueries.getBestConvergenceConfig, {
+      system_name: systemName
+    });
+    
+    return c.json({
+      success: true,
+      data: config
+    });
+  } catch (error) {
+    console.error("[CONVERGENCE] Get best config error:", error);
+    return c.json({
+      success: false,
+      error: "Failed to get best convergence config"
+    }, 500);
+  }
+});
+
+/**
+ * Get convergence configs by optimization run
+ */
+app.get("/api/convergence/configs/run/:optimization_run_id", async (c) => {
+  try {
+    const runId = c.req.param("optimization_run_id");
+    const configs = await c.env.runQuery(api.convergenceConfigQueries.getConvergenceConfigsByRun, {
+      optimization_run_id: runId
+    });
+    
+    return c.json({
+      success: true,
+      data: configs
+    });
+  } catch (error) {
+    console.error("[CONVERGENCE] Get configs by run error:", error);
+    return c.json({
+      success: false,
+      error: "Failed to get convergence configs by run"
+    }, 500);
+  }
+});
+
+/**
+ * Get all convergence configs (for admin view)
+ */
+app.get("/api/convergence/configs/all", async (c) => {
+  try {
+    const limit = c.req.query("limit") ? parseInt(c.req.query("limit") as string) : undefined;
+    const configs = await c.env.runQuery(api.convergenceConfigQueries.getAllConvergenceConfigs, {
+      limit
+    });
+    
+    return c.json({
+      success: true,
+      data: configs
+    });
+  } catch (error) {
+    console.error("[CONVERGENCE] Get all configs error:", error);
+    return c.json({
+      success: false,
+      error: "Failed to get all convergence configs"
+    }, 500);
+  }
+});
+
+/**
+ * Update convergence config status
+ */
+app.patch("/api/convergence/configs/:configId/status", async (c) => {
+  try {
+    const configId = c.req.param("configId") as Id<"convergence_configs">;
+    const args = await c.req.json();
+    
+    await c.env.runMutation(api.convergenceConfigMutations.updateConvergenceConfigStatus, {
+      configId,
+      status: args.status,
+      deployed_at: args.deployed_at
+    });
+    
+    return c.json({
+      success: true
+    });
+  } catch (error) {
+    console.error("[CONVERGENCE] Update config status error:", error);
+    return c.json({
+      success: false,
+      error: "Failed to update convergence config status"
+    }, 500);
+  }
+});
+
+/**
+ * Update convergence config usage tracking
+ */
+app.post("/api/convergence/configs/:configId/usage", async (c) => {
+  try {
+    const configId = c.req.param("configId") as Id<"convergence_configs">;
+    const args = await c.req.json();
+    
+    await c.env.runMutation(api.convergenceConfigMutations.updateConvergenceConfigUsage, {
+      configId,
+      success: args.success
+    });
+    
+    return c.json({
+      success: true
+    });
+  } catch (error) {
+    console.error("[CONVERGENCE] Update config usage error:", error);
+    return c.json({
+      success: false,
+      error: "Failed to update convergence config usage"
     }, 500);
   }
 });

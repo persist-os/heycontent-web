@@ -95,7 +95,7 @@ export interface ConfigGenerationResponse {
     endpoint: string;
     parameters: string[];
     test_case_count: number;
-    intensity: string;
+    algorithm: string;
   };
   error?: string;
 }

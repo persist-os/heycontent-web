@@ -2458,5 +2458,50 @@ export default defineSchema({
     .index("by_plan_key_interval", ["planKey", "interval"])
     .index("by_active", ["active", "sortOrder"])
     .index("by_price_id", ["priceId"]),
+
+  // Convergence Preset Configs - Pre-built optimization configurations
+  convergence_preset_configs: defineTable({
+    preset_id: v.string(),            // "openai", "browserbase", "groq", "azure"
+    name: v.string(),                 // "OpenAI/ChatGPT (Recommended)"
+    description: v.string(),         // "Optimize ChatGPT API calls - model & temperature tuning"
+    
+    // Configuration data
+    config: v.any(),                  // Full optimization.yaml as object
+    test_cases: v.any(),              // test_cases.json as object
+    evaluator_code: v.optional(v.string()), // evaluator.py as string
+    
+    // Metadata
+    metadata: v.any(),                // Features, test count, etc.
+    
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_preset_id", ["preset_id"])
+    .index("by_name", ["name"]),
+
+  // Current Convergence Config - Active configuration for optimization
+  convergence_current_config: defineTable({
+    user_id: v.string(),              // User who owns this config
+    config_id: v.string(),            // Unique identifier for this config instance
+    preset_id: v.optional(v.string()), // If from preset, which preset
+    name: v.string(),                 // Display name
+    description: v.string(),         // Description
+    
+    // Configuration data ready for Convergence SDK
+    config: v.any(),                  // Prepared config dict for SDK
+    test_cases: v.any(),              // Test cases embedded in config
+    evaluator_code: v.optional(v.string()), // Custom evaluator if any
+    
+    // Metadata
+    system_name: v.string(),          // "context_enrichment", etc.
+    algorithm: v.string(),            // "mab_evolution", etc.
+    status: v.string(),               // "ready", "running", "completed"
+    
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user_id", ["user_id"])
+    .index("by_config_id", ["config_id"])
+    .index("by_status", ["status"]),
 });
 

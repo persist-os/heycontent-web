@@ -9,6 +9,124 @@ import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useState } from 'react';
 
+interface WinningConfigsDisplayProps {
+  systemName: string;
+}
+
+function WinningConfigsDisplay({ systemName }: WinningConfigsDisplayProps) {
+  const winningConfigs = useQuery(api.convergenceConfigQueries.getConvergenceConfigsBySystem, {
+    system_name: systemName,
+    status: "active",
+    limit: 5,
+  });
+
+  const bestConfig = useQuery(api.convergenceConfigQueries.getBestConvergenceConfig, {
+    system_name: systemName,
+  });
+
+  if (!winningConfigs) {
+    return (
+      <div className="text-center py-8">
+        <div className="text-sm font-mono text-slate-500">Loading winning configs...</div>
+      </div>
+    );
+  }
+
+  if (winningConfigs.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <div className="text-sm font-mono text-slate-500">
+          No winning configurations found for {systemName}
+        </div>
+        <div className="text-xs font-mono text-slate-600 mt-2">
+          Run an optimization to generate winning configs
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Best Config Highlight */}
+      {bestConfig && (
+        <div className="bg-purple-500/10 border border-purple-500/30 p-4 rounded">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs font-mono text-purple-400 uppercase tracking-wider">
+              🏆 BEST_CONFIG
+            </div>
+            <div className="text-xs font-mono text-purple-300">
+              Score: {bestConfig.score.toFixed(4)}
+            </div>
+          </div>
+          <div className="text-sm font-mono text-white">
+            {JSON.stringify(bestConfig.params, null, 2)}
+          </div>
+          <div className="text-xs font-mono text-slate-400 mt-2">
+            Algorithm: {bestConfig.algorithm_used} | Run: {bestConfig.optimization_run_id}
+          </div>
+        </div>
+      )}
+
+      {/* All Winning Configs Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs font-mono">
+          <thead>
+            <tr className="border-b border-purple-500/30">
+              <th className="text-left py-2 px-2 text-purple-400">RANK</th>
+              <th className="text-left py-2 px-2 text-purple-400">SCORE</th>
+              <th className="text-left py-2 px-2 text-purple-400">ALGORITHM</th>
+              <th className="text-left py-2 px-2 text-purple-400">RUN_ID</th>
+              <th className="text-left py-2 px-2 text-purple-400">STATUS</th>
+              <th className="text-left py-2 px-2 text-purple-400">CONFIG</th>
+            </tr>
+          </thead>
+          <tbody>
+            {winningConfigs.map((config: any) => (
+              <tr key={config._id} className="border-b border-slate-700/30 hover:bg-slate-800/20">
+                <td className="py-2 px-2 text-center">
+                  <span className={`inline-flex items-center justify-center w-8 h-6 text-xs font-bold ${
+                    config.rank === 1 
+                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' 
+                      : 'bg-slate-500/20 text-slate-400 border border-slate-500/30'
+                  }`}>
+                    {config.rank}
+                  </span>
+                </td>
+                <td className="py-2 px-2 text-green-400 font-bold">
+                  {config.score.toFixed(4)}
+                </td>
+                <td className="py-2 px-2 text-cyan-400">
+                  {config.algorithm_used}
+                </td>
+                <td className="py-2 px-2 text-slate-400">
+                  {config.optimization_run_id.substring(0, 8)}...
+                </td>
+                <td className="py-2 px-2 text-center">
+                  <span className={`inline-flex items-center justify-center w-16 px-2 py-1 text-[10px] font-bold ${
+                    config.status === 'active'
+                      ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                      : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                  }`}>
+                    {config.status.toUpperCase()}
+                  </span>
+                </td>
+                <td className="py-2 px-2 text-slate-300">
+                  <details className="cursor-pointer">
+                    <summary className="hover:text-white">View Config</summary>
+                    <pre className="mt-2 p-2 bg-slate-900/50 border border-slate-600/30 rounded text-xs overflow-x-auto">
+                      {JSON.stringify(config.params, null, 2)}
+                    </pre>
+                  </details>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export function ExperimentsView() {
   const [selectedSystem, setSelectedSystem] = useState('context_enrichment');
   const [minScore, setMinScore] = useState(0.0);
@@ -163,6 +281,22 @@ export function ExperimentsView() {
             </table>
           )}
         </div>
+      </div>
+
+      {/* Winning Configurations Section */}
+      <div className="bg-black border border-purple-500/30 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="space-y-1">
+            <h3 className="text-sm font-mono font-bold text-purple-400 uppercase tracking-wider">
+              WINNING_CONFIGURATIONS
+            </h3>
+            <p className="text-xs font-mono text-slate-500">
+              Production-ready configs from optimization runs
+            </p>
+          </div>
+        </div>
+        
+        <WinningConfigsDisplay systemName={selectedSystem} />
       </div>
 
       {/* Stats footer */}

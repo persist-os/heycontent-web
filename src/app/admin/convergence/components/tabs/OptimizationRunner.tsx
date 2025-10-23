@@ -7,8 +7,10 @@
  * Focuses on optimizing vector search thresholds, limits, content types, and shard parameters.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/app/context/auth-context';
+import { useQuery } from 'convex/react';
+import { api } from '../../../../../../convex/_generated/api';
 
 interface ContextEnrichmentTestCase {
   id: string;
@@ -88,6 +90,11 @@ export function OptimizationRunner() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showTestCases, setShowTestCases] = useState(false);
   const [editingTestCase, setEditingTestCase] = useState<number | null>(null);
+
+  // Get current config for this user
+  const currentConfig = useQuery(api.convergenceCurrentConfigQueries.getCurrentConfig, 
+    firebaseUser?.uid ? { user_id: firebaseUser.uid } : "skip"
+  );
 
   const addTestCase = () => {
     setParams(prev => ({
@@ -266,6 +273,56 @@ export function OptimizationRunner() {
           )}
         </div>
       </div>
+
+      {/* Current Config Display */}
+      {currentConfig ? (
+        <div className="bg-black border-l-4 border-cyan-500 p-6 space-y-3">
+          <div className="flex items-center gap-2 text-sm font-mono font-bold text-cyan-400">
+            <span>⚡</span>
+            <span>CURRENT_CONFIG</span>
+            <span className="text-xs text-slate-500">({currentConfig.status})</span>
+          </div>
+          <div className="text-xs font-mono text-slate-400 space-y-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-cyan-400">Name:</span> {currentConfig.name}
+              </div>
+              <div>
+                <span className="text-cyan-400">System:</span> {currentConfig.system_name}
+              </div>
+              <div>
+                <span className="text-cyan-400">Algorithm:</span> {currentConfig.algorithm}
+              </div>
+              <div>
+                <span className="text-cyan-400">Preset:</span> {currentConfig.preset_id || 'Custom'}
+              </div>
+            </div>
+            <div className="text-slate-500">
+              {currentConfig.description}
+            </div>
+            {currentConfig.config?.search_space?.parameters && (
+              <div>
+                <span className="text-cyan-400">Parameters:</span> {Object.keys(currentConfig.config.search_space.parameters).join(', ')}
+              </div>
+            )}
+            {currentConfig.test_cases?.test_cases && (
+              <div>
+                <span className="text-cyan-400">Test Cases:</span> {currentConfig.test_cases.test_cases.length} cases
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="bg-black border-l-4 border-yellow-500 p-6 space-y-3">
+          <div className="flex items-center gap-2 text-sm font-mono font-bold text-yellow-400">
+            <span>⚠️</span>
+            <span>NO_CURRENT_CONFIG</span>
+          </div>
+          <div className="text-xs font-mono text-slate-400">
+            Go to <span className="text-yellow-400">CONFIG_GEN</span> tab to generate a configuration first.
+          </div>
+        </div>
+      )}
 
       {/* Configuration form */}
       <form onSubmit={handleSubmit} className="space-y-6">
