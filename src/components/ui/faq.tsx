@@ -7,19 +7,23 @@ import { T } from '@/components/translation'
 const faqData = [
   {
     question: "What's available right now?",
-    answer: "Memory that accumulates and connects automatically. Every conversation you have, every note you write, feeds a system that spots patterns and surfaces insights.<br><br>Chat that references what you said last month without prompting. Notes that link to related thinking across all your content. Writing assistance that knows your voice because it's been listening.<br><br>Not a storage system. Active memory that processes and grows."
+    answer: "Three powerful realms that work together. Constellations—visual projects where your goals evolve with custom AI tools. A Thinking Lab for deep conversations that remember everything you've ever discussed. Files that automatically link related ideas across all your content. Cosmic Intelligence that reveals patterns in your thinking and behavior.<br><br>Each realm learns from how you work and gets smarter over time. No setup required—just start using them naturally."
   },
   {
     question: "Where is this headed?",
-    answer: "Background processing that happens overnight. Contradictions spotted before you see them. Understanding that refines itself while you're away.<br><br>Multiple forms of analysis running simultaneously—each one feeding insights to the others. Your work developing depth even when you're not actively working on it.<br><br>Eventually: memory so deep it anticipates what you need before you ask."
+    answer: "Your system will dream while you sleep. It'll discover connections between your work patterns, suggest experiments based on your behavior, and wake you up to insights you never noticed.<br><br>Your AI companions will develop personalities and teach each other new skills. Tools will automatically learn the perfect combinations for any task. Everything becomes more intelligent the more you use it."
   },
   {
     question: "How is this different from ChatGPT or Claude?",
-    answer: "They remember conversations. We extract understanding.<br><br>ChatGPT and Claude: You upload a document, it stays exactly as uploaded. Static memory that requires you to manage it.<br><br>This: Every interaction feeds background analysis. Connections form between old conversations and new ones. Patterns emerge across everything you've said. Memory that actively processes instead of passively storing.<br><br>Their memory is a filing cabinet. Ours is a living system that thinks about your work even when you're not."
+    answer: "They're chatbots. This is a living system.<br><br>ChatGPT and Claude: You ask questions, they answer. Each conversation is separate.<br><br>This: Your projects evolve. Constellations generate custom tools for your goals. The Thinking Lab remembers every conversation and connects ideas across time. Cosmic Intelligence spots patterns you miss. It's not just AI—it's your second brain growing smarter."
   },
   {
     question: "Who is this for?",
-    answer: "Anyone drowning in scattered notes and disconnected thoughts.<br><br>Anyone tired of re-explaining the same context to AI over and over.<br><br>Anyone who wishes their tools remembered not just what they said, but why it mattered.<br><br>If your work involves ideas that build over time, this was built for you."
+    answer: "Anyone who thinks deeply about their work and life.<br><br>Anyone tired of explaining the same context to AI over and over.<br><br>Anyone who wants their tools to understand not just what they're doing, but how they think.<br><br>If you have ideas that build over time, goals that evolve, or thoughts that connect across different areas of your life—this was built for you."
+  },
+  {
+    question: "Privacy & Trustworthiness",
+    answer: "Your data is yours.<br>HeyContext DOES NOT sell your data or use it for profit-seeking purposes.<br><br>You can trust what you read.<br>Generated content links to source material for easy verification."
   },
   {
     question: "What about privacy?",
