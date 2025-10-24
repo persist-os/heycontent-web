@@ -11,6 +11,7 @@ interface UseNotepadAIProps {
   setContent: (content: string) => void
   setRefinementPreview: (preview: string | null) => void
   setIsRefining: (refining: boolean) => void
+  onGenerationComplete?: () => void
 }
 
 export function useNotepadAI({
@@ -18,7 +19,8 @@ export function useNotepadAI({
   userId,
   setContent,
   setRefinementPreview,
-  setIsRefining
+  setIsRefining,
+  onGenerationComplete
 }: UseNotepadAIProps): AIHandlers {
   const { askAI, requestAnalysis, requestIdeas } = useInlineAI({
     noteContent: content,
@@ -42,13 +44,15 @@ export function useNotepadAI({
       // Automatically append the AI response to the current content
       const newContent = content.trim() ? `${content}\n\n${response}` : response
       setContent(newContent)
-      console.log('✅ [MarkdownNotepad] AI content appended to editor')
+      
+      // Notify that generation completed
+      onGenerationComplete?.()
       
     } catch (error) {
       console.error('❌ [MarkdownNotepad] Failed to get AI response:', error)
       throw error
     }
-  }, [askAI, content, setContent])
+  }, [askAI, content, setContent, onGenerationComplete])
 
   const handleRequestAnalysis = useCallback(async (noteType: string) => {
     try {
@@ -57,13 +61,15 @@ export function useNotepadAI({
       // Automatically append the analysis to the current content
       const newContent = content.trim() ? `${content}\n\n${analysis}` : analysis
       setContent(newContent)
-      console.log('✅ [MarkdownNotepad] Analysis content appended to editor')
+      
+      // Notify that generation completed
+      onGenerationComplete?.()
       
     } catch (error) {
       console.error('❌ [MarkdownNotepad] Failed to get analysis:', error)
       throw error
     }
-  }, [requestAnalysis, content, setContent])
+  }, [requestAnalysis, content, setContent, onGenerationComplete])
 
   const handleRequestIdeas = useCallback(async () => {
     try {
@@ -73,13 +79,15 @@ export function useNotepadAI({
       // Automatically append the ideas to the current content
       const newContent = content.trim() ? `${content}\n\n${ideasText}` : ideasText
       setContent(newContent)
-      console.log('✅ [MarkdownNotepad] Ideas content appended to editor')
+      
+      // Notify that generation completed
+      onGenerationComplete?.()
       
     } catch (error) {
       console.error('❌ [MarkdownNotepad] Failed to get ideas:', error)
       throw error
     }
-  }, [requestIdeas, content, setContent])
+  }, [requestIdeas, content, setContent, onGenerationComplete])
 
   // Refinement API function
   const refineText = useCallback(async (refinementType: string, selectedText: string): Promise<string> => {
@@ -163,6 +171,10 @@ export function useNotepadAI({
         refinedLength: refinedText.length,
         refinementType
       })
+      
+      // Notify that generation completed
+      onGenerationComplete?.()
+      
       return refinedText
     } catch (error) {
       console.error('❌ [MarkdownNotepad] Failed to refine text:', error)
@@ -170,7 +182,7 @@ export function useNotepadAI({
     } finally {
       setIsRefining(false)
     }
-  }, [refineText, setIsRefining, setRefinementPreview])
+  }, [refineText, setIsRefining, setRefinementPreview, onGenerationComplete])
 
   const handleAcceptRefinement = useCallback(async () => {
     // This would be called when a refinement preview exists and user accepts it

@@ -28,6 +28,8 @@ interface MobileNotepadLayoutProps {
   onEditingTitleChange: (editing: boolean) => void
   onLinkNote?: (noteId: string) => void
   onShare?: () => void
+  showRatingButton?: boolean
+  onRateLastGeneration?: () => void
   isReadOnly?: boolean
   notePermission?: "owner" | "read" | "edit" | null
   panelState?: PanelState
@@ -50,6 +52,8 @@ export function MobileNotepadLayout({
   onEditingTitleChange,
   onLinkNote,
   onShare,
+  showRatingButton = false,
+  onRateLastGeneration,
   isReadOnly = false,
   notePermission = null,
   panelState
@@ -75,6 +79,8 @@ export function MobileNotepadLayout({
         onGenerateMetadata={noteHandlers.handleGenerateMetadata}
         onSaveNote={noteHandlers.handleSaveAsNote}
         onShare={onShare}
+        showRatingButton={showRatingButton}
+        onRateLastGeneration={onRateLastGeneration}
         isReadOnly={isReadOnly}
         notePermission={notePermission}
         panelState={panelState}

@@ -175,7 +175,7 @@ export function useNotepadState({
     setTitle,
     setRefinementPreview,
     setIsRefining
-  }), [setIsEditingTitle, setIsNewNote, setCurrentNoteId, setContent, setTitle, setRefinementPreview, setIsRefining])
+  }), []) // useState setters are stable, no dependencies needed
 
   // FIXED: Memoize contextData to prevent handlers recreation
   const contextData = useMemo(() => ({

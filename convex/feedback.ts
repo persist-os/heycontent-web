@@ -252,4 +252,278 @@ export const deleteFeedback = mutation({
     await ctx.db.delete(args.feedbackId);
     return null;
   },
+});
+
+// ============================================================================
+// CONTENT FEEDBACK SYSTEM - For chat messages, notes, and widgets
+// ============================================================================
+
+/**
+ * Create content feedback (ratings for AI-generated content)
+ * Supports chat messages, note generation, and widget outputs
+ */
+export const createContentFeedback = mutation({
+  args: {
+    // Entity identification
+    entityType: v.union(
+      v.literal("chat_message"),
+      v.literal("note_generation"),
+      v.literal("widget_output")
+    ),
+    entityId: v.string(),
+    
+    // Rating data
+    rating: v.number(), // 1-5
+    feedbackText: v.optional(v.string()),
+    
+    // User info
+    userId: v.string(),
+    userEmail: v.optional(v.string()),
+    userName: v.optional(v.string()),
+    
+    // Context snapshot (comprehensive for all types)
+    contentSnapshot: v.object({
+      // Chat message fields
+      messageContent: v.optional(v.string()),
+      conversationId: v.optional(v.string()),
+      messageRole: v.optional(v.string()),
+      messageSequence: v.optional(v.number()),
+      
+      // Note generation fields
+      noteId: v.optional(v.string()),
+      noteTitle: v.optional(v.string()),
+      noteContent: v.optional(v.string()),
+      noteType: v.optional(v.string()),
+      generationType: v.optional(v.string()),
+      generationPrompt: v.optional(v.string()),
+      
+      // Widget output fields
+      widgetType: v.optional(v.string()),
+      widgetTitle: v.optional(v.string()),
+      widgetDescription: v.optional(v.string()),
+      outputContent: v.optional(v.string()),
+      openingMessage: v.optional(v.string()),
+      promptsCount: v.optional(v.number()),
+    }),
+    
+    // Optional context
+    projectId: v.optional(v.string()),
+    widgetId: v.optional(v.string()),
+    page: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    deviceType: v.optional(v.string()),
+    browserInfo: v.optional(v.string()),
+  },
+  returns: v.id("feedback"),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    
+    // Generate descriptive title based on entity type
+    const titleMap = {
+      chat_message: "Chat message rating",
+      note_generation: "Note generation rating",
+      widget_output: "Widget output rating",
+    };
+    
+    const feedbackId = await ctx.db.insert("feedback", {
+      // Standard feedback fields
+      type: "content_rating",
+      title: `${titleMap[args.entityType]}: ${args.rating}/5`,
+      description: args.feedbackText || `User rated ${args.entityType} as ${args.rating} out of 5`,
+      userEmail: args.userEmail || "",
+      userName: args.userName || "",
+      page: args.page || "",
+      userAgent: args.userAgent || "",
+      timestamp: now,
+      userId: args.userId,
+      status: "new",
+      priority: args.rating <= 2 ? "high" : args.rating <= 3 ? "medium" : "low",
+      assignedTo: undefined,
+      tags: [
+        args.entityType,
+        `rating_${args.rating}`,
+        args.rating <= 3 ? "needs_attention" : "positive"
+      ],
+      screenshots: [],
+      discordMessageId: undefined,
+      createdAt: now,
+      updatedAt: now,
+      
+      // Content feedback fields
+      entityType: args.entityType,
+      entityId: args.entityId,
+      rating: args.rating,
+      feedbackText: args.feedbackText,
+      contentSnapshot: args.contentSnapshot,
+      projectId: args.projectId,
+      widgetId: args.widgetId,
+      deviceType: args.deviceType,
+      browserInfo: args.browserInfo,
+    });
+
+    return feedbackId;
+  },
+});
+
+/**
+ * Get feedback for a specific entity (message, note, or widget)
+ */
+export const getFeedbackByEntity = query({
+  args: {
+    entityType: v.string(),
+    entityId: v.string(),
+  },
+  returns: v.array(v.object({
+    _id: v.id("feedback"),
+    rating: v.optional(v.number()),
+    feedbackText: v.optional(v.string()),
+    createdAt: v.number(),
+    userId: v.optional(v.string()),
+    userName: v.string(),
+  })),
+  handler: async (ctx, args) => {
+    const feedback = await ctx.db
+      .query("feedback")
+      .withIndex("by_entity", (q) => 
+        q.eq("entityType", args.entityType as any).eq("entityId", args.entityId)
+      )
+      .order("desc")
+      .collect();
+    
+    return feedback.map(f => ({
+      _id: f._id,
+      rating: f.rating,
+      feedbackText: f.feedbackText,
+      createdAt: f.createdAt,
+      userId: f.userId,
+      userName: f.userName,
+    }));
+  },
+});
+
+/**
+ * Get feedback statistics by entity type
+ */
+export const getFeedbackStatsByType = query({
+  args: {
+    entityType: v.union(
+      v.literal("chat_message"),
+      v.literal("note_generation"),
+      v.literal("widget_output")
+    ),
+    userId: v.optional(v.string()), // Filter by user if provided
+  },
+  returns: v.object({
+    totalCount: v.number(),
+    averageRating: v.number(),
+    ratingDistribution: v.object({
+      rating_1: v.number(),
+      rating_2: v.number(),
+      rating_3: v.number(),
+      rating_4: v.number(),
+      rating_5: v.number(),
+    }),
+    feedbackWithText: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    let query = ctx.db
+      .query("feedback")
+      .withIndex("by_entity_created", (q) => q.eq("entityType", args.entityType));
+    
+    const allFeedback = await query.collect();
+    
+    // Filter by user if provided
+    const feedback = args.userId 
+      ? allFeedback.filter(f => f.userId === args.userId)
+      : allFeedback;
+    
+    // Calculate statistics
+    const ratingDistribution = {
+      rating_1: 0,
+      rating_2: 0,
+      rating_3: 0,
+      rating_4: 0,
+      rating_5: 0,
+    };
+    
+    let totalRating = 0;
+    let feedbackWithTextCount = 0;
+    
+    feedback.forEach(f => {
+      if (f.rating) {
+        totalRating += f.rating;
+        const key = `rating_${f.rating}` as keyof typeof ratingDistribution;
+        ratingDistribution[key]++;
+      }
+      if (f.feedbackText && f.feedbackText.trim().length > 0) {
+        feedbackWithTextCount++;
+      }
+    });
+    
+    const averageRating = feedback.length > 0 ? totalRating / feedback.length : 0;
+    
+    return {
+      totalCount: feedback.length,
+      averageRating: Math.round(averageRating * 100) / 100,
+      ratingDistribution,
+      feedbackWithText: feedbackWithTextCount,
+    };
+  },
+});
+
+/**
+ * Get recent low-rated content (for monitoring/alerts)
+ */
+export const getLowRatedContent = query({
+  args: {
+    entityType: v.optional(v.union(
+      v.literal("chat_message"),
+      v.literal("note_generation"),
+      v.literal("widget_output")
+    )),
+    maxRating: v.optional(v.number()), // Default 3
+    limit: v.optional(v.number()), // Default 20
+  },
+  returns: v.array(v.object({
+    _id: v.id("feedback"),
+    entityType: v.optional(v.string()),
+    entityId: v.optional(v.string()),
+    rating: v.optional(v.number()),
+    feedbackText: v.optional(v.string()),
+    contentSnapshot: v.optional(v.any()),
+    createdAt: v.number(),
+    userId: v.optional(v.string()),
+  })),
+  handler: async (ctx, args) => {
+    const maxRating = args.maxRating ?? 3;
+    const limit = args.limit ?? 20;
+    
+    let query = ctx.db.query("feedback");
+    
+    if (args.entityType) {
+      query = query.withIndex("by_entity_created", (q) => 
+        q.eq("entityType", args.entityType)
+      );
+    }
+    
+    const allFeedback = await query
+      .order("desc")
+      .take(limit * 3); // Get more to filter
+    
+    // Filter by rating
+    const lowRated = allFeedback
+      .filter(f => f.rating !== undefined && f.rating <= maxRating)
+      .slice(0, limit);
+    
+    return lowRated.map(f => ({
+      _id: f._id,
+      entityType: f.entityType,
+      entityId: f.entityId,
+      rating: f.rating,
+      feedbackText: f.feedbackText,
+      contentSnapshot: f.contentSnapshot,
+      createdAt: f.createdAt,
+      userId: f.userId,
+    }));
+  },
 }); 

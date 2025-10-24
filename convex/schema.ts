@@ -543,9 +543,10 @@ export default defineSchema({
   .index("by_startedAt", ["startedAt"])
   .index("by_user_status", ["userId", "status"]),
 
-  // Feedback System
+  // Feedback System - Enhanced for content ratings
   feedback: defineTable({
-    type: v.string(), // "bug", "feature_request", "general", "praise"
+    // === EXISTING FIELDS (for bug reports, feature requests) ===
+    type: v.string(), // "bug", "feature_request", "general", "praise", "content_rating"
     title: v.string(),
     description: v.string(),
     userEmail: v.string(),
@@ -567,6 +568,53 @@ export default defineSchema({
     discordMessageId: v.optional(v.string()), // To link back to Discord
     createdAt: v.number(),
     updatedAt: v.number(),
+    
+    // === NEW FIELDS FOR CONTENT FEEDBACK (chat, notes, widgets) ===
+    
+    // Entity tracking - what content is being rated
+    entityType: v.optional(v.union(
+      v.literal("chat_message"),
+      v.literal("note_generation"),
+      v.literal("widget_output")
+    )),
+    entityId: v.optional(v.string()), // ID of the message/note/widget output
+    
+    // Rating data (1-5 stars)
+    rating: v.optional(v.number()),
+    feedbackText: v.optional(v.string()), // Optional text feedback from user
+    
+    // Context preservation - snapshot of what was rated
+    contentSnapshot: v.optional(v.object({
+      // === Chat Message Context ===
+      messageContent: v.optional(v.string()),
+      conversationId: v.optional(v.string()),
+      messageRole: v.optional(v.string()), // "user" or "assistant"
+      messageSequence: v.optional(v.number()),
+      
+      // === Note Generation Context ===
+      noteId: v.optional(v.string()),
+      noteTitle: v.optional(v.string()),
+      noteContent: v.optional(v.string()), // First 500 chars
+      noteType: v.optional(v.string()),
+      generationType: v.optional(v.string()), // "title", "type", "metadata", "inline_ai", "refinement"
+      generationPrompt: v.optional(v.string()), // What the user asked for
+      
+      // === Widget Output Context ===
+      widgetType: v.optional(v.string()),
+      widgetTitle: v.optional(v.string()),
+      widgetDescription: v.optional(v.string()),
+      outputContent: v.optional(v.string()), // First 500 chars of generated output
+      openingMessage: v.optional(v.string()),
+      promptsCount: v.optional(v.number()),
+    })),
+    
+    // Project/widget linkage
+    projectId: v.optional(v.string()),
+    widgetId: v.optional(v.string()),
+    
+    // Analytics metadata
+    deviceType: v.optional(v.string()), // "desktop", "mobile", "tablet"
+    browserInfo: v.optional(v.string()),
   })
   .index("by_status", ["status"])
   .index("by_type", ["type"])
@@ -575,7 +623,13 @@ export default defineSchema({
   .index("by_priority", ["priority"])
   .index("by_assigned", ["assignedTo"])
   .index("by_user_status", ["userId", "status"])
-  .index("by_type_status", ["type", "status"]),
+  .index("by_type_status", ["type", "status"])
+  // === NEW INDEXES FOR CONTENT FEEDBACK ===
+  .index("by_entity", ["entityType", "entityId"])
+  .index("by_rating", ["rating"])
+  .index("by_user_entity", ["userId", "entityType"])
+  .index("by_entity_created", ["entityType", "createdAt"])
+  .index("by_user_rating", ["userId", "rating"]),
 
   // Referrals tracking
   referrals: defineTable({
@@ -1266,7 +1320,7 @@ export default defineSchema({
     stardust: defineTable({
       // === CORE IDENTIFICATION ===
       userId: v.string(),
-      stardust_id: v.string(),  // Unique stardust identifier
+      stardustId: v.string(),  // Unique stardust identifier (camelCase to match actual data)
       
       // === STARDUST DEFINITION ===
       name: v.string(),  // Generated from keywords
@@ -1275,16 +1329,16 @@ export default defineSchema({
       dimension: v.string(),  // Primary dimension (inherited from shards)
       
       // === DETECTION METADATA ===
-      detected_at: v.number(),  // Unix timestamp when detected
-      detection_method: v.string(),  // Detection algorithm used (default: "code_based")
+      detectedAt: v.number(),  // Unix timestamp when detected (camelCase to match actual data)
+      detectionMethod: v.string(),  // Detection algorithm used (default: "code_based")
       confidence: v.number(),  // Detection confidence (0-1)
-      evidence_strength: v.string(),  // Flexible string (no hardcoded categories)
+      evidenceStrength: v.string(),  // Flexible string (no hardcoded categories)
       
       // === SOURCE TRACKING ===
-      source_shard_ids: v.array(v.string()),  // Shards that formed this stardust
-      shard_count: v.number(),  // Number of shards
-      related_note_ids: v.array(v.string()),  // Notes contributing to this stardust
-      related_conversation_ids: v.array(v.string()),  // Conversations contributing
+      sourceShardIds: v.array(v.string()),  // Shards that formed this stardust
+      shardCount: v.number(),  // Number of shards
+      relatedNoteIds: v.array(v.string()),  // Notes contributing to this stardust
+      relatedConversationIds: v.array(v.string()),  // Conversations contributing
       
       // === LIFECYCLE STAGE (LLM-DRIVEN, FLEXIBLE) ===
       // Flexible string - LLM can generate any stage name
@@ -1294,17 +1348,17 @@ export default defineSchema({
       energy: v.number(),  // Energy level for evolution
       
       // === PROJECT SUGGESTIONS (FOR PROMOTION) ===
-      suggested_project_name: v.string(),
-      suggested_project_description: v.string(),
-      suggested_domain: v.string(),  // No longer hardcoded, any string is valid
-      suggested_complexity: v.number(),  // Complexity (0-10)
-      suggested_time_horizon: v.string(),  // Time horizon estimate
+      suggestedProjectName: v.string(),
+      suggestedProjectDescription: v.string(),
+      suggestedDomain: v.string(),  // No longer hardcoded, any string is valid
+      suggestedComplexity: v.number(),  // Complexity (0-10)
+      suggestedTimeHorizon: v.string(),  // Time horizon estimate
       
       // === PROMOTION TRACKING ===
       promoted: v.boolean(),  // Has been promoted to star organism/project
-      promoted_at: v.optional(v.number()),  // When promoted
-      promoted_to_project_id: v.optional(v.id("projects")),  // Project ID created from this
-      confidence_at_promotion: v.optional(v.number()),  // Confidence when promoted
+      promotedAt: v.optional(v.number()),  // When promoted
+      promotedToProjectId: v.optional(v.id("projects")),  // Project ID created from this
+      confidenceAtPromotion: v.optional(v.number()),  // Confidence when promoted
       
       // === TEMPORAL METADATA ===
       createdAt: v.number(),
@@ -1312,15 +1366,15 @@ export default defineSchema({
       lastEvolution: v.optional(v.number()),  // Last lifecycle evolution
       
       // === SYMBIOTIC RELATIONSHIPS (FUTURE) ===
-      related_crystal_ids: v.array(v.string()),  // Crystals providing wisdom to this star
-      symbiotic_pairs: v.array(v.string()),  // Star-crystal symbiotic relationships
+      relatedCrystalIds: v.array(v.string()),  // Crystals providing wisdom to this star
+      symbioticPairs: v.array(v.string()),  // Star-crystal symbiotic relationships
     })
       .index("by_user", ["userId"])
       .index("by_confidence", ["userId", "confidence"])
       .index("by_promoted", ["userId", "promoted"])
-      .index("by_detected", ["userId", "detected_at"])
+      .index("by_detected", ["userId", "detectedAt"])
       .index("by_lifecycle", ["userId", "lifecycleStage"])
-      .index("by_domain", ["userId", "suggested_domain"]),
+      .index("by_domain", ["userId", "suggestedDomain"]),
     
     crystal_formation_runs: defineTable({
       userId: v.string(),

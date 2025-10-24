@@ -1186,6 +1186,125 @@ app.delete("/api/feedback/:id", async (c) => {
   }
 });
 
+// ============================================================================
+// CONTENT FEEDBACK ROUTES - For chat, notes, and widgets
+// ============================================================================
+
+/**
+ * POST /api/feedback/content
+ * Create content feedback (ratings for AI-generated content)
+ */
+app.post("/api/feedback/content", async (c) => {
+  const ctx = c.env;
+  const feedbackData = await c.req.json();
+  
+  try {
+    const feedbackId = await ctx.runMutation(
+      api.feedback.createContentFeedback, 
+      feedbackData
+    );
+    return c.json({ success: true, feedbackId });
+  } catch (error: any) {
+    console.error("Failed to create content feedback:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to create content feedback",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * GET /api/feedback/entity
+ * Get feedback for specific entity (message, note, or widget)
+ * Query params: entityType, entityId
+ */
+app.get("/api/feedback/entity", async (c) => {
+  const ctx = c.env;
+  const { entityType, entityId } = c.req.query();
+  
+  if (!entityType || !entityId) {
+    return c.json({
+      success: false,
+      error: "entityType and entityId are required"
+    }, 400);
+  }
+  
+  try {
+    const feedback = await ctx.runQuery(api.feedback.getFeedbackByEntity, {
+      entityType,
+      entityId,
+    });
+    return c.json({ success: true, data: feedback });
+  } catch (error: any) {
+    console.error("Failed to get entity feedback:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get entity feedback",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * GET /api/feedback/stats/:entityType
+ * Get feedback statistics by entity type
+ * Query params: userId (optional)
+ */
+app.get("/api/feedback/stats/:entityType", async (c) => {
+  const ctx = c.env;
+  const entityType = c.req.param("entityType");
+  const { userId } = c.req.query();
+  
+  if (!["chat_message", "note_generation", "widget_output"].includes(entityType)) {
+    return c.json({
+      success: false,
+      error: "Invalid entityType"
+    }, 400);
+  }
+  
+  try {
+    const stats = await ctx.runQuery(api.feedback.getFeedbackStatsByType, {
+      entityType: entityType as any,
+      userId: userId || undefined,
+    });
+    return c.json({ success: true, data: stats });
+  } catch (error: any) {
+    console.error("Failed to get feedback stats:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get feedback stats",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * GET /api/feedback/low-rated
+ * Get recent low-rated content for monitoring
+ * Query params: entityType (optional), maxRating (optional), limit (optional)
+ */
+app.get("/api/feedback/low-rated", async (c) => {
+  const ctx = c.env;
+  const { entityType, maxRating, limit } = c.req.query();
+  
+  try {
+    const lowRated = await ctx.runQuery(api.feedback.getLowRatedContent, {
+      entityType: entityType as any || undefined,
+      maxRating: maxRating ? parseInt(maxRating) : undefined,
+      limit: limit ? parseInt(limit) : undefined,
+    });
+    return c.json({ success: true, data: lowRated });
+  } catch (error: any) {
+    console.error("Failed to get low-rated content:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get low-rated content",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
 // CONVERSATION SUMMARIES ROUTES
 
 // Create conversation summary

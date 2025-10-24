@@ -9,6 +9,11 @@ import React, { useState, useEffect } from 'react'
 import { ContentRenderer } from './ContentRenderer'
 import { FileAttachmentRenderer } from '@/components/ui/FileAttachmentRenderer'
 import { useTranslation } from '@/hooks/useTranslation'
+import { StarRating } from '@/components/ui/star-rating'
+import { useDialogueStore } from '@/app/dashboard/thinking_lab/stores/dialogueStore'
+import { getCurrentUserId } from '@/app/lib/api-helpers'
+import { useMutation } from 'convex/react'
+import { api } from '@/convex/_generated/api'
 
 interface MessageBubbleProps {
   message: Message
@@ -48,6 +53,14 @@ export function MessageBubble({
   const isUser = message.role === 'user'
   const [selectedText, setSelectedText] = useState('')
   const [showQuoteButton, setShowQuoteButton] = useState(false)
+  const [messageRating, setMessageRating] = useState<number | undefined>(undefined)
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false)
+  
+  // Get conversation ID from dialogue store
+  const conversationId = useDialogueStore(state => state.conversationId)
+  
+  // Initialize Convex mutation (matches pattern used throughout codebase)
+  const createContentFeedback = useMutation(api.feedback.createContentFeedback)
   
   // Translations for tooltips
   const { text: quoteTooltip } = useTranslation(`Quote "${selectedText.slice(0, 30)}..."`, {
@@ -83,6 +96,39 @@ export function MessageBubble({
       setSelectedText('')
       setShowQuoteButton(false)
       // Don't clear selection - let user copy normally
+    }
+  }
+
+  // Handle feedback submission - uses Convex mutation directly (matches codebase pattern)
+  const handleRateFeedback = async (rating: number, feedbackText?: string) => {
+    if (isSubmittingFeedback) return
+    
+    setIsSubmittingFeedback(true)
+    try {
+      const currentUserId = await getCurrentUserId()
+      
+      // Call Convex mutation directly (pattern matches useWidgetContent, useCrystalMutations, etc.)
+      const feedbackId = await createContentFeedback({
+        entityType: 'chat_message',
+        entityId: message.id,
+        rating,
+        feedbackText,
+        userId: currentUserId,
+        contentSnapshot: {
+          messageContent: message.content.substring(0, 500), // First 500 chars
+          conversationId: conversationId || message.sessionId,
+          messageRole: 'assistant',
+        },
+        page: window.location.pathname,
+        userAgent: navigator.userAgent,
+      })
+      
+      setMessageRating(rating)
+      console.log('[MessageFeedback] Feedback submitted successfully:', feedbackId)
+    } catch (error) {
+      console.error('[MessageFeedback] Error submitting feedback:', error)
+    } finally {
+      setIsSubmittingFeedback(false)
     }
   }
 
@@ -168,6 +214,19 @@ export function MessageBubble({
           >
             <Quote className="w-5 h-5" />
           </button>
+        )}
+        
+        {/* Star rating for assistant messages only */}
+        {!isUser && message.status !== 'typing' && (
+          <div className="ml-2">
+            <StarRating
+              size="sm"
+              value={messageRating}
+              onRate={handleRateFeedback}
+              disabled={isSubmittingFeedback}
+              allowFeedbackText={true}
+            />
+          </div>
         )}
       </div>
     </div>
