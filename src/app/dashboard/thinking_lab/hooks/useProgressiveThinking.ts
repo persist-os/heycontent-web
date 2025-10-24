@@ -71,18 +71,19 @@ export function useProgressiveThinking(
 /**
  * Standalone function for use in non-React contexts (like messageService)
  * MAB now controls all context decisions automatically
+ * Returns both stop function and a promise that resolves when all steps complete
  */
 export function startProgressiveThinking(
   onUpdate?: (status: string) => void
-): () => void {
+): { stop: () => void; completion: Promise<void> } {
   let stopped = false
   const stop = () => { stopped = true }
 
-  ;(async () => {
+  const completion = (async () => {
     try {
       const steps = [
         "Understanding what you're thinking about",
-        "Searching related content",
+        "Query needs context - proceeding with vector search",
         "Looking through all your content",
         "Quality filtering",
       ]
@@ -97,7 +98,7 @@ export function startProgressiveThinking(
     }
   })()
 
-  return stop
+  return { stop, completion }
 }
 
 // Export sleep and delay constants for other uses

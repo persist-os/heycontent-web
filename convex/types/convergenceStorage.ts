@@ -18,6 +18,22 @@ export const rlRecordTypeValidator = v.union(
   v.literal("training_run")
 );
 
+// Schema fields (unwrapped for defineTable)
+export const rlTrainingDataSchemaFields = {
+  rl_key: v.string(),
+  rl_record_type: rlRecordTypeValidator,
+  agent_id: v.string(),
+  civilization_id: v.optional(v.string()),
+  station: v.optional(v.string()),
+  reward_score: v.optional(v.number()),
+  fitness_score: v.optional(v.number()),
+  episode_timestamp: v.number(),
+  success: v.optional(v.boolean()),
+  rl_episode_data: v.any(),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+};
+
 export const rlTrainingDataValidator = v.object({
   rl_key: v.string(),
   rl_record_type: rlRecordTypeValidator,
@@ -51,6 +67,25 @@ export const rlTrainingDataReturnValidator = v.object({
 // ============================================================================
 // OPTIMIZATION EXPERIMENT TYPES
 // ============================================================================
+
+// Schema fields (unwrapped for defineTable)
+export const optimizationExperimentSchemaFields = {
+  experiment_id: v.string(),
+  optimization_run_id: v.string(),
+  system_name: v.string(),
+  algorithm_name: v.string(),
+  test_case_id: v.string(),
+  tested_config: v.any(),
+  generation_number: v.optional(v.number()),
+  experiment_score: v.number(),
+  test_passed: v.boolean(),
+  latency_ms: v.optional(v.number()),
+  cost_usd: v.optional(v.number()),
+  full_metrics: v.optional(v.any()),
+  session_id: v.optional(v.string()),
+  experiment_timestamp: v.number(),
+  createdAt: v.number(),
+};
 
 export const optimizationExperimentValidator = v.object({
   experiment_id: v.string(),
@@ -92,6 +127,25 @@ export const optimizationExperimentReturnValidator = v.object({
 // ============================================================================
 // OPTIMIZATION RUN TYPES
 // ============================================================================
+
+// Schema fields (unwrapped for defineTable)
+export const optimizationRunSchemaFields = {
+  run_id: v.string(),
+  system_name: v.string(),
+  algorithm_name: v.string(),
+  run_started_at: v.number(),
+  run_completed_at: v.optional(v.number()),
+  total_duration_ms: v.optional(v.number()),
+  total_experiments_run: v.number(),
+  best_experiment_score: v.number(),
+  avg_experiment_score: v.number(),
+  experiments_by_generation: v.optional(v.any()),
+  winning_config_id: v.optional(v.id("convergence_configs")),
+  winning_config_snapshot: v.optional(v.any()),
+  total_generations: v.optional(v.number()),
+  convergence_achieved: v.optional(v.boolean()),
+  createdAt: v.number(),
+};
 
 export const optimizationRunValidator = v.object({
   run_id: v.string(),

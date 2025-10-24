@@ -36,7 +36,7 @@ export const saveTranslation = mutation({
     // Generate hash
     const sourceTextHash = hashTranslationKey(sourceText);
     
-    // Check if already exists (race condition protection)
+    // Check if already exists (upsert pattern - idempotent)
     const existing = await ctx.db
       .query("translations")
       .withIndex("by_hash_and_lang", (q) =>
@@ -45,7 +45,7 @@ export const saveTranslation = mutation({
       .first();
     
     if (existing) {
-      // Already cached by another request, just update usage
+      // Update usage count (idempotent - safe to retry)
       await ctx.db.patch(existing._id, {
         usageCount: existing.usageCount + 1,
         lastUsedAt: Date.now(),
@@ -53,7 +53,7 @@ export const saveTranslation = mutation({
       return existing._id;
     }
     
-    // Create new translation
+    // Create new translation - if duplicate created concurrently, query will find it next time
     const now = Date.now();
     const translationId = await ctx.db.insert("translations", {
       sourceText,
@@ -215,6 +215,11 @@ export const flagForReview = mutation({
   handler: async (ctx, args) => {
     const { translationId, reason } = args;
     
+    const translation = await ctx.db.get(translationId);
+    if (!translation) {
+      throw new Error("Translation not found");
+    }
+    
     await ctx.db.patch(translationId, {
       needsReview: true,
       notes: reason,
@@ -235,6 +240,11 @@ export const verifyTranslation = mutation({
   },
   handler: async (ctx, args) => {
     const { translationId, reviewedBy } = args;
+    
+    const translation = await ctx.db.get(translationId);
+    if (!translation) {
+      throw new Error("Translation not found");
+    }
     
     await ctx.db.patch(translationId, {
       verified: true,

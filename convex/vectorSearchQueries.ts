@@ -1,5 +1,6 @@
 import { query, action } from "./_generated/server";
 import { v } from "convex/values";
+import { contentTypesArrayValidator } from "./types/embeddings";
 import { api } from "./_generated/api";
 
 /**
@@ -73,7 +74,7 @@ export const getVectorSearchData = action({
     
     // Search parameters
     query: v.optional(v.string()),
-    contentTypes: v.optional(v.array(v.string())),
+    contentTypes: contentTypesArrayValidator,
     limit: v.optional(v.number()),
     threshold: v.optional(v.number()),
     
@@ -106,8 +107,12 @@ export const getVectorSearchData = action({
     try {
       const { userId, operation, table = "vector_embeddings" } = args;
       
+      // Supported operations: similarity_search, hybrid_search, batch_search, search_with_grading, get_stats, health_check
       switch (operation) {
         case "similarity_search":
+          return await handleSimilaritySearch(ctx, args);
+          
+        case "hybrid_search":
           return await handleSimilaritySearch(ctx, args);
           
         case "batch_search":

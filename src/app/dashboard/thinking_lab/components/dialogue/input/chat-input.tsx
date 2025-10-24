@@ -1,13 +1,9 @@
 'use client'
 
-import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react'
-import { UnifiedContentSelector } from '@/components/ui/UnifiedContentSelector';
+import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { useTheme } from 'next-themes';
 import { Send, Loader2, MessageSquare, FileText, Search, Paperclip, X, FileText as NotepadIcon } from 'lucide-react'
 import { getCurrentUserId, getCurrentUserIdSync, waitForAuthReady } from '@/app/lib/api-helpers'
-import { AuthenticationError } from '@/app/lib/errors'
-import { useQuery } from 'convex/react'
-import { api } from '@/convex/_generated/api'
 import type { Message } from '@/app/types/chat';
 import { uploadFile, formatFileSize, getFileTypeIcon, getFileDisplayUrl, type FileUploadResponse } from '@/lib/file-upload';
 import { track } from '@/lib/analytics';
@@ -75,11 +71,6 @@ export function ChatInput({
   const textareaRef = inputRef || internalInputRef
   const { theme } = useTheme()
   
-  // @ functionality state
-  const [showEnhancedContentSelector, setShowEnhancedContentSelector] = useState(false)
-  const [contentSelectorPosition, setContentSelectorPosition] = useState({ top: 100, left: 100 })
-  const [contentSearchTerm, setContentSearchTerm] = useState('')
-  
   // Auth/user state with readiness guard
   const [userId, setUserId] = useState<string | null>(getCurrentUserIdSync())
   const [authStatus, setAuthStatus] = useState<'idle' | 'waiting' | 'ready' | 'unavailable'>('idle')
@@ -115,32 +106,6 @@ export function ChatInput({
     return () => { mounted = false }
   }, [])
   
-  // Fetch unified content using platformRouter (same as UnifiedContentSelector)
-  const allUnifiedContent = useQuery(
-    api.platformRouter.getAllUnifiedContent,
-    userId ? { 
-      userId,
-      platforms: currentTab !== 'all' ? [currentTab] : undefined,
-      limit: 200 
-    } : "skip"
-  );
-
-  // Transform unified content to the format expected by chat-input
-  const allLinkableContent = useMemo(() => {
-    if (!allUnifiedContent) return [];
-    
-    return allUnifiedContent.map(item => ({
-      id: item.id, // Already in standardized format: platform:actualId
-      title: item.title,
-      content: item.content,
-      type: item.platform, // 'youtube', 'instagram', 'gmail', 'notes', 'conversations', 'insights'
-      metadata: item.metadata,
-      originalDocument: item.originalDocument
-    }));
-  }, [allUnifiedContent]);
-
-  const isContentLoading = authStatus === 'waiting' || (!userId || allUnifiedContent === undefined);
-  
   // Theme-aware accent colors
   const isDark = theme === 'dark'
   const accentColor = isDark ? 'text-accent' : 'text-purple-600'
@@ -159,46 +124,11 @@ export function ChatInput({
     }
   }
 
-  // Handle linking content from the selector
-  const handleLinkContent = useCallback((contentId: string) => {
-    if (!textareaRef.current) return
-    const textarea = textareaRef.current
-    const cursorPos = textarea.selectionStart
-    const textBeforeCursor = textarea.value.substring(0, cursorPos)
-    const atSymbolIndex = textBeforeCursor.lastIndexOf('@')
-    if (atSymbolIndex === -1) return
-    
-    const linkedContent = allLinkableContent?.find(item => item.id === contentId)
-    if (!linkedContent) return
-    
-    // Get the title and create a truncated version for display with brackets
-    const title = linkedContent.title || 'Untitled'
-    const truncatedTitle = title.replace(/\n/g, ' ').substring(0, 20) + (title.length > 20 ? '...' : '')
-    
-    // Replace the @ symbol with the truncated title in brackets for better clarity
-    const textAfterCursor = textarea.value.substring(cursorPos)
-    const newText = textarea.value.substring(0, atSymbolIndex) + `@[${truncatedTitle}]` + textAfterCursor
-    
-    setCurrentInput(newText)
-    
-    // Position cursor after the inserted content
-    const newCursorPos = atSymbolIndex + `@[${truncatedTitle}]`.length
-    textarea.setSelectionRange(newCursorPos, newCursorPos)
-    
-    setShowEnhancedContentSelector(false)
-    setContentSearchTerm('')
-  }, [textareaRef, allLinkableContent])
-
   // Handle textarea changes
   const handleTextareaChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value
     setCurrentInput(newValue)
   }, [setCurrentInput])
-
-  // Handle textarea selection to prevent cursor inside links
-  const handleTextareaSelect = useCallback((e: React.SyntheticEvent<HTMLTextAreaElement>) => {
-    // Simple cursor positioning - no complex link handling needed
-  }, [])
 
   // Define placeholder arrays - unique prompts that reflect HeyContext's distinctive approach
   const placeholders = [
@@ -260,65 +190,6 @@ export function ChatInput({
     }
   }, [autoFocus, isLoading, referencedMessage, textareaRef])
 
-  // Get cursor coordinates for content selector positioning
-  const getCursorCoordinates = useCallback((textarea: HTMLTextAreaElement) => {
-    const rect = textarea.getBoundingClientRect()
-    const style = window.getComputedStyle(textarea)
-    const lineHeight = parseInt(style.lineHeight) || 20
-    const paddingTop = parseInt(style.paddingTop) || 0
-    const paddingLeft = parseInt(style.paddingLeft) || 0
-    
-    const text = textarea.value.substring(0, textarea.selectionStart)
-    const lines = text.split('\n')
-    const currentLine = lines[lines.length - 1]
-    const lineNumber = lines.length
-    
-    const canvas = document.createElement('canvas')
-    const context = canvas.getContext('2d')
-    if (!context) return { top: 0, left: 0 }
-    
-    context.font = style.font
-    const textWidth = context.measureText(currentLine).width
-    
-    const cursorTop = rect.top + paddingTop + (lineNumber * lineHeight)
-    const cursorLeft = rect.left + paddingLeft + textWidth
-    
-    // Check if there's enough space below the cursor
-    const selectorHeight = 400 // Approximate height of the content selector
-    const margin = 20
-    const spaceBelow = window.innerHeight - cursorTop - margin
-    const spaceAbove = cursorTop - margin
-    
-    // Position above cursor if there's not enough space below
-    const finalTop = spaceBelow < selectorHeight && spaceAbove > selectorHeight 
-      ? cursorTop - selectorHeight - 10 // Position above with 10px gap
-      : cursorTop + 10 // Position below with 10px gap
-    
-    return {
-      top: Math.max(margin, finalTop),
-      left: Math.max(margin, Math.min(cursorLeft, window.innerWidth - 600 - margin)) // Ensure it doesn't go off-screen horizontally
-    }
-  }, [])
-
-  // Function to convert truncated titles back to content IDs
-  const convertTitlesToContentIds = useCallback((text: string): string => {
-    if (!allLinkableContent) return text
-    
-    // Find all @[Title] patterns and convert them back to @[contentId]@ format
-    let convertedText = text
-    
-    allLinkableContent.forEach(content => {
-      const title = content.title || 'Untitled'
-      const truncatedTitle = title.replace(/\n/g, ' ').substring(0, 20) + (title.length > 20 ? '...' : '')
-      
-      // Replace @[TruncatedTitle] with @[contentId]@
-      const titlePattern = new RegExp(`@\\[${truncatedTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\]`, 'g')
-      convertedText = convertedText.replace(titlePattern, `@[${content.id}]@`)
-    })
-    
-    return convertedText
-  }, [allLinkableContent])
-
   // File upload handlers
   const handleFileSelect = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0 || !userId) return
@@ -365,15 +236,13 @@ export function ChatInput({
     })
     
     if ((currentInput.trim() || fileAttachments.length > 0) && !isLoading && currentInput.length <= maxLength) {
-      // Convert truncated titles back to content IDs before sending
-      const processedMessage = convertTitlesToContentIds(currentInput.trim())
+      const message = currentInput.trim()
       console.log('🔔 [CHAT INPUT] Sending message:', {
-        originalMessage: currentInput.trim(),
-        processedMessage,
+        message,
         fileAttachments: fileAttachments.length
       })
-      track('chat_message_sent', { message_length: processedMessage.length })
-      onSend(processedMessage, fileAttachments.length > 0 ? fileAttachments : undefined)
+      track('chat_message_sent', { message_length: message.length })
+      onSend(message, fileAttachments.length > 0 ? fileAttachments : undefined)
       setCurrentInput('')
       setFileAttachments([])
     }
@@ -400,35 +269,12 @@ export function ChatInput({
         e.preventDefault()
         if ((!currentInput.trim() && fileAttachments.length === 0) || isLoading || characterCount >= maxLength) return
         
-        // Convert truncated titles back to content IDs before sending
-        const processedMessage = convertTitlesToContentIds(currentInput.trim())
-        track('chat_message_sent', { message_length: processedMessage.length })
-        onSend(processedMessage, fileAttachments.length > 0 ? fileAttachments : undefined)
+        const message = currentInput.trim()
+        track('chat_message_sent', { message_length: message.length })
+        onSend(message, fileAttachments.length > 0 ? fileAttachments : undefined)
         setCurrentInput('')
         setFileAttachments([])
       }
-    }
-
-    // '@' to open content linking selector
-    if (e.key === '@') {
-      // Let the @ be typed first, then open selector
-      setTimeout(() => {
-        if (textareaRef.current) {
-          const coords = getCursorCoordinates(textareaRef.current)
-          setContentSelectorPosition(coords)
-          setShowEnhancedContentSelector(true)
-          setContentSearchTerm('')
-        }
-      }, 10) // Slightly longer delay to ensure @ is typed and cursor updated
-      return
-    }
-
-    // Handle ESC to close content selector
-    if (e.key === 'Escape' && showEnhancedContentSelector) {
-      e.preventDefault()
-      e.stopPropagation()
-      setShowEnhancedContentSelector(false)
-      return
     }
   }
 
@@ -693,7 +539,6 @@ export function ChatInput({
                 [scrollbar-color:hsl(var(--border))_transparent]"
                 disabled={isLoading || disabled}
                 onKeyDown={handleKeyDown}
-                onSelect={handleTextareaSelect}
                 maxLength={maxLength}
                 data-chat-input
               />
@@ -788,24 +633,9 @@ export function ChatInput({
           </div>
         </div>
         <div className="mt-1.5 text-xs text-muted-foreground text-center">
-          <T context="chat.help">Press Enter to send, Shift+Enter for new line, @ to link content</T>
+          <T context="chat.help">Press Enter to send, Shift+Enter for new line</T>
         </div>
-        
-        {/* Temporary shadow text display - only in development */}
-        {/* Shadow text debug UI removed for production cleanup */}
       </form>
-
-      {/* Enhanced Content Selector */}
-      <UnifiedContentSelector
-        mode="link"
-        isOpen={showEnhancedContentSelector}
-        onClose={() => setShowEnhancedContentSelector(false)}
-        onSelect={handleLinkContent}
-        position={contentSelectorPosition}
-        searchTerm={contentSearchTerm}
-        onSearchChange={setContentSearchTerm}
-        currentTab={currentTab}
-      />
     </div>
   )
 }

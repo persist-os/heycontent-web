@@ -5,7 +5,7 @@ import { Quote } from 'lucide-react'
 import { MarkdownRenderer } from './MarkdownRenderer'
 import { HorizontalProgressiveThinking } from '../components/HorizontalProgressiveThinking'
 import { CopyButton } from '@/components/ui/copy-button'
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import { ContentRenderer } from './ContentRenderer'
 import { FileAttachmentRenderer } from '@/components/ui/FileAttachmentRenderer'
 import { useTranslation } from '@/hooks/useTranslation'
@@ -51,105 +51,14 @@ export function MessageBubble({
   onContentClick
 }: MessageBubbleProps) {
   const isUser = message.role === 'user'
-  const [selectedText, setSelectedText] = useState('')
-  const [showQuoteButton, setShowQuoteButton] = useState(false)
-  const [messageRating, setMessageRating] = useState<number | undefined>(undefined)
-  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false)
   
-  // Get conversation ID from dialogue store
-  const conversationId = useDialogueStore(state => state.conversationId)
-  
-  // Initialize Convex mutation (matches pattern used throughout codebase)
-  const createContentFeedback = useMutation(api.feedback.createContentFeedback)
-  
-  // Translations for tooltips
-  const { text: quoteTooltip } = useTranslation(`Quote "${selectedText.slice(0, 30)}..."`, {
-    context: 'message.quote_selection'
-  })
   const { text: sendToNotepadTooltip } = useTranslation('Send full message to notepad', {
     context: 'message.quote_to_notepad'
   })
 
-  // Minimal selection detection - don't interfere with native behavior
-  useEffect(() => {
-    const handleSelectionChange = () => {
-      const selection = window.getSelection()
-      const text = selection?.toString().trim() || ''
-      
-      if (text) {
-        setSelectedText(text)
-        setShowQuoteButton(true)
-      } else {
-        setSelectedText('')
-        setShowQuoteButton(false)
-      }
-    }
-
-    document.addEventListener('selectionchange', handleSelectionChange)
-    return () => document.removeEventListener('selectionchange', handleSelectionChange)
-  }, [])
-
-  // Handle quote - don't clear native selection
-  const handleQuoteText = () => {
-    if (selectedText && onQuoteToNotepad) {
-      onQuoteToNotepad(selectedText)
-      setSelectedText('')
-      setShowQuoteButton(false)
-      // Don't clear selection - let user copy normally
-    }
-  }
-
-  // Handle feedback submission - uses Convex mutation directly (matches codebase pattern)
-  const handleRateFeedback = async (rating: number, feedbackText?: string) => {
-    if (isSubmittingFeedback) return
-    
-    setIsSubmittingFeedback(true)
-    try {
-      const currentUserId = await getCurrentUserId()
-      
-      // Call Convex mutation directly (pattern matches useWidgetContent, useCrystalMutations, etc.)
-      const feedbackId = await createContentFeedback({
-        entityType: 'chat_message',
-        entityId: message.id,
-        rating,
-        feedbackText,
-        userId: currentUserId,
-        contentSnapshot: {
-          messageContent: message.content.substring(0, 500), // First 500 chars
-          conversationId: conversationId || message.sessionId,
-          messageRole: 'assistant',
-        },
-        page: window.location.pathname,
-        userAgent: navigator.userAgent,
-      })
-      
-      setMessageRating(rating)
-      console.log('[MessageFeedback] Feedback submitted successfully:', feedbackId)
-    } catch (error) {
-      console.error('[MessageFeedback] Error submitting feedback:', error)
-    } finally {
-      setIsSubmittingFeedback(false)
-    }
-  }
-
   return (
     <div className={`w-full ${className}`}>
-      {/* Quote button - simple and centered */}
-      {showQuoteButton && selectedText && notepadOpen && onQuoteToNotepad && (
-        <div 
-          className="fixed z-50 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-primary text-primary-foreground p-2 rounded-lg shadow-lg"
-        >
-          <button
-            onClick={handleQuoteText}
-            className="hover:bg-primary/90 transition-all duration-200 transform hover:scale-105"
-            title={quoteTooltip}
-          >
-            <Quote className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
-      {/* Message container - keeping original styling */}
+      {/* Message container */}
       <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-1 group`}>
         <div className={`max-w-full sm:max-w-[95%] w-full`}>
           <div
@@ -161,18 +70,36 @@ export function MessageBubble({
               }
               relative w-full min-w-0
             `}
-            style={{ userSelect: 'text' }}
           >
             {/* Thinking indicator for typing messages */}
             {message.status === 'typing' ? (
-              <HorizontalProgressiveThinking 
-                searchStatus={message.searchStatus}
-                statusHistory={message.statusHistory}
-              />
+              // Crossfade between thinking indicator and streaming content
+              <div className="relative min-h-[60px]">
+                {/* Thinking indicator - fades out when content arrives */}
+                <div 
+                  className="absolute inset-0 flex items-center transition-opacity duration-300 ease-out"
+                  style={{ 
+                    opacity: message.content ? 0 : 1,
+                    pointerEvents: message.content ? 'none' : 'auto'
+                  }}
+                >
+                  <HorizontalProgressiveThinking />
+                </div>
+                
+                {/* Streaming content - fades in as it arrives */}
+                {message.content && (
+                  <div 
+                    className={`transition-opacity duration-300 ease-out ${isUser ? 'text-primary-foreground dark:text-black' : 'text-foreground'}`}
+                    style={{ opacity: 1 }}
+                  >
+                    <MarkdownRenderer content={message.content} />
+                  </div>
+                )}
+              </div>
             ) : (
               <>
                 {/* Message content */}
-                <div className={`${isUser ? 'text-primary-foreground dark:text-black' : 'text-foreground'}`} style={{ userSelect: 'text' }}>
+                <div className={`${isUser ? 'text-primary-foreground dark:text-black' : 'text-foreground'}`}>
                   <MarkdownRenderer content={message.content} />
                 </div>
 
@@ -197,8 +124,8 @@ export function MessageBubble({
         </div>
       </div>
       
-      {/* Action buttons below message - ChatGPT style */}
-      <div className={`flex items-center gap-1 mt-2 opacity-100 transition-opacity ${isUser ? 'justify-end' : 'justify-start'}`} style={{ userSelect: 'none' }}>
+      {/* Action buttons below message */}
+      <div className={`flex items-center gap-1 mt-2 opacity-100 transition-opacity ${isUser ? 'justify-end' : 'justify-start'}`}>
         <CopyButton 
           text={message.content}
           className="!w-8 !h-8 !p-2 hover:bg-background/80 rounded flex items-center justify-center"

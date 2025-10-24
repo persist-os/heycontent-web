@@ -42,7 +42,21 @@ export const getConversation = query({
       return null;
     }
 
-    return conversation;
+    // Fetch messages from NEW messages table (not legacy array)
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_conversation", (q) => q.eq("conversationId", args.conversationId))
+      .order("asc")
+      .collect();
+
+    // Filter out soft-deleted messages
+    const activeMessages = messages.filter(msg => !msg.deletedAt);
+
+    // Return conversation with messages from new table
+    return {
+      ...conversation,
+      messages: activeMessages
+    };
   },
 });
 

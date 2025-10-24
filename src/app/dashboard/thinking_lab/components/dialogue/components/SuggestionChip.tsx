@@ -27,9 +27,23 @@ export const SuggestionChip = ({ suggestion, onClick, onInputPopulate }: Suggest
     : cleanSuggestionText((suggestion as SuggestedAction).description);
   
   const [isHovered, setIsHovered] = React.useState(false);
+  const [isMounted, setIsMounted] = React.useState(false);
+  
+  // Trigger fade+slide animation immediately on mount
+  React.useEffect(() => {
+    requestAnimationFrame(() => {
+      setIsMounted(true);
+    });
+  }, []);
   
   return (
-    <div className="group relative inline-block max-w-full">
+    <div 
+      className="group relative inline-block max-w-full transition-all duration-300 ease-out"
+      style={{
+        opacity: isMounted ? 1 : 0,
+        transform: isMounted ? 'translateY(0)' : 'translateY(10px)'
+      }}
+    >
       <button
         onClick={onClick}
         onMouseEnter={() => setIsHovered(true)}

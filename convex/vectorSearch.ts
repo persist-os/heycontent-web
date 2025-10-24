@@ -2,6 +2,7 @@
 import { action, query, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { contentTypesArrayValidator } from "./types/embeddings";
 
 /**
  * Vector Search System
@@ -27,11 +28,7 @@ export const hybridSearchContentWithQuotas = action({
     userId: v.string(),
     query: v.string(),
     limit: v.optional(v.number()),
-    contentTypes: v.optional(v.array(v.union(
-      v.literal("conversation"),
-      v.literal("note"),
-      v.literal("crystal"),
-    ))),
+    contentTypes: contentTypesArrayValidator,
     minSimilarity: v.optional(v.number()),
   },
   returns: v.array(v.object({
@@ -556,11 +553,7 @@ export const hybridSearchContentWithQuotas = action({
 export const getUserEmbeddings = internalQuery({
   args: {
     userId: v.string(),
-    contentTypes: v.optional(v.array(v.union(
-      v.literal("conversation"),
-      v.literal("note"),
-      v.literal("crystal"),
-    ))),
+    contentTypes: contentTypesArrayValidator,
   },
   handler: async (ctx, args) => {
     console.log('🔍 [GET USER EMBEDDINGS] Starting query for user:', args.userId);

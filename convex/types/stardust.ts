@@ -20,105 +20,156 @@ import { v } from "convex/values";
 
 // Flexible lifecycle stage - LLM can generate any stage name
 // Common stages: embryo, juvenile, mature, ghost, transcendent, archived
-export const stardustLifecycleStageValidator = v.string();
+export const stardustLifecycleStageValidator = v.optional(v.any());
 
 // Flexible string validators - no hardcoded categories
-export const stardustEvidenceStrengthValidator = v.string();
-export const stardustDomainValidator = v.string();
+export const stardustEvidenceStrengthValidator = v.optional(v.any());
+export const stardustDomainValidator = v.optional(v.any());
 
-export const stardustValidator = v.object({
+// Schema fields (unwrapped for defineTable)
+export const stardustSchemaFields = {
   // Core identification
   userId: v.string(),
-  stardust_id: v.string(),
   
   // Stardust definition
-  name: v.string(),
-  description: v.string(),
-  keywords: v.array(v.string()),
-  dimension: v.string(),
+  name: v.optional(v.any()),
+  description: v.optional(v.any()),
+  keywords: v.optional(v.any()),
+  dimension: v.optional(v.any()),
   
-  // Detection metadata
-  detected_at: v.number(),
-  detection_method: v.string(),
-  confidence: v.number(),
-  evidence_strength: v.string(),
+  // Detection metadata (legacy compatible)
+  detectedAt: v.optional(v.any()),  // Legacy: detected_at
+  detected_at: v.optional(v.any()),
+  detectionMethod: v.optional(v.any()),  // Legacy: detection_method
+  detection_method: v.optional(v.any()),
+  confidence: v.optional(v.any()),
+  evidenceStrength: v.optional(v.any()),  // Legacy: evidence_strength
+  evidence_strength: v.optional(v.any()),
   
-  // Source tracking
-  source_shard_ids: v.array(v.string()),
-  shard_count: v.number(),
-  related_note_ids: v.array(v.string()),
-  related_conversation_ids: v.array(v.string()),
+  // Source tracking (legacy compatible)
+  sourceShardIds: v.optional(v.any()),  // Legacy: source_shard_ids
+  source_shard_ids: v.optional(v.any()),
+  shardCount: v.optional(v.any()),  // Legacy: shard_count
+  shard_count: v.optional(v.any()),
+  relatedNoteIds: v.optional(v.any()),  // Legacy: related_note_ids
+  related_note_ids: v.optional(v.any()),
+  relatedConversationIds: v.optional(v.any()),  // Legacy: related_conversation_ids
+  related_conversation_ids: v.optional(v.any()),
   
   // Lifecycle stage
-  lifecycleStage: stardustLifecycleStageValidator,
-  health: v.number(),
-  energy: v.number(),
+  lifecycleStage: v.optional(v.any()),
+  health: v.optional(v.any()),
+  energy: v.optional(v.any()),
   
-  // Project suggestions
-  suggested_project_name: v.string(),
-  suggested_project_description: v.string(),
-  suggested_domain: v.string(),
-  suggested_complexity: v.number(),
-  suggested_time_horizon: v.string(),
+  // Project suggestions (legacy compatible)
+  suggestedProjectName: v.optional(v.any()),  // Legacy: suggested_project_name
+  suggested_project_name: v.optional(v.any()),
+  suggestedProjectDescription: v.optional(v.any()),  // Legacy: suggested_project_description
+  suggested_project_description: v.optional(v.any()),
+  suggestedDomain: v.optional(v.any()),  // Legacy: suggested_domain
+  suggested_domain: v.optional(v.any()),
+  suggestedComplexity: v.optional(v.any()),  // Legacy: suggested_complexity
+  suggested_complexity: v.optional(v.any()),
+  suggestedTimeHorizon: v.optional(v.any()),  // Legacy: suggested_time_horizon
+  suggested_time_horizon: v.optional(v.any()),
   
-  // Promotion tracking
-  promoted: v.boolean(),
-  promoted_at: v.optional(v.number()),
-  promoted_to_project_id: v.optional(v.id("projects")),
-  confidence_at_promotion: v.optional(v.number()),
+  // Promotion tracking (legacy compatible)
+  promoted: v.optional(v.any()),
+  promotedAt: v.optional(v.any()),  // Legacy: promoted_at
+  promoted_at: v.optional(v.any()),
+  promotedToProjectId: v.optional(v.any()),  // Legacy: promoted_to_project_id
+  promoted_to_project_id: v.optional(v.any()),
+  confidenceAtPromotion: v.optional(v.any()),  // Legacy: confidence_at_promotion
+  confidence_at_promotion: v.optional(v.any()),
   
   // Temporal metadata
-  createdAt: v.number(),
-  updatedAt: v.number(),
-  lastEvolution: v.optional(v.number()),
+  createdAt: v.optional(v.any()),
+  updatedAt: v.optional(v.any()),
+  lastEvolution: v.optional(v.any()),
   
-  // Symbiotic relationships
-  related_crystal_ids: v.array(v.string()),
-  symbiotic_pairs: v.array(v.string()),
-});
+  // Symbiotic relationships (legacy compatible)
+  relatedCrystalIds: v.optional(v.any()),  // Legacy: related_crystal_ids
+  related_crystal_ids: v.optional(v.any()),
+  symbioticPairs: v.optional(v.any()),  // Legacy: symbiotic_pairs
+  symbiotic_pairs: v.optional(v.any()),
+  
+  // Legacy fields
+  stardustId: v.optional(v.any()),  // Legacy stardust_id field
+};
+
+// Wrapped validator for mutations/queries
+export const stardustValidator = v.object(stardustSchemaFields);
 
 export const stardustCreateValidator = v.object({
   userId: v.string(),
-  stardust_id: v.string(),
-  name: v.string(),
-  description: v.string(),
-  confidence: v.number(),
-  source_shard_ids: v.array(v.string()),
-  keywords: v.array(v.string()),
-  dimension: v.string(),
-  suggested_project_name: v.string(),
-  suggested_project_description: v.string(),
-  suggested_domain: v.string(),
-  suggested_complexity: v.number(),
-  suggested_time_horizon: v.string(),
-  related_note_ids: v.array(v.string()),
-  related_conversation_ids: v.array(v.string()),
-  shard_count: v.number(),
-  evidence_strength: v.string(),
-  lifecycleStage: v.optional(stardustLifecycleStageValidator),
-  health: v.optional(v.number()),
-  energy: v.optional(v.number()),
-  detection_method: v.optional(v.string()),
+  name: v.optional(v.any()),
+  description: v.optional(v.any()),
+  confidence: v.optional(v.any()),
+  // Legacy compatible source tracking
+  sourceShardIds: v.optional(v.any()),
+  source_shard_ids: v.optional(v.any()),
+  keywords: v.optional(v.any()),
+  dimension: v.optional(v.any()),
+  // Legacy compatible project suggestions
+  suggestedProjectName: v.optional(v.any()),
+  suggested_project_name: v.optional(v.any()),
+  suggestedProjectDescription: v.optional(v.any()),
+  suggested_project_description: v.optional(v.any()),
+  suggestedDomain: v.optional(v.any()),
+  suggested_domain: v.optional(v.any()),
+  suggestedComplexity: v.optional(v.any()),
+  suggested_complexity: v.optional(v.any()),
+  suggestedTimeHorizon: v.optional(v.any()),
+  suggested_time_horizon: v.optional(v.any()),
+  // Legacy compatible related IDs
+  relatedNoteIds: v.optional(v.any()),
+  related_note_ids: v.optional(v.any()),
+  relatedConversationIds: v.optional(v.any()),
+  related_conversation_ids: v.optional(v.any()),
+  shardCount: v.optional(v.any()),
+  shard_count: v.optional(v.any()),
+  evidenceStrength: v.optional(v.any()),
+  evidence_strength: v.optional(v.any()),
+  lifecycleStage: v.optional(v.any()),
+  health: v.optional(v.any()),
+  energy: v.optional(v.any()),
+  detectionMethod: v.optional(v.any()),
+  detection_method: v.optional(v.any()),
+  // Legacy fields
+  stardustId: v.optional(v.any()),
 });
 
 export const stardustUpdateValidator = v.object({
-  name: v.optional(v.string()),
-  description: v.optional(v.string()),
-  confidence: v.optional(v.number()),
-  source_shard_ids: v.optional(v.array(v.string())),
-  keywords: v.optional(v.array(v.string())),
-  shard_count: v.optional(v.number()),
-  evidence_strength: v.optional(v.string()),
-  suggested_project_name: v.optional(v.string()),
-  suggested_project_description: v.optional(v.string()),
-  suggested_domain: v.optional(v.string()),
-  suggested_complexity: v.optional(v.number()),
-  suggested_time_horizon: v.optional(v.string()),
-  lifecycleStage: v.optional(stardustLifecycleStageValidator),
-  health: v.optional(v.number()),
-  energy: v.optional(v.number()),
-  related_crystal_ids: v.optional(v.array(v.string())),
-  symbiotic_pairs: v.optional(v.array(v.string())),
+  name: v.optional(v.any()),
+  description: v.optional(v.any()),
+  confidence: v.optional(v.any()),
+  // Legacy compatible source tracking
+  sourceShardIds: v.optional(v.any()),
+  source_shard_ids: v.optional(v.any()),
+  keywords: v.optional(v.any()),
+  shardCount: v.optional(v.any()),
+  shard_count: v.optional(v.any()),
+  evidenceStrength: v.optional(v.any()),
+  evidence_strength: v.optional(v.any()),
+  // Legacy compatible project suggestions
+  suggestedProjectName: v.optional(v.any()),
+  suggested_project_name: v.optional(v.any()),
+  suggestedProjectDescription: v.optional(v.any()),
+  suggested_project_description: v.optional(v.any()),
+  suggestedDomain: v.optional(v.any()),
+  suggested_domain: v.optional(v.any()),
+  suggestedComplexity: v.optional(v.any()),
+  suggested_complexity: v.optional(v.any()),
+  suggestedTimeHorizon: v.optional(v.any()),
+  suggested_time_horizon: v.optional(v.any()),
+  lifecycleStage: v.optional(v.any()),
+  health: v.optional(v.any()),
+  energy: v.optional(v.any()),
+  // Legacy compatible symbiotic relationships
+  relatedCrystalIds: v.optional(v.any()),
+  related_crystal_ids: v.optional(v.any()),
+  symbioticPairs: v.optional(v.any()),
+  symbiotic_pairs: v.optional(v.any()),
 });
 
 // ============================================================================
@@ -127,87 +178,138 @@ export const stardustUpdateValidator = v.object({
 
 // Flexible string - LLM can generate any stage name
 // Common stages: "embryo", "juvenile", "mature", "ghost", "transcendent", "archived"
-export type StardustLifecycleStage = string;
+export type StardustLifecycleStage = any;
 
 // Flexible string types - no hardcoded categories
-export type StardustEvidenceStrength = string;
-export type StardustDomain = string;
+export type StardustEvidenceStrength = any;
+export type StardustDomain = any;
 
 export interface Stardust {
   userId: string;
-  stardust_id: string;
-  name: string;
-  description: string;
-  keywords: string[];
-  dimension: string;
-  detected_at: number;
-  detection_method: string;
-  confidence: number;
-  evidence_strength: StardustEvidenceStrength;
-  source_shard_ids: string[];
-  shard_count: number;
-  related_note_ids: string[];
-  related_conversation_ids: string[];
-  lifecycleStage: StardustLifecycleStage;
-  health: number;
-  energy: number;
-  suggested_project_name: string;
-  suggested_project_description: string;
-  suggested_domain: string;
-  suggested_complexity: number;
-  suggested_time_horizon: string;
-  promoted: boolean;
-  promoted_at?: number;
-  promoted_to_project_id?: string;
-  confidence_at_promotion?: number;
-  createdAt: number;
-  updatedAt: number;
-  lastEvolution?: number;
-  related_crystal_ids: string[];
-  symbiotic_pairs: string[];
+  name?: any;
+  description?: any;
+  keywords?: any;
+  dimension?: any;
+  // Legacy compatible detection metadata
+  detectedAt?: any;
+  detected_at?: any;
+  detectionMethod?: any;
+  detection_method?: any;
+  confidence?: any;
+  evidenceStrength?: any;
+  evidence_strength?: any;
+  // Legacy compatible source tracking
+  sourceShardIds?: any;
+  source_shard_ids?: any;
+  shardCount?: any;
+  shard_count?: any;
+  relatedNoteIds?: any;
+  related_note_ids?: any;
+  relatedConversationIds?: any;
+  related_conversation_ids?: any;
+  lifecycleStage?: any;
+  health?: any;
+  energy?: any;
+  // Legacy compatible project suggestions
+  suggestedProjectName?: any;
+  suggested_project_name?: any;
+  suggestedProjectDescription?: any;
+  suggested_project_description?: any;
+  suggestedDomain?: any;
+  suggested_domain?: any;
+  suggestedComplexity?: any;
+  suggested_complexity?: any;
+  suggestedTimeHorizon?: any;
+  suggested_time_horizon?: any;
+  promoted?: any;
+  // Legacy compatible promotion tracking
+  promotedAt?: any;
+  promoted_at?: any;
+  promotedToProjectId?: any;
+  promoted_to_project_id?: any;
+  confidenceAtPromotion?: any;
+  confidence_at_promotion?: any;
+  createdAt?: any;
+  updatedAt?: any;
+  lastEvolution?: any;
+  // Legacy compatible symbiotic relationships
+  relatedCrystalIds?: any;
+  related_crystal_ids?: any;
+  symbioticPairs?: any;
+  symbiotic_pairs?: any;
+  // Legacy fields
+  stardustId?: any;
 }
 
 export interface StardustCreateInput {
   userId: string;
-  stardust_id: string;
-  name: string;
-  description: string;
-  confidence: number;
-  source_shard_ids: string[];
-  keywords: string[];
-  dimension: string;
-  suggested_project_name: string;
-  suggested_project_description: string;
-  suggested_domain: StardustDomain;
-  suggested_complexity: number;
-  suggested_time_horizon: string;
-  related_note_ids: string[];
-  related_conversation_ids: string[];
-  shard_count: number;
-  evidence_strength: StardustEvidenceStrength;
-  lifecycleStage?: StardustLifecycleStage;
-  health?: number;
-  energy?: number;
-  detection_method?: string;
+  name?: any;
+  description?: any;
+  confidence?: any;
+  // Legacy compatible source tracking
+  sourceShardIds?: any;
+  source_shard_ids?: any;
+  keywords?: any;
+  dimension?: any;
+  // Legacy compatible project suggestions
+  suggestedProjectName?: any;
+  suggested_project_name?: any;
+  suggestedProjectDescription?: any;
+  suggested_project_description?: any;
+  suggestedDomain?: any;
+  suggested_domain?: any;
+  suggestedComplexity?: any;
+  suggested_complexity?: any;
+  suggestedTimeHorizon?: any;
+  suggested_time_horizon?: any;
+  // Legacy compatible related IDs
+  relatedNoteIds?: any;
+  related_note_ids?: any;
+  relatedConversationIds?: any;
+  related_conversation_ids?: any;
+  shardCount?: any;
+  shard_count?: any;
+  evidenceStrength?: any;
+  evidence_strength?: any;
+  lifecycleStage?: any;
+  health?: any;
+  energy?: any;
+  detectionMethod?: any;
+  detection_method?: any;
+  // Legacy fields
+  stardustId?: any;
 }
 
 export interface StardustUpdateInput {
-  name?: string;
-  description?: string;
-  confidence?: number;
-  source_shard_ids?: string[];
-  keywords?: string[];
-  shard_count?: number;
-  evidence_strength?: StardustEvidenceStrength;
-  suggested_project_name?: string;
-  suggested_project_description?: string;
-  suggested_domain?: StardustDomain;
-  suggested_complexity?: number;
-  suggested_time_horizon?: string;
-  lifecycleStage?: StardustLifecycleStage;
-  health?: number;
-  energy?: number;
-  related_crystal_ids?: string[];
-  symbiotic_pairs?: string[];
+  name?: any;
+  description?: any;
+  confidence?: any;
+  // Legacy compatible source tracking
+  sourceShardIds?: any;
+  source_shard_ids?: any;
+  keywords?: any;
+  shardCount?: any;
+  shard_count?: any;
+  evidenceStrength?: any;
+  evidence_strength?: any;
+  // Legacy compatible project suggestions
+  suggestedProjectName?: any;
+  suggested_project_name?: any;
+  suggestedProjectDescription?: any;
+  suggested_project_description?: any;
+  suggestedDomain?: any;
+  suggested_domain?: any;
+  suggestedComplexity?: any;
+  suggested_complexity?: any;
+  suggestedTimeHorizon?: any;
+  suggested_time_horizon?: any;
+  lifecycleStage?: any;
+  health?: any;
+  energy?: any;
+  // Legacy compatible symbiotic relationships
+  relatedCrystalIds?: any;
+  related_crystal_ids?: any;
+  symbioticPairs?: any;
+  symbiotic_pairs?: any;
 }
 

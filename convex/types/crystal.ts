@@ -3,161 +3,18 @@
  * 
  * CRITICAL: These types MUST match backend/app/models/crystal_models.py exactly
  * Any changes here should be mirrored in Python and vice versa.
+ * 
+ * For shard types, see types/shard.ts
+ * 
+ * VALIDATOR PATTERN:
+ * - AI-GENERATED FIELDS: Flexible validators (v.optional(v.string()))
+ *   All crystal content fields use flexible string validators to prevent AI save failures
+ * 
+ * - PROGRAMMATIC FIELDS: Strict validators only for lifecycle management
+ *   Examples: evolution_change_type (set by backend intelligence system)
  */
 
 import { v } from "convex/values";
-
-// ============================================================================
-// CRYSTAL SHARD VALIDATORS
-// ============================================================================
-
-export const crystalShardValidator = v.object({
-  // Core identification
-  userId: v.string(),
-  
-  // Source metadata
-  source: v.optional(v.string()),
-  sourceIds: v.optional(v.array(v.string())),
-  source_type: v.optional(v.union(
-    v.literal("conversation"),
-    v.literal("note"),
-    v.literal("document"),
-    v.literal("behavior_observation")
-  )),
-  extraction_timestamp: v.optional(v.number()),
-  extraction_method: v.optional(v.union(
-    v.literal("direct_quote"),
-    v.literal("behavioral_inference"),
-    v.literal("pattern_synthesis")
-  )),
-  
-  // Project & widget context
-  projectId: v.optional(v.id("projects")),
-  widgetId: v.optional(v.string()),
-  conversationId: v.optional(v.string()),
-  
-  // Core revelation
-  dimension: v.optional(v.string()),
-  exact_quote: v.optional(v.string()),
-  what_it_reveals: v.optional(v.string()),
-  situation_context: v.optional(v.string()),
-  why_significant: v.optional(v.string()),
-  
-  // Quality indicators
-  confidence_level: v.optional(v.union(
-    v.literal("low"),
-    v.literal("medium"),
-    v.literal("high")
-  )),
-  linguistic_intensity: v.optional(v.union(
-    v.literal("weak"),
-    v.literal("moderate"),
-    v.literal("strong")
-  )),
-  emotional_weight: v.optional(v.union(
-    v.literal("neutral"),
-    v.literal("mild"),
-    v.literal("strong")
-  )),
-  specificity: v.optional(v.union(
-    v.literal("vague"),
-    v.literal("specific"),
-    v.literal("very_specific")
-  )),
-  
-  // Pattern connections
-  connects_to: v.optional(v.array(v.string())),
-  contradicts: v.optional(v.array(v.string())),
-  reinforces: v.optional(v.array(v.string())),
-  
-  // Temporal data
-  temporal_context: v.optional(v.string()),
-  recency_weight: v.optional(v.union(
-    v.literal("recent"),
-    v.literal("moderate"),
-    v.literal("old")
-  )),
-  
-  // Metadata
-  createdAt: v.number(),
-  updatedAt: v.number(),
-  last_referenced: v.optional(v.number()),
-  reference_count: v.optional(v.number()),
-  
-  // Shard lifecycle tracking
-  shard_status: v.optional(v.union(
-    v.literal("unprocessed"),
-    v.literal("reserved"),
-    v.literal("used_for_crystal"),
-    v.literal("archived")
-  )),
-  used_in_crystal_id: v.optional(v.string()),
-  date_consumed: v.optional(v.number()),
-  reserved_by_formation: v.optional(v.string()),
-  reserved_at: v.optional(v.number()),
-});
-
-export const crystalShardUpdateValidator = v.object({
-  source: v.optional(v.string()),
-  sourceIds: v.optional(v.array(v.string())),
-  source_type: v.optional(v.union(
-    v.literal("conversation"),
-    v.literal("note"),
-    v.literal("document"),
-    v.literal("behavior_observation")
-  )),
-  extraction_timestamp: v.optional(v.number()),
-  extraction_method: v.optional(v.union(
-    v.literal("direct_quote"),
-    v.literal("behavioral_inference"),
-    v.literal("pattern_synthesis")
-  )),
-  dimension: v.optional(v.string()),
-  exact_quote: v.optional(v.string()),
-  what_it_reveals: v.optional(v.string()),
-  situation_context: v.optional(v.string()),
-  why_significant: v.optional(v.string()),
-  confidence_level: v.optional(v.union(
-    v.literal("low"),
-    v.literal("medium"),
-    v.literal("high")
-  )),
-  linguistic_intensity: v.optional(v.union(
-    v.literal("weak"),
-    v.literal("moderate"),
-    v.literal("strong")
-  )),
-  emotional_weight: v.optional(v.union(
-    v.literal("neutral"),
-    v.literal("mild"),
-    v.literal("strong")
-  )),
-  specificity: v.optional(v.union(
-    v.literal("vague"),
-    v.literal("specific"),
-    v.literal("very_specific")
-  )),
-  connects_to: v.optional(v.array(v.string())),
-  contradicts: v.optional(v.array(v.string())),
-  reinforces: v.optional(v.array(v.string())),
-  temporal_context: v.optional(v.string()),
-  recency_weight: v.optional(v.union(
-    v.literal("recent"),
-    v.literal("moderate"),
-    v.literal("old")
-  )),
-  updatedAt: v.optional(v.number()),
-  last_referenced: v.optional(v.number()),
-  reference_count: v.optional(v.union(v.number(), v.literal("INCREMENT"))),
-  shard_status: v.optional(v.union(
-    v.literal("unprocessed"),
-    v.literal("reserved"),
-    v.literal("used_for_crystal"),
-    v.literal("archived")
-  )),
-  used_in_crystal_id: v.optional(v.string()),
-  date_consumed: v.optional(v.number()),
-});
 
 // ============================================================================
 // CRYSTAL VALIDATORS
@@ -177,6 +34,7 @@ export const consistencyRatingValidator = v.string();
 export const stabilityTrendValidator = v.string();
 export const reviewPriorityValidator = v.string();
 
+// PROGRAMMATICALLY SET: Strict validator safe (set by intelligence system, not AI)
 export const evolutionChangeTypeValidator = v.union(
   v.literal("strengthened"),
   v.literal("weakened"),
@@ -186,7 +44,8 @@ export const evolutionChangeTypeValidator = v.union(
   v.literal("merged_at_limit")
 );
 
-export const crystalValidator = v.object({
+// Schema fields (unwrapped for defineTable)
+export const crystalSchemaFields = {
   // Core identification
   userId: v.string(),
   crystal_id: v.string(),
@@ -217,8 +76,9 @@ export const crystalValidator = v.object({
   observation_count: v.optional(v.number()),
   time_span_days: v.optional(v.number()),
   
-  // Lifecycle management (NEW)
+  // Lifecycle management
   lifecycleStage: v.optional(lifecycleStageValidator),
+  lifecycle_stage: v.optional(lifecycleStageValidator),
   health: v.optional(v.number()),
   energy: v.optional(v.number()),
   lastEvolution: v.optional(v.number()),
@@ -263,7 +123,10 @@ export const crystalValidator = v.object({
   // Archival fields
   archived: v.optional(v.boolean()),
   archived_at: v.optional(v.number()),
-});
+};
+
+// Wrapped validator for mutations/queries
+export const crystalValidator = v.object(crystalSchemaFields);
 
 export const crystalUpdateValidator = v.object({
   name: v.optional(v.string()),
@@ -334,43 +197,6 @@ export type EvolutionChangeType =
   | "contradicted"
   | "created"
   | "merged_at_limit";
-
-export type ShardStatus = "unprocessed" | "reserved" | "used_for_crystal" | "archived";
-
-export interface CrystalShard {
-  userId: string;
-  source?: string;
-  sourceIds?: string[];
-  source_type?: "conversation" | "note" | "document" | "behavior_observation";
-  extraction_timestamp?: number;
-  extraction_method?: "direct_quote" | "behavioral_inference" | "pattern_synthesis";
-  projectId?: string;
-  widgetId?: string;
-  conversationId?: string;
-  dimension?: string;
-  exact_quote?: string;
-  what_it_reveals?: string;
-  situation_context?: string;
-  why_significant?: string;
-  confidence_level?: "low" | "medium" | "high";
-  linguistic_intensity?: "weak" | "moderate" | "strong";
-  emotional_weight?: "neutral" | "mild" | "strong";
-  specificity?: "vague" | "specific" | "very_specific";
-  connects_to?: string[];
-  contradicts?: string[];
-  reinforces?: string[];
-  temporal_context?: string;
-  recency_weight?: "recent" | "moderate" | "old";
-  createdAt: number;
-  updatedAt: number;
-  last_referenced?: number;
-  reference_count?: number;
-  shard_status?: ShardStatus;
-  used_in_crystal_id?: string;
-  date_consumed?: number;
-  reserved_by_formation?: string;
-  reserved_at?: number;
-}
 
 export interface EvolutionHistoryEntry {
   timestamp: number;

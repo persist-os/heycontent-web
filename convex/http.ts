@@ -148,6 +148,44 @@ app.post("/api/users/:id/add_message_to_conversation", async (c) => {
   return c.json(result);
 });
 
+// Update conversation title (async generation in background)
+app.post("/api/users/:id/update_conversation_title", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { conversationId, title } = await c.req.json();
+  
+  const result = await ctx.runMutation(api.chatMutations.updateConversationTitle, {
+    userId,
+    conversationId,
+    title
+  });
+  return c.json(result);
+});
+
+// Update conversation suggestions (async generation)
+app.post("/api/chat/updateSuggestions", async (c) => {
+  const ctx = c.env;
+  const { conversationId, suggestions } = await c.req.json();
+  
+  const result = await ctx.runMutation(api.chatMutations.updateConversationSuggestions, {
+    conversationId,
+    suggestions
+  });
+  return c.json(result);
+});
+
+// Update message suggestions (async generation)
+app.post("/api/chat/updateMessageSuggestions", async (c) => {
+  const ctx = c.env;
+  const { messageId, suggestions } = await c.req.json();
+  
+  const result = await ctx.runMutation(api.chatMutations.updateMessageSuggestions, {
+    messageId,
+    suggestions
+  });
+  return c.json(result);
+});
+
 // Batch fetch multiple conversations (for context enrichment)
 app.post("/api/chat/getMultiple", async (c) => {
   const ctx = c.env;
@@ -2051,7 +2089,7 @@ app.post("/api/crystal/query", async (c) => {
   const requestBody = await c.req.json();
   
   try {
-    const result = await ctx.runQuery(api.crystalQueries.getCrystalData, requestBody);
+    const result = await ctx.runQuery(api.crystalQueries.queryCrystal, requestBody);
     return c.json({ success: true, data: result });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
@@ -2095,20 +2133,104 @@ app.post("/api/crystal/mutate", async (c) => {
   const requestBody = await c.req.json();
   
   try {
-    const result = await ctx.runMutation(api.crystalMutations.mutateCrystalData, requestBody);
+    const result = await ctx.runMutation(api.crystalMutations.mutateCrystal, requestBody);
     return c.json({ success: true, data: result });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   }
 });
 
-// Batch mutation endpoint for efficient bulk operations
+// Batch mutation endpoint for efficient bulk crystal operations
 app.post("/api/crystal/batch-mutate", async (c) => {
   const ctx = c.env;
   const requestBody = await c.req.json();
   
   try {
-    const result = await ctx.runMutation(api.crystalMutations.batchMutateCrystalData, requestBody);
+    const result = await ctx.runMutation(api.crystalMutations.batchMutateCrystals, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+/**
+ * Get crystals by user ID
+ * Parallel to /api/shard/getByUser endpoint
+ */
+app.post("/api/crystal/getByUser", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runQuery(api.crystalQueries.getCrystalsByUser, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[GET CRYSTALS BY USER] Error fetching crystals:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+/**
+ * Get crystals by IDs
+ * Parallel to /api/shard/getByIds endpoint
+ */
+app.post("/api/crystal/getByIds", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runQuery(internal.crystalQueries.getCrystalsByIds, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[GET CRYSTALS BY IDS] Error fetching crystals:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+/**
+ * Get crystals by widget ID
+ * Parallel to /api/shard/getByWidgetId endpoint
+ */
+app.post("/api/crystal/getByWidgetId", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runQuery(api.crystalQueries.getCrystalsByWidgetId, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[GET CRYSTALS BY WIDGET] Error fetching crystals:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// ===== SHARD OPERATIONS =====
+// Separate endpoints for shard-specific operations
+
+/**
+ * Batch mutation endpoint for efficient bulk shard operations
+ */
+app.post("/api/shard/batch-mutate", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.shardMutations.batchMutateShards, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+/**
+ * Single shard mutation endpoint (create, update, or delete)
+ */
+app.post("/api/shard/mutate", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.shardMutations.mutateShard, requestBody);
     return c.json({ success: true, data: result });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
@@ -2122,55 +2244,6 @@ app.post("/api/crystal/persona", async (c) => {
   
   try {
     const result = await ctx.runQuery(api.crystalQueries.getPersonaData, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
-// ===== ATOMIC CRYSTAL OPERATIONS =====
-// These endpoints ensure crystal creation and shard consumption happen atomically
-
-/**
- * Atomically create a crystal and mark its shards as consumed.
- * This is the RECOMMENDED way to create crystals - it ensures consistency.
- */
-app.post("/api/crystal/atomic-create", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.crystalAtomicMutations.createCrystalWithShardConsumption, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
-/**
- * Atomically update a crystal and adjust shard associations.
- */
-app.post("/api/crystal/atomic-update", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.crystalAtomicMutations.updateCrystalWithShardAdjustment, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
-/**
- * Delete a crystal and optionally release its shards.
- */
-app.post("/api/crystal/atomic-delete", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.crystalAtomicMutations.deleteCrystalAndReleaseShards, requestBody);
     return c.json({ success: true, data: result });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
@@ -2230,70 +2303,12 @@ app.post("/api/formation/mutate", async (c) => {
 });
 
 
-// === OPTIMIZED VECTOR SEARCH HTTP ROUTES ===
-// Following convex-http-integration.mdc and performance optimization patterns
-
-// Input validation schemas for performance and security
-import { z } from 'zod';
-
-const vectorSearchQuerySchema = z.object({
-  userId: z.string().min(1),
-  operation: z.string().min(1),
-  table: z.string().optional(),
-  
-  // Search parameters
-  query: z.string().optional(),
-  contentTypes: z.array(z.string()).optional(),
-  limit: z.number().int().positive().max(50).optional(),
-  threshold: z.number().min(0).max(1).optional(),
-  
-  // Query optimization
-  useIndex: z.string().optional(),
-  indexFields: z.record(z.any()).optional(),
-  filters: z.record(z.any()).optional(),
-  orderBy: z.enum(["asc", "desc"]).optional(),
-  
-  // Batch operations
-  queries: z.array(z.any()).optional(),
-  maxConcurrent: z.number().int().positive().max(10).optional(),
-  includeGrading: z.boolean().optional(),
-});
-
-const vectorSearchMutationSchema = z.object({
-  operation: z.string().min(1),
-  userId: z.string().min(1),
-  table: z.string().optional(),
-  
-  // Direct operation parameters
-  text: z.string().optional(),
-  contentId: z.string().optional(),
-  contentType: z.string().optional(),
-  embedding: z.array(z.number()).optional(),
-  title: z.string().optional(),
-  content: z.string().optional(),
-  metadata: z.any().optional(),
-  
-  // Batch parameters
-  items: z.array(z.any()).optional(),
-  contentIds: z.array(z.string()).optional(),
-  maxConcurrent: z.number().int().positive().max(10).optional(),
-});
-
 // POST /api/vectorSearch/action - Optimized generic action endpoint (supports ctx.runAction)
 app.post("/api/vectorSearch/action", async (c) => {
   try {
     const requestBody = await c.req.json();
-    const validation = vectorSearchQuerySchema.safeParse(requestBody);
-    
-    if (!validation.success) {
-      return c.json({
-        error: "Invalid vector search action parameters",
-        details: validation.error.flatten()
-      }, 400);
-    }
-
     // Ensure required fields are present
-    const { userId, operation, ...rest } = validation.data;
+    const { userId, operation, ...rest } = requestBody;
     if (!userId || !operation) {
       return c.json({ error: "userId and operation are required" }, 400);
     }
@@ -2319,22 +2334,14 @@ app.post("/api/vectorSearch/action", async (c) => {
 app.post("/api/vectorSearch/mutate", async (c) => {
   try {
     const requestBody = await c.req.json();
-    const validation = vectorSearchMutationSchema.safeParse(requestBody);
-    
-    if (!validation.success) {
-      return c.json({
-        error: "Invalid vector search mutation parameters",
-        details: validation.error.flatten()
-      }, 400);
-    }
 
     // Ensure required fields are present
-    const { userId, operation, ...rest } = validation.data;
+    const { userId, operation, ...rest } = requestBody;
     if (!userId || !operation) {
       return c.json({ error: "userId and operation are required" }, 400);
     }
     
-    const result = await c.env.runMutation(api.vectorSearchMutations.batchMutateVectorSearchData, {
+    const result = await c.env.runMutation(api.vectorSearchMutations.mutateEmbedding, {
       userId,
       operation,
       ...rest
@@ -2857,6 +2864,70 @@ app.post("/api/contextEnrichmentBandit/getDecisionById", async (c) => {
   }
 });
 
+// === CONTEXT USAGE TRACKING ENDPOINTS ===
+// Track which context items powered which outputs (chat, widgets, etc.)
+
+/**
+ * Track context usage for outputs
+ */
+app.post("/api/context/track_usage", async (c) => {
+  const ctx = c.env;
+  try {
+    const args = await c.req.json();
+    const result = await ctx.runMutation(api.contextUsageMutations.trackContextUsage, args);
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ContextUsage] Track usage error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+/**
+ * Update engagement score for a context usage log
+ */
+app.post("/api/context/update_engagement", async (c) => {
+  const ctx = c.env;
+  try {
+    const args = await c.req.json();
+    
+    const result = await ctx.runMutation(api.contextUsageMutations.updateContextUsageEngagement, args);
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ContextUsage] Update engagement error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+/**
+ * Get recent context usage logs (for debugging/verification)
+ */
+app.get("/api/context/recent", async (c) => {
+  const ctx = c.env;
+  try {
+    const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : 20;
+    
+    const result = await ctx.runQuery(api.contextUsageQueries.getRecentContextUsage, { limit });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[ContextUsage] Get recent error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+/**
+ * Count context usage logs
+ */
+app.get("/api/context/count", async (c) => {
+  const ctx = c.env;
+  try {
+    const result = await ctx.runQuery(api.contextUsageQueries.countContextUsageLogs, {});
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[ContextUsage] Count error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 
 // === SHARD LIFECYCLE QUERY ENDPOINTS ===
 // Query endpoints for shard data (read-only operations)
@@ -2887,15 +2958,79 @@ app.post("/api/query/searchShardsForInlineWriting", async (c) => {
   }
 });
 
-app.post("/api/crystals/getShardsByIds", async (c) => {
+app.post("/api/shard/getByUser", async (c) => {
   const ctx = c.env;
   const requestBody = await c.req.json();
   
   try {
-    const result = await ctx.runQuery(api.crystalQueries.getShardsByIds, requestBody);
+    const result = await ctx.runQuery(api.shardQueries.getShardsByUser, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[GET SHARDS BY USER] Error fetching shards:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+/**
+ * Get shards by IDs
+ */
+app.post("/api/shard/getByIds", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runQuery(api.shardQueries.getShardsByIds, requestBody);
     return c.json({ success: true, data: result });
   } catch (error: any) {
     console.error("[GET SHARDS BY IDS] Error fetching shards:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+/**
+ * Get shards by widget ID
+ */
+app.post("/api/shard/getByWidgetId", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runQuery(api.shardQueries.getShardsByWidgetId, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[GET SHARDS BY WIDGET] Error fetching shards:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+/**
+ * Get shards by status
+ */
+app.post("/api/shard/getByStatus", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runQuery(api.shardQueries.getShardsByStatus, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[GET SHARDS BY STATUS] Error fetching shards:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+/**
+ * Get unprocessed shards count
+ */
+app.post("/api/shard/getUnprocessedCount", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runQuery(api.shardQueries.getUnprocessedShardsCount, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[GET UNPROCESSED COUNT] Error counting shards:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -4624,6 +4759,29 @@ app.post("/api/stardust/batchCreate", async (c) => {
     return c.json({ 
       success: false,
       error: error.message || "Failed to batch create stardust"
+    }, 500);
+  }
+});
+
+
+/**
+ * Batch update stardust
+ */
+app.post("/api/stardust/batchUpdate", async (c) => {
+  try {
+    const ctx = c.env;
+    const body = await c.req.json();
+    
+    const stardustIds = await ctx.runMutation(api.stardustMutations.batchUpdateStardust, {
+      updates: body.updates,
+    });
+    
+    return c.json({ success: true, data: stardustIds });
+  } catch (error: any) {
+    console.error("[STARDUST_BATCH_UPDATE] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to batch update stardust"
     }, 500);
   }
 });

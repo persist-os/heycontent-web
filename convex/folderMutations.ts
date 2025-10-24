@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
 
 // Create a new folder
 export const createFolder = mutation({
@@ -138,7 +138,7 @@ export const deleteFolder = mutation({
       
       for (const subfolder of subfolders) {
         // Recursive call to delete subfolder
-        await deleteFolder(ctx, {
+          await ctx.runMutation(internal.folderMutations.deleteFolder, {
           folderId: subfolder._id,
           userId: args.userId,
           moveContentsToParent: false,

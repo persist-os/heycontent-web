@@ -30,14 +30,15 @@ import type { Message } from '@/app/types/chat'
 // =============================================================================
 
 const ChatPanel = React.memo<{
+  messages: Message[]
   onInputPopulate: (text: string) => void
   onQuoteToNotepad: (text: string) => void
   widgetOutputId?: string
   isFullScreen?: boolean
   onRestoreNotepad?: () => void
   onCloseChat?: () => void
-}>(({ onInputPopulate, onQuoteToNotepad, widgetOutputId, isFullScreen, onRestoreNotepad, onCloseChat }) => {
-  const { messages, sendMessage, startNewConversation, isLoading, error } = useDialogueStore()
+}>(({ messages, onInputPopulate, onQuoteToNotepad, widgetOutputId, isFullScreen, onRestoreNotepad, onCloseChat }) => {
+  const { sendMessageStream, startNewConversation, isLoading, error } = useDialogueStore()
   const authData = useOptimizedAuth()
   
   // Auto-scroll when messages change
@@ -52,8 +53,9 @@ const ChatPanel = React.memo<{
   }, [])
 
   const handleActionClick = React.useCallback((action: string) => {
-    sendMessage(action)
-  }, [sendMessage])
+    sendMessageStream(action)
+  }, [sendMessageStream])
+
 
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden">
@@ -106,11 +108,11 @@ const ChatPanel = React.memo<{
                     referencedMessage={null}
                     handleMessageReference={() => {}}
                     handleReferenceClick={() => {}}
-                    handleOptionClick={sendMessage}
-                    handleFollowUpClick={sendMessage}
+                    handleOptionClick={sendMessageStream}
+                    handleFollowUpClick={sendMessageStream}
                     userId={authData.user?.uid}
                     handleSuggestionClick={handleSuggestionClick}
-                    handleSendMessage={sendMessage}
+                    handleSendMessage={sendMessageStream}
                     onInputPopulate={onInputPopulate}
                     notepadOpen={true}
                     onQuoteToNotepad={onQuoteToNotepad}
@@ -122,6 +124,7 @@ const ChatPanel = React.memo<{
               </div>
             </div>
           </div>
+
         </>
       ) : isLoading ? (
         /* Loading state - show while conversation is being loaded */
@@ -196,17 +199,10 @@ const ChatPanel = React.memo<{
                 userId={authData.user?.uid}
                 onInsightClick={(action: string, insight: any) => {
                   const fullMessage = `${insight.title}\n\n${insight.description}\n\n${action}`
-                  sendMessage(fullMessage)
+                  sendMessageStream(fullMessage)
                 }}
               />
             )}
-          </div>
-          <div className="px-6 py-3 border-t border-border/30 backdrop-blur-sm bg-card/40">
-            <BottomBarActions
-              onActionClick={handleActionClick}
-              onInputPopulate={onInputPopulate}
-              isFullScreen={false}
-            />
           </div>
         </div>
       )}
@@ -223,7 +219,7 @@ const NotepadPanel = React.memo<{
   isFullScreen: boolean
   onClose?: () => void
 }>(({ noteId, quotedContent, onClearQuoted, isFullScreen, onClose }) => {
-  const { sessionId } = useDialogueStore()
+  const conversationId = useDialogueStore(state => state.conversationId)
 
   return (
     <div className="h-full">
@@ -239,7 +235,7 @@ const NotepadPanel = React.memo<{
         fromChat={true}
         canNavigateBack={true}
         onBack={() => {}}
-        sessionId={sessionId || undefined}
+        sessionId={conversationId || undefined}
         panelState={isFullScreen ? "notepad-full" : "split"}
         onClose={onClose}
       />
@@ -254,7 +250,7 @@ NotepadPanel.displayName = 'NotepadPanel'
 // =============================================================================
 
 function useInputSection(clearQuotedContent: () => void) {
-  const { isLoading, sendMessage } = useDialogueStore()
+  const { isLoading, sendMessageStream } = useDialogueStore()
   const { includeInMessages, setIncludeInMessages } = useNotepadStore()
   const inputRef = React.useRef<HTMLTextAreaElement>(null)
   const [inputValue, setInputValue] = React.useState("")
@@ -272,8 +268,8 @@ function useInputSection(clearQuotedContent: () => void) {
   const inputComponent = React.useMemo(() => (
     <ChatInputArea
       showAmbient={false}
-      handleActionClick={sendMessage}
-      handleSendMessage={sendMessage}
+      handleActionClick={sendMessageStream}
+      handleSendMessage={sendMessageStream}
       inputRef={inputRef}
       isLoading={isLoading}
       referencedMessage={null}
@@ -294,7 +290,7 @@ function useInputSection(clearQuotedContent: () => void) {
       onToggleNotepadInMessages={setIncludeInMessages}
     />
   ), [
-    sendMessage,
+    sendMessageStream,
     isLoading,
     inputValue,
     setInputValue,
@@ -334,12 +330,9 @@ export function FullThinkingLab({
 }: LabCompositionProps) {
   // All basic state hooks first to maintain consistent hook order
   const [userId, setUserId] = React.useState<string | null>(null)
-  const [openingMessageSent, setOpeningMessageSent] = React.useState(false)
   
   // Store hooks
-  const { quotedContent, setQuotedContent, clearQuotedContent, resetForWidget, addMessage, startNewConversation } = useDialogueStore()
-  const messages = useDialogueStore(state => state.messages)
-  
+  const { quotedContent, setQuotedContent, clearQuotedContent, startNewConversation } = useDialogueStore()
   // Custom hooks
   const { inputComponent, handleInputPopulate } = useInputSection(clearQuotedContent)
   
@@ -388,88 +381,106 @@ export function FullThinkingLab({
     getUserId()
   }, [])
 
-  // Fetch conversation from Convex when chatId is provided
+  // Simple: Get conversationId from store
+  const conversationId = useDialogueStore(state => state.conversationId)
+  const isLoading = useDialogueStore(state => state.isLoading)
+  const pendingUserMessage = useDialogueStore(state => state.pendingUserMessage)
+  const streamingContent = useDialogueStore(state => state.streamingContent)
+
+  // Simple: Subscribe to conversation (chatId from URL or conversationId from store)
+  const activeConvId = chatId || conversationId
   const conversationData = useQuery(
     api.chatQueries.getConversation,
-    chatId && userId && !widgetOutputId ? {
+    userId && activeConvId && !widgetOutputId ? {
       userId,
-      conversationId: chatId as any // Convex ID type
+      conversationId: activeConvId as any
     } : 'skip'
   )
 
-  // Load conversation messages when data arrives
+  // Watch for Convex messages to arrive after streaming completes
+  const streamingComplete = useDialogueStore(state => state.streamingComplete)
+  const prevMessageCount = React.useRef(conversationData?.messages?.length || 0)
+  
   React.useEffect(() => {
-    if (conversationData && chatId && !widgetOutputId) {
-
-      // IMPORTANT: Set conversationId FIRST so backend knows we're resuming
+    const currentMessageCount = conversationData?.messages?.length || 0
+    
+    // If streaming is complete and message count increased, clear optimistic state
+    if (streamingComplete && currentMessageCount > prevMessageCount.current) {
       useDialogueStore.setState({
-        conversationId: chatId,
-        sessionId: chatId,
+        isLoading: false,
+        pendingUserMessage: undefined,
+        streamingContent: "",
+        streamingComplete: false
       })
+    }
+    
+    prevMessageCount.current = currentMessageCount
+  }, [conversationData?.messages?.length, streamingComplete])
+  
+  // Simple: When conversation data arrives initially, update conversationId
+  React.useEffect(() => {
+    if (conversationData?._id && !conversationId) {
+      useDialogueStore.setState({
+        conversationId: conversationData._id
+      })
+    }
+  }, [conversationData?._id, conversationId])
 
-      // Convert Convex messages to Message[] format
-      const messages: Message[] = (conversationData.messages || []).map((msg: any, index: number) => ({
-        id: `msg-${index}`,
+  // Simple: Build message list
+  const messages: Message[] = (() => {
+    const list: Message[] = []
+    
+    // Add Convex messages with their persisted suggestions
+    conversationData?.messages?.forEach((msg: any, i: number) => {
+      list.push({
+        id: `msg-${i}`,
         content: msg.content,
-        role: msg.role as 'user' | 'assistant' | 'system',
-        timestamp: msg.timestamp ? new Date(msg.timestamp).getTime().toString() : Date.now().toString(),
+        role: msg.role,
+        timestamp: msg.timestamp?.toString() || Date.now().toString(),
         chat_response: msg.content,
-        status: 'delivered' as const,
+        status: 'delivered',
+        suggestions: msg.suggestions || [],
+        metadata: {}
+      })
+    })
+    
+    // Add optimistic user message (before Convex write completes)
+    if (pendingUserMessage) {
+      list.push({
+        id: 'pending-user',
+        content: pendingUserMessage,
+        role: 'user',
+        timestamp: Date.now().toString(),
+        chat_response: pendingUserMessage,
+        status: 'delivered',
         suggestions: [],
         metadata: {}
-      }))
-
-      // Then load messages
-      useDialogueStore.setState({
-        messages,
-        isLoading: false,
-        error: undefined
       })
-
     }
-  }, [conversationData, chatId, widgetOutputId])
-
-  // Fetch widget output data to get opening message
-  const widgetOutputData = useQuery(
-    api.widgetOutputsQueries.getWidgetOutputData,
-    widgetOutputId && userId ? {
-      userId,
-      filters: { outputId: widgetOutputId },
-      limit: 1
-    } : 'skip'
-  )
-
-  // Reset dialogue store and opening message flag when widget changes
-  React.useEffect(() => {
-    if (widgetOutputId) {
-      resetForWidget()
-      setOpeningMessageSent(false)
-    }
-  }, [widgetOutputId, resetForWidget])
-
-  // Auto-send opening message when widget output loads
-  React.useEffect(() => {
-    if (!widgetOutputId || !widgetOutputData || openingMessageSent) return
-
-    const output = Array.isArray(widgetOutputData) ? widgetOutputData[0] : widgetOutputData
     
-    if (output?.openingMessage && messages.length === 0) {
-      
-      const aiMessage = {
-        id: `msg-${Date.now()}`,
-        content: output.openingMessage,
-        role: 'assistant' as const,
+    // Add typing indicator with streaming content
+    if (isLoading) {
+      list.push({
+        id: 'typing',
+        content: streamingContent || '', // Show streaming content as it arrives
+        role: 'assistant',
         timestamp: Date.now().toString(),
-        chat_response: output.openingMessage,
-        status: 'delivered' as const,
-        suggestions: output.prompts?.map((p: any) => p.text) || [],
+        chat_response: streamingContent || '',
+        status: 'typing',
+        searchStatus: 'Understanding what you\'re thinking about',
+        statusHistory: [
+          'Understanding what you\'re thinking about',
+          'Query needs context - proceeding with vector search',
+          'Looking through all your content',
+          'Quality filtering'
+        ],
+        suggestions: [],
         metadata: {}
-      }
-      
-      addMessage(aiMessage)
-      setOpeningMessageSent(true)
+      })
     }
-  }, [widgetOutputId, widgetOutputData, openingMessageSent, messages.length, addMessage])
+    
+    return list
+  })()
 
   // Auto-snap to full screen when dragged close to edges (only after drag ends)
   React.useEffect(() => {
@@ -531,6 +542,7 @@ export function FullThinkingLab({
         <div style={resizable.styles.leftPanelStyle} className="flex flex-col h-full overflow-hidden">
           <div className="flex-1 overflow-hidden">
             <ChatPanel 
+              messages={messages}
               onInputPopulate={handleInputPopulate}
               onQuoteToNotepad={setQuotedContent}
               widgetOutputId={widgetOutputId}

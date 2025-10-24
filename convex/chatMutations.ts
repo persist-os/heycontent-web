@@ -167,6 +167,54 @@ handler: async (ctx, args) => {
 },
 });
 
+export const updateConversationTitle = mutation({
+  args: {
+    userId: v.string(),
+    conversationId: v.string(),
+    title: v.string()
+  },
+  handler: async (ctx, args) => {
+    const doc = await ctx.db.get(args.conversationId as any);
+    if (!doc) {
+      throw new Error("Conversation not found");
+    }
+
+    // Type check to ensure it's a conversation document
+    if (!('userId' in doc) || !('messages' in doc)) {
+      throw new Error("Invalid document type - not a conversation");
+    }
+
+    const conversation = doc as any;
+
+    // Verify ownership
+    if (conversation.userId !== args.userId) {
+      throw new Error("Unauthorized access to conversation");
+    }
+
+    // Update the title
+    await ctx.db.patch(conversation._id, {
+      title: args.title,
+      updatedAt: Date.now()
+    });
+
+    return { success: true };
+  }
+});
+
+export const updateConversationSuggestions = mutation({
+  args: {
+    conversationId: v.id("conversations"),
+    suggestions: v.array(v.string())
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.conversationId, {
+      suggestions: args.suggestions,
+      updatedAt: Date.now()
+    });
+    return { success: true };
+  }
+});
+
 export const starConversation = mutation({
 args: {
     conversationId: v.string(),
@@ -199,5 +247,20 @@ handler: async (ctx, args) => {
     });
 
     return { success: true, starred: !conversation.starred };
+},
+});
+
+// Add suggestions to a message in the messages table
+export const updateMessageSuggestions = mutation({
+args: {
+    messageId: v.id("messages"),
+    suggestions: v.array(v.string())
+},
+handler: async (ctx, args) => {
+    await ctx.db.patch(args.messageId, {
+    suggestions: args.suggestions,
+    updatedAt: Date.now(),
+    });
+    return { success: true };
 },
 });

@@ -58,7 +58,7 @@ export const getEvents = query({
   },
   handler: async (ctx, args) => {
     // Start with user-scoped query
-    let query = ctx.db
+    const query = ctx.db
       .query("briefing_events")
       .withIndex("by_user_timestamp", (q) => 
         q.eq("userId", args.userId)

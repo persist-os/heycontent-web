@@ -1,99 +1,149 @@
 import type { BottomBarAction } from '@/app/dashboard/thinking_lab/types/core/labCore'
 
-export const bottomBarActions: BottomBarAction[] = [
-  {
-    id: 'help',
-    text: 'How do I use this space?',
-    action: 'How do I use this space? Give me a detailed explanation of how the platform works and how to use it best.'
-  },
-  {
-    id: 'next-focus',
-    text: 'What should I focus on?',
-    action: 'What should I focus on next?'
-  },
-  {
-    id: 'decision-help',
-    text: 'Help me decide',
-    action: 'Help me think through this decision'
-  },
-  {
-    id: 'stuck-feeling',
-    text: 'I feel stuck',
-    action: 'I feel stuck with something. Help me work through it.'
-  },
-  {
-    id: 'priorities',
-    text: 'Sort my priorities',
-    action: 'Help me figure out my priorities right now'
-  },
-  {
-    id: 'life-direction',
-    text: 'Life direction',
-    action: 'I\'m thinking about my life direction. Help me sort through it.'
-  },
-  {
-    id: 'relationship-thoughts',
-    text: 'Relationship stuff',
-    action: 'I need to work through some relationship thoughts'
-  },
-  {
-    id: 'career-thinking',
-    text: 'Career thoughts',
-    action: 'Help me think through some career stuff'
-  },
-  {
-    id: 'overwhelmed',
-    text: 'I feel overwhelmed',
-    action: 'I feel overwhelmed. Help me break things down.'
-  },
-  {
-    id: 'personal-growth',
-    text: 'Growing as a person',
-    action: 'I want to work on growing as a person. Where do I start?'
-  },
-  {
-    id: 'goal-clarity',
-    text: 'Unclear about goals',
-    action: 'I\'m not clear on my goals. Help me figure them out.'
-  },
-  {
-    id: 'life-balance',
-    text: 'Finding balance',
-    action: 'How do I find better balance in my life?'
-  },
-  {
-    id: 'motivation-low',
-    text: 'Low motivation',
-    action: 'My motivation is low. Help me understand why and what to do.'
-  },
-  {
-    id: 'forgotten-dreams',
-    text: 'Forgotten dreams',
-    action: 'I think I\'ve lost touch with what I really want. Help me remember.'
-  },
-  {
-    id: 'fear-holding-back',
-    text: 'Fear is holding me back',
-    action: 'I think fear is holding me back from things. Let\'s talk about it.'
-  },
-  {
-    id: 'big-change',
-    text: 'Considering big changes',
-    action: 'I\'m thinking about making some big changes in my life'
-  },
-  {
-    id: 'habits-struggle',
-    text: 'Struggling with habits',
-    action: 'I struggle with building good habits. Help me figure this out.'
-  },
-  {
-    id: 'energy-drained',
-    text: 'Feeling drained',
-    action: 'I feel drained lately. Help me understand what\'s going on.'
-  },
-  {
-    id: 'gentle-honesty',
-    text: 'Be gently honest with me',
-    action: 'Be gently honest with me about something I might not be seeing clearly'
-  }
+// Multiple action sets for different thinking modes - rotates on each refresh
+export const actionSets: BottomBarAction[][] = [
+  // Set 1: Perspective & Assumptions
+  [
+    {
+      id: 'perspective-shift',
+      text: 'Challenge my perspective',
+      action: 'What\'s one assumption I might be making that\'s limiting my thinking right now?'
+    },
+    {
+      id: 'hidden-connections',
+      text: 'Reveal hidden connections',
+      action: 'What unexpected connections exist between my recent thoughts that I might be missing?'
+    },
+    {
+      id: 'blindspot-detector',
+      text: 'Find my blind spots',
+      action: 'What important consideration am I probably overlooking in my current thinking?'
+    },
+    {
+      id: 'future-self',
+      text: 'Future me would say...',
+      action: 'What would my future self want me to focus on right now?'
+    },
+    {
+      id: 'question-question',
+      text: 'Better questions',
+      action: 'What better questions should I be asking about this situation?'
+    },
+    {
+      id: 'pattern-recognition',
+      text: 'Spot my patterns',
+      action: 'What recurring patterns do you notice in my recent thoughts that I might not see?'
+    }
+  ],
+  
+  // Set 2: Mental Models & Frameworks
+  [
+    {
+      id: 'mental-models',
+      text: 'New mental model',
+      action: 'Suggest one mental model that could help me think differently about my current challenge'
+    },
+    {
+      id: 'constraints-as-levers',
+      text: 'Turn constraints into levers',
+      action: 'How might my current constraints actually be opportunities in disguise?'
+    },
+    {
+      id: 'opposite-day',
+      text: 'Opposite thinking',
+      action: 'What would the opposite of my current approach look like, and what can I learn from it?'
+    },
+    {
+      id: 'core-beliefs',
+      text: 'Examine core beliefs',
+      action: 'What core belief is shaping my current thinking, and is it serving me well?'
+    },
+    {
+      id: 'second-order',
+      text: 'Second-order effects',
+      action: 'What might be the unintended consequences of my current line of thinking?'
+    },
+    {
+      id: 'simplify',
+      text: 'Simplify complexity',
+      action: 'How could I explain my current challenge to a 10-year-old?'
+    }
+  ],
+  
+  // Set 3: Time & Context
+  [
+    {
+      id: 'temporal-lens',
+      text: 'Time travel thinking',
+      action: 'How will I view this situation one year from now? Ten years?'
+    },
+    {
+      id: 'stakeholder-views',
+      text: 'Other perspectives',
+      action: 'How would someone with completely different values view this situation?'
+    },
+    {
+      id: 'first-principles',
+      text: 'First principles',
+      action: 'What are the fundamental truths about this situation that I might be overlooking?'
+    },
+    {
+      id: 'energy-audit',
+      text: 'Energy audit',
+      action: 'What activities or thoughts are giving me energy, and which are draining it?'
+    },
+    {
+      id: 'fear-mapping',
+      text: 'Map my fears',
+      action: 'What am I really afraid of in this situation, and what would I do if that fear came true?'
+    },
+    {
+      id: 'decision-lens',
+      text: 'Decision clarity',
+      action: 'What would make this decision 10% easier to make?'
+    }
+  ],
+  
+  // Set 4: Growth & Reflection
+  [
+    {
+      id: 'growth-edge',
+      text: 'Growth edge',
+      action: 'Where is my current discomfort pointing me toward growth?'
+    },
+    {
+      id: 'silent-assumptions',
+      text: 'Silent assumptions',
+      action: 'What am I taking for granted that might not actually be true?'
+    },
+    {
+      id: 'creative-breakthrough',
+      text: 'Creative breakthrough',
+      action: 'What would happen if I approached this with complete creative freedom?'
+    },
+    {
+      id: 'system-thinking',
+      text: 'System thinking',
+      action: 'How does this connect to the bigger system I\'m part of?'
+    },
+    {
+      id: 'emotional-intelligence',
+      text: 'Emotional intelligence',
+      action: 'What emotions are driving my thinking right now, and what are they telling me?'
+    },
+    {
+      id: 'wisdom-seeking',
+      text: 'Seek wisdom',
+      action: 'What would someone I deeply respect advise me about this situation?'
+    }
+  ]
 ];
+
+// Legacy export for backward compatibility
+export const bottomBarActions: BottomBarAction[] = actionSets[0];
+
+// Function to get a random action set (similar to placeholder rotation)
+export function getRandomActionSet(): BottomBarAction[] {
+  const randomIndex = Math.floor(Math.random() * actionSets.length);
+  return actionSets[randomIndex];
+}

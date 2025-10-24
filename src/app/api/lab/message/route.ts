@@ -132,10 +132,11 @@ export async function POST(request: Request) {
     const backendData = data.success ? data.data : data;
     
     // Transform chat API response to thinking lab format
+    // Backend now returns minimal response (no message content, just conversationId and suggestions)
     const labResponse = {
-      response_content: backendData.response || backendData.chat_response || 'No response received',
-      session_identifier: backendData.session_id || session_identifier,
-      user_input: backendData.user_message || query,
+      status: backendData.status || 'success',
+      session_identifier: backendData.session_id || backendData.conversationId || session_identifier,
+      conversationId: backendData.conversationId || backendData.session_id || session_identifier,
       suggestions: backendData.suggestions || [],
       metadata: {
         ...backendData.metadata,
@@ -146,7 +147,7 @@ export async function POST(request: Request) {
 
     console.log(`[${requestId}] Lab message request completed`, {
       duration_ms: Date.now() - startTime,
-      response_length: labResponse.response_content?.length || 0,
+      conversationId: labResponse.conversationId,
       suggestions_count: labResponse.suggestions?.length || 0,
       has_notepad_context: !!chatRequestBody.notepad_context
     });

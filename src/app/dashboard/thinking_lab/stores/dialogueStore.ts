@@ -9,7 +9,7 @@ import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 
 // Import API services
-import { transmitMessageWithContext } from '../modules/api/messageService'
+import { transmitMessageWithContext, transmitMessageWithStreaming } from '../modules/api/messageService'
 import { useLayoutStore } from './layoutStore' // For getting context preferences
 import { useNotepadStore } from './notepadStore' // For getting notepad context
 
@@ -22,14 +22,17 @@ type DialogueStore = DialogueState & DialogueActions
 
 export const useDialogueStore = create<DialogueStore>()(
     subscribeWithSelector((set, get) => ({
-        // Initial state
-        messages: [],
+        // Initial state - UI state only, NO messages (Convex is source of truth)
         isLoading: false,
-        sessionId: null,  // ✅ Start with null - Convex will create real ID
         conversationId: undefined,
         error: undefined,
         currentStatus: undefined,
         quotedContent: "", // Content to be quoted to notepad
+        lastSuggestions: [], // Ephemeral suggestions from last response
+        pendingUserMessage: undefined, // Optimistic UI: user message before Convex write
+        streamingContent: "", // Real-time streaming content as it arrives
+        streamingComplete: false, // Streaming done, waiting for Convex
+        expectedMessageCount: undefined, // Expected message count after completion
         // Project/widget context
         projectId: undefined,
         widgetId: undefined,
@@ -37,35 +40,18 @@ export const useDialogueStore = create<DialogueStore>()(
 
         // Actions
         sendMessage: async (content: string, fileAttachments?: FileUploadResponse[]) => {
-            const { messages, sessionId, conversationId } = get()
+            const { conversationId } = get()
 
-            // Add user message immediately
-            const userMessage: Message = {
-                id: `msg-${Date.now()}`,
-                content,
-                role: 'user',
-                timestamp: Date.now().toString(),
-                chat_response: content,
-                status: 'sent',
-                fileAttachments: fileAttachments || undefined
-            }
+            // Determine if this is the first message
+            const isFirstMessage = !conversationId
+            const actualSessionId = isFirstMessage ? null : conversationId
 
-            // Create typing message for thinking indicator
-            const typingMessage: Message = {
-                id: `typing-${Date.now()}`,
-                content: '',
-                role: 'assistant',
-                timestamp: Date.now().toString(),
-                chat_response: '',
-                status: 'typing',
-                statusHistory: []
-            }
-
+            // Set loading state + optimistic user message immediately
             set({
-                messages: [...messages, userMessage, typingMessage],
                 isLoading: true,
                 error: undefined,
-                currentStatus: 'Thinking...'
+                currentStatus: 'Thinking...',
+                pendingUserMessage: content
             })
 
             try {
@@ -77,13 +63,6 @@ export const useDialogueStore = create<DialogueStore>()(
                         title: notepadState.currentTitle || 'Untitled'
                       }
                     : null
-                
-                console.log('[DialogueStore] Sending message with notepad context:', {
-                    hasNotepadContext: !!notepadContext,
-                    includeInMessages: notepadState.includeInMessages,
-                    contentLength: notepadState.currentContent.length,
-                    title: notepadState.currentTitle
-                })
 
                 // Get project/widget context from store
                 const { projectId, widgetId, widgetOutputId } = get()
@@ -91,17 +70,97 @@ export const useDialogueStore = create<DialogueStore>()(
                 // Determine conversation type based on context
                 const conversationType = widgetOutputId ? 'widget_prompt' : 'general'
 
-                // ATOMIC PATTERN: Use conversationId (Convex ID) if available, null for first message
-                const isFirstMessage = messages.length === 0
-                const actualSessionId = isFirstMessage ? null : (conversationId || sessionId)
-
-                console.log('[DialogueStore] Message context:', {
+                // Prepare request parameters
+                const requestParams: MessageTransmissionRequest = {
+                    content,
                     isFirstMessage,
-                    conversationId,
-                    sessionId,
-                    actualSessionId,
-                    messageCount: messages.length
+                    sessionIdentifier: actualSessionId,
+                    workspaceContext: conversationId ? { contentId: conversationId } : null,
+                    notepadContext,
+                    fileAttachments,
+                    projectId,
+                    widgetId,
+                    widgetOutputId,
+                    conversationType,
+                    onStatusUpdate: (status: string) => {
+                        set({ currentStatus: status })
+                    }
+                }
+
+                // Call the backend - it writes to Convex immediately
+                const response = await transmitMessageWithContext(requestParams)
+                
+                console.log('[DialogueStore] Backend response:', {
+                    response,
+                    session_identifier: response.session_identifier,
+                    conversationId: response.conversationId,
+                    suggestions: response.suggestions
                 })
+                
+                // Backend no longer returns message content, just conversationId and suggestions
+                // Component subscription will automatically update messages from Convex
+                const convexConversationId = response.session_identifier || response.conversationId
+                
+                console.log('[DialogueStore] Setting conversationId:', convexConversationId)
+                
+                // Update conversationId and suggestions, clear loading state
+                // Component subscription will replace optimistic messages with real ones
+                set({
+                    conversationId: convexConversationId || conversationId,
+                    isLoading: false,
+                    currentStatus: undefined,
+                    pendingUserMessage: undefined, // Clear optimistic message
+                    // Store suggestions temporarily for UI (they're ephemeral)
+                    lastSuggestions: response.suggestions || []
+                })
+                
+                console.log('[DialogueStore] Store updated with conversationId, subscription should fire')
+
+            } catch (error) {
+                console.error('Failed to send message:', error)
+                set({
+                    isLoading: false,
+                    currentStatus: undefined,
+                    pendingUserMessage: undefined, // Clear optimistic message on error
+                    error: error instanceof Error ? error.message : 'Failed to send message'
+                })
+            }
+        },
+
+        // Streaming version of sendMessage - yields chunks in real-time
+        sendMessageStream: async (content: string, fileAttachments?: FileUploadResponse[]) => {
+            const { conversationId } = get()
+
+            // Determine if this is the first message
+            const isFirstMessage = !conversationId
+            const actualSessionId = isFirstMessage ? null : conversationId
+
+            // Set loading state with optimistic messages
+            set({
+                isLoading: true,
+                error: undefined,
+                currentStatus: 'Connecting...',
+                pendingUserMessage: content, // User message for optimistic UI
+                streamingContent: "", // Will be updated as chunks arrive
+                streamingComplete: false, // Reset completion flag
+                expectedMessageCount: undefined
+            })
+
+            try {
+                // Get notepad context if enabled
+                const notepadState = useNotepadStore.getState()
+                const notepadContext = notepadState.includeInMessages && notepadState.currentContent
+                    ? {
+                        content: notepadState.currentContent,
+                        title: notepadState.currentTitle || 'Untitled'
+                      }
+                    : null
+
+                // Get project/widget context from store
+                const { projectId, widgetId, widgetOutputId } = get()
+
+                // Determine conversation type based on context
+                const conversationType = widgetOutputId ? 'widget_prompt' : 'general'
 
                 // Prepare request parameters
                 const requestParams: MessageTransmissionRequest = {
@@ -109,111 +168,52 @@ export const useDialogueStore = create<DialogueStore>()(
                     isFirstMessage,
                     sessionIdentifier: actualSessionId,
                     workspaceContext: conversationId ? { contentId: conversationId } : null,
-                    notepadContext, // Include notepad context
+                    notepadContext,
                     fileAttachments,
-                    // Pass project/widget context
                     projectId,
                     widgetId,
                     widgetOutputId,
-                    conversationType, // Set conversation type
+                    conversationType,
                     onStatusUpdate: (status: string) => {
                         set({ currentStatus: status })
-                        // Update the typing message with status updates
-                        set(state => ({
-                            messages: state.messages.map(msg => 
-                                msg.status === 'typing' 
-                                    ? { 
-                                        ...msg, 
-                                        statusHistory: [...(msg.statusHistory || []), status],
-                                        searchStatus: status
-                                    }
-                                    : msg
-                            )
-                        }))
                     }
                 }
 
-                // Call the enhanced message service
-                const response = await transmitMessageWithContext(requestParams)
+                // Call the streaming backend - updates UI as chunks arrive
+                const response = await transmitMessageWithStreaming(
+                    requestParams,
+                    (chunk: string) => {
+                        // Update streaming content as chunks arrive
+                        set(state => ({
+                            streamingContent: state.streamingContent + chunk
+                        }))
+                    }
+                    // Suggestions generated async, no callback needed
+                )
                 
-                console.log('[DialogueStore] Received response from messageService:', {
-                    hasResponse: !!response,
-                    responseKeys: response ? Object.keys(response) : [],
-                    response_content: response?.response_content,
-                    response_content_length: response?.response_content?.length,
-                    session_identifier: response?.session_identifier,
-                    suggestions: response?.suggestions,
-                    suggestionsCount: response?.suggestions?.length || 0,
-                    fullResponse: response
-                })
-
-                // Create assistant message from response
-                const assistantMessage: Message = {
-                    id: `msg-${Date.now() + 1}`,
-                    content: response.response_content || 'No response received',
-                    role: 'assistant',
-                    timestamp: Date.now().toString(),
-                    chat_response: response.response_content || 'No response received',
-                    status: 'delivered',
-                    suggestions: response.suggestions || [],
-                    metadata: response.suggestions ? { suggestions: response.suggestions } : undefined
-                }
-
-                console.log('[DialogueStore] Created assistant message with suggestions:', {
-                    messageId: assistantMessage.id,
-                    hasSuggestions: !!assistantMessage.suggestions,
-                    suggestionsCount: assistantMessage.suggestions?.length || 0,
-                    suggestions: assistantMessage.suggestions
-                })
-
-                // Replace typing message with real response
-                // Backend returns the Convex conversation ID as session_identifier
-                const convexConversationId = response.session_identifier
+                // Backend writes to Convex after streaming completes
+                // Component subscription will update messages from Convex
+                const convexConversationId = response.session_identifier || response.conversationId
                 
-                console.log('[DialogueStore] Response received:', {
-                    session_identifier: response.session_identifier,
-                    previousConversationId: get().conversationId,
-                    previousSessionId: get().sessionId
-                })
-                
-                set(state => ({
-                    messages: state.messages.map(msg => 
-                        msg.status === 'typing' ? assistantMessage : msg
-                    ),
-                    isLoading: false,
+                // Mark streaming as complete but KEEP isLoading true
+                // We'll clear it only when Convex confirms the message arrived
+                set({
+                    conversationId: convexConversationId || conversationId,
+                    streamingComplete: true, // Mark as complete, waiting for Convex
                     currentStatus: undefined,
-                    conversationId: convexConversationId || state.conversationId,
-                    // Keep sessionId as fallback but conversationId is the source of truth
-                    sessionId: convexConversationId || state.sessionId
-                }))
+                    // Keep isLoading, pendingUserMessage, and streamingContent until Convex confirms
+                })
 
             } catch (error) {
-                console.error('Failed to send message:', error)
-                // Replace typing message with error message
-                const errorMessage: Message = {
-                    id: `error-${Date.now()}`,
-                    content: 'Sorry, I encountered an error. Please try again.',
-                    role: 'assistant',
-                    timestamp: Date.now().toString(),
-                    chat_response: 'Error occurred',
-                    status: 'failed'
-                }
-
-                set(state => ({
-                    messages: state.messages.map(msg => 
-                        msg.status === 'typing' ? errorMessage : msg
-                    ),
+                console.error('Failed to stream message:', error)
+                set({
                     isLoading: false,
                     currentStatus: undefined,
-                    error: error instanceof Error ? error.message : 'Failed to send message'
-                }))
+                    pendingUserMessage: undefined,
+                    streamingContent: "", // Clear streaming content on error
+                    error: error instanceof Error ? error.message : 'Failed to stream message'
+                })
             }
-        },
-
-        addMessage: (message: Message) => {
-            set(state => ({
-                messages: [...state.messages, message]
-            }))
         },
 
         setLoading: (loading: boolean) => {
@@ -222,36 +222,18 @@ export const useDialogueStore = create<DialogueStore>()(
 
         startNewConversation: () => {
             set({
-                messages: [],
-                sessionId: null,  // ✅ Clear session - new conversation will get Convex ID
                 conversationId: undefined,
                 error: undefined,
-                currentStatus: undefined
+                currentStatus: undefined,
+                pendingUserMessage: undefined,
+                lastSuggestions: []
             })
         },
 
         loadConversation: async (conversationId: string) => {
-            // Note: Actual conversation loading is now handled directly via Convex useQuery
-            // in LabCompositions. This method is kept for backward compatibility.
-            console.log('[DialogueStore] loadConversation called (loading handled by Convex useQuery)')
-            set({ 
-                conversationId,
-                sessionId: conversationId
-            })
-        },
-
-        quoteMessage: (messageId: string) => {
-            const { messages } = get()
-            const message = messages.find(m => m.id === messageId)
-
-            if (message) {
-                console.log('Quoting message:', message.content)
-                // Quote integration handled by parent components
-            }
-        },
-
-        clearMessages: () => {
-            set({ messages: [] })
+            // Just set conversationId - component's useQuery will load messages
+            console.log('[DialogueStore] loadConversation - setting conversationId:', conversationId)
+            set({ conversationId })
         },
 
         setError: (error: string | undefined) => {
@@ -272,15 +254,15 @@ export const useDialogueStore = create<DialogueStore>()(
             set({ quotedContent: "" })
         },
 
-        // Reset for widget context - clears messages but preserves widget context
+        // Reset for widget context
         resetForWidget: () => {
             set({
-                messages: [],
-                sessionId: null,  // ✅ Clear session - new conversation will get Convex ID
+                conversationId: undefined,
                 error: undefined,
                 currentStatus: undefined,
                 quotedContent: "",
-                // Note: conversationId is preserved for widget context
+                pendingUserMessage: undefined,
+                lastSuggestions: []
             })
         },
 
@@ -307,7 +289,6 @@ export const useDialogueStore = create<DialogueStore>()(
 )
 
 // Additional selectors for convenience
-export const useDialogueMessages = () => useDialogueStore(state => state.messages)
 export const useDialogueLoading = () => useDialogueStore(state => state.isLoading)
 export const useDialogueActions = () => useDialogueStore(state => ({
     sendMessage: state.sendMessage,

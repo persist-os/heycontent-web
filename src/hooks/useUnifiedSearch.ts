@@ -60,13 +60,18 @@ export function useUnifiedSearch({ enabled }: UseUnifiedSearchProps) {
   );
 
   const crystals = useQuery(
-    api.crystalQueries.getPersonaData,
-    enabled && userId ? { userId, operation: 'crystals', limit: 100 } : 'skip'
+    api.crystalQueries.getCrystalsByUser,
+    enabled && userId ? { userId, limit: 100 } : 'skip'
   );
 
   const conversations = useQuery(
     api.chatQueries.getHistory,
     enabled && userId ? { userId, limit: 50 } : 'skip'
+  );
+
+  const shards = useQuery(
+    api.shardQueries.getShardsByUser,
+    enabled && userId ? { userId, limit: 100 } : 'skip'
   );
 
   // Vector search action
@@ -137,6 +142,26 @@ export function useUnifiedSearch({ enabled }: UseUnifiedSearchProps) {
       });
     }
 
+    // Search shards - direct array from getShardsByUser
+    if (Array.isArray(shards)) {
+      shards.forEach((shard: any) => {
+        if (
+          shard.insight?.toLowerCase().includes(query) ||
+          shard.dimension?.toLowerCase().includes(query) ||
+          shard.tags?.some((tag: string) => tag.toLowerCase().includes(query))
+        ) {
+          results.push({
+            id: shard._id,
+            type: 'shard',
+            title: shard.dimension || 'Untitled Shard',
+            content: shard.insight?.substring(0, 150) || '',
+            metadata: shard,
+            updatedAt: shard._creationTime
+          });
+        }
+      });
+    }
+
     // Sort by relevance (best match first) and recency
     return results
       .sort((a, b) => {
@@ -153,7 +178,7 @@ export function useUnifiedSearch({ enabled }: UseUnifiedSearchProps) {
         return (b.updatedAt || 0) - (a.updatedAt || 0);
       })
       .slice(0, 20); // Limit to top 20 results
-  }, [searchQuery, searchMode, userId, notes, crystals, conversations]);
+  }, [searchQuery, searchMode, userId, notes, crystals, conversations, shards]);
 
   // Vector search (triggered on Enter)
   const performVectorSearch = useCallback(async () => {
@@ -165,7 +190,7 @@ export function useUnifiedSearch({ enabled }: UseUnifiedSearchProps) {
         userId,
         query: searchQuery,
         limit: 20,
-        contentTypes: ['note', 'crystal', 'conversation'],
+        contentTypes: ['note', 'crystal', 'conversation', 'shard'],
         minSimilarity: 0.3
       });
 

@@ -43,7 +43,7 @@ export const addMessage = mutation({
     const now = Date.now();
     const sequence = conversation.messageCount || 0;
 
-    // 1. Write to NEW messages table
+    // Write to NEW messages table only (no dual write)
     const messageId = await ctx.db.insert("messages", {
       conversationId: args.conversationId,
       userId: args.userId,
@@ -58,18 +58,8 @@ export const addMessage = mutation({
       updatedAt: now,
     });
 
-    // 2. DUAL-WRITE: Also update legacy messages array (during migration)
-    const legacyMessage = {
-      content: args.content,
-      role: args.role,
-      timestamp: args.timestamp,
-      context: args.context,
-      fileAttachments: args.fileAttachments,
-      enrichment_metadata: args.enrichment_metadata,
-    };
-
+    // Update conversation metadata (messageCount, lastMessageAt, updatedAt)
     await ctx.db.patch(args.conversationId, {
-      messages: [...(conversation.messages || []), legacyMessage],
       messageCount: sequence + 1,
       lastMessageAt: args.timestamp,
       updatedAt: now,

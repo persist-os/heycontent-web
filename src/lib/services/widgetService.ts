@@ -29,7 +29,6 @@ export interface WidgetRunResponse {
     priority: number;
   }>;
   opening_message?: string;  // AI's first conversational message to start the dialogue
-  execution_prompt?: string;  // User's custom prompt that was used for execution
   user_id: string;
 }
 
@@ -96,11 +95,7 @@ export async function runWidget(params: WidgetRunRequest): Promise<WidgetRunResp
       widget_id: widgetId,
       project_id: projectId
     };
-    
-    // Add execution_prompt if provided
-    if (executionPrompt) {
-      requestBody.execution_prompt = executionPrompt;
-    }
+
     
     const response = await fetchWithApiKey('/api/widgets/run', {
       method: 'POST',

@@ -83,6 +83,7 @@ export const updateStardust = mutation({
 
 /**
  * Mark a stardust as promoted (when converted to star organism/project)
+ * Thread-safe: prevents double promotion
  */
 export const promoteStardust = mutation({
   args: {
@@ -92,6 +93,14 @@ export const promoteStardust = mutation({
   },
   returns: v.id("stardust"),
   handler: async (ctx, args) => {
+    const stardust = await ctx.db.get(args.stardustId);
+    if (!stardust) {
+      throw new Error("Stardust not found");
+    }
+    if (stardust.promoted) {
+      throw new Error(`Stardust ${args.stardustId} already promoted to project ${stardust.promoted_to_project_id}`);
+    }
+    
     await ctx.db.patch(args.stardustId, {
       promoted: true,
       promoted_at: Date.now(),
@@ -154,6 +163,35 @@ export const batchCreateStardust = mutation({
     }
     
     return createdIds;
+  },
+});
+
+
+/**
+ * Batch update multiple stardust atomically
+ * Crystal Pattern: Accepts any data structure, schema validates at update
+ */
+export const batchUpdateStardust = mutation({
+  args: {
+    updates: v.array(v.object({
+      id: v.id("stardust"),
+      data: v.any(),
+    })),
+  },
+  returns: v.array(v.id("stardust")),
+  handler: async (ctx, { updates }) => {
+    const now = Date.now();
+    const updatedIds: any[] = [];
+    
+    for (const update of updates) {
+      await ctx.db.patch(update.id, {
+        ...update.data,
+        updatedAt: now,
+      });
+      updatedIds.push(update.id);
+    }
+    
+    return updatedIds;
   },
 });
 

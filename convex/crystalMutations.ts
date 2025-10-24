@@ -2,104 +2,220 @@ import { v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import {
-  crystalShardUpdateValidator,
+  crystalValidator,
   crystalUpdateValidator,
   lifecycleStageValidator,
+  crystalTypeValidator,
+  confidenceScoreValidator,
+  evidenceStrengthValidator,
+  consistencyRatingValidator,
+  stabilityTrendValidator,
+  reviewPriorityValidator,
+  evolutionChangeTypeValidator
 } from "./types/crystal";
 
 /**
- * Single item mutation for crystal data (legacy function - use batch version for better performance)
- *
- * @deprecated Use `batchMutateCrystalData` for better performance with multiple items
+ * Single crystal mutation function
+ * 
+ * Flexible mutation that can create, update, or delete a single crystal.
+ * Simpler and more maintainable than separate functions.
+ * 
+ * ATOMICITY GUARANTEES:
+ * - All shard operations use Promise.all() for parallel atomic execution
+ * - Shard validation and updates happen in separate atomic batches
+ * - Safe for concurrent multi-instance deployments (Cloud Run, Kubernetes)
  */
-export const mutateCrystalData = mutation({
-    args: {
-        table: v.union(v.literal("crystal_shards"), v.literal("crystals")),
-        operation: v.union(v.literal("create"), v.literal("update"), v.literal("delete")),
-        data: v.optional(v.any()),
-        shardId: v.optional(v.id("crystal_shards")),
-        crystalId: v.optional(v.id("crystals")),
-    },
-    returns: v.union(v.id("crystal_shards"), v.id("crystals"), v.boolean(), v.null()),
-    handler: async (ctx, { table, operation, data, shardId, crystalId }) => {
-        const id = table === "crystal_shards" ? shardId : crystalId;
+export const mutateCrystal = mutation({
+  args: {
+    operation: v.union(v.literal("create"), v.literal("update"), v.literal("delete")),
+    id: v.optional(v.id("crystals")),
+    data: v.optional(v.any()), // Use flexible validation for crystal data
+    shardIds: v.optional(v.array(v.id("crystal_shards"))),
+    addShardIds: v.optional(v.array(v.id("crystal_shards"))),
+    removeShardIds: v.optional(v.array(v.id("crystal_shards"))),
+    releaseShards: v.optional(v.boolean()),
+  },
+  returns: v.union(v.id("crystals"), v.boolean()),
+  handler: async (ctx, { operation, id, data, shardIds, addShardIds, removeShardIds, releaseShards }) => {
+    switch (operation) {
+      case "create":
+        if (!data) throw new Error("Data is required for create operation");
+        if (!shardIds || shardIds.length === 0) {
+          throw new Error("shard IDs are required for crystal creation");
+        }
+        
+        // Step 1: Validate all shards are available (atomic batch fetch)
+        const createTime = Date.now();
+        await Promise.all(
+          shardIds.map(async (shardId) => {
+            const shard = await ctx.db.get(shardId);
+            if (!shard) {
+              throw new Error(`Shard ${shardId} not found`);
+            }
+            if (shard.shard_status === "used_for_crystal") {
+              throw new Error(`Shard ${shardId} already used in crystal ${shard.used_in_crystal_id}`);
+            }
+          })
+        );
+        
+        // Step 2: Insert crystal
+        const crystalId = await ctx.db.insert("crystals", {
+          ...data,
+          createdAt: data.createdAt || Date.now(),
+          updatedAt: Date.now(),
+        });
+        
+        // Step 3: Mark shards as consumed (atomic parallel operations)
+        await Promise.all(
+          shardIds.map(shardId =>
+            ctx.db.patch(shardId, {
+              shard_status: "used_for_crystal",
+              used_in_crystal_id: data.crystal_id,
+              date_consumed: createTime,
+              updatedAt: createTime,
+              reserved_by_formation: undefined,
+              reserved_at: undefined,
+            })
+          )
+        );
+        
+        return crystalId;
 
-        if (operation === "create") {
-            // Ensure new shards get proper initial status
-            if (table === "crystal_shards" && data) {
-                const shardData = { ...data };
-                // Set explicit unprocessed status for new shards if not already set
-                if (!shardData.shard_status) {
-                    shardData.shard_status = "unprocessed";
-                }
-                return await ctx.db.insert(table, shardData);
-            }
-            return await ctx.db.insert(table, data!);
+      case "update":
+        if (!id) throw new Error("ID is required for update operation");
+        if (!data) throw new Error("Data is required for update operation");
+        
+        const crystal = await ctx.db.get(id);
+        if (!crystal) throw new Error("Crystal not found");
+        
+        const updateTime = Date.now();
+        
+        // Handle INCREMENT operations for usage counting
+        const updateData: any = { ...data };
+        if (updateData.usage_count === "INCREMENT") {
+          updateData.usage_count = ((crystal as any).usage_count || 0) + 1;
         }
-        if (operation === "update") { 
-            // Handle special operations for programmatic fields
-            const updateData: any = { ...data };
-            
-            // Handle INCREMENT operations for reference counting
-            if (table === "crystal_shards" && updateData.reference_count === "INCREMENT") {
-                const existingShard = await ctx.db.get(id!);
-                if (existingShard) {
-                    updateData.reference_count = ((existingShard as any).reference_count || 0) + 1;
-                } else {
-                    updateData.reference_count = 1;
-                }
-            }
-            
-            if (table === "crystals" && updateData.usage_count === "INCREMENT") {
-                const existingCrystal = await ctx.db.get(id!);
-                if (existingCrystal) {
-                    updateData.usage_count = ((existingCrystal as any).usage_count || 0) + 1;
-                } else {
-                    updateData.usage_count = 1;
-                }
-            }
-            
-            await ctx.db.patch(id!, updateData);
-            return id!;
+        
+        // Step 1: Update crystal data
+        await ctx.db.patch(id, {
+          ...updateData,
+          updatedAt: updateTime,
+        });
+        
+        // Step 2: Add new shards (validate then mark as consumed atomically)
+        if (addShardIds && addShardIds.length > 0) {
+          // Validate all shards in parallel
+          await Promise.all(
+            addShardIds.map(async (shardId) => {
+              const shard = await ctx.db.get(shardId);
+              if (!shard) throw new Error(`Shard ${shardId} not found`);
+              if (shard.shard_status === "used_for_crystal") {
+                throw new Error(`Shard ${shardId} already used in crystal ${shard.used_in_crystal_id}`);
+              }
+            })
+          );
+          
+          // Mark all as consumed in parallel
+          await Promise.all(
+            addShardIds.map(shardId =>
+              ctx.db.patch(shardId, {
+                shard_status: "used_for_crystal",
+                used_in_crystal_id: crystal.crystal_id,
+                date_consumed: updateTime,
+                updatedAt: updateTime,
+                reserved_by_formation: undefined,
+                reserved_at: undefined,
+              })
+            )
+          );
         }
-        if (operation === "delete") { 
-            await ctx.db.delete(id!); 
-            return true; 
+        
+        // Step 3: Remove shards (return to unprocessed atomically)
+        if (removeShardIds && removeShardIds.length > 0) {
+          // Fetch and validate all shards in parallel
+          const shardsToRemove = await Promise.all(
+            removeShardIds.map(async (shardId) => {
+              const shard = await ctx.db.get(shardId);
+              if (!shard) throw new Error(`Shard ${shardId} not found`);
+              return { shardId, shard };
+            })
+          );
+          
+          // Update all matching shards in parallel
+          await Promise.all(
+            shardsToRemove
+              .filter(({ shard }) => shard.used_in_crystal_id === crystal.crystal_id)
+              .map(({ shardId }) =>
+                ctx.db.patch(shardId, {
+                  shard_status: "unprocessed",
+                  used_in_crystal_id: undefined,
+                  date_consumed: undefined,
+                  updatedAt: updateTime,
+                })
+              )
+          );
         }
-        return null;
+        
+        return id;
+
+      case "delete":
+        if (!id) throw new Error("ID is required for delete operation");
+        
+        const crystalToDelete = await ctx.db.get(id);
+        if (!crystalToDelete) throw new Error("Crystal not found");
+        
+        const deleteTime = Date.now();
+        
+        // Step 1: Release shards if requested (atomic parallel operations)
+        if (releaseShards && crystalToDelete.shardIds && crystalToDelete.shardIds.length > 0) {
+          // Fetch all shards in parallel
+          const shardsToRelease = await Promise.all(
+            crystalToDelete.shardIds.map(async (shardId) => {
+              const shard = await ctx.db.get(shardId as Id<"crystal_shards">);
+              return { shardId: shardId as Id<"crystal_shards">, shard };
+            })
+          );
+          
+          // Release all matching shards in parallel
+          await Promise.all(
+            shardsToRelease
+              .filter(({ shard }) => shard && shard.used_in_crystal_id === crystalToDelete.crystal_id)
+              .map(({ shardId }) =>
+                ctx.db.patch(shardId, {
+                  shard_status: "unprocessed",
+                  used_in_crystal_id: undefined,
+                  date_consumed: undefined,
+                  updatedAt: deleteTime,
+                })
+              )
+          );
+        }
+        
+        // Step 2: Delete crystal
+        await ctx.db.delete(id);
+        return true;
+
+      default:
+        throw new Error(`Unknown operation type: ${operation}`);
     }
+  }
 });
 
 /**
- * Batch mutation function for efficient crystal data operations
+ * Batch mutation function for efficient crystal operations
  *
- * Handles batch create, update, and delete operations for both crystal_shards and crystals
- * tables through a single unified interface. Significantly more efficient than individual
- * operations when dealing with multiple items.
+ * Handles batch create, update, and delete operations for crystals table only.
+ * For shard operations, use batchMutateShards from shardMutations.ts
+ * 
+ * NOTE: Operations are processed sequentially to maintain database consistency.
+ * Each operation is atomic, but the batch itself is not a single transaction.
  *
- * @param table - Target table ("crystal_shards" or "crystals")
  * @param operations - Array of operation objects
  *
  * @example
  * ```typescript
- * // Batch create multiple shards
- * const result = await batchMutateCrystalData({
- *   table: "crystal_shards",
- *   operations: [
- *     {
- *       type: "create",
- *       data: { userId: "user1", dimension: "work_style", exact_quote: "I work best in quiet spaces", createdAt: Date.now(), updatedAt: Date.now() }
- *     },
- *     {
- *       type: "create", 
- *       data: { userId: "user1", dimension: "communication", exact_quote: "I prefer written feedback", createdAt: Date.now(), updatedAt: Date.now() }
- *     }
- *   ]
- * });
- *
  * // Batch update multiple crystals
- * await batchMutateCrystalData({
- *   table: "crystals",
+ * await batchMutateCrystals({
  *   operations: [
  *     {
  *       type: "update",
@@ -113,25 +229,14 @@ export const mutateCrystalData = mutation({
  *     }
  *   ]
  * });
- *
- * // Mixed batch operations
- * await batchMutateCrystalData({
- *   table: "crystal_shards",
- *   operations: [
- *     { type: "create", data: { userId: "user1", dimension: "creativity", createdAt: Date.now(), updatedAt: Date.now() } },
- *     { type: "update", id: "shard789", data: { confidence_level: "high", updatedAt: Date.now() } },
- *     { type: "delete", id: "shard999" }
- *   ]
- * });
  * ```
  */
-export const batchMutateCrystalData = mutation({
+export const batchMutateCrystals = mutation({
     args: {
-        table: v.union(v.literal("crystal_shards"), v.literal("crystals")),
         operations: v.array(v.object({
             type: v.union(v.literal("create"), v.literal("update"), v.literal("delete")),
             data: v.optional(v.any()),
-            id: v.optional(v.union(v.id("crystal_shards"), v.id("crystals"))),
+            id: v.optional(v.id("crystals")),
         })),
     },
     returns: v.object({
@@ -139,18 +244,18 @@ export const batchMutateCrystalData = mutation({
         results: v.array(v.object({
             operation: v.union(v.literal("create"), v.literal("update"), v.literal("delete")),
             success: v.boolean(),
-            id: v.optional(v.union(v.id("crystal_shards"), v.id("crystals"))),
+            id: v.optional(v.id("crystals")),
             error: v.optional(v.string()),
         })),
         totalOperations: v.number(),
         successfulOperations: v.number(),
         failedOperations: v.number(),
     }),
-    handler: async (ctx, { table, operations }) => {
+    handler: async (ctx, { operations }) => {
         const results: Array<{
             operation: "create" | "update" | "delete";
             success: boolean;
-            id?: Id<"crystal_shards"> | Id<"crystals">;
+            id?: Id<"crystals">;
             error?: string;
         }> = [];
 
@@ -160,25 +265,19 @@ export const batchMutateCrystalData = mutation({
         // Process each operation in the batch
         for (const op of operations) {
             try {
-                let resultId: Id<"crystal_shards"> | Id<"crystals"> | undefined;
+                let resultId: Id<"crystals"> | undefined;
 
                 switch (op.type) {
                     case "create":
                         if (!op.data) {
                             throw new Error("Data is required for create operations");
                         }
-                        // Ensure new shards get proper initial status
-                        if (table === "crystal_shards") {
-                            const shardData = { ...op.data };
-                            // Set explicit unprocessed status for new shards if not already set
-                            if (!shardData.shard_status) {
-                                shardData.shard_status = "unprocessed";
-                            }
-                            resultId = await ctx.db.insert(table, shardData);
-                        } else {
-                            // For create operations, Convex will validate against the full schema automatically
-                            resultId = await ctx.db.insert(table, op.data);
-                        }
+                        
+                        resultId = await ctx.db.insert("crystals", {
+                          ...op.data,
+                          createdAt: op.data.createdAt || Date.now(),
+                          updatedAt: Date.now(),
+                        });
                         break;
 
                     case "update":
@@ -188,8 +287,22 @@ export const batchMutateCrystalData = mutation({
                         if (!op.data) {
                             throw new Error("Data is required for update operations");
                         }
-                        // For update operations, Convex will validate the fields automatically
-                        await ctx.db.patch(op.id, op.data);
+                        
+                        // Handle INCREMENT operations for usage counting
+                        const updateData: any = { ...op.data };
+                        if (updateData.usage_count === "INCREMENT") {
+                          const existingCrystal = await ctx.db.get(op.id);
+                          if (existingCrystal) {
+                            updateData.usage_count = ((existingCrystal as any).usage_count || 0) + 1;
+                          } else {
+                            updateData.usage_count = 1;
+                          }
+                        }
+                        
+                        await ctx.db.patch(op.id, {
+                          ...updateData,
+                          updatedAt: Date.now(),
+                        });
                         resultId = op.id;
                         break;
 
@@ -277,4 +390,108 @@ export const evolveCrystalLifecycle = mutation({
     
     return args.crystalId;
   },
+});
+
+/**
+ * Unified batch mutation for both crystals and shards
+ * 
+ * This function handles batch operations for both crystals and crystal_shards tables.
+ * Used by the frontend hooks for CRUD operations.
+ */
+export const batchMutateCrystalData = mutation({
+    args: {
+        table: v.union(v.literal("crystals"), v.literal("crystal_shards")),
+        operations: v.array(v.object({
+            type: v.union(v.literal("create"), v.literal("update"), v.literal("delete")),
+            data: v.optional(v.any()),
+            id: v.optional(v.union(v.id("crystals"), v.id("crystal_shards"))),
+        })),
+    },
+    returns: v.object({
+        success: v.boolean(),
+        results: v.array(v.object({
+            operation: v.union(v.literal("create"), v.literal("update"), v.literal("delete")),
+            success: v.boolean(),
+            id: v.optional(v.union(v.id("crystals"), v.id("crystal_shards"))),
+            error: v.optional(v.string()),
+        })),
+        totalOperations: v.number(),
+        successfulOperations: v.number(),
+        failedOperations: v.number(),
+    }),
+    handler: async (ctx, { table, operations }) => {
+        const results: Array<{
+            operation: "create" | "update" | "delete";
+            success: boolean;
+            id?: Id<"crystals"> | Id<"crystal_shards">;
+            error?: string;
+        }> = [];
+
+        let successfulOperations = 0;
+        let failedOperations = 0;
+
+        for (const operation of operations) {
+            try {
+                switch (operation.type) {
+                    case "create":
+                        if (!operation.data) {
+                            throw new Error("Data required for create operation");
+                        }
+                        const newId = await ctx.db.insert(table, operation.data);
+                        results.push({
+                            operation: "create",
+                            success: true,
+                            id: newId,
+                        });
+                        successfulOperations++;
+                        break;
+
+                    case "update":
+                        if (!operation.id || !operation.data) {
+                            throw new Error("ID and data required for update operation");
+                        }
+                        await ctx.db.patch(operation.id, operation.data);
+                        results.push({
+                            operation: "update",
+                            success: true,
+                            id: operation.id,
+                        });
+                        successfulOperations++;
+                        break;
+
+                    case "delete":
+                        if (!operation.id) {
+                            throw new Error("ID required for delete operation");
+                        }
+                        await ctx.db.delete(operation.id);
+                        results.push({
+                            operation: "delete",
+                            success: true,
+                            id: operation.id,
+                        });
+                        successfulOperations++;
+                        break;
+
+                    default:
+                        throw new Error(`Unknown operation type: ${operation.type}`);
+                }
+            } catch (error: any) {
+                console.error(`[BATCH MUTATE ${table.toUpperCase()}] Error in ${operation.type}:`, error);
+                results.push({
+                    operation: operation.type,
+                    success: false,
+                    error: error.message || "Unknown error",
+                });
+                failedOperations++;
+            }
+        }
+
+        return {
+            success: failedOperations === 0,
+            results,
+            totalOperations: operations.length,
+            successfulOperations,
+            failedOperations,
+        };
+    },
 });

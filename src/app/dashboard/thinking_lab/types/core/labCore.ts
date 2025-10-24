@@ -6,8 +6,8 @@
  */
 
 export interface LabResponseData {
-  response_content: string
-  session_identifier: string
+  session_identifier: string | null
+  conversationId: string | null
   user_input: string
   suggestions?: string[]
   metadata?: Record<string, any>
@@ -69,13 +69,17 @@ export interface BottomBarAction {
 // =============================================================================
 
 export interface DialogueState {
-    messages: any[]
+    // UI state only - NO messages (Convex is source of truth)
     isLoading: boolean
-    sessionId: string
     conversationId?: string
     error?: string
     currentStatus?: string
     quotedContent: string
+    lastSuggestions?: string[]  // Ephemeral suggestions from last backend response
+    pendingUserMessage?: string // Optimistic UI: user message before Convex write
+    streamingContent: string // Real-time streaming content as it arrives
+    streamingComplete: boolean // Streaming done, waiting for Convex persistence
+    expectedMessageCount?: number // Expected message count after streaming completes
     // Project/widget context
     projectId?: string
     widgetId?: string
@@ -84,11 +88,10 @@ export interface DialogueState {
 
 export interface DialogueActions {
     sendMessage: (content: string) => Promise<void>
+    sendMessageStream: (content: string) => Promise<void>
     startNewConversation: () => void
     loadConversation: (conversationId: string) => Promise<void>
-    clearMessages: () => void
     setError: (error: string | undefined) => void
-    addMessage: (message: any) => void
     setLoading: (loading: boolean) => void
     setStatus: (status: string | undefined) => void
     setQuotedContent: (content: string) => void

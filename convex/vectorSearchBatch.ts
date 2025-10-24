@@ -2,6 +2,7 @@
 import { action, internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
+import { contentTypeValidator, contentTypesArrayValidator } from "./types/embeddings";
 import { internal } from "./_generated/api";
 
 /**
@@ -18,11 +19,7 @@ export const batchGenerateEmbeddings = action({
     userId: v.string(),
     items: v.array(v.object({
       contentId: v.string(),
-      contentType: v.union(
-        v.literal("conversation"),
-        v.literal("note"),
-        v.literal("crystal")
-      ),
+      contentType: contentTypeValidator,
       title: v.string(),
       content: v.string(),
     })),
@@ -134,11 +131,7 @@ export const batchVectorSearch = action({
       queryId: v.string(),
       query: v.string(),
       limit: v.optional(v.number()),
-      contentTypes: v.optional(v.array(v.union(
-        v.literal("conversation"),
-        v.literal("note"),
-        v.literal("crystal")
-      ))),
+      contentTypes: contentTypesArrayValidator,
       minSimilarity: v.optional(v.number()),
     })),
   },
