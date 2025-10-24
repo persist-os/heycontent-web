@@ -56,6 +56,25 @@ export function MessageBubble({
     context: 'message.quote_to_notepad'
   })
 
+  // Star rating functionality
+  const [messageRating, setMessageRating] = React.useState(0)
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = React.useState(false)
+  
+  const handleRateFeedback = React.useCallback(async (rating: number, feedbackText?: string) => {
+    if (!userId || !message.id) return
+    
+    setIsSubmittingFeedback(true)
+    try {
+      // TODO: Implement feedback submission
+      console.log('Rating submitted:', { rating, feedbackText, messageId: message.id })
+      setMessageRating(rating)
+    } catch (error) {
+      console.error('Failed to submit feedback:', error)
+    } finally {
+      setIsSubmittingFeedback(false)
+    }
+  }, [userId, message.id])
+
   return (
     <div className={`w-full ${className}`}>
       {/* Message container */}
@@ -72,33 +91,16 @@ export function MessageBubble({
             `}
           >
             {/* Thinking indicator for typing messages */}
-            {message.status === 'typing' ? (
-              // Crossfade between thinking indicator and streaming content
+            {message.status === 'typing' && !message.content ? (
+              // Show thinking indicator while loading (only if no content)
               <div className="relative min-h-[60px]">
-                {/* Thinking indicator - fades out when content arrives */}
-                <div 
-                  className="absolute inset-0 flex items-center transition-opacity duration-300 ease-out"
-                  style={{ 
-                    opacity: message.content ? 0 : 1,
-                    pointerEvents: message.content ? 'none' : 'auto'
-                  }}
-                >
+                <div className="flex items-center">
                   <HorizontalProgressiveThinking />
                 </div>
-                
-                {/* Streaming content - fades in as it arrives */}
-                {message.content && (
-                  <div 
-                    className={`transition-opacity duration-300 ease-out ${isUser ? 'text-primary-foreground dark:text-black' : 'text-foreground'}`}
-                    style={{ opacity: 1 }}
-                  >
-                    <MarkdownRenderer content={message.content} />
-                  </div>
-                )}
               </div>
             ) : (
               <>
-                {/* Message content */}
+                {/* Message content - show streaming content in real-time */}
                 <div className={`${isUser ? 'text-primary-foreground dark:text-black' : 'text-foreground'}`}>
                   <MarkdownRenderer content={message.content} />
                 </div>

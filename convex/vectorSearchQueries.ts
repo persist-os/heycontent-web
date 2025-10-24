@@ -18,6 +18,10 @@ export const getVectorSearchData = action({
     contentTypes: contentTypesArrayValidator,
     limit: v.optional(v.number()),
     threshold: v.optional(v.number()),
+    // Add missing fields that backend sends
+    includeMetadata: v.optional(v.boolean()),
+    useIndex: v.optional(v.string()),
+    table: v.optional(v.string()),
   },
   returns: v.object({
     success: v.boolean(),

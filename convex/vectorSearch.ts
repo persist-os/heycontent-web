@@ -556,42 +556,54 @@ export const getUserEmbeddings = internalQuery({
     contentTypes: contentTypesArrayValidator,
   },
   handler: async (ctx, args) => {
-    console.log('🔍 [GET USER EMBEDDINGS] Starting query for user:', args.userId);
-    console.log('🔍 [GET USER EMBEDDINGS] Content types filter:', args.contentTypes);
-    
-    const query = ctx.db
-      .query("contentEmbeddings")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId));
-    
-    let results;
-    // Apply content type filter if specified
-    if (args.contentTypes && args.contentTypes.length > 0) {
-      console.log('🔍 [GET USER EMBEDDINGS] Applying content type filter for:', args.contentTypes);
-      results = await query
-        .filter((q) => {
-          let filter = q.eq(q.field("contentType"), args.contentTypes![0]);
-          for (let i = 1; i < args.contentTypes!.length; i++) {
-            filter = q.or(filter, q.eq(q.field("contentType"), args.contentTypes![i]));
-          }
-          return filter;
-        })
-        .collect();
-    } else {
-      console.log('🔍 [GET USER EMBEDDINGS] No content type filter, getting all embeddings');
-      results = await query.collect();
+    try {
+      console.log('🔍 [GET USER EMBEDDINGS] Starting query for user:', args.userId);
+      console.log('🔍 [GET USER EMBEDDINGS] Content types filter:', args.contentTypes);
+      
+      const query = ctx.db
+        .query("contentEmbeddings")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId));
+      
+      let results;
+      // Apply content type filter if specified
+      if (args.contentTypes && args.contentTypes.length > 0) {
+        console.log('🔍 [GET USER EMBEDDINGS] Applying content type filter for:', args.contentTypes);
+        results = await query
+          .filter((q) => {
+            let filter = q.eq(q.field("contentType"), args.contentTypes![0]);
+            for (let i = 1; i < args.contentTypes!.length; i++) {
+              filter = q.or(filter, q.eq(q.field("contentType"), args.contentTypes![i]));
+            }
+            return filter;
+          })
+          .collect();
+      } else {
+        console.log('🔍 [GET USER EMBEDDINGS] No content type filter, getting all embeddings');
+        results = await query.collect();
+      }
+      
+      // Log detailed breakdown of what we found
+      const contentTypeCounts = results.reduce((acc, embedding) => {
+        acc[embedding.contentType] = (acc[embedding.contentType] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      console.log('🔍 [GET USER EMBEDDINGS] Found embeddings:', {
+        total: results.length,
+        byType: contentTypeCounts
+      });
+      
+      return results;
+    } catch (error) {
+      console.error('❌ [GET USER EMBEDDINGS] Error fetching embeddings:', error);
+      console.error('❌ [GET USER EMBEDDINGS] Error details:', {
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorStack: error instanceof Error ? error.stack : 'No stack',
+        userId: args.userId,
+        contentTypes: args.contentTypes
+      });
+      // Return empty array to prevent cascading failures
+      return [];
     }
-    
-    // Log detailed breakdown of what we found
-    const contentTypeCounts = results.reduce((acc, embedding) => {
-      acc[embedding.contentType] = (acc[embedding.contentType] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-    
-    console.log('🔍 [GET USER EMBEDDINGS] Found embeddings:', {
-      total: results.length,
-      byType: contentTypeCounts
-    });
-    
-    return results;
   },
 });

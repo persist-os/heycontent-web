@@ -403,7 +403,7 @@ export const useShardMutations = () => {
  */
 export const useShardsByIds = (userId: string | undefined, shardIds: string[] | undefined) => {
   const shards = useQuery(
-    api.crystalQueries.getShardsByIds,
+    api.shardQueries.getShardsByIds,
     userId && shardIds && shardIds.length > 0 ? {
       userId,
       shardIds

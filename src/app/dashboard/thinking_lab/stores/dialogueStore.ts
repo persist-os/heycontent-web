@@ -30,9 +30,7 @@ export const useDialogueStore = create<DialogueStore>()(
         quotedContent: "", // Content to be quoted to notepad
         lastSuggestions: [], // Ephemeral suggestions from last response
         pendingUserMessage: undefined, // Optimistic UI: user message before Convex write
-        streamingContent: "", // Real-time streaming content as it arrives
-        streamingComplete: false, // Streaming done, waiting for Convex
-        expectedMessageCount: undefined, // Expected message count after completion
+        streamingContent: "", // Real-time streaming content during chat
         // Project/widget context
         projectId: undefined,
         widgetId: undefined,
@@ -51,7 +49,8 @@ export const useDialogueStore = create<DialogueStore>()(
                 isLoading: true,
                 error: undefined,
                 currentStatus: 'Thinking...',
-                pendingUserMessage: content
+                pendingUserMessage: content,
+                streamingContent: "" // Clear any previous streaming content
             })
 
             try {
@@ -87,8 +86,17 @@ export const useDialogueStore = create<DialogueStore>()(
                     }
                 }
 
-                // Call the backend - it writes to Convex immediately
-                const response = await transmitMessageWithContext(requestParams)
+                // Call the streaming backend - accumulate chunks in store state
+                const response = await transmitMessageWithStreaming(
+                    requestParams,
+                    (chunk: string) => {
+                        // Accumulate streaming chunks in store state for real-time UI updates
+                        console.log('[DialogueStore] Received chunk:', chunk.length, 'chars')
+                        set(state => ({
+                            streamingContent: state.streamingContent + chunk
+                        }))
+                    }
+                )
                 
                 console.log('[DialogueStore] Backend response:', {
                     response,
@@ -104,17 +112,26 @@ export const useDialogueStore = create<DialogueStore>()(
                 console.log('[DialogueStore] Setting conversationId:', convexConversationId)
                 
                 // Update conversationId and suggestions, clear loading state
-                // Component subscription will replace optimistic messages with real ones
+                // Keep streamingContent until Convex subscription updates with real message
                 set({
                     conversationId: convexConversationId || conversationId,
                     isLoading: false,
                     currentStatus: undefined,
                     pendingUserMessage: undefined, // Clear optimistic message
+                    // Keep streamingContent until Convex subscription replaces it
+                    // streamingContent: "", // Don't clear immediately - let Convex subscription handle it
                     // Store suggestions temporarily for UI (they're ephemeral)
                     lastSuggestions: response.suggestions || []
                 })
                 
                 console.log('[DialogueStore] Store updated with conversationId, subscription should fire')
+                
+                // Keep streaming content until message is confirmed in Convex
+                // This will be cleared when:
+                // 1. User starts a new conversation (startNewConversation action)
+                // 2. User navigates away (component unmount)
+                // 3. Message is confirmed to exist in Convex (via component query)
+                console.log('[DialogueStore] Keeping streaming content until new conversation or navigation')
 
             } catch (error) {
                 console.error('Failed to send message:', error)
@@ -122,99 +139,12 @@ export const useDialogueStore = create<DialogueStore>()(
                     isLoading: false,
                     currentStatus: undefined,
                     pendingUserMessage: undefined, // Clear optimistic message on error
+                    streamingContent: "", // Clear streaming content on error
                     error: error instanceof Error ? error.message : 'Failed to send message'
                 })
             }
         },
 
-        // Streaming version of sendMessage - yields chunks in real-time
-        sendMessageStream: async (content: string, fileAttachments?: FileUploadResponse[]) => {
-            const { conversationId } = get()
-
-            // Determine if this is the first message
-            const isFirstMessage = !conversationId
-            const actualSessionId = isFirstMessage ? null : conversationId
-
-            // Set loading state with optimistic messages
-            set({
-                isLoading: true,
-                error: undefined,
-                currentStatus: 'Connecting...',
-                pendingUserMessage: content, // User message for optimistic UI
-                streamingContent: "", // Will be updated as chunks arrive
-                streamingComplete: false, // Reset completion flag
-                expectedMessageCount: undefined
-            })
-
-            try {
-                // Get notepad context if enabled
-                const notepadState = useNotepadStore.getState()
-                const notepadContext = notepadState.includeInMessages && notepadState.currentContent
-                    ? {
-                        content: notepadState.currentContent,
-                        title: notepadState.currentTitle || 'Untitled'
-                      }
-                    : null
-
-                // Get project/widget context from store
-                const { projectId, widgetId, widgetOutputId } = get()
-
-                // Determine conversation type based on context
-                const conversationType = widgetOutputId ? 'widget_prompt' : 'general'
-
-                // Prepare request parameters
-                const requestParams: MessageTransmissionRequest = {
-                    content,
-                    isFirstMessage,
-                    sessionIdentifier: actualSessionId,
-                    workspaceContext: conversationId ? { contentId: conversationId } : null,
-                    notepadContext,
-                    fileAttachments,
-                    projectId,
-                    widgetId,
-                    widgetOutputId,
-                    conversationType,
-                    onStatusUpdate: (status: string) => {
-                        set({ currentStatus: status })
-                    }
-                }
-
-                // Call the streaming backend - updates UI as chunks arrive
-                const response = await transmitMessageWithStreaming(
-                    requestParams,
-                    (chunk: string) => {
-                        // Update streaming content as chunks arrive
-                        set(state => ({
-                            streamingContent: state.streamingContent + chunk
-                        }))
-                    }
-                    // Suggestions generated async, no callback needed
-                )
-                
-                // Backend writes to Convex after streaming completes
-                // Component subscription will update messages from Convex
-                const convexConversationId = response.session_identifier || response.conversationId
-                
-                // Mark streaming as complete but KEEP isLoading true
-                // We'll clear it only when Convex confirms the message arrived
-                set({
-                    conversationId: convexConversationId || conversationId,
-                    streamingComplete: true, // Mark as complete, waiting for Convex
-                    currentStatus: undefined,
-                    // Keep isLoading, pendingUserMessage, and streamingContent until Convex confirms
-                })
-
-            } catch (error) {
-                console.error('Failed to stream message:', error)
-                set({
-                    isLoading: false,
-                    currentStatus: undefined,
-                    pendingUserMessage: undefined,
-                    streamingContent: "", // Clear streaming content on error
-                    error: error instanceof Error ? error.message : 'Failed to stream message'
-                })
-            }
-        },
 
         setLoading: (loading: boolean) => {
             set({ isLoading: loading })
@@ -226,8 +156,13 @@ export const useDialogueStore = create<DialogueStore>()(
                 error: undefined,
                 currentStatus: undefined,
                 pendingUserMessage: undefined,
+                streamingContent: "", // Clear streaming content when starting new conversation
                 lastSuggestions: []
             })
+        },
+
+        clearStreamingContent: () => {
+            set({ streamingContent: "" })
         },
 
         loadConversation: async (conversationId: string) => {
@@ -262,6 +197,7 @@ export const useDialogueStore = create<DialogueStore>()(
                 currentStatus: undefined,
                 quotedContent: "",
                 pendingUserMessage: undefined,
+                streamingContent: "",
                 lastSuggestions: []
             })
         },

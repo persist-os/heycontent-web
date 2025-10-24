@@ -27,6 +27,7 @@ export const conversationSchemaFields = {
       uploaded_at: v.string(),
     }))),
     enrichment_metadata: v.optional(v.any()),
+    context_summary: v.optional(v.any()),
   }))),
   
   // Message statistics (denormalized for performance)

@@ -7,7 +7,7 @@ export async function POST(request: Request) {
   const startTime = Date.now();
   const requestId = Math.random().toString(36).substring(7);
 
-  console.log(`[${requestId}] Lab message request started`, {
+  console.log(`[${requestId}] Chat stream request started`, {
     timestamp: new Date().toISOString(),
     method: request.method,
     url: request.url
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     
-    // Transform thinking lab payload to chat API format
+    // Transform main chat payload to streaming chat API format
     const {
       user_id,
       query,
@@ -33,24 +33,22 @@ export async function POST(request: Request) {
       session_identifier,
       notepad_context,
       workspace_context,
-      intent_analysis,
-      vector_search_metadata,
-      // Context parameters for project/widget linkage
       project_id,
       widget_id,
       widget_output_id,
-      conversation_type
+      conversation_type,
+      file_attachments,
+      content_context,
+      vector_search_metadata
     } = body;
 
-    console.log(`[${requestId}] Received lab request:`, {
-      user_id,
+    console.log(`[${requestId}] Received streaming chat request:`, {
+      user_id: userId,
       query_length: query?.length || 0,
       is_first_message,
       session_identifier,
       has_notepad_context: !!notepad_context,
-      has_workspace_context: !!workspace_context,
-      has_intent_analysis: !!intent_analysis,
-      has_vector_search_metadata: !!vector_search_metadata
+      has_file_attachments: Array.isArray(file_attachments) ? file_attachments.length : 0
     });
 
     if (!query) {
@@ -65,21 +63,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized - Invalid API key format or missing user_id' }, { status: 401 });
     }
 
-    // Build payload for chat API (MAB now controls all context decisions)
+    // Build payload for streaming chat API
     const chatRequestBody: any = {
       user_id: authenticated_user_id,
       query,
       is_first_message: is_first_message === true,
       session_id: is_first_message === true ? null : (session_identifier || null),
       notepad_context,
-      vector_search_metadata
+      content_context: content_context || {},
+      vector_search_metadata: vector_search_metadata || {},
+      file_attachments: file_attachments || []
     };
 
-    // Add workspace context as content_context if provided
+    // Add workspace context if provided
     if (workspace_context) {
       chatRequestBody.content_context = {
-        platform: 'thinking_lab',
-        content: workspace_context
+        platform: 'main_chat',
+        content: workspace_context,
+        ...chatRequestBody.content_context
       };
     }
 
@@ -100,9 +101,7 @@ export async function POST(request: Request) {
     console.log(`[${requestId}] Forwarding to streaming chat API:`, {
       url: `${BACKEND_URL}/api/v1/chat/stream`,
       user_id: authenticated_user_id,
-      query_length: query.length,
-      has_notepad_context: !!chatRequestBody.notepad_context,
-      has_content_context: !!chatRequestBody.content_context
+      query_length: query.length
     });
 
     // Forward to streaming chat endpoint
@@ -126,7 +125,7 @@ export async function POST(request: Request) {
       }, { status: response.status });
     }
 
-    // Return streaming response
+    // Proxy the streaming response back to client
     return new Response(response.body, {
       headers: {
         'Content-Type': 'text/event-stream',
@@ -138,7 +137,7 @@ export async function POST(request: Request) {
 
   } catch (error) {
     const totalDuration = Date.now() - startTime;
-    console.error(`[${requestId}] Lab message request failed`, {
+    console.error(`[${requestId}] Chat stream request failed`, {
       error: error instanceof Error ? error.message : 'Unknown error',
       duration_ms: totalDuration
     });

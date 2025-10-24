@@ -109,22 +109,45 @@ app.get("/api/users/lookup/subscription/:subscriptionId", async (c) => {
 
 // Conversations
 app.post("/api/users/:id/create_conversation", async (c) => {
-  const ctx = c.env;
-  const userId = c.req.param("id");
-  const { title, messages } = await c.req.json();
-  
-  // Add timestamps to messages if they don't have them
-  const messagesWithTimestamps = messages.map((message: any) => ({
-    ...message,
-    timestamp: message.timestamp || Date.now(),
-  }));
-  
-  const result = await ctx.runMutation(api.chatMutations.createConversation, {
-    userId,
-    title,
-    messages: messagesWithTimestamps,
-  });
-  return c.json(result);
+  try {
+    const ctx = c.env;
+    const userId = c.req.param("id");
+    const { title, messages } = await c.req.json();
+    
+    // Validate required fields
+    if (!title || !messages || !Array.isArray(messages)) {
+      return c.json({ 
+        success: false, 
+        error: "title and messages are required" 
+      }, 400);
+    }
+    
+    // Add timestamps to messages if they don't have them
+    const messagesWithTimestamps = messages.map((message: any) => ({
+      ...message,
+      timestamp: message.timestamp || Date.now(),
+    }));
+    
+    const result = await ctx.runMutation(api.chatMutations.createConversation, {
+      userId,
+      title,
+      messages: messagesWithTimestamps,
+    });
+    return c.json(result);
+  } catch (error) {
+    console.error('Create conversation error:', error);
+    console.error('Create conversation error details:', {
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : 'No stack',
+      userId: c.req.param("id"),
+      requestBody: await c.req.json().catch(() => 'Failed to parse request body')
+    });
+    return c.json({ 
+      success: false, 
+      error: `Create conversation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      data: null 
+    }, 500);
+  }
 });
 
 // Add message to conversation (LEGACY - uses old messages array)
@@ -229,6 +252,7 @@ app.post("/api/users/:id/messages/add", async (c) => {
     context: body.context,
     fileAttachments: body.fileAttachments,
     enrichment_metadata: body.enrichment_metadata,
+    context_summary: body.context_summary,
   });
   
   return c.json({ messageId });
@@ -2322,9 +2346,14 @@ app.post("/api/vectorSearch/action", async (c) => {
     return c.json(result);
   } catch (error) {
     console.error('Vector search action error:', error);
+    console.error('Vector search error details:', {
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : 'No stack',
+      requestBody: await c.req.json().catch(() => 'Failed to parse request body')
+    });
     return c.json({ 
       success: false, 
-      error: 'Vector search action failed',
+      error: `Vector search action failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
       data: null 
     }, 500);
   }

@@ -19,7 +19,9 @@ export const jobTypeValidator = v.union(
   v.literal("evolution_mab_reward"),
   v.literal("formation_mab_reward"),
   v.literal("stardust_promotion"),
-  v.literal("widget_execution")
+  v.literal("widget_execution"),
+  v.literal("chat_post_message_tasks"),
+  v.literal("conversation_title_generation")
 );
 
 // Job status validator - matches Python JobStatus enum
@@ -39,7 +41,7 @@ export const jobPriorityValidator = v.union(
 );
 
 // Type exports for TypeScript code
-export type JobType = "shard_extraction" | "crystal_formation" | "intelligence_analysis" | "chatgpt_import" | "context_enrichment_feedback" | "stardust_stream_detection" | "convergence_optimization" | "evolution_mab_reward" | "formation_mab_reward" | "stardust_promotion" | "widget_execution";
+export type JobType = "shard_extraction" | "crystal_formation" | "intelligence_analysis" | "chatgpt_import" | "context_enrichment_feedback" | "stardust_stream_detection" | "convergence_optimization" | "evolution_mab_reward" | "formation_mab_reward" | "stardust_promotion" | "widget_execution" | "chat_post_message_tasks" | "conversation_title_generation";
 export type JobStatus = "queued" | "running" | "completed" | "failed";
 export type JobPriority = "low" | "normal" | "high" | "urgent";
 
@@ -135,4 +137,24 @@ export interface WidgetExecutionPayload {
   scheduled: boolean;
   execution_prompt?: string;
   metadata?: any;
+}
+
+export interface ChatPostMessageTasksPayload {
+  user_id: string;
+  session_id: string;
+  is_first_message: boolean;
+  user_message: string;
+  ai_response: string;
+  user_info?: string;
+  enrichment_result?: any;
+  enrichment_metadata?: any;
+  memory_key: string;
+}
+
+export interface ConversationTitleGenerationPayload {
+  user_id: string;
+  session_id: string;
+  user_message: string;
+  ai_response: string;
+  user_info?: string;
 }

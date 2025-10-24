@@ -2,26 +2,13 @@ import { mutation, action } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
 import { internal } from "./_generated/api";
+import { messageArrayValidator, messageInputValidator } from "./types/message";
 
 export const createConversation = mutation({
     args: {
       userId: v.string(),
       title: v.string(),
-      messages: v.array(v.object({
-        content: v.string(),
-        role: v.union(v.literal("user"), v.literal("assistant")),
-        timestamp: v.number(),
-        context: v.optional(v.string()),
-        fileAttachments: v.optional(v.array(v.object({
-          file_url: v.string(),
-          original_filename: v.string(),
-          content_type: v.string(),
-          file_size: v.number(),
-          gcs_url: v.string(),
-          uploaded_at: v.string(),
-        }))),
-        enrichment_metadata: v.optional(v.any()),
-      })),
+      messages: messageArrayValidator,
       // NEW: Optional project/widget context fields
       projectId: v.optional(v.id("projects")),
       widgetId: v.optional(v.union(v.string(), v.id("widgets"))),  // 🔄 Migration: supports both legacy string and Convex ID
@@ -34,25 +21,37 @@ export const createConversation = mutation({
       )),
     },
     handler: async (ctx, args) => {
-      const conversationId = await ctx.db.insert("conversations", {
-        userId: args.userId,
-        title: args.title,
-        messages: args.messages,
-        messageCount: args.messages.length,
-        lastMessageAt: args.messages.length > 0 ? args.messages[args.messages.length - 1].timestamp : undefined,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        starred: false,
-        // NEW: Include context fields if provided
-        projectId: args.projectId,
-        widgetId: args.widgetId,
-        widgetOutputId: args.widgetOutputId,
-        conversationType: args.conversationType,
-      });
+      try {
+        const conversationId = await ctx.db.insert("conversations", {
+          userId: args.userId,
+          title: args.title,
+          messages: args.messages,
+          messageCount: args.messages.length,
+          lastMessageAt: args.messages.length > 0 ? args.messages[args.messages.length - 1].timestamp : undefined,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          starred: false,
+          // NEW: Include context fields if provided
+          projectId: args.projectId,
+          widgetId: args.widgetId,
+          widgetOutputId: args.widgetOutputId,
+          conversationType: args.conversationType,
+        });
 
-      // Note: Embeddings are generated automatically by the backend after conversation is stored
+        // Note: Embeddings are generated automatically by the backend after conversation is stored
 
-      return conversationId;
+        return conversationId;
+      } catch (error) {
+        console.error('Create conversation mutation error:', error);
+        console.error('Create conversation mutation error details:', {
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          errorStack: error instanceof Error ? error.stack : 'No stack',
+          userId: args.userId,
+          title: args.title,
+          messageCount: args.messages?.length || 0
+        });
+        throw new Error(`Failed to create conversation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
     },
   });
   
@@ -60,21 +59,7 @@ export const addMessageToConversation = mutation({
 args: {
     userId: v.string(),
     conversationId: v.string(),
-    message: v.object({
-      content: v.string(),
-      role: v.union(v.literal("user"), v.literal("assistant")),
-      timestamp: v.number(),
-      context: v.optional(v.string()),
-      fileAttachments: v.optional(v.array(v.object({
-        file_url: v.string(),
-        original_filename: v.string(),
-        content_type: v.string(),
-        file_size: v.number(),
-        gcs_url: v.string(),
-        uploaded_at: v.string(),
-      }))),
-      enrichment_metadata: v.optional(v.any()),
-    }),
+    message: messageInputValidator,
 },
 handler: async (ctx, args) => {
     const doc = await ctx.db.get(args.conversationId as any);
