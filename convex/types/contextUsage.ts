@@ -12,8 +12,11 @@ import { v } from "convex/values";
 
 export const outputTypeValidator = v.union(
   v.literal("chat"),
+  v.literal("chat_message"),           // More specific chat type for feedback integration
   v.literal("widget"),
   v.literal("widget_generation"),
+  v.literal("widget_output"),          // More specific widget type for feedback integration
+  v.literal("note_generation"),        // Note generation for feedback integration
   v.literal("shard_extraction"),
   v.literal("crystal_formation"),
   v.literal("project_discovery")

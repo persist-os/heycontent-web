@@ -170,7 +170,6 @@ import type * as userActions from "../userActions.js";
 import type * as userMutations from "../userMutations.js";
 import type * as userQueries from "../userQueries.js";
 import type * as vectorSearch from "../vectorSearch.js";
-import type * as vectorSearchBatch from "../vectorSearchBatch.js";
 import type * as vectorSearchMutations from "../vectorSearchMutations.js";
 import type * as vectorSearchQueries from "../vectorSearchQueries.js";
 import type * as webhookEvents from "../webhookEvents.js";
@@ -346,7 +345,6 @@ declare const fullApi: ApiFromModules<{
   userMutations: typeof userMutations;
   userQueries: typeof userQueries;
   vectorSearch: typeof vectorSearch;
-  vectorSearchBatch: typeof vectorSearchBatch;
   vectorSearchMutations: typeof vectorSearchMutations;
   vectorSearchQueries: typeof vectorSearchQueries;
   webhookEvents: typeof webhookEvents;

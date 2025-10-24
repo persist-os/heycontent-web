@@ -4,7 +4,14 @@ export const feedbackTypeValidator = v.union(
   v.literal("bug"),
   v.literal("feature_request"),
   v.literal("general"),
-  v.literal("praise")
+  v.literal("praise"),
+  v.literal("content_rating")
+);
+
+export const contentFeedbackEntityTypeValidator = v.union(
+  v.literal("chat_message"),
+  v.literal("note_generation"),
+  v.literal("widget_output")
 );
 
 export const feedbackStatusValidator = v.union(
@@ -22,7 +29,7 @@ export const feedbackPriorityValidator = v.union(
 );
 
 export const feedbackSchemaFields = {
-  type: v.string(), // "bug", "feature_request", "general", "praise"
+  type: v.string(), // "bug", "feature_request", "general", "praise", "content_rating"
   title: v.string(),
   description: v.string(),
   userEmail: v.string(),
@@ -44,6 +51,19 @@ export const feedbackSchemaFields = {
   discordMessageId: v.optional(v.string()), // To link back to Discord
   createdAt: v.number(),
   updatedAt: v.number(),
+
+  // Content feedback fields (optional for backward compatibility)
+  entityType: v.optional(contentFeedbackEntityTypeValidator),
+  entityId: v.optional(v.string()),
+  rating: v.optional(v.number()),
+  feedbackText: v.optional(v.string()),
+  contentSnapshot: v.optional(v.any()),
+
+  // Additional context fields
+  projectId: v.optional(v.string()),
+  widgetId: v.optional(v.string()),
+  deviceType: v.optional(v.string()),
+  browserInfo: v.optional(v.string()),
 };
 
 export const feedbackValidator = v.object(feedbackSchemaFields);

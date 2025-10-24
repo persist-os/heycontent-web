@@ -1,6 +1,8 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
+import { contentFeedbackEntityTypeValidator } from "./types/feedback";
+import * as contextUsageMutations from "./contextUsageMutations";
 
 // Create new feedback entry
 export const createFeedback = mutation({
@@ -265,11 +267,7 @@ export const deleteFeedback = mutation({
 export const createContentFeedback = mutation({
   args: {
     // Entity identification
-    entityType: v.union(
-      v.literal("chat_message"),
-      v.literal("note_generation"),
-      v.literal("widget_output")
-    ),
+    entityType: contentFeedbackEntityTypeValidator,
     entityId: v.string(),
     
     // Rating data
@@ -361,6 +359,36 @@ export const createContentFeedback = mutation({
       browserInfo: args.browserInfo,
     });
 
+    // Update context usage log with feedback if it exists
+    try {
+      // Map feedback entity types to context usage output types
+      const outputTypeMap: Record<string, string> = {
+        "chat_message": "chat",
+        "note_generation": "widget_generation",
+        "widget_output": "widget",
+      };
+
+      const contextOutputType = outputTypeMap[args.entityType] || args.entityType;
+
+      const contextUsageLogs = await ctx.db
+        .query("context_usage_logs")
+        .withIndex("by_output", (q) =>
+          q.eq("outputType", contextOutputType as any).eq("outputId", args.entityId)
+        )
+        .collect();
+
+      // Update the most recent context usage log with this feedback
+      if (contextUsageLogs.length > 0) {
+        const latestLog = contextUsageLogs[contextUsageLogs.length - 1];
+        await ctx.db.patch(latestLog._id, {
+          userFeedback: args.feedbackText || `Rated ${args.rating}/5`,
+        });
+      }
+    } catch (error) {
+      // Don't fail feedback creation if context usage update fails
+      console.error("[createContentFeedback] Failed to update context usage:", error);
+    }
+
     return feedbackId;
   },
 });
@@ -370,7 +398,7 @@ export const createContentFeedback = mutation({
  */
 export const getFeedbackByEntity = query({
   args: {
-    entityType: v.string(),
+    entityType: contentFeedbackEntityTypeValidator,
     entityId: v.string(),
   },
   returns: v.array(v.object({
@@ -384,8 +412,8 @@ export const getFeedbackByEntity = query({
   handler: async (ctx, args) => {
     const feedback = await ctx.db
       .query("feedback")
-      .withIndex("by_entity", (q) => 
-        q.eq("entityType", args.entityType as any).eq("entityId", args.entityId)
+      .withIndex("by_entity", (q) =>
+        q.eq("entityType", args.entityType).eq("entityId", args.entityId)
       )
       .order("desc")
       .collect();
@@ -406,11 +434,7 @@ export const getFeedbackByEntity = query({
  */
 export const getFeedbackStatsByType = query({
   args: {
-    entityType: v.union(
-      v.literal("chat_message"),
-      v.literal("note_generation"),
-      v.literal("widget_output")
-    ),
+    entityType: contentFeedbackEntityTypeValidator,
     userId: v.optional(v.string()), // Filter by user if provided
   },
   returns: v.object({
@@ -426,7 +450,7 @@ export const getFeedbackStatsByType = query({
     feedbackWithText: v.number(),
   }),
   handler: async (ctx, args) => {
-    let query = ctx.db
+    const query = ctx.db
       .query("feedback")
       .withIndex("by_entity_created", (q) => q.eq("entityType", args.entityType));
     
@@ -476,11 +500,7 @@ export const getFeedbackStatsByType = query({
  */
 export const getLowRatedContent = query({
   args: {
-    entityType: v.optional(v.union(
-      v.literal("chat_message"),
-      v.literal("note_generation"),
-      v.literal("widget_output")
-    )),
+    entityType: v.optional(contentFeedbackEntityTypeValidator),
     maxRating: v.optional(v.number()), // Default 3
     limit: v.optional(v.number()), // Default 20
   },
@@ -497,18 +517,26 @@ export const getLowRatedContent = query({
   handler: async (ctx, args) => {
     const maxRating = args.maxRating ?? 3;
     const limit = args.limit ?? 20;
-    
-    let query = ctx.db.query("feedback");
-    
+
+    let allFeedback;
+
     if (args.entityType) {
-      query = query.withIndex("by_entity_created", (q) => 
-        q.eq("entityType", args.entityType)
-      );
+      // Use index for entity-specific queries
+      allFeedback = await ctx.db
+        .query("feedback")
+        .withIndex("by_entity_created", (q) =>
+          q.eq("entityType", args.entityType)
+        )
+        .order("desc")
+        .take(limit * 3);
+    } else {
+      // Use general index for all feedback queries
+      allFeedback = await ctx.db
+        .query("feedback")
+        .withIndex("by_created", (q) => q)
+        .order("desc")
+        .take(limit * 3);
     }
-    
-    const allFeedback = await query
-      .order("desc")
-      .take(limit * 3); // Get more to filter
     
     // Filter by rating
     const lowRated = allFeedback

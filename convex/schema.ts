@@ -247,7 +247,8 @@ export default defineSchema({
   .index("by_rating", ["rating"])
   .index("by_user_entity", ["userId", "entityType"])
   .index("by_entity_created", ["entityType", "createdAt"])
-  .index("by_user_rating", ["userId", "rating"]),
+  .index("by_user_rating", ["userId", "rating"])
+  .index("by_entity_rating", ["entityType", "rating"]),
 
   // Referrals tracking
   referrals: defineTable(referralSchemaFields)
@@ -470,7 +471,8 @@ export default defineSchema({
   .index("by_user_and_time", ["userId", "timestamp"])
   .index("by_output", ["outputType", "outputId"])
   .index("by_user", ["userId"])
-  .index("by_timestamp", ["timestamp"]),
+  .index("by_timestamp", ["timestamp"])
+  .index("by_output_type", ["outputType"]),
 
   // Stripe Webhook Events Tracking
   webhook_events: defineTable(webhookEventSchemaFields)

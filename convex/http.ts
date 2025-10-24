@@ -2330,13 +2330,12 @@ app.post("/api/vectorSearch/action", async (c) => {
   }
 });
 
-// POST /api/vectorSearch/mutate - Optimized batch mutation endpoint
+// POST /api/vectorSearch/mutate - Store embeddings from backend
 app.post("/api/vectorSearch/mutate", async (c) => {
   try {
     const requestBody = await c.req.json();
-
-    // Ensure required fields are present
     const { userId, operation, ...rest } = requestBody;
+    
     if (!userId || !operation) {
       return c.json({ error: "userId and operation are required" }, 400);
     }
@@ -2346,27 +2345,15 @@ app.post("/api/vectorSearch/mutate", async (c) => {
       operation,
       ...rest
     });
+    
     return c.json(result);
   } catch (error) {
-    console.error('Vector search mutation error:', error);
+    console.error('Embedding mutation error:', error);
     return c.json({ 
       success: false, 
-      error: 'Vector search mutation failed',
+      error: 'Embedding mutation failed',
       data: null 
     }, 500);
-  }
-});
-
-// Legacy embedding generation route (for backward compatibility)
-app.post("/api/vector-search/generate-embedding", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  const text = requestBody.text;
-  try {
-    const result = await ctx.runAction(api.vectorSearchEmbeddings.generateEmbedding, { text: text });
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
   }
 });
 
@@ -2385,49 +2372,6 @@ app.post("/api/vector-search/crystals", async (c) => {
 });
 
 
-
-// BATCH OPERATIONS AND OPTIMIZATION ENDPOINTS
-
-// Batch vector search operations
-app.post("/api/vector/batch-search", async (c) => {
-  const ctx = c.env;
-  const body = await c.req.json();
-  const { userId, queries } = body;
-  
-  console.log(`🔍 [HTTP] Batch vector search for user ${userId} with ${queries?.length || 0} queries`);
-  
-  try {
-    const result = await ctx.runAction(api.vectorSearchBatch.batchVectorSearch, {
-      userId,
-      queries: queries || []
-    });
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    console.error("❌ [HTTP] Batch vector search error:", error);
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
-// Batch embedding generation
-app.post("/api/vector/batch-embeddings", async (c) => {
-  const ctx = c.env;
-  const body = await c.req.json();
-  const { userId, items, maxConcurrency } = body;
-  
-  console.log(`🚀 [HTTP] Batch embeddings for user ${userId} with ${items?.length || 0} items`);
-  
-  try {
-    const result = await ctx.runAction(api.vectorSearchBatch.batchGenerateEmbeddings, {
-      userId,
-      items: items || [],
-      maxConcurrency: maxConcurrency || 5
-    });
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    console.error("❌ [HTTP] Batch embeddings error:", error);
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
 
 // Optimized crystal context
 app.post("/api/crystal/optimized-context", async (c) => {
