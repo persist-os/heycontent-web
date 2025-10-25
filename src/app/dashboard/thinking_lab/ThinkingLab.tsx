@@ -47,7 +47,7 @@ export default ThinkingLab
 
 // Named exports for building blocks
 export { FullThinkingLab } from './compositions/LabCompositions'
-export { useDialogueStore } from './stores/dialogueStore'
+// Removed dialogueStore export - using conversation hooks instead
 export { useLayoutStore } from './stores/layoutStore'
 
 // Type exports

@@ -155,16 +155,26 @@ export async function transmitMessageWithContext(params: MessageTransmissionRequ
 class StreamBuffer {
   private buffer: string = ''
   private rafId: number | null = null
+  private lastFlushTime: number = 0
+  private readonly MIN_INTERVAL_MS = 50 // ~20fps max for smoother experience
   
   constructor(private onFlush: (content: string) => void) {}
 
   accumulate(chunk: string) {
     this.buffer += chunk
     
-    if (!this.rafId) {
+    const now = performance.now()
+    const timeSinceLastFlush = now - this.lastFlushTime
+    
+    // Only schedule flush if enough time has passed or buffer is large
+    if (!this.rafId && (timeSinceLastFlush >= this.MIN_INTERVAL_MS || this.buffer.length > 100)) {
       this.rafId = requestAnimationFrame(() => {
-        this.onFlush(this.buffer)
-        this.buffer = ''
+        // Only flush if we have content to avoid empty updates
+        if (this.buffer) {
+          this.onFlush(this.buffer)
+          this.buffer = ''
+          this.lastFlushTime = performance.now()
+        }
         this.rafId = null
       })
     }
@@ -178,6 +188,7 @@ class StreamBuffer {
     if (this.buffer) {
       this.onFlush(this.buffer)
       this.buffer = ''
+      this.lastFlushTime = performance.now()
     }
   }
 }

@@ -1,22 +1,31 @@
 /**
  * useMessageList - Extracted from LabCompositions
  * 
- * Manages message list building from store state.
+ * Manages message list building from state.
  * Handles pending messages, streaming content, and loading states.
  */
 
 import React from 'react'
-import { useDialogueStore } from '../stores/dialogueStore'
 import type { Message } from '@/app/types/chat'
 
-export function useMessageList(): Message[] {
-  const conversationId = useDialogueStore(state => state.conversationId)
-  const isLoading = useDialogueStore(state => state.isLoading)
-  const pendingUserMessage = useDialogueStore(state => state.pendingUserMessage)
-  const streamingContent = useDialogueStore(state => state.streamingContent)
+interface UseMessageListProps {
+  conversationId?: string
+  isLoading: boolean
+  pendingUserMessage?: string
+  streamingContent: string
+  messages: any[]
+}
 
-  // Build message list from store state
-  const messages: Message[] = React.useMemo(() => {
+export function useMessageList(props?: UseMessageListProps): Message[] {
+  // Always use the provided props if available, otherwise use empty defaults
+  const conversationId = props?.conversationId
+  const isLoading = props?.isLoading || false
+  const pendingUserMessage = props?.pendingUserMessage
+  const streamingContent = props?.streamingContent || ''
+  const messages = props?.messages || []
+
+  // Build message list from state
+  const messageList: Message[] = React.useMemo(() => {
     const list: Message[] = []
     const now = Date.now().toString()
     
@@ -55,8 +64,22 @@ export function useMessageList(): Message[] {
       })
     }
     
+    // Add real messages from Convex
+    messages.forEach((msg: any) => {
+      list.push({
+        id: msg._id,
+        content: msg.content,
+        role: msg.role,
+        timestamp: msg.timestamp?.toString() || now,
+        chat_response: msg.content,
+        status: 'delivered',
+        suggestions: msg.suggestions || [],
+        metadata: msg.metadata || {}
+      })
+    })
+    
     return list
-  }, [pendingUserMessage, isLoading, streamingContent])
-
-  return messages
+  }, [pendingUserMessage, isLoading, streamingContent, messages])
+  
+  return messageList
 }

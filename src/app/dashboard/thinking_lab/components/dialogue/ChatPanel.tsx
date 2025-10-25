@@ -7,12 +7,12 @@
 
 import React from 'react'
 import { PanelRight, X } from 'lucide-react'
-import { useDialogueStore } from '../../stores/dialogueStore'
 import { useOptimizedAuth } from '../../components/notepad/hooks/useOptimizedAuth'
 import { useAutoScroll } from '../../hooks/useAutoScroll'
 import ChatMessagesList from './components/ChatMessagesList'
 import { AmbientInsights } from '@/app/dashboard/ambient_insights/AmbientInsights'
 import { WidgetPrompts } from '../../components/WidgetPrompts'
+import { BottomBarActions } from './components/BottomBarActions'
 import type { Message } from '@/app/types/chat'
 
 interface ChatPanelProps {
@@ -23,6 +23,11 @@ interface ChatPanelProps {
   isFullScreen?: boolean
   onRestoreNotepad?: () => void
   onCloseChat?: () => void
+  suggestions?: string[]
+  sendMessage: (content: string) => void
+  startNewConversation: () => void
+  isLoading: boolean
+  error?: string
 }
 
 export const ChatPanel = React.memo<ChatPanelProps>(({ 
@@ -32,9 +37,13 @@ export const ChatPanel = React.memo<ChatPanelProps>(({
   widgetOutputId, 
   isFullScreen, 
   onRestoreNotepad, 
-  onCloseChat 
+  onCloseChat,
+  suggestions = [],
+  sendMessage,
+  startNewConversation,
+  isLoading,
+  error
 }) => {
-  const { sendMessage, startNewConversation, isLoading, error } = useDialogueStore()
   const authData = useOptimizedAuth()
   
   // Auto-scroll when messages change
@@ -200,6 +209,14 @@ export const ChatPanel = React.memo<ChatPanelProps>(({
           </div>
         </div>
       )}
+
+      {/* Bottom Bar Actions - Always visible at the bottom */}
+      <BottomBarActions
+        onActionClick={handleActionClick}
+        onInputPopulate={onInputPopulate}
+        isFullScreen={isFullScreen}
+        suggestions={suggestions}
+      />
     </div>
   )
 })

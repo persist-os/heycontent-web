@@ -10,7 +10,7 @@ import { ContentRenderer } from './ContentRenderer'
 import { FileAttachmentRenderer } from '@/components/ui/FileAttachmentRenderer'
 import { useTranslation } from '@/hooks/useTranslation'
 import { StarRating } from '@/components/ui/star-rating'
-import { useDialogueStore } from '@/app/dashboard/thinking_lab/stores/dialogueStore'
+// Removed dialogueStore import - using conversation hooks instead
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'

@@ -113,12 +113,8 @@ export function useNotepadState({
     }
   }, [existingNote?.title, isNewNote])
 
-  // Sync note title to notepad store for cross-component access
-  useEffect(() => {
-    const title = note.title || 'Untitled Note'
-    useNotepadStore.getState().updateTitle(title)
-    useNotepadStore.getState().setCurrentNoteId(currentNoteId as string)
-  }, [note.title, currentNoteId])
+  // Note: Notepad context is now managed by the NotepadProvider
+  // The notepad component will sync its data through the context
 
   // Handle quoted content insertion
   useEffect(() => {

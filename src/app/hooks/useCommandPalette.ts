@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Command } from '../types/command';
 import { searchCommands, parseCommandString, createQuickAskCommand } from '../lib/commands';
+import { useTiptapEditor } from '../context/tiptap-editor-context';
 
 const MAX_HISTORY = 50;
 
@@ -14,6 +15,7 @@ interface CommandHistory {
 export function useCommandPaletteState() {
   const router = useRouter();
   const pathname = usePathname();
+  const { isTiptapEditorActive } = useTiptapEditor();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
@@ -26,7 +28,8 @@ export function useCommandPaletteState() {
 
   // Check if we're on a route where command palette should be disabled
   const isCommandPaletteDisabled = pathname === '/' || 
-                                   pathname.startsWith('/auth/');
+                                   pathname.startsWith('/auth/') ||
+                                   isTiptapEditorActive;
 
   // Debounced search effect with longer delay to prevent violations
   useEffect(() => {
@@ -131,6 +134,13 @@ export function useCommandPaletteState() {
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // Disable command palette on landing page and auth screens
     if (isCommandPaletteDisabled) {
+      return;
+    }
+
+    // Cmd/Ctrl + K to open command palette
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      setIsOpen(true);
       return;
     }
 

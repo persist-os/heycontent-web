@@ -301,6 +301,21 @@ app.post("/api/users/:id/messages/update_metadata", async (c) => {
   return c.json(result);
 });
 
+// Update message suggestions
+app.post("/api/users/:id/update_message_suggestions", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const body = await c.req.json();
+  
+  const result = await ctx.runMutation(api.messagesMutations.updateMessageSuggestions, {
+    messageId: body.messageId,
+    userId,
+    suggestions: body.suggestions,
+  });
+  
+  return c.json(result);
+});
+
 // Get conversations for a user
 app.get("/api/users/:id/conversations", async (c) => {
   const ctx = c.env;

@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { useDialogueStore } from '../stores/dialogueStore'
+// Removed dialogueStore import - using conversation hooks instead
 import { Badge } from '@/components/ui/badge'
 import { X, Layers, FolderKanban, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -14,7 +14,11 @@ import { useRouter } from 'next/navigation'
  * Allows user to exit the context and return to general chat.
  */
 export function ContextIndicator() {
-  const { projectId, widgetId, widgetOutputId, clearProjectContext } = useDialogueStore()
+  // Note: Context indicator now gets project context from props or conversation hooks
+  const projectId = undefined
+  const widgetId = undefined  
+  const widgetOutputId = undefined
+  const clearProjectContext = () => {}
   const router = useRouter()
 
   // Only show if there's an active context

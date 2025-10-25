@@ -5,8 +5,8 @@ import './globals.css'
 import { Providers } from './providers'
 import { headers } from 'next/headers'
 import { Toaster } from 'react-hot-toast'
-import { CommandPaletteProvider } from './context/CommandPaletteProvider'
 import { InlineReplyProvider } from './context/inline-reply-context'
+import { TiptapEditorProvider } from './context/tiptap-editor-context'
 import { Analytics } from "@vercel/analytics/next"
 
 const siteUrl = 'https://heycontext.co'
@@ -264,10 +264,10 @@ export default async function RootLayout({
       <body className="font-sans min-h-screen">
         <Providers>
           <InlineReplyProvider>
-            <CommandPaletteProvider>
+            <TiptapEditorProvider>
               <Toaster position="top-center" />
               {children}
-            </CommandPaletteProvider>
+            </TiptapEditorProvider>
           </InlineReplyProvider>
         </Providers>
         <Analytics />

@@ -9,6 +9,7 @@ import { DesktopNotepadLayout } from './components/DesktopNotepadLayout'
 import { useNotepadState } from './hooks/useNotepadState'
 import { useNotepadHandlers } from './hooks/useNotepadHandlers'
 import { useNotepadAI } from './hooks/useNotepadAI'
+// Removed useNotepadContext import - no longer needed
 import type { MarkdownNotepadProps, MarkdownNotepadRef } from './types'
 import type { Id } from "@/convex/_generated/dataModel"
 import { ShareNoteModal } from '../../../notes/components/ShareNoteModal'
@@ -74,6 +75,8 @@ export const MarkdownNotepad = forwardRef<MarkdownNotepadRef, MarkdownNotepadPro
     onClearQuoted,
     sessionId
   })
+
+  // Removed notepad context - using direct ref forwarding instead
 
   const noteHandlers = useNotepadHandlers({
     state,

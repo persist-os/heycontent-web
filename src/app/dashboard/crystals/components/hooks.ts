@@ -2,24 +2,9 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
-import { authStateManager } from '@/app/lib/auth-state-manager';
+import { useAuth } from '@/app/context/auth-context';
 import { CrystalStats, FormationStatus, FormationEligibility } from './types';
 import { toast } from 'sonner';
-
-export const useAuth = () => {
-  const [userId, setUserId] = useState<string | undefined>();
-
-  useEffect(() => {
-    // Use centralized auth state manager to prevent multiple listeners
-    const unsubscribe = authStateManager.subscribe((firebaseUser) => {
-      setUserId(firebaseUser?.uid);
-    });
-    
-    return () => unsubscribe();
-  }, []);
-
-  return userId;
-};
 
 export const useCrystalData = (userId: string | undefined) => {
   const crystalStats = useQuery(

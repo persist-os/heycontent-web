@@ -67,6 +67,7 @@ export const messageInputValidator = v.object({
   }))),
   enrichment_metadata: v.optional(v.any()),
   context_summary: v.optional(v.any()),
+  suggestions: v.optional(v.any()),
 });
 
 // Message array validator for createConversation

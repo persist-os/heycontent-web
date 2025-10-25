@@ -12,6 +12,7 @@ import { useAdminAuth } from '@/app/lib/admin-auth'
 import { cn } from '@/lib/utils'
 import { useLanguagePreference, useTranslation } from '@/hooks/useTranslation'
 import { useUnifiedSearch } from '@/hooks/useUnifiedSearch'
+import { useTiptapEditor } from '@/app/context/tiptap-editor-context'
 import {
   CommandPaletteHeader,
   CommandPaletteSearch,
@@ -99,6 +100,7 @@ export const DashboardNav = memo(function DashboardNav() {
   const { isExpanded, setIsExpanded } = useSidebar();
   const { canAccessAdmin } = useAdminAuth();
   const { language } = useLanguagePreference();
+  const { isTiptapEditorActive } = useTiptapEditor();
   
   // Get translated placeholder text
   const { text: searchPlaceholder } = useTranslation('Search spaces, chats, or actions...', {
@@ -210,8 +212,12 @@ export const DashboardNav = memo(function DashboardNav() {
   // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Command/Ctrl + K to open command palette
+      // Command/Ctrl + K to open command palette (disabled when Tiptap editor is active)
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        // Don't open if Tiptap editor is active
+        if (isTiptapEditorActive) {
+          return;
+        }
         e.preventDefault();
         setIsExpanded(!isExpanded);
       }
@@ -225,7 +231,7 @@ export const DashboardNav = memo(function DashboardNav() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isExpanded, setIsExpanded, setSearchQuery, setSearchMode]);
+  }, [isExpanded, setIsExpanded, setSearchQuery, setSearchMode, isTiptapEditorActive]);
 
   // Close chat menu when clicking outside
   useEffect(() => {

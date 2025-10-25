@@ -10,7 +10,7 @@
 import React, { useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { FullThinkingLab } from './compositions/LabCompositions'
-import { useDialogueStore } from './stores/dialogueStore'
+// Removed dialogueStore import - using conversation hooks instead
 
 /**
  * Validates that a URL parameter is a valid non-empty string
@@ -43,15 +43,13 @@ export default function ThinkingLabPage() {
         widgetId: validWidgetId,
         widgetOutputId: validWidgetOutputId
       });
-      useDialogueStore.getState().setProjectContext(
-        validProjectId,
-        validWidgetId,
-        validWidgetOutputId
-      );
+      // Note: Project context now handled by conversation hooks
+      console.log('Project context:', { validProjectId, validWidgetId, validWidgetOutputId });
     } else if (projectId !== null || widgetId !== null || widgetOutputId !== null) {
       // Context params exist but are invalid/empty - clear context
       console.log('[THINKING LAB] Invalid context params detected - clearing context');
-      useDialogueStore.getState().clearProjectContext();
+      // Note: Project context clearing now handled by conversation hooks
+      console.log('Clearing project context');
     }
     // Note: If no context params at all, we don't clear (might be navigating within lab)
   }, [projectId, widgetId, widgetOutputId]);

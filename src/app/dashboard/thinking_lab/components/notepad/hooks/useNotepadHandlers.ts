@@ -1,8 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useRef } from 'react'
-import { useNotepadStore } from '../../../stores/notepadStore'
-import { useDialogueStore } from '../../../stores/dialogueStore'
+// Removed notepadStore import - using direct props/context instead
+// Removed dialogueStore import - using conversation hooks instead
 import type { Note, NoteUpdate } from '../../../../notes/types'
 import type { Id } from "@/convex/_generated/dataModel"
 import type { NoteHandlers, NotepadState, NotepadRefs } from '../types'
@@ -158,7 +158,10 @@ export function useNotepadHandlers({
     
     if (isNewNote) {
       // Read context from dialogue store (context container)
-      const { projectId, widgetId, widgetOutputId } = useDialogueStore.getState();
+      // Note: Removed dialogueStore usage - project context handled elsewhere
+      const projectId = undefined;
+      const widgetId = undefined;
+      const widgetOutputId = undefined;
       
       console.log('📝 [MarkdownNotepad] Creating note with context:', { 
         projectId, 
@@ -253,17 +256,24 @@ export function useNotepadHandlers({
       console.log('🤖 [MarkdownNotepad] Generating metadata for note:', noteIdToUse)
       const result = await generateMetadataManually(String(noteIdToUse), content.trim())
       
-      if (result && result.success) {
-        // Check if a new note was created (different noteId returned)
-        if (result.noteId && result.noteId !== String(noteIdToUse)) {
-          console.log('✅ [MarkdownNotepad] New note created during metadata generation:', result.noteId)
-          // Update to point to the new note
-          setCurrentNoteId(result.noteId)
-          setIsNewNote(false)
+      if (result) {
+        // Check if result is a boolean (success) or an object with success property
+        const isSuccess = typeof result === 'boolean' ? result : result.success
+        
+        if (isSuccess) {
+          // Check if a new note was created (different noteId returned)
+          if (typeof result === 'object' && result.noteId && result.noteId !== String(noteIdToUse)) {
+            console.log('✅ [MarkdownNotepad] New note created during metadata generation:', result.noteId)
+            // Update to point to the new note
+            setCurrentNoteId(result.noteId)
+            setIsNewNote(false)
+          }
+          console.log('✅ [MarkdownNotepad] Metadata generation completed successfully')
+        } else {
+          console.error('❌ [MarkdownNotepad] Metadata generation failed:', result)
         }
-        console.log('✅ [MarkdownNotepad] Metadata generation completed successfully')
       } else {
-        console.error('❌ [MarkdownNotepad] Metadata generation failed:', result)
+        console.error('❌ [MarkdownNotepad] Metadata generation returned false')
       }
     } catch (error) {
       console.error('❌ [MarkdownNotepad] Exception during metadata generation:', error)
@@ -355,8 +365,7 @@ export function useNotepadHandlers({
     
     setContent(newContent)
     
-    // Sync with notepad store for cross-component access (e.g., chat can include notepad context)
-    useNotepadStore.getState().updateContent(newContent)
+    // Note: Removed notepadStore sync - notepad content is now passed directly via props/context
     
     // Clear existing auto-save timeout
     if (autoSaveTimeoutRef.current) {
