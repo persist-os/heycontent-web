@@ -77,7 +77,9 @@ export interface DialogueState {
     quotedContent: string
     lastSuggestions?: string[]  // Ephemeral suggestions from last backend response
     pendingUserMessage?: string // Optimistic UI: user message before Convex write
-    streamingContent: string    // Real-time streaming content during chat
+    streamingContent: string // Real-time streaming content as it arrives
+    streamingComplete: boolean // Streaming done, waiting for Convex persistence
+    expectedMessageCount?: number // Expected message count after streaming completes
     // Project/widget context
     projectId?: string
     widgetId?: string
@@ -86,6 +88,7 @@ export interface DialogueState {
 
 export interface DialogueActions {
     sendMessage: (content: string) => Promise<void>
+    sendMessageStream: (content: string) => Promise<void>
     startNewConversation: () => void
     loadConversation: (conversationId: string) => Promise<void>
     setError: (error: string | undefined) => void
@@ -93,7 +96,6 @@ export interface DialogueActions {
     setStatus: (status: string | undefined) => void
     setQuotedContent: (content: string) => void
     clearQuotedContent: () => void
-    clearStreamingContent: () => void
     resetForWidget: () => void
     setProjectContext: (projectId?: string, widgetId?: string, widgetOutputId?: string) => void
     clearProjectContext: () => void

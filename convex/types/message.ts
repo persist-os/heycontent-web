@@ -34,9 +34,6 @@ export const messageSchemaFields = {
   // Context Enrichment MAB Metadata
   enrichment_metadata: v.optional(v.any()),
   
-  // Context Summary (backend adds this for assistant messages)
-  context_summary: v.optional(v.any()),
-  
   // Timestamps
   createdAt: v.number(),
   updatedAt: v.number(),
@@ -50,25 +47,4 @@ export const messageSchemaFields = {
 };
 
 export const messageValidator = v.object(messageSchemaFields);
-
-// Message object validator for API input (no database fields)
-export const messageInputValidator = v.object({
-  content: v.string(),
-  role: messageRoleValidator,
-  timestamp: v.number(),
-  context: v.optional(v.string()),
-  fileAttachments: v.optional(v.array(v.object({
-    file_url: v.string(),
-    original_filename: v.string(),
-    content_type: v.string(),
-    file_size: v.number(),
-    gcs_url: v.string(),
-    uploaded_at: v.string(),
-  }))),
-  enrichment_metadata: v.optional(v.any()),
-  context_summary: v.optional(v.any()),
-});
-
-// Message array validator for createConversation
-export const messageArrayValidator = v.array(messageInputValidator);
 

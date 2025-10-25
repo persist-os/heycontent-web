@@ -97,7 +97,14 @@ export async function transmitMessageWithContext(params: MessageTransmissionRequ
       requestBody.conversation_type = conversationType;
     }
 
-    // Sending to lab endpoint
+    console.log('[MessageService] Sending to lab endpoint:', {
+      url: '/api/lab/message',
+      hasNotepadContext: !!notepadContext,
+      notepadContentLength: notepadContext?.content?.length || 0,
+      hasWorkspaceContext: !!workspaceContext,
+      isFirstMessage,
+      sessionIdentifier
+    });
 
     // Call the thinking lab API endpoint (not the generic chat endpoint)
     // Run backend call and thinking sequence in parallel, wait for both
@@ -115,7 +122,14 @@ export async function transmitMessageWithContext(params: MessageTransmissionRequ
     }
 
     const data = await response.json();
-    // Received response from API
+    console.log('[MessageService] Received response from API:', {
+      hasData: !!data,
+      dataKeys: Object.keys(data),
+      status: data.status,
+      conversationId: data.conversationId || data.session_identifier,
+      hasSuggestions: !!data.suggestions,
+      data: data
+    });
     
     // Thinking steps already completed, show final status
     onStatusUpdate?.('Messages updated via subscription');
@@ -131,7 +145,11 @@ export async function transmitMessageWithContext(params: MessageTransmissionRequ
       user_input: content
     };
     
-    // Returning result
+    console.log('[MessageService] Returning result:', {
+      session_identifier: result.session_identifier,
+      conversationId: result.conversationId,
+      has_suggestions: result.suggestions.length > 0
+    });
     
     return result;
 
@@ -257,7 +275,11 @@ export async function transmitMessageWithStreaming(
       requestBody.conversation_type = conversationType;
     }
 
-    // Sending to streaming lab endpoint
+    console.log('[MessageService] Sending to streaming lab endpoint:', {
+      url: '/api/lab/stream',
+      isFirstMessage,
+      sessionIdentifier
+    });
 
     // Call the streaming endpoint
     const response = await fetchWithApiKey('/api/lab/stream', {

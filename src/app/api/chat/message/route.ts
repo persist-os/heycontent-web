@@ -52,34 +52,29 @@ export async function POST(request: Request) {
       timestamp: new Date().toISOString()
     });
 
-    // Forward request to backend streaming endpoint
-    const response = await fetch(`${BACKEND_URL}/api/v1/chat/stream`, {
+    // Forward request to backend with minimal processing
+    const response = await fetch(`${BACKEND_URL}/api/v1/chat/message`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'text/event-stream',
+        'Accept': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify(body)
     });
 
     if (!response.ok) {
-      console.error(`[${requestId}] Backend streaming error:`, response.status, response.statusText);
+      console.error(`[${requestId}] Backend error:`, response.status, response.statusText);
       return NextResponse.json(
-        { error: 'Backend streaming service error' }, 
+        { error: 'Backend service error' }, 
         { status: response.status }
       );
     }
 
-    // Return streaming response
-    return new Response(response.body, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-        'X-Accel-Buffering': 'no'
-      }
-    });
+    const data = await response.json();
+    console.log(`[${requestId}] Chat message completed successfully`);
+    
+    return NextResponse.json(data);
 
   } catch (error) {
     console.error(`[${requestId}] Request failed:`, error);

@@ -32,7 +32,7 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
   
   // Use direct query for shards
   const shards = useQuery(
-    api.shardQueries.getShardsByIds,
+    api.crystalQueries.getShardsByIds,
     crystal.shardIds && crystal.shardIds.length > 0 ? {
       userId: crystal.userId,
       shardIds: crystal.shardIds

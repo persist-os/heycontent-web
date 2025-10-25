@@ -33,7 +33,6 @@ export const addMessage = mutation({
       uploaded_at: v.string(),
     }))),
     enrichment_metadata: v.optional(v.any()),
-    context_summary: v.optional(v.any()),
   },
   handler: async (ctx, args) => {
     const conversation = await ctx.db.get(args.conversationId);
@@ -55,7 +54,6 @@ export const addMessage = mutation({
       context: args.context,
       fileAttachments: args.fileAttachments,
       enrichment_metadata: args.enrichment_metadata,
-      context_summary: args.context_summary,
       createdAt: now,
       updatedAt: now,
     });
