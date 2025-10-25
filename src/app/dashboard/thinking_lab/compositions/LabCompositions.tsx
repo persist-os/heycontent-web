@@ -119,8 +119,8 @@ function FullThinkingLabInternal({
     isStreaming
   })
 
-  // Resizable panes
-  const resizable = useResizablePanes()
+  // Resizable panes - ensure notepad is visible by default (60% chat, 40% notepad)
+  const resizable = useResizablePanes(0.6)
 
   // Check if we're in full screen mode
   const isChatFullScreen = resizable.state.splitRatio === 1.0

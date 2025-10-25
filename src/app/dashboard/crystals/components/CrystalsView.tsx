@@ -565,10 +565,9 @@ export const CrystalsView: React.FC<CrystalsViewProps> = ({ recentCrystals }) =>
   
   // Use direct query for crystals - load all available (no limit for full data access)
   const crystals = useQuery(
-    api.crystalQueries.getPersonaData,
+    api.crystalQueries.getCrystalPersonaData,
     userId ? {
       userId,
-      operation: "crystals",
       limit: 1000 // High limit to get all crystals
     } : "skip"
   );

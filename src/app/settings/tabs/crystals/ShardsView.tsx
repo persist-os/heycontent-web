@@ -472,10 +472,9 @@ export const ShardsView: React.FC<ShardsViewProps> = ({ recentShards }) => {
   
   // Use direct query for shards - load all available (no limit for full data access)
   const shards = useQuery(
-    api.crystalQueries.getPersonaData,
+    api.shardQueries.getShardPersonaData,
     userId ? {
       userId,
-      operation: "shards",
       limit: 2000 // High limit to get all shards
     } : "skip"
   );

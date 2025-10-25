@@ -28,13 +28,13 @@ export const useCrystalData = (userId: string | undefined) => {
   ) as CrystalStats | undefined;
 
   const recentCrystals = useQuery(
-    api.crystalQueries.getPersonaData,
-    userId ? { userId, operation: "crystals", limit: 5 } : "skip"
+    api.crystalQueries.getCrystalPersonaData,
+    userId ? { userId, limit: 5 } : "skip"
   ) as any[] | undefined;
 
   const recentShards = useQuery(
-    api.crystalQueries.getPersonaData,
-    userId ? { userId, operation: "shards", limit: 8 } : "skip"
+    api.shardQueries.getShardPersonaData,
+    userId ? { userId, limit: 8 } : "skip"
   ) as any[] | undefined;
 
   return {
@@ -105,10 +105,9 @@ export const usePaginatedCrystals = (userId: string | undefined, pageSize: numbe
 
   // Fallback to original query if pagination fails
   const fallbackResult = useQuery(
-    api.crystalQueries.getPersonaData,
+    api.crystalQueries.getCrystalPersonaData,
     userId && paginationError ? { 
       userId, 
-      operation: "crystals", 
       limit: pageSize 
     } : "skip"
   ) as any[] | undefined;

@@ -42,13 +42,27 @@ export function useResizablePanes(initialRatio = 0.5): UseResizablePanesResult {
       const stored = localStorage.getItem('thinking-lab-split-ratio')
       if (stored) {
         const storedRatio = parseFloat(stored)
-        setSplitRatio(storedRatio)
-        preferredRatio.current = storedRatio
+        // Only use stored ratio if it's valid and not hiding the notepad
+        // Ensure notepad is always visible by default (splitRatio < 1.0)
+        if (!isNaN(storedRatio) && storedRatio >= 0 && storedRatio < 1.0) {
+          setSplitRatio(storedRatio)
+          preferredRatio.current = storedRatio
+        } else {
+          // If stored ratio would hide notepad, use initialRatio instead
+          setSplitRatio(initialRatio)
+          preferredRatio.current = initialRatio
+          // Clear the problematic stored value
+          try {
+            localStorage.removeItem('thinking-lab-split-ratio')
+          } catch {
+            // Ignore localStorage errors
+          }
+        }
       }
     } catch {
-      // Ignore localStorage errors
+      // Ignore localStorage errors, keep initialRatio
     }
-  }, [])
+  }, [initialRatio])
 
   // Helper function to persist ratio
   const persistRatio = useCallback((ratio: number) => {

@@ -103,7 +103,7 @@ export function useUnifiedSearch({ enabled }: UseUnifiedSearchProps) {
       });
     }
 
-    // Search crystals - direct array from getPersonaData
+    // Search crystals - direct array from getCrystalPersonaData
     if (Array.isArray(crystals)) {
       crystals.forEach((crystal: any) => {
         if (
