@@ -2123,17 +2123,6 @@ app.patch("/api/widgets/:widgetId/execution", async (c) => {
 
 
 // Single query endpoint that mirrors getCrystalData exactly
-app.post("/api/crystal/query", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runQuery(api.crystalQueries.queryCrystal, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
 
 // Batch fetch crystals by IDs (for context enrichment)
 app.post("/api/crystal/getBatch", async (c) => {
@@ -2209,39 +2198,7 @@ app.post("/api/crystal/getByUser", async (c) => {
   }
 });
 
-/**
- * Get crystals by IDs
- * Parallel to /api/shard/getByIds endpoint
- */
-app.post("/api/crystal/getByIds", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runQuery(internal.crystalQueries.getCrystalsByIds, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    console.error("[GET CRYSTALS BY IDS] Error fetching crystals:", error);
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
 
-/**
- * Get crystals by widget ID
- * Parallel to /api/shard/getByWidgetId endpoint
- */
-app.post("/api/crystal/getByWidgetId", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runQuery(api.crystalQueries.getCrystalsByWidgetId, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    console.error("[GET CRYSTALS BY WIDGET] Error fetching crystals:", error);
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
 
 // ===== SHARD OPERATIONS =====
 // Separate endpoints for shard-specific operations
@@ -2276,44 +2233,22 @@ app.post("/api/shard/mutate", async (c) => {
   }
 });
 
-// Crystal data convenience endpoint
-app.post("/api/crystal/persona", async (c) => {
+/**
+ * Query shards with flexible parameters
+ */
+app.post("/api/shard/query", async (c) => {
   const ctx = c.env;
   const requestBody = await c.req.json();
   
   try {
-    const result = await ctx.runQuery(api.crystalQueries.getPersonaData, requestBody);
+    const result = await ctx.runQuery(api.shardQueries.queryShard, requestBody);
     return c.json({ success: true, data: result });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   }
 });
 
-/**
- * Evolve crystal lifecycle stage
- * Parallel to stardust lifecycle evolution
- */
-app.post("/api/crystal/evolveLifecycle", async (c) => {
-  try {
-    const ctx = c.env;
-    const body = await c.req.json();
-    
-    const crystalId = await ctx.runMutation(api.crystalMutations.evolveCrystalLifecycle, {
-      crystalId: body.crystalId as Id<"crystals">,
-      newStage: body.newStage,
-      healthDelta: body.healthDelta,
-      energyDelta: body.energyDelta,
-    });
-    
-    return c.json({ success: true, data: { crystalId } });
-  } catch (error: any) {
-    console.error("[CRYSTAL_EVOLVE_LIFECYCLE] Error:", error);
-    return c.json({ 
-      success: false,
-      error: error.message || "Failed to evolve crystal lifecycle"
-    }, 500);
-  }
-});
+
 
 // Formation query endpoint that mirrors queryFormation exactly
 app.post("/api/formation/query", async (c) => {
@@ -2417,48 +2352,7 @@ app.post("/api/vector-search/crystals", async (c) => {
 
 
 
-// Optimized crystal context
-app.post("/api/crystal/optimized-context", async (c) => {
-  const ctx = c.env;
-  const body = await c.req.json();
-  const { userId, contextQueries, includeRelated, cacheKey } = body;
-  
-  console.log(`🔍 [HTTP] Optimized crystal context for user ${userId}`);
-  
-  try {
-    const result = await ctx.runQuery(api.crystalContextOptimized.getBatchCrystalContext, {
-      userId,
-      contextQueries: contextQueries || [],
-      includeRelated: includeRelated || false,
-      cacheKey
-    });
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    console.error("❌ [HTTP] Optimized crystal context error:", error);
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
 
-// Formation context
-app.post("/api/crystal/formation-context", async (c) => {
-  const ctx = c.env;
-  const body = await c.req.json();
-  const { userId, shardCount, dimensions } = body;
-  
-  console.log(`🔮 [HTTP] Formation context for user ${userId} with ${shardCount} shards`);
-  
-  try {
-    const result = await ctx.runQuery(api.crystalContextOptimized.getFormationContext, {
-      userId,
-      shardCount: shardCount || 0,
-      dimensions: dimensions || []
-    });
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    console.error("❌ [HTTP] Formation context error:", error);
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
 
 // Cache management endpoints
 app.get("/api/cache/stats/:userId", async (c) => {
@@ -2477,27 +2371,6 @@ app.get("/api/cache/stats/:userId", async (c) => {
 });
 
 // Paginated crystals
-app.post("/api/crystal/paginated", async (c) => {
-  const ctx = c.env;
-  const body = await c.req.json();
-  const { userId, paginationOpts, filters, sortBy, sortOrder } = body;
-  
-  console.log(`📄 [HTTP] Paginated crystals for user ${userId}`);
-  
-  try {
-    const result = await ctx.runQuery(api.paginatedQueries.getPaginatedCrystals, {
-      userId,
-      paginationOpts: paginationOpts || { numItems: 20, cursor: null },
-      filters,
-      sortBy,
-      sortOrder
-    });
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    console.error("❌ [HTTP] Paginated crystals error:", error);
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
 
 
 // === INTELLIGENCE SYSTEM ENDPOINTS ===
@@ -2959,117 +2832,14 @@ app.post("/api/shard/getByUser", async (c) => {
   }
 });
 
-/**
- * Get shards by IDs
- */
-app.post("/api/shard/getByIds", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runQuery(api.shardQueries.getShardsByIds, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    console.error("[GET SHARDS BY IDS] Error fetching shards:", error);
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
 
-/**
- * Get shards by widget ID
- */
-app.post("/api/shard/getByWidgetId", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runQuery(api.shardQueries.getShardsByWidgetId, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    console.error("[GET SHARDS BY WIDGET] Error fetching shards:", error);
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
 
-/**
- * Get shards by status
- */
-app.post("/api/shard/getByStatus", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runQuery(api.shardQueries.getShardsByStatus, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    console.error("[GET SHARDS BY STATUS] Error fetching shards:", error);
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
 
 /**
  * Get unprocessed shards count
  */
-app.post("/api/shard/getUnprocessedCount", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runQuery(api.shardQueries.getUnprocessedShardsCount, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    console.error("[GET UNPROCESSED COUNT] Error counting shards:", error);
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
 
-app.post("/api/shard-lifecycle/stats", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runQuery(api.shardLifecycleQueries.getShardConsumptionStats, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
 
-app.post("/api/shard-lifecycle/validate", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runQuery(api.shardLifecycleQueries.validateShardAvailability, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
-app.post("/api/shard-lifecycle/initialize-legacy", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.shardLifecycleMutations.initializeLegacyShardStatus, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
-app.post("/api/shard-lifecycle/release-stuck", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.shardLifecycleMutations.releaseStuckReservedShards, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
 
 // === MIGRATIONS ===
 
@@ -3152,53 +2922,6 @@ app.get("/api/migrations/shard-status-distribution", async (c) => {
 // === SHARD STATUS MANAGEMENT ===
 // Atomic shard lifecycle state transitions with validation
 
-app.post("/api/shard-status/update", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.shardStatusManager.updateShardStatus, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
-app.post("/api/shard-status/release", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.shardStatusManager.releaseReservedShards, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
-app.post("/api/shard-status/reserve", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.shardStatusManager.reserveShards, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
-app.post("/api/shard-status/archive", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.shardStatusManager.archiveShards, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
 
 // ============================================================================
 // PROJECT FINGERPRINT ROUTES - Optimized for Discovery Flow

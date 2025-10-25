@@ -9,25 +9,24 @@ import { internal } from "./_generated/api";
  * Flexible query that can get crystals by various criteria.
  * Simpler and more maintainable than separate functions.
  * 
- * Returns array of crystals or shards depending on table parameter.
+ * CRYSTALS ONLY - For shard queries, use queryShard in shardQueries.ts
  */
 export const queryCrystal = query({
   args: {
     userId: v.string(),
-    table: v.union(v.literal("crystal_shards"), v.literal("crystals")),
     useIndex: v.optional(v.string()),
     indexFields: v.optional(v.record(v.string(), v.union(v.string(), v.number(), v.boolean()))),
     filters: v.optional(v.record(v.string(), v.union(v.string(), v.number(), v.boolean()))),
     limit: v.optional(v.number()),
     orderBy: v.optional(v.union(v.literal("asc"), v.literal("desc"))),
   },
-  handler: async (ctx, { userId, table, useIndex, indexFields, filters, limit, orderBy }) => {
+  handler: async (ctx, { userId, useIndex, indexFields, filters, limit, orderBy }) => {
     try {
       let query;
       
-      // Start with base query using by_user index
+      // Start with base query using by_user index for crystals table only
       if (useIndex && indexFields) {
-        query = ctx.db.query(table).withIndex(useIndex as any, (q: any) => {
+        query = ctx.db.query("crystals").withIndex(useIndex as any, (q: any) => {
           let queryBuilder = q.eq("userId", userId);
           Object.entries(indexFields).forEach(([field, value]) => {
             queryBuilder = queryBuilder.eq(field, value);
@@ -35,7 +34,7 @@ export const queryCrystal = query({
           return queryBuilder;
         });
       } else {
-        query = ctx.db.query(table).withIndex("by_user", (q) => q.eq("userId", userId));
+        query = ctx.db.query("crystals").withIndex("by_user", (q) => q.eq("userId", userId));
       }
 
       // Apply additional filters
@@ -57,7 +56,7 @@ export const queryCrystal = query({
         return await query.collect();
       }
     } catch (error) {
-      console.error(`[CRYSTAL QUERY] Error querying ${table}:`, error);
+      console.error(`[CRYSTAL QUERY] Error querying crystals:`, error);
       return [];
     }
   }
@@ -328,22 +327,20 @@ export const getCrystalsByWidgetId = query({
 });
 
 /**
- * Unified persona data query for both crystals and shards
+ * Get persona data for crystals only
  * 
- * This function handles the getPersonaData calls from the frontend hooks.
- * Returns either crystals or shards based on the operation parameter.
+ * This function handles crystal-specific persona data queries.
+ * For shard persona data, use getShardPersonaData in shardQueries.ts
  */
-export const getPersonaData = query({
+export const getCrystalPersonaData = query({
     args: {
         userId: v.string(),
-        operation: v.union(v.literal("crystals"), v.literal("shards")),
         limit: v.optional(v.number()),
     },
-    handler: async (ctx, { userId, operation, limit }) => {
+    handler: async (ctx, { userId, limit }) => {
         try {
-            const table = operation === "crystals" ? "crystals" : "crystal_shards";
             const query = ctx.db
-                .query(table)
+                .query("crystals")
                 .withIndex("by_user", (q) => q.eq("userId", userId))
                 .order("desc");
             
@@ -353,7 +350,7 @@ export const getPersonaData = query({
                 return await query.collect();
             }
         } catch (error) {
-            console.error(`[GET PERSONA DATA] Error getting ${operation}:`, error);
+            console.error(`[GET CRYSTAL PERSONA DATA] Error getting crystals:`, error);
             return [];
         }
     },

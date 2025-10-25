@@ -166,3 +166,92 @@ export const getUnprocessedShardsCount = query({
   },
 });
 
+/**
+ * Single shard query function
+ * 
+ * Flexible query that can get shards by various criteria.
+ * Simpler and more maintainable than separate functions.
+ * 
+ * SHARDS ONLY - For crystal queries, use queryCrystal in crystalQueries.ts
+ */
+export const queryShard = query({
+  args: {
+    userId: v.string(),
+    useIndex: v.optional(v.string()),
+    indexFields: v.optional(v.record(v.string(), v.union(v.string(), v.number(), v.boolean()))),
+    filters: v.optional(v.record(v.string(), v.union(v.string(), v.number(), v.boolean()))),
+    limit: v.optional(v.number()),
+    orderBy: v.optional(v.union(v.literal("asc"), v.literal("desc"))),
+  },
+  handler: async (ctx, { userId, useIndex, indexFields, filters, limit, orderBy }) => {
+    try {
+      let query;
+      
+      // Start with base query using by_user index for crystal_shards table only
+      if (useIndex && indexFields) {
+        query = ctx.db.query("crystal_shards").withIndex(useIndex as any, (q: any) => {
+          let queryBuilder = q.eq("userId", userId);
+          Object.entries(indexFields).forEach(([field, value]) => {
+            queryBuilder = queryBuilder.eq(field, value);
+          });
+          return queryBuilder;
+        });
+      } else {
+        query = ctx.db.query("crystal_shards").withIndex("by_user", (q) => q.eq("userId", userId));
+      }
+
+      // Apply additional filters
+      if (filters) {
+        Object.entries(filters).forEach(([field, value]) => {
+          query = query.filter((q: any) => q.eq(q.field(field), value));
+        });
+      }
+
+      // Apply ordering if specified
+      if (orderBy) {
+        query = query.order(orderBy);
+      }
+
+      // Execute with limit
+      if (limit) {
+        return await query.take(limit);
+      } else {
+        return await query.collect();
+      }
+    } catch (error) {
+      console.error(`[SHARD QUERY] Error querying shards:`, error);
+      return [];
+    }
+  }
+});
+
+/**
+ * Get persona data for shards only
+ * 
+ * This function handles shard-specific persona data queries.
+ * For crystal persona data, use getCrystalPersonaData in crystalQueries.ts
+ */
+export const getShardPersonaData = query({
+    args: {
+        userId: v.string(),
+        limit: v.optional(v.number()),
+    },
+    handler: async (ctx, { userId, limit }) => {
+        try {
+            const query = ctx.db
+                .query("crystal_shards")
+                .withIndex("by_user", (q) => q.eq("userId", userId))
+                .order("desc");
+            
+            if (limit) {
+                return await query.take(limit);
+            } else {
+                return await query.collect();
+            }
+        } catch (error) {
+            console.error(`[GET SHARD PERSONA DATA] Error getting shards:`, error);
+            return [];
+        }
+    },
+});
+

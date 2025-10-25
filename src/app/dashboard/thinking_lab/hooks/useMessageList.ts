@@ -30,6 +30,20 @@ export function useMessageList(props: UseMessageListProps): Message[] {
   const { convexMessages, optimisticMessages, streamingContent, currentStreamingId, isStreaming } = props
 
   return React.useMemo(() => {
+    // TEMPORARY DEBUG LOGGING - Remove after fixing
+    console.log('[DEBUG:useMessageList] Convex messages:', convexMessages.length, convexMessages.map(m => ({
+      id: m._id,
+      role: m.role,
+      content: (m.content || '').slice(0, 40) + '...'
+    })))
+    console.log('[DEBUG:useMessageList] Optimistic messages:', optimisticMessages.length, optimisticMessages.map(m => ({
+      id: m.id,
+      role: m.role,
+      content: (m.content || '').slice(0, 40) + '...'
+    })))
+    console.log('[DEBUG:useMessageList] Current streaming ID:', currentStreamingId)
+    console.log('[DEBUG:useMessageList] Streaming content length:', streamingContent.length)
+    
     const list: Message[] = []
     const now = Date.now()
     
@@ -75,13 +89,30 @@ export function useMessageList(props: UseMessageListProps): Message[] {
       // They should always show while streaming, even if content is empty or partial
       if (!isCurrentlyStreaming) {
         // Skip if this message is already in Convex (but only check non-streaming messages)
-        if (isInConvex(optMsg.content, optMsg.role)) {
+        const inConvex = isInConvex(optMsg.content, optMsg.role)
+        console.log('[DEBUG:useMessageList] Checking optimistic message:', {
+          id: optMsg.id,
+          role: optMsg.role,
+          content: (optMsg.content || '').slice(0, 40) + '...',
+          isInConvex: inConvex
+        })
+        if (inConvex) {
+          console.log('[DEBUG:useMessageList] SKIPPING optimistic message (already in Convex)')
           return
         }
+      } else {
+        console.log('[DEBUG:useMessageList] Currently streaming message:', optMsg.id)
       }
       
       // Use real-time streaming content if this is the streaming message
       const content = isCurrentlyStreaming && streamingContent ? streamingContent : optMsg.content
+      
+      console.log('[DEBUG:useMessageList] ADDING optimistic message to list:', {
+        id: optMsg.id,
+        role: optMsg.role,
+        contentLength: content.length,
+        isStreaming: isStreaming && isCurrentlyStreaming
+      })
       
       list.push({
         id: optMsg.id,
@@ -94,6 +125,13 @@ export function useMessageList(props: UseMessageListProps): Message[] {
         metadata: {}
       })
     })
+    
+    console.log('[DEBUG:useMessageList] FINAL message list:', list.length, list.map(m => ({
+      id: m.id,
+      role: m.role,
+      content: (m.content || '').slice(0, 40) + '...',
+      status: m.status
+    })))
     
     return list
   }, [convexMessages, optimisticMessages, streamingContent, currentStreamingId, isStreaming])
