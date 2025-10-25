@@ -116,16 +116,16 @@ export function HeroSection() {
               </div>
               
               <h1 className="text-3xl sm:text-5xl lg:text-7xl font-light text-foreground leading-tight animate-fade-in-up hover:text-foreground/80 transition-colors duration-300 cursor-default" style={{animationDelay: '0.1s'}}>
-                <span className="inline-block"><T context="hero.headline1">Work with AI </T></span>
-                <span className="block text-4xl sm:text-6xl lg:text-8xl font-extralight text-primary mt-1 sm:mt-2 hover:text-primary/80 transition-colors duration-300"><T context="hero.headline2">that learns you</T></span>
+                <span className="inline-block"><T context="hero.headline1">AI that works </T></span>
+                <span className="block text-4xl sm:text-6xl lg:text-8xl font-extralight text-primary mt-1 sm:mt-2 hover:text-primary/80 transition-colors duration-300"><T context="hero.headline2">with you</T></span>
               </h1>
               
               <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 animate-fade-in-up" style={{animationDelay: '0.2s'}}>
                 <p className="text-lg sm:text-xl lg:text-2xl text-muted-foreground font-light leading-relaxed hover:text-foreground/70 transition-colors duration-300 cursor-default">
-                  <T context="hero.description1">What you said last week connects to what you're thinking right now. Your scattered notes reveal patterns you missed. Everything you write feeds understanding that grows deeper every day.</T>
+                  <T context="hero.description1">Intelligence that understands your goals</T>
                 </p>
                 <p className="text-base sm:text-lg lg:text-xl text-muted-foreground/80 font-light leading-relaxed hover:text-muted-foreground transition-colors duration-300 cursor-default">
-                  <T context="hero.description2">No organizing. No managing. Just natural conversation that builds permanent memory.</T>
+                  <T context="hero.description2">Go further in fewer prompts, and never repeat a thing.</T>
                 </p>
               </div>
             </div>
@@ -139,7 +139,7 @@ export function HeroSection() {
                 className={`group px-8 sm:px-10 py-3 sm:py-4 bg-foreground text-background text-base sm:text-lg font-medium hover:bg-foreground/90 transition-all duration-300 active:scale-95 hover:scale-105 hover:shadow-xl min-w-[200px] sm:min-w-[240px] ${isButtonPressed ? 'scale-95' : ''} ${isMobile ? 'min-h-[48px] touch-manipulation' : ''}`}
               >
                 <span className="transition-all duration-300 group-active:tracking-wide">
-                  <T context="hero.cta">See how it works</T>
+                  <T context="hero.cta">Try Now</T>
                 </span>
               </button>
             </div>

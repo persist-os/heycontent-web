@@ -7,7 +7,6 @@ import { motion } from "framer-motion"
 import { Loader2, ArrowRight } from 'lucide-react'
 import { MobileTabBar } from '@/app/dashboard/thinking_lab/components/notepad/MobileTabBar'
 import { CreateNoteButton } from '@/components/ui/CreateNoteButton'
-// import { SimpleIntegratedNotepad } from '@/components/ui/tiptap-editor'
 
 interface Source {
   id: string
@@ -606,7 +605,7 @@ export function AgentsShowcase() {
 
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [inputValue, setInputValue] = useState('')
-  const notepadRef = useRef<any>(null)
+  const notepadRef = useRef<{ hasUnsavedContent: () => boolean; clearContent: () => void; getContent: () => string }>(null)
   const { theme } = useTheme()
 
   const handleSuggestionClick = (suggestion: string) => {

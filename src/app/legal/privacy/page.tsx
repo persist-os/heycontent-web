@@ -57,10 +57,10 @@ export default function Privacy() {
           Privacy Policy
         </h1>
         <p className="text-lg text-muted-foreground">
-          Last updated: June 06, 2025
+          Last updated: October 25, 2025
         </p>
         <p className="mt-4 text-base text-foreground">
-          This Privacy Policy describes how Divertissement AI, Inc. ("we", "us", or "our") collects, uses, and discloses your information when you use HeyContext. It also explains your privacy rights and how the law protects you. By using HeyContext, you agree to the collection and use of information in accordance with this Privacy Policy.
+          This Privacy Policy describes how PersistOS ("we", "us", or "our") collects, uses, and discloses your information when you use HeyContext. It also explains your privacy rights and how the law protects you. By using HeyContext, you agree to the collection and use of information in accordance with this Privacy Policy.
         </p>
         {/* Explicit clarity for Chrome Web Store compliance */}
         <section className="mt-8 space-y-4">
@@ -84,7 +84,7 @@ export default function Privacy() {
           <h3 className="text-xl font-medium text-foreground">Definitions</h3>
           <ul className="space-y-2 ml-6">
             <li><strong>Account</strong>: A unique account created for you to access HeyContext.</li>
-            <li><strong>Company</strong>: Divertissement AI, Inc. ("we", "us", or "our").</li>
+            <li><strong>Company</strong>: PersistOS ("we", "us", or "our").</li>
             <li><strong>Cookies</strong>: Small files placed on your device by a website, containing details of your browsing history and preferences.</li>
             <li><strong>Country</strong>: California, United States.</li>
             <li><strong>Device</strong>: Any device that can access HeyContext, such as a computer, phone, or tablet.</li>
@@ -214,7 +214,7 @@ export default function Privacy() {
         {/* Contact Section */}
         <section className="space-y-6 border-t border-border pt-12">
           <h2 className="text-3xl font-medium text-foreground border-b border-border pb-3">Contact Us</h2>
-          <p>If you have any questions about this Privacy Policy, you can contact us at <a href="mailto:hello@divertissement.ai" className="text-blue-600 dark:text-blue-400 hover:underline">hello@divertissement.ai</a>.</p>
+          <p>If you have any questions about this Privacy Policy, you can contact us at <a href="mailto:hello@persistos.com" className="text-blue-600 dark:text-blue-400 hover:underline">hello@persistos.com</a>.</p>
         </section>
       </article>
     </div>
