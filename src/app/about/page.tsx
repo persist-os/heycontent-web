@@ -103,11 +103,11 @@ export default function About() {
             <T context="about.howItWorks.heading">How It Works</T>
           </h2>
           <ul className="space-y-2 ml-6 list-disc">
-            <li><T context="about.howItWorks.item1">Simply describe what you need in natural language to get started.</T></li>
-            <li><T context="about.howItWorks.item2">AI learns your communication style and preferences through every interaction.</T></li>
-            <li><T context="about.howItWorks.item3">Your thoughts and conversations are connected across time, building deeper understanding.</T></li>
-            <li><T context="about.howItWorks.item4">Everything remains completely private with zero external sharing or data mining.</T></li>
-            <li><T context="about.howItWorks.item5">All your conversations are stored securely and remain exclusively yours forever.</T></li>
+            <li><T context="about.howItWorks.item1">Constellations: Create goals that evolve with AI-generated tools tailored to your working style.</T></li>
+            <li><T context="about.howItWorks.item2">Thinking Lab: Have deep conversations that remember everything and connect ideas across time.</T></li>
+            <li><T context="about.howItWorks.item3">Files: Write notes that automatically link to related content across all your work.</T></li>
+            <li><T context="about.howItWorks.item4">Cosmic Intelligence: Watch insights crystallize from your patterns—stars for your concrete achievements, crystals for your consciousness and thinking patterns.</T></li>
+            <li><T context="about.howItWorks.item5">Everything remains completely private with zero external sharing or data mining.</T></li>
           </ul>
         </section>
 

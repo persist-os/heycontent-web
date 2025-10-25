@@ -3,12 +3,15 @@ import { ImportStatus, UploadResponse } from './chatGPTImportTypes';
 
 export class ChatGPTImportService {
   /**
-   * Upload a ChatGPT export zip file using signed URL (bypasses backend size limits)
+   * Upload a ChatGPT export zip file using chunked uploads (bypasses Cloud Run 32MB limit)
    * 
    * Flow:
-   * 1. Get signed URL from backend
-   * 2. Upload file directly to GCS
-   * 3. Confirm upload with backend to trigger processing
+   * 1. Get signed URL and chunk_size from backend
+   * 2. Upload file in chunks with Content-Range headers
+   * 3. Backend assembles chunks in Redis
+   * 4. Confirm upload with backend to trigger processing
+   * 
+   * Supports files up to 200MB by splitting into 10MB chunks.
    */
   static async uploadFile(file: File, onProgress?: (progress: number) => void): Promise<UploadResponse> {
     const apiKey = await getApiKey();
@@ -37,23 +40,46 @@ export class ChatGPTImportService {
         throw new Error(error.detail || error.error || 'Failed to get upload URL');
       }
 
-      const { upload_url, file_path } = await urlResponse.json();
+      const { upload_url, file_path, chunk_size } = await urlResponse.json();
 
-      // Step 2: Upload file directly to GCS using signed URL
-      onProgress?.(20);
-      const uploadResponse = await fetch(upload_url, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/zip',
-        },
-        body: file,
-      });
+      // Step 2: Upload file in chunks (bypasses Cloud Run 32MB limit)
+      const totalSize = file.size;
+      const chunkSize = chunk_size || (10 * 1024 * 1024); // Default 10MB from backend
+      let uploaded = 0;
+      
+      console.log(`[CHATGPT_UPLOAD] Starting chunked upload: ${totalSize} bytes, chunk size: ${chunkSize}`);
+      onProgress?.(10);
+      
+      while (uploaded < totalSize) {
+        const start = uploaded;
+        const end = Math.min(start + chunkSize, totalSize);
+        const chunk = file.slice(start, end);
+        
+        console.log(`[CHATGPT_UPLOAD] Sending chunk: ${start}-${end-1}/${totalSize} (${((uploaded/totalSize)*100).toFixed(1)}%)`);
+        
+        const uploadResponse = await fetch(upload_url, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/zip',
+            'Content-Range': `bytes ${start}-${end-1}/${totalSize}`,
+          },
+          body: chunk,
+        });
 
-      if (!uploadResponse.ok) {
-        throw new Error(`Upload to GCS failed: ${uploadResponse.status} ${uploadResponse.statusText}`);
+        if (!uploadResponse.ok) {
+          const errorText = await uploadResponse.text().catch(() => uploadResponse.statusText);
+          throw new Error(`Chunk upload failed: ${uploadResponse.status} - ${errorText}`);
+        }
+        
+        uploaded = end;
+        
+        // Update progress (10% to 80% during upload)
+        const uploadProgress = 10 + (uploaded / totalSize) * 70;
+        onProgress?.(Math.round(uploadProgress));
       }
 
-      onProgress?.(80);
+      console.log(`[CHATGPT_UPLOAD] All chunks uploaded successfully`);
+      onProgress?.(85);
 
       // Step 3: Confirm upload and trigger processing
       const confirmResponse = await fetch(`${BACKEND_URL}/api/v1/chatgpt/confirm-upload`, {
@@ -193,9 +219,9 @@ export class ChatGPTImportService {
       return { valid: false, error: 'Please upload a .zip file' };
     }
 
-    const maxSize = 100 * 1024 * 1024; // 100MB
+    const maxSize = 200 * 1024 * 1024; // 200MB (matches backend limit)
     if (file.size > maxSize) {
-      return { valid: false, error: 'File too large. Maximum: 100MB' };
+      return { valid: false, error: 'File too large. Maximum: 200MB' };
     }
 
     return { valid: true };
