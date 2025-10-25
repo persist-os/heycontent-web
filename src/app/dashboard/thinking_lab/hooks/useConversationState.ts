@@ -120,7 +120,12 @@ export function useConversationState(userId: string | undefined, projectId?: str
       setIsStreaming(false)
       setCurrentStatus(undefined)
       
-      // 7. Optimistic messages will be auto-removed by content matching when Convex updates
+      // 7. Clear optimistic messages after Convex confirms (with delay for DB sync)
+      setTimeout(() => {
+        setOptimisticMessages([])
+        setStreamingContent('')
+        setCurrentStreamingId(null)
+      }, 500)
       
     } catch (error) {
       console.error('Failed to send message:', error)

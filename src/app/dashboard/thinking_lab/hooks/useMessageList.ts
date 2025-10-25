@@ -126,11 +126,19 @@ export function useMessageList(props: UseMessageListProps): Message[] {
       })
     })
     
-    console.log('[DEBUG:useMessageList] FINAL message list:', list.length, list.map(m => ({
+    // Sort by timestamp to ensure chronological order
+    list.sort((a, b) => {
+      const timeA = typeof a.timestamp === 'string' ? parseInt(a.timestamp) : a.timestamp
+      const timeB = typeof b.timestamp === 'string' ? parseInt(b.timestamp) : b.timestamp
+      return timeA - timeB  // Ascending order (oldest first)
+    })
+    
+    console.log('[DEBUG:useMessageList] FINAL sorted message list:', list.length, list.map(m => ({
       id: m.id,
       role: m.role,
       content: (m.content || '').slice(0, 40) + '...',
-      status: m.status
+      status: m.status,
+      timestamp: m.timestamp
     })))
     
     return list
