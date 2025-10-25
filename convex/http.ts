@@ -2198,6 +2198,23 @@ app.post("/api/crystal/getByUser", async (c) => {
   }
 });
 
+/**
+ * Query crystals with flexible filtering and indexing options
+ * Connects to queryCrystal function in crystalQueries.ts
+ */
+app.post("/api/crystal/query", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runQuery(api.crystalQueries.queryCrystal, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[QUERY CRYSTALS] Error querying crystals:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 
 
 // ===== SHARD OPERATIONS =====
