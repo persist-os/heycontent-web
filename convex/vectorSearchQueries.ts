@@ -15,7 +15,7 @@ export const getVectorSearchData = action({
     userId: v.string(),
     operation: v.string(),
     query: v.optional(v.string()),
-    contentTypes: contentTypesArrayValidator,
+    contentTypes: v.optional(contentTypesArrayValidator),
     limit: v.optional(v.number()),
     threshold: v.optional(v.number()),
     // Add missing fields that backend sends
