@@ -10,7 +10,6 @@
 import React, { useState } from 'react';
 import { T } from '@/components/translation';
 import { 
-  useAuth, 
   useCrystalData, 
   useFormationData,
   useFormationRuns,
@@ -27,15 +26,29 @@ import {
   ViewType
 } from './components';
 import { toast } from 'sonner';
-import { getApiKey } from '@/app/lib/api-helpers';
+import { getApiKey, getCurrentUserId } from '@/app/lib/api-helpers';
 import { Activity } from 'lucide-react';
 
 export default function CrystalsPage() {
   const [activeView, setActiveView] = useState<ViewType>('overview');
   const [isFormingCrystals, setIsFormingCrystals] = useState(false);
   const [showFormationTools, setShowFormationTools] = useState(false);
+  const [userId, setUserId] = useState<string | undefined>(undefined);
   
-  const userId = useAuth();
+  // Get user ID using centralized helper
+  React.useEffect(() => {
+    const fetchUserId = async () => {
+      try {
+        const id = await getCurrentUserId();
+        setUserId(id);
+      } catch (error) {
+        console.error('Failed to get user ID:', error);
+        setUserId(undefined);
+      }
+    };
+    fetchUserId();
+  }, []);
+  
   const { crystalStats, recentCrystals, recentShards } = useCrystalData(userId);
   const { formationStatus, formationEligibility } = useFormationData(userId);
   const { formationRuns } = useFormationRuns(userId, 5);

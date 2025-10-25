@@ -307,7 +307,15 @@ export async function transmitMessageWithStreaming(
       for (const line of lines) {
         if (line.startsWith('data: ')) {
           try {
-            const data = JSON.parse(line.slice(6));
+            // Remove BOM if present and extract data content
+            const cleanLine = line.slice(6).replace(/^\uFEFF/, '').trim();
+            
+            // Skip [DONE] marker - it's not JSON
+            if (cleanLine === '[DONE]') {
+              continue;
+            }
+            
+            const data = JSON.parse(cleanLine);
             
             if (data.type === 'content') {
               // Accumulate chunk in buffer for smooth rendering
@@ -329,7 +337,10 @@ export async function transmitMessageWithStreaming(
               throw new Error(data.data);
             }
           } catch (parseError) {
-            console.warn('[MessageService] Failed to parse SSE chunk:', line);
+            // Don't log [DONE] marker as error - it's expected
+            if (!line.includes('[DONE]')) {
+              console.warn('[MessageService] Failed to parse SSE chunk:', line);
+            }
           }
         }
       }

@@ -1,76 +1,45 @@
 /**
- * useMessageList - Extracted from LabCompositions
+ * useMessageList - Clean Message List with Optimistic UI
  * 
- * Manages message list building from state.
- * Handles pending messages, streaming content, and loading states.
+ * Single source of truth pattern with automatic deduplication:
+ * - Convex messages are the source of truth
+ * - Optimistic messages are temporary overlays (stored in array)
+ * - Auto-remove optimistic messages when Convex confirms them (by content matching)
+ * - No cleanup effect needed - self-managing
  */
 
 import React from 'react'
 import type { Message } from '@/app/types/chat'
 
-interface UseMessageListProps {
-  conversationId?: string
-  isLoading: boolean
-  pendingUserMessage?: string
-  streamingContent: string
-  messages: any[]
+interface OptimisticMessage {
+  id: string
+  content: string
+  role: 'user' | 'assistant'
+  timestamp: number
 }
 
-export function useMessageList(props?: UseMessageListProps): Message[] {
-  // Always use the provided props if available, otherwise use empty defaults
-  const conversationId = props?.conversationId
-  const isLoading = props?.isLoading || false
-  const pendingUserMessage = props?.pendingUserMessage
-  const streamingContent = props?.streamingContent || ''
-  const messages = props?.messages || []
+interface UseMessageListProps {
+  convexMessages: any[]
+  optimisticMessages: OptimisticMessage[]
+  streamingContent: string
+  currentStreamingId: string | null
+  isStreaming: boolean
+}
 
-  // Build message list from state
-  const messageList: Message[] = React.useMemo(() => {
+export function useMessageList(props: UseMessageListProps): Message[] {
+  const { convexMessages, optimisticMessages, streamingContent, currentStreamingId, isStreaming } = props
+
+  return React.useMemo(() => {
     const list: Message[] = []
-    const now = Date.now().toString()
+    const now = Date.now()
     
-    // Add optimistic user message (before streaming starts)
-    if (pendingUserMessage) {
-      list.push({
-        id: 'pending-user',
-        content: pendingUserMessage,
-        role: 'user',
-        timestamp: now,
-        chat_response: pendingUserMessage,
-        status: 'delivered',
-        suggestions: [],
-        metadata: {}
-      })
-    }
-    
-    // Add streaming assistant message (real-time updates)
-    if (isLoading || streamingContent) {
-      list.push({
-        id: 'streaming-assistant',
-        content: streamingContent, // Real-time streaming content
-        role: 'assistant',
-        timestamp: now,
-        chat_response: streamingContent,
-        status: 'typing', // Show as typing during streaming
-        searchStatus: isLoading ? 'Understanding what you\'re thinking about' : 'Streaming response...',
-        statusHistory: isLoading ? [
-          'Understanding what you\'re thinking about',
-          'Query needs context - proceeding with vector search',
-          'Looking through all your content',
-          'Quality filtering'
-        ] : ['Streaming response...'],
-        suggestions: [],
-        metadata: {}
-      })
-    }
-    
-    // Add real messages from Convex
-    messages.forEach((msg: any) => {
+    // 1. ALL Convex messages (source of truth) - always show these first
+    convexMessages.forEach((msg: any) => {
       list.push({
         id: msg._id,
         content: msg.content,
         role: msg.role,
-        timestamp: msg.timestamp?.toString() || now,
+        timestamp: msg.timestamp || now,
         chat_response: msg.content,
         status: 'delivered',
         suggestions: msg.suggestions || [],
@@ -78,8 +47,54 @@ export function useMessageList(props?: UseMessageListProps): Message[] {
       })
     })
     
+    // Helper: Check if message already exists in Convex
+    const isInConvex = (content: string, role: 'user' | 'assistant'): boolean => {
+      return convexMessages.some((msg: any) => {
+        // Match by role
+        if (msg.role !== role) return false
+        
+        // Match by content (exact or prefix for streaming messages)
+        const msgContent = msg.content || ''
+        if (role === 'assistant') {
+          // For streaming assistant messages, check if Convex has the complete version
+          // or if streaming content is a prefix of Convex content
+          return msgContent === content || msgContent.startsWith(content) || content.startsWith(msgContent)
+        } else {
+          // For user messages, require exact match
+          return msgContent === content
+        }
+      })
+    }
+    
+    // 2. Add optimistic messages (only if not yet in Convex)
+    optimisticMessages.forEach((optMsg) => {
+      // Check if this is the currently streaming message
+      const isCurrentlyStreaming = optMsg.id === currentStreamingId
+      
+      // CRITICAL: Don't check isInConvex for messages that are currently streaming
+      // They should always show while streaming, even if content is empty or partial
+      if (!isCurrentlyStreaming) {
+        // Skip if this message is already in Convex (but only check non-streaming messages)
+        if (isInConvex(optMsg.content, optMsg.role)) {
+          return
+        }
+      }
+      
+      // Use real-time streaming content if this is the streaming message
+      const content = isCurrentlyStreaming && streamingContent ? streamingContent : optMsg.content
+      
+      list.push({
+        id: optMsg.id,
+        content,
+        role: optMsg.role,
+        timestamp: optMsg.timestamp.toString(),
+        chat_response: content,
+        status: optMsg.role === 'user' ? 'sent' : (isStreaming && isCurrentlyStreaming ? 'typing' : 'delivered'),
+        suggestions: [],
+        metadata: {}
+      })
+    })
+    
     return list
-  }, [pendingUserMessage, isLoading, streamingContent, messages])
-  
-  return messageList
+  }, [convexMessages, optimisticMessages, streamingContent, currentStreamingId, isStreaming])
 }

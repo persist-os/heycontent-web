@@ -20,7 +20,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { CrystalData } from './types';
 import { EditCrystalModal } from './EditCrystalModal';
-import { useCrystalMutations, useShardsByIds, useAuth } from './hooks';
+import { useCrystalMutations, useShardsByIds } from './hooks';
+import { getCurrentUserId } from '@/app/lib/api-helpers';
 
 interface CrystalCardProps {
   crystal: CrystalData;
@@ -36,8 +37,23 @@ export const CrystalCard: React.FC<CrystalCardProps> = ({
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showAllShards, setShowAllShards] = useState(false);
+  const [userId, setUserId] = useState<string | undefined>(undefined);
   const { deleteCrystal, isLoading } = useCrystalMutations();
-  const userId = useAuth();
+  
+  // Get user ID using centralized helper
+  React.useEffect(() => {
+    const fetchUserId = async () => {
+      try {
+        const id = await getCurrentUserId();
+        setUserId(id);
+      } catch (error) {
+        console.error('Failed to get user ID:', error);
+        setUserId(undefined);
+      }
+    };
+    fetchUserId();
+  }, []);
+  
   const { shards, isLoading: shardsLoading, hasShards } = useShardsByIds(userId, crystal.shardIds);
   
   // Sort shards by creation time (most recent first) and limit to 50

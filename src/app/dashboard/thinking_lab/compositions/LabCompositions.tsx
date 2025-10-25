@@ -79,15 +79,16 @@ function FullThinkingLabInternal({
   const { user, isLoading: authLoading } = useOptimizedAuth()
   const userId = user?.uid
   
-  // Simple local state instead of complex context
+  // Simple local state - minimal React state
   const [includeInMessages, setIncludeInMessages] = useState(false)
   
   // Use the conversation state hook with all logic
   const {
     conversationId,
-    isLoading,
+    isStreaming,
     streamingContent,
-    pendingUserMessage,
+    optimisticMessages,
+    currentStreamingId,
     currentStatus,
     error,
     messages,
@@ -105,6 +106,54 @@ function FullThinkingLabInternal({
     setInputValue
   } = useConversationState(userId, projectId, widgetId, widgetOutputId)
 
+  // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
+  // Input ref
+  const inputRef = React.useRef<HTMLTextAreaElement>(null)
+
+  // Use existing useMessageList hook with clean props
+  const messageList = useMessageList({
+    convexMessages: messages,
+    optimisticMessages,
+    streamingContent,
+    currentStreamingId,
+    isStreaming
+  })
+
+  // Resizable panes
+  const resizable = useResizablePanes()
+
+  // Check if we're in full screen mode
+  const isChatFullScreen = resizable.state.splitRatio === 1.0
+  const isNotepadFullScreen = resizable.state.splitRatio === 0.0
+  const isFullScreen = isChatFullScreen || isNotepadFullScreen
+
+  // Simplified handlers
+  const handleNotepadClose = React.useCallback(() => resizable.actions.snapToLeft(), [resizable.actions])
+  const handleNotepadExpand = React.useCallback(() => resizable.actions.snapToSplit(), [resizable.actions])
+  const closeChat = React.useCallback(() => resizable.actions.snapToRight(), [resizable.actions])
+
+  // Input component
+  const inputComponent = React.useMemo(() => (
+    <ChatInputArea
+      showAmbient={false}
+      handleActionClick={sendMessage}
+      handleSendMessage={sendMessage}
+      inputRef={inputRef}
+      isLoading={isStreaming}
+      referencedMessage={null}
+      handleClearReference={() => {}}
+      includeAnalysisInQuery={true}
+      inputValue={inputValue}
+      onInputChange={setInputValue}
+      onInputPopulate={handleInputPopulate}
+      notepadOpen={true}
+      openNotepad={() => {}}
+      quotedForNotepad={quotedContent}
+      onClearQuoted={clearQuotedContent}
+      onToggleNotepadInMessages={setIncludeInMessages}
+    />
+  ), [sendMessage, isStreaming, inputValue, handleInputPopulate, quotedContent, clearQuotedContent, setIncludeInMessages])
+
   // Show loading state while auth is initializing
   if (authLoading) {
     return (
@@ -118,53 +167,6 @@ function FullThinkingLabInternal({
       </div>
     )
   }
-  
-  // Input ref
-  const inputRef = React.useRef<HTMLTextAreaElement>(null)
-
-  // Use existing useMessageList hook with props
-  const messageList = useMessageList({
-    conversationId,
-    isLoading,
-    pendingUserMessage,
-    streamingContent,
-    messages
-  })
-
-  // Resizable panes
-  const resizable = useResizablePanes()
-
-  // Check if we're in full screen mode
-  const isChatFullScreen = resizable.state.splitRatio === 1.0
-  const isNotepadFullScreen = resizable.state.splitRatio === 0.0
-  const isFullScreen = isChatFullScreen || isNotepadFullScreen
-
-  // Simplified handlers
-  const handleNotepadClose = () => resizable.actions.snapToLeft()
-  const handleNotepadExpand = () => resizable.actions.snapToSplit()
-  const closeChat = () => resizable.actions.snapToRight()
-
-  // Input component
-  const inputComponent = React.useMemo(() => (
-    <ChatInputArea
-      showAmbient={false}
-      handleActionClick={sendMessage}
-      handleSendMessage={sendMessage}
-      inputRef={inputRef}
-      isLoading={isLoading}
-      referencedMessage={null}
-      handleClearReference={() => {}}
-      includeAnalysisInQuery={true}
-      inputValue={inputValue}
-      onInputChange={setInputValue}
-      onInputPopulate={handleInputPopulate}
-      notepadOpen={true}
-      openNotepad={() => {}}
-      quotedForNotepad={quotedContent}
-      onClearQuoted={clearQuotedContent}
-      onToggleNotepadInMessages={setIncludeInMessages}
-    />
-  ), [sendMessage, isLoading, inputValue, handleInputPopulate, quotedContent, clearQuotedContent, setIncludeInMessages])
 
   return (
     <div className={`h-screen flex flex-col bg-background overflow-hidden ${className || ''}`}>
@@ -194,7 +196,7 @@ function FullThinkingLabInternal({
               suggestions={suggestions}
               sendMessage={sendMessage}
               startNewConversation={startNewConversation}
-              isLoading={isLoading}
+              isLoading={isStreaming}
               error={error}
             />
           </div>

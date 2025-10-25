@@ -61,6 +61,7 @@ export function ChatInput({
   includeNotepadInMessages = false,
   onToggleNotepadInMessages
 }: ChatInputProps) {
+  // Minimal state - only what's absolutely necessary
   const [input, setInput] = useState('')
   const [placeholderIndex, setPlaceholderIndex] = useState(0)
   const [showFullReply, setShowFullReply] = useState(false)
@@ -71,7 +72,7 @@ export function ChatInput({
   const textareaRef = inputRef || internalInputRef
   const { theme } = useTheme()
   
-  // Auth/user state with readiness guard
+  // Auth/user state - simplified to avoid conditional hooks
   const [userId, setUserId] = useState<string | null>(getCurrentUserIdSync())
   const [authStatus, setAuthStatus] = useState<'idle' | 'waiting' | 'ready' | 'unavailable'>('idle')
 
@@ -97,12 +98,9 @@ export function ChatInput({
         setUserId(null)
       }
     }
-    // Only fetch if we don't have a synchronous cookie userId
-    if (!userId) {
-      ensureAuth()
-    } else {
-      setAuthStatus('ready')
-    }
+    
+    // Always call ensureAuth to maintain consistent hook execution
+    ensureAuth()
     return () => { mounted = false }
   }, [])
   

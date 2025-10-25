@@ -5,8 +5,7 @@ import { Editor } from '@tiptap/react'
 import { 
   Bold, 
   Italic, 
-  Underline, 
-  Strikethrough,
+  Underline,
   Code,
   Heading1,
   Heading2,
@@ -17,16 +16,12 @@ import {
   Undo,
   Redo,
   Link,
-  Image,
+  CheckSquare,
   AlignLeft,
   AlignCenter,
-  AlignRight,
-  AlignJustify,
-  Highlighter
+  AlignRight
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-// import { Separator } from '@/components/ui/separator'
-import { T } from '@/components/translation'
 
 interface TiptapToolbarProps {
   editor: Editor
@@ -35,13 +30,6 @@ interface TiptapToolbarProps {
 
 export function TiptapToolbar({ editor, className = '' }: TiptapToolbarProps) {
   if (!editor) return null
-
-  const addImage = () => {
-    const url = window.prompt('Enter image URL:')
-    if (url) {
-      editor.chain().focus().setImage({ src: url }).run()
-    }
-  }
 
   const setLink = () => {
     const url = window.prompt('Enter URL:')
@@ -84,16 +72,6 @@ export function TiptapToolbar({ editor, className = '' }: TiptapToolbarProps) {
       </Button>
       
       <Button
-        variant={editor.isActive('strike') ? 'default' : 'ghost'}
-        size="sm"
-        onClick={() => editor.chain().focus().toggleStrike().run()}
-        disabled={!editor.can().chain().focus().toggleStrike().run()}
-        className="h-7 w-7 p-0 hover:bg-muted/50"
-      >
-        <Strikethrough className="h-3.5 w-3.5" />
-      </Button>
-      
-      <Button
         variant={editor.isActive('code') ? 'default' : 'ghost'}
         size="sm"
         onClick={() => editor.chain().focus().toggleCode().run()}
@@ -101,16 +79,6 @@ export function TiptapToolbar({ editor, className = '' }: TiptapToolbarProps) {
         className="h-7 w-7 p-0 hover:bg-muted/50"
       >
         <Code className="h-3.5 w-3.5" />
-      </Button>
-      
-      <Button
-        variant={editor.isActive('highlight') ? 'default' : 'ghost'}
-        size="sm"
-        onClick={() => editor.chain().focus().toggleHighlight().run()}
-        disabled={!editor.can().chain().focus().toggleHighlight().run()}
-        className="h-7 w-7 p-0 hover:bg-muted/50"
-      >
-        <Highlighter className="h-3.5 w-3.5" />
       </Button>
 
       <div className="w-px h-4 bg-border/30 mx-1" />
@@ -168,14 +136,14 @@ export function TiptapToolbar({ editor, className = '' }: TiptapToolbarProps) {
         variant={editor.isActive('taskList') ? 'default' : 'ghost'}
         size="sm"
         onClick={() => editor.chain().focus().toggleTaskList().run()}
-        className="h-7 px-2 text-xs hover:bg-muted/50"
+        className="h-7 w-7 p-0 hover:bg-muted/50"
       >
-        <T context="editor.taskList">✓</T>
+        <CheckSquare className="h-3.5 w-3.5" />
       </Button>
 
       <div className="w-px h-4 bg-border/30 mx-1" />
 
-      {/* Essential tools */}
+      {/* Blockquote */}
       <Button
         variant={editor.isActive('blockquote') ? 'default' : 'ghost'}
         size="sm"
@@ -185,6 +153,7 @@ export function TiptapToolbar({ editor, className = '' }: TiptapToolbarProps) {
         <Quote className="h-3.5 w-3.5" />
       </Button>
       
+      {/* Link */}
       <Button
         variant="ghost"
         size="sm"
@@ -193,15 +162,6 @@ export function TiptapToolbar({ editor, className = '' }: TiptapToolbarProps) {
         className="h-7 w-7 p-0 hover:bg-muted/50"
       >
         <Link className="h-3.5 w-3.5" />
-      </Button>
-      
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={addImage}
-        className="h-7 w-7 p-0 hover:bg-muted/50"
-      >
-        <Image className="h-3.5 w-3.5" />
       </Button>
 
       <div className="w-px h-4 bg-border/30 mx-1" />

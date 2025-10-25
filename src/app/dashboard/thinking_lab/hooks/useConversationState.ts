@@ -13,18 +13,26 @@ import { transmitMessageWithStreaming } from '../modules/api/messageService'
 import type { MessageTransmissionRequest } from '../types'
 import type { FileUploadResponse } from '@/lib/file-upload'
 
+interface OptimisticMessage {
+  id: string
+  content: string
+  role: 'user' | 'assistant'
+  timestamp: number
+}
+
 export function useConversationState(userId: string | undefined, projectId?: string, widgetId?: string, widgetOutputId?: string) {
-  // Local state
+  // Local state - clean and minimal
   const [conversationId, setConversationId] = useState<string | undefined>()
-  const [isLoading, setIsLoading] = useState(false)
+  const [isStreaming, setIsStreaming] = useState(false)
+  const [optimisticMessages, setOptimisticMessages] = useState<OptimisticMessage[]>([])
   const [streamingContent, setStreamingContent] = useState('')
-  const [pendingUserMessage, setPendingUserMessage] = useState<string | undefined>()
+  const [currentStreamingId, setCurrentStreamingId] = useState<string | null>(null)
   const [currentStatus, setCurrentStatus] = useState<string | undefined>()
   const [error, setError] = useState<string | undefined>()
   const [quotedContent, setQuotedContent] = useState("")
   const [inputValue, setInputValue] = useState("")
 
-  // Load conversation from Convex - with better error handling
+  // Load conversation from Convex
   const conversation = useQuery(
     api.chatQueries.getConversation,
     conversationId && userId ? { userId, conversationId } : "skip"
@@ -38,8 +46,11 @@ export function useConversationState(userId: string | undefined, projectId?: str
     const lastAssistantMessage = assistantMessages[assistantMessages.length - 1]
     return lastAssistantMessage?.suggestions || []
   })()
+  
+  // Note: No cleanup effect needed - useMessageList handles optimistic message removal
+  // automatically via content matching. Messages disappear when Convex confirms them.
 
-  // Send message function
+  // Send message function - clean streaming implementation
   const sendMessage = useCallback(async (content: string, fileAttachments?: FileUploadResponse[]) => {
     if (!userId) {
       setError('User not authenticated')
@@ -48,24 +59,39 @@ export function useConversationState(userId: string | undefined, projectId?: str
     
     const isFirstMessage = !conversationId
     
-    // Set loading state
-    setIsLoading(true)
-    setError(undefined)
-    setCurrentStatus('Thinking...')
-    setPendingUserMessage(content)
+    // 1. Add optimistic user message immediately (don't overwrite - ADD to array)
+    const userMsgId = `temp-user-${Date.now()}`
+    setOptimisticMessages(prev => [...prev, {
+      id: userMsgId,
+      content,
+      role: 'user',
+      timestamp: Date.now()
+    }])
+    
+    // 2. Add placeholder assistant message for streaming
+    const assistantMsgId = `temp-assistant-${Date.now()}`
+    setOptimisticMessages(prev => [...prev, {
+      id: assistantMsgId,
+      content: '',
+      role: 'assistant',
+      timestamp: Date.now()
+    }])
+    
+    // 3. Start streaming
+    setCurrentStreamingId(assistantMsgId)
     setStreamingContent('')
+    setIsStreaming(true)
+    setError(undefined)
+    setCurrentStatus('Connecting...')
     
     try {
-      // Removed notepad context - notepad content will be handled differently
-      const notepadContext = null
-
       // Prepare request parameters
       const requestParams: MessageTransmissionRequest = {
         content,
         isFirstMessage,
         sessionIdentifier: conversationId || null,
         workspaceContext: conversationId ? { contentId: conversationId } : null,
-        notepadContext,
+        notepadContext: null,
         fileAttachments,
         projectId,
         widgetId,
@@ -76,7 +102,7 @@ export function useConversationState(userId: string | undefined, projectId?: str
         }
       }
       
-      // Call the streaming backend
+      // 4. Start streaming - chunks update in real-time
       const response = await transmitMessageWithStreaming(
         requestParams,
         (chunk: string) => {
@@ -84,39 +110,46 @@ export function useConversationState(userId: string | undefined, projectId?: str
         }
       )
       
-      // Update conversation ID if we got a new one
+      // 5. Streaming complete - update conversation ID
       const newConversationId = response.session_identifier || response.conversationId
-      if (newConversationId && newConversationId !== conversationId) {
+      if (newConversationId) {
         setConversationId(newConversationId)
       }
       
-      // Clear loading state
-      setIsLoading(false)
+      // 6. Mark streaming as complete
+      setIsStreaming(false)
       setCurrentStatus(undefined)
-      setPendingUserMessage(undefined)
+      
+      // 7. Optimistic messages will be auto-removed by content matching when Convex updates
       
     } catch (error) {
       console.error('Failed to send message:', error)
-      setIsLoading(false)
+      setIsStreaming(false)
       setCurrentStatus(undefined)
-      setPendingUserMessage(undefined)
       setStreamingContent('')
+      setCurrentStreamingId(null)
+      // On error, clear the failed optimistic messages
+      setOptimisticMessages([])
       setError(error instanceof Error ? error.message : 'Failed to send message')
     }
-  }, [userId, conversationId])
+  }, [userId, conversationId, projectId, widgetId, widgetOutputId])
 
   // Start new conversation
   const startNewConversation = useCallback(() => {
     setConversationId(undefined)
     setError(undefined)
     setCurrentStatus(undefined)
-    setPendingUserMessage(undefined)
+    setOptimisticMessages([])
     setStreamingContent('')
+    setCurrentStreamingId(null)
+    setIsStreaming(false)
   }, [])
 
-  // Clear streaming content when message is confirmed in Convex
+  // Clear streaming content manually (for edge cases)
   const clearStreamingContent = useCallback(() => {
     setStreamingContent('')
+    setCurrentStreamingId(null)
+    setOptimisticMessages([])
   }, [])
 
   // Input handlers
@@ -138,19 +171,13 @@ export function useConversationState(userId: string | undefined, projectId?: str
     setQuotedContent("")
   }, [])
 
-  // Clear streaming content when message is confirmed in Convex
-  React.useEffect(() => {
-    if (streamingContent && messages.length > 0) {
-      clearStreamingContent()
-    }
-  }, [streamingContent, messages.length, clearStreamingContent])
-
   return {
     // State
     conversationId,
-    isLoading,
+    isStreaming,
     streamingContent,
-    pendingUserMessage,
+    optimisticMessages,
+    currentStreamingId,
     currentStatus,
     error,
     messages,
