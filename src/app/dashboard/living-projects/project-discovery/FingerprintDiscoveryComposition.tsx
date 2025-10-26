@@ -172,11 +172,11 @@ const FingerprintDiscoveryComposition: React.FC<FingerprintDiscoveryCompositionP
 
     // Import progressive thinking dynamically (avoid hook in callback)
     const { startProgressiveThinking } = await import('@/app/dashboard/thinking_lab/hooks/useProgressiveThinking')
-    let stopThinking: (() => void) | null = null
+    let thinkingControl: any = null
 
     try {
       // Start progressive thinking UI (MAB controls context automatically)
-      stopThinking = startProgressiveThinking((status) => {
+      thinkingControl = startProgressiveThinking((status) => {
         setMessages(prev => prev.map(m =>
           m.id === typingId
             ? { ...m, statusHistory: [...(m.statusHistory || []), status], searchStatus: status }
@@ -204,7 +204,7 @@ const FingerprintDiscoveryComposition: React.FC<FingerprintDiscoveryCompositionP
       })
 
       // Transition to generation steps
-      stopThinking?.()
+      thinkingControl?.stop()
       setMessages(prev => prev.map(m =>
         m.id === typingId
           ? { ...m, statusHistory: [...(m.statusHistory || []), 'Putting my thoughts together'], searchStatus: 'Putting my thoughts together' }
@@ -248,7 +248,7 @@ const FingerprintDiscoveryComposition: React.FC<FingerprintDiscoveryCompositionP
 
     } catch (error) {
       console.error('Discovery error:', error)
-      stopThinking?.()
+      thinkingControl?.stop()
       
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -267,7 +267,7 @@ const FingerprintDiscoveryComposition: React.FC<FingerprintDiscoveryCompositionP
         msg.id === typingId || msg.status === 'typing' ? errorMessage : msg
       ))
     } finally {
-      stopThinking?.()
+      thinkingControl?.stop()
       setIsLoading(false)
     }
   }, [userId, messages.length, projectId, conversationId, addMessage])
