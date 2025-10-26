@@ -2326,6 +2326,74 @@ app.post("/api/vectorSearch/action", async (c) => {
   }
 });
 
+// POST /api/vectorSearch/getEmbeddingsByContentIds - Get embeddings by content IDs (for clustering reuse)
+app.post("/api/vectorSearch/getEmbeddingsByContentIds", async (c) => {
+  try {
+    const requestBody = await c.req.json();
+    const { userId, contentType, contentIds } = requestBody;
+    
+    if (!userId || !contentType || !contentIds || !Array.isArray(contentIds)) {
+      return c.json({ 
+        success: false, 
+        error: "userId, contentType, and contentIds array are required" 
+      }, 400);
+    }
+    
+    console.log(`🔍 [VECTOR_SEARCH] Getting embeddings by IDs for user ${userId}, type ${contentType}, count ${contentIds.length}`);
+    
+    const result = await c.env.runAction(api.vectorSearchQueries.getVectorSearchData, {
+      userId,
+      operation: "get_by_content_ids",
+      contentType,
+      contentIds
+    });
+    
+    return c.json(result);
+  } catch (error) {
+    console.error('Get embeddings by content IDs error:', error);
+    return c.json({ 
+      success: false, 
+      error: `Failed to get embeddings by content IDs: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      data: null 
+    }, 500);
+  }
+});
+
+// POST /api/vectorSearch/similaritySearch - Direct similarity search endpoint
+app.post("/api/vectorSearch/similaritySearch", async (c) => {
+  try {
+    const requestBody = await c.req.json();
+    const { userId, query, contentTypes, limit, threshold } = requestBody;
+    
+    if (!userId || !query) {
+      return c.json({ 
+        success: false, 
+        error: "userId and query are required" 
+      }, 400);
+    }
+    
+    console.log(`🔍 [VECTOR_SEARCH] Similarity search for user ${userId}, query: ${query.substring(0, 100)}...`);
+    
+    const result = await c.env.runAction(api.vectorSearchQueries.getVectorSearchData, {
+      userId,
+      operation: "similarity_search",
+      query,
+      contentTypes: contentTypes || ["note", "crystal", "conversation", "shard"],
+      limit: limit || 10,
+      threshold: threshold || 0.35
+    });
+    
+    return c.json(result);
+  } catch (error) {
+    console.error('Similarity search error:', error);
+    return c.json({ 
+      success: false, 
+      error: `Similarity search failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      data: null 
+    }, 500);
+  }
+});
+
 // POST /api/vectorSearch/mutate - Store embeddings from backend
 app.post("/api/vectorSearch/mutate", async (c) => {
   try {

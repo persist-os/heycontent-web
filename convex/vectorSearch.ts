@@ -383,12 +383,14 @@ export const hybridSearchContentWithQuotas = action({
         conversation: filteredSimilarities.filter(item => item.contentType === 'conversation'),
         note: filteredSimilarities.filter(item => item.contentType === 'note'),
         crystal: filteredSimilarities.filter(item => item.contentType === 'crystal'),
+        shard: filteredSimilarities.filter(item => item.contentType === 'shard'),
       };
       
       console.log('🔀 [HYBRID QUOTA SEARCH] Content distribution before quota application:', {
         conversations: contentByType.conversation.length,
         notes: contentByType.note.length,
         crystals: contentByType.crystal.length,
+        shards: contentByType.shard.length,
         crystalDetails: contentByType.crystal.map(c => ({
           contentId: c.contentId,
           title: c.title,
@@ -405,6 +407,16 @@ export const hybridSearchContentWithQuotas = action({
         embedding: number[];
         score: number;
       }> = [];
+      
+      // Add shards (max 20)
+      console.log('🧩 [HYBRID QUOTA SEARCH] Selecting shards for final results');
+      const topShards = contentByType.shard.slice(0, 20);
+      console.log('🧩 [HYBRID QUOTA SEARCH] Selected shards:', {
+        requested: 20,
+        available: contentByType.shard.length,
+        selected: topShards.length
+      });
+      selectedResults.push(...topShards);
       
       // Add crystals (max 5)
       console.log('💎 [HYBRID QUOTA SEARCH] Selecting crystals for final results');
@@ -442,7 +454,8 @@ export const hybridSearchContentWithQuotas = action({
       selectedResults.push(...topNotes);
       
       // Fill remaining slots while respecting quotas
-      const targetTotal = args.limit || 10;
+      // Default to 50 to accommodate all quotas (20 shards + 5 crystals + 4 conversations + 3 notes = 32)
+      const targetTotal = args.limit || 50;
       const remainingSlots = targetTotal - selectedResults.length;
       
       console.log('🔄 [HYBRID QUOTA SEARCH] Filling remaining slots:', {
@@ -453,6 +466,7 @@ export const hybridSearchContentWithQuotas = action({
           conversations: selectedResults.filter(item => item.contentType === 'conversation').length,
           crystals: selectedResults.filter(item => item.contentType === 'crystal').length,
           notes: selectedResults.filter(item => item.contentType === 'note').length,
+          shards: selectedResults.filter(item => item.contentType === 'shard').length,
         }
       });
       
@@ -466,6 +480,7 @@ export const hybridSearchContentWithQuotas = action({
             conversations: unusedContent.filter(item => item.contentType === 'conversation').length,
             crystals: unusedContent.filter(item => item.contentType === 'crystal').length,
             notes: unusedContent.filter(item => item.contentType === 'note').length,
+            shards: unusedContent.filter(item => item.contentType === 'shard').length,
           }
         });
         
@@ -474,9 +489,10 @@ export const hybridSearchContentWithQuotas = action({
           conversation: selectedResults.filter(item => item.contentType === 'conversation').length,
           crystal: selectedResults.filter(item => item.contentType === 'crystal').length,
           note: selectedResults.filter(item => item.contentType === 'note').length,
+          shard: selectedResults.filter(item => item.contentType === 'shard').length,
         };
         
-        const quotaLimits = { conversation: 4, crystal: 5, note: 3 };
+        const quotaLimits = { conversation: 4, crystal: 5, note: 3, shard: 20 };
         
         console.log('🔄 [HYBRID QUOTA SEARCH] Current counts vs quotas:', {
           currentCounts,
@@ -484,7 +500,8 @@ export const hybridSearchContentWithQuotas = action({
           canAddMore: {
             conversations: currentCounts.conversation < quotaLimits.conversation,
             crystals: currentCounts.crystal < quotaLimits.crystal,
-            notes: currentCounts.note < quotaLimits.note
+            notes: currentCounts.note < quotaLimits.note,
+            shards: currentCounts.shard < quotaLimits.shard
           }
         });
         
@@ -528,6 +545,7 @@ export const hybridSearchContentWithQuotas = action({
         conversations: finalResults.filter(item => item.contentType === 'conversation').length,
         crystals: finalCrystals.length,
         notes: finalResults.filter(item => item.contentType === 'note').length,
+        shards: finalResults.filter(item => item.contentType === 'shard').length,
         finalCrystalDetails: finalCrystals.map(c => ({
           contentId: c.contentId,
           title: c.title,
@@ -603,6 +621,42 @@ export const getUserEmbeddings = internalQuery({
         contentTypes: args.contentTypes
       });
       // Return empty array to prevent cascading failures
+      return [];
+    }
+  },
+});
+
+/**
+ * Fetch embeddings by content IDs
+ * Used by clustering to get pre-computed shard embeddings
+ */
+export const getEmbeddingsByContentIds = internalQuery({
+  args: {
+    userId: v.string(),
+    contentType: v.string(),
+    contentIds: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    try {
+      console.log(`🔍 [GET EMBEDDINGS BY IDS] Fetching ${args.contentIds.length} ${args.contentType} embeddings for user ${args.userId}`);
+      
+      // Query all embeddings for this user and content type
+      const allEmbeddings = await ctx.db
+        .query("contentEmbeddings")
+        .withIndex("by_user_type", (q) => 
+          q.eq("userId", args.userId).eq("contentType", args.contentType)
+        )
+        .collect();
+      
+      // Filter to only requested content IDs
+      const contentIdSet = new Set(args.contentIds);
+      const results = allEmbeddings.filter(e => contentIdSet.has(e.contentId));
+      
+      console.log(`✅ [GET EMBEDDINGS BY IDS] Found ${results.length}/${args.contentIds.length} embeddings`);
+      
+      return results;
+    } catch (error) {
+      console.error('❌ [GET EMBEDDINGS BY IDS] Error:', error);
       return [];
     }
   },

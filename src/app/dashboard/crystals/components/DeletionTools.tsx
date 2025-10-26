@@ -31,8 +31,8 @@ export const DeletionTools: React.FC<DeletionToolsProps> = ({ userId }) => {
   const deleteProject = useMutation(api.projectsMutations.deleteProject);
   
   // Query all crystals, shards, stardust, and projects for deletion operations
-  const allCrystals = useQuery(api.crystalQueries.getCrystalData, userId ? { userId, table: 'crystals' } : 'skip');
-  const allShards = useQuery(api.crystalQueries.getCrystalData, userId ? { userId, table: 'crystal_shards' } : 'skip');
+  const allCrystals = useQuery(api.crystalQueries.getCrystalsByUser, userId ? { userId } : 'skip');
+  const allShards = useQuery(api.shardQueries.getShardsByUser, userId ? { userId } : 'skip');
   const allStardust = useQuery(api.stardustQueries.listStardust, userId ? { userId } : 'skip');
   const allProjects = useQuery(api.projectsQueries.getByUser, userId ? { userId, limit: 1000 } : 'skip');
 

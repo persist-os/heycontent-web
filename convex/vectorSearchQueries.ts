@@ -16,6 +16,8 @@ export const getVectorSearchData = action({
     operation: v.string(),
     query: v.optional(v.string()),
     contentTypes: v.optional(contentTypesArrayValidator),
+    contentType: v.optional(v.string()),
+    contentIds: v.optional(v.array(v.string())),
     limit: v.optional(v.number()),
     threshold: v.optional(v.number()),
     // Add missing fields that backend sends
@@ -37,6 +39,30 @@ export const getVectorSearchData = action({
     const startTime = Date.now();
     
     try {
+      // Handle get_by_content_ids operation
+      if (args.operation === "get_by_content_ids") {
+        if (!args.contentType || !args.contentIds) {
+          throw new Error("contentType and contentIds are required for get_by_content_ids operation");
+        }
+        
+        const results = await ctx.runQuery(api.vectorSearch.getEmbeddingsByContentIds, {
+          userId: args.userId,
+          contentType: args.contentType,
+          contentIds: args.contentIds,
+        });
+        
+        return {
+          success: true,
+          data: results || [],
+          metadata: {
+            processingTimeMs: Date.now() - startTime,
+            resultsCount: results?.length || 0,
+            operationType: args.operation,
+          },
+        };
+      }
+      
+      // Handle similarity_search operation
       const { userId, query, contentTypes, limit = 10, threshold = 0.7 } = args;
       
       if (!query) {

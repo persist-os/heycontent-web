@@ -115,6 +115,15 @@ export const mutateCrystal = mutation({
             })
           );
           
+          // CRITICAL FIX: Update crystal's shardIds array to include new shard IDs
+          const currentShardIds = crystal.shardIds || [];
+          const updatedShardIds = [...currentShardIds, ...addShardIds];
+          await ctx.db.patch(id, {
+            shardIds: updatedShardIds,
+            observation_count: updatedShardIds.length,
+            updatedAt: updateTime,
+          });
+          
           // Mark all as consumed in parallel
           await Promise.all(
             addShardIds.map(shardId =>
