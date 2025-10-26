@@ -17,7 +17,7 @@ export const projectSchemaFields = {
   // Content ID Arrays - Enable efficient batch content fetching
   noteIds: v.optional(v.array(v.string())),
   conversationIds: v.optional(v.array(v.string())),
-  analysisIds: v.optional(v.array(v.string())),
+  stardustIds: v.optional(v.array(v.string())),
   crystalIds: v.optional(v.array(v.string())),
   shardIds: v.optional(v.array(v.string())),
   
@@ -35,7 +35,8 @@ export const projectSchemaFields = {
         v.literal("note"),
         v.literal("conversation"),
         v.literal("crystal"),
-        v.literal("shard")
+        v.literal("shard"),
+        v.literal("stardust")
       ),
       x: v.number(),
       y: v.number(),
@@ -55,7 +56,7 @@ export const projectSchemaFields = {
 export const projectValidator = v.object(projectSchemaFields);
 
 // Type exports
-export type ConstellationItemType = "widget" | "note" | "conversation" | "crystal" | "shard";
+export type ConstellationItemType = "widget" | "note" | "conversation" | "crystal" | "shard" | "stardust";
 
 export interface ConstellationItem {
   itemId: string;
@@ -80,7 +81,7 @@ export interface Project {
   description?: string;
   noteIds?: string[];
   conversationIds?: string[];
-  analysisIds?: string[];
+  stardustIds?: string[];
   crystalIds?: string[];
   shardIds?: string[];
   fingerprintId?: string;

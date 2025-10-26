@@ -63,7 +63,7 @@ export const createProject = mutation({
         conversationIds: args.conversationIds || [],
         crystalIds: args.crystalIds || [],
         shardIds: args.shardIds || [],
-        analysisIds: [],
+        stardustIds: [],
         
         // No fingerprint initially - created during discovery
         fingerprintId: undefined,
@@ -154,7 +154,7 @@ export const addContent = mutation({
       v.literal("conversation"),
       v.literal("crystal"),
       v.literal("shard"),
-      v.literal("analysis")
+      v.literal("stardust")
     ),
     contentId: v.string(),
   },
@@ -175,7 +175,7 @@ export const addContent = mutation({
       conversation: "conversationIds",
       crystal: "crystalIds",
       shard: "shardIds",
-      analysis: "analysisIds",
+      stardust: "stardustIds",
     };
     
     const field = fieldMap[contentType];
@@ -232,7 +232,7 @@ export const removeContent = mutation({
       v.literal("conversation"),
       v.literal("crystal"),
       v.literal("shard"),
-      v.literal("analysis")
+      v.literal("stardust")
     ),
     contentId: v.string(),
   },
@@ -253,7 +253,7 @@ export const removeContent = mutation({
       conversation: "conversationIds",
       crystal: "crystalIds",
       shard: "shardIds",
-      analysis: "analysisIds",
+      stardust: "stardustIds",
     };
     
     const field = fieldMap[contentType];
@@ -285,7 +285,7 @@ export const addMultipleContent = mutation({
         v.literal("conversation"),
         v.literal("crystal"),
         v.literal("shard"),
-        v.literal("analysis")
+        v.literal("stardust")
       ),
       id: v.string(),
     })),
@@ -308,7 +308,7 @@ export const addMultipleContent = mutation({
       conversation: "conversationIds",
       crystal: "crystalIds",
       shard: "shardIds",
-      analysis: "analysisIds",
+      stardust: "stardustIds",
     };
     
     for (const item of content) {
@@ -491,7 +491,8 @@ export const saveConstellationLayout = mutation({
           v.literal("note"), 
           v.literal("conversation"),
           v.literal("crystal"),
-          v.literal("shard")
+          v.literal("shard"),
+          v.literal("stardust")
         ),
         x: v.number(),
         y: v.number(),
@@ -584,7 +585,7 @@ export const batchDeleteProjects = mutation({
       for (const projectId of chunk) {
         try {
           // Validate project ownership
-          const project = await ctx.db.get(projectId);
+          const project = await ctx.db.get(projectId) as any;
           if (!project) {
             throw new Error("Project not found");
           }

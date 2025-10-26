@@ -15,13 +15,14 @@ export const contentTypeValidator = v.union(
   v.literal("conversation"),
   v.literal("note"),
   v.literal("crystal"),
-  v.literal("shard")
+  v.literal("shard"),
+  v.literal("stardust")
 );
 
 /**
  * TypeScript type derived from validator
  */
-export type ContentType = "conversation" | "note" | "crystal" | "shard";
+export type ContentType = "conversation" | "note" | "crystal" | "shard" | "stardust";
 
 /**
  * Array of content types validator - for filters
@@ -31,7 +32,7 @@ export const contentTypesArrayValidator = v.optional(v.array(contentTypeValidato
 /**
  * All valid content types as constant array
  */
-export const CONTENT_TYPES: readonly ContentType[] = ["conversation", "note", "crystal", "shard"] as const;
+export const CONTENT_TYPES: readonly ContentType[] = ["conversation", "note", "crystal", "shard", "stardust"] as const;
 
 /**
  * Embedding operation types

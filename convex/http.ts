@@ -2393,7 +2393,7 @@ app.post("/api/vectorSearch/action", async (c) => {
     const results = await c.env.runAction(api.vectorSearch.hybridSearchContent, {
       userId,
       query,
-      contentTypes: contentTypes || ["note", "crystal", "conversation", "shard"],
+      contentTypes: contentTypes || ["note", "crystal", "conversation", "shard", "stardust"],
       limit: limit || 10,
       minSimilarity: threshold || 0.35
     });
@@ -2465,7 +2465,7 @@ app.post("/api/vectorSearch/similaritySearch", async (c) => {
     const results = await c.env.runAction(api.vectorSearch.hybridSearchContent, {
       userId,
       query,
-      contentTypes: contentTypes || ["note", "crystal", "conversation", "shard"],
+      contentTypes: contentTypes || ["note", "crystal", "conversation", "shard", "stardust"],
       limit: limit || 10,
       minSimilarity: threshold || 0.35
     });
@@ -2588,7 +2588,7 @@ app.post("/api/vectorSearch/searchByEmbedding", async (c) => {
     const result = await c.env.runAction(internal.vectorSearch.searchByEmbedding, {
       userId,
       embedding,
-      contentTypes: contentTypes || ["note", "crystal", "conversation", "shard"],
+      contentTypes: contentTypes || ["note", "crystal", "conversation", "shard", "stardust"],
       limit: limit || 10,
       threshold: threshold || 0.35
     });
@@ -4585,6 +4585,14 @@ app.post("/api/stardust/create", async (c) => {
     const ctx = c.env;
     const requestBody = await c.req.json();
     
+    // Validate userId is provided
+    if (!requestBody.userId) {
+      return c.json({ 
+        success: false,
+        error: "userId is required in request body"
+      }, 400);
+    }
+    
     const result = await ctx.runMutation(
       api.stardustMutations.createStardust,
       { stardustData: requestBody }
@@ -4723,11 +4731,31 @@ app.post("/api/stardust/byDomain", async (c) => {
 
 /**
  * Batch create stardust
+ * 
+ * CRITICAL: Each stardust in stardustList must include userId for backend toolkit compatibility
  */
 app.post("/api/stardust/batchCreate", async (c) => {
   try {
     const ctx = c.env;
     const body = await c.req.json();
+    
+    // Validate stardustList is provided
+    if (!body.stardustList || !Array.isArray(body.stardustList)) {
+      return c.json({ 
+        success: false,
+        error: "stardustList array is required in request body"
+      }, 400);
+    }
+    
+    // Validate each stardust has userId
+    for (const stardust of body.stardustList) {
+      if (!stardust.userId) {
+        return c.json({ 
+          success: false,
+          error: "userId is required for each stardust in stardustList"
+        }, 400);
+      }
+    }
     
     const stardustIds = await ctx.runMutation(api.stardustMutations.batchCreateStardust, {
       stardustList: body.stardustList,
@@ -4813,6 +4841,53 @@ app.post("/api/stardust/createSymbioticPair", async (c) => {
     return c.json({ 
       success: false,
       error: error.message || "Failed to create symbiotic pair"
+    }, 500);
+  }
+});
+
+/**
+ * Batch delete multiple stardust
+ */
+app.post("/api/stardust/batchDelete", async (c) => {
+  try {
+    const ctx = c.env;
+    const body = await c.req.json();
+    
+    const result = await ctx.runMutation(api.stardustMutations.batchDeleteStardust, {
+      stardustIds: body.stardustIds,
+    });
+    
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[STARDUST_BATCH_DELETE] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to batch delete stardust"
+    }, 500);
+  }
+});
+
+/**
+ * Evolve stardust lifecycle stage
+ */
+app.post("/api/stardust/evolveLifecycle", async (c) => {
+  try {
+    const ctx = c.env;
+    const body = await c.req.json();
+    
+    const stardustId = await ctx.runMutation(api.stardustMutations.evolveStardustLifecycle, {
+      stardustId: body.stardustId as Id<"stardust">,
+      newStage: body.newStage,
+      healthDelta: body.healthDelta,
+      energyDelta: body.energyDelta,
+    });
+    
+    return c.json({ success: true, data: { stardustId } });
+  } catch (error: any) {
+    console.error("[STARDUST_EVOLVE_LIFECYCLE] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to evolve stardust lifecycle"
     }, 500);
   }
 });

@@ -11,6 +11,9 @@ export const embeddingUpdateTypeValidator = v.union(
 export const embeddingPlatformTypeValidator = v.union(
   v.literal("conversations"),
   v.literal("notes"),
+  v.literal("crystals"),
+  v.literal("shards"),
+  v.literal("stardusts"),
   v.literal("all")
 );
 

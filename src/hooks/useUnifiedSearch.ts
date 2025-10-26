@@ -190,7 +190,7 @@ export function useUnifiedSearch({ enabled }: UseUnifiedSearchProps) {
         userId,
         query: searchQuery,
         limit: 20,
-        contentTypes: ['note', 'crystal', 'conversation', 'shard'],
+        contentTypes: ['note', 'crystal', 'conversation', 'shard', 'stardust'],
         minSimilarity: 0.3
       });
 

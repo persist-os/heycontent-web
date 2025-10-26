@@ -38,7 +38,8 @@ async function getProjectByIdHandler(
     shardCount: (project.shardIds || []).length,
     
     // Analytics
-    analysisIds: project.analysisIds || [],
+    stardustIds: project.stardustIds || [],
+    stardustCount: (project.stardustIds || []).length,
     
     // Intelligence
     fingerprintId: project.fingerprintId,
@@ -238,12 +239,14 @@ export const getByUser = query({
         (project.noteIds || []).length +
         (project.conversationIds || []).length +
         (project.crystalIds || []).length +
-        (project.shardIds || []).length
+        (project.shardIds || []).length +
+        (project.stardustIds || []).length
       ),
       noteCount: (project.noteIds || []).length,
       conversationCount: (project.conversationIds || []).length,
       crystalCount: (project.crystalIds || []).length,
       shardCount: (project.shardIds || []).length,
+      stardustCount: (project.stardustIds || []).length,
       
       // Intelligence status
       hasFingerprintId: !!project.fingerprintId,
@@ -298,6 +301,7 @@ export const getWithContentType = query({
       v.literal("conversations"), 
       v.literal("crystals"),
       v.literal("shards"),
+      v.literal("stardust"),
       v.literal("all")
     ),
   },
@@ -324,7 +328,7 @@ export const getWithContentType = query({
         conversationIds: project.conversationIds || [],
         crystalIds: project.crystalIds || [],
         shardIds: project.shardIds || [],
-        analysisIds: project.analysisIds || [],
+        stardustIds: project.stardustIds || [],
       };
     } else {
       const fieldMap = {
@@ -332,6 +336,7 @@ export const getWithContentType = query({
         conversations: "conversationIds",
         crystals: "crystalIds",
         shards: "shardIds",
+        stardust: "stardustIds",
       };
       
       const field = fieldMap[contentType];
@@ -375,7 +380,8 @@ export const getWithFingerprints = query({
         (project.noteIds || []).length +
         (project.conversationIds || []).length +
         (project.crystalIds || []).length +
-        (project.shardIds || []).length
+        (project.shardIds || []).length +
+        (project.stardustIds || []).length
       ),
       createdAt: project.createdAt,
       updatedAt: project.updatedAt,
@@ -485,7 +491,8 @@ export const searchByName = query({
         (project.noteIds || []).length +
         (project.conversationIds || []).length +
         (project.crystalIds || []).length +
-        (project.shardIds || []).length
+        (project.shardIds || []).length +
+        (project.stardustIds || []).length
       ),
       createdAt: project.createdAt,
     }));
@@ -520,12 +527,13 @@ export const getStats = query({
         conversations: (project.conversationIds || []).length,
         crystals: (project.crystalIds || []).length,
         shards: (project.shardIds || []).length,
-        analyses: (project.analysisIds || []).length,
+        stardusts: (project.stardustIds || []).length,
         total: (
           (project.noteIds || []).length +
           (project.conversationIds || []).length +
           (project.crystalIds || []).length +
-          (project.shardIds || []).length
+          (project.shardIds || []).length +
+          (project.stardustIds || []).length
         ),
       },
       

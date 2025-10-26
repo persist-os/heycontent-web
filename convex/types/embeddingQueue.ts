@@ -2,7 +2,10 @@ import { v } from "convex/values";
 
 export const embeddingPlatformValidator = v.union(
   v.literal("notes"),
-  v.literal("conversations")
+  v.literal("conversations"),
+  v.literal("crystals"),
+  v.literal("shards"),
+  v.literal("stardusts"),
 );
 
 export const embeddingChangeTypeValidator = v.union(
