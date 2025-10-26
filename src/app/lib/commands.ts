@@ -515,7 +515,7 @@ async function vectorSearchContent(query: string, limit: number = 5): Promise<Se
     
     // Try the new enhanced search with quotas first
     try {
-      const vectorResults = await convex.action(api.vectorSearch.hybridSearchContentWithQuotas, {
+      const vectorResults = await convex.action(api.vectorSearch.hybridSearchContent, {
         userId,
         query,
         limit,

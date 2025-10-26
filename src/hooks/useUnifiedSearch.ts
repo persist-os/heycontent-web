@@ -75,7 +75,7 @@ export function useUnifiedSearch({ enabled }: UseUnifiedSearchProps) {
   );
 
   // Vector search action
-  const vectorSearch = useAction(api.vectorSearch.hybridSearchContentWithQuotas);
+  const vectorSearch = useAction(api.vectorSearch.hybridSearchContent);
 
   // Keyword search (instant)
   const keywordSearchResults = useCallback(() => {

@@ -171,7 +171,6 @@ import type * as userMutations from "../userMutations.js";
 import type * as userQueries from "../userQueries.js";
 import type * as vectorSearch from "../vectorSearch.js";
 import type * as vectorSearchMutations from "../vectorSearchMutations.js";
-import type * as vectorSearchQueries from "../vectorSearchQueries.js";
 import type * as webhookEvents from "../webhookEvents.js";
 import type * as widgetContentMutations from "../widgetContentMutations.js";
 import type * as widgetOutputsMutations from "../widgetOutputsMutations.js";
@@ -346,7 +345,6 @@ declare const fullApi: ApiFromModules<{
   userQueries: typeof userQueries;
   vectorSearch: typeof vectorSearch;
   vectorSearchMutations: typeof vectorSearchMutations;
-  vectorSearchQueries: typeof vectorSearchQueries;
   webhookEvents: typeof webhookEvents;
   widgetContentMutations: typeof widgetContentMutations;
   widgetOutputsMutations: typeof widgetOutputsMutations;

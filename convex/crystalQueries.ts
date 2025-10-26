@@ -80,7 +80,7 @@ export const vectorSearchCrystals = action({
     handler: async (ctx, { userId, query, limit, minSimilarity }) => {
         try {
             // Use the hybrid search system to find relevant crystal embeddings
-            const searchResults = await ctx.runAction(api.vectorSearch.hybridSearchContentWithQuotas, {
+            const searchResults = await ctx.runAction(api.vectorSearch.hybridSearchContent, {
                 userId,
                 query,
                 limit: limit || 10,

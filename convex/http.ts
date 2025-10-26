@@ -2294,30 +2294,53 @@ app.post("/api/formation/mutate", async (c) => {
 });
 
 
-// POST /api/vectorSearch/action - Optimized generic action endpoint (supports ctx.runAction)
+// POST /api/vectorSearch/action - Direct action endpoint (calls hybridSearchContent or operations)
 app.post("/api/vectorSearch/action", async (c) => {
   try {
     const requestBody = await c.req.json();
-    // Ensure required fields are present
-    const { userId, operation, ...rest } = requestBody;
+    const { userId, operation, query, contentType, contentIds, contentTypes, limit, threshold } = requestBody;
+    
     if (!userId || !operation) {
       return c.json({ error: "userId and operation are required" }, 400);
     }
     
-    // Call as action instead of query to support ctx.runAction calls
-    const result = await c.env.runAction(api.vectorSearchQueries.getVectorSearchData, {
+    // Handle get_by_content_ids operation
+    if (operation === "get_by_content_ids") {
+      if (!contentType || !contentIds) {
+        return c.json({ error: "contentType and contentIds required for get_by_content_ids" }, 400);
+      }
+      
+      const embeddings = await c.env.runQuery(internal.vectorSearch.getEmbeddingsByContentIds, {
+        userId,
+        contentType,
+        contentIds
+      });
+      
+      return c.json({
+        success: true,
+        data: embeddings || []
+      });
+    }
+    
+    // Handle similarity_search operation (default to hybridSearchContent)
+    if (!query) {
+      return c.json({ error: "query is required for similarity search" }, 400);
+    }
+    
+    const results = await c.env.runAction(api.vectorSearch.hybridSearchContent, {
       userId,
-      operation,
-      ...rest
+      query,
+      contentTypes: contentTypes || ["note", "crystal", "conversation", "shard"],
+      limit: limit || 10,
+      minSimilarity: threshold || 0.35
     });
-    return c.json(result);
+    
+    return c.json({
+      success: true,
+      data: results || []
+    });
   } catch (error) {
     console.error('Vector search action error:', error);
-    console.error('Vector search error details:', {
-      errorMessage: error instanceof Error ? error.message : 'Unknown error',
-      errorStack: error instanceof Error ? error.stack : 'No stack',
-      requestBody: await c.req.json().catch(() => 'Failed to parse request body')
-    });
     return c.json({ 
       success: false, 
       error: `Vector search action failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -2341,14 +2364,16 @@ app.post("/api/vectorSearch/getEmbeddingsByContentIds", async (c) => {
     
     console.log(`🔍 [VECTOR_SEARCH] Getting embeddings by IDs for user ${userId}, type ${contentType}, count ${contentIds.length}`);
     
-    const result = await c.env.runAction(api.vectorSearchQueries.getVectorSearchData, {
+    const embeddings = await c.env.runQuery(internal.vectorSearch.getEmbeddingsByContentIds, {
       userId,
-      operation: "get_by_content_ids",
       contentType,
       contentIds
     });
     
-    return c.json(result);
+    return c.json({
+      success: true,
+      data: embeddings || []
+    });
   } catch (error) {
     console.error('Get embeddings by content IDs error:', error);
     return c.json({ 
@@ -2374,16 +2399,18 @@ app.post("/api/vectorSearch/similaritySearch", async (c) => {
     
     console.log(`🔍 [VECTOR_SEARCH] Similarity search for user ${userId}, query: ${query.substring(0, 100)}...`);
     
-    const result = await c.env.runAction(api.vectorSearchQueries.getVectorSearchData, {
+    const results = await c.env.runAction(api.vectorSearch.hybridSearchContent, {
       userId,
-      operation: "similarity_search",
       query,
       contentTypes: contentTypes || ["note", "crystal", "conversation", "shard"],
       limit: limit || 10,
-      threshold: threshold || 0.35
+      minSimilarity: threshold || 0.35
     });
     
-    return c.json(result);
+    return c.json({
+      success: true,
+      data: results || []
+    });
   } catch (error) {
     console.error('Similarity search error:', error);
     return c.json({ 
@@ -2432,6 +2459,76 @@ app.post("/api/vector-search/crystals", async (c) => {
   } catch (error: any) {
     console.error("Failed to perform vector search on crystals:", error);
     return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// POST /api/vectorSearch/getAverageEmbedding - Get average embedding for content items (NO generation)
+app.post("/api/vectorSearch/getAverageEmbedding", async (c) => {
+  try {
+    const requestBody = await c.req.json();
+    const { userId, contentType, contentIds } = requestBody;
+    
+    if (!userId || !contentType || !contentIds || !Array.isArray(contentIds)) {
+      return c.json({ 
+        success: false, 
+        error: "Missing required fields: userId, contentType, contentIds (array)" 
+      }, 400);
+    }
+    
+    console.log(`🔍 [GET_AVG_EMBEDDING] Getting average for ${contentIds.length} ${contentType} items`);
+    
+    const result = await c.env.runAction(internal.vectorSearch.getAverageEmbedding, {
+      userId,
+      contentType,
+      contentIds
+    });
+    
+    return c.json({
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    console.error("❌ [GET_AVG_EMBEDDING] Error:", error);
+    return c.json({
+      success: false,
+      error: error.message || "Failed to get average embedding"
+    }, 500);
+  }
+});
+
+// POST /api/vectorSearch/searchByEmbedding - Search using pre-computed embedding (NO generation)
+app.post("/api/vectorSearch/searchByEmbedding", async (c) => {
+  try {
+    const requestBody = await c.req.json();
+    const { userId, embedding, contentTypes, limit, threshold } = requestBody;
+    
+    if (!userId || !embedding || !Array.isArray(embedding)) {
+      return c.json({ 
+        success: false, 
+        error: "Missing required fields: userId, embedding (array)" 
+      }, 400);
+    }
+    
+    console.log(`🔍 [SEARCH_BY_EMBEDDING] Searching with pre-computed embedding for user ${userId}`);
+    
+    const result = await c.env.runAction(internal.vectorSearch.searchByEmbedding, {
+      userId,
+      embedding,
+      contentTypes: contentTypes || ["note", "crystal", "conversation", "shard"],
+      limit: limit || 10,
+      threshold: threshold || 0.35
+    });
+    
+    return c.json({
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    console.error("❌ [SEARCH_BY_EMBEDDING] Error:", error);
+    return c.json({
+      success: false,
+      error: error.message || "Failed to search by embedding"
+    }, 500);
   }
 });
 
