@@ -6,31 +6,13 @@ dotenv.config();
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 export async function POST(request: Request) {
-  const debug = (...args: any[]) => console.log('[SMART-NOTE-INLINE-ANALYSIS]', ...args);
   const startTime = Date.now();
   const requestId = Math.random().toString(36).substring(7);
 
-  console.log(`[${requestId}] Smart note inline analysis request started`, {
-    timestamp: new Date().toISOString(),
-    method: request.method,
-    url: request.url
-  });
-
   try {
-    debug('--- New Request ---');
-    debug('Request method:', request.method);
-    debug('Request url:', request.url);
-    if (process.env.NODE_ENV !== 'production') {
-      debug('Request headers:', JSON.stringify(Object.fromEntries(request.headers.entries()), null, 2));
-    } else {
-      debug('Request headers: [REDACTED]');
-    }
-
     // Get API key from Authorization header
     const authHeader = request.headers.get('Authorization');
-    debug('Extracted Authorization header:', authHeader);
     const apiKey = authHeader?.replace('Bearer ', '').trim();
-    debug('Extracted apiKey:', apiKey);
     
     if (!apiKey) {
       console.warn(`[${requestId}] Authentication failed: No Authorization header or invalid format`);
@@ -38,10 +20,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    debug('Request body:', body);
-    
     const { noteId, noteContent, noteType, title, platform, tags } = body;
-    debug('Parsed request data:', { noteId, noteContent: noteContent?.length, noteType, title, platform, tags });
     
     if (!noteContent || !noteType) {
       console.warn(`[${requestId}] Invalid request: Missing required fields`);
@@ -57,15 +36,12 @@ export async function POST(request: Request) {
       platform,
       tags: tags || []
     };
-    debug('Prepared payload for backend:', { ...payload, noteContent: payload.noteContent?.length });
 
     const headersToSend = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
       'Authorization': `Bearer ${apiKey}`
     };
-    debug('Headers to backend:', headersToSend);
-    debug('Backend URL:', `${BACKEND_URL}/api/v1/smart-notes-inline/smart-note-analysis`);
 
     const response = await fetch(`${BACKEND_URL}/api/v1/smart-notes-inline/smart-note-analysis`, {
       method: 'POST',
@@ -73,50 +49,43 @@ export async function POST(request: Request) {
       body: JSON.stringify(payload)
     });
 
-    debug('Backend response status:', response.status);
     let backendData = null;
     try {
       backendData = await response.clone().json();
-      debug('Backend response JSON:', backendData);
     } catch (jsonErr) {
-      debug('Backend response not JSON or failed to parse:', jsonErr);
+      // Handle non-JSON responses gracefully
     }
 
     if (!response.ok) {
-      debug('Backend returned error status:', response.status, response.statusText);
       throw new Error(`Backend API responded with status: ${response.status} (${response.statusText})`);
     }
 
     const data = backendData;
     const totalDuration = Date.now() - startTime;
 
-    // Log success with more details
-    console.info(`[${requestId}] Request completed successfully`, {
+    console.info(`[${requestId}] Smart note analysis completed`, {
       duration_ms: totalDuration,
       note_type: data.type,
-      analysis_length: data.analysis?.length || 0,
-      response_size: JSON.stringify(data).length
+      analysis_length: data.analysis?.length || 0
     });
 
-    // Return the response data
     return NextResponse.json(data);
   } catch (error) {
     const totalDuration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    const errorStack = error instanceof Error ? error.stack : undefined;
-    const errorName = error instanceof Error ? error.name : 'UnknownError';
 
-    debug('Request failed:', { errorName, errorMessage, errorStack, totalDuration });
+    console.error(`[${requestId}] Smart note analysis failed`, {
+      error: errorMessage,
+      duration_ms: totalDuration
+    });
 
     return NextResponse.json({
       success: false,
       error: 'Smart Note Analysis Failed',
       message: errorMessage,
-      errorType: errorName,
       metadata: {
         request_id: requestId,
-        processing_time_ms: totalDuration,
-        timestamp: new Date().toISOString()
+        processing_time_ms: totalDuration
       }
     }, { status: 500 });
   }

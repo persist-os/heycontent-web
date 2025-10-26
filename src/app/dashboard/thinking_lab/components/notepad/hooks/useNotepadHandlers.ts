@@ -49,18 +49,25 @@ export function useNotepadHandlers({
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isSavingRef = useRef(false)
   const lastSavedContentRef = useRef<string>('')
+  const isTransitioningRef = useRef(false) // Prevent auto-save during note transitions
 
   // Debounced auto-save function for existing notes
   const autoSaveContent = useCallback(async (contentToSave: string) => {
     // Early returns for invalid save conditions
-    if (isNewNote || !existingNote || !currentNoteId || isSavingRef.current) {
+    if (isNewNote || !existingNote || !currentNoteId || isSavingRef.current || isTransitioningRef.current) {
       return
     }
 
     const trimmedContent = contentToSave.trim()
     
     // Don't save if content hasn't actually changed or is empty
-    if (!trimmedContent || trimmedContent === lastSavedContentRef.current.trim()) {
+    // Handle TipTap's empty content format: <p></p> or <p><br></p>
+    const isEmptyContent = !trimmedContent || 
+      trimmedContent === '<p></p>' || 
+      trimmedContent === '<p><br></p>' ||
+      trimmedContent === lastSavedContentRef.current.trim()
+    
+    if (isEmptyContent) {
       return
     }
 
@@ -293,6 +300,9 @@ export function useNotepadHandlers({
       return
     }
     
+    // Set transition flag to prevent auto-save during switch
+    isTransitioningRef.current = true
+    
     // Cancel any pending auto-save to prevent saving to wrong note
     if (autoSaveTimeoutRef.current) {
       clearTimeout(autoSaveTimeoutRef.current)
@@ -307,11 +317,19 @@ export function useNotepadHandlers({
     setCurrentNoteId(noteId)
     setIsNewNote(false)
     
+    // Clear transition flag after a brief delay to allow editor to stabilize
+    setTimeout(() => {
+      isTransitioningRef.current = false
+    }, 100)
+    
     console.log('🔄 [MarkdownNotepad] Switched to note:', noteId)
   }, [setCurrentNoteId, setIsNewNote, currentNoteId])
 
   // Handle new note creation with proper cleanup
   const handleCreateNewNote = useCallback(() => {
+    // Set transition flag to prevent auto-save during new note creation
+    isTransitioningRef.current = true
+    
     // Cancel any pending auto-save
     if (autoSaveTimeoutRef.current) {
       clearTimeout(autoSaveTimeoutRef.current)
@@ -329,6 +347,11 @@ export function useNotepadHandlers({
     setContent('')
     setters.setTitle('Untitled Note')
     lexicalEditorRef.current?.clear()
+    
+    // Clear transition flag after editor stabilizes
+    setTimeout(() => {
+      isTransitioningRef.current = false
+    }, 100)
     
     console.log('✨ [MarkdownNotepad] Created new note')
   }, [setCurrentNoteId, setIsNewNote, setContent, setters, lexicalEditorRef])

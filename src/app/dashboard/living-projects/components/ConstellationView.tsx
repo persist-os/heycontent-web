@@ -190,7 +190,11 @@ export function ConstellationView() {
         <div className="text-center space-y-8 max-w-md mx-auto px-6">
           <div className="space-y-5 bg-gradient-to-br from-card/80 via-card/70 to-primary/10 backdrop-blur-xl border border-border/60 rounded-2xl p-8 shadow-2xl shadow-primary/10">
             <div className="w-20 h-20 mx-auto bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center border border-primary/30">
-              <div className="w-12 h-12 bg-primary/30 rounded-full animate-pulse"></div>
+              <div className="w-12 h-12 text-primary/60 animate-pulse">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+              </div>
             </div>
             <h2 className="text-3xl font-light text-foreground">
               <T context="constellation.empty.heading">Your constellation awaits</T>

@@ -7,12 +7,6 @@ export async function POST(request: Request) {
   const startTime = Date.now();
   const requestId = Math.random().toString(36).substring(7);
 
-  console.log(`[${requestId}] Chat stream request started`, {
-    timestamp: new Date().toISOString(),
-    method: request.method,
-    url: request.url
-  });
-
   try {
     // Get API key and user ID from Authorization header
     const authHeader = request.headers.get('Authorization');
@@ -41,15 +35,6 @@ export async function POST(request: Request) {
       content_context,
       vector_search_metadata
     } = body;
-
-    console.log(`[${requestId}] Received streaming chat request:`, {
-      user_id: userId,
-      query_length: query?.length || 0,
-      is_first_message,
-      session_identifier,
-      has_notepad_context: !!notepad_context,
-      has_file_attachments: Array.isArray(file_attachments) ? file_attachments.length : 0
-    });
 
     if (!query) {
       console.warn(`[${requestId}] Invalid request: Missing query`);
@@ -98,10 +83,11 @@ export async function POST(request: Request) {
       chatRequestBody.conversation_type = conversation_type;
     }
 
-    console.log(`[${requestId}] Forwarding to streaming chat API:`, {
-      url: `${BACKEND_URL}/api/v1/chat/stream`,
+    console.info(`[${requestId}] Streaming chat request`, {
       user_id: authenticated_user_id,
-      query_length: query.length
+      query_length: query.length,
+      is_first_message,
+      has_file_attachments: Array.isArray(file_attachments) ? file_attachments.length : 0
     });
 
     // Forward to streaming chat endpoint

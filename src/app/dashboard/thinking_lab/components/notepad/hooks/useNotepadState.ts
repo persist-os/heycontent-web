@@ -97,7 +97,10 @@ export function useNotepadState({
   // Initialize content from existing note only when note actually loads
   useEffect(() => {
     if (existingNote && existingNote.content !== undefined) {
-      setContent(existingNote.content)
+      // Only update content if it's actually different to prevent unnecessary re-renders
+      if (existingNote.content !== content) {
+        setContent(existingNote.content)
+      }
     }
     // REMOVED: Premature content clearing that caused erratic behavior
     // Only set content when we actually have note data, never clear preemptively

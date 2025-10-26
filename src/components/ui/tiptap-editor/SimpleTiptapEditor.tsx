@@ -139,7 +139,8 @@ export const SimpleTiptapEditor = forwardRef<SimpleTiptapEditorRef, SimpleTiptap
         const timeoutId = setTimeout(() => {
           if (editor && content !== editor.getHTML()) {
             console.log('📝 [SimpleTiptapEditor] Setting editor content:', content.substring(0, 100) + '...')
-            editor.commands.setContent(content)
+            // Use TipTap's transaction system to prevent race conditions
+            editor.commands.setContent(content, { emitUpdate: false }) // don't emit update event
           }
         }, 0)
         
