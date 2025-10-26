@@ -55,6 +55,30 @@ export const getShardsByUser = query({
 });
 
 /**
+ * Get ALL shards for a user without limits - for deletion operations
+ * 
+ * This query fetches all shards for a user without any limits.
+ * Used specifically for deletion operations where we need to delete everything.
+ * 
+ * @param userId - User ID to fetch shards for
+ * @returns Array of all shard objects for the user
+ */
+export const getAllShardsByUser = query({
+  args: {
+    userId: v.string(),
+  },
+  returns: v.array(v.any()),
+  handler: async (ctx, { userId }) => {
+    const shards = await ctx.db
+      .query("crystal_shards")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    
+    return shards;
+  },
+});
+
+/**
  * Retrieve crystal shards by their IDs
  * 
  * Fetches multiple shards in a single query with user ownership validation.

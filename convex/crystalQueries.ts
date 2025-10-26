@@ -301,6 +301,29 @@ export const getCrystalsByUser = query({
 });
 
 /**
+ * Get ALL crystals for a user without limits - for deletion operations
+ * 
+ * This query fetches all crystals for a user without any limits.
+ * Used specifically for deletion operations where we need to delete everything.
+ * 
+ * @param userId - User ID to fetch crystals for
+ * @returns Array of all crystal objects for the user
+ */
+export const getAllCrystalsByUser = query({
+  args: {
+    userId: v.string(),
+  },
+  handler: async (ctx, { userId }) => {
+    const crystals = await ctx.db
+      .query("crystals")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    
+    return crystals;
+  },
+});
+
+/**
  * Get crystals by widget ID
  * 
  * Fetches all crystals associated with a specific widget for a user.

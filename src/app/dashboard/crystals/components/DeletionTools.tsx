@@ -38,10 +38,10 @@ export const DeletionTools: React.FC<DeletionToolsProps> = ({ userId }) => {
   const batchDeleteProjects = useMutation(api.projectsMutations.batchDeleteProjects);
   
   // Query all crystals, shards, stardust, and projects for deletion operations
-  const allCrystals = useQuery(api.crystalQueries.getCrystalsByUser, userId ? { userId } : 'skip');
-  const allShards = useQuery(api.shardQueries.getShardsByUser, userId ? { userId } : 'skip');
+  const allCrystals = useQuery(api.crystalQueries.getAllCrystalsByUser, userId ? { userId } : 'skip');
+  const allShards = useQuery(api.shardQueries.getAllShardsByUser, userId ? { userId } : 'skip');
   const allStardust = useQuery(api.stardustQueries.listStardust, userId ? { userId } : 'skip');
-  const allProjects = useQuery(api.projectsQueries.getByUser, userId ? { userId, limit: 1000 } : 'skip');
+  const allProjects = useQuery(api.projectsQueries.getAllByUser, userId ? { userId } : 'skip');
 
   const openDeleteDialog = (type: DeletionType) => {
     setDeletionType(type);
@@ -94,31 +94,87 @@ export const DeletionTools: React.FC<DeletionToolsProps> = ({ userId }) => {
     const totalItems = crystalIds.length + shardIds.length + stardustIds.length + projectIds.length;
     let processedItems = 0;
 
-    // Delete all crystals
+    // Delete all crystals in batches
     if (crystalIds.length > 0) {
       setDeletionProgress({ current: processedItems, total: totalItems, type: 'crystals' });
-      const result = await batchMutateCrystalData({
-        table: 'crystals',
-        operations: crystalIds.map((id: string) => ({ type: 'delete', id }))
-      });
+      
+      // Process crystals in batches of 1000
+      const BATCH_SIZE = 1000;
+      let crystalProcessedCount = 0;
+      let crystalTotalSuccessful = 0;
+      let crystalTotalFailed = 0;
+      
+      for (let i = 0; i < crystalIds.length; i += BATCH_SIZE) {
+        const batch = crystalIds.slice(i, i + BATCH_SIZE);
+        
+        // Update progress
+        setDeletionProgress({ 
+          current: processedItems + crystalProcessedCount, 
+          total: totalItems, 
+          type: `crystals (batch ${Math.floor(i / BATCH_SIZE) + 1})` 
+        });
+        
+        const result = await batchMutateCrystalData({
+          table: 'crystals',
+          operations: batch.map((id: string) => ({ type: 'delete', id }))
+        });
+        
+        crystalTotalSuccessful += result.successfulOperations;
+        crystalTotalFailed += result.failedOperations;
+        crystalProcessedCount += batch.length;
+        
+        // Small delay between batches
+        if (i + BATCH_SIZE < crystalIds.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+      
       processedItems += crystalIds.length;
       
-      if (!result.success) {
-        throw new Error(`Failed to delete crystals: ${result.failedOperations} failed`);
+      if (crystalTotalFailed > 0) {
+        throw new Error(`Failed to delete ${crystalTotalFailed} crystals out of ${crystalIds.length}`);
       }
     }
 
-    // Delete all shards
+    // Delete all shards in batches
     if (shardIds.length > 0) {
       setDeletionProgress({ current: processedItems, total: totalItems, type: 'shards' });
-      const result = await batchMutateCrystalData({
-        table: 'crystal_shards',
-        operations: shardIds.map((id: string) => ({ type: 'delete', id }))
-      });
+      
+      // Process shards in batches of 1000
+      const BATCH_SIZE = 1000;
+      let shardProcessedCount = 0;
+      let shardTotalSuccessful = 0;
+      let shardTotalFailed = 0;
+      
+      for (let i = 0; i < shardIds.length; i += BATCH_SIZE) {
+        const batch = shardIds.slice(i, i + BATCH_SIZE);
+        
+        // Update progress
+        setDeletionProgress({ 
+          current: processedItems + shardProcessedCount, 
+          total: totalItems, 
+          type: `shards (batch ${Math.floor(i / BATCH_SIZE) + 1})` 
+        });
+        
+        const result = await batchMutateCrystalData({
+          table: 'crystal_shards',
+          operations: batch.map((id: string) => ({ type: 'delete', id }))
+        });
+        
+        shardTotalSuccessful += result.successfulOperations;
+        shardTotalFailed += result.failedOperations;
+        shardProcessedCount += batch.length;
+        
+        // Small delay between batches
+        if (i + BATCH_SIZE < shardIds.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+      
       processedItems += shardIds.length;
       
-      if (!result.success) {
-        throw new Error(`Failed to delete shards: ${result.failedOperations} failed`);
+      if (shardTotalFailed > 0) {
+        throw new Error(`Failed to delete ${shardTotalFailed} shards out of ${shardIds.length}`);
       }
     }
 
@@ -160,16 +216,43 @@ export const DeletionTools: React.FC<DeletionToolsProps> = ({ userId }) => {
 
     if (shardIds.length > 0) {
       setDeletionProgress({ current: 0, total: shardIds.length, type: 'shards' });
-      const result = await batchMutateCrystalData({
-        table: 'crystal_shards',
-        operations: shardIds.map((id: string) => ({ type: 'delete', id }))
-      });
       
-      if (!result.success) {
-        throw new Error(`Failed to delete shards: ${result.failedOperations} failed`);
+      // Process in batches of 1000 to avoid overwhelming Convex
+      const BATCH_SIZE = 1000;
+      let processedCount = 0;
+      let totalSuccessful = 0;
+      let totalFailed = 0;
+      
+      for (let i = 0; i < shardIds.length; i += BATCH_SIZE) {
+        const batch = shardIds.slice(i, i + BATCH_SIZE);
+        
+        // Update progress
+        setDeletionProgress({ 
+          current: processedCount, 
+          total: shardIds.length, 
+          type: `shards (batch ${Math.floor(i / BATCH_SIZE) + 1})` 
+        });
+        
+        const result = await batchMutateCrystalData({
+          table: 'crystal_shards',
+          operations: batch.map((id: string) => ({ type: 'delete', id }))
+        });
+        
+        totalSuccessful += result.successfulOperations;
+        totalFailed += result.failedOperations;
+        processedCount += batch.length;
+        
+        // Small delay between batches to prevent overwhelming Convex
+        if (i + BATCH_SIZE < shardIds.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
       }
       
-      toast.success(`Successfully deleted ${result.successfulOperations} shards`);
+      if (totalFailed > 0) {
+        throw new Error(`Failed to delete ${totalFailed} shards out of ${shardIds.length}`);
+      }
+      
+      toast.success(`Successfully deleted ${totalSuccessful} shards`);
       setTimeout(() => window.location.reload(), 1000);
     } else {
       toast('No shards to delete');
@@ -183,16 +266,43 @@ export const DeletionTools: React.FC<DeletionToolsProps> = ({ userId }) => {
 
     if (crystalIds.length > 0) {
       setDeletionProgress({ current: 0, total: crystalIds.length, type: 'crystals' });
-      const result = await batchMutateCrystalData({
-        table: 'crystals',
-        operations: crystalIds.map((id: string) => ({ type: 'delete', id }))
-      });
       
-      if (!result.success) {
-        throw new Error(`Failed to delete crystals: ${result.failedOperations} failed`);
+      // Process in batches of 1000 to avoid overwhelming Convex
+      const BATCH_SIZE = 1000;
+      let processedCount = 0;
+      let totalSuccessful = 0;
+      let totalFailed = 0;
+      
+      for (let i = 0; i < crystalIds.length; i += BATCH_SIZE) {
+        const batch = crystalIds.slice(i, i + BATCH_SIZE);
+        
+        // Update progress
+        setDeletionProgress({ 
+          current: processedCount, 
+          total: crystalIds.length, 
+          type: `crystals (batch ${Math.floor(i / BATCH_SIZE) + 1})` 
+        });
+        
+        const result = await batchMutateCrystalData({
+          table: 'crystals',
+          operations: batch.map((id: string) => ({ type: 'delete', id }))
+        });
+        
+        totalSuccessful += result.successfulOperations;
+        totalFailed += result.failedOperations;
+        processedCount += batch.length;
+        
+        // Small delay between batches to prevent overwhelming Convex
+        if (i + BATCH_SIZE < crystalIds.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
       }
       
-      toast.success(`Successfully deleted ${result.successfulOperations} crystals`);
+      if (totalFailed > 0) {
+        throw new Error(`Failed to delete ${totalFailed} crystals out of ${crystalIds.length}`);
+      }
+      
+      toast.success(`Successfully deleted ${totalSuccessful} crystals`);
       setTimeout(() => window.location.reload(), 1000);
     } else {
       toast('No crystals to delete');

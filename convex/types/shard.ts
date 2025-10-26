@@ -99,6 +99,9 @@ export const crystalShardSchemaFields = {
   temporal_context: v.optional(v.string()),
   recency_weight: v.optional(shardRecencyWeightValidator),
   
+  // STRUCTURAL FIX: Embedding stored directly with shard (eliminates race condition)
+  embedding: v.optional(v.array(v.float64())),
+  
   // Metadata
   createdAt: v.number(),
   updatedAt: v.number(),
@@ -195,6 +198,8 @@ export interface CrystalShard {
   reinforces?: string[];
   temporal_context?: string;
   recency_weight?: ShardRecencyWeight;
+  // STRUCTURAL FIX: Embedding stored directly with shard
+  embedding?: number[];
   createdAt: number;
   updatedAt: number;
   last_referenced?: number;

@@ -274,7 +274,7 @@ export const getEmbeddingsByContentIds = internalQuery({
 
 /**
  * Get average embedding for multiple content items
- * Used by attachment detector to compare shard clusters without regenerating embeddings
+ * STRUCTURAL FIX: Uses embeddings stored directly in shard records (no separate table lookup)
  */
 export const getAverageEmbedding = internalAction({
   args: {
@@ -284,7 +284,47 @@ export const getAverageEmbedding = internalAction({
   },
   handler: async (ctx, args) => {
     try {
-      // Get embeddings for content IDs (already exist in database)
+      console.log(`🔍 [GET AVERAGE EMBEDDING] Getting average for ${args.contentIds.length} ${args.contentType} items`);
+      
+      // STRUCTURAL FIX: Get embeddings directly from shard records
+      if (args.contentType === "shard") {
+        const shards = await ctx.runQuery(internal.shardQueries.getShardsByIdsInternal, {
+          userId: args.userId,
+          shardIds: args.contentIds
+        });
+        
+        if (!shards || shards.length === 0) {
+          throw new Error(`No shards found for ${args.contentType} IDs`);
+        }
+        
+        // Extract embeddings from shard records
+        const embeddings = shards
+          .filter(shard => shard.embedding && Array.isArray(shard.embedding))
+          .map(shard => shard.embedding);
+        
+        if (embeddings.length === 0) {
+          throw new Error(`No embeddings found in shard records for ${args.contentType} IDs`);
+        }
+        
+        // Calculate average embedding
+        const embeddingLength = embeddings[0].length;
+        const avgEmbedding = new Array(embeddingLength).fill(0);
+        
+        for (const embedding of embeddings) {
+          for (let i = 0; i < embeddingLength; i++) {
+            avgEmbedding[i] += embedding[i];
+          }
+        }
+        
+        for (let i = 0; i < embeddingLength; i++) {
+          avgEmbedding[i] /= embeddings.length;
+        }
+        
+        console.log(`✅ [GET AVERAGE EMBEDDING] Averaged ${embeddings.length} ${args.contentType} embeddings from shard records`);
+        return avgEmbedding;
+      }
+      
+      // Fallback to content_embeddings table for other content types
       const embeddings = await ctx.runQuery(internal.vectorSearch.getEmbeddingsByContentIds, {
         userId: args.userId,
         contentType: args.contentType,

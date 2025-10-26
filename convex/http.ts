@@ -1567,6 +1567,25 @@ app.post("/api/projects/getByUser", async (c) => {
   }
 });
 
+app.post("/api/projects/getAllByUser", async (c) => {
+  const ctx = c.env;
+  const { userId } = await c.req.json();
+  
+  try {
+    const projects = await ctx.runQuery(api.projectsQueries.getAllByUser, { 
+      userId
+    });
+    return c.json({ success: true, data: projects });
+  } catch (error: any) {
+    console.error("Failed to get all user projects:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get all user projects",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
 // Check if project exists
 app.post("/api/projects/exists", async (c) => {
   const ctx = c.env;
@@ -2225,6 +2244,19 @@ app.post("/api/crystal/getByUser", async (c) => {
     return c.json({ success: true, data: result });
   } catch (error: any) {
     console.error("[GET CRYSTALS BY USER] Error fetching crystals:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/crystal/getAllByUser", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runQuery(api.crystalQueries.getAllCrystalsByUser, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[GET ALL CRYSTALS BY USER] Error fetching all crystals:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -3052,6 +3084,19 @@ app.post("/api/shard/getByUser", async (c) => {
     return c.json({ success: true, data: result });
   } catch (error: any) {
     console.error("[GET SHARDS BY USER] Error fetching shards:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/shard/getAllByUser", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runQuery(api.shardQueries.getAllShardsByUser, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[GET ALL SHARDS BY USER] Error fetching all shards:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });

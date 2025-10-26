@@ -257,6 +257,29 @@ export const getByUser = query({
 });
 
 /**
+ * Get ALL projects for a user without limits - for deletion operations
+ * 
+ * This query fetches all projects for a user without any limits.
+ * Used specifically for deletion operations where we need to delete everything.
+ * 
+ * @param userId - User ID to fetch projects for
+ * @returns Array of all project objects for the user
+ */
+export const getAllByUser = query({
+  args: { 
+    userId: v.string(),
+  },
+  handler: async (ctx, { userId }) => {
+    const projects = await ctx.db
+      .query("projects")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    
+    return projects;
+  },
+});
+
+/**
  * Retrieve project with filtered content type
  * 
  * Returns project data with only the specified content type populated,
