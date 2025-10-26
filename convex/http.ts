@@ -3,9 +3,6 @@ import { HonoWithConvex, HttpRouterWithHono } from "convex-helpers/server/hono";
 import { ActionCtx } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import { cors } from "hono/cors";
-import { ConfigStatus } from "./types/convergence";
-import * as convergenceConfigMutations from "./convergenceConfigMutations";
-import * as convergenceConfigQueries from "./convergenceConfigQueries";
 
 /**
  * PARALLEL SYSTEM: Native Convex Actions + Hono Fallback
@@ -4731,216 +4728,6 @@ app.post("/api/stardust/createSymbioticPair", async (c) => {
 });
 
 // ============================================================================
-// CONVERGENCE CONFIG ROUTES
-// ============================================================================
-
-/**
- * Get top configs for a system (most common read operation)
- */
-app.get("/api/convergence/configs/:system_name", async (c) => {
-  try {
-    const system_name = c.req.param("system_name");
-    const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : 3;
-    const status = c.req.query("status") as ConfigStatus | undefined;
-    
-    const configs = await c.env.runQuery(api.convergenceQueries.getTopConfigs, {
-      system_name,
-      limit,
-      status,
-    });
-    
-    return c.json({ success: true, data: configs });
-  } catch (error: any) {
-    console.error("[CONVERGENCE] Get configs error:", error);
-    return c.json({ 
-      success: false,
-      error: error.message || "Failed to get configs"
-    }, 500);
-  }
-});
-
-/**
- * Get single config by rank
- */
-app.get("/api/convergence/configs/:system_name/rank/:rank", async (c) => {
-  try {
-    const system_name = c.req.param("system_name");
-    const rank = parseInt(c.req.param("rank"));
-    const status = c.req.query("status") as ConfigStatus | undefined;
-    
-    const config = await c.env.runQuery(api.convergenceQueries.getConfigByRank, {
-      system_name,
-      rank,
-      status,
-    });
-    
-    return c.json({ success: true, data: config });
-  } catch (error: any) {
-    console.error("[CONVERGENCE] Get config by rank error:", error);
-    return c.json({ 
-      success: false,
-      error: error.message || "Failed to get config"
-    }, 500);
-  }
-});
-
-/**
- * Get system statistics
- */
-app.get("/api/convergence/stats/:system_name", async (c) => {
-  try {
-    const system_name = c.req.param("system_name");
-    
-    const stats = await c.env.runQuery(api.convergenceQueries.getSystemStats, {
-      system_name,
-    });
-    
-    return c.json({ success: true, data: stats });
-  } catch (error: any) {
-    console.error("[CONVERGENCE] Get stats error:", error);
-    return c.json({ 
-      success: false,
-      error: error.message || "Failed to get stats"
-    }, 500);
-  }
-});
-
-/**
- * Save single config (called by optimization runs)
- */
-app.post("/api/convergence/configs", async (c) => {
-  try {
-    const body = await c.req.json();
-    
-    const configId = await c.env.runMutation(api.convergenceMutations.saveConfig, body);
-    
-    return c.json({ success: true, data: { configId } });
-  } catch (error: any) {
-    console.error("[CONVERGENCE] Save config error:", error);
-    return c.json({ 
-      success: false,
-      error: error.message || "Failed to save config"
-    }, 500);
-  }
-});
-
-/**
- * Batch save configs (optimization runs with multiple candidates)
- */
-app.post("/api/convergence/configs/batch", async (c) => {
-  try {
-    const body = await c.req.json();
-    
-    const result = await c.env.runMutation(api.convergenceMutations.batchSaveConfigs, {
-      configs: body.configs,
-    });
-    
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    console.error("[CONVERGENCE] Batch save error:", error);
-    return c.json({ 
-      success: false,
-      error: error.message || "Failed to batch save configs"
-    }, 500);
-  }
-});
-
-/**
- * Update config status (lifecycle management)
- */
-app.patch("/api/convergence/configs/:configId/status", async (c) => {
-  try {
-    const configId = c.req.param("configId") as Id<"convergence_configs">;
-    const { status } = await c.req.json();
-    
-    await c.env.runMutation(api.convergenceMutations.updateConfigStatus, {
-      configId,
-      status,
-    });
-    
-    return c.json({ success: true, data: { configId } });
-  } catch (error: any) {
-    console.error("[CONVERGENCE] Update status error:", error);
-    return c.json({ 
-      success: false,
-      error: error.message || "Failed to update status"
-    }, 500);
-  }
-});
-
-/**
- * Record config usage (track performance in production)
- */
-app.post("/api/convergence/configs/:configId/usage", async (c) => {
-  try {
-    const configId = c.req.param("configId") as Id<"convergence_configs">;
-    const { success } = await c.req.json();
-    
-    await c.env.runMutation(api.convergenceMutations.recordConfigUsage, {
-      configId,
-      success,
-    });
-    
-    return c.json({ success: true, data: { configId } });
-  } catch (error: any) {
-    console.error("[CONVERGENCE] Record usage error:", error);
-    return c.json({ 
-      success: false,
-      error: error.message || "Failed to record usage"
-    }, 500);
-  }
-});
-
-/**
- * Promote configs (deploy new optimized configs)
- * 
- * IDEMPOTENT: Pass promotion_id for safe retries
- */
-app.post("/api/convergence/configs/promote", async (c) => {
-  try {
-    const { system_name, new_config_ids, promotion_id } = await c.req.json();
-    
-    const result = await c.env.runMutation(api.convergenceMutations.promoteConfigs, {
-      system_name,
-      new_config_ids,
-      promotion_id,
-    });
-    
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    console.error("[CONVERGENCE] Promote configs error:", error);
-    return c.json({ 
-      success: false,
-      error: error.message || "Failed to promote configs"
-    }, 500);
-  }
-});
-
-/**
- * Search configs by context (contextTag-based retrieval)
- * Vector similarity search endpoint - currently using contextTag filtering
- */
-app.post("/api/convergence/configs/search-by-embedding", async (c) => {
-  try {
-    const { system_name, contextTag, limit } = await c.req.json();
-    
-    const configs = await c.env.runQuery(api.convergenceQueries.searchConfigsByContext, {
-      system_name,
-      contextTag,
-      limit,
-    });
-    
-    return c.json({ success: true, data: configs });
-  } catch (error: any) {
-    console.error("[CONVERGENCE] Context search error:", error);
-    return c.json({ 
-      success: false,
-      error: error.message || "Failed to search configs by context"
-    }, 500);
-  }
-});
-
-// ============================================================================
 // CONVERGENCE PRESET CONFIGS
 // ============================================================================
 
@@ -5058,125 +4845,8 @@ app.delete("/api/convergence/preset-configs/:configId", async (c) => {
 });
 
 // ============================================================================
-// CONVERGENCE STORAGE ROUTES - RL Data, Experiments, Optimization Runs
+// CONVERGENCE STORAGE ROUTES - Experiments, Optimization Runs
 // ============================================================================
-
-/**
- * Save RL training data
- */
-app.post("/api/convergence/storage/rl-data", async (c) => {
-  try {
-    const body = await c.req.json();
-    
-    const recordId = await c.env.runMutation(api.convergenceStorageMutations.saveRLData, body);
-    
-    return c.json({ success: true, data: { recordId } });
-  } catch (error: any) {
-    console.error("[CONVERGENCE_STORAGE] Save RL data error:", error);
-    return c.json({ 
-      success: false,
-      error: error.message || "Failed to save RL data"
-    }, 500);
-  }
-});
-
-/**
- * Batch save RL training data
- */
-app.post("/api/convergence/storage/rl-data/batch", async (c) => {
-  try {
-    const body = await c.req.json();
-    
-    const result = await c.env.runMutation(api.convergenceStorageMutations.batchSaveRLData, {
-      records: body.records,
-    });
-    
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    console.error("[CONVERGENCE_STORAGE] Batch save RL data error:", error);
-    return c.json({ 
-      success: false,
-      error: error.message || "Failed to batch save RL data"
-    }, 500);
-  }
-});
-
-/**
- * Get RL data by key
- */
-app.get("/api/convergence/storage/rl-data/:rl_key", async (c) => {
-  try {
-    const rl_key = c.req.param("rl_key");
-    
-    const data = await c.env.runQuery(api.convergenceStorageQueries.getRLDataByKey, {
-      rl_key,
-    });
-    
-    return c.json({ success: true, data });
-  } catch (error: any) {
-    console.error("[CONVERGENCE_STORAGE] Get RL data error:", error);
-    return c.json({ 
-      success: false,
-      error: error.message || "Failed to get RL data"
-    }, 500);
-  }
-});
-
-/**
- * Query RL episodes for training
- */
-app.get("/api/convergence/storage/rl-data/query", async (c) => {
-  try {
-    const agent_id = c.req.query("agent_id");
-    const record_type = c.req.query("record_type");
-    const station = c.req.query("station");
-    const min_reward_score = c.req.query("min_reward_score") ? parseFloat(c.req.query("min_reward_score")!) : undefined;
-    const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : 100;
-    
-    if (!agent_id) {
-      return c.json({ success: false, error: "agent_id is required" }, 400);
-    }
-    
-    const data = await c.env.runQuery(api.convergenceStorageQueries.queryRLEpisodesForTraining, {
-      agent_id,
-      record_type: record_type as any,
-      station,
-      min_reward_score,
-      limit,
-    });
-    
-    return c.json({ success: true, data });
-  } catch (error: any) {
-    console.error("[CONVERGENCE_STORAGE] Query RL episodes error:", error);
-    return c.json({ 
-      success: false,
-      error: error.message || "Failed to query RL episodes"
-    }, 500);
-  }
-});
-
-/**
- * Get top RL performers
- */
-app.get("/api/convergence/storage/rl-data/top-performers/:agent_id", async (c) => {
-  try {
-    const agent_id = c.req.param("agent_id");
-    const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : 10;
-    
-    const data = await c.env.runQuery(api.convergenceStorageQueries.getTopRLPerformers, {
-      agent_id,
-      limit,
-    });
-    
-    return c.json({ success: true, data });
-  } catch (error: any) {
-    console.error("[CONVERGENCE_STORAGE] Get top RL performers error:", error);
-    return c.json({ 
-      success: false,
-      error: error.message || "Failed to get top RL performers"
-    }, 500);
-  }
-});
 
 /**
  * Save optimization experiment
@@ -5570,65 +5240,57 @@ app.delete("/api/convergence/current-config/:user_id", async (c) => {
 });
 
 // ============================================================================
-// CONVERGENCE CONFIGS - Production Config Management
+// CONVERGENCE BEST CONFIGS
 // ============================================================================
 
 /**
- * Create a new convergence config (winning configuration from optimization)
+ * Save or update best config for a system
  */
-app.post("/api/convergence/configs/create", async (c) => {
+app.post("/api/convergence/best-configs", async (c) => {
   try {
     const args = await c.req.json();
-    const configId = await c.env.runMutation(api.convergenceConfigMutations.createConvergenceConfig, args);
+    const configId = await c.env.runMutation(api.convergenceBestConfigMutations.saveBestConfig, args);
     
     return c.json({
       success: true,
-      data: configId
+      data: { configId }
     });
-  } catch (error) {
-    console.error("[CONVERGENCE] Create config error:", error);
+  } catch (error: any) {
+    console.error("[CONVERGENCE] Save best config error:", error);
     return c.json({
       success: false,
-      error: "Failed to create convergence config"
+      error: error.message || "Failed to save best config"
     }, 500);
   }
 });
 
 /**
- * Get convergence configs by system name
+ * Get all best configs (one per system)
  */
-app.get("/api/convergence/configs/system/:system_name", async (c) => {
+app.get("/api/convergence/best-configs", async (c) => {
   try {
-    const systemName = c.req.param("system_name");
-    const status = c.req.query("status");
-    const limit = c.req.query("limit") ? parseInt(c.req.query("limit") as string) : undefined;
-    
-    const configs = await c.env.runQuery(api.convergenceConfigQueries.getConvergenceConfigsBySystem, {
-      system_name: systemName,
-      status,
-      limit
-    });
+    const configs = await c.env.runQuery(api.convergenceBestConfigQueries.getAllBestConfigs, {});
     
     return c.json({
       success: true,
       data: configs
     });
   } catch (error) {
-    console.error("[CONVERGENCE] Get configs by system error:", error);
+    console.error("[CONVERGENCE] Get all best configs error:", error);
     return c.json({
       success: false,
-      error: "Failed to get convergence configs"
+      error: "Failed to get best configs"
     }, 500);
   }
 });
 
 /**
- * Get best convergence config for a system
+ * Get best config for a specific system
  */
-app.get("/api/convergence/configs/system/:system_name/best", async (c) => {
+app.get("/api/convergence/best-configs/:system_name", async (c) => {
   try {
     const systemName = c.req.param("system_name");
-    const config = await c.env.runQuery(api.convergenceConfigQueries.getBestConvergenceConfig, {
+    const config = await c.env.runQuery(api.convergenceBestConfigQueries.getBestConfig, {
       system_name: systemName
     });
     
@@ -5640,108 +5302,35 @@ app.get("/api/convergence/configs/system/:system_name/best", async (c) => {
     console.error("[CONVERGENCE] Get best config error:", error);
     return c.json({
       success: false,
-      error: "Failed to get best convergence config"
+      error: "Failed to get best config"
     }, 500);
   }
 });
 
+// ============================================================================
+// CONVERGENCE OPTIMIZATION RUNS
+// ============================================================================
+
 /**
- * Get convergence configs by optimization run
+ * Save optimization run history
  */
-app.get("/api/convergence/configs/run/:optimization_run_id", async (c) => {
+app.post("/api/convergence/optimization-runs", async (c) => {
   try {
-    const runId = c.req.param("optimization_run_id");
-    const configs = await c.env.runQuery(api.convergenceConfigQueries.getConvergenceConfigsByRun, {
-      optimization_run_id: runId
-    });
+    const args = await c.req.json();
+    const runId = await c.env.runMutation(api.convergenceOptimizationRuns.saveRunHistory, args);
     
     return c.json({
       success: true,
-      data: configs
+      data: { runId }
     });
-  } catch (error) {
-    console.error("[CONVERGENCE] Get configs by run error:", error);
+  } catch (error: any) {
+    console.error("[CONVERGENCE] Save run history error:", error);
     return c.json({
       success: false,
-      error: "Failed to get convergence configs by run"
+      error: error.message || "Failed to save run history"
     }, 500);
   }
 });
-
-/**
- * Get all convergence configs (for admin view)
- */
-app.get("/api/convergence/configs/all", async (c) => {
-  try {
-    const limit = c.req.query("limit") ? parseInt(c.req.query("limit") as string) : undefined;
-    const configs = await c.env.runQuery(api.convergenceConfigQueries.getAllConvergenceConfigs, {
-      limit
-    });
-    
-    return c.json({
-      success: true,
-      data: configs
-    });
-  } catch (error) {
-    console.error("[CONVERGENCE] Get all configs error:", error);
-    return c.json({
-      success: false,
-      error: "Failed to get all convergence configs"
-    }, 500);
-  }
-});
-
-/**
- * Update convergence config status
- */
-app.patch("/api/convergence/configs/:configId/status", async (c) => {
-  try {
-    const configId = c.req.param("configId") as Id<"convergence_configs">;
-    const args = await c.req.json();
-    
-    await c.env.runMutation(api.convergenceConfigMutations.updateConvergenceConfigStatus, {
-      configId,
-      status: args.status,
-      deployed_at: args.deployed_at
-    });
-    
-    return c.json({
-      success: true
-    });
-  } catch (error) {
-    console.error("[CONVERGENCE] Update config status error:", error);
-    return c.json({
-      success: false,
-      error: "Failed to update convergence config status"
-    }, 500);
-  }
-});
-
-/**
- * Update convergence config usage tracking
- */
-app.post("/api/convergence/configs/:configId/usage", async (c) => {
-  try {
-    const configId = c.req.param("configId") as Id<"convergence_configs">;
-    const args = await c.req.json();
-    
-    await c.env.runMutation(api.convergenceConfigMutations.updateConvergenceConfigUsage, {
-      configId,
-      success: args.success
-    });
-    
-    return c.json({
-      success: true
-    });
-  } catch (error) {
-    console.error("[CONVERGENCE] Update config usage error:", error);
-    return c.json({
-      success: false,
-      error: "Failed to update convergence config usage"
-    }, 500);
-  }
-});
-
 
 const router = new HttpRouterWithHono(app);
 export default router;

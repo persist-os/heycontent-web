@@ -63,11 +63,13 @@ export function OptimizationRunner() {
         '[SUCCESS] Optimization job started!',
         `[JOB_ID] ${result.job_id}`,
         '[INFO] Job is running in background...',
-        '[INFO] Check job status in JOBS tab',
+        '[INFO] Check RUN_HISTORY tab for results',
         ''
       ]);
       
       setJobId(result.job_id);
+      
+      // Job is now running - results will be available in RUN_HISTORY tab
     } catch (error) {
       setOutput(prev => [...prev, 
         '[ERROR] Failed to start optimization',

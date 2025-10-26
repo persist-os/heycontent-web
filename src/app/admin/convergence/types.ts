@@ -3,7 +3,7 @@
  * Aligned with actual Convergence optimization system functionality
  */
 
-export type TabId = 'runner' | 'experiments' | 'configs' | 'rl_meta' | 'runs' | 'terminal' | 'generator';
+export type TabId = 'generator' | 'runner' | 'current_run' | 'best_configs' | 'run_history' | 'terminal';
 
 export interface Tab {
   id: TabId;

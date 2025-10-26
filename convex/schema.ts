@@ -36,8 +36,6 @@ import { briefingClusterSchemaFields } from "./types/briefingCluster";
 
 // Convergence
 import { 
-  rlTrainingDataSchemaFields, 
-  rlRecordTypeValidator,
   optimizationExperimentSchemaFields,
   optimizationRunSchemaFields 
 } from "./types/convergenceStorage";
@@ -60,9 +58,6 @@ import { sharedNoteSchemaFields } from "./types/sharedNote";
 import { crystalIntelligenceSchemaFields } from "./types/crystalIntelligence";
 import { intelligenceJobSchemaFields } from "./types/intelligenceJob";
 
-// Convergence Configs
-import { convergenceConfigSchemaFields } from "./types/convergenceConfig";
-
 // Translations & Subscriptions
 import { translationSchemaFields } from "./types/translation";
 import { subscriptionPlanSchemaFields } from "./types/subscriptionPlan";
@@ -82,9 +77,9 @@ import { friendshipSchemaFields } from "./types/friendship";
 import { sharedContentSchemaFields } from "./types/sharedContent";
 
 // Convergence Advanced
-import { convergenceStorageKVSchemaFields } from "./types/convergenceStorageKV";
 import { convergencePresetConfigSchemaFields } from "./types/convergencePresetConfig";
 import { convergenceCurrentConfigSchemaFields } from "./types/convergenceCurrentConfig";
+import { convergenceBestConfigSchemaFields } from "./types/convergenceBestConfig";
 
 // Webhooks
 import { webhookEventSchemaFields } from "./types/webhookEvent";
@@ -531,34 +526,12 @@ export default defineSchema({
   // ============================================================================
   // Complete RL + Optimization pipeline for self-learning tool workflows
   // 
-  // Flow: Experiments → Configs → Production → RL Feedback → Loop Closes
+  // Flow: Experiments → Runs → Best Configs
   //
   // 1. convergence_optimization_experiments: Test workflow candidates
   // 2. convergence_optimization_runs: Run metadata and summaries  
-  // 3. convergence_configs: Winners promoted to production (INTERFACE to agents)
-  // 4. convergence_rl_training_data: Production feedback for next iteration
+  // 3. convergence_best_configs: One best config per system (promoted winners)
   // ============================================================================
-
-  // ============================================================================
-  // RL TRAINING DATA - Agent Episodes & Evolution
-  // ============================================================================
-  /**
-   * Stores RL training data: episodes, trajectories, agent legacies
-   * 
-   * Purpose:
-   * - Capture agent interactions for RL policy training
-   * - Track agent evolution across stations/tasks
-   * - Feed production signals back into Convergence optimization
-   * 
-   * NOT for config optimization - that's in optimization_experiments
-   * This is for AGENT learning and evolution tracking
-   */
-  convergence_rl_training_data: defineTable(rlTrainingDataSchemaFields)
-    .index("by_rl_key", ["rl_key"])
-    .index("by_agent", ["agent_id", "rl_record_type"])
-    .index("by_agent_reward", ["agent_id", "reward_score"])
-    .index("by_agent_station", ["agent_id", "station"])
-    .index("by_timestamp", ["episode_timestamp"]),
 
   // ============================================================================
   // OPTIMIZATION EXPERIMENTS - Config Testing & Evolution
@@ -570,7 +543,7 @@ export default defineSchema({
    * - Record every config test (test_case × config)
    * - Track evolution progress (generations, mutations)
    * - Full audit trail of what was tested and how it performed
-   * - Feeds into convergence_configs (winners get promoted)
+   * - Feeds into convergence_best_configs (winners get promoted)
    * 
    * This is the RAW DATA that generates production configs
    */
@@ -597,45 +570,6 @@ export default defineSchema({
     .index("by_run_id", ["run_id"])
     .index("by_system", ["system_name"])
     .index("by_best_score", ["system_name", "best_experiment_score"]),
-
-  // ============================================================================
-  // PRODUCTION CONFIGS - Winners for Agent Use (INTERFACE)
-  // ============================================================================
-  /**
-   * Convergence Configs - Production-ready optimized configurations
-   * 
-   * THIS IS THE INTERFACE between Convergence and HeyContext agents
-   * 
-   * Purpose:
-   * - Store winning configs promoted from optimization runs
-   * - Enable vector search for contextual config retrieval
-   * - Track production usage and success rates
-   * - Feed RL signals back into next optimization cycle
-   * 
-   * Systems:
-   * - MAB parameters (context enrichment, crystal thresholds)
-   * - Tool workflow bundles (Reddit tools, search tools)
-   * - AI model configs (Azure O1, temperature settings)
-   * - Any parameter combinations requiring optimization
-   * 
-   * Agents fetch these via vector search based on context
-   */
-  convergence_configs: defineTable(convergenceConfigSchemaFields)
-    .index("by_system", ["system_name"])
-    .index("by_system_rank", ["system_name", "rank"])
-    .index("by_system_status", ["system_name", "status"])
-    .index("by_type", ["config_type"])
-    .index("by_score", ["system_name", "score"])
-    .index("by_optimization_run", ["optimization_run_id"])
-    .vectorIndex("by_embedding", {
-      vectorField: "embedding",
-      dimensions: 768,
-      filterFields: ["system_name", "status"],
-    }),
-  // Convergence Storage - Generic key-value storage for Convergence framework
-  convergence_storage: defineTable(convergenceStorageKVSchemaFields)
-  .index("by_key", ["key"])
-  .index("by_created_at", ["created_at"]),
 
   // Translations - Progressive translation cache for all languages
   translations: defineTable(translationSchemaFields)
@@ -671,5 +605,11 @@ export default defineSchema({
     .index("by_user_id", ["user_id"])
     .index("by_config_id", ["config_id"])
     .index("by_status", ["status"]),
+
+  // Convergence Best Configs - One best config per system type
+  convergence_best_configs: defineTable(convergenceBestConfigSchemaFields)
+    .index("by_system_name", ["system_name"])
+    .index("by_score", ["system_name", "score"])
+    .index("by_run_id", ["optimization_run_id"]),
 });
 

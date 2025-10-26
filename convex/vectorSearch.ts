@@ -1,5 +1,6 @@
 // @ts-nocheck
-import { action, query, internalQuery } from "./_generated/server";
+// @ts-nocheck
+import { action, query, internalQuery, internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { contentTypesArrayValidator } from "./types/embeddings";
