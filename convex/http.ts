@@ -232,6 +232,40 @@ app.post("/api/chat/getMultiple", async (c) => {
   }
 });
 
+// Get single conversation by ID (for backend toolkit access)
+app.post("/api/chat/conversation/get", async (c) => {
+  const ctx = c.env;
+  
+  try {
+    const { userId, conversationId } = await c.req.json();
+    
+    if (!userId) {
+      return c.json({ error: "Missing required field: userId" }, 400);
+    }
+    if (!conversationId) {
+      return c.json({ error: "Missing required field: conversationId" }, 400);
+    }
+    
+    const conversation = await ctx.runQuery(api.chatQueries.getConversation, { 
+      userId, 
+      conversationId 
+    });
+    
+    if (!conversation) {
+      return c.json({ error: "Conversation not found" }, 404);
+    }
+    
+    return c.json(conversation);
+  } catch (error: any) {
+    console.error("Failed to get conversation:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get conversation",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
 // ===== NEW MESSAGES TABLE ENDPOINTS (Dual-write system) =====
 
 // Add message to conversation (NEW - writes to messages table + legacy array)
@@ -2422,21 +2456,32 @@ app.post("/api/vectorSearch/similaritySearch", async (c) => {
 app.post("/api/vectorSearch/mutate", async (c) => {
   try {
     const requestBody = await c.req.json();
-    const { userId, operation, ...rest } = requestBody;
+    const { userId, operation, contentId, contentType, ...rest } = requestBody;
+    
+    console.log(`🔵 [VECTOR] POST /api/vectorSearch/mutate - START`);
+    console.log(`🔍 [VECTOR] Operation: ${operation}, User: ${userId}, ContentId: ${contentId}, ContentType: ${contentType}`);
     
     if (!userId || !operation) {
+      console.error(`❌ [VECTOR] Missing required fields - userId: ${!!userId}, operation: ${!!operation}`);
       return c.json({ error: "userId and operation are required" }, 400);
     }
     
     const result = await c.env.runMutation(api.vectorSearchMutations.mutateEmbedding, {
       userId,
       operation,
+      contentId,
+      contentType,
       ...rest
     });
     
+    console.log(`✅ [VECTOR] POST /api/vectorSearch/mutate - ${result.success ? 'SUCCESS' : 'FAILED'} (${result.success ? '200' : '400'})`);
+    if (!result.success) {
+      console.error(`❌ [VECTOR] Mutation failed: ${result.error}`);
+    }
+    
     return c.json(result);
   } catch (error) {
-    console.error('Embedding mutation error:', error);
+    console.error('❌ [VECTOR] Embedding mutation error:', error);
     return c.json({ 
       success: false, 
       error: 'Embedding mutation failed',

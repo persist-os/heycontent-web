@@ -20,6 +20,7 @@
 
 import { mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
 
 
 /**
@@ -235,6 +236,94 @@ export const evolveStardustLifecycle = mutation({
   },
 });
 
+
+/**
+ * Batch delete multiple stardust - Production ready with chunking
+ * 
+ * Handles large-scale stardust deletion with proper error handling and chunking.
+ * Respects Convex limits and provides comprehensive reporting.
+ */
+export const batchDeleteStardust = mutation({
+  args: {
+    stardustIds: v.array(v.id("stardust")),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    results: v.array(v.object({
+      id: v.id("stardust"),
+      success: v.boolean(),
+      error: v.optional(v.string()),
+    })),
+    totalOperations: v.number(),
+    successfulOperations: v.number(),
+    failedOperations: v.number(),
+    chunksProcessed: v.number(),
+  }),
+  handler: async (ctx, { stardustIds }) => {
+    const BATCH_SIZE = 1000; // Well under Convex limit of 16,000
+    const chunks = [];
+    
+    // Split operations into chunks to respect Convex limits
+    for (let i = 0; i < stardustIds.length; i += BATCH_SIZE) {
+      chunks.push(stardustIds.slice(i, i + BATCH_SIZE));
+    }
+    
+    const allResults: Array<{
+      id: Id<"stardust">;
+      success: boolean;
+      error?: string;
+    }> = [];
+    
+    let totalSuccessful = 0;
+    let totalFailed = 0;
+    
+    // Process each chunk atomically
+    for (const chunk of chunks) {
+      const chunkResults: Array<{
+        id: Id<"stardust">;
+        success: boolean;
+        error?: string;
+      }> = [];
+      
+      let chunkSuccessful = 0;
+      let chunkFailed = 0;
+      
+      // Process deletions in chunk sequentially for consistency
+      for (const stardustId of chunk) {
+        try {
+          await ctx.db.delete(stardustId);
+          
+          chunkResults.push({
+            id: stardustId,
+            success: true,
+          });
+          chunkSuccessful++;
+          
+        } catch (error) {
+          chunkResults.push({
+            id: stardustId,
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error",
+          });
+          chunkFailed++;
+        }
+      }
+      
+      allResults.push(...chunkResults);
+      totalSuccessful += chunkSuccessful;
+      totalFailed += chunkFailed;
+    }
+    
+    return {
+      success: totalFailed === 0,
+      results: allResults,
+      totalOperations: stardustIds.length,
+      successfulOperations: totalSuccessful,
+      failedOperations: totalFailed,
+      chunksProcessed: chunks.length,
+    };
+  },
+});
 
 /**
  * Create symbiotic relationship between stardust and crystal

@@ -18,7 +18,7 @@ import ChatInputArea from '../components/dialogue/input/ChatInputArea'
 import { useMessageList } from '../hooks/useMessageList'
 import { useConversationState } from '../hooks/useConversationState'
 import { useOptimizedAuth } from '../components/notepad/hooks/useOptimizedAuth'
-// Removed NotepadProvider - using simple local state instead
+import { NotepadProvider, useNotepadContext } from '../contexts/NotepadContext'
 
 // =============================================================================
 // PANEL COMPONENTS
@@ -29,8 +29,17 @@ const NotepadPanel = React.memo<{
   quotedContent: string
   onClearQuoted: () => void
   onClose?: () => void
-  notepadRef?: React.RefObject<any>
-}>(({ noteId, quotedContent, onClearQuoted, onClose, notepadRef }) => {
+}>(({ noteId, quotedContent, onClearQuoted, onClose }) => {
+  const notepadContext = useNotepadContext()
+  const notepadRef = React.useRef<any>(null)
+
+  // Set the notepad ref in the context when component mounts
+  React.useEffect(() => {
+    if (notepadRef.current) {
+      notepadContext.setNotepadRef(notepadRef.current)
+    }
+  }, [notepadContext])
+
   return (
     <div className="h-full">
       <MarkdownNotepad
@@ -79,10 +88,10 @@ function FullThinkingLabInternal({
   const { user, isLoading: authLoading } = useOptimizedAuth()
   const userId = user?.uid
   
-  // Simple local state - minimal React state
-  const [includeInMessages, setIncludeInMessages] = useState(false)
+  // Use the notepad context
+  const notepadContext = useNotepadContext()
   
-  // Use the conversation state hook with all logic
+  // Use the conversation state hook with notepad context getter
   const {
     conversationId,
     isStreaming,
@@ -104,7 +113,7 @@ function FullThinkingLabInternal({
     handleQuoteToNotepad,
     clearQuotedContent,
     setInputValue
-  } = useConversationState(userId, projectId, widgetId, widgetOutputId)
+  } = useConversationState(userId, projectId, widgetId, widgetOutputId, notepadContext.getNotepadContent)
 
   // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
   // Input ref
@@ -150,9 +159,10 @@ function FullThinkingLabInternal({
       openNotepad={() => {}}
       quotedForNotepad={quotedContent}
       onClearQuoted={clearQuotedContent}
-      onToggleNotepadInMessages={setIncludeInMessages}
+      includeNotepadInMessages={notepadContext.includeInMessages}
+      onToggleNotepadInMessages={notepadContext.setIncludeInMessages}
     />
-  ), [sendMessage, isStreaming, inputValue, handleInputPopulate, quotedContent, clearQuotedContent, setIncludeInMessages])
+  ), [sendMessage, isStreaming, inputValue, handleInputPopulate, quotedContent, clearQuotedContent, notepadContext.includeInMessages, notepadContext.setIncludeInMessages])
 
   // Show loading state while auth is initializing
   if (authLoading) {
@@ -221,7 +231,11 @@ function FullThinkingLabInternal({
   )
 }
 
-// Main export - no provider needed
+// Main export - wrapped with NotepadProvider
 export function FullThinkingLab(props: LabCompositionProps) {
-  return <FullThinkingLabInternal {...props} />
+  return (
+    <NotepadProvider>
+      <FullThinkingLabInternal {...props} />
+    </NotepadProvider>
+  )
 }

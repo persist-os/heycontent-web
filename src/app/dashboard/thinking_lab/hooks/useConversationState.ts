@@ -21,7 +21,13 @@ interface OptimisticMessage {
   timestamp: number
 }
 
-export function useConversationState(userId: string | undefined, projectId?: string, widgetId?: string, widgetOutputId?: string) {
+export function useConversationState(
+  userId: string | undefined, 
+  projectId?: string, 
+  widgetId?: string, 
+  widgetOutputId?: string,
+  getNotepadContext?: () => { content: string; title: string } | null
+) {
   // Local state - clean and minimal
   const [conversationId, setConversationId] = useState<string | undefined>()
   const [isStreaming, setIsStreaming] = useState(false)
@@ -109,7 +115,7 @@ export function useConversationState(userId: string | undefined, projectId?: str
         isFirstMessage,  // True if conversation was just created, false if it already existed
         sessionIdentifier: currentConversationId || null,
         workspaceContext: currentConversationId ? { contentId: currentConversationId } : null,
-        notepadContext: null,
+        notepadContext: getNotepadContext?.() || null,
         fileAttachments,
         projectId,
         widgetId,
@@ -155,7 +161,7 @@ export function useConversationState(userId: string | undefined, projectId?: str
       setOptimisticMessages([])
       setError(error instanceof Error ? error.message : 'Failed to send message')
     }
-  }, [userId, conversationId, projectId, widgetId, widgetOutputId, createConversation])
+  }, [userId, conversationId, projectId, widgetId, widgetOutputId, createConversation, getNotepadContext])
 
   // Start new conversation
   const startNewConversation = useCallback(() => {

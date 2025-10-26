@@ -529,6 +529,105 @@ export const saveConstellationLayout = mutation({
 });
 
 /**
+ * Batch delete multiple projects - Production ready with chunking
+ * 
+ * Handles large-scale project deletion with proper error handling and chunking.
+ * Respects Convex limits and provides comprehensive reporting.
+ */
+export const batchDeleteProjects = mutation({
+  args: {
+    projectIds: v.array(v.id("projects")),
+    userId: v.string(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    results: v.array(v.object({
+      id: v.id("projects"),
+      success: v.boolean(),
+      error: v.optional(v.string()),
+    })),
+    totalOperations: v.number(),
+    successfulOperations: v.number(),
+    failedOperations: v.number(),
+    chunksProcessed: v.number(),
+  }),
+  handler: async (ctx, { projectIds, userId }) => {
+    const BATCH_SIZE = 1000; // Well under Convex limit of 16,000
+    const chunks = [];
+    
+    // Split operations into chunks to respect Convex limits
+    for (let i = 0; i < projectIds.length; i += BATCH_SIZE) {
+      chunks.push(projectIds.slice(i, i + BATCH_SIZE));
+    }
+    
+    const allResults: Array<{
+      id: Id<"projects">;
+      success: boolean;
+      error?: string;
+    }> = [];
+    
+    let totalSuccessful = 0;
+    let totalFailed = 0;
+    
+    // Process each chunk atomically
+    for (const chunk of chunks) {
+      const chunkResults: Array<{
+        id: Id<"projects">;
+        success: boolean;
+        error?: string;
+      }> = [];
+      
+      let chunkSuccessful = 0;
+      let chunkFailed = 0;
+      
+      // Process deletions in chunk sequentially for consistency
+      for (const projectId of chunk) {
+        try {
+          // Validate project ownership
+          const project = await ctx.db.get(projectId);
+          if (!project) {
+            throw new Error("Project not found");
+          }
+          
+          if (project.userId !== userId) {
+            throw new Error("Access denied: You don't own this project");
+          }
+          
+          await ctx.db.delete(projectId);
+          
+          chunkResults.push({
+            id: projectId,
+            success: true,
+          });
+          chunkSuccessful++;
+          
+        } catch (error) {
+          chunkResults.push({
+            id: projectId,
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error",
+          });
+          chunkFailed++;
+        }
+      }
+      
+      allResults.push(...chunkResults);
+      totalSuccessful += chunkSuccessful;
+      totalFailed += chunkFailed;
+    }
+    
+    return {
+      success: totalFailed === 0,
+      results: allResults,
+      totalOperations: projectIds.length,
+      successfulOperations: totalSuccessful,
+      failedOperations: totalFailed,
+      chunksProcessed: chunks.length,
+    };
+  },
+});
+
+/**
  * Clear constellation layout for a project (manual reset)
  * Used by: Layout reset functionality
  */

@@ -27,14 +27,27 @@ export const mutateEmbedding = mutation({
   }),
   handler: async (ctx, args) => {
     try {
+      console.log(`🔍 [MUTATE_EMBEDDING] Operation: ${args.operation}, ContentId: ${args.contentId}, ContentType: ${args.contentType}`);
+      
       if (args.operation === "create_embedding_record") {
-        // Validate required fields
-        if (!args.contentId || !args.contentType || !args.embedding || !args.title || !args.content) {
+        // Validate required fields with detailed error messages
+        const missingFields = [];
+        if (!args.contentId) missingFields.push("contentId");
+        if (!args.contentType) missingFields.push("contentType");
+        if (!args.embedding || !Array.isArray(args.embedding) || args.embedding.length === 0) missingFields.push("embedding");
+        if (!args.title || args.title.trim() === "") missingFields.push("title");
+        if (!args.content || args.content.trim() === "") missingFields.push("content");
+        
+        if (missingFields.length > 0) {
+          console.error(`❌ [MUTATE_EMBEDDING] Missing required fields: ${missingFields.join(", ")}`);
+          console.error(`❌ [MUTATE_EMBEDDING] Field values - contentId: "${args.contentId}", contentType: "${args.contentType}", embedding: ${args.embedding?.length || 0} dims, title: "${args.title}", content: ${args.content?.length || 0} chars`);
           return {
             success: false,
-            error: "Missing required fields for create_embedding_record",
+            error: `Missing required fields for create_embedding_record: ${missingFields.join(", ")}`,
           };
         }
+
+        console.log(`🔄 [MUTATE_EMBEDDING] Storing embedding for ${args.contentType} ${args.contentId} (embedding dim: ${args.embedding?.length})`);
 
         // Insert embedding into contentEmbeddings table
         const now = Date.now();
@@ -49,6 +62,8 @@ export const mutateEmbedding = mutation({
           createdAt: now,
           updatedAt: now,
         });
+
+        console.log(`✅ [MUTATE_EMBEDDING] Successfully stored embedding ${embeddingId} for ${args.contentType} ${args.contentId}`);
 
         return {
           success: true,

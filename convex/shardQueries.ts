@@ -48,7 +48,7 @@ export const getShardsByUser = query({
       .query("crystal_shards")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .order("desc")
-      .take(limit)
+      .take(limit || 100)
     
     return shards;
   },
