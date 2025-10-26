@@ -85,16 +85,20 @@ export function useMessageList(props: UseMessageListProps): Message[] {
       // Check if this is the currently streaming message
       const isCurrentlyStreaming = optMsg.id === currentStreamingId
       
-      // CRITICAL: Don't check isInConvex for messages that are currently streaming
-      // They should always show while streaming, even if content is empty or partial
-      if (!isCurrentlyStreaming) {
-        // Skip if this message is already in Convex (but only check non-streaming messages)
+      // CRITICAL FIX: Even for streaming messages, check if Convex already has them
+      // This prevents duplicates when Convex confirms faster than cleanup runs
+      const shouldCheckDedup = !isCurrentlyStreaming || (optMsg.role === 'assistant' && !isStreaming)
+      
+      if (shouldCheckDedup) {
+        // Skip if this message is already in Convex
         const inConvex = isInConvex(optMsg.content, optMsg.role)
         console.log('[DEBUG:useMessageList] Checking optimistic message:', {
           id: optMsg.id,
           role: optMsg.role,
           content: (optMsg.content || '').slice(0, 40) + '...',
-          isInConvex: inConvex
+          isInConvex: inConvex,
+          isStreaming,
+          isCurrentlyStreaming
         })
         if (inConvex) {
           console.log('[DEBUG:useMessageList] SKIPPING optimistic message (already in Convex)')

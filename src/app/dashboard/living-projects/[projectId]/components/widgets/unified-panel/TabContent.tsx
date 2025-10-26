@@ -278,6 +278,35 @@ export const ActionsTab = ({ item, itemType, projectId, onClose }: TabContentPro
   const router = useRouter()
   const actions = useUnifiedActions(projectId)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [userId, setUserId] = React.useState<string | null>(null)
+
+  // Fetch latest widget output for widgets (same as OverviewTab)
+  const latestOutput = useQuery(
+    api.widgetOutputsQueries.getWidgetOutputData,
+    itemType === 'widget' && userId ? {
+      userId,
+      filters: { widgetId: item._id },
+      limit: 1,
+      orderBy: 'desc'
+    } : 'skip'
+  )
+
+  React.useEffect(() => {
+    const getUserId = async () => {
+      try {
+        const id = await getCurrentUserId()
+        setUserId(id)
+      } catch (error) {
+        console.error('Failed to get user ID:', error)
+      }
+    }
+    getUserId()
+  }, [])
+
+  // Parse the latest output
+  const output = latestOutput && typeof latestOutput === 'object' && '_id' in latestOutput
+    ? latestOutput
+    : null
 
   const hasRunAction = itemType === 'widget'
   const hasEditAction = ['widget', 'note', 'conversation'].includes(itemType)
@@ -286,7 +315,7 @@ export const ActionsTab = ({ item, itemType, projectId, onClose }: TabContentPro
   // Check if we have a widget output available (from just-run result OR existing output)
   const hasWidgetOutput = itemType === 'widget' && (
     (actions.lastResult?.note_id) || 
-    (item.latestOutput?.noteId)
+    (output?.noteId)
   )
 
   return (
@@ -314,13 +343,23 @@ export const ActionsTab = ({ item, itemType, projectId, onClose }: TabContentPro
       {hasWidgetOutput && (
         <Button
           onClick={() => {
-            // Use fresh result if available, otherwise use existing output
+            // Priority: 1) fresh result, 2) queried output, 3) fallback
             if (actions.lastResult?.note_id) {
               launchThinkingLabWithOutput(
                 router,
                 {
                   noteId: actions.lastResult.note_id,
                   outputId: actions.lastResult.output_id
+                },
+                projectId,
+                item._id
+              )
+            } else if (output?.noteId) {
+              launchThinkingLabWithOutput(
+                router,
+                {
+                  noteId: output.noteId,
+                  outputId: output.outputId
                 },
                 projectId,
                 item._id
