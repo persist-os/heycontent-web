@@ -4,12 +4,13 @@ import React, { forwardRef, useImperativeHandle, useCallback } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Color from '@tiptap/extension-color'
-import TextStyle from '@tiptap/extension-text-style'
+import { TextStyleKit } from '@tiptap/extension-text-style'
 import Highlight from '@tiptap/extension-highlight'
 import TextAlign from '@tiptap/extension-text-align'
 import Underline from '@tiptap/extension-underline'
 import Image from '@tiptap/extension-image'
 import Link from '@tiptap/extension-link'
+import HorizontalRule from '@tiptap/extension-horizontal-rule'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -49,12 +50,13 @@ export const SimpleTiptapEditor = forwardRef<SimpleTiptapEditorRef, SimpleTiptap
   }, ref) => {
     
     const editor = useEditor({
+      immediatelyRender: false,
       extensions: [
         StarterKit.configure({
-          codeBlock: false, // We'll add this back with syntax highlighting later
+          codeBlock: false,
         }),
         Color,
-        TextStyle,
+        TextStyleKit,
         Highlight.configure({
           multicolor: true,
         }),
@@ -71,6 +73,11 @@ export const SimpleTiptapEditor = forwardRef<SimpleTiptapEditorRef, SimpleTiptap
           openOnClick: false,
           HTMLAttributes: {
             class: 'text-blue-600 hover:text-blue-800 underline',
+          },
+        }),
+        HorizontalRule.configure({
+          HTMLAttributes: {
+            class: 'my-horizontal-rule',
           },
         }),
         TaskList,
@@ -118,10 +125,27 @@ export const SimpleTiptapEditor = forwardRef<SimpleTiptapEditorRef, SimpleTiptap
       editor
     }), [editor])
 
-    // Update content when prop changes
+    // Update content when prop changes - more robust synchronization
     React.useEffect(() => {
+      console.log('🔍 [SimpleTiptapEditor] Content update effect triggered:', {
+        content: content ? content.substring(0, 100) + '...' : 'empty',
+        editorReady: !!editor,
+        editorContent: editor ? editor.getHTML().substring(0, 100) + '...' : 'no editor'
+      })
+      
       if (editor && content !== editor.getHTML()) {
-        editor.commands.setContent(content)
+        console.log('📝 [SimpleTiptapEditor] Updating editor content')
+        // Use a small delay to ensure editor is fully ready
+        const timeoutId = setTimeout(() => {
+          if (editor && content !== editor.getHTML()) {
+            console.log('📝 [SimpleTiptapEditor] Setting editor content:', content.substring(0, 100) + '...')
+            editor.commands.setContent(content)
+          }
+        }, 0)
+        
+        return () => clearTimeout(timeoutId)
+      } else {
+        console.log('📝 [SimpleTiptapEditor] No update needed - content matches or no editor')
       }
     }, [content, editor])
 
@@ -264,6 +288,13 @@ export const SimpleTiptapEditor = forwardRef<SimpleTiptapEditorRef, SimpleTiptap
           
           .tiptap-editor ul[data-type="taskList"] li > div {
             flex: 1 1 auto;
+          }
+          
+          .tiptap-editor hr {
+            border: none;
+            border-top: 2px solid hsl(var(--border));
+            margin: 2rem 0;
+            background: none;
           }
         `}</style>
         

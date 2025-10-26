@@ -87,20 +87,20 @@ export const manualTriggerAnalysis = action({
         throw new Error("BACKEND_URL not configured");
       }
       
-      // Get user's auth token (if available)
-      // For manual triggers, we'll use the system API key
-      const systemApiKey = process.env.BACKEND_API_KEY;
-      
-      const response = await fetch(`${backendUrl}/api/v1/background_jobs/trigger_intelligence`, {
+      const response = await fetch(`${backendUrl}/api/v1/crystal_intelligence/analyze`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${systemApiKey}`,
         },
         body: JSON.stringify({
           userId,
-          analysis_depth,
-          trigger_source: "manual"
+          jobId: `manual-${Date.now()}`,
+          jobType: "manual_analysis",
+          scope: {
+            analysis_depth: analysis_depth,
+            trigger_source: "manual"
+          },
+          analysisDepth: analysis_depth
         }),
       });
       

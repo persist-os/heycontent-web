@@ -49,19 +49,9 @@ export function useNotepadHandlers({
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isSavingRef = useRef(false)
   const lastSavedContentRef = useRef<string>('')
-  
-  // DEFENSIVE: Prevent recursive note switching
-  const isSwitchingRef = useRef(false)
-  const lastSwitchTimeRef = useRef(0)
 
-  // Debounced auto-save function for existing notes (optimized with defensive guards)
+  // Debounced auto-save function for existing notes
   const autoSaveContent = useCallback(async (contentToSave: string) => {
-    // DEFENSIVE: Don't auto-save during note switching
-    if (isSwitchingRef.current) {
-      console.log('📝 [MarkdownNotepad] Skipped auto-save during note switch')
-      return
-    }
-    
     // Early returns for invalid save conditions
     if (isNewNote || !existingNote || !currentNoteId || isSavingRef.current) {
       return
@@ -147,7 +137,17 @@ export function useNotepadHandlers({
 
   // Create or save note function with auto-save coordination
   const handleSaveAsNote = useCallback(async (): Promise<string | null> => {
-    if (!content.trim()) return null
+    console.log('🔍 [handleSaveAsNote] Starting note creation:', {
+      content: content ? content.substring(0, 100) + '...' : 'empty',
+      contentLength: content.length,
+      isNewNote,
+      noteTitle: note.title
+    })
+    
+    if (!content.trim()) {
+      console.log('⚠️ [handleSaveAsNote] No content to save, returning null')
+      return null
+    }
     
     // Cancel any pending auto-save to prevent race conditions
     if (autoSaveTimeoutRef.current) {
@@ -283,21 +283,9 @@ export function useNotepadHandlers({
     }
   }, [shouldShowSmartButton, isGeneratingMetadata, handleSaveAsNote, currentNoteId, isNewNote, generateMetadataManually, content, setCurrentNoteId, setIsNewNote, metadataGenerationInProgress, existingNote])
 
-  // Handle note switching with proper cleanup and defensive guards
+  // Handle note switching with simplified logic
   const handleSwitchToNote = useCallback((noteId: string) => {
-    const now = Date.now()
-    
-    // DEFENSIVE: Prevent rapid successive switches and infinite loops
-    if (isSwitchingRef.current) {
-      console.log('⚠️ [MarkdownNotepad] Blocked recursive note switch to:', noteId)
-      return
-    }
-    
-    // DEFENSIVE: Prevent switches within 100ms (debounce)
-    if (now - lastSwitchTimeRef.current < 100) {
-      console.log('⚠️ [MarkdownNotepad] Blocked rapid switch to:', noteId)
-      return
-    }
+    console.log('🔄 [handleSwitchToNote] Switching to note:', noteId, 'from:', currentNoteId)
     
     // DEFENSIVE: Don't switch to same note
     if (String(noteId) === String(currentNoteId)) {
@@ -305,31 +293,21 @@ export function useNotepadHandlers({
       return
     }
     
-    isSwitchingRef.current = true
-    lastSwitchTimeRef.current = now
-    
-    try {
-      // Cancel any pending auto-save to prevent saving to wrong note
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current)
-        autoSaveTimeoutRef.current = null
-        console.log('📝 [MarkdownNotepad] Cancelled auto-save during note switch')
-      }
-      
-      // Reset saving state
-      isSavingRef.current = false
-      
-      // Switch to the new note
-      setCurrentNoteId(noteId)
-      setIsNewNote(false)
-      
-      console.log('🔄 [MarkdownNotepad] Switched to note:', noteId)
-    } finally {
-      // Always reset the switching flag
-      setTimeout(() => {
-        isSwitchingRef.current = false
-      }, 50)
+    // Cancel any pending auto-save to prevent saving to wrong note
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current)
+      autoSaveTimeoutRef.current = null
+      console.log('📝 [MarkdownNotepad] Cancelled auto-save during note switch')
     }
+    
+    // Reset saving state
+    isSavingRef.current = false
+    
+    // Switch to the new note
+    setCurrentNoteId(noteId)
+    setIsNewNote(false)
+    
+    console.log('🔄 [MarkdownNotepad] Switched to note:', noteId)
   }, [setCurrentNoteId, setIsNewNote, currentNoteId])
 
   // Handle new note creation with proper cleanup
@@ -355,14 +333,8 @@ export function useNotepadHandlers({
     console.log('✨ [MarkdownNotepad] Created new note')
   }, [setCurrentNoteId, setIsNewNote, setContent, setters, lexicalEditorRef])
 
-  // Content state changes with debounced auto-save (defensive)
+  // Content state changes with debounced auto-save
   const handleContentChange = useCallback((newContent: string) => {
-    // DEFENSIVE: Don't process content changes during note switching
-    if (isSwitchingRef.current) {
-      console.log('📝 [MarkdownNotepad] Skipped content change during note switch')
-      return
-    }
-    
     setContent(newContent)
     
     // Note: Removed notepadStore sync - notepad content is now passed directly via props/context

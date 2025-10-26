@@ -15,7 +15,7 @@ import {
   Quote,
   Undo,
   Redo,
-  Link,
+  Minus,
   CheckSquare,
   AlignLeft,
   AlignCenter,
@@ -30,13 +30,6 @@ interface TiptapToolbarProps {
 
 export function TiptapToolbar({ editor, className = '' }: TiptapToolbarProps) {
   if (!editor) return null
-
-  const setLink = () => {
-    const url = window.prompt('Enter URL:')
-    if (url) {
-      editor.chain().focus().setLink({ href: url }).run()
-    }
-  }
 
   return (
     <div className={`flex flex-wrap items-center gap-0.5 py-1.5 w-full ${className}`}>
@@ -153,15 +146,14 @@ export function TiptapToolbar({ editor, className = '' }: TiptapToolbarProps) {
         <Quote className="h-3.5 w-3.5" />
       </Button>
       
-      {/* Link */}
+      {/* Horizontal Rule */}
       <Button
         variant="ghost"
         size="sm"
-        onClick={setLink}
-        disabled={!editor.can().chain().focus().setLink({ href: '' }).run()}
+        onClick={() => editor.chain().focus().setHorizontalRule().run()}
         className="h-7 w-7 p-0 hover:bg-muted/50"
       >
-        <Link className="h-3.5 w-3.5" />
+        <Minus className="h-3.5 w-3.5" />
       </Button>
 
       <div className="w-px h-4 bg-border/30 mx-1" />
