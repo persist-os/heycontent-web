@@ -114,11 +114,11 @@ export function CreateProjectModal({
 
   // Translated texts
   const { text: projectNamePlaceholder } = useTranslation(
-    defaultName || "Content Strategy Q1, Personal Blog, Creative Workshop...",
+    defaultName || "My Website, Learning Spanish, Garden Project, Family Cookbook, Photography Portfolio, Home Renovation...",
     { targetLang: 'en', context: 'project.modal.placeholder.name' }
   )
   const { text: descriptionPlaceholder } = useTranslation(
-    defaultName ? "A few words about what you're building..." : "What are you hoping to build or explore together...",
+    defaultName ? "What do you want to build or learn? Share your main goal or idea." : "Tell me about your idea. What do you want to create, learn, or achieve? What's your main goal?",
     { targetLang: 'en', context: 'project.modal.placeholder.description' }
   )
 
@@ -146,11 +146,11 @@ export function CreateProjectModal({
               <DialogDescription className="text-muted-foreground/80 leading-relaxed text-base ml-1">
                 {defaultName ? (
                   <T context="project.modal.description.transform">
-                    Transform your selected note into the foundation of a new project workspace.
+                    Turn your note into a smart project workspace that learns and grows with you. Your project will ask questions about your goals, help you plan, and remember everything you discuss together.
                   </T>
                 ) : (
                   <T context="project.modal.description.evolve">
-                    Name your project and give it some initial context. It will evolve through discovery conversations.
+                    Create a project that learns about your goals through natural conversation. Just talk about what you want to build, learn, or achieve. Your project will ask questions, help you think through ideas, and remember your progress as you work together.
                   </T>
                 )}
               </DialogDescription>
@@ -178,9 +178,9 @@ export function CreateProjectModal({
               <div className="space-y-3">
                 <Label htmlFor="project-description" className="text-sm font-medium text-foreground/90">
                   {defaultName ? (
-                    <T context="project.modal.label.brief_context">Brief context</T>
+                    <T context="project.modal.label.brief_context">What's your goal?</T>
                   ) : (
-                    <T context="project.modal.label.initial_direction">Initial direction</T>
+                    <T context="project.modal.label.initial_direction">What's your idea?</T>
                   )}
                   <span className="text-muted-foreground/60 ml-2 font-normal">
                     <T context="project.modal.label.optional">optional</T>
@@ -207,7 +207,7 @@ export function CreateProjectModal({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-medium text-foreground/90">
-                  <T context="project.modal.label.attach_content">Attach content</T>
+                  <T context="project.modal.label.attach_content">Add your existing notes and ideas</T>
                   <span className="text-muted-foreground/60 ml-2 font-normal">
                     <T context="project.modal.label.optional">optional</T>
                   </span>
@@ -221,7 +221,7 @@ export function CreateProjectModal({
                   disabled={isLoading}
                 >
                   <Plus className="w-3 h-3" />
-                  <T context="project.modal.button.add_content">Add content</T>
+                  <T context="project.modal.button.add_content">Add existing ideas</T>
                 </Button>
               </div>
 
@@ -319,7 +319,7 @@ export function CreateProjectModal({
                   defaultName ? (
                     <T context="project.modal.button.create_project">Create project</T>
                   ) : (
-                    <T context="project.modal.button.begin_discovery">Begin discovery</T>
+                    <T context="project.modal.button.begin_discovery">Start conversation</T>
                   )
                 )}
               </Button>

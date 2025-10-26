@@ -14,7 +14,7 @@ import { Id } from '@/convex/_generated/dataModel'
 import { STATUS_CONFIGS, DEFAULT_STATUS_CONFIG, TabType } from './fingerprint/fingerprintConfig'
 import { useFingerprintEdit } from './fingerprint/useFingerprintEdit'
 import { CollapsedView, ExpandedView } from './fingerprint/FingerprintViews'
-import { VisionTab, DNATab, TimelineTab, PreferencesTab } from './fingerprint/FingerprintTabContent'
+import { VisionTab, DNATab, TimelineTab, PreferencesTab, EvolutionTab } from './fingerprint/FingerprintTabContent'
 
 interface ProjectFingerprintProps {
   projectId: string
@@ -106,6 +106,14 @@ export function ProjectFingerprint({ projectId, className = '' }: ProjectFingerp
           )}
           {activeTab === 'preferences' && (
             <PreferencesTab
+              fingerprint={fingerprint}
+              isEditing={isEditing}
+              getFieldValue={getField}
+              updateField={updateField}
+            />
+          )}
+          {activeTab === 'evolution' && (
+            <EvolutionTab
               fingerprint={fingerprint}
               isEditing={isEditing}
               getFieldValue={getField}

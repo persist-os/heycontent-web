@@ -428,3 +428,113 @@ export const PreferencesTab = ({ fingerprint, isEditing, getFieldValue, updateFi
     )}
   </motion.div>
 )
+
+export const EvolutionTab = ({ fingerprint, isEditing, getFieldValue, updateField }: TabProps) => (
+  <motion.div className="space-y-5" {...tabAnimation}>
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      {(getFieldValue('learning_sensitivity') || isEditing) && (
+        <EditableField 
+          label={<T context="fingerprint.evolution.adaptivity">Adaptivity</T>}
+          value={isEditing ? getFieldValue('learning_sensitivity') : `${getFieldValue('learning_sensitivity')}/10`} 
+          field="learning_sensitivity"
+          isEditing={isEditing}
+          updateField={updateField}
+          placeholder="1-10"
+        />
+      )}
+    </div>
+
+    {/* Change Triggers */}
+    {((Array.isArray(getFieldValue('change_triggers')) && getFieldValue('change_triggers').length > 0) || isEditing) && (
+      <div className="pt-4 border-t border-border/10">
+        <div className="text-xs uppercase tracking-wide text-muted-foreground/50 mb-3">
+          <T context="fingerprint.evolution.change_triggers">Change Triggers</T>
+        </div>
+        {isEditing ? (
+          <EditableArrayField
+            values={getFieldValue('change_triggers') || []}
+            onChange={(val) => updateField('change_triggers', val)}
+            isEditing={isEditing}
+            placeholder="Add change trigger..."
+          />
+        ) : (
+          <div className="space-y-3">
+            {(getFieldValue('change_triggers') || []).map((trigger: any, idx: number) => (
+              <div key={idx} className="p-3 bg-muted/20 rounded-lg border border-border/20">
+                {typeof trigger === 'object' && trigger !== null ? (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-foreground/90">
+                      {trigger.response_style || 'Change Trigger'}
+                    </div>
+                    <div className="text-xs text-muted-foreground/70">
+                      <span className="font-medium">Type:</span> {trigger.condition_type || 'insight'} • 
+                      <span className="font-medium ml-1">Threshold:</span> {trigger.threshold || 0.5}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-foreground/90">{String(trigger)}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )}
+
+    {/* Stability Zones */}
+    {((Array.isArray(getFieldValue('stability_zones')) && getFieldValue('stability_zones').length > 0) || isEditing) && (
+      <div className="pt-4 border-t border-border/10">
+        <div className="text-xs uppercase tracking-wide text-muted-foreground/50 mb-3">
+          <T context="fingerprint.evolution.stability_zones">Stability Zones</T>
+        </div>
+        {isEditing ? (
+          <EditableArrayField
+            values={getFieldValue('stability_zones') || []}
+            onChange={(val) => updateField('stability_zones', val)}
+            isEditing={isEditing}
+            placeholder="Add stability zone..."
+          />
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {(getFieldValue('stability_zones') || []).map((zone: string, idx: number) => (
+              <span 
+                key={idx}
+                className="px-2.5 py-1 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-full text-xs"
+              >
+                {zone}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    )}
+
+    {/* Growth Edges */}
+    {((Array.isArray(getFieldValue('growth_edges')) && getFieldValue('growth_edges').length > 0) || isEditing) && (
+      <div className="pt-4 border-t border-border/10">
+        <div className="text-xs uppercase tracking-wide text-muted-foreground/50 mb-3">
+          <T context="fingerprint.evolution.growth_edges">Growth Edges</T>
+        </div>
+        {isEditing ? (
+          <EditableArrayField
+            values={getFieldValue('growth_edges') || []}
+            onChange={(val) => updateField('growth_edges', val)}
+            isEditing={isEditing}
+            placeholder="Add growth edge..."
+          />
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {(getFieldValue('growth_edges') || []).map((edge: string, idx: number) => (
+              <span 
+                key={idx}
+                className="px-2.5 py-1 bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-full text-xs"
+              >
+                {edge}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    )}
+  </motion.div>
+)

@@ -7,8 +7,8 @@ export default function DashboardPage() {
   const router = useRouter()
   
   useEffect(() => {
-    // Redirect to Thinking Lab as the default dashboard view
-    router.replace('/dashboard/thinking_lab')
+    // Redirect to Constellations (Living Projects) as the default dashboard view
+    router.replace('/dashboard/living-projects')
   }, [router])
   
   return (
