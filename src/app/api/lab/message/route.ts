@@ -70,7 +70,7 @@ export async function POST(request: Request) {
       user_id: authenticated_user_id,
       query,
       is_first_message: is_first_message === true,
-      session_id: is_first_message === true ? null : (session_identifier || null),
+      session_id: session_identifier || null,  // Always pass session_id (frontend creates conversation)
       notepad_context,
       vector_search_metadata
     };

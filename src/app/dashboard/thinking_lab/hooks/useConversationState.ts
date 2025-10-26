@@ -63,6 +63,8 @@ export function useConversationState(userId: string | undefined, projectId?: str
     
     // Create conversation eagerly if first message
     let currentConversationId = conversationId
+    const isFirstMessage = !conversationId  // Track if conversation was just created
+    
     if (!currentConversationId) {
       currentConversationId = await createConversation({
         userId,
@@ -74,9 +76,7 @@ export function useConversationState(userId: string | undefined, projectId?: str
       })
       setConversationId(currentConversationId)
     }
-    
-    const isFirstMessage = false
-    
+        
     // 1. Add optimistic user message immediately (don't overwrite - ADD to array)
     const userMsgId = `temp-user-${Date.now()}`
     setOptimisticMessages(prev => [...prev, {
@@ -106,7 +106,7 @@ export function useConversationState(userId: string | undefined, projectId?: str
       // Prepare request parameters
       const requestParams: MessageTransmissionRequest = {
         content,
-        isFirstMessage,
+        isFirstMessage,  // True if conversation was just created, false if it already existed
         sessionIdentifier: currentConversationId || null,
         workspaceContext: currentConversationId ? { contentId: currentConversationId } : null,
         notepadContext: null,
