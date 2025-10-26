@@ -6,8 +6,9 @@
  */
 
 import React, { useState, useCallback } from 'react'
-import { useQuery } from 'convex/react'
+import { useQuery, useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
+import { Id } from 'convex/_generated/dataModel'
 // Removed useNotepadContext import - no longer needed
 import { transmitMessageWithStreaming } from '../modules/api/messageService'
 import type { MessageTransmissionRequest } from '../types'
@@ -32,10 +33,13 @@ export function useConversationState(userId: string | undefined, projectId?: str
   const [quotedContent, setQuotedContent] = useState("")
   const [inputValue, setInputValue] = useState("")
 
+  // Convex mutation for creating conversations
+  const createConversation = useMutation(api.chatMutations.createConversation)
+
   // Load conversation from Convex
   const conversation = useQuery(
     api.chatQueries.getConversation,
-    conversationId && userId ? { userId, conversationId } : "skip"
+    conversationId && userId ? { userId, conversationId: conversationId as Id<"conversations"> } : "skip"
   )
   
   // Extract messages and suggestions
@@ -57,7 +61,21 @@ export function useConversationState(userId: string | undefined, projectId?: str
       return
     }
     
-    const isFirstMessage = !conversationId
+    // Create conversation eagerly if first message
+    let currentConversationId = conversationId
+    if (!currentConversationId) {
+      currentConversationId = await createConversation({
+        userId,
+        title: "New Conversation",
+        conversationType: widgetOutputId ? 'widget_prompt' : 'general',
+        projectId: projectId as Id<"projects"> | undefined,
+        widgetId: widgetId as Id<"widgets"> | string | undefined,
+        widgetOutputId
+      })
+      setConversationId(currentConversationId)
+    }
+    
+    const isFirstMessage = false
     
     // 1. Add optimistic user message immediately (don't overwrite - ADD to array)
     const userMsgId = `temp-user-${Date.now()}`
@@ -89,8 +107,8 @@ export function useConversationState(userId: string | undefined, projectId?: str
       const requestParams: MessageTransmissionRequest = {
         content,
         isFirstMessage,
-        sessionIdentifier: conversationId || null,
-        workspaceContext: conversationId ? { contentId: conversationId } : null,
+        sessionIdentifier: currentConversationId || null,
+        workspaceContext: currentConversationId ? { contentId: currentConversationId } : null,
         notepadContext: null,
         fileAttachments,
         projectId,
@@ -137,7 +155,7 @@ export function useConversationState(userId: string | undefined, projectId?: str
       setOptimisticMessages([])
       setError(error instanceof Error ? error.message : 'Failed to send message')
     }
-  }, [userId, conversationId, projectId, widgetId, widgetOutputId])
+  }, [userId, conversationId, projectId, widgetId, widgetOutputId, createConversation])
 
   // Start new conversation
   const startNewConversation = useCallback(() => {

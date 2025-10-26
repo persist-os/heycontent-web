@@ -8,7 +8,7 @@ export const createConversation = mutation({
     args: {
       userId: v.string(),
       title: v.string(),
-      messages: messageArrayValidator,
+      messages: v.optional(messageArrayValidator),
       // NEW: Optional project/widget context fields
       projectId: v.optional(v.id("projects")),
       widgetId: v.optional(v.union(v.string(), v.id("widgets"))),  // 🔄 Migration: supports both legacy string and Convex ID
@@ -25,9 +25,9 @@ export const createConversation = mutation({
         const conversationId = await ctx.db.insert("conversations", {
           userId: args.userId,
           title: args.title,
-          messages: args.messages,
-          messageCount: args.messages.length,
-          lastMessageAt: args.messages.length > 0 ? args.messages[args.messages.length - 1].timestamp : undefined,
+          messages: args.messages || [],
+          messageCount: args.messages?.length || 0,
+          lastMessageAt: args.messages && args.messages.length > 0 ? args.messages[args.messages.length - 1].timestamp : undefined,
           createdAt: Date.now(),
           updatedAt: Date.now(),
           starred: false,
