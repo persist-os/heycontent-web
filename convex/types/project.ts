@@ -23,6 +23,7 @@ export const projectSchemaFields = {
   
   // AI Intelligence Integration
   fingerprintId: v.optional(v.id("project_fingerprints")),
+  analysisIds: v.optional(v.array(v.string())),
   
   // Constellation Layout Cache (recalculated manually)
   constellationLayout: v.optional(v.object({
@@ -85,6 +86,7 @@ export interface Project {
   crystalIds?: string[];
   shardIds?: string[];
   fingerprintId?: string;
+  analysisIds?: string[];
   constellationLayout?: ConstellationLayout;
   createdAt: number;
   updatedAt: number;
