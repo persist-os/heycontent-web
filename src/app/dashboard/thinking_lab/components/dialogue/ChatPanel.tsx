@@ -12,7 +12,6 @@ import { useAutoScroll } from '../../hooks/useAutoScroll'
 import ChatMessagesList from './components/ChatMessagesList'
 import { AmbientInsights } from '@/app/dashboard/ambient_insights/AmbientInsights'
 import { WidgetPrompts } from '../../components/WidgetPrompts'
-import { BottomBarActions } from './components/BottomBarActions'
 import type { Message } from '@/app/types/chat'
 
 interface ChatPanelProps {
@@ -209,14 +208,6 @@ export const ChatPanel = React.memo<ChatPanelProps>(({
           </div>
         </div>
       )}
-
-      {/* Bottom Bar Actions - Always visible at the bottom */}
-      <BottomBarActions
-        onActionClick={handleActionClick}
-        onInputPopulate={onInputPopulate}
-        isFullScreen={isFullScreen}
-        suggestions={suggestions}
-      />
     </div>
   )
 })

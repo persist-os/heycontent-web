@@ -59,10 +59,11 @@ export const crystalSchemaFields = {
   projectId: v.optional(v.id("projects")),
   widgetId: v.optional(v.string()),
   
-  // Flexible crystal content
+  // STRUCTURAL FIX: Make critical fields required to prevent incomplete crystals
+  // Flexible crystal content - now required for data integrity
   secondary_dimensions: v.optional(v.array(v.string())),
-  description: v.optional(v.string()),
-  core_insight: v.optional(v.string()),
+  description: v.string(), // REQUIRED: Crystal description
+  core_insight: v.string(), // REQUIRED: Core insight
   detailed_analysis: v.optional(v.string()),
   
   // Supporting evidence
@@ -83,10 +84,10 @@ export const crystalSchemaFields = {
   energy: v.optional(v.number()),
   lastEvolution: v.optional(v.number()),
   
-  // Pattern metadata
+  // Pattern metadata - now required for data integrity
   tags: v.optional(v.array(v.string())),
-  behavioral_implications: v.optional(v.array(v.string())),
-  interaction_guidance: v.optional(v.array(v.string())),
+  behavioral_implications: v.array(v.string()), // REQUIRED: Behavioral implications
+  interaction_guidance: v.array(v.string()), // REQUIRED: Interaction guidance
   
   // Contradictions & nuance
   contradicting_shards: v.optional(v.array(v.string())),

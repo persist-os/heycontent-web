@@ -21,6 +21,7 @@
 import { mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
+import { stardustCreateValidator, stardustUpdateValidator } from "./types/stardust";
 
 
 /**
@@ -28,7 +29,7 @@ import { Id } from "./_generated/dataModel";
  */
 export const createStardust = mutation({
   args: {
-    stardustData: v.any(),
+    stardustData: stardustCreateValidator,
   },
   returns: v.id("stardust"),
   handler: async (ctx, { stardustData }) => {
@@ -37,14 +38,14 @@ export const createStardust = mutation({
     // Add required fields and defaults - Crystal Pattern
     const completeData = {
       ...stardustData,
-      detected_at: stardustData.detected_at ?? now,
-      detection_method: stardustData.detection_method ?? "code_based",
+      detectedAt: stardustData.detectedAt ?? now,
+      detectionMethod: stardustData.detectionMethod ?? "code_based",
       lifecycleStage: stardustData.lifecycleStage ?? "embryo",
       health: stardustData.health ?? 0.5,
       energy: stardustData.energy ?? 0.5,
       promoted: false,
-      related_crystal_ids: stardustData.related_crystal_ids ?? [],
-      symbiotic_pairs: stardustData.symbiotic_pairs ?? [],
+      relatedCrystalIds: stardustData.relatedCrystalIds ?? [],
+      symbioticPairs: stardustData.symbioticPairs ?? [],
       createdAt: now,
       updatedAt: now,
     };
@@ -62,7 +63,7 @@ export const createStardust = mutation({
 export const updateStardust = mutation({
   args: {
     stardustId: v.id("stardust"),
-    updates: v.any(),
+    updates: stardustUpdateValidator,
   },
   returns: v.id("stardust"),
   handler: async (ctx, { stardustId, updates }) => {
@@ -99,14 +100,14 @@ export const promoteStardust = mutation({
       throw new Error("Stardust not found");
     }
     if (stardust.promoted) {
-      throw new Error(`Stardust ${args.stardustId} already promoted to project ${stardust.promoted_to_project_id}`);
+      throw new Error(`Stardust ${args.stardustId} already promoted to project ${stardust.promotedToProjectId}`);
     }
     
     await ctx.db.patch(args.stardustId, {
       promoted: true,
-      promoted_at: Date.now(),
-      promoted_to_project_id: args.projectId,
-      confidence_at_promotion: args.confidenceAtPromotion,
+      promotedAt: Date.now(),
+      promotedToProjectId: args.projectId,
+      confidenceAtPromotion: args.confidenceAtPromotion,
       lifecycleStage: "transcendent",
       updatedAt: Date.now(),
     });
@@ -138,7 +139,7 @@ export const deleteStardust = mutation({
  */
 export const batchCreateStardust = mutation({
   args: {
-    stardustList: v.array(v.any()),
+    stardustList: v.array(stardustCreateValidator),
   },
   returns: v.array(v.id("stardust")),
   handler: async (ctx, { stardustList }) => {
@@ -148,14 +149,14 @@ export const batchCreateStardust = mutation({
     for (const stardustData of stardustList) {
       const completeData = {
         ...stardustData,
-        detected_at: stardustData.detected_at ?? now,
-        detection_method: stardustData.detection_method ?? "code_based",
+        detectedAt: stardustData.detectedAt ?? now,
+        detectionMethod: stardustData.detectionMethod ?? "code_based",
         lifecycleStage: stardustData.lifecycleStage ?? "embryo",
         health: stardustData.health ?? 0.5,
         energy: stardustData.energy ?? 0.5,
         promoted: false,
-        related_crystal_ids: stardustData.related_crystal_ids ?? [],
-        symbiotic_pairs: stardustData.symbiotic_pairs ?? [],
+        relatedCrystalIds: stardustData.relatedCrystalIds ?? [],
+        symbioticPairs: stardustData.symbioticPairs ?? [],
         createdAt: now,
         updatedAt: now,
       };
@@ -176,7 +177,7 @@ export const batchUpdateStardust = mutation({
   args: {
     updates: v.array(v.object({
       id: v.id("stardust"),
-      data: v.any(),
+      data: stardustUpdateValidator,
     })),
   },
   returns: v.array(v.id("stardust")),
@@ -342,21 +343,21 @@ export const createSymbioticPair = mutation({
     }
     
     // Add crystal to related crystals if not already present
-    const relatedCrystalIds = stardust.related_crystal_ids || [];
+    const relatedCrystalIds = stardust.relatedCrystalIds || [];
     if (!relatedCrystalIds.includes(args.crystalId)) {
       relatedCrystalIds.push(args.crystalId);
     }
     
     // Add symbiotic pair
-    const symbioticPairs = stardust.symbiotic_pairs || [];
+    const symbioticPairs = stardust.symbioticPairs || [];
     const pairId = `${args.stardustId}_${args.crystalId}`;
     if (!symbioticPairs.includes(pairId)) {
       symbioticPairs.push(pairId);
     }
     
     await ctx.db.patch(args.stardustId, {
-      related_crystal_ids: relatedCrystalIds,
-      symbiotic_pairs: symbioticPairs,
+      relatedCrystalIds: relatedCrystalIds,
+      symbioticPairs: symbioticPairs,
       updatedAt: Date.now(),
     });
     

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { actionSets } from '../data/bottomActions';
+import { actionSets, getRandomActionSet } from '../data/bottomActions';
 
 interface BottomBarActionsProps {
   onActionClick: (action: string) => void;
@@ -18,14 +18,14 @@ export const BottomBarActions: React.FC<BottomBarActionsProps> = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showScrollHint, setShowScrollHint] = useState(false);
   
-  // Use dynamic suggestions if available, otherwise use first action set (consistent)
+  // Use dynamic suggestions if available, otherwise rotate through action sets
   const actionsToDisplay = suggestions.length > 0 
     ? suggestions.map((text, index) => ({
         id: `suggestion-${index}`,
         text,
         action: text
       }))
-    : actionSets[0];
+    : getRandomActionSet();
 
   useEffect(() => {
     if (!isFullScreen && scrollRef.current) {

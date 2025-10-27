@@ -30,20 +30,6 @@ export function useMessageList(props: UseMessageListProps): Message[] {
   const { convexMessages, optimisticMessages, streamingContent, currentStreamingId, isStreaming } = props
 
   return React.useMemo(() => {
-    // TEMPORARY DEBUG LOGGING - Remove after fixing
-    console.log('[DEBUG:useMessageList] Convex messages:', convexMessages.length, convexMessages.map(m => ({
-      id: m._id,
-      role: m.role,
-      content: (m.content || '').slice(0, 40) + '...'
-    })))
-    console.log('[DEBUG:useMessageList] Optimistic messages:', optimisticMessages.length, optimisticMessages.map(m => ({
-      id: m.id,
-      role: m.role,
-      content: (m.content || '').slice(0, 40) + '...'
-    })))
-    console.log('[DEBUG:useMessageList] Current streaming ID:', currentStreamingId)
-    console.log('[DEBUG:useMessageList] Streaming content length:', streamingContent.length)
-    
     const list: Message[] = []
     const now = Date.now()
     
@@ -61,74 +47,58 @@ export function useMessageList(props: UseMessageListProps): Message[] {
       })
     })
     
-    // Helper: Check if message already exists in Convex
-    const isInConvex = (content: string, role: 'user' | 'assistant'): boolean => {
+    // Helper: Check if user message already exists in Convex (exact match only)
+    const isUserMessageInConvex = (content: string): boolean => {
       return convexMessages.some((msg: any) => {
-        // Match by role
-        if (msg.role !== role) return false
-        
-        // Match by content (exact or prefix for streaming messages)
-        const msgContent = msg.content || ''
-        if (role === 'assistant') {
-          // For streaming assistant messages, check if Convex has the complete version
-          // or if streaming content is a prefix of Convex content
-          return msgContent === content || msgContent.startsWith(content) || content.startsWith(msgContent)
-        } else {
-          // For user messages, require exact match
-          return msgContent === content
-        }
+        return msg.role === 'user' && msg.content === content
       })
     }
     
-    // 2. Add optimistic messages (only if not yet in Convex)
+    // 2. Add optimistic user messages (only if not yet in Convex)
     optimisticMessages.forEach((optMsg) => {
-      // Check if this is the currently streaming message
-      const isCurrentlyStreaming = optMsg.id === currentStreamingId
-      
-      // CRITICAL FIX: Even for streaming messages, check if Convex already has them
-      // This prevents duplicates when Convex confirms faster than cleanup runs
-      const shouldCheckDedup = !isCurrentlyStreaming || (optMsg.role === 'assistant' && !isStreaming)
-      
-      if (shouldCheckDedup) {
-        // Skip if this message is already in Convex
-        const inConvex = isInConvex(optMsg.content, optMsg.role)
-        console.log('[DEBUG:useMessageList] Checking optimistic message:', {
-          id: optMsg.id,
-          role: optMsg.role,
-          content: (optMsg.content || '').slice(0, 40) + '...',
-          isInConvex: inConvex,
-          isStreaming,
-          isCurrentlyStreaming
-        })
-        if (inConvex) {
-          console.log('[DEBUG:useMessageList] SKIPPING optimistic message (already in Convex)')
+      // Only add user messages optimistically (no assistant messages)
+      if (optMsg.role === 'user') {
+        // Skip if this user message is already in Convex
+        if (isUserMessageInConvex(optMsg.content)) {
           return
         }
-      } else {
-        console.log('[DEBUG:useMessageList] Currently streaming message:', optMsg.id)
+        
+        list.push({
+          id: optMsg.id,
+          content: optMsg.content,
+          role: optMsg.role,
+          timestamp: optMsg.timestamp.toString(),
+          chat_response: optMsg.content,
+          status: 'sent',
+          suggestions: [],
+          metadata: {}
+        })
       }
-      
-      // Use real-time streaming content if this is the streaming message
-      const content = isCurrentlyStreaming && streamingContent ? streamingContent : optMsg.content
-      
-      console.log('[DEBUG:useMessageList] ADDING optimistic message to list:', {
-        id: optMsg.id,
-        role: optMsg.role,
-        contentLength: content.length,
-        isStreaming: isStreaming && isCurrentlyStreaming
+    })
+    
+    // Helper: Check if streaming content matches a Convex assistant message
+    const hasMatchingConvexAssistant = (content: string): boolean => {
+      return convexMessages.some((msg: any) => {
+        return msg.role === 'assistant' && msg.content === content
       })
-      
+    }
+    
+    // 3. Add streaming content as assistant message if streaming OR if no matching Convex message yet
+    const shouldShowStreaming = (isStreaming && streamingContent) || 
+                               (!isStreaming && streamingContent && !hasMatchingConvexAssistant(streamingContent))
+    
+    if (shouldShowStreaming) {
       list.push({
-        id: optMsg.id,
-        content,
-        role: optMsg.role,
-        timestamp: optMsg.timestamp.toString(),
-        chat_response: content,
-        status: optMsg.role === 'user' ? 'sent' : (isStreaming && isCurrentlyStreaming ? 'typing' : 'delivered'),
+        id: 'streaming-assistant',
+        content: streamingContent,
+        role: 'assistant',
+        timestamp: now.toString(),
+        chat_response: streamingContent,
+        status: isStreaming ? 'typing' : 'delivered',
         suggestions: [],
         metadata: {}
       })
-    })
+    }
     
     // Sort by timestamp to ensure chronological order
     list.sort((a, b) => {
@@ -136,14 +106,6 @@ export function useMessageList(props: UseMessageListProps): Message[] {
       const timeB = typeof b.timestamp === 'string' ? parseInt(b.timestamp) : b.timestamp
       return timeA - timeB  // Ascending order (oldest first)
     })
-    
-    console.log('[DEBUG:useMessageList] FINAL sorted message list:', list.length, list.map(m => ({
-      id: m.id,
-      role: m.role,
-      content: (m.content || '').slice(0, 40) + '...',
-      status: m.status,
-      timestamp: m.timestamp
-    })))
     
     return list
   }, [convexMessages, optimisticMessages, streamingContent, currentStreamingId, isStreaming])

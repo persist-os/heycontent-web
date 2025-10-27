@@ -145,7 +145,7 @@ export const getStardustStatistics = query({
     // Count by domain
     const byDomain: Record<string, number> = {};
     allStardust.forEach(s => {
-      byDomain[s.suggested_domain] = (byDomain[s.suggested_domain] || 0) + 1;
+      byDomain[s.suggestedDomain] = (byDomain[s.suggestedDomain] || 0) + 1;
     });
     
     return {
@@ -207,7 +207,7 @@ export const getStardustByDomain = query({
     const allStardust = await ctx.db
       .query("stardust")
       .withIndex("by_domain", (q) => 
-        q.eq("userId", args.userId).eq("suggested_domain", args.domain))
+        q.eq("userId", args.userId).eq("suggestedDomain", args.domain))
       .collect();
     
     // Sort by confidence descending

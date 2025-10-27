@@ -80,33 +80,35 @@ export function useConversationState(
     return lastAssistantMessage?.suggestions || []
   })()
   
-  // Reactive cleanup: Clear optimistic messages when Convex confirms them
+  // Reactive cleanup: Clear optimistic messages and streaming content when Convex confirms them
   useEffect(() => {
-    // Don't cleanup while actively streaming, if no optimistic messages, or if already cleaned up
-    if (isStreaming || optimisticMessages.length === 0 || cleanupDoneRef.current) return
+    // Don't cleanup while actively streaming or if already cleaned up
+    if (isStreaming || cleanupDoneRef.current) return
     
-    // Check if ALL optimistic messages are now in Convex
-    const allConfirmed = optimisticMessages.every(optMsg => {
+    // Check if ALL optimistic user messages are now in Convex
+    const allUserMessagesConfirmed = optimisticMessages.length === 0 || optimisticMessages.every(optMsg => {
       return messages.some((convexMsg: any) => {
         // Role must match
         if (convexMsg.role !== optMsg.role) return false
         
-        // For assistant, use streaming content; for user, use original content
-        const content = optMsg.role === 'assistant' ? streamingContent : optMsg.content
+        // Use original content for matching
+        const content = optMsg.content
         if (!content) return false // Skip empty content
         
-        // Content matching (exact or prefix match for streaming)
+        // Content matching (exact match for user messages)
         const convexContent = convexMsg.content || ''
-        return convexContent === content || 
-               convexContent.startsWith(content) || 
-               content.startsWith(convexContent)
+        return convexContent === content
       })
     })
     
+    // Check if streaming content has a matching Convex assistant message
+    const streamingContentConfirmed = !streamingContent || messages.some((convexMsg: any) => {
+      return convexMsg.role === 'assistant' && convexMsg.content === streamingContent
+    })
+    
     // If all confirmed, clear optimistic state (only once per message cycle)
-    if (allConfirmed) {
+    if (allUserMessagesConfirmed && streamingContentConfirmed) {
       cleanupDoneRef.current = true  // Prevent cleanup from running multiple times
-      console.log('[useConversationState] All messages confirmed by Convex, cleaning up')
       
       // Batch all state updates together with startTransition to prevent multiple renders
       startTransition(() => {
@@ -143,12 +145,11 @@ export function useConversationState(
     // 1. Reset cleanup flag for new message cycle
     cleanupDoneRef.current = false
     
-    // 2. Generate sequential timestamps and IDs (single atomic update prevents flicker)
+    // 2. Generate timestamp and ID for user message only
     const baseTimestamp = Date.now()
     const userMsgId = `temp-user-${baseTimestamp}`
-    const assistantMsgId = `temp-assistant-${baseTimestamp}`
     
-    // 3. Add BOTH optimistic messages atomically (prevents reordering flicker)
+    // 3. Add ONLY user message optimistically (no ghost assistant message)
     setOptimisticMessages(prev => [
       ...prev,
       {
@@ -156,17 +157,11 @@ export function useConversationState(
         content,
         role: 'user',
         timestamp: baseTimestamp
-      },
-      {
-        id: assistantMsgId,
-        content: '',
-        role: 'assistant',
-        timestamp: baseTimestamp + 1  // Guaranteed to sort after user message
       }
     ])
     
-    // 4. Start streaming
-    setCurrentStreamingId(assistantMsgId)
+    // 4. Start streaming (no assistant message ID needed)
+    setCurrentStreamingId(null)
     setStreamingContent('')
     setIsStreaming(true)
     setError(undefined)
@@ -240,7 +235,6 @@ export function useConversationState(
         let currentConversationId = conversationId
         
         if (!currentConversationId) {
-          console.log('[useConversationState] Creating conversation for opening message')
           currentConversationId = await createConversation({
             userId,
             title: "New Conversation",
@@ -251,8 +245,6 @@ export function useConversationState(
           })
           setConversationId(currentConversationId)
         }
-
-        console.log('[useConversationState] Auto-adding opening message as AI message:', openingMessage.slice(0, 50) + '...')
         hasAutoSentRef.current = true
         
         // Add the opening message directly as an assistant message to the conversation
