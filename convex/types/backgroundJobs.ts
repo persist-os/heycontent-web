@@ -10,7 +10,6 @@ import { v } from "convex/values";
 // Job type validator - matches Python JobType enum
 export const jobTypeValidator = v.union(
   v.literal("shard_extraction"),
-  v.literal("crystal_formation"),
   v.literal("intelligence_analysis"),
   v.literal("chatgpt_import"),
   v.literal("context_enrichment_feedback"),
@@ -22,7 +21,9 @@ export const jobTypeValidator = v.union(
   v.literal("widget_execution"),
   v.literal("chat_post_message_tasks"),
   v.literal("conversation_title_generation"),
-  v.literal("chaos_generation")
+  v.literal("chaos_generation"),
+  v.literal("cognitive_field_formation"),
+  v.literal("crystal_formation")  // Added for backwards compatibility
 );
 
 // Job status validator - matches Python JobStatus enum
@@ -42,7 +43,7 @@ export const jobPriorityValidator = v.union(
 );
 
 // Type exports for TypeScript code
-export type JobType = "shard_extraction" | "crystal_formation" | "intelligence_analysis" | "chatgpt_import" | "context_enrichment_feedback" | "stardust_stream_detection" | "convergence_optimization" | "evolution_mab_reward" | "formation_mab_reward" | "stardust_promotion" | "widget_execution" | "chat_post_message_tasks" | "conversation_title_generation" | "chaos_generation";
+export type JobType = "shard_extraction" | "intelligence_analysis" | "chatgpt_import" | "context_enrichment_feedback" | "stardust_stream_detection" | "convergence_optimization" | "evolution_mab_reward" | "formation_mab_reward" | "stardust_promotion" | "widget_execution" | "chat_post_message_tasks" | "conversation_title_generation" | "chaos_generation" | "cognitive_field_formation" | "crystal_formation";
 export type JobStatus = "queued" | "running" | "completed" | "failed";
 export type JobPriority = "low" | "normal" | "high" | "urgent";
 
@@ -52,8 +53,12 @@ export const shardExtractionPayloadValidator = v.object({
   batch_size: v.number(),
 });
 
-export const crystalFormationPayloadValidator = v.object({
+export const cognitiveFieldFormationPayloadValidator = v.object({
   trigger_source: v.string(),
+  content: v.string(),
+  source_type: v.string(),
+  force_formation: v.boolean(),
+  max_fields: v.number(),
 });
 
 export const intelligenceAnalysisPayloadValidator = v.object({
@@ -98,8 +103,12 @@ export interface ShardExtractionPayload {
   batch_size: number;
 }
 
-export interface CrystalFormationPayload {
+export interface CognitiveFieldFormationPayload {
   trigger_source: string;
+  content: string;
+  source_type: string;
+  force_formation: boolean;
+  max_fields: number;
 }
 
 export interface IntelligenceAnalysisPayload {

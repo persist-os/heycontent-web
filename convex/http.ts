@@ -3045,6 +3045,23 @@ app.get("/api/context/count", async (c) => {
   }
 });
 
+/**
+ * Get context usage logs with time window filtering
+ * Used by fitness calculator for natural selection evolution
+ */
+app.post("/api/context-usage/get-usage-logs", async (c) => {
+  const ctx = c.env;
+  try {
+    const args = await c.req.json();
+    const result = await ctx.runQuery(api.contextUsageQueries.getUsageLogs, args);
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ContextUsage] Get usage logs error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+
 
 // === SHARD LIFECYCLE QUERY ENDPOINTS ===
 // Query endpoints for shard data (read-only operations)
@@ -4888,6 +4905,105 @@ app.post("/api/stardust/evolveLifecycle", async (c) => {
     return c.json({ 
       success: false,
       error: error.message || "Failed to evolve stardust lifecycle"
+    }, 500);
+  }
+});
+
+// Cognative Fields Routes
+app.post("/api/cognative/create", async (c) => {
+  try {
+    const body = await c.req.json();
+    const field = await c.env.runMutation(api.cognitiveMutations.createCognitiveField, body);
+    return c.json({ success: true, data: field });
+  } catch (error: any) {
+    console.error("[COGNATIVE_CREATE] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to create cognative field"
+    }, 500);
+  }
+});
+
+app.post("/api/cognative/mutate", async (c) => {
+  try {
+    const body = await c.req.json();
+    const field = await c.env.runMutation(api.cognitiveMutations.mutateCognitiveField, body);
+    return c.json({ success: true, data: field });
+  } catch (error: any) {
+    console.error("[COGNATIVE_MUTATE] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to mutate cognative field"
+    }, 500);
+  }
+});
+
+app.post("/api/cognative/delete", async (c) => {
+  try {
+    const body = await c.req.json();
+    const field = await c.env.runMutation(api.cognitiveMutations.deleteCognitiveField, body);
+    return c.json({ success: true, data: field });
+  } catch (error: any) {
+    console.error("[COGNATIVE_DELETE] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to delete cognative field"
+    }, 500);
+  }
+});
+
+app.post("/api/cognative/query", async (c) => {
+  try {
+    const body = await c.req.json();
+    const field = await c.env.runQuery(api.cognitiveQueries.queryCognitiveField, body);
+    return c.json({ success: true, data: field });
+  } catch (error: any) {
+    console.error("[COGNATIVE_GET] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to query cognative field"
+    }, 500);
+  }
+});
+
+app.post("/api/cognative/getAll", async (c) => {
+  try {
+    const body = await c.req.json();
+    const fields = await c.env.runQuery(api.cognitiveQueries.getAllCognitiveFields, body);
+    return c.json({ success: true, data: fields });
+  } catch (error: any) {
+    console.error("[COGNATIVE_GET_ALL] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get all cognative fields"
+    }, 500);
+  }
+});
+
+app.post("/api/cognative/count", async (c) => {
+  try {
+    const body = await c.req.json();
+    const count = await c.env.runQuery(api.cognitiveQueries.countCognitiveFields, body);
+    return c.json({ success: true, data: count });
+  } catch (error: any) {
+    console.error("[COGNATIVE_COUNT] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to count cognative fields"
+    }, 500);
+  }
+});
+
+app.post("/api/cognative/getNeedingOptimization", async (c) => {
+  try {
+    const body = await c.req.json();
+    const fields = await c.env.runQuery(api.cognitiveQueries.getCognitiveFieldsNeedingOptimization, body);
+    return c.json({ success: true, data: fields });
+  } catch (error: any) {
+    console.error("[COGNATIVE_GET_NEEDING_OPTIMIZATION] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get needing optimization cognative fields"
     }, 500);
   }
 });

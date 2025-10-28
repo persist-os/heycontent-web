@@ -19,6 +19,9 @@ import { stardustSchemaFields } from "./types/stardust";
 import { crystalCacheSchemaFields } from "./types/crystalCache";
 import { crystalFormationRunSchemaFields } from "./types/crystalFormationRun";
 
+// Cognitive Field System
+import { cognitiveFieldSchemaFields } from "./types/cognitiveField";
+
 // Projects
 import { projectSchemaFields } from "./types/project";
 import { projectFingerprintSchemaFields } from "./types/projectFingerprint";
@@ -387,6 +390,22 @@ export default defineSchema({
       .index("by_user", ["userId"])
       .index("by_status", ["status"])
       .index("by_user_status", ["userId", "status"]),
+
+    // === COGNITIVE FIELDS TABLE (REVOLUTIONARY REPLACEMENT FOR CRYSTALS) ===
+    // Cognitive Fields are dynamic cognitive state containers that serve as shared
+    // intelligence substrates between AIs and humans. Four-layer architecture:
+    // Layer 1: Core Field (Machine Substrate) - Pure vectors, metrics, node links
+    // Layer 2: Semantic Metadata (A2A Language) - Structured causal and relational meaning
+    // Layer 3: Human Transparency (Read-Only) - Natural language explanations with data pointers
+    // Layer 4: User Preferences (A2A Coordination) - How user wants things done and responses
+    cognitive_fields: defineTable(cognitiveFieldSchemaFields)
+      .index("by_user", ["userId"])
+      .index("by_status", ["userId", "status"])
+      .index("by_created", ["userId", "created_at"])
+      .index("by_updated", ["userId", "updated_at"])
+      .index("by_usage", ["userId", "usage_count"])
+      .index("by_optimization", ["userId", "optimization_strategy"])
+      .index("by_archived", ["userId", "archived"]),
 
   // ========================================
   // CRYSTAL INTELLIGENCE SYSTEM

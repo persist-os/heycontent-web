@@ -1,78 +1,93 @@
-# HeyContent
+# HeyContext
 
-A comprehensive AI-powered content creation and management platform that provides intelligent insights, social media integration, and content analysis tools.
+An AI-powered memory and intelligence platform that creates persistent, evolving AI understanding of users through sophisticated content processing and psychological insight generation.
 
 ## Project Overview
 
-HeyContent is a web application designed to assist creators and content managers by providing AI-powered analytics, insights, and management tools. It integrates with various social platforms (Gmail, YouTube, Instagram) and offers chat-based interaction with AI assistants.
+HeyContext solves the fundamental problem of AI assistants that don't remember or understand users across conversations. Unlike ChatGPT or Claude which offer static memory, HeyContext builds **dynamic, evolving AI understanding** that grows with every interaction.
 
 ### Core Functionality
 
-- **AI Chat Assistance**: Interactive chat interface with AI for content creation support
-- **Social Platform Integration**: Connect and manage Gmail, YouTube, and Instagram accounts
-- **Content Analytics**: Performance metrics and insights for your content
-- **Notes & Organization**: Create, manage, and organize content ideas and strategies
-- **AI Insights**: Automated analysis and suggestions for content improvement
+- **Thinking Lab**: Primary AI interface with persistent memory and context-aware conversations
+- **Crystal Intelligence**: Sophisticated psychological insight extraction and evolution system
+- **Living Projects**: Dynamic projects that evolve and develop AI-powered widgets
+- **Smart Notes**: AI-enhanced note-taking with cross-content linking
+- **Cosmic Intelligence**: Stars and crystals that evolve from user interactions
 
 ## Technical Architecture
 
 ### Frontend
 - **Framework**: Next.js 15 with App Router
-- **UI Components**: React 18 with TypeScript
-- **Styling**: Tailwind CSS with shadcn/ui components
-- **Theming**: next-themes with CSS variables for light/dark mode support
-- **Design System**: Semantic color tokens with HeyContent Yellow (#FFDF39) as primary accent
-- **Authentication**: Firebase Authentication
+- **UI Components**: React 18 with TypeScript, Radix UI primitives
+- **Styling**: Tailwind CSS with shadcn/ui design system
+- **Theming**: next-themes with semantic color tokens for light/dark mode
+- **Authentication**: Firebase Authentication with API key management
+- **State Management**: Zustand for client-side state
+- **Rich Text**: TipTap editor with markdown support
 
-### Backend
+### Backend Integration
 - **Database**: Convex (serverless backend with real-time sync)
-- **External API**: Integration with backend.hicontent.co for advanced processing
-- **Authentication**: Firebase for user authentication and session management
+- **AI Processing**: FastAPI backend with Google Gemini via Vertex AI
+- **Background Jobs**: Redis-backed job queue for async AI processing
+- **Vector Search**: Semantic content retrieval and matching
+- **Streaming**: Real-time AI response streaming
 
-## Project Structure (Note: May be out of date)
+## Project Structure
 
 ```
 heycontent-web/
-├── app/                        # Next.js app directory (App Router)
-│   ├── (auth)/                 # Authentication routes and components
-│   ├── (dashboard)/            # Main application dashboard
-│   │   ├── _components/        # Dashboard-specific components
-│   │   ├── ai-insights/        # AI analysis and insights
-│   │   ├── audience/           # Audience analytics
-│   │   ├── chat/               # AI chat interface
-│   │   ├── content/            # Content management
-│   │   ├── notes/              # Notes and ideas
-│   │   └── settings/           # User settings
-│   ├── api/                    # API routes
-│   │   ├── auth/               # Authentication endpoints
-│   │   ├── chat/               # Chat functionality
-│   │   ├── social/             # Social platform connectors
-│   │   └── notes/              # Notes management
+├── src/app/                    # Next.js app directory (App Router)
+│   ├── dashboard/              # Main application dashboard
+│   │   ├── thinking_lab/       # Primary AI interface with persistent memory
+│   │   ├── living-projects/    # Dynamic projects with AI widgets
+│   │   ├── notes/              # AI-enhanced note-taking system
+│   │   ├── crystals/           # Psychological insight visualization
+│   │   ├── briefing_room/       # Living intelligence command center
+│   │   └── _components/        # Dashboard-specific components
+│   ├── api/                    # Next.js API routes (backend integration)
+│   │   ├── chat/               # Chat and streaming endpoints
+│   │   ├── lab/                # Thinking lab API
+│   │   ├── projects/           # Project processing endpoints
+│   │   └── ambient_insights/   # Background AI processing
+│   ├── auth/                   # Authentication pages
 │   ├── lib/                    # Utility functions and helpers
 │   └── types/                  # TypeScript type definitions
 ├── convex/                     # Convex database functions and schema
-│   ├── schema.ts               # Database schema definition
+│   ├── schema.ts               # Comprehensive database schema (50+ tables)
 │   ├── auth.ts                 # Authentication utilities
-│   ├── chat.ts                 # Chat functionality
-│   ├── gmailMutations.ts       # Gmail integration - mutations
-│   ├── gmailQueries.ts         # Gmail integration - queries
-│   ├── youtubeMutations.ts     # YouTube integration - mutations
-│   ├── youtubeQueries.ts       # YouTube integration - queries
-│   └── instagramMutations.ts   # Instagram integration - mutations
+│   ├── chat.ts                 # Chat functionality and mutations
+│   ├── crystals.ts             # Crystal intelligence system
+│   ├── projects.ts             # Living projects and widgets
+│   ├── notes.ts                # Smart notes system
+│   └── types/                  # Type definitions for all entities
+├── src/components/             # Reusable UI components
 ├── public/                     # Static assets
 └── src/                        # Additional source files
 ```
 
 ## Database Schema
 
-The Convex database includes tables for:
-- **Users**: User profiles and authentication data
-- **Personas**: User-created content personas with descriptions and aspirations
-- **Chat**: Conversations between users and AI
-- **Notes**: User notes and content ideas
-- **Social Integration**: Tables for Gmail, YouTube, and Instagram data
-- **API Keys**: Management of API access
-- **Rate Limiting**: Controls for API usage
+The Convex database includes comprehensive tables for:
+
+### Core User Data
+- **Users**: User profiles, authentication, and preferences
+- **Conversations & Messages**: Chat history with individual message tracking
+- **Notes**: Smart notes with AI enhancement and cross-linking
+- **Projects**: Living projects with fingerprinting and evolution
+
+### AI Intelligence System
+- **Crystals & Crystal Shards**: Psychological insights and their components
+- **Stardust**: Project potential detection and evolution
+- **Cognitive Fields**: Advanced AI understanding containers
+- **Content Embeddings**: Vector search for semantic content retrieval
+- **Intelligence Jobs**: Background AI processing queue
+
+### Advanced Features
+- **Widgets & Widget Outputs**: AI-generated project tools and deliverables
+- **Briefing Events**: Autonomous AI briefing system
+- **Context Enrichment**: Multi-armed bandit learning for context strategies
+- **Formation Runs**: Crystal formation tracking and optimization
+- **Usage Events**: Comprehensive usage analytics and monitoring
 
 ## Authentication Flow
 
@@ -87,9 +102,9 @@ The Convex database includes tables for:
 ### Prerequisites
 
 - Node.js 18+ and npm/yarn
-- Firebase project
-- Convex account
-- Google Cloud Platform account (for Gmail and YouTube APIs)
+- Firebase project with Authentication enabled
+- Convex account and project
+- Backend API access (backend.hicontent.co)
 
 ### Setup Instructions
 
@@ -105,7 +120,14 @@ The Convex database includes tables for:
    ```
 
 3. **Environment configuration**
-   Set up environment variables. 
+   Create a `.env.local` file with:
+   ```env
+   NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
+   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_firebase_auth_domain
+   NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_firebase_project_id
+   NEXT_PUBLIC_CONVEX_URL=your_convex_url
+   NEXT_PUBLIC_BACKEND_URL=your_backend_url
+   ```
 
 4. **Start the development server**
    ```bash
@@ -114,29 +136,41 @@ The Convex database includes tables for:
 
 5. **Access the application**
    - Open [http://localhost:3000](http://localhost:3000) in your browser
+   - Sign up for an account to start building your AI memory
 
 ## API Integration
 
-The application interacts with:
-1. **Convex Database**: Direct integration for data storage and retrieval
-2. **External Backend**: API calls to backend.hicontent.co for specialized processing
-3. **Social Platforms**: Integration with Gmail, YouTube, and Instagram APIs
+The application integrates with multiple systems:
+
+1. **Convex Database**: Direct integration for real-time data storage and retrieval
+2. **Backend AI Processing**: FastAPI backend for sophisticated AI analysis and processing
+3. **Firebase Authentication**: User authentication and session management
+4. **Vector Search**: Semantic content retrieval and matching
+5. **Background Processing**: Redis-backed job queue for async AI operations
+
+### API Endpoints
+
+- `/api/chat/message` - Main chat interface with streaming responses
+- `/api/lab/message` - Thinking lab with enhanced context processing
+- `/api/projects/[projectId]/process-message` - Project-specific processing
+- `/api/ambient_insights` - Background AI insight generation
 
 ## Available Scripts
 
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run start` - Start production server
-- `node .next/standalone/server.js` - Start standalone server
+- `npm run lint` - Run ESLint
+- `npm run test` - Run Jest tests
 
 ## Design System & Theming
 
-HeyContent follows a strict theming approach using semantic CSS variables:
+HeyContext follows a comprehensive theming approach:
 
 ### Color Scheme
 - **Light Mode**: Clean white background (#FFFFFF)
-- **Dark Mode**: Deep charcoal background (#202020) - never navy blue
-- **Primary Accent**: HeyContent Yellow (#FFDF39)
+- **Dark Mode**: Deep charcoal background (#202020)
+- **Primary Accent**: HeyContext Yellow (#FFDF39)
 - **Secondary Colors**: Purple (#9046FF), Green (#45E290)
 
 ### Theme Implementation
@@ -146,62 +180,67 @@ HeyContent follows a strict theming approach using semantic CSS variables:
 - No hardcoded color values in component code
 - Proper accessibility support with ARIA labels and focus states
 
-### Theme Toggle
-Located in navigation areas, supports:
-- Light mode (sun icon)
-- Dark mode (moon icon)  
-- System preference (monitor icon)
-- Automatic hydration handling to prevent flash
+## Key Differentiators
 
-## Features
+### 1. **Evolving AI Memory**
+Unlike static AI assistants, HeyContext builds understanding that grows and connects insights across time.
 
-### Smart Notes with Enhanced Content Linking
+### 2. **Psychological Intelligence**
+The crystal system extracts deep psychological insights from user interactions, creating a unique personality profile.
 
-Smart Notes now support linking to content across multiple platforms using a unified prefixed ID system:
+### 3. **Living Projects**
+Projects that evolve and develop AI-powered tools based on user behavior and preferences.
 
-#### Content Linking Format
+### 4. **Privacy-First Architecture**
+User data stays private with secure processing and no external model training.
 
-- **Smart Notes**: `@[note:convexId]@`
-- **YouTube Videos**: `@[youtube:videoId]@`
-- **Instagram Posts**: `@[instagram:postId]@`
+### 5. **Sophisticated Content Processing**
+Multi-stage AI pipeline with intelligent batching, clustering, and evolution tracking.
 
-#### How to Use Content Linking
+## Target Users
 
-1. **In the Smart Notes Editor**:
-   - Type `@` to open the content selector
-   - Search for any content (notes, YouTube videos, Instagram posts)
-   - Select content to insert a link
+HeyContext is designed for knowledge workers, researchers, writers, developers, designers, entrepreneurs, and students who:
+- Work with ideas that build over time
+- Are tired of re-explaining context to AI assistants
+- Want AI that truly understands their work and thinking patterns
+- Need tools that remember and connect insights across conversations
 
-2. **Content Types Supported**:
-   - **Smart Notes**: Your existing notes with titles, tags, and analysis
-   - **YouTube Videos**: Videos with titles, descriptions, statistics, and thumbnails
-   - **Instagram Posts**: Posts with captions, media, insights, and engagement metrics
+## Key Features
 
-3. **Visual Indicators**:
-   - Each content type has platform-specific icons and styling
-   - YouTube content shows red accents and video statistics
-   - Instagram content shows pink accents and engagement metrics
-   - Smart notes show standard styling with tags and analysis
+### 🧠 Thinking Lab
+The primary AI interface where users interact with AI that has persistent memory:
+- **Context-Aware Conversations**: AI remembers previous conversations and connects insights
+- **Progressive Thinking**: Multi-step AI reasoning with real-time status updates
+- **File Attachments**: Support for document and image processing
+- **Notepad Integration**: Seamless integration with note-taking system
+- **Project Context**: Conversations can be linked to specific projects
 
-#### Technical Implementation
+### 🔮 Crystal Intelligence System
+Sophisticated AI system that extracts and evolves psychological insights:
+- **Content Processing**: Intelligent batching and analysis of user interactions
+- **Shard Extraction**: AI analyzes content for psychological insights
+- **Crystal Formation**: ML clustering + LLM synthesis creates coherent personality patterns
+- **Intelligent Evolution**: System updates existing crystals instead of creating duplicates
+- **Vector Matching**: Semantic similarity prevents insight duplication
 
-The system uses:
-- **Prefixed IDs**: `type:id` format for content identification
-- **Convex Queries**: Efficient data fetching with platform-specific queries
-- **Unified Selector**: Single interface for all content types
-- **Rich Rendering**: Platform-specific display components
+### 🌌 Living Projects
+Dynamic projects that evolve and develop AI-powered tools:
+- **Project Fingerprinting**: AI discovers project characteristics through conversation
+- **Constellation View**: Visual mapping of project relationships and connections
+- **AI-Generated Widgets**: Personalized tools and insights for each project
+- **Evolution Tracking**: Projects learn and adapt based on user interactions
 
-#### Database Schema
+### 📝 Smart Notes
+Advanced note-taking system with AI integration:
+- **Rich Text Editor**: TipTap-based editor with markdown support
+- **AI Assistance**: Inline AI help for writing and refinement
+- **Content Linking**: Cross-reference notes, conversations, and projects
+- **Folder Organization**: Hierarchical organization with AI-powered suggestions
+- **Project Integration**: Notes can be linked to living projects
 
-No changes to the existing Convex schema were required. The system leverages:
-- Existing `notes` table for smart notes
-- Existing `youtubeVideos` table for YouTube content  
-- Existing `instagramPosts` table for Instagram content
-- New queries in `notes.ts` for content aggregation
-
-#### Benefits
-
-- **Cross-Platform References**: Link any content type in your notes
-- **Rich Context**: See statistics, insights, and metadata for linked content
-- **Seamless Integration**: Works with existing note-taking workflow
-- **Future-Proof**: Easy to extend for additional platforms
+### 🌟 Cosmic Intelligence
+Visualization and management of AI-generated insights:
+- **Crystal Dashboard**: View and manage psychological insights
+- **Formation Status**: Track crystal formation progress and eligibility
+- **System Debugging**: Comprehensive debugging tools for AI processing
+- **Deletion Tools**: Safe cleanup of unwanted insights

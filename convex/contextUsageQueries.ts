@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
-import { outputTypeValidator } from "./types/contextUsage";
+import { outputTypeValidator, getUsageLogsRequestValidator } from "./types/contextUsage";
 
 /**
  * Get all context usage logs for a user
@@ -20,6 +20,52 @@ export const getUserContextUsage = query({
     return logs;
   },
 });
+
+/**
+ * Get context usage logs with time window filtering
+ * Used by fitness calculator for natural selection evolution
+ */
+export const getUsageLogs = query({
+  args: getUsageLogsRequestValidator,
+  handler: async (ctx, { userId, startTime, endTime, limit, outputType }) => {
+    try {
+      let query = ctx.db
+        .query("context_usage_logs")
+        .withIndex("by_user_and_time", (q) => q.eq("userId", userId));
+      
+      // Apply time filtering if provided
+      if (startTime !== undefined) {
+        query = query.filter((q) => q.gte(q.field("timestamp"), startTime));
+      }
+      if (endTime !== undefined) {
+        query = query.filter((q) => q.lte(q.field("timestamp"), endTime));
+      }
+      
+      // Apply output type filtering if provided
+      if (outputType !== undefined) {
+        query = query.filter((q) => q.eq(q.field("outputType"), outputType));
+      }
+      
+      const logs = await query
+        .order("desc")
+        .take(limit || 50);
+      
+      return {
+        success: true,
+        data: logs,
+        message: `Retrieved ${logs.length} usage logs`
+      };
+    } catch (error) {
+      console.error("[getUsageLogs] Error:", error);
+      return {
+        success: false,
+        error: `Failed to get usage logs: ${error}`,
+        data: []
+      };
+    }
+  },
+});
+
 
 /**
  * Get context usage logs by output

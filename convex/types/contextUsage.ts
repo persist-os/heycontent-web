@@ -62,3 +62,22 @@ export const contextUsageSchemaFields = {
 
 export const contextUsageValidator = v.object(contextUsageSchemaFields);
 
+// =========================================================================
+// 🌟 REQUEST/RESPONSE VALIDATORS
+// =========================================================================
+
+export const getUsageLogsRequestValidator = v.object({
+  userId: v.string(),
+  startTime: v.optional(v.number()),
+  endTime: v.optional(v.number()),
+  limit: v.optional(v.number()),
+  outputType: v.optional(outputTypeValidator),
+});
+
+export const getUsageLogsResponseValidator = v.object({
+  success: v.boolean(),
+  data: v.optional(v.array(contextUsageValidator)),
+  error: v.optional(v.string()),
+  message: v.optional(v.string()),
+});
+
