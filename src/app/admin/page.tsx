@@ -37,6 +37,7 @@ import {
 import { FeedbackDetailModal } from './components/FeedbackDetailModal';
 import { FeedbackFilters } from './components/FeedbackFilters';
 import { DashboardNav } from '../dashboard/_components/dashboard-nav';
+import { IntelligenceTestPanel } from './components/IntelligenceTestPanel';
 
 const roleColors = {
   user: 'bg-gray-100 text-gray-800',
@@ -169,7 +170,7 @@ export default function AdminPage() {
   const filteredAndSortedUsers = useMemo(() => {
     if (!users || !referralData) return [];
     
-    let filtered = users.filter((user: any) => {
+    const filtered = users.filter((user: any) => {
       // Search filter
       const matchesSearch = user.name.toLowerCase().includes(userSearch.toLowerCase()) ||
                            user.email.toLowerCase().includes(userSearch.toLowerCase());
@@ -400,6 +401,8 @@ export default function AdminPage() {
               {isSuperAdmin ? 'Super Admin' : 'Admin'}
             </Badge>
           </div>
+
+          <IntelligenceTestPanel />
 
           {/* Convergence Admin Quick Access */}
           <Card className="border-blue-200 dark:border-blue-900 bg-gradient-to-br from-blue-50 to-background dark:from-blue-950/20 dark:to-background">

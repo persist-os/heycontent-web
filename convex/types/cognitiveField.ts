@@ -42,12 +42,12 @@ export const fieldCoherenceValidator = v.optional(v.string());
 
 // MAB INTEGRATION: Field optimization parameters
 export const mabArmValidator = v.object({
-  arm_id: v.string(),
+  armId: v.string(),
   parameters: v.any(), // Flexible parameters for different optimization strategies
   alpha: v.number(),
   beta: v.number(),
-  last_selected: v.optional(v.number()),
-  reward_history: v.optional(v.array(v.number()))
+  lastSelected: v.optional(v.number()),
+  rewardHistory: v.optional(v.array(v.number()))
 });
 
 // ============================================================================
@@ -55,31 +55,31 @@ export const mabArmValidator = v.object({
 // ============================================================================
 
 export const fieldNodeValidator = v.object({
-  node_id: v.string(),
-  coherence: v.number(),
-  entropy: v.number(),
-  temporal_drift: v.number(),
-  embedding_vector: v.optional(v.array(v.number())),
-  last_updated: v.number()
+  nodeId: v.string(),
+  coherence: v.optional(v.number()),
+  entropy: v.optional(v.number()),
+  temporalDrift: v.optional(v.number()),
+  embeddingVector: v.optional(v.array(v.number())),
+  lastUpdated: v.optional(v.number())
 });
 
 export const fieldCrosslinkValidator = v.object({
-  source_node: v.string(),
-  target_node: v.string(),
-  weight: v.number(),
-  relationship_type: v.string(),
-  confidence: v.number()
+  sourceNode: v.string(),
+  targetNode: v.string(),
+  weight: v.optional(v.number()),
+  relationshipType: v.optional(v.string()),
+  confidence: v.optional(v.number())
 });
 
 export const coreFieldValidator = v.object({
   field_id: v.string(),
   user_id: v.string(),
-  vector_space: v.any(), // Embedding manifold representation
-  field_nodes: v.array(fieldNodeValidator),
-  crosslinks: v.array(fieldCrosslinkValidator),
-  temporal_vector: v.array(v.number()),
-  update_signature: v.string(), // SHA256 hash of shard sources
-  last_processed: v.number()
+  vectorSpace: v.optional(v.any()), // Embedding manifold representation
+  fieldNodes: v.optional(v.array(fieldNodeValidator)),
+  crosslinks: v.optional(v.array(fieldCrosslinkValidator)),
+  temporalVector: v.optional(v.array(v.number())),
+  updateSignature: v.optional(v.string()), // SHA256 hash of shard sources
+  lastProcessed: v.optional(v.number())
 });
 
 // ============================================================================
@@ -87,31 +87,31 @@ export const coreFieldValidator = v.object({
 // ============================================================================
 
 export const abstractDimensionValidator = v.object({
-  dimension_name: v.string(),
-  value: v.number(),
-  confidence: v.number()
+  dimensionName: v.string(),
+  value: v.optional(v.number()),
+  confidence: v.optional(v.number())
 });
 
 export const crossDomainPatternValidator = v.object({
-  pattern_name: v.string(),
-  strength: v.number(),
-  domains: v.array(v.string())
+  patternName: v.string(),
+  strength: v.optional(v.number()),
+  domains: v.optional(v.array(v.string()))
 });
 
 export const chaosInterpretationValidator = v.object({
   hypothesis: v.string(),
-  confidence: v.number(),
-  variance_source: v.string(),
-  alternative_explanations: v.optional(v.array(v.string()))
+  confidence: v.optional(v.number()),
+  varianceSource: v.optional(v.string()),
+  alternativeExplanations: v.optional(v.array(v.string()))
 });
 
 export const semanticMetadataValidator = v.object({
-  abstract_dimensions: v.array(abstractDimensionValidator),
-  cross_domain_patterns: v.array(crossDomainPatternValidator),
-  chaos_interpretations: v.array(chaosInterpretationValidator),
-  meta_inference_summary: v.string(),
-  confidence_profile: v.any(), // Flexible confidence structure
-  divergence_log: v.array(v.string())
+  abstractDimensions: v.optional(v.array(abstractDimensionValidator)),
+  crossDomainPatterns: v.optional(v.array(crossDomainPatternValidator)),
+  chaosInterpretations: v.optional(v.array(chaosInterpretationValidator)),
+  metaInferenceSummary: v.optional(v.string()),
+  confidenceProfile: v.optional(v.any()), // Flexible confidence structure
+  divergenceLog: v.optional(v.array(v.string()))
 });
 
 // ============================================================================
@@ -119,18 +119,18 @@ export const semanticMetadataValidator = v.object({
 // ============================================================================
 
 export const traceLinkValidator = v.object({
-  source_type: v.string(), // "shard", "node", "pattern"
-  source_id: v.string(),
-  contribution_weight: v.number()
+  sourceType: v.string(), // "shard", "node", "pattern"
+  sourceId: v.string(),
+  contributionWeight: v.number()
 });
 
 export const transparencyLayerValidator = v.object({
-  human_label: v.string(),
-  interpretive_summary: v.string(),
-  trace_links: v.array(traceLinkValidator),
-  temporal_note: v.string(),
-  stability_score: v.number(),
-  ethical_disclosure: v.string()
+  humanLabel: v.string(),
+  interpretiveSummary: v.optional(v.string()),
+  traceLinks: v.optional(v.array(traceLinkValidator)),
+  temporalNote: v.optional(v.string()),
+  stabilityScore: v.optional(v.number()),
+  ethicalDisclosure: v.optional(v.string())
 });
 
 // ============================================================================
@@ -138,25 +138,25 @@ export const transparencyLayerValidator = v.object({
 // ============================================================================
 
 export const communicationPreferenceValidator = v.object({
-  tone_preference: v.string(), // "formal", "casual", "encouraging", "direct"
-  detail_level: v.string(), // "minimal", "moderate", "detailed"
-  response_style: v.string(), // "conversational", "structured", "bullet_points"
-  feedback_frequency: v.string() // "immediate", "periodic", "on_request"
+  tonePreference: v.string(), // "formal", "casual", "encouraging", "direct"
+  detailLevel: v.string(), // "minimal", "moderate", "detailed"
+  responseStyle: v.string(), // "conversational", "structured", "bullet_points"
+  feedbackFrequency: v.string() // "immediate", "periodic", "on_request"
 });
 
 export const interactionPreferenceValidator = v.object({
-  preferred_triggers: v.array(v.string()),
-  avoided_topics: v.array(v.string()),
-  collaboration_style: v.string(), // "autonomous", "collaborative", "guided"
-  decision_making_style: v.string() // "analytical", "intuitive", "balanced"
+  preferredTriggers: v.array(v.string()),
+  avoidedTopics: v.array(v.string()),
+  collaborationStyle: v.string(), // "autonomous", "collaborative", "guided"
+  decisionMakingStyle: v.string() // "analytical", "intuitive", "balanced"
 });
 
 export const userPreferencesValidator = v.object({
-  communication_preferences: communicationPreferenceValidator,
-  interaction_preferences: interactionPreferenceValidator,
-  learning_preferences: v.any(), // Flexible learning style preferences
-  adaptation_rate: v.number(), // How quickly preferences should evolve
-  last_preference_update: v.number()
+  communicationPreferences: communicationPreferenceValidator,
+  interactionPreferences: interactionPreferenceValidator,
+  learningPreferences: v.any(), // Flexible learning style preferences
+  adaptationRate: v.number(), // How quickly preferences should evolve
+  lastPreferenceUpdate: v.number()
 });
 
 // ============================================================================
@@ -170,35 +170,35 @@ export const cognitiveFieldSchemaFields = {
   
   // Field status and lifecycle
   status: v.optional(fieldStatusValidator),
-  created_at: v.number(),
-  updated_at: v.number(),
-  last_evolution: v.optional(v.number()),
+  createdAt: v.optional(v.number()),
+  updatedAt: v.optional(v.number()),
+  lastEvolution: v.optional(v.number()),
   
   // Source tracking
-  source_shard_ids: v.array(v.string()),
-  source_stardust_ids: v.array(v.string()),
+  sourceShardIds: v.optional(v.array(v.string())),
+  sourceStardustIds: v.optional(v.array(v.string())),
   
   // The four layers
-  core_field: coreFieldValidator,
-  semantic_metadata: semanticMetadataValidator,
-  transparency_layer: transparencyLayerValidator,
-  user_preferences: userPreferencesValidator,
+  coreField: v.optional(coreFieldValidator),
+  semanticMetadata: v.optional(semanticMetadataValidator),
+  transparencyLayer: v.optional(transparencyLayerValidator),
+  userPreferences: v.optional(userPreferencesValidator),
   
   // MAB integration
-  mab_arms: v.array(mabArmValidator),
-  optimization_strategy: v.optional(v.string()),
+  mabArms: v.optional(v.array(mabArmValidator)),
+  optimizationStrategy: v.optional(v.string()),
   
   // Cross-field relationships
-  related_fields: v.optional(v.array(v.string())),
-  conflicting_fields: v.optional(v.array(v.string())),
+  relatedFields: v.optional(v.array(v.string())),
+  conflictingFields: v.optional(v.array(v.string())),
   
   // Utilization tracking
-  usage_count: v.optional(v.number()),
-  last_used: v.optional(v.number()),
+  usageCount: v.optional(v.number()),
+  lastUsed: v.optional(v.number()),
   
   // Archival fields
   archived: v.optional(v.boolean()),
-  archived_at: v.optional(v.number())
+  archivedAt: v.optional(v.number())
 };
 
 // Wrapped validator for mutations/queries
@@ -206,19 +206,19 @@ export const cognitiveFieldValidator = v.object(cognitiveFieldSchemaFields);
 
 export const cognitiveFieldUpdateValidator = v.object({
   status: v.optional(fieldStatusValidator),
-  core_field: v.optional(coreFieldValidator),
-  semantic_metadata: v.optional(semanticMetadataValidator),
-  transparency_layer: v.optional(transparencyLayerValidator),
-  user_preferences: v.optional(userPreferencesValidator),
-  mab_arms: v.optional(v.array(mabArmValidator)),
-  optimization_strategy: v.optional(v.string()),
-  related_fields: v.optional(v.array(v.string())),
-  conflicting_fields: v.optional(v.array(v.string())),
-  usage_count: v.optional(v.union(v.number(), v.literal("INCREMENT"))),
-  last_used: v.optional(v.number()),
-  updated_at: v.optional(v.number()),
+  coreField: v.optional(coreFieldValidator),
+  semanticMetadata: v.optional(semanticMetadataValidator),
+  transparencyLayer: v.optional(transparencyLayerValidator),
+  userPreferences: v.optional(userPreferencesValidator),
+  mabArms: v.optional(v.array(mabArmValidator)),
+  optimizationStrategy: v.optional(v.string()),
+  relatedFields: v.optional(v.array(v.string())),
+  conflictingFields: v.optional(v.array(v.string())),
+  usageCount: v.optional(v.union(v.number(), v.literal("INCREMENT"))),
+  lastUsed: v.optional(v.number()),
+  updatedAt: v.optional(v.number()),
   archived: v.optional(v.boolean()),
-  archived_at: v.optional(v.number())
+  archivedAt: v.optional(v.number())
 });
 
 // ============================================================================
@@ -229,41 +229,41 @@ export type FieldStatus = "active" | "evolving" | "stable" | "archived";
 export type FieldLayer = "core" | "semantic" | "transparency" | "preferences";
 
 export type FieldNode = {
-  node_id: string;
+  nodeId: string;
   coherence: number;
   entropy: number;
-  temporal_drift: number;
-  embedding_vector?: number[];
-  last_updated: number;
+  temporalDrift: number;
+  embeddingVector?: number[];
+  lastUpdated: number;
 };
 
 export type FieldCrosslink = {
-  source_node: string;
-  target_node: string;
+  sourceNode: string;
+  targetNode: string;
   weight: number;
-  relationship_type: string;
+  relationshipType: string;
   confidence: number;
 };
 
 export type CoreField = {
   field_id: string;
   user_id: string;
-  vector_space: any;
-  field_nodes: FieldNode[];
+  vectorSpace: any;
+  fieldNodes: FieldNode[];
   crosslinks: FieldCrosslink[];
-  temporal_vector: number[];
-  update_signature: string;
-  last_processed: number;
+  temporalVector: number[];
+  updateSignature: string;
+  lastProcessed: number;
 };
 
 export type AbstractDimension = {
-  dimension_name: string;
+  dimensionName: string;
   value: number;
   confidence: number;
 };
 
 export type CrossDomainPattern = {
-  pattern_name: string;
+  patternName: string;
   strength: number;
   domains: string[];
 };
@@ -271,84 +271,84 @@ export type CrossDomainPattern = {
 export type ChaosInterpretation = {
   hypothesis: string;
   confidence: number;
-  variance_source: string;
-  alternative_explanations?: string[];
+  varianceSource: string;
+  alternativeExplanations?: string[];
 };
 
 export type SemanticMetadata = {
-  abstract_dimensions: AbstractDimension[];
-  cross_domain_patterns: CrossDomainPattern[];
-  chaos_interpretations: ChaosInterpretation[];
-  meta_inference_summary: string;
-  confidence_profile: any;
-  divergence_log: string[];
+  abstractDimensions: AbstractDimension[];
+  crossDomainPatterns: CrossDomainPattern[];
+  chaosInterpretations: ChaosInterpretation[];
+  metaInferenceSummary: string;
+  confidenceProfile: any;
+  divergenceLog: string[];
 };
 
 export type TraceLink = {
-  source_type: string;
-  source_id: string;
-  contribution_weight: number;
+  sourceType: string;
+  sourceId: string;
+  contributionWeight: number;
 };
 
 export type TransparencyLayer = {
-  human_label: string;
-  interpretive_summary: string;
-  trace_links: TraceLink[];
-  temporal_note: string;
-  stability_score: number;
-  ethical_disclosure: string;
+  humanLabel: string;
+  interpretiveSummary: string;
+  traceLinks: TraceLink[];
+  temporalNote: string;
+  stabilityScore: number;
+  ethicalDisclosure: string;
 };
 
 export type CommunicationPreference = {
-  tone_preference: string;
-  detail_level: string;
-  response_style: string;
-  feedback_frequency: string;
+  tonePreference: string;
+  detailLevel: string;
+  responseStyle: string;
+  feedbackFrequency: string;
 };
 
 export type InteractionPreference = {
-  preferred_triggers: string[];
-  avoided_topics: string[];
-  collaboration_style: string;
-  decision_making_style: string;
+  preferredTriggers: string[];
+  avoidedTopics: string[];
+  collaborationStyle: string;
+  decisionMakingStyle: string;
 };
 
 export type UserPreferences = {
-  communication_preferences: CommunicationPreference;
-  interaction_preferences: InteractionPreference;
-  learning_preferences: any;
-  adaptation_rate: number;
-  last_preference_update: number;
+  communicationPreferences: CommunicationPreference;
+  interactionPreferences: InteractionPreference;
+  learningPreferences: any;
+  adaptationRate: number;
+  lastPreferenceUpdate: number;
 };
 
 export type MABArm = {
-  arm_id: string;
+  armId: string;
   parameters: any;
   alpha: number;
   beta: number;
-  last_selected?: number;
-  reward_history?: number[];
+  lastSelected?: number;
+  rewardHistory?: number[];
 };
 
 export interface CognitiveField {
   userId: string;
   field_id: string;
   status?: FieldStatus;
-  created_at: number;
-  updated_at: number;
-  last_evolution?: number;
-  source_shard_ids: string[];
-  source_stardust_ids: string[];
-  core_field: CoreField;
-  semantic_metadata: SemanticMetadata;
-  transparency_layer: TransparencyLayer;
-  user_preferences: UserPreferences;
-  mab_arms: MABArm[];
-  optimization_strategy?: string;
-  related_fields?: string[];
-  conflicting_fields?: string[];
-  usage_count?: number;
-  last_used?: number;
+  createdAt: number;
+  updatedAt: number;
+  lastEvolution?: number;
+  sourceShardIds: string[];
+  sourceStardustIds: string[];
+  coreField: CoreField;
+  semanticMetadata: SemanticMetadata;
+  transparencyLayer: TransparencyLayer;
+  userPreferences: UserPreferences;
+  mabArms: MABArm[];
+  optimizationStrategy?: string;
+  relatedFields?: string[];
+  conflictingFields?: string[];
+  usageCount?: number;
+  lastUsed?: number;
   archived?: boolean;
-  archived_at?: number;
+  archivedAt?: number;
 }
