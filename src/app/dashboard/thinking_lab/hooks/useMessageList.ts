@@ -76,6 +76,32 @@ export function useMessageList(props: UseMessageListProps): Message[] {
       }
     })
     
+    // Step 2.5: Add thinking indicator when streaming started but no content yet
+    if (isStreaming && !streamingContent) {
+      // Only show if there's a user message (optimistic or Convex)
+      const hasUserMessage = list.some(msg => msg.role === 'user')
+      if (hasUserMessage) {
+        // Get timestamp of last user message to position thinking right after it
+        const lastUserMessage = [...list].reverse().find(msg => msg.role === 'user')
+        const thinkingTimestamp = lastUserMessage 
+          ? (typeof lastUserMessage.timestamp === 'string' 
+              ? parseInt(lastUserMessage.timestamp) 
+              : lastUserMessage.timestamp) + 1
+          : now
+        
+        list.push({
+          id: 'thinking-indicator',
+          content: '', // Empty content triggers thinking indicator in MessageBubble
+          role: 'assistant',
+          timestamp: thinkingTimestamp.toString(),
+          chat_response: '',
+          status: 'typing',
+          suggestions: [],
+          metadata: {}
+        })
+      }
+    }
+    
     // Helper: Check if streaming content matches a Convex assistant message
     const hasMatchingConvexAssistant = (content: string): boolean => {
       return convexMessages.some((msg: any) => {

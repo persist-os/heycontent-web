@@ -199,7 +199,7 @@ app.post("/api/chat/updateMessageSuggestions", async (c) => {
   const ctx = c.env;
   const { messageId, suggestions } = await c.req.json();
   
-  const result = await ctx.runMutation(api.chatMutations.updateMessageSuggestions, {
+  const result = await ctx.runMutation(api.messageMutations.updateMessageSuggestions, {
     messageId,
     suggestions
   });

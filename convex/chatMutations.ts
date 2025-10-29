@@ -234,18 +234,3 @@ handler: async (ctx, args) => {
     return { success: true, starred: !conversation.starred };
 },
 });
-
-// Add suggestions to a message in the messages table
-export const updateMessageSuggestions = mutation({
-args: {
-    messageId: v.id("messages"),
-    suggestions: v.array(v.string())
-},
-handler: async (ctx, args) => {
-    await ctx.db.patch(args.messageId, {
-    suggestions: args.suggestions,
-    updatedAt: Date.now(),
-    });
-    return { success: true };
-},
-});
