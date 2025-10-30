@@ -378,7 +378,7 @@ export const searchByEmbedding = internalAction({
         userId: args.userId,
         contentTypes: args.contentTypes
       });
-      
+
       // Calculate similarities with provided embedding
       const similarities = userEmbeddings.map((doc) => {
         try {
@@ -392,28 +392,28 @@ export const searchByEmbedding = internalAction({
               score: 0,
             };
           }
-          
+
           // Cosine similarity calculation
           let dotProduct = 0;
           let normA = 0;
           let normB = 0;
-          
+
           for (let i = 0; i < args.embedding.length; i++) {
             const queryVal = args.embedding[i];
             const docVal = doc.embedding[i];
-            
+
             if (typeof queryVal !== 'number' || typeof docVal !== 'number' || isNaN(queryVal) || isNaN(docVal)) {
               continue;
             }
-            
+
             dotProduct += queryVal * docVal;
             normA += queryVal * queryVal;
             normB += docVal * docVal;
           }
-          
+
           const score = dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
           const finalScore = isNaN(score) || !isFinite(score) ? 0 : score;
-          
+
           return {
             contentId: doc.contentId,
             contentType: doc.contentType,
@@ -439,17 +439,68 @@ export const searchByEmbedding = internalAction({
       const filteredSimilarities = similarities
         .filter(item => item.score >= minThreshold)
         .sort((a, b) => b.score - a.score);
-      
+
       // Return top results up to limit
       const limit = args.limit || 50;
       const results = filteredSimilarities.slice(0, limit);
-      
+
       console.log(`✅ [SEARCH BY EMBEDDING] Found ${results.length} results above threshold ${minThreshold}`);
       return results;
-      
+
     } catch (error) {
       console.error('❌ [SEARCH BY EMBEDDING] Error:', error);
       return [];
+    }
+  },
+});
+
+/**
+ * Migration action: Update all existing "crystal" content types to "cognitive_field"
+ * This ensures backwards compatibility while transitioning to the new type
+ */
+export const migrateCrystalContentTypes = action({
+  args: {},
+  handler: async (ctx) => {
+    try {
+      console.log('🔄 [MIGRATION] Starting migration of crystal content types to cognitive_field');
+
+      // Get all embeddings with contentType "crystal"
+      const crystalEmbeddings = await ctx.db
+        .query("contentEmbeddings")
+        .filter((q) => q.eq(q.field("contentType"), "crystal"))
+        .collect();
+
+      console.log(`🔄 [MIGRATION] Found ${crystalEmbeddings.length} crystal embeddings to migrate`);
+
+      let migratedCount = 0;
+
+      // Update each embedding to use "cognitive_field" instead of "crystal"
+      for (const embedding of crystalEmbeddings) {
+        try {
+          await ctx.db.patch(embedding._id, {
+            contentType: "cognitive_field"
+          });
+          migratedCount++;
+        } catch (error) {
+          console.error(`❌ [MIGRATION] Failed to migrate embedding ${embedding._id}:`, error);
+        }
+      }
+
+      console.log(`✅ [MIGRATION] Successfully migrated ${migratedCount}/${crystalEmbeddings.length} crystal embeddings to cognitive_field`);
+      return {
+        success: true,
+        migratedCount,
+        totalFound: crystalEmbeddings.length
+      };
+
+    } catch (error) {
+      console.error('❌ [MIGRATION] Error during crystal content type migration:', error);
+      return {
+        success: false,
+        error: error.message,
+        migratedCount: 0,
+        totalFound: 0
+      };
     }
   },
 });

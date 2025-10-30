@@ -190,14 +190,14 @@ export function useUnifiedSearch({ enabled }: UseUnifiedSearchProps) {
         userId,
         query: searchQuery,
         limit: 20,
-        contentTypes: ['note', 'crystal', 'conversation', 'shard', 'stardust'],
+        contentTypes: ['note', 'cognitive_field', 'conversation', 'shard', 'stardust'],
         minSimilarity: 0.3
       });
 
       // Transform results to SearchResult format
       return results.map((result: any) => ({
         id: result.contentId,
-        type: result.contentType as 'note' | 'crystal' | 'shard' | 'conversation',
+        type: result.contentType as 'note' | 'cognitive_field' | 'shard' | 'conversation',
         title: result.title || 'Untitled',
         content: result.content?.substring(0, 150) || '',
         score: result.score,

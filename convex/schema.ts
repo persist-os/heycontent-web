@@ -74,6 +74,7 @@ import { rateLimitSchemaFields } from "./types/rateLimit";
 import { usageEventSchemaFields } from "./types/usageEvent";
 import { feedbackSchemaFields } from "./types/feedback";
 import { referralSchemaFields } from "./types/referral";
+import { agnoRunEventSchemaFields } from "./types/agnoRunEvent";
 
 // Social Features
 import { friendshipSchemaFields } from "./types/friendship";
@@ -188,6 +189,13 @@ export default defineSchema({
   .index("by_timestamp", ["timestamp"])
   .index("by_endpoint", ["endpoint"])
   .index("by_status", ["status"]),
+
+  // Agno Telemetry
+  agnoRunEvents: defineTable(agnoRunEventSchemaFields)
+  .index("by_run", ["runId"])
+  .index("by_agent_time", ["agentId", "createdAt"])
+  .index("by_user_time", ["userId", "createdAt"])
+  .index("by_agentType_time", ["agentType", "createdAt"]),
 
 
 
@@ -631,4 +639,3 @@ export default defineSchema({
     .index("by_score", ["system_name", "score"])
     .index("by_run_id", ["optimization_run_id"]),
 });
-

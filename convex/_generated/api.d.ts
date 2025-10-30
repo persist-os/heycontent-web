@@ -13,6 +13,7 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as agnoRunEvents from "../agnoRunEvents.js";
 import type * as ambientInsights from "../ambientInsights.js";
 import type * as apiKeys from "../apiKeys.js";
 import type * as apiKeysMutations from "../apiKeysMutations.js";
@@ -108,6 +109,7 @@ import type * as subscriptionPlansQueries from "../subscriptionPlansQueries.js";
 import type * as subscriptionQueries from "../subscriptionQueries.js";
 import type * as translationMutations from "../translationMutations.js";
 import type * as translationQueries from "../translationQueries.js";
+import type * as types_agnoRunEvent from "../types/agnoRunEvent.js";
 import type * as types_ambientInsight from "../types/ambientInsight.js";
 import type * as types_apiKey from "../types/apiKey.js";
 import type * as types_backgroundJob from "../types/backgroundJob.js";
@@ -187,6 +189,7 @@ import type * as widgetsQueries from "../widgetsQueries.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  agnoRunEvents: typeof agnoRunEvents;
   ambientInsights: typeof ambientInsights;
   apiKeys: typeof apiKeys;
   apiKeysMutations: typeof apiKeysMutations;
@@ -282,6 +285,7 @@ declare const fullApi: ApiFromModules<{
   subscriptionQueries: typeof subscriptionQueries;
   translationMutations: typeof translationMutations;
   translationQueries: typeof translationQueries;
+  "types/agnoRunEvent": typeof types_agnoRunEvent;
   "types/ambientInsight": typeof types_ambientInsight;
   "types/apiKey": typeof types_apiKey;
   "types/backgroundJob": typeof types_backgroundJob;

@@ -44,6 +44,7 @@ app.use('*', async (c, next) => {
   else if (path.includes('/feedback')) domain = 'feedback';
   else if (path.includes('/backgroundJobs') || path.includes('/background')) domain = 'background_jobs';
   else if (path.includes('/briefing')) domain = 'briefing';
+  else if (path.includes('/agnoRunEvents')) domain = 'agno_run_events';
   
   console.log(`🔵 [${domain.toUpperCase()}] ${method} ${path} - START`);
   
@@ -359,7 +360,16 @@ app.get("/api/users/:id/conversations", async (c) => {
   return c.json(result);
 });
 
-// ⚠️ DEPRECATED: Gmail integration endpoints removed - use crystal system for email insights
+// Agno Run Events
+app.post("/api/agnoRunEvents/recordAgnoRunEvents", async (c) => {
+  const ctx = c.env;
+  const { events } = await c.req.json();
+  const result = await ctx.runMutation(api.agnoRunEvents.recordAgnoRunEvents, {
+    events,
+  });
+  return c.json(result);
+});
+
 
 // Save insights for a user
 app.post("/api/users/:id/save_insights", async (c) => {
@@ -1322,37 +1332,6 @@ app.post("/api/feedback/content", async (c) => {
   }
 });
 
-/**
- * GET /api/feedback/entity
- * Get feedback for specific entity (message, note, or widget)
- * Query params: entityType, entityId
- */
-app.get("/api/feedback/entity", async (c) => {
-  const ctx = c.env;
-  const { entityType, entityId } = c.req.query();
-  
-  if (!entityType || !entityId) {
-    return c.json({
-      success: false,
-      error: "entityType and entityId are required"
-    }, 400);
-  }
-  
-  try {
-    const feedback = await ctx.runQuery(api.feedback.getFeedbackByEntity, {
-      entityType,
-      entityId,
-    });
-    return c.json({ success: true, data: feedback });
-  } catch (error: any) {
-    console.error("Failed to get entity feedback:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to get entity feedback",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
 
 /**
  * GET /api/feedback/stats/:entityType
@@ -2393,7 +2372,7 @@ app.post("/api/vectorSearch/action", async (c) => {
     const results = await c.env.runAction(api.vectorSearch.hybridSearchContent, {
       userId,
       query,
-      contentTypes: contentTypes || ["note", "crystal", "conversation", "shard", "stardust"],
+      contentTypes: contentTypes || ["note", "cognitive_field", "conversation", "shard", "stardust"],
       limit: limit || 10,
       minSimilarity: threshold || 0.35
     });
@@ -2465,7 +2444,7 @@ app.post("/api/vectorSearch/similaritySearch", async (c) => {
     const results = await c.env.runAction(api.vectorSearch.hybridSearchContent, {
       userId,
       query,
-      contentTypes: contentTypes || ["note", "crystal", "conversation", "shard", "stardust"],
+      contentTypes: contentTypes || ["note", "cognitive_field", "conversation", "shard", "stardust"],
       limit: limit || 10,
       minSimilarity: threshold || 0.35
     });
@@ -2588,7 +2567,7 @@ app.post("/api/vectorSearch/searchByEmbedding", async (c) => {
     const result = await c.env.runAction(internal.vectorSearch.searchByEmbedding, {
       userId,
       embedding,
-      contentTypes: contentTypes || ["note", "crystal", "conversation", "shard", "stardust"],
+      contentTypes: contentTypes || ["note", "cognitive_field", "conversation", "shard", "stardust"],
       limit: limit || 10,
       threshold: threshold || 0.35
     });
@@ -2609,6 +2588,20 @@ app.post("/api/vectorSearch/searchByEmbedding", async (c) => {
 
 
 
+
+// POST /api/vectorSearch/migrateCrystalContentTypes - Migrate crystal content types to cognitive_field
+app.post("/api/vectorSearch/migrateCrystalContentTypes", async (c) => {
+  const ctx = c.env;
+
+  try {
+    console.log('🔄 [HTTP] Starting crystal content type migration');
+    const result = await ctx.runAction(api.vectorSearch.migrateCrystalContentTypes, {});
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Failed to migrate crystal content types:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
 
 // Cache management endpoints
 app.get("/api/cache/stats/:userId", async (c) => {

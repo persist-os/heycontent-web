@@ -84,7 +84,7 @@ export const vectorSearchCrystals = action({
                 userId,
                 query,
                 limit: limit || 10,
-                contentTypes: ["crystal"], // Only search crystal content
+                contentTypes: ["cognitive_field"], // Only search cognitive field content
                 minSimilarity: minSimilarity || 0.35,
             });
             
