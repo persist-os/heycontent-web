@@ -70,6 +70,8 @@ export const stardustSchemaFields = {
   createdAt: v.optional(v.any()),
   updatedAt: v.optional(v.any()),
   lastEvolution: v.optional(v.any()),
+  lastReferenced: v.optional(v.any()),
+  referenceCount: v.optional(v.any()),
   
   // Symbiotic relationships
   relatedCrystalIds: v.optional(v.any()),

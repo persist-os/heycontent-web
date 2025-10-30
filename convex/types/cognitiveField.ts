@@ -166,7 +166,7 @@ export const userPreferencesValidator = v.object({
 export const cognitiveFieldSchemaFields = {
   // Core identification
   userId: v.string(),
-  field_id: v.string(),
+  fieldId: v.string(),
   
   // Field status and lifecycle
   status: v.optional(fieldStatusValidator),

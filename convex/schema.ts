@@ -401,10 +401,10 @@ export default defineSchema({
     cognitive_fields: defineTable(cognitiveFieldSchemaFields)
       .index("by_user", ["userId"])
       .index("by_status", ["userId", "status"])
-      .index("by_created", ["userId", "created_at"])
-      .index("by_updated", ["userId", "updated_at"])
-      .index("by_usage", ["userId", "usage_count"])
-      .index("by_optimization", ["userId", "optimization_strategy"])
+      .index("by_created", ["userId", "createdAt"])
+      .index("by_updated", ["userId", "updatedAt"])
+      .index("by_usage", ["userId", "usageCount"])
+      .index("by_optimization", ["userId", "optimizationStrategy"])
       .index("by_archived", ["userId", "archived"]),
 
   // ========================================

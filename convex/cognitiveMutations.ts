@@ -95,7 +95,10 @@ export const mutateCognitiveField = mutation({
           last_evolution: data?.last_evolution,
         };
         
-        const fieldId = await ctx.db.insert("cognitive_fields", fieldData);
+        const fieldId = await ctx.db.insert("cognitive_fields", {
+          ...fieldData,
+          fieldId: data?.fieldId || "",
+        });
         
         // Step 4: Update source shards to reference this field (atomic batch)
         await Promise.all(
@@ -111,8 +114,8 @@ export const mutateCognitiveField = mutation({
         await Promise.all(
           sourceStardustIds.map(async (stardustId) => {
             await ctx.db.patch(stardustId as Id<"stardust">, {
-              // Note: stardust table doesn't have last_referenced field
-              // Keep reference count for audit if field exists
+				lastReferenced: createTime,
+				referenceCount: "INCREMENT" as any,
             });
           })
         );
@@ -130,7 +133,7 @@ export const mutateCognitiveField = mutation({
         }
         
         // Step 2: Handle source shard additions/removals
-        let updatedShardIds = existingField.source_shard_ids || [];
+        let updatedShardIds = existingField.sourceShardIds || [];
         if (addSourceShardIds && addSourceShardIds.length > 0) {
           // Validate new shards exist
           await Promise.all(
@@ -148,7 +151,7 @@ export const mutateCognitiveField = mutation({
         }
         
         // Step 3: Handle source stardust additions/removals
-        let updatedStardustIds = existingField.source_stardust_ids || [];
+        let updatedStardustIds = existingField.sourceStardustIds || [];
         if (addSourceStardustIds && addSourceStardustIds.length > 0) {
           // Validate new stardust exist
           await Promise.all(
@@ -220,9 +223,9 @@ export const mutateCognitiveField = mutation({
           const deleteTime = Date.now();
           
           // Release shard references
-          if (fieldToDelete.source_shard_ids && fieldToDelete.source_shard_ids.length > 0) {
+          if (fieldToDelete.sourceShardIds && fieldToDelete.sourceShardIds.length > 0) {
             await Promise.all(
-              fieldToDelete.source_shard_ids.map(async (shardId) => {
+              fieldToDelete.sourceShardIds.map(async (shardId) => {
                 await ctx.db.patch(shardId as Id<"crystal_shards">, {
                   last_referenced: deleteTime,
                   reference_count: "INCREMENT" as any, // Keep reference count for audit
@@ -232,9 +235,9 @@ export const mutateCognitiveField = mutation({
           }
           
           // Release stardust references
-          if (fieldToDelete.source_stardust_ids && fieldToDelete.source_stardust_ids.length > 0) {
+          if (fieldToDelete.sourceStardustIds && fieldToDelete.sourceStardustIds.length > 0) {
             await Promise.all(
-              fieldToDelete.source_stardust_ids.map(async (stardustId) => {
+              fieldToDelete.sourceStardustIds.map(async (stardustId) => {
                 await ctx.db.patch(stardustId as Id<"stardust">, {
                   // Note: stardust table doesn't have last_referenced field
                   // Keep reference count for audit if field exists
@@ -297,34 +300,34 @@ export const createCognitiveField = mutation({
     // Create cognitive field
     const fieldId = await ctx.db.insert("cognitive_fields", {
       userId: args.userId,
-      field_id: args.fieldId,
+      fieldId: args.fieldId,
       status: "active",
-      created_at: createTime,
-      updated_at: createTime,
-      source_shard_ids: args.sourceShardIds,
-      source_stardust_ids: args.sourceStardustIds,
-      core_field: args.coreField,
-      semantic_metadata: args.semanticMetadata,
-      transparency_layer: args.transparencyLayer,
-      user_preferences: args.userPreferences || {
-        communication_preferences: {
-          tone_preference: "casual",
-          detail_level: "moderate", 
-          response_style: "conversational",
-          feedback_frequency: "periodic"
+      createdAt: createTime,
+      updatedAt: createTime,
+      sourceShardIds: args.sourceShardIds,
+      sourceStardustIds: args.sourceStardustIds,
+      coreField: args.coreField,
+      semanticMetadata: args.semanticMetadata,
+      transparencyLayer: args.transparencyLayer,
+      userPreferences: args.userPreferences || {
+        communicationPreferences: {
+          tonePreference: "casual",
+          detailLevel: "moderate", 
+          responseStyle: "conversational",
+          feedbackFrequency: "periodic"
         },
-        interaction_preferences: {
-          preferred_triggers: [],
-          avoided_topics: [],
-          collaboration_style: "collaborative",
-          decision_making_style: "balanced"
+        interactionPreferences: {
+          preferredTriggers: [],
+          avoidedTopics: [],
+          collaborationStyle: "collaborative",
+          decisionMakingStyle: "balanced"
         },
-        learning_preferences: {},
-        adaptation_rate: 0.1,
-        last_preference_update: createTime
+        learningPreferences: {},
+        adaptationRate: 0.1,
+        lastPreferenceUpdate: createTime
       },
-      mab_arms: args.mabArms || [],
-      optimization_strategy: args.optimizationStrategy,
+      mabArms: args.mabArms || [],
+      optimizationStrategy: args.optimizationStrategy,
     });
     
     // Update source references
@@ -368,9 +371,9 @@ export const deleteCognitiveField = mutation({
       const deleteTime = Date.now();
       
       // Release shard references
-      if (field.source_shard_ids && field.source_shard_ids.length > 0) {
+      if (field.sourceShardIds && field.sourceShardIds.length > 0) {
         await Promise.all(
-          field.source_shard_ids.map(async (shardId) => {
+          field.sourceShardIds.map(async (shardId) => {
             await ctx.db.patch(shardId as Id<"crystal_shards">, {
               last_referenced: deleteTime,
               reference_count: "INCREMENT" as any,
@@ -380,9 +383,9 @@ export const deleteCognitiveField = mutation({
       }
       
       // Release stardust references
-      if (field.source_stardust_ids && field.source_stardust_ids.length > 0) {
+      if (field.sourceStardustIds && field.sourceStardustIds.length > 0) {
         await Promise.all(
-          field.source_stardust_ids.map(async (stardustId) => {
+          field.sourceStardustIds.map(async (stardustId) => {
             await ctx.db.patch(stardustId as Id<"stardust">, {
               // Note: stardust table doesn't have last_referenced field
               // Keep reference count for audit if field exists

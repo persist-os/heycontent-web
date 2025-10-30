@@ -127,8 +127,8 @@ export const getCognitiveFieldsNeedingOptimization = query({
         .withIndex("by_user", (q) => q.eq("userId", userId))
         .filter((q) => {
           return q.or(
-            q.eq(q.field("usage_count"), 0), // Never used
-            q.lt(q.field("last_used"), cutoffTime), // Not used in 30 days
+            q.eq(q.field("usageCount"), 0), // Never used
+            q.lt(q.field("lastUsed"), cutoffTime), // Not used in 30 days
             q.eq(q.field("status"), "evolving") // Still evolving
           );
         });
