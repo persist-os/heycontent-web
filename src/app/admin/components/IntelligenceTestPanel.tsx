@@ -17,6 +17,15 @@ type TestRunResult = {
   error?: string;
 };
 
+type CognitiveFieldResult = {
+  success: boolean;
+  field_id?: string;
+  message?: string;
+  shards_used?: number;
+  stardust_used?: number;
+  error?: string;
+};
+
 const DEFAULT_CONTENT =
   'Admin test content: validate shard, stardust, and cognitive field creation.';
 
@@ -25,6 +34,8 @@ export function IntelligenceTestPanel() {
   const [content, setContent] = useState(DEFAULT_CONTENT);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<TestRunResult | null>(null);
+  const [cognitiveFieldLoading, setCognitiveFieldLoading] = useState(false);
+  const [cognitiveFieldResult, setCognitiveFieldResult] = useState<CognitiveFieldResult | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -105,6 +116,68 @@ export function IntelligenceTestPanel() {
     }
   };
 
+  const handleGenerateCognitiveField = async () => {
+    setCognitiveFieldLoading(true);
+    setCognitiveFieldResult(null);
+
+    try {
+      let resolvedUserId = userId;
+
+      if (!resolvedUserId) {
+        try {
+          resolvedUserId = await getCurrentUserId();
+          setUserId(resolvedUserId);
+        } catch (idError: any) {
+          setCognitiveFieldResult({
+            success: false,
+            error:
+              idError?.message ||
+              'Failed to determine current user. Please ensure you are signed in.',
+          });
+          return;
+        }
+      }
+
+      const response = await fetchWithApiKey(
+        '/api/admin/intelligence/generate-cognitive-field',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            user_id: resolvedUserId,
+          }),
+        }
+      );
+
+      let data: CognitiveFieldResult;
+      try {
+        data = (await response.json()) as CognitiveFieldResult;
+      } catch (parseError) {
+        data = {
+          success: false,
+          error: response.ok
+            ? 'Unexpected response format'
+            : `Request failed with status ${response.status}`,
+        };
+      }
+
+      setCognitiveFieldResult(
+        response.ok
+          ? data
+          : {
+              success: false,
+              error: data?.error || `Request failed with status ${response.status}`,
+            }
+      );
+    } catch (error: any) {
+      setCognitiveFieldResult({
+        success: false,
+        error: error?.message || 'Failed to generate cognitive field',
+      });
+    } finally {
+      setCognitiveFieldLoading(false);
+    }
+  };
+
   return (
     <Card className="border-primary/30 shadow-sm">
       <CardHeader>
@@ -131,9 +204,49 @@ export function IntelligenceTestPanel() {
           />
         </div>
 
-        <Button onClick={handleRun} disabled={loading}>
-          {loading ? 'Running orchestrator...' : 'Trigger Orchestrator'}
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handleRun} disabled={loading || cognitiveFieldLoading}>
+            {loading ? 'Running orchestrator...' : 'Trigger Orchestrator'}
+          </Button>
+
+          <Button
+            onClick={handleGenerateCognitiveField}
+            disabled={loading || cognitiveFieldLoading}
+            variant="outline"
+          >
+            {cognitiveFieldLoading ? 'Generating field...' : 'Generate 4-Layer Field'}
+          </Button>
+        </div>
+
+        {cognitiveFieldResult && (
+          <div className="space-y-2 rounded-md border border-blue-500/30 bg-blue-50 p-3 text-sm dark:bg-blue-950/20">
+            <div className="flex items-center gap-2">
+              <Badge variant={cognitiveFieldResult.success ? 'default' : 'destructive'}>
+                {cognitiveFieldResult.success ? 'Field Created' : 'Failed'}
+              </Badge>
+              <span className="font-medium">
+                {cognitiveFieldResult.message || cognitiveFieldResult.error || 'No message'}
+              </span>
+            </div>
+
+            {cognitiveFieldResult.success && cognitiveFieldResult.field_id && (
+              <div className="space-y-1">
+                <Label className="text-xs">Cognitive Field ID</Label>
+                <div className="break-all rounded bg-white p-2 font-mono text-xs dark:bg-gray-900">
+                  {cognitiveFieldResult.field_id}
+                </div>
+              </div>
+            )}
+
+            {cognitiveFieldResult.shards_used !== undefined &&
+              cognitiveFieldResult.stardust_used !== undefined && (
+                <div className="flex gap-4 text-xs text-muted-foreground">
+                  <span>Shards used: {cognitiveFieldResult.shards_used}</span>
+                  <span>Stardust used: {cognitiveFieldResult.stardust_used}</span>
+                </div>
+              )}
+          </div>
+        )}
 
         {result && (
           <div className="space-y-2 rounded-md border p-3 text-sm">
