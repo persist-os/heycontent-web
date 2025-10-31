@@ -53,6 +53,7 @@ import type * as crystalContextOptimized from "../crystalContextOptimized.js";
 import type * as crystalMutations from "../crystalMutations.js";
 import type * as crystalQueries from "../crystalQueries.js";
 import type * as executionPlanMutations from "../executionPlanMutations.js";
+import type * as executionPlanQueries from "../executionPlanQueries.js";
 import type * as feedback from "../feedback.js";
 import type * as fingerprintSignalsMutations from "../fingerprintSignalsMutations.js";
 import type * as fingerprintSignalsQueries from "../fingerprintSignalsQueries.js";
@@ -231,6 +232,7 @@ declare const fullApi: ApiFromModules<{
   crystalMutations: typeof crystalMutations;
   crystalQueries: typeof crystalQueries;
   executionPlanMutations: typeof executionPlanMutations;
+  executionPlanQueries: typeof executionPlanQueries;
   feedback: typeof feedback;
   fingerprintSignalsMutations: typeof fingerprintSignalsMutations;
   fingerprintSignalsQueries: typeof fingerprintSignalsQueries;

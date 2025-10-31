@@ -1565,6 +1565,24 @@ app.post("/api/executionPlans/getLatest", async (c) => {
   }
 });
 
+// Update plan status
+app.post("/api/executionPlans/updateStatus", async (c) => {
+  const ctx = c.env;
+  const { planId, status, result } = await c.req.json();
+  
+  try {
+    const updated = await ctx.runMutation(api.executionPlanMutations.updatePlanStatus, { planId, status, result });
+    return c.json({ success: updated });
+  } catch (error: any) {
+    console.error("[EXECUTION_PLAN] Update status failed:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to update status",
+      message: error.message 
+    }, 500);
+  }
+});
+
 // ============================================================================
 // PROJECTS
 // ============================================================================

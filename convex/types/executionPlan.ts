@@ -30,19 +30,23 @@ export const executionPlanSchemaFields = {
   createdAt: v.number(),
   updatedAt: v.number(),
   status: v.string(), // "pending", "executing", "completed", "failed"
+  result: v.optional(v.any()), // Execution result (completed steps, failed steps, outputs)
 };
 
 // Execution plan validator (wrapped for mutations)
 export const executionPlanValidator = v.object(executionPlanSchemaFields);
 
-// Create validator (excludes auto-generated fields)
+// Create validator (excludes auto-generated fields: planId, createdAt, updatedAt, status)
 export const executionPlanCreateValidator = v.object({
-  planId: v.string(),
   userId: v.string(),
   projectId: v.id("projects"),
   steps: v.array(planStepValidator),
   totalEstimatedDurationMinutes: v.number(),
   cognitiveContext: v.optional(v.string()),
+  // NO planId - Convex generates _id
+  // NO createdAt - Convex generates
+  // NO updatedAt - Convex generates
+  // NO status - Convex generates
 });
 
 // Type exports
@@ -67,5 +71,6 @@ export type ExecutionPlan = {
   createdAt: number;
   updatedAt: number;
   status: string;
+  result?: any;
 };
 

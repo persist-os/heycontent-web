@@ -18,13 +18,16 @@ import {
   LayoutGrid,
   List,
   FileText,
-  Plus
+  Plus,
+  Play
 } from 'lucide-react'
 import { ConstellationTransition } from '@/app/dashboard/living-projects/components/widgets/ConstellationTransition'
 import { DeleteProjectModal } from './DeleteProjectModal'
+import { ProjectExecutionPlanModal } from './ProjectExecutionPlanModal'
 import { WidgetConfig } from '@/types/projectWidgets'
 import { useWidgetGeneration } from './hooks/useWidgetGeneration'
 import { useProjectActions } from './hooks/useProjectActions'
+import { useProjectExecution } from './hooks/useProjectExecution'
 import { UnifiedDetailsPanel, usePanelInstances } from './widgets/unified-panel/UnifiedDetailsPanel'
 import { WidgetGenerationLoader } from './widgets/WidgetGenerationLoader'
 import { ConstellationCanvas } from './widgets/ConstellationCanvas'
@@ -51,6 +54,7 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showProjectContentPanel, setShowProjectContentPanel] = useState(false)
+  const [showExecutionPlanModal, setShowExecutionPlanModal] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>("constellation")
   const menuRef = useRef<HTMLDivElement>(null)
   
@@ -107,6 +111,16 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   })
 
   const { editFingerprint, goBack, deleteProjectAction } = useProjectActions(projectId)
+
+  // Project execution
+  const { 
+    isGeneratingPlan,
+    isExecuting,
+    currentPlan, 
+    generatePlan,
+    executePlan,
+    clearPlan 
+  } = useProjectExecution(projectId as Id<"projects">)
 
   // Handle content opening with mutual exclusion (closes widget panel)
   const handleContentOpen = (id: string, type: string) => {
@@ -210,6 +224,53 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
     setViewMode(mode)
   }
 
+  // Handle Run Project button click
+  const handleRunProject = async () => {
+    if (!project || !projectWidgets?.widgets?.length) {
+      return
+    }
+
+    try {
+      await generatePlan({
+        projectId: projectId,
+        projectName: (project as any).name || 'Unnamed Project',
+        projectDomain: (project as any).projectDomain || 'general',
+        saveToDb: true
+      })
+      setShowExecutionPlanModal(true)
+    } catch (error) {
+      console.error('Failed to generate execution plan:', error)
+    }
+  }
+
+  // Handle Execute Plan
+  const handleExecutePlan = async () => {
+    if (!currentPlan) return
+
+    try {
+      await executePlan({
+        projectId: projectId,
+        planId: currentPlan.planId,
+        steps: currentPlan.steps,
+        executeImmediately: true
+      })
+      
+      // Close modal after triggering execution
+      setShowExecutionPlanModal(false)
+      
+      // Note: Progress tracking would be implemented in Phase 5
+      console.log('Plan execution triggered successfully')
+    } catch (error) {
+      console.error('Failed to execute plan:', error)
+    }
+  }
+
+  // Handle close plan modal
+  const handleClosePlanModal = () => {
+    setShowExecutionPlanModal(false)
+    clearPlan()
+  }
+
   if (!project) {
     return (
       <div className="min-h-screen bg-background">
@@ -285,6 +346,19 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
 
               {/* Actions */}
               <div className="flex items-center gap-3">
+                {/* Run Project Button - Primary Action */}
+                {projectWidgets && projectWidgets.widgets && projectWidgets.widgets.length > 0 && (
+                  <button
+                    onClick={handleRunProject}
+                    disabled={isGeneratingPlan}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Generate and execute project plan"
+                  >
+                    <Play className="w-4 h-4" />
+                    <T context="button.run_project">{isGeneratingPlan ? 'Generating Plan...' : 'Run Project'}</T>
+                  </button>
+                )}
+
                 {/* Add Content Button - Prominent */}
                 <button
                   onClick={() => setShowProjectContentPanel(true)}
@@ -490,6 +564,14 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
         onConfirm={handleDeleteProject}
         projectName={project?.name || 'Project'}
         isDeleting={isDeleting}
+      />
+      
+      <ProjectExecutionPlanModal
+        isOpen={showExecutionPlanModal}
+        onClose={handleClosePlanModal}
+        onExecute={handleExecutePlan}
+        plan={currentPlan}
+        isExecuting={isExecuting}
       />
 
       {/* Unified Details Panel - handles widgets, notes, conversations, crystals, shards */}
