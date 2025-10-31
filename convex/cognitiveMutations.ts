@@ -103,20 +103,26 @@ export const mutateCognitiveField = mutation({
         // Step 4: Update source shards to reference this field (atomic batch)
         await Promise.all(
           sourceShardIds.map(async (shardId) => {
-            await ctx.db.patch(shardId as Id<"crystal_shards">, {
-              last_referenced: createTime,
-              reference_count: "INCREMENT" as any,
-            });
+            const shard = await ctx.db.get(shardId as Id<"crystal_shards">);
+            if (shard) {
+              await ctx.db.patch(shardId as Id<"crystal_shards">, {
+                last_referenced: createTime,
+                reference_count: (shard.reference_count || 0) + 1,
+              });
+            }
           })
         );
         
         // Step 5: Update source stardust to reference this field (atomic batch)
         await Promise.all(
           sourceStardustIds.map(async (stardustId) => {
-            await ctx.db.patch(stardustId as Id<"stardust">, {
-				lastReferenced: createTime,
-				referenceCount: "INCREMENT" as any,
-            });
+            const stardust = await ctx.db.get(stardustId as Id<"stardust">);
+            if (stardust) {
+              await ctx.db.patch(stardustId as Id<"stardust">, {
+                lastReferenced: createTime,
+                referenceCount: (stardust.referenceCount || 0) + 1,
+              });
+            }
           })
         );
         
@@ -188,10 +194,13 @@ export const mutateCognitiveField = mutation({
         if (addSourceShardIds && addSourceShardIds.length > 0) {
           await Promise.all(
             addSourceShardIds.map(async (shardId) => {
-              await ctx.db.patch(shardId as Id<"crystal_shards">, {
-                last_referenced: updateTime,
-                reference_count: "INCREMENT" as any,
-              });
+              const shard = await ctx.db.get(shardId as Id<"crystal_shards">);
+              if (shard) {
+                await ctx.db.patch(shardId as Id<"crystal_shards">, {
+                  last_referenced: updateTime,
+                  reference_count: (shard.reference_count || 0) + 1,
+                });
+              }
             })
           );
         }
@@ -226,10 +235,13 @@ export const mutateCognitiveField = mutation({
           if (fieldToDelete.sourceShardIds && fieldToDelete.sourceShardIds.length > 0) {
             await Promise.all(
               fieldToDelete.sourceShardIds.map(async (shardId) => {
-                await ctx.db.patch(shardId as Id<"crystal_shards">, {
-                  last_referenced: deleteTime,
-                  reference_count: "INCREMENT" as any, // Keep reference count for audit
-                });
+                const shard = await ctx.db.get(shardId as Id<"crystal_shards">);
+                if (shard) {
+                  await ctx.db.patch(shardId as Id<"crystal_shards">, {
+                    last_referenced: deleteTime,
+                    reference_count: Math.max(0, (shard.reference_count || 0) - 1), // Decrement on delete
+                  });
+                }
               })
             );
           }
@@ -333,16 +345,22 @@ export const createCognitiveField = mutation({
     // Update source references
     await Promise.all([
       ...args.sourceShardIds.map(async (shardId) => {
-        await ctx.db.patch(shardId as Id<"crystal_shards">, {
-          last_referenced: createTime,
-          reference_count: "INCREMENT" as any,
-        });
+        const shard = await ctx.db.get(shardId as Id<"crystal_shards">);
+        if (shard) {
+          await ctx.db.patch(shardId as Id<"crystal_shards">, {
+            last_referenced: createTime,
+            reference_count: (shard.reference_count || 0) + 1,
+          });
+        }
       }),
       ...args.sourceStardustIds.map(async (stardustId) => {
-        await ctx.db.patch(stardustId as Id<"stardust">, {
-          // Note: stardust table doesn't have last_referenced field
-          // Keep reference count for audit if field exists
-        });
+        const stardust = await ctx.db.get(stardustId as Id<"stardust">);
+        if (stardust) {
+          await ctx.db.patch(stardustId as Id<"stardust">, {
+            lastReferenced: createTime,
+            referenceCount: (stardust.referenceCount || 0) + 1,
+          });
+        }
       })
     ]);
     
@@ -374,10 +392,13 @@ export const deleteCognitiveField = mutation({
       if (field.sourceShardIds && field.sourceShardIds.length > 0) {
         await Promise.all(
           field.sourceShardIds.map(async (shardId) => {
-            await ctx.db.patch(shardId as Id<"crystal_shards">, {
-              last_referenced: deleteTime,
-              reference_count: "INCREMENT" as any,
-            });
+            const shard = await ctx.db.get(shardId as Id<"crystal_shards">);
+            if (shard) {
+              await ctx.db.patch(shardId as Id<"crystal_shards">, {
+                last_referenced: deleteTime,
+                reference_count: Math.max(0, (shard.reference_count || 0) - 1), // Decrement on delete
+              });
+            }
           })
         );
       }

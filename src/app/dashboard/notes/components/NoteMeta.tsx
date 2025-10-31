@@ -37,7 +37,7 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onTagsChange, onEditin
   const { text: addTagButtonText } = useTranslation("Add Tag", { context: "note.add_tag_button" });
   
   const isEditingTitle = editedTitle !== null;
-  const currentTags = note.tags || [];
+  const currentTags = [...new Set(note.tags || [])]; // Deduplicate to prevent duplicate keys
 
   // Get smart tag suggestions (only 2 for minimalism)
   const tagSuggestions = React.useMemo(() => {
