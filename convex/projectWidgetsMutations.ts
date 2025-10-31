@@ -1,6 +1,12 @@
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { 
+  widgetCategoryValidator,
+  widgetBatchValidator,
+  widgetUpdateValidator,
+  projectWidgetsUpdateValidator
+} from "./types/widgets";
 
 /**
  * Project Widget Layout Mutations
@@ -12,39 +18,6 @@ import { Id } from "./_generated/dataModel";
  * Migration strategy: Backend can still send full widget data,
  * we'll split it into layout + individual widgets
  */
-
-// ============================================================================
-// WIDGET CATEGORY VALIDATOR
-// ============================================================================
-
-const widgetCategoryValidator = v.object({
-  name: v.string(),
-  icon: v.optional(v.string()),
-  description: v.optional(v.string()),
-  display_order: v.optional(v.number()),
-});
-
-// ============================================================================
-// WIDGET VALIDATOR (for batch operations)
-// ============================================================================
-
-const widgetValidator = v.object({
-  widget_id: v.string(),
-  widget_type: v.string(),
-  title: v.string(),
-  description: v.optional(v.string()),
-  category: v.string(),
-  priority: v.number(),
-  size: v.string(),
-  theme: v.string(),
-  position: v.number(),
-  config: v.any(),
-  data_sources: v.array(v.string()),
-  update_frequency: v.string(),
-  interactive: v.boolean(),
-  editable: v.boolean(),
-  shareable: v.boolean(),
-});
 
 // ============================================================================
 // UPSERT PROJECT WIDGETS (REDESIGNED)
@@ -67,7 +40,7 @@ export const upsertProjectWidgets = mutation({
     
     // Widget data
     categories: v.array(widgetCategoryValidator),
-    widgets: v.array(widgetValidator),
+    widgets: v.array(widgetBatchValidator),
     
     // Global layout settings
     layout_type: v.string(),
@@ -247,22 +220,7 @@ export const updateWidgetLayout = mutation({
   args: {
     projectId: v.id("projects"),
     userId: v.string(),
-    updates: v.object({
-      categories: v.optional(v.array(widgetCategoryValidator)),
-      layout_type: v.optional(v.string()),
-      columns: v.optional(v.number()),
-      rows: v.optional(v.number()),
-      global_theme: v.optional(v.string()),
-      color_scheme: v.optional(v.string()),
-      font_style: v.optional(v.string()),
-      allow_customization: v.optional(v.boolean()),
-      allow_reordering: v.optional(v.boolean()),
-      allow_resizing: v.optional(v.boolean()),
-      required_integrations: v.optional(v.array(v.string())),
-      data_refresh_strategy: v.optional(v.string()),
-      version: v.optional(v.string()),
-      confidence: v.optional(v.number()),
-    }),
+    updates: projectWidgetsUpdateValidator,
   },
   returns: v.object({
     success: v.boolean(),
@@ -373,18 +331,7 @@ export const updateWidget = mutation({
     projectId: v.id("projects"),
     userId: v.string(),
     widgetId: v.id("widgets"), // Use Convex ID
-    updates: v.object({
-      title: v.optional(v.string()),
-      description: v.optional(v.string()),
-      priority: v.optional(v.number()),
-      size: v.optional(v.string()),
-      theme: v.optional(v.string()),
-      category: v.optional(v.string()),
-      update_frequency: v.optional(v.string()),
-      interactive: v.optional(v.boolean()),
-      editable: v.optional(v.boolean()),
-      shareable: v.optional(v.boolean()),
-    }),
+    updates: widgetUpdateValidator,
   },
   returns: v.object({
     success: v.boolean(),

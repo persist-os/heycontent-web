@@ -1525,6 +1525,50 @@ app.post("/api/projects/getById", async (c) => {
   }
 });
 
+// ============================================================================
+// EXECUTION PLANS - AI-generated widget execution plans
+// ============================================================================
+
+// Save execution plan
+app.post("/api/executionPlans/save", async (c) => {
+  const ctx = c.env;
+  
+  try {
+    const planData = await c.req.json();
+    const planId = await ctx.runMutation(api.executionPlanMutations.savePlan, planData);
+    return c.json({ success: true, data: { planId } });
+  } catch (error: any) {
+    console.error("[EXECUTION_PLAN] Save failed:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to save plan",
+      message: error.message 
+    }, 500);
+  }
+});
+
+// Get latest plan for project
+app.post("/api/executionPlans/getLatest", async (c) => {
+  const ctx = c.env;
+  const { projectId, userId } = await c.req.json();
+  
+  try {
+    const plan = await ctx.runMutation(api.executionPlanMutations.getLatestPlan, { projectId, userId });
+    return c.json({ success: true, data: plan });
+  } catch (error: any) {
+    console.error("[EXECUTION_PLAN] Get latest failed:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get plan",
+      message: error.message 
+    }, 500);
+  }
+});
+
+// ============================================================================
+// PROJECTS
+// ============================================================================
+
 // Get projects by user
 app.post("/api/projects/getByUser", async (c) => {
   const ctx = c.env;

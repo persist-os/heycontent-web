@@ -2,33 +2,18 @@ import { v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { api } from "./_generated/api";
+import {
+  widgetCreateValidator,
+  widgetBatchValidator,
+  widgetUpdateValidator,
+  widgetRunStatusValidator
+} from "./types/widgets";
 
 /**
  * Individual Widget Mutations
  * Follows Convex best practices - each widget is its own document with a Convex ID
  * Optimized for efficient updates and queries
  */
-
-// ============================================================================
-// WIDGET VALIDATOR
-// ============================================================================
-
-const widgetValidator = v.object({
-  widget_type: v.string(),
-  title: v.string(),
-  description: v.optional(v.string()),
-  category: v.string(),
-  priority: v.number(),
-  size: v.string(),
-  theme: v.string(),
-  position: v.number(),
-  config: v.any(),
-  data_sources: v.array(v.string()),
-  update_frequency: v.string(),
-  interactive: v.boolean(),
-  editable: v.boolean(),
-  shareable: v.boolean(),
-});
 
 // ============================================================================
 // CREATE WIDGET
@@ -39,26 +24,7 @@ const widgetValidator = v.object({
  * Each widget gets its own Convex ID for optimal queries
  */
 export const createWidget = mutation({
-  args: {
-    projectId: v.id("projects"),
-    fingerprintId: v.id("project_fingerprints"),
-    userId: v.string(),
-    widget_id: v.string(), // Legacy string ID for backward compatibility
-    widget_type: v.string(),
-    title: v.string(),
-    description: v.optional(v.string()),
-    category: v.string(),
-    priority: v.number(),
-    size: v.string(),
-    theme: v.string(),
-    position: v.number(),
-    config: v.any(),
-    data_sources: v.array(v.string()),
-    update_frequency: v.string(),
-    interactive: v.boolean(),
-    editable: v.boolean(),
-    shareable: v.boolean(),
-  },
+  args: widgetCreateValidator,
   returns: v.id("widgets"),
   handler: async (ctx, args) => {
     // Validate user ownership
@@ -124,25 +90,7 @@ export const batchCreateWidgets = mutation({
     projectId: v.id("projects"),
     fingerprintId: v.id("project_fingerprints"),
     userId: v.string(),
-    widgets: v.array(
-      v.object({
-        widget_id: v.string(),
-        widget_type: v.string(),
-        title: v.string(),
-        description: v.optional(v.string()),
-        category: v.string(),
-        priority: v.number(),
-        size: v.string(),
-        theme: v.string(),
-        position: v.number(),
-        config: v.any(),
-        data_sources: v.array(v.string()),
-        update_frequency: v.string(),
-        interactive: v.boolean(),
-        editable: v.boolean(),
-        shareable: v.boolean(),
-      })
-    ),
+    widgets: v.array(widgetBatchValidator),
   },
   returns: v.object({
     success: v.boolean(),
@@ -190,6 +138,12 @@ export const batchCreateWidgets = mutation({
         interactive: widget.interactive,
         editable: widget.editable,
         shareable: widget.shareable,
+        // Orchestration metadata (if provided)
+        input_requirements: widget.input_requirements,
+        output_artifacts: widget.output_artifacts,
+        dependency_hints: widget.dependency_hints,
+        execution_profile: widget.execution_profile,
+        workflow_stage: widget.workflow_stage,
         status: "active",
         createdAt: now,
         updatedAt: now,
@@ -213,37 +167,7 @@ export const updateWidget = mutation({
   args: {
     widgetId: v.id("widgets"),
     userId: v.string(),
-    updates: v.object({
-      title: v.optional(v.string()),
-      description: v.optional(v.string()),
-      category: v.optional(v.string()),
-      priority: v.optional(v.number()),
-      size: v.optional(v.string()),
-      theme: v.optional(v.string()),
-      position: v.optional(v.number()),
-      config: v.optional(v.any()),
-      data_sources: v.optional(v.array(v.string())),
-      update_frequency: v.optional(v.string()),
-      interactive: v.optional(v.boolean()),
-      editable: v.optional(v.boolean()),
-      shareable: v.optional(v.boolean()),
-      lastRunAt: v.optional(v.number()),
-      lastRunStatus: v.optional(
-        v.union(
-          v.literal("idle"),
-          v.literal("running"),
-          v.literal("success"),
-          v.literal("failed")
-        )
-      ),
-      status: v.optional(
-        v.union(
-          v.literal("active"),
-          v.literal("archived"),
-          v.literal("deleted")
-        )
-      ),
-    }),
+    updates: widgetUpdateValidator,
   },
   returns: v.object({
     success: v.boolean(),
@@ -385,12 +309,7 @@ export const updateWidgetExecution = mutation({
   args: {
     widgetId: v.id("widgets"),
     userId: v.string(),
-    status: v.union(
-      v.literal("idle"),
-      v.literal("running"),
-      v.literal("success"),
-      v.literal("failed")
-    ),
+    status: widgetRunStatusValidator,
   },
   returns: v.object({
     success: v.boolean(),

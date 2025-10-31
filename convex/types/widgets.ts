@@ -31,6 +31,24 @@ export const widgetScheduleFrequencyValidator = v.union(
   v.literal("monthly")
 );
 
+// Workflow stage validator
+export const widgetWorkflowStageValidator = v.union(
+  v.literal("gathering"),
+  v.literal("analysis"),
+  v.literal("synthesis"),
+  v.literal("tracking"),
+  v.literal("reporting")
+);
+
+// Output artifact type validator
+export const widgetOutputArtifactTypeValidator = v.union(
+  v.literal("structured_list"),
+  v.literal("report"),
+  v.literal("analysis"),
+  v.literal("summary"),
+  v.literal("tracker")
+);
+
 // Schema fields for individual widgets (unwrapped for defineTable)
 export const widgetSchemaFields = {
   // Foreign keys - establish relationships
@@ -72,6 +90,26 @@ export const widgetSchemaFields = {
   lastScheduledRun: v.optional(v.number()),
   scheduledRunCount: v.optional(v.number()),
   requiresApproval: v.optional(v.boolean()),
+  
+  // Orchestration metadata
+  input_requirements: v.optional(v.array(v.string())),
+  output_artifacts: v.optional(v.array(v.object({
+    type: widgetOutputArtifactTypeValidator,
+    description: v.string(),
+    feeds_into: v.array(v.string()),
+  }))),
+  dependency_hints: v.optional(v.object({
+    should_run_after: v.optional(v.array(v.string())),
+    should_run_before: v.optional(v.array(v.string())),
+    can_run_parallel_with: v.optional(v.array(v.string())),
+  })),
+  execution_profile: v.optional(v.object({
+    frequency_suggestion: v.string(),
+    typical_duration_minutes: v.number(),
+    requires_recent_data: v.boolean(),
+    skip_if_no_activity: v.boolean(),
+  })),
+  workflow_stage: v.optional(widgetWorkflowStageValidator),
   
   // Metadata
   status: widgetStatusValidator,
@@ -145,6 +183,112 @@ export const projectWidgetsSchemaFields = {
   }))),
 };
 
+// Category validator for batch operations
+export const widgetCategoryValidator = v.object({
+  name: v.string(),
+  icon: v.optional(v.string()),
+  description: v.optional(v.string()),
+  display_order: v.optional(v.number()),
+});
+
+// Widget validator for batch create/update operations (excludes auto-generated fields)
+export const widgetBatchValidator = v.object({
+  widget_id: v.string(),
+  widget_type: v.string(),
+  title: v.string(),
+  description: v.optional(v.string()),
+  category: v.string(),
+  priority: v.number(),
+  size: v.string(),
+  theme: v.string(),
+  position: v.number(),
+  config: v.any(),
+  data_sources: v.array(v.string()),
+  update_frequency: v.string(),
+  interactive: v.boolean(),
+  editable: v.boolean(),
+  shareable: v.boolean(),
+  // Orchestration metadata (optional)
+  input_requirements: v.optional(v.array(v.string())),
+  output_artifacts: v.optional(v.array(v.object({
+    type: widgetOutputArtifactTypeValidator,
+    description: v.string(),
+    feeds_into: v.array(v.string()),
+  }))),
+  dependency_hints: v.optional(v.object({
+    should_run_after: v.optional(v.array(v.string())),
+    should_run_before: v.optional(v.array(v.string())),
+    can_run_parallel_with: v.optional(v.array(v.string())),
+  })),
+  execution_profile: v.optional(v.object({
+    frequency_suggestion: v.string(),
+    typical_duration_minutes: v.number(),
+    requires_recent_data: v.boolean(),
+    skip_if_no_activity: v.boolean(),
+  })),
+  workflow_stage: v.optional(widgetWorkflowStageValidator),
+});
+
+// Widget create validator (for single widget creation - extends batch validator)
+export const widgetCreateValidator = v.object({
+  projectId: v.id("projects"),
+  fingerprintId: v.id("project_fingerprints"),
+  userId: v.string(),
+  widget_id: v.string(),
+  widget_type: v.string(),
+  title: v.string(),
+  description: v.optional(v.string()),
+  category: v.string(),
+  priority: v.number(),
+  size: v.string(),
+  theme: v.string(),
+  position: v.number(),
+  config: v.any(),
+  data_sources: v.array(v.string()),
+  update_frequency: v.string(),
+  interactive: v.boolean(),
+  editable: v.boolean(),
+  shareable: v.boolean(),
+});
+
+// Widget update validator (all fields optional)
+export const widgetUpdateValidator = v.object({
+  title: v.optional(v.string()),
+  description: v.optional(v.string()),
+  category: v.optional(v.string()),
+  priority: v.optional(v.number()),
+  size: v.optional(v.string()),
+  theme: v.optional(v.string()),
+  position: v.optional(v.number()),
+  config: v.optional(v.any()),
+  data_sources: v.optional(v.array(v.string())),
+  update_frequency: v.optional(v.string()),
+  interactive: v.optional(v.boolean()),
+  editable: v.optional(v.boolean()),
+  shareable: v.optional(v.boolean()),
+  lastRunAt: v.optional(v.number()),
+  lastRunStatus: v.optional(widgetRunStatusValidator),
+  status: v.optional(widgetStatusValidator),
+});
+
+// Layout update validator (all fields optional)
+export const projectWidgetsUpdateValidator = v.object({
+  categories: v.optional(v.array(widgetCategoryValidator)),
+  layout_type: v.optional(v.string()),
+  columns: v.optional(v.number()),
+  rows: v.optional(v.number()),
+  global_theme: v.optional(v.string()),
+  color_scheme: v.optional(v.string()),
+  font_style: v.optional(v.string()),
+  allow_customization: v.optional(v.boolean()),
+  allow_reordering: v.optional(v.boolean()),
+  allow_resizing: v.optional(v.boolean()),
+  required_integrations: v.optional(v.array(v.string())),
+  data_refresh_strategy: v.optional(v.string()),
+  version: v.optional(v.string()),
+  confidence: v.optional(v.number()),
+});
+
 // Wrapped validators for mutations/queries
 export const widgetValidator = v.object(widgetSchemaFields);
 export const projectWidgetsValidator = v.object(projectWidgetsSchemaFields);
@@ -153,12 +297,33 @@ export const projectWidgetsValidator = v.object(projectWidgetsSchemaFields);
 export type WidgetStatus = "active" | "archived" | "deleted";
 export type WidgetRunStatus = "idle" | "running" | "success" | "failed";
 export type WidgetScheduleFrequency = "manual" | "hourly" | "daily" | "weekly" | "monthly";
+export type WidgetWorkflowStage = "gathering" | "analysis" | "synthesis" | "tracking" | "reporting";
+export type WidgetOutputArtifactType = "structured_list" | "report" | "analysis" | "summary" | "tracker";
 
 export interface WidgetCategory {
   name: string;
   icon?: string;
   description?: string;
   display_order?: number;
+}
+
+export interface WidgetOutputArtifact {
+  type: WidgetOutputArtifactType;
+  description: string;
+  feeds_into: string[];
+}
+
+export interface WidgetDependencyHints {
+  should_run_after?: string[];
+  should_run_before?: string[];
+  can_run_parallel_with?: string[];
+}
+
+export interface WidgetExecutionProfile {
+  frequency_suggestion: string;
+  typical_duration_minutes: number;
+  requires_recent_data: boolean;
+  skip_if_no_activity: boolean;
 }
 
 export interface Widget {
@@ -188,6 +353,11 @@ export interface Widget {
   lastScheduledRun?: number;
   scheduledRunCount?: number;
   requiresApproval?: boolean;
+  input_requirements?: string[];
+  output_artifacts?: WidgetOutputArtifact[];
+  dependency_hints?: WidgetDependencyHints;
+  execution_profile?: WidgetExecutionProfile;
+  workflow_stage?: WidgetWorkflowStage;
   status: WidgetStatus;
   createdAt: number;
   updatedAt: number;

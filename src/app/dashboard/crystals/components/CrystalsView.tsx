@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { RefreshCw, ChevronDown, ChevronRight, Clock, TrendingUp, Users, Zap, Eye, EyeOff, Edit3, Trash2, Save, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, Users, Eye } from 'lucide-react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
@@ -10,38 +9,31 @@ import { T } from '@/components/translation';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 
 interface CrystalsViewProps {
-  recentCrystals?: any[]; // Legacy prop for fallback
+  recentCrystals?: any[]; // Legacy prop for fallback - now expects cognitive fields
 }
 
-interface EnhancedCrystalCardProps {
-  crystal: any;
+interface EnhancedCognitiveFieldCardProps {
+  field: any;
 }
 
-const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) => {
+const EnhancedCognitiveFieldCard: React.FC<EnhancedCognitiveFieldCardProps> = ({ field }) => {
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
-  const [showAllEvolution, setShowAllEvolution] = useState(false);
   const [showAllShards, setShowAllShards] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [editedCrystal, setEditedCrystal] = useState({
-    ...crystal,
-    core_insight: crystal.core_insight || crystal.stable_trait
-  });
   
-  // Convex mutation for crystal operations
-  const batchMutateCrystalData = useMutation(api.crystalMutations.batchMutateCrystalData);
+  // Convex mutation for cognitive field operations
+  const mutateCognitiveField = useMutation(api.cognitiveMutations.mutateCognitiveField);
   
   // Use direct query for shards
   const shards = useQuery(
     api.shardQueries.getShardsByIds,
-    crystal.shardIds && crystal.shardIds.length > 0 ? {
-      userId: crystal.userId,
-      shardIds: crystal.shardIds
+    field.sourceShardIds && field.sourceShardIds.length > 0 ? {
+      userId: field.userId,
+      shardIds: field.sourceShardIds
     } : "skip"
   );
   
   const shardsLoading = shards === undefined;
-  // Sort shards by creation time (most recent first) and limit to 50
   const sortedShards = shards ? [...shards].sort((a: any, b: any) => 
     (b._creationTime || 0) - (a._creationTime || 0)
   ).slice(0, 50) : [];
@@ -53,59 +45,21 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
 
   const handleDelete = async () => {
     try {
-      const result = await batchMutateCrystalData({
-        table: "crystals",
-        operations: [{
-          type: "delete",
-          id: crystal._id
-        }]
+      const result = await mutateCognitiveField({
+        operation: "delete",
+        id: field._id
       });
 
-      if (result.success) {
-        toast.success('Crystal deleted successfully');
+      if (result) {
+        toast.success('Cognitive field deleted successfully');
         setShowDeleteConfirm(false);
       } else {
-        toast.error('Failed to delete crystal');
+        toast.error('Failed to delete cognitive field');
       }
     } catch (error) {
-      console.error('Error deleting crystal:', error);
-      toast.error('Failed to delete crystal');
+      console.error('Error deleting cognitive field:', error);
+      toast.error('Failed to delete cognitive field');
     }
-  };
-
-  const handleSave = async () => {
-    try {
-      const updateData = {
-        core_insight: editedCrystal.core_insight || editedCrystal.stable_trait,
-        behavioral_implications: editedCrystal.behavioral_implications,
-        confidence_score: editedCrystal.confidence_score,
-        updatedAt: Date.now()
-      };
-
-      const result = await batchMutateCrystalData({
-        table: "crystals",
-        operations: [{
-          type: "update",
-          id: crystal._id,
-          data: updateData
-        }]
-      });
-
-      if (result.success) {
-        toast.success('Crystal updated successfully');
-        setIsEditing(false);
-      } else {
-        toast.error('Failed to update crystal');
-      }
-    } catch (error) {
-      console.error('Error updating crystal:', error);
-      toast.error('Failed to update crystal');
-    }
-  };
-
-  const handleCancel = () => {
-    setEditedCrystal(crystal);
-    setIsEditing(false);
   };
 
   const formatTimestamp = (timestamp: number) => {
@@ -129,56 +83,37 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
     return date.toLocaleDateString();
   };
 
-  const getConfidenceColor = (confidence: string) => {
-    switch (confidence) {
-      case 'very_high':
-      case 'high':
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'stable':
         return 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800';
-      case 'moderate':
+      case 'evolving':
         return 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800';
-      case 'developing':
-      case 'low':
+      case 'active':
+        return 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800';
+      case 'archived':
         return 'text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-950/30 border-gray-200 dark:border-gray-800';
       default:
         return 'text-muted-foreground bg-muted/30 border-border';
     }
   };
 
-  const getStabilityIcon = (trend: string) => {
-    switch (trend) {
-      case 'strengthening':
-        return <TrendingUp className="w-3 h-3 text-green-500" />;
-      case 'weakening':
-        return <TrendingUp className="w-3 h-3 text-red-500 rotate-180" />;
-      case 'evolving':
-        return <Zap className="w-3 h-3 text-amber-500" />;
-      default:
-        return <Clock className="w-3 h-3 text-muted-foreground" />;
-    }
-  };
-
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'stable_trait': return 'Core Trait';
-      case 'behavioral_pattern': return 'Behavior Pattern';
-      case 'preference_cluster': return 'Preferences';
-      case 'value_system': return 'Values';
-      case 'contextual_adaptation': return 'Adaptability';
-      case 'growth_trajectory': return 'Growth Path';
-      case 'contradiction_resolution': return 'Complexity';
-      default: return type?.replace('_', ' ') || 'Pattern';
-    }
+  const getStabilityColor = (score?: number) => {
+    if (!score) return 'text-muted-foreground';
+    if (score >= 0.8) return 'text-blue-600 dark:text-blue-400';
+    if (score >= 0.5) return 'text-amber-600 dark:text-amber-400';
+    return 'text-gray-600 dark:text-gray-400';
   };
 
   return (
     <div className="border border-border/50 rounded-2xl overflow-hidden bg-background/50 backdrop-blur-sm hover:border-border/60 transition-all duration-300">
       {/* Status line at top */}
       <div className={`h-px w-full ${
-        crystal.confidence_score === 'high' || crystal.confidence_score === 'very_high'
+        field.status === 'stable'
           ? 'bg-gradient-to-r from-transparent via-blue-400/60 to-transparent'
-          : crystal.confidence_score === 'moderate'
+          : field.status === 'evolving'
           ? 'bg-gradient-to-r from-transparent via-amber-400/60 to-transparent'
-          : 'bg-gradient-to-r from-transparent via-muted-foreground/30 to-transparent'
+          : 'bg-gradient-to-r from-transparent via-green-400/60 to-transparent'
       }`} />
       
       <div className="p-6 space-y-4">
@@ -187,114 +122,71 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
               <h4 className="text-lg font-medium text-foreground leading-tight">
-                {crystal.name}
+                {field.transparencyLayer?.humanLabel || field.fieldId || 'Cognitive Field'}
               </h4>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span className="px-2 py-1 bg-muted/30 rounded-full">
-                  <T context={`crystal.type.${crystal.crystal_type}`}>{getTypeLabel(crystal.crystal_type)}</T>
+                  <T context="cognitive_field.type">Cognitive Field</T>
                 </span>
-                <span>•</span>
-                <span>{crystal.dimension}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {crystal.stability_trend && getStabilityIcon(crystal.stability_trend)}
-              <span className={`text-xs px-2 py-1 rounded-full border ${getConfidenceColor(crystal.confidence_score)}`}>
-                <T context={`crystal.confidence.${crystal.confidence_score}`}>{crystal.confidence_score?.replace('_', ' ')}</T>
-              </span>
-              
-              {/* Edit/Delete Actions */}
-              <div className="flex items-center gap-1 ml-2">
-                {isEditing ? (
+                {field.transparencyLayer?.stabilityScore !== undefined && (
                   <>
-                    <button
-                      onClick={handleSave}
-                      className="p-1.5 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-md transition-colors"
-                      title="Save changes"
-                    >
-                      <Save className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      onClick={handleCancel}
-                      className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
-                      title="Cancel editing"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
-                      title="Edit crystal"
-                    >
-                      <Edit3 className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      onClick={() => setShowDeleteConfirm(true)}
-                      className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                      title="Delete crystal"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    <span>•</span>
+                    <span className={getStabilityColor(field.transparencyLayer.stabilityScore)}>
+                      <T context="cognitive_field.stability">Stability</T>: {Math.round(field.transparencyLayer.stabilityScore * 100)}%
+                    </span>
                   </>
                 )}
               </div>
             </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span className={`text-xs px-2 py-1 rounded-full border ${getStatusColor(field.status || 'active')}`}>
+                <T context={`cognitive_field.status.${field.status || 'active'}`}>{field.status || 'active'}</T>
+              </span>
+            </div>
           </div>
           
           <p className="text-muted-foreground leading-relaxed text-sm">
-            {crystal.description}
+            {field.transparencyLayer?.interpretiveSummary || 'No summary available'}
           </p>
         </div>
 
-        {/* Core Insight - Always visible */}
-        {(crystal.core_insight || crystal.stable_trait) && (
+        {/* Temporal Note - Always visible if present */}
+        {field.transparencyLayer?.temporalNote && (
           <div className="space-y-2 border-l-2 border-blue-400/30 pl-4">
             <h5 className="text-xs font-medium text-foreground uppercase tracking-wide">
-              <T context="crystal.section.key_insight">Key Insight</T>
+              <T context="cognitive_field.section.temporal_evolution">Temporal Evolution</T>
             </h5>
-            {isEditing ? (
-              <textarea
-                value={editedCrystal.core_insight || editedCrystal.stable_trait || ''}
-                onChange={(e) => setEditedCrystal({...editedCrystal, core_insight: e.target.value})}
-                className="w-full text-sm text-muted-foreground leading-relaxed bg-muted/20 p-3 rounded-lg border border-border/50 focus:border-border focus:outline-none resize-none"
-                rows={3}
-                placeholder="Describe the core insight..."
-              />
-            ) : (
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {crystal.stable_trait || crystal.core_insight}
-              </p>
-            )}
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {field.transparencyLayer.temporalNote}
+            </p>
           </div>
         )}
 
         {/* Metadata Summary */}
         <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/30">
           <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1">
-              <Users className="w-3 h-3" />
-              {crystal.observation_count} <T context="crystal.metadata.observations">observations</T>
-            </span>
-            <span>{crystal.time_span_days} <T context="crystal.metadata.days">days</T></span>
-            {crystal.usage_count > 0 && (
+            {field.sourceShardIds && (
+              <span className="flex items-center gap-1">
+                <Users className="w-3 h-3" />
+                {field.sourceShardIds.length} <T context="cognitive_field.metadata.source_shards">source shards</T>
+              </span>
+            )}
+            {field.createdAt && (
+              <span>
+                <T context="cognitive_field.metadata.created">Created</T> {formatTimestamp(field.createdAt)}
+              </span>
+            )}
+            {field.usageCount !== undefined && field.usageCount > 0 && (
               <span className="flex items-center gap-1">
                 <Eye className="w-3 h-3" />
-                <T context="crystal.metadata.used">Used</T> {crystal.usage_count}x
+                <T context="cognitive_field.metadata.used">Used</T> {field.usageCount}x
               </span>
             )}
           </div>
           <div className="flex items-center gap-2">
-            {crystal.evidence_strength && (
-              <span className={`px-2 py-1 rounded-full text-xs ${
-                crystal.evidence_strength === 'overwhelming' ? 'bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-300' :
-                crystal.evidence_strength === 'strong' ? 'bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300' :
-                crystal.evidence_strength === 'moderate' ? 'bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300' :
-                'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
-              }`}>
-                <T context={`crystal.evidence_strength.${crystal.evidence_strength}`}>{crystal.evidence_strength}</T> <T context="crystal.metadata.evidence">evidence</T>
+            {field.lastEvolution && (
+              <span className="text-xs text-muted-foreground">
+                <T context="cognitive_field.metadata.evolved">Evolved</T> {formatTimestamp(field.lastEvolution)}
               </span>
             )}
           </div>
@@ -302,123 +194,73 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
 
         {/* Progressive disclosure sections */}
         <div className="space-y-2">
-          {/* Evolution History */}
-          {crystal.evolution_history && crystal.evolution_history.length > 0 && (
+          {/* Trace Links - Source Attribution */}
+          {field.transparencyLayer?.traceLinks && field.transparencyLayer.traceLinks.length > 0 && (
             <div className="space-y-2">
               <button
-                onClick={() => toggleSection('evolution')}
+                onClick={() => toggleSection('traceLinks')}
                 className="flex items-center gap-2 text-xs font-medium text-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
               >
-                {expandedSection === 'evolution' ? 
+                {expandedSection === 'traceLinks' ? 
                   <ChevronDown className="w-3 h-3" /> : 
                   <ChevronRight className="w-3 h-3" />
                 }
-                <T context="crystal.section.evolution_history">Evolution History</T> ({crystal.evolution_history.length})
+                <T context="cognitive_field.section.source_attribution">Source Attribution</T> ({field.transparencyLayer.traceLinks.length})
               </button>
               
-              {expandedSection === 'evolution' && (
+              {expandedSection === 'traceLinks' && (
                 <div className="space-y-2 ml-5">
-                  {[...crystal.evolution_history]
-                    .sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0))
-                    .slice(0, showAllEvolution ? crystal.evolution_history.length : 3)
-                    .map((event: any, i: number) => (
+                  {field.transparencyLayer.traceLinks.map((link: any, i: number) => (
                     <div key={i} className="flex items-start gap-3 text-xs">
-                      <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
-                        event.change_type === 'created' ? 'bg-green-400' :
-                        event.change_type === 'strengthened' ? 'bg-blue-400' :
-                        event.change_type === 'refined' ? 'bg-amber-400' :
-                        event.change_type === 'contradicted' ? 'bg-red-400' :
-                        'bg-muted-foreground'
-                      }`} />
+                      <div className="w-2 h-2 rounded-full bg-blue-400 mt-1.5 flex-shrink-0" />
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-foreground capitalize">
-                            {event.change_type.replace('_', ' ')}
+                            {link.sourceType || 'Unknown'}
                           </span>
-                          <span className="text-muted-foreground">
-                            {formatTimestamp(event.timestamp)}
-                          </span>
+                          {link.contributionWeight !== undefined && (
+                            <span className="text-muted-foreground">
+                              {Math.round(link.contributionWeight * 100)}% <T context="cognitive_field.trace.contribution">contribution</T>
+                            </span>
+                          )}
                         </div>
-                        <p className="text-muted-foreground leading-relaxed">
-                          {event.description}
-                        </p>
+                        {link.sourceId && (
+                          <p className="text-muted-foreground leading-relaxed text-xs font-mono">
+                            {link.sourceId}
+                          </p>
+                        )}
                       </div>
                     </div>
                   ))}
-                  
-                  {crystal.evolution_history.length > 3 && (
-                    <button
-                      onClick={() => setShowAllEvolution(!showAllEvolution)}
-                      className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 ml-5"
-                    >
-                      {showAllEvolution ? 
-                        <T context="crystal.action.show_less">Show less</T> : 
-                        <><T context="crystal.action.show_all">Show all</T> {crystal.evolution_history.length} <T context="crystal.metadata.events">events</T></>
-                      }
-                    </button>
-                  )}
                 </div>
               )}
             </div>
           )}
 
-          {/* Behavioral Implications */}
-          {crystal.behavioral_implications && crystal.behavioral_implications.length > 0 && (
+          {/* Ethical Disclosure */}
+          {field.transparencyLayer?.ethicalDisclosure && (
             <div className="space-y-2">
               <button
-                onClick={() => toggleSection('implications')}
+                onClick={() => toggleSection('ethical')}
                 className="flex items-center gap-2 text-xs font-medium text-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
               >
-                {expandedSection === 'implications' ? 
+                {expandedSection === 'ethical' ? 
                   <ChevronDown className="w-3 h-3" /> : 
                   <ChevronRight className="w-3 h-3" />
                 }
-                <T context="crystal.section.what_this_means">What This Means</T> ({crystal.behavioral_implications.length})
+                <T context="cognitive_field.section.ethical_considerations">Ethical Considerations</T>
               </button>
               
-              {expandedSection === 'implications' && (
-                <div className="space-y-1 ml-5">
-                  {crystal.behavioral_implications.map((implication: string, i: number) => (
-                    <div key={i} className="flex items-start gap-2 text-xs">
-                      <div className="w-1 h-1 rounded-full bg-muted-foreground/60 mt-2 flex-shrink-0" />
-                      <span className="text-muted-foreground leading-relaxed">
-                        {implication}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Supporting Evidence */}
-          {crystal.supporting_quotes && crystal.supporting_quotes.length > 0 && (
-            <div className="space-y-2">
-              <button
-                onClick={() => toggleSection('quotes')}
-                className="flex items-center gap-2 text-xs font-medium text-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-              >
-                {expandedSection === 'quotes' ? 
-                  <ChevronDown className="w-3 h-3" /> : 
-                  <ChevronRight className="w-3 h-3" />
-                }
-                <T context="crystal.section.direct_quotes">Direct Quotes</T> ({crystal.supporting_quotes.length})
-              </button>
-              
-              {expandedSection === 'quotes' && (
-                <div className="space-y-2 ml-5">
-                  {[...crystal.supporting_quotes].reverse().slice(0, 3).map((quote: string, i: number) => (
-                    <blockquote key={i} className="text-xs text-muted-foreground italic border-l-2 border-border/50 pl-3 leading-relaxed">
-                      "{quote}"
-                    </blockquote>
-                  ))}
+              {expandedSection === 'ethical' && (
+                <div className="ml-5 text-xs text-muted-foreground leading-relaxed bg-amber-50 dark:bg-amber-950/20 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
+                  {field.transparencyLayer.ethicalDisclosure}
                 </div>
               )}
             </div>
           )}
 
           {/* Connected Shards */}
-          {crystal.shardIds && crystal.shardIds.length > 0 && (
+          {field.sourceShardIds && field.sourceShardIds.length > 0 && (
             <div className="space-y-2">
               <button
                 onClick={() => toggleSection('shards')}
@@ -428,8 +270,8 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
                   <ChevronDown className="w-3 h-3" /> : 
                   <ChevronRight className="w-3 h-3" />
                 }
-                <T context="crystal.section.source_insights">Source Insights</T> ({crystal.shardIds.length})
-                {shardsLoading && <span className="text-muted-foreground"><T context="crystal.status.loading">Loading...</T></span>}
+                <T context="cognitive_field.section.source_insights">Source Insights</T> ({field.sourceShardIds.length})
+                {shardsLoading && <span className="text-muted-foreground"><T context="cognitive_field.status.loading">Loading...</T></span>}
               </button>
               
               {expandedSection === 'shards' && hasShards && (
@@ -445,14 +287,14 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
                       <div className="space-y-1">
                         {shard.what_it_reveals && (
                           <div>
-                            <span className="text-xs font-medium text-foreground"><T context="crystal.shard.shows">Shows:</T> </span>
+                            <span className="text-xs font-medium text-foreground"><T context="cognitive_field.shard.shows">Shows:</T> </span>
                             <span className="text-xs text-muted-foreground">{shard.what_it_reveals}</span>
                           </div>
                         )}
                         
                         {shard.why_significant && (
                           <div>
-                            <span className="text-xs font-medium text-foreground"><T context="crystal.shard.why_important">Why Important:</T> </span>
+                            <span className="text-xs font-medium text-foreground"><T context="cognitive_field.shard.why_important">Why Important:</T> </span>
                             <span className="text-xs text-muted-foreground">{shard.why_significant}</span>
                           </div>
                         )}
@@ -468,11 +310,11 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
                             shard.confidence_level === 'medium' ? 'bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300' :
                             'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
                           }`}>
-                            <T context={`crystal.shard.confidence.${shard.confidence_level}`}>{shard.confidence_level}</T>
+                            <T context={`cognitive_field.shard.confidence.${shard.confidence_level}`}>{shard.confidence_level}</T>
                           </span>
                           {shard.source_type && (
                             <span className="text-xs text-muted-foreground">
-                              <T context="crystal.shard.from">from</T> {shard.source_type}
+                              <T context="cognitive_field.shard.from">from</T> {shard.source_type}
                             </span>
                           )}
                         </div>
@@ -491,33 +333,11 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
                       className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                     >
                       {showAllShards ? 
-                        <T context="crystal.action.show_less">Show less</T> : 
-                        <T context="crystal.action.show_more_insights">Show more insights</T>
+                        <T context="cognitive_field.action.show_less">Show less</T> : 
+                        <T context="cognitive_field.action.show_more_insights">Show more insights</T>
                       }
                     </button>
                   )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Detailed Analysis */}
-          {crystal.detailed_analysis && (
-            <div className="space-y-2">
-              <button
-                onClick={() => toggleSection('analysis')}
-                className="flex items-center gap-2 text-xs font-medium text-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-              >
-                {expandedSection === 'analysis' ? 
-                  <ChevronDown className="w-3 h-3" /> : 
-                  <ChevronRight className="w-3 h-3" />
-                }
-                <T context="crystal.section.deep_analysis">Deep Analysis</T>
-              </button>
-              
-              {expandedSection === 'analysis' && (
-                <div className="ml-5 text-xs text-muted-foreground leading-relaxed bg-muted/20 p-3 rounded-lg">
-                  {crystal.detailed_analysis}
                 </div>
               )}
             </div>
@@ -529,10 +349,10 @@ const EnhancedCrystalCard: React.FC<EnhancedCrystalCardProps> = ({ crystal }) =>
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={handleDelete}
-        title="Delete Crystal"
-        titleContext="crystal.delete_confirm.title"
-        description="Are you sure you want to delete this crystal? This action cannot be undone."
-        descriptionContext="crystal.delete_confirm.description"
+        title="Delete Cognitive Field"
+        titleContext="cognitive_field.delete_confirm.title"
+        description="Are you sure you want to delete this cognitive field? This action cannot be undone."
+        descriptionContext="cognitive_field.delete_confirm.description"
         confirmText="Delete"
         confirmContext="button.delete"
         cancelText="Cancel"
@@ -563,30 +383,30 @@ export const CrystalsView: React.FC<CrystalsViewProps> = ({ recentCrystals }) =>
     fetchUserId();
   }, []);
   
-  // Use direct query for crystals - load all available (no limit for full data access)
-  const crystals = useQuery(
-    api.crystalQueries.getCrystalPersonaData,
+  // Use direct query for cognitive fields - load all available
+  const cognitiveFields = useQuery(
+    api.cognitiveQueries.getAllCognitiveFields,
     userId ? {
       userId,
-      limit: 1000 // High limit to get all crystals
+      limit: 1000 // High limit to get all fields
     } : "skip"
   );
   
-  // Use direct data or fallback to legacy prop
-  const displayCrystals = crystals || recentCrystals || [];
-  const isLoading = isLoadingUserId || (!userId || crystals === undefined);
+  // Use direct data or fallback to legacy prop (recentCrystals now contains cognitive fields)
+  const displayFields = cognitiveFields || recentCrystals || [];
+  const isLoading = isLoadingUserId || (!userId || cognitiveFields === undefined);
 
   return (
     <div className="space-y-6">
       <div className="space-y-2">
         <h3 className="text-2xl font-light tracking-tight text-foreground">
-          <T context="crystal.heading">Knowledge Crystals</T>
+          <T context="cognitive_field.heading">Cognitive Fields</T>
         </h3>
         <p className="text-muted-foreground leading-relaxed">
-          <T context="crystal.description">Consolidated patterns and behavioral insights from your interactions</T>
-          {displayCrystals.length > 0 && (
+          <T context="cognitive_field.description">Living intelligence substrates that capture and evolve your patterns over time</T>
+          {displayFields.length > 0 && (
             <span className="ml-2 text-sm">
-              • {displayCrystals.length} <T context="crystal.count">crystal{displayCrystals.length !== 1 ? 's' : ''}</T>
+              • {displayFields.length} <T context="cognitive_field.count">cognitive field{displayFields.length !== 1 ? 's' : ''}</T>
             </span>
           )}
         </p>
@@ -612,18 +432,18 @@ export const CrystalsView: React.FC<CrystalsViewProps> = ({ recentCrystals }) =>
             </div>
           ))}
         </div>
-      ) : displayCrystals.length > 0 ? (
+      ) : displayFields.length > 0 ? (
         <>
           <div className="space-y-6">
-            {displayCrystals.map((crystal: any) => (
-              <EnhancedCrystalCard key={crystal._id} crystal={crystal} />
+            {displayFields.map((field: any) => (
+              <EnhancedCognitiveFieldCard key={field._id} field={field} />
             ))}
           </div>
           
         </>
       ) : (
         <div className="text-center py-12 text-muted-foreground">
-          <p><T context="crystal.empty_state">No crystals found. Start a conversation to generate insights!</T></p>
+          <p><T context="cognitive_field.empty_state">No cognitive fields found. Start a conversation to generate cognitive fields!</T></p>
         </div>
       )}
     </div>

@@ -113,6 +113,12 @@ export const getProjectWidgets = query({
         shareable: w.shareable,
         lastRunAt: w.lastRunAt,
         lastRunStatus: w.lastRunStatus,
+        // Orchestration metadata
+        input_requirements: w.input_requirements,
+        output_artifacts: w.output_artifacts,
+        dependency_hints: w.dependency_hints,
+        execution_profile: w.execution_profile,
+        workflow_stage: w.workflow_stage,
       })),
     };
   },
@@ -190,6 +196,12 @@ export const getProjectWidgetsByProject = query({
         shareable: w.shareable,
         lastRunAt: w.lastRunAt,
         lastRunStatus: w.lastRunStatus,
+        // Orchestration metadata
+        input_requirements: w.input_requirements,
+        output_artifacts: w.output_artifacts,
+        dependency_hints: w.dependency_hints,
+        execution_profile: w.execution_profile,
+        workflow_stage: w.workflow_stage,
       })),
     };
   },
@@ -252,6 +264,12 @@ export const getWidgetById = query({
       shareable: widget.shareable,
       lastRunAt: widget.lastRunAt,
       lastRunStatus: widget.lastRunStatus,
+      // Orchestration metadata
+      input_requirements: widget.input_requirements,
+      output_artifacts: widget.output_artifacts,
+      dependency_hints: widget.dependency_hints,
+      execution_profile: widget.execution_profile,
+      workflow_stage: widget.workflow_stage,
     };
   },
 });

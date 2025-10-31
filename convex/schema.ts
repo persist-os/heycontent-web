@@ -103,6 +103,9 @@ import { contextEnrichmentDecisionSchemaFields } from "./types/contextEnrichment
 // Context Usage Tracking
 import { contextUsageSchemaFields } from "./types/contextUsage";
 
+// Execution Plans
+import { executionPlanSchemaFields } from "./types/executionPlan";
+
 export default defineSchema({
   // User Info
   users: defineTable(userSchemaFields)
@@ -292,7 +295,8 @@ export default defineSchema({
   .index("by_status", ["projectId", "status"])
   .index("by_widget_id", ["projectId", "widget_id"]) // For legacy lookups
   .index("by_created", ["createdAt"])
-  .index("by_schedule", ["nextScheduledRun", "scheduleEnabled"]),
+  .index("by_schedule", ["nextScheduledRun", "scheduleEnabled"])
+  .index("by_workflow_stage", ["projectId", "workflow_stage"]), // For orchestration queries
 
   // ============================================================================
   // PROJECT WIDGET LAYOUTS - Layout configuration and categories
@@ -312,6 +316,13 @@ export default defineSchema({
     .index("by_output_id", ["outputId"])
     .index("by_rating", ["widgetId", "userRating"])  // For analyzing widget quality
     .index("by_user", ["userId"]),
+
+  // Execution Plans - AI-generated widget execution plans
+  execution_plans: defineTable(executionPlanSchemaFields)
+    .index("by_project", ["projectId"])
+    .index("by_user", ["userId"])
+    .index("by_status", ["status"])
+    .index("by_created", ["createdAt"]),
 
   // Conversation Summaries - Real-time conversation analysis
   conversation_summaries: defineTable(conversationSummarySchemaFields)

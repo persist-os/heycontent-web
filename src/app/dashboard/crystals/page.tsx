@@ -3,8 +3,8 @@
 /**
  * Crystals Page
  * 
- * Main view for crystal intelligence - insights crystallized from your content.
- * Shows crystals, shards, formation status, and system tools.
+ * Main view for cosmic intelligence - cognitive fields and insights from your content.
+ * Shows cognitive fields, shards, formation status, and system tools.
  */
 
 import React, { useState } from 'react';
@@ -28,6 +28,8 @@ import {
 import { toast } from 'sonner';
 import { getApiKey, getCurrentUserId } from '@/app/lib/api-helpers';
 import { Activity } from 'lucide-react';
+import { useQuery } from 'convex/react';
+import { api } from '../../../../convex/_generated/api';
 
 export default function CrystalsPage() {
   const [activeView, setActiveView] = useState<ViewType>('overview');
@@ -52,6 +54,16 @@ export default function CrystalsPage() {
   const { crystalStats, recentCrystals, recentShards } = useCrystalData(userId);
   const { formationStatus, formationEligibility } = useFormationData(userId);
   const { formationRuns } = useFormationRuns(userId, 5);
+  
+  // Cognitive field queries
+  const cognitiveFields = useQuery(
+    api.cognitiveQueries.getAllCognitiveFields,
+    userId ? { userId, limit: 20 } : "skip"
+  );
+  const cognitiveFieldsCount = useQuery(
+    api.cognitiveQueries.countCognitiveFields,
+    userId ? { userId } : "skip"
+  );
   
   const handleManualCrystalFormation = async () => {
     if (!userId || isFormingCrystals) return;
@@ -89,17 +101,17 @@ export default function CrystalsPage() {
       
       if (result.success && result.triggered) {
         toast.success(
-          result.message || 'Crystal formation completed successfully!',
+          result.message || 'Cognitive field formation completed successfully!',
           { duration: 5000 }
         );
       } else if (result.success && !result.triggered) {
         toast.info(
-          result.message || 'Crystal formation not triggered - check eligibility requirements',
+          result.message || 'Cognitive field formation not triggered - check eligibility requirements',
           { duration: 4000 }
         );
       } else {
         toast.error(
-          result.message || result.error || 'Crystal formation failed',
+          result.message || result.error || 'Cognitive field formation failed',
           { duration: 5000 }
         );
       }
@@ -107,7 +119,7 @@ export default function CrystalsPage() {
     } catch (error) {
       console.error('💎 [MANUAL FORMATION] Error:', error);
       toast.error(
-        `Crystal formation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Cognitive field formation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
         { duration: 5000 }
       );
     } finally {
@@ -130,7 +142,7 @@ export default function CrystalsPage() {
               <T context="crystals.page.title">Cosmic Intelligence</T>
             </h1>
             <p className="text-muted-foreground font-light">
-              <T context="crystals.page.subtitle">Dual-species organisms: stars for what you do, crystals for who you are</T>
+              <T context="crystals.page.subtitle">Dual-species organisms: stars for what you do, cognitive fields for who you are</T>
             </p>
           </div>
 
@@ -138,8 +150,8 @@ export default function CrystalsPage() {
           {crystalStats && (
             <div className="hidden sm:flex items-center gap-6">
               <div className="text-center">
-                <div className="text-2xl font-light text-foreground">{crystalStats.crystalsCount}</div>
-                <div className="text-xs text-muted-foreground"><T context="crystals.stats.crystals">Crystals</T></div>
+                <div className="text-2xl font-light text-foreground">{cognitiveFieldsCount || 0}</div>
+                <div className="text-xs text-muted-foreground"><T context="crystals.stats.cognitive_fields">Cognitive Fields</T></div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-light text-foreground">{crystalStats.shardsCount}</div>
@@ -148,7 +160,7 @@ export default function CrystalsPage() {
               <div className="w-px h-8 bg-border/40" />
               <div className="text-center px-3 py-2 bg-primary/5 rounded-xl border border-primary/10">
                 <div className="text-2xl font-medium text-primary">
-                  {crystalStats.recentActivity.crystalsThisWeek + crystalStats.recentActivity.shardsThisWeek}
+                  {(cognitiveFieldsCount || 0) + crystalStats.recentActivity.shardsThisWeek}
                 </div>
                 <div className="text-xs text-muted-foreground"><T context="crystals.stats.this_week">This Week</T></div>
               </div>
@@ -160,8 +172,8 @@ export default function CrystalsPage() {
         {crystalStats && (
           <div className="sm:hidden grid grid-cols-3 gap-3">
             <div className="bg-muted/10 rounded-xl p-3 text-center">
-              <div className="text-xl font-light text-foreground">{crystalStats.crystalsCount}</div>
-              <div className="text-xs text-muted-foreground"><T context="crystals.stats.crystals">Crystals</T></div>
+              <div className="text-xl font-light text-foreground">{cognitiveFieldsCount || 0}</div>
+              <div className="text-xs text-muted-foreground"><T context="crystals.stats.cognitive_fields">Cognitive Fields</T></div>
             </div>
             <div className="bg-muted/10 rounded-xl p-3 text-center">
               <div className="text-xl font-light text-foreground">{crystalStats.shardsCount}</div>
@@ -169,7 +181,7 @@ export default function CrystalsPage() {
             </div>
             <div className="bg-primary/5 border border-primary/10 rounded-xl p-3 text-center">
               <div className="text-xl font-medium text-primary">
-                {crystalStats.recentActivity.crystalsThisWeek + crystalStats.recentActivity.shardsThisWeek}
+                {(cognitiveFieldsCount || 0) + crystalStats.recentActivity.shardsThisWeek}
               </div>
               <div className="text-xs text-muted-foreground"><T context="crystals.stats.this_week">This Week</T></div>
             </div>
@@ -202,7 +214,7 @@ export default function CrystalsPage() {
           )}
 
           {activeView === 'crystals' && (
-            <CrystalsView recentCrystals={recentCrystals} />
+            <CrystalsView recentCrystals={cognitiveFields || []} />
           )}
 
           {activeView === 'shards' && (
@@ -226,9 +238,9 @@ export default function CrystalsPage() {
               <div className="flex items-center gap-3">
                 <Activity className="w-5 h-5 text-muted-foreground" />
                 <div className="text-left">
-                  <div className="font-medium text-foreground"><T context="crystals.tools.formation">Crystal Formation</T></div>
+                  <div className="font-medium text-foreground"><T context="crystals.tools.formation">Cognitive Field Formation</T></div>
                   <div className="text-sm text-muted-foreground font-light">
-                    <T context="crystals.tools.form_new">Form new crystals from shards</T>
+                    <T context="crystals.tools.form_new">Form new cognitive fields from shards</T>
                   </div>
                 </div>
               </div>
@@ -238,9 +250,9 @@ export default function CrystalsPage() {
               <div className="px-6 py-4 space-y-4 bg-background">
                 <div className="space-y-3">
                   <div>
-                    <h4 className="font-medium text-sm text-foreground mb-2"><T context="crystals.formation.title">Crystal Formation</T></h4>
+                    <h4 className="font-medium text-sm text-foreground mb-2"><T context="crystals.formation.title">Cognitive Field Formation</T></h4>
                     <p className="text-sm text-muted-foreground mb-3 font-light">
-                      <T context="crystals.formation.description">Create new crystals from your existing shards</T>
+                      <T context="crystals.formation.description">Create new cognitive fields from your existing shards</T>
                     </p>
                     <button
                       onClick={handleManualCrystalFormation}
@@ -253,7 +265,7 @@ export default function CrystalsPage() {
                     >
                       {isFormingCrystals ? 
                         <T context="crystals.formation.forming">Forming...</T> : 
-                        <T context="crystals.formation.form_crystals">Form Crystals</T>
+                        <T context="crystals.formation.form_crystals">Form Cognitive Fields</T>
                       }
                     </button>
                   </div>
