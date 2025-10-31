@@ -3,13 +3,12 @@
  * 
  * Centralized state management for project execution flow.
  * Follows existing hook patterns from useWidgetGeneration.ts
- * 
- * NOTE: userId is NOT managed here - it's handled automatically by auth system
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
+import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { 
   generateExecutionPlan as generatePlanAPI,
   executePlan as executePlanAPI,
@@ -25,11 +24,26 @@ export function useProjectExecution(projectId?: string) {
   const [currentPlan, setCurrentPlan] = useState<ExecutionPlan | null>(null)
   const [executionJobId, setExecutionJobId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+  
+  // Get user ID on mount
+  useEffect(() => {
+    const fetchUserId = async () => {
+      try {
+        const id = await getCurrentUserId()
+        setUserId(id)
+      } catch (error) {
+        console.error('Failed to get user ID:', error)
+        setUserId(null)
+      }
+    }
+    fetchUserId()
+  }, [])
   
   // Subscribe to execution progress (real-time updates via Convex)
   const executionProgress = useQuery(
     api.executionPlanQueries.getLatestPlanForProject,
-    projectId ? { projectId } : 'skip'
+    projectId && userId ? { projectId: projectId as any, userId } : 'skip'
   )
 
   /**

@@ -18,14 +18,15 @@ export interface ExecutionPlan {
 }
 
 export interface ExecutionStep {
-  order: number
   widgetId: string
-  widgetTitle: string
+  widgetTitle: string  // Display title for the widget
+  executionOrder: number  // Matches backend PlanStep model
   timing: string
   rationale: string
   expectedOutput: string
   dependencies?: string[]
   skipRecommended?: boolean
+  skipReason?: string
 }
 
 export interface GeneratePlanParams {
