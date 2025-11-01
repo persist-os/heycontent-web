@@ -116,9 +116,11 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   const { 
     isGeneratingPlan,
     isExecuting,
-    currentPlan, 
+    currentPlan,
+    hasExistingPlan,
     generatePlan,
     executePlan,
+    loadExistingPlan,
     clearPlan 
   } = useProjectExecution(projectId as Id<"projects">)
 
@@ -231,15 +233,23 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
     }
 
     try {
-      await generatePlan({
-        projectId: projectId,
-        projectName: (project as any).name || 'Unnamed Project',
-        projectDomain: (project as any).projectDomain || 'general',
-        saveToDb: true
-      })
-      setShowExecutionPlanModal(true)
+      // Check if there's an existing plan first
+      if (hasExistingPlan) {
+        // Load existing plan instead of generating new one
+        loadExistingPlan()
+        setShowExecutionPlanModal(true)
+      } else {
+        // No existing plan, generate new one
+        await generatePlan({
+          projectId: projectId,
+          projectName: (project as any).name || 'Unnamed Project',
+          projectDomain: (project as any).projectDomain || 'general',
+          saveToDb: true
+        })
+        setShowExecutionPlanModal(true)
+      }
     } catch (error) {
-      console.error('Failed to generate execution plan:', error)
+      console.error('Failed to load or generate execution plan:', error)
     }
   }
 
@@ -262,6 +272,25 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
       console.log('Plan execution triggered successfully')
     } catch (error) {
       console.error('Failed to execute plan:', error)
+    }
+  }
+
+  // Handle Regenerate Plan
+  const handleRegeneratePlan = async () => {
+    if (!project) return
+
+    try {
+      // Clear current plan and generate new one
+      clearPlan()
+      await generatePlan({
+        projectId: projectId,
+        projectName: (project as any).name || 'Unnamed Project',
+        projectDomain: (project as any).projectDomain || 'general',
+        saveToDb: true
+      })
+      // Modal stays open with new plan
+    } catch (error) {
+      console.error('Failed to regenerate plan:', error)
     }
   }
 
@@ -570,8 +599,10 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
         isOpen={showExecutionPlanModal}
         onClose={handleClosePlanModal}
         onExecute={handleExecutePlan}
+        onRegenerate={handleRegeneratePlan}
         plan={currentPlan}
         isExecuting={isExecuting}
+        isExistingPlan={hasExistingPlan && !isGeneratingPlan}
       />
 
       {/* Unified Details Panel - handles widgets, notes, conversations, crystals, shards */}

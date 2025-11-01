@@ -15,6 +15,11 @@ export interface ExecutionPlan {
   steps: ExecutionStep[]
   totalEstimatedDurationMinutes: number
   cognitiveContext?: string
+  // Fields from Convex when loaded from DB
+  status?: string
+  createdAt?: number
+  updatedAt?: number
+  userId?: string
 }
 
 export interface ExecutionStep {

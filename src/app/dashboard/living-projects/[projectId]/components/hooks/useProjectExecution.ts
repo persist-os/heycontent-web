@@ -111,6 +111,28 @@ export function useProjectExecution(projectId?: string) {
   }, [currentPlan])
 
   /**
+   * Load existing plan from executionProgress
+   * Converts Convex query result to ExecutionPlan format
+   */
+  const loadExistingPlan = useCallback(() => {
+    if (!executionProgress || !userId) return null
+
+    const plan: ExecutionPlan = {
+      planId: executionProgress.planId,
+      projectId: executionProgress.projectId,
+      userId: userId,
+      steps: executionProgress.steps || [],
+      // Duration calculation: If not available in loaded plan, default to step count * 2 minutes
+      totalEstimatedDurationMinutes: (executionProgress.steps?.length || 0) * 2,
+      status: executionProgress.status,
+      createdAt: executionProgress.createdAt
+    }
+
+    setCurrentPlan(plan)
+    return plan
+  }, [executionProgress, userId])
+
+  /**
    * Clear current plan
    */
   const clearPlan = useCallback(() => {
@@ -118,6 +140,9 @@ export function useProjectExecution(projectId?: string) {
     setExecutionJobId(null)
     setError(null)
   }, [])
+
+  // Helper: Check if there's an existing plan
+  const hasExistingPlan = Boolean(executionProgress?.planId)
 
   return {
     // State
@@ -127,11 +152,13 @@ export function useProjectExecution(projectId?: string) {
     executionJobId,
     executionProgress, // Real-time progress from Convex
     error,
+    hasExistingPlan, // NEW: Flag for existing plan
 
     // Actions
     generatePlan,
     executePlan,
     modifyPlan,
+    loadExistingPlan, // NEW: Load existing plan
     clearPlan
   }
 }
