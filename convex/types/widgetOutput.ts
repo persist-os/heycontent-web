@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { widgetOutputArtifactTypeValidator } from "./widgets";
 
 export const widgetOutputSchemaFields = {
   outputId: v.string(),
@@ -14,6 +15,11 @@ export const widgetOutputSchemaFields = {
     text: v.string(),
     priority: v.number(),
   })),
+  
+  // Artifact System (Universal Rendering)
+  artifactType: v.optional(widgetOutputArtifactTypeValidator),  // Type of structured artifact
+  artifactSchema: v.optional(v.any()),  // JSON schema describing artifact structure
+  artifactData: v.optional(v.any()),  // The actual structured data
   
   // Feedback
   userRating: v.optional(v.union(v.literal(1), v.literal(0))),  // 1 = thumbs up, 0 = thumbs down

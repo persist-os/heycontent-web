@@ -38,6 +38,7 @@ import { FeedbackDetailModal } from './components/FeedbackDetailModal';
 import { FeedbackFilters } from './components/FeedbackFilters';
 import { DashboardNav } from '../dashboard/_components/dashboard-nav';
 import { IntelligenceTestPanel } from './components/IntelligenceTestPanel';
+import { ArtifactTestingGround } from './components/ArtifactTestingGround';
 
 const roleColors = {
   user: 'bg-gray-100 text-gray-800',
@@ -429,7 +430,7 @@ export default function AdminPage() {
           </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="feedback" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
             Feedback
@@ -437,6 +438,10 @@ export default function AdminPage() {
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             Users
+          </TabsTrigger>
+          <TabsTrigger value="testing" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Testing Ground
           </TabsTrigger>
         </TabsList>
 
@@ -1211,6 +1216,9 @@ export default function AdminPage() {
           )}
         </TabsContent>
 
+        <TabsContent value="testing" className="space-y-6">
+          <ArtifactTestingGround />
+        </TabsContent>
 
       </Tabs>
         </div>
