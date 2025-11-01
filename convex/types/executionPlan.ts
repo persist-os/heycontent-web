@@ -10,6 +10,7 @@ import { v } from "convex/values";
 // Plan step validator
 export const planStepValidator = v.object({
   widgetId: v.string(),
+  widgetTitle: v.optional(v.string()), // Display title for UI
   executionOrder: v.number(),
   timing: v.string(),
   rationale: v.string(),
@@ -52,6 +53,7 @@ export const executionPlanCreateValidator = v.object({
 // Type exports
 export type PlanStep = {
   widgetId: string;
+  widgetTitle: string; // Display title for UI
   executionOrder: number;
   timing: string;
   rationale: string;

@@ -257,6 +257,13 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   const handleExecutePlan = async () => {
     if (!currentPlan) return
 
+    // Safeguard: Ensure plan has a valid planId (means it was saved successfully)
+    if (!currentPlan.planId) {
+      console.error('Cannot execute plan: planId is missing (plan may not have been saved)')
+      alert('Cannot execute plan. The plan was not saved properly. Please try regenerating.')
+      return
+    }
+
     try {
       await executePlan({
         projectId: projectId,
@@ -272,6 +279,7 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
       console.log('Plan execution triggered successfully')
     } catch (error) {
       console.error('Failed to execute plan:', error)
+      alert(`Failed to execute plan: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 

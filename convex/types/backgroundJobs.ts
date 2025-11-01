@@ -23,7 +23,8 @@ export const jobTypeValidator = v.union(
   v.literal("conversation_title_generation"),
   v.literal("chaos_generation"),
   v.literal("cognitive_field_formation"),
-  v.literal("crystal_formation")  // Added for backwards compatibility
+  v.literal("crystal_formation"),  // Added for backwards compatibility
+  v.literal("plan_execution")
 );
 
 // Job status validator - matches Python JobStatus enum
@@ -43,11 +44,19 @@ export const jobPriorityValidator = v.union(
 );
 
 // Type exports for TypeScript code
-export type JobType = "shard_extraction" | "intelligence_analysis" | "chatgpt_import" | "context_enrichment_feedback" | "stardust_stream_detection" | "convergence_optimization" | "evolution_mab_reward" | "formation_mab_reward" | "stardust_promotion" | "widget_execution" | "chat_post_message_tasks" | "conversation_title_generation" | "chaos_generation" | "cognitive_field_formation" | "crystal_formation";
+export type JobType = "shard_extraction" | "intelligence_analysis" | "chatgpt_import" | "context_enrichment_feedback" | "stardust_stream_detection" | "convergence_optimization" | "evolution_mab_reward" | "formation_mab_reward" | "stardust_promotion" | "widget_execution" | "chat_post_message_tasks" | "conversation_title_generation" | "chaos_generation" | "cognitive_field_formation" | "crystal_formation" | "plan_execution";
 export type JobStatus = "queued" | "running" | "completed" | "failed";
 export type JobPriority = "low" | "normal" | "high" | "urgent";
 
 // Payload type validators (match Python dataclasses)
+export const planExecutionPayloadValidator = v.object({
+  plan_id: v.string(),
+  project_id: v.string(),
+  user_id: v.string(),
+  steps: v.array(v.any()),
+  execute_immediately: v.boolean(),
+});
+
 export const shardExtractionPayloadValidator = v.object({
   batch_content: v.array(v.any()),
   batch_size: v.number(),
