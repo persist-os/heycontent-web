@@ -38,8 +38,8 @@ export function AssignmentItem({ project }: AssignmentItemProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   
   // Mutations
-  const updateProject = useMutation(api.projectMutations.updateProject)
-  const deleteProject = useMutation(api.projectMutations.deleteProject)
+  const toggleArchive = useMutation(api.projectsMutations.toggleArchive)
+  const deleteProject = useMutation(api.projectsMutations.deleteProject)
 
   // Calculate relative time
   const relativeTime = useMemo(() => {
@@ -66,8 +66,9 @@ export function AssignmentItem({ project }: AssignmentItemProps) {
   const handlePause = async () => {
     setIsPausing(true)
     try {
-      await updateProject({
+      await toggleArchive({
         projectId: project._id,
+        userId: project.userId,
         archived: !project.archived
       })
     } catch (error) {
@@ -81,7 +82,10 @@ export function AssignmentItem({ project }: AssignmentItemProps) {
   const handleDelete = async () => {
     setIsDeleting(true)
     try {
-      await deleteProject({ projectId: project._id })
+      await deleteProject({ 
+        projectId: project._id,
+        userId: project.userId
+      })
     } catch (error) {
       console.error('Failed to delete project:', error)
     } finally {

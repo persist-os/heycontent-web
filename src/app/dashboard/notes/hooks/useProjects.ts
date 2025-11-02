@@ -21,7 +21,7 @@ export function useProjects(userId: string | undefined) {
   // Mutations - Using the correct mutation names from projectsMutations.ts
   const createProjectMutation = useMutation(api.projectsMutations.createProject);
   const updateProjectMutation = useMutation(api.projectsMutations.updateProject);
-  const deleteProjectMutation = useMutation(api.projectsMutations.deleteProject);
+  const deleteProjectMutation = useMutation(api.projectsMutations.batchDeleteProjects);
   const addContentMutation = useMutation(api.projectsMutations.addContent);
   const removeContentMutation = useMutation(api.projectsMutations.removeContent);
   const addMultipleContentMutation = useMutation(api.projectsMutations.addMultipleContent);

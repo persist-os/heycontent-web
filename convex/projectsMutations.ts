@@ -437,8 +437,8 @@ export const deleteProject = mutation({
 
 /**
  * Archive/unarchive project
- * Used by: Project organization
- * Note: This would require adding an 'archived' field to the schema
+ * Used by: Project organization, pause/resume functionality
+ * Production-ready implementation with schema support
  */
 export const toggleArchive = mutation({
   args: {
@@ -457,11 +457,9 @@ export const toggleArchive = mutation({
       throw new Error("Access denied: You don't own this project");
     }
     
-    // Note: This assumes an 'archived' field exists in the schema
-    // You would need to add: archived: v.optional(v.boolean()) to the schema
-    
+    // Update archived state
     await ctx.db.patch(projectId, {
-      // archived, // Uncomment when schema is updated
+      archived,
       updatedAt: Date.now(),
     });
     
