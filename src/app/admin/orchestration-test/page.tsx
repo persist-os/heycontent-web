@@ -104,7 +104,7 @@ export default function OrchestrationTestPage() {
 
   // Initialize test results when component mounts
   useEffect(() => {
-    if (testResults.length === 0) {
+    if (!testResults || testResults.length === 0) {
       setTestResults([
         { test: 'test1', status: 'pending' },
         { test: 'test1_5', status: 'pending' },
@@ -114,7 +114,7 @@ export default function OrchestrationTestPage() {
         { test: 'test6', status: 'pending' },
       ]);
     }
-  }, [testResults.length, setTestResults]);
+  }, [testResults?.length, setTestResults]);
 
   // Run all tests sequentially (FULL FLOW)
   const runAllTests = async () => {
@@ -226,6 +226,20 @@ export default function OrchestrationTestPage() {
     return null;
   }
 
+  // Ensure all required values are defined before rendering
+  if (!testResults || !setTestResults || !addLog) {
+    return (
+      <div className="relative flex min-h-screen">
+        <DashboardNav />
+        <main className="flex-1 overflow-y-auto overflow-x-hidden ml-16 md:ml-20">
+          <div className="container mx-auto p-6">
+            <div>Loading...</div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="relative flex min-h-screen">
       <DashboardNav />
@@ -273,8 +287,8 @@ export default function OrchestrationTestPage() {
             {/* Orchestration Tab */}
             <TabsContent value="orchestration" className="space-y-4">
               <TestResultsList
-                testResults={testResults}
-                testProjectId={testProjectId}
+                testResults={testResults || []}
+                testProjectId={testProjectId || ''}
                 onRunTest={runIndividualTest}
               />
             </TabsContent>
