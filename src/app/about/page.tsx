@@ -4,8 +4,8 @@ import { Metadata } from 'next';
 import { T } from '@/components/translation';
 
 export const metadata: Metadata = {
-  title: 'About HeyContext - AI Memory That Remembers You Privately',
-  description: 'Learn about HeyContext, the AI-powered platform that remembers you privately. Thoughtfully designed intelligence that learns from every conversation, builds understanding over time, and keeps everything completely yours.',
+  title: 'About HeyContext - Cosmic Intelligence That Evolves With You',
+  description: 'Learn about HeyContext, the cosmic intelligence system that discovers patterns you never noticed. Living projects, crystal formation, and constellation thinking that evolves with your mind.',
   keywords: [
     'about HeyContext',
     'AI memory platform',
@@ -14,18 +14,25 @@ export const metadata: Metadata = {
     'conversational AI',
     'secure AI platform',
     'privacy-first AI',
-    'intelligent memory system'
+    'intelligent memory system',
+    'cosmic intelligence system',
+    'living projects AI',
+    'crystal formation insights',
+    'constellation thinking',
+    'pattern recognition AI',
+    'shard extraction',
+    'thinking lab memory'
   ],
   openGraph: {
-    title: 'About HeyContext - AI Memory That Remembers You Privately',
-    description: 'Discover how HeyContext creates a private space for thinking where your thoughts are connected across time, never lost, and always yours.',
+    title: 'About HeyContext - Cosmic Intelligence That Evolves With You',
+    description: 'Discover how HeyContext creates living constellations from your scattered thinking, forming crystals of insight that reveal patterns you never noticed about yourself.',
     type: 'website',
     url: 'https://heycontext.co/about',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'About HeyContext - AI Memory That Remembers You Privately',
-    description: 'Discover how HeyContext creates a private space for thinking where your thoughts are connected across time.',
+    title: 'About HeyContext - Cosmic Intelligence That Evolves With You',
+    description: 'Cosmic intelligence that spots patterns in your scattered thinking and creates living constellations that evolve with your mind.',
   },
   alternates: {
     canonical: 'https://heycontext.co/about',
@@ -54,21 +61,21 @@ export default function About() {
           <T context="about.header.title">About HeyContext</T>
         </h1>
         <p className="text-lg text-muted-foreground">
-          <T context="about.header.lastUpdated">Last updated: June 06, 2025</T>
+          <T context="about.header.lastUpdated">Last updated: November 01, 2025</T>
         </p>
       </header>
 
       <article className="space-y-12 text-foreground leading-relaxed">
-        {/* Platform Overview */}
+        {/* Cosmic Intelligence Overview */}
         <section className="space-y-6">
           <h2 className="text-3xl font-medium text-foreground border-b border-border pb-3">
             <T context="about.platform.heading">What is HeyContext?</T>
           </h2>
           <p>
-            <T context="about.platform.description1">HeyContext is an AI-powered platform that remembers you privately. We provide thoughtfully designed intelligence that learns from every conversation, builds understanding over time, and keeps everything completely yours.</T>
+            <T context="about.platform.description1">HeyContext is a cosmic intelligence system that discovers patterns you never noticed about yourself. We create living constellations from your scattered thinking, forming crystals of insight through shard extraction, and building understanding that evolves with your mind.</T>
           </p>
           <p>
-            <T context="about.platform.description2">Our platform creates a private space for thinking where your thoughts are connected across time, never lost, and always yours. We prioritize privacy above all else, ensuring zero data sharing, zero external access, and zero compromise on your personal privacy.</T>
+            <T context="about.platform.description2">Our system transforms disconnected thoughts into living projects that grow and adapt. Through crystal formation and pattern recognition, we reveal the hidden connections in your thinking while keeping everything completely private and exclusively yours.</T>
           </p>
         </section>
 
@@ -78,7 +85,7 @@ export default function About() {
             <T context="about.mission.heading">Our Mission</T>
           </h2>
           <p>
-            <T context="about.mission.description">Our mission is to create AI tools that remember you privately, providing thoughtfully designed intelligence that learns and grows with you while keeping everything completely secure and personal. We believe in empowering individuals with beautifully simple, deeply personal AI that respects your privacy.</T>
+            <T context="about.mission.description">Our mission is to create cosmic intelligence that helps you discover patterns in your scattered thinking. We build living constellations that evolve with your mind, forming crystals of insight that reveal who you are and how you think, while keeping everything completely secure and personal.</T>
           </p>
         </section>
 
@@ -109,6 +116,12 @@ export default function About() {
             <li><T context="about.howItWorks.item4">Everything remains completely private with zero external sharing or data mining.</T></li>
             <li><T context="about.howItWorks.item5">All your conversations are stored securely and remain exclusively yours forever.</T></li>
           </ul>
+          <p className="mt-6">
+            <T context="about.howItWorks.compareLink">See how HeyContext's cosmic intelligence compares to ChatGPT, Claude, and others</T> →{' '}
+            <Link href="/compare" className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
+              Compare AI Platforms
+            </Link>
+          </p>
         </section>
 
         {/* Who We Serve */}
@@ -117,9 +130,9 @@ export default function About() {
             <T context="about.whoWeServe.heading">Who We Serve</T>
           </h2>
           <ul className="space-y-2 ml-6 list-disc">
-            <li><T context="about.whoWeServe.item1">Individuals who want AI that truly understands and remembers them personally.</T></li>
-            <li><T context="about.whoWeServe.item2">People seeking a private space for thinking and organizing their thoughts.</T></li>
-            <li><T context="about.whoWeServe.item3">Anyone who values privacy and wants AI that learns without compromising their personal data.</T></li>
+            <li><T context="about.whoWeServe.item1">People drowning in scattered notes and disconnected thoughts who want AI that discovers patterns they never noticed.</T></li>
+            <li><T context="about.whoWeServe.item2">Anyone tired of re-explaining context to AI over and over, seeking tools that remember why things mattered, not just what was said.</T></li>
+            <li><T context="about.whoWeServe.item3">Individuals who value privacy and want cosmic intelligence that learns without compromising their personal data during insight discovery.</T></li>
           </ul>
         </section>
 
@@ -138,6 +151,12 @@ export default function About() {
             <li><T context="about.technology.item7">We are committed to strong privacy and data security practices, though no system is 100% secure.</T></li>
             <li><T context="about.technology.item8">We believe individuals should own and control their thoughts, conversations, and personal data.</T></li>
           </ul>
+          <p className="mt-6">
+            <T context="about.technology.privacyLink">Learn how we protect your thoughts during crystal formation and pattern discovery</T> →{' '}
+            <Link href="/legal/privacy" className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
+              Privacy Policy
+            </Link>
+          </p>
         </section>
 
         {/* Join Us Section */}
@@ -146,7 +165,7 @@ export default function About() {
             <T context="about.join.heading">Join HeyContext</T>
           </h2>
           <p>
-            <T context="about.join.description">Whether you're looking for a private thinking partner or AI that truly understands you, HeyContext is here to provide beautifully simple, deeply personal intelligence. Experience thoughtfully designed AI that remembers you privately and keeps everything completely yours.</T>
+            <T context="about.join.description">Whether you're drowning in scattered thinking or seeking AI that discovers patterns you never noticed, HeyContext is here to provide cosmic intelligence that evolves with your mind. Experience living constellations, crystal formation, and pattern recognition that keeps everything completely yours.</T>
           </p>
         </section>
       </article>
