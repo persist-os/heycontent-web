@@ -23,7 +23,14 @@ export function ReportLayout({
   editable = false,
   onUpdate
 }: LayoutProps<ReportArtifact>) {
-  const { schema, data, metadata } = artifact
+  // Defensive: ensure all required properties exist
+  const schema = artifact?.schema || { layout: 'markdown' as const }
+  const data = artifact?.data || { markdown: '', sections: [] }
+  const metadata = artifact?.metadata || {
+    version: 1,
+    lastUpdatedBy: 'unknown',
+    lastUpdatedAt: Date.now()
+  }
   const [isEditing, setIsEditing] = useState(false)
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
@@ -46,8 +53,9 @@ export function ReportLayout({
   const handleSave = () => {
     if (!onUpdate || !editingSectionId) return
 
-    const newSections = data.sections?.map(section =>
-      section.id === editingSectionId
+    const sections = Array.isArray(data?.sections) ? data.sections : []
+    const newSections = sections.map(section =>
+      section?.id === editingSectionId
         ? { ...section, content: editValue }
         : section
     )
@@ -86,18 +94,18 @@ export function ReportLayout({
 
       <CardContent className="space-y-6">
         {/* Sections view if provided */}
-        {data.sections && data.sections.length > 0 ? (
-          data.sections.map((section) => (
-            <div key={section.id} className="space-y-2">
+        {data?.sections && Array.isArray(data.sections) && data.sections.length > 0 ? (
+          data.sections.map((section, sectionIdx) => (
+            <div key={section?.id || `section-${sectionIdx}`} className="space-y-2">
               <div className="flex items-center justify-between border-b border-border/20 pb-2">
                 <h3 className="text-lg font-semibold text-foreground">
-                  {section.title}
+                  {section?.title || 'Untitled Section'}
                 </h3>
-                {editable && editingSectionId !== section.id && !isEditing && (
+                {editable && editingSectionId !== section?.id && !isEditing && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleEditSection(section.id, section.content)}
+                    onClick={() => handleEditSection(section?.id || '', section?.content || '')}
                     className="h-6 px-2 text-xs"
                   >
                     <Pencil className="w-3 h-3 mr-1" />
@@ -106,7 +114,7 @@ export function ReportLayout({
                 )}
               </div>
               
-              {editingSectionId === section.id && isEditing ? (
+              {editingSectionId === section?.id && isEditing ? (
                 /* Editing mode */
                 <div className="space-y-2">
                   <textarea
@@ -150,7 +158,7 @@ export function ReportLayout({
                 /* Display mode */
                 <div className="prose prose-sm max-w-none text-muted-foreground">
                   <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
-                    {section.content}
+                    {section?.content || ''}
                   </ReactMarkdown>
                 </div>
               )}
@@ -160,7 +168,7 @@ export function ReportLayout({
           /* Single markdown content */
           <div className="prose prose-sm max-w-none text-muted-foreground">
             <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
-              {data.markdown}
+              {data?.markdown || ''}
             </ReactMarkdown>
           </div>
         )}

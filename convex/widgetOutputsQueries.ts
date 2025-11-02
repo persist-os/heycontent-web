@@ -143,3 +143,98 @@ export const getWidgetOutputData = query({
   },
 });
 
+/**
+ * Get a single widget output by ID
+ * Used by artifact viewer page
+ * Privacy: Enforces user isolation
+ */
+export const getById = query({
+  args: {
+    id: v.id("widget_outputs"),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const output = await ctx.db.get(args.id);
+    
+    // Privacy check: Only return if it belongs to this user
+    if (!output || output.userId !== args.userId) {
+      return null;
+    }
+    
+    return output;
+  },
+});
+
+/**
+ * Get all artifacts for a project
+ * Used by ConstellationView to display artifacts in preview modal
+ */
+export const getProjectArtifacts = query({
+  args: {
+    projectId: v.id("projects"),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("widget_outputs")
+      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("userId"), args.userId),
+          q.neq(q.field("artifactType"), null) // Only return outputs with artifacts
+        )
+      )
+      .order("desc")
+      .collect();
+  },
+});
+
+/**
+ * Get recent artifacts across all user's projects
+ * Used by homepage to display latest artifacts
+ */
+export const getRecentArtifacts = query({
+  args: {
+    userId: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { userId, limit = 5 }) => {
+    // Query widget_outputs, filter by userId and has artifact, order by most recent
+    const artifacts = await ctx.db
+      .query("widget_outputs")
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("userId"), userId),
+          q.neq(q.field("artifactType"), null)
+        )
+      )
+      .order("desc")
+      .take(Math.min(limit, 10));
+
+    // Enrich with project names
+    const enrichedArtifacts = await Promise.all(
+      artifacts.map(async (artifact) => {
+        let projectName = 'Unknown Project'
+        
+        if (artifact.projectId) {
+          try {
+            const project = await ctx.db.get(artifact.projectId)
+            if (project) {
+              projectName = project.name
+            }
+          } catch (error) {
+            console.warn('Failed to fetch project for artifact:', artifact._id)
+          }
+        }
+        
+        return {
+          ...artifact,
+          projectName,
+        }
+      })
+    )
+
+    return enrichedArtifacts
+  },
+});
+

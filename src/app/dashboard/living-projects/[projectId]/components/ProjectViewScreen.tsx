@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation } from 'convex/react'
-import { useRouter } from 'next/navigation'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { api } from '@/convex/_generated/api'
 import { Id } from '@/convex/_generated/dataModel'
@@ -18,23 +17,18 @@ import {
   LayoutGrid,
   List,
   FileText,
-  Plus,
-  Play
+  Plus
 } from 'lucide-react'
 import { ConstellationTransition } from '@/app/dashboard/living-projects/components/widgets/ConstellationTransition'
 import { DeleteProjectModal } from './DeleteProjectModal'
-import { ProjectExecutionPlanModal } from './ProjectExecutionPlanModal'
 import { WidgetConfig } from '@/types/projectWidgets'
 import { useWidgetGeneration } from './hooks/useWidgetGeneration'
 import { useProjectActions } from './hooks/useProjectActions'
-import { useProjectExecution } from './hooks/useProjectExecution'
 import { UnifiedDetailsPanel, usePanelInstances } from './widgets/unified-panel/UnifiedDetailsPanel'
 import { WidgetGenerationLoader } from './widgets/WidgetGenerationLoader'
 import { ConstellationCanvas } from './widgets/ConstellationCanvas'
 import { formatDistanceToNow } from './utils/dateFormatting'
-import { useWidgetRunner } from '@/app/dashboard/living-projects/hooks/useWidgetRunner'
 import { ContentAttachmentPanel } from '@/app/dashboard/living-projects/components/ContentAttachmentPanel'
-import { ProjectContentSection } from './ProjectContentSection'
 import { ProjectGridView } from './ProjectGridView'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
@@ -54,7 +48,6 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showProjectContentPanel, setShowProjectContentPanel] = useState(false)
-  const [showExecutionPlanModal, setShowExecutionPlanModal] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>("constellation")
   const menuRef = useRef<HTMLDivElement>(null)
   
@@ -99,6 +92,15 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
     projectId ? { projectId: projectId as any } : 'skip'
   )
 
+  // Fetch artifacts for constellation display
+  const artifacts = useQuery(
+    api.widgetOutputsQueries.getProjectArtifacts,
+    projectId && userId ? { 
+      projectId: projectId as any,
+      userId: userId 
+    } : 'skip'
+  )
+
   const clearConstellationLayout = useMutation(api.projectsMutations.clearConstellationLayout)
 
   const { fingerprint: currentFingerprint } = useProjectFingerprint(projectId as any)
@@ -111,18 +113,6 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   })
 
   const { editFingerprint, goBack, deleteProjectAction } = useProjectActions(projectId)
-
-  // Project execution
-  const { 
-    isGeneratingPlan,
-    isExecuting,
-    currentPlan,
-    hasExistingPlan,
-    generatePlan,
-    executePlan,
-    loadExistingPlan,
-    clearPlan 
-  } = useProjectExecution(projectId as Id<"projects">)
 
   // Handle content opening with mutual exclusion (closes widget panel)
   const handleContentOpen = (id: string, type: string) => {
@@ -139,6 +129,15 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
     }
   };
 
+  // Handle artifact opening
+  const handleArtifactClick = (artifact: any) => {
+    const position = {
+      x: window.innerWidth / 2 - 200,
+      y: window.innerHeight / 2 - 150
+    }
+    openPanel(artifact, 'artifact', position)
+  };
+
   // Handle layout reset
   const handleLayoutReset = async () => {
     if (!userId) return;
@@ -153,11 +152,6 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
     }
   };
 
-  // Widget runner hook
-  const router = useRouter()
-  const { executeWidget, isRunning: isWidgetRunning, lastResult } = useWidgetRunner()
-  const [runningWidgetId, setRunningWidgetId] = useState<string | null>(null)
-
   // Event handlers - unified panel opens at widget/content position
   const handleWidgetClick = (widget: WidgetConfig) => {
     // Open panel at widget position (center of viewport as fallback)
@@ -170,42 +164,6 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
 
   const handleWidgetHover = (widgetId: string | null) => {
     setHighlightedWidget(widgetId)
-  }
-
-  const handleWidgetRun = async (widgetId: string) => {
-    try {
-      setRunningWidgetId(widgetId)
-      
-      // Find widget by Convex ID
-      const widget = projectWidgets?.widgets.find(
-        (w: any) => w._id === widgetId
-      ) as WidgetConfig | undefined
-      
-      if (!widget) {
-        console.error('Widget not found:', widgetId)
-        return
-      }
-
-      const result = await executeWidget({
-        widgetId,
-        projectId
-      })
-
-      if (result) {
-        // Success! Open the panel to show the output
-        
-        // Open panel at center of viewport
-        const position = {
-          x: window.innerWidth / 2 - 200,
-          y: window.innerHeight / 2 - 150
-        }
-        openPanel(widget, 'widget', position)
-      }
-    } catch (error) {
-      console.error('Failed to run widget:', error)
-    } finally {
-      setRunningWidgetId(null)
-    }
   }
 
   const handleDeleteProject = async () => {
@@ -224,88 +182,6 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   // Handle view mode toggle
   const handleViewModeToggle = (mode: ViewMode) => {
     setViewMode(mode)
-  }
-
-  // Handle Run Project button click
-  const handleRunProject = async () => {
-    if (!project || !projectWidgets?.widgets?.length) {
-      return
-    }
-
-    try {
-      // Check if there's an existing plan first
-      if (hasExistingPlan) {
-        // Load existing plan instead of generating new one
-        loadExistingPlan()
-        setShowExecutionPlanModal(true)
-      } else {
-        // No existing plan, generate new one
-        await generatePlan({
-          projectId: projectId,
-          projectName: (project as any).name || 'Unnamed Project',
-          projectDomain: (project as any).projectDomain || 'general',
-          saveToDb: true
-        })
-        setShowExecutionPlanModal(true)
-      }
-    } catch (error) {
-      console.error('Failed to load or generate execution plan:', error)
-    }
-  }
-
-  // Handle Execute Plan
-  const handleExecutePlan = async () => {
-    if (!currentPlan) return
-
-    // Safeguard: Ensure plan has a valid planId (means it was saved successfully)
-    if (!currentPlan.planId) {
-      console.error('Cannot execute plan: planId is missing (plan may not have been saved)')
-      alert('Cannot execute plan. The plan was not saved properly. Please try regenerating.')
-      return
-    }
-
-    try {
-      await executePlan({
-        projectId: projectId,
-        planId: currentPlan.planId,
-        steps: currentPlan.steps,
-        executeImmediately: true
-      })
-      
-      // Close modal after triggering execution
-      setShowExecutionPlanModal(false)
-      
-      // Note: Progress tracking would be implemented in Phase 5
-      console.log('Plan execution triggered successfully')
-    } catch (error) {
-      console.error('Failed to execute plan:', error)
-      alert(`Failed to execute plan: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    }
-  }
-
-  // Handle Regenerate Plan
-  const handleRegeneratePlan = async () => {
-    if (!project) return
-
-    try {
-      // Clear current plan and generate new one
-      clearPlan()
-      await generatePlan({
-        projectId: projectId,
-        projectName: (project as any).name || 'Unnamed Project',
-        projectDomain: (project as any).projectDomain || 'general',
-        saveToDb: true
-      })
-      // Modal stays open with new plan
-    } catch (error) {
-      console.error('Failed to regenerate plan:', error)
-    }
-  }
-
-  // Handle close plan modal
-  const handleClosePlanModal = () => {
-    setShowExecutionPlanModal(false)
-    clearPlan()
   }
 
   if (!project) {
@@ -383,19 +259,6 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
 
               {/* Actions */}
               <div className="flex items-center gap-3">
-                {/* Run Project Button - Primary Action */}
-                {projectWidgets && projectWidgets.widgets && projectWidgets.widgets.length > 0 && (
-                  <button
-                    onClick={handleRunProject}
-                    disabled={isGeneratingPlan}
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Generate and execute project plan"
-                  >
-                    <Play className="w-4 h-4" />
-                    <T context="button.run_project">{isGeneratingPlan ? 'Generating Plan...' : 'Run Project'}</T>
-                  </button>
-                )}
-
                 {/* Add Content Button - Prominent */}
                 <button
                   onClick={() => setShowProjectContentPanel(true)}
@@ -512,16 +375,16 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
               ) : currentFingerprint ? (
                 <ConstellationCanvas
                   widgets={(projectWidgets?.widgets || []) as WidgetConfig[]}
+                  artifacts={artifacts || []}
                   userId={userId}
                   projectId={projectId}
                   onWidgetClick={handleWidgetClick}
                   onWidgetHover={handleWidgetHover}
                   highlightedWidget={highlightedWidget}
-                  onWidgetRun={handleWidgetRun}
-                  runningWidgetId={runningWidgetId}
                   contentItems={(project as any)?.contentItems || []}
                   storedLayout={(project as any)?.constellationLayout}
                   onContentOpen={handleContentOpen}
+                  onArtifactClick={handleArtifactClick}
                   onLayoutReset={handleLayoutReset}
                 />
               ) : (
@@ -574,8 +437,6 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
                         widgets={(projectWidgets?.widgets || []) as WidgetConfig[]}
                         contentItems={(project as any)?.contentItems || []}
                         onWidgetClick={handleWidgetClick}
-                        onWidgetRun={handleWidgetRun}
-                        runningWidgetId={runningWidgetId}
                         onContentOpen={handleContentOpen}
                       />
                     )}
@@ -601,16 +462,6 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
         onConfirm={handleDeleteProject}
         projectName={project?.name || 'Project'}
         isDeleting={isDeleting}
-      />
-      
-      <ProjectExecutionPlanModal
-        isOpen={showExecutionPlanModal}
-        onClose={handleClosePlanModal}
-        onExecute={handleExecutePlan}
-        onRegenerate={handleRegeneratePlan}
-        plan={currentPlan}
-        isExecuting={isExecuting}
-        isExistingPlan={hasExistingPlan && !isGeneratingPlan}
       />
 
       {/* Unified Details Panel - handles widgets, notes, conversations, crystals, shards */}

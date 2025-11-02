@@ -3,7 +3,7 @@
 import React, { memo, useCallback, useMemo, useEffect, useState, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  FileText, Shield, Zap, Sparkles, Gem, Radio
+  FileText, Shield, Zap, Sparkles, Gem, Radio, Home
 } from 'lucide-react'
 import { useSidebar } from '@/app/context/sidebar-context'
 import { getApiKey } from '@/app/lib/api-helpers'
@@ -23,6 +23,15 @@ import {
 } from '@/components/command-palette'
 
 const navItems = [
+  {
+    id: 'home',
+    label: 'Home',
+    description: 'Your personalized dashboard',
+    icon: Home,
+    href: '/dashboard/home',
+    dataAttr: 'data-home-link',
+    category: 'navigate',
+  },
   // {
   //   id: 'briefing-room',
   //   label: 'Briefing Room',
@@ -327,6 +336,9 @@ export const DashboardNav = memo(function DashboardNav() {
   // Memoize active item calculation
   const isItemActive = useCallback((item: typeof dynamicNavItems[0]) => {
     switch (item.id) {
+      case 'home':
+        // Home is active for /dashboard/home or just /dashboard
+        return pathname === '/dashboard/home' || pathname === '/dashboard';
       case 'briefing-room':
         // This tab is active for briefing room routes
         return pathname.startsWith('/dashboard/briefing_room');

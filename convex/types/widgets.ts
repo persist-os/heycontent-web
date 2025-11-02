@@ -104,6 +104,27 @@ export const widgetSchemaFields = {
     })
   )),
   
+  // Family Identity (NEW - Phase 2: Widget as Family of Agents)
+  familyIdentity: v.optional(v.object({
+    familyName: v.string(),
+    mission: v.string(),
+    collaborationStyle: v.string(),
+    qualityStandard: v.string(),
+  })),
+  
+  // Agent Roster (NEW - Phase 2: Dynamic agent spawning)
+  agentRoster: v.optional(v.array(v.object({
+    agentId: v.string(),
+    roleName: v.string(),
+    personality: v.string(),
+    responsibilities: v.array(v.string()),
+    spawnCondition: v.string(),
+  }))),
+  
+  // ❌ NO artifact relationships here - widgets discover artifacts at runtime
+  // ❌ NO sibling awareness here - widgets discover siblings at runtime
+  // Background jobs handle all linkages dynamically
+  
   // Execution tracking
   lastRunAt: v.optional(v.number()),
   lastRunStatus: v.optional(widgetRunStatusValidator),
@@ -217,22 +238,24 @@ export const widgetCategoryValidator = v.object({
 });
 
 // Widget validator for batch create/update operations (excludes auto-generated fields)
+// ✅ PHASE 2 TRANSITION: Old UI fields now optional for family-centric widgets
+// ✅ CRITICAL: Uses camelCase to match Python's by_alias=True serialization
 export const widgetBatchValidator = v.object({
-  widget_id: v.string(),
-  widget_type: v.string(),
+  widgetId: v.string(),                       // ✅ camelCase (Python: widget_id → widgetId)
+  widgetType: v.string(),                     // ✅ camelCase (Python: widget_type → widgetType)
   title: v.string(),
   description: v.optional(v.string()),
-  category: v.string(),
-  priority: v.number(),
-  size: v.string(),
-  theme: v.string(),
-  position: v.number(),
-  config: v.any(),
-  data_sources: v.array(v.string()),
-  update_frequency: v.string(),
-  interactive: v.boolean(),
-  editable: v.boolean(),
-  shareable: v.boolean(),
+  category: v.optional(v.string()),           // ✅ Optional - family widgets may not have category
+  priority: v.optional(v.number()),           // ✅ Optional - defaults can be set
+  size: v.optional(v.string()),               // ✅ Optional - UI field
+  theme: v.optional(v.string()),              // ✅ Optional - UI field
+  position: v.optional(v.number()),           // ✅ Optional - UI field
+  config: v.optional(v.any()),                // ✅ Optional - UI config
+  dataSource: v.optional(v.array(v.string())), // ✅ Optional - camelCase
+  updateFrequency: v.optional(v.string()),    // ✅ Optional - camelCase
+  interactive: v.optional(v.boolean()),       // ✅ Optional - UI field
+  editable: v.optional(v.boolean()),          // ✅ Optional - UI field
+  shareable: v.optional(v.boolean()),         // ✅ Optional - UI field
   // Widget Capabilities (NEW - Phase 1.3)
   // Note: v.union(v.null(), ...) allows explicit null values from backend
   capabilities: v.optional(v.union(
@@ -274,6 +297,21 @@ export const widgetBatchValidator = v.object({
     skipIfNoActivity: v.boolean(),
   })),
   workflowStage: v.optional(widgetWorkflowStageValidator),
+  // ✅ PHASE 2: Family Identity fields
+  familyIdentity: v.optional(v.object({
+    familyName: v.string(),
+    mission: v.string(),
+    collaborationStyle: v.string(),
+    qualityStandard: v.string(),
+  })),
+  // ✅ PHASE 2: Agent Roster
+  agentRoster: v.optional(v.array(v.object({
+    agentId: v.string(),
+    roleName: v.string(),
+    personality: v.string(),
+    responsibilities: v.array(v.string()),
+    spawnCondition: v.string(),
+  }))),
 });
 
 // Widget create validator (for single widget creation - extends batch validator)

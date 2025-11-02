@@ -10,8 +10,9 @@
 import React from 'react'
 import { WidgetConfig } from '@/types/projectWidgets'
 import { getWidgetThemeClasses } from '../utils/widgetStyling'
-import { PlayCircle, Clock } from 'lucide-react'
+import { Clock } from 'lucide-react'
 import { WidgetScheduleControls } from './WidgetScheduleControls'
+import { type FamilyStatus, FAMILY_STATUS_CONFIG } from '@/app/types/family-status'
 
 interface FloatingWidgetCardProps {
   widget: WidgetConfig & {
@@ -28,8 +29,7 @@ interface FloatingWidgetCardProps {
   scale: number
   onClick: () => void
   onHover?: (widgetId: string | null) => void
-  onRun?: (widgetId: string) => void
-  isRunning?: boolean
+  status: FamilyStatus
   projectId?: string
 }
 
@@ -47,10 +47,11 @@ export function FloatingWidgetCard({
   scale,
   onClick,
   onHover,
-  onRun,
-  isRunning = false,
+  status,
   projectId = ''
 }: FloatingWidgetCardProps) {
+  // Get status badge configuration
+  const statusBadge = FAMILY_STATUS_CONFIG[status]
   // Dynamic sizing based on zoom level and content
   const getCardDimensions = () => {
     // Base sizes
@@ -165,27 +166,18 @@ export function FloatingWidgetCard({
               </div>
             </div>
             
-            {/* Run Widget Button - shown at medium zoom and above */}
-            {onRun && scale > 0.8 && (
+            {/* Status Badge - shown at medium zoom and above */}
+            {scale > 0.8 && (
               <div className="space-y-2">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation() // Prevent card click
-                    onRun(widget._id)  // ✅ Use Convex ID (_id)
-                  }}
-                  disabled={isRunning}
-                  className={`
-                    w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg
-                    text-sm font-medium transition-all duration-200
-                    ${isRunning 
-                      ? 'bg-muted text-muted-foreground cursor-not-allowed' 
-                      : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 active:scale-[0.98]'
-                    }
-                  `}
-                >
-                  <PlayCircle className={`w-4 h-4 ${isRunning ? 'animate-pulse' : ''}`} />
-                  <span>{isRunning ? 'Running...' : 'Run Widget'}</span>
-                </button>
+                <div className={`
+                  w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg
+                  text-sm font-medium border transition-all duration-200
+                  ${statusBadge.color}
+                  ${statusBadge.animate ? 'animate-pulse' : ''}
+                `}>
+                  <span className="text-base">{statusBadge.icon}</span>
+                  <span>{statusBadge.label}</span>
+                </div>
 
                 {scale > 0.9 && projectId && (
                   <WidgetScheduleControls 

@@ -156,13 +156,15 @@ export interface AnalysisArtifact {
   }
   data: {
     insights: Array<{
-      id: string
+      id?: string
       title: string
       description: string
-      priority: 'high' | 'medium' | 'low'
+      impact: 'high' | 'medium' | 'low'
+      metric?: string
+      value?: string
       category?: string
     }>
-    chartData?: Array<Record<string, any>>
+    chartData?: Record<string, any>
   }
   metadata: ArtifactMetadata
 }

@@ -164,29 +164,32 @@ export function useUnifiedActions(projectId: string): UnifiedActionsReturn {
 
   /**
    * Handle open full view for any item type
+   * Routes widgets and artifacts to unified gallery (simpler URL now!)
    */
   const handleOpenFull = useCallback((item: any, itemType: DetailItemType) => {
     try {
-      switch (itemType) {
-        case 'widget':
-          router.push(`/dashboard/living-projects/${projectId}/widgets/${item._id}`)
-          break
-          
-        case 'note':
-          router.push(`/dashboard/thinking_lab?noteId=${item._id}`)
-          break
-          
-        case 'conversation':
-          router.push(`/dashboard/thinking_lab?conversationId=${item._id}`)
-          break
-          
-        case 'crystal':
-          router.push(`/dashboard/crystals?crystalId=${item.crystal_id || item._id}`)
-          break
-          
-        case 'shard':
-          router.push(`/dashboard/crystals?shardId=${item._id}`)
-          break
+      // Widgets and artifacts go to unified gallery
+      if (itemType === 'widget' || itemType === 'artifact') {
+        router.push(`/dashboard/living-projects/${projectId}/gallery?id=${item._id}`)
+      } else {
+        // Keep existing routes for non-gallery types
+        switch (itemType) {
+          case 'note':
+            router.push(`/dashboard/thinking_lab?noteId=${item._id}`)
+            break
+            
+          case 'conversation':
+            router.push(`/dashboard/thinking_lab?conversationId=${item._id}`)
+            break
+            
+          case 'crystal':
+            router.push(`/dashboard/crystals?crystalId=${item.crystal_id || item._id}`)
+            break
+            
+          case 'shard':
+            router.push(`/dashboard/crystals?shardId=${item._id}`)
+            break
+        }
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Navigation failed'

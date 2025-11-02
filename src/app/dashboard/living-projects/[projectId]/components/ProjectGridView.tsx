@@ -36,8 +36,6 @@ interface ProjectGridViewProps {
   widgets: WidgetConfig[]
   contentItems: any[]
   onWidgetClick: (widget: WidgetConfig) => void
-  onWidgetRun?: (widgetId: string) => void
-  runningWidgetId?: string | null
   onContentOpen: (id: string, type: string) => void
 }
 
@@ -51,8 +49,6 @@ export function ProjectGridView({
   widgets,
   contentItems,
   onWidgetClick,
-  onWidgetRun,
-  runningWidgetId,
   onContentOpen
 }: ProjectGridViewProps) {
   const router = useRouter()
@@ -189,11 +185,10 @@ export function ProjectGridView({
     }
   }
 
-  // Handle card action (e.g., run widget)
+  // Handle card click - widgets now managed via ProjectControlPanel
   const handleCardAction = (content: ContentCardData) => {
-    if (content.type === 'widget' && onWidgetRun) {
-      onWidgetRun(content.id)
-    }
+    // Card clicks open the unified details panel
+    // Widget execution is now controlled via "Start Project" button
   }
 
   // Convert items to ContentCardData format

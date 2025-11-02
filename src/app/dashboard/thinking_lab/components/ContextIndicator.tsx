@@ -32,7 +32,7 @@ export function ContextIndicator() {
   const handleBackToWidget = () => {
     if (!widgetId || !projectId) return
     console.log('[CONTEXT INDICATOR] Navigating back to widget:', { widgetId, projectId })
-    router.push(`/dashboard/living-projects/${projectId}/widgets/${widgetId}`)
+    router.push(`/dashboard/living-projects/${projectId}/gallery?id=${widgetId}`)
   }
 
   const handleExitContext = () => {

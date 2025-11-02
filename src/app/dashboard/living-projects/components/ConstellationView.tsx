@@ -145,8 +145,17 @@ export function ConstellationView() {
     return 'temp-id' // Return temp ID since we're navigating away
   }, [router])
 
-  // Handle clicking on a project
+  // Handle clicking on a project - Navigate to project page
   const handleProjectClick = useCallback((project: Project) => {
+    if (project.fingerprintId) {
+      router.push(`/dashboard/living-projects/${project._id}`)
+    } else {
+      router.push(`/dashboard/living-projects/project-discovery?projectId=${project._id}`)
+    }
+  }, [router])
+
+  // Handle double-click on a project - Navigate to project page
+  const handleProjectDoubleClick = useCallback((project: Project) => {
     if (project.fingerprintId) {
       router.push(`/dashboard/living-projects/${project._id}`)
     } else {
@@ -382,7 +391,7 @@ export function ConstellationView() {
         <div className="absolute bottom-32 left-1/2 z-10 pointer-events-none" style={{ transform: 'translateX(-50%)' }}>
           <div className="bg-gradient-to-r from-accent/10 via-primary/10 to-accent/10 backdrop-blur-md border border-accent/30 rounded-xl px-5 py-3 shadow-xl shadow-accent/10">
             <div className="text-xs text-foreground text-center font-medium">
-              <T context="constellation.hint.controls">Drag to explore • Scroll to zoom • Click projects to open</T>
+              <T context="constellation.hint.controls">Drag to explore • Scroll to zoom • Click to open project</T>
             </div>
           </div>
         </div>

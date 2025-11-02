@@ -36,19 +36,28 @@ export function TimelineLayout({
   artifact,
   editable = false 
 }: LayoutProps<TimelineArtifact>) {
-  const { schema, data, metadata } = artifact
+  // Defensive: ensure all required properties exist
+  const schema = artifact?.schema || { layout: 'timeline' as const, eventTypes: [] }
+  const data = artifact?.data || { events: [] }
+  const metadata = artifact?.metadata || {
+    version: 1,
+    lastUpdatedBy: 'unknown',
+    lastUpdatedAt: Date.now()
+  }
   
   // Note: Timeline editing would allow reordering events or editing descriptions
   // For Phase 2, we mark it as supporting editable prop but don't implement full editing yet
 
   // Sort events by timestamp (newest first)
   // Defensive check: ensure events is an array before spreading
-  const events = Array.isArray(data.events) ? data.events : []
-  const sortedEvents = [...events].sort((a, b) => b.timestamp - a.timestamp)
+  const events = Array.isArray(data?.events) ? data.events : []
+  const sortedEvents = [...events].sort((a, b) => (b?.timestamp || 0) - (a?.timestamp || 0))
 
   // Get event type config
   const getEventTypeConfig = (eventType: string) => {
-    return schema.eventTypes.find(t => t.type === eventType)
+    return Array.isArray(schema?.eventTypes) 
+      ? schema.eventTypes.find(t => t?.type === eventType)
+      : undefined
   }
 
   // Format date
@@ -92,7 +101,7 @@ export function TimelineLayout({
             const isLast = index === sortedEvents.length - 1
 
             return (
-              <div key={event.id} className="relative">
+              <div key={event.id || `timeline-event-${index}`} className="relative">
                 {/* Event dot */}
                 <div 
                   className={`absolute -left-8 top-1 w-4 h-4 rounded-full ${dotColor} border-2 border-background flex items-center justify-center`}
@@ -106,10 +115,10 @@ export function TimelineLayout({
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
                         <h4 className="text-sm font-medium text-foreground mb-1">
-                          {event.title}
+                          {event?.title || 'Untitled Event'}
                         </h4>
                         
-                        {event.description && (
+                        {event?.description && (
                           <p className="text-sm text-muted-foreground">
                             {event.description}
                           </p>
@@ -118,14 +127,14 @@ export function TimelineLayout({
 
                       {typeConfig && (
                         <Badge variant="outline" className="text-xs">
-                          {typeConfig.label}
+                          {typeConfig?.label || typeConfig?.type || 'Event'}
                         </Badge>
                       )}
                     </div>
 
                     <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
-                      <span>{formatDate(event.timestamp)}</span>
-                      {event.metadata && Object.keys(event.metadata).length > 0 && (
+                      <span>{formatDate(event?.timestamp || Date.now())}</span>
+                      {event?.metadata && Object.keys(event.metadata).length > 0 && (
                         <>
                           <span>•</span>
                           <span className="text-muted-foreground/70">

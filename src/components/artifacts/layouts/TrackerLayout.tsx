@@ -34,15 +34,21 @@ export function TrackerLayout({
   artifact,
   editable = false 
 }: LayoutProps<TrackerArtifact>) {
-  const { data, metadata } = artifact
+  // Defensive: ensure all required properties exist
+  const data = artifact?.data || { events: [] }
+  const metadata = artifact?.metadata || {
+    version: 1,
+    lastUpdatedBy: 'unknown',
+    lastUpdatedAt: Date.now()
+  }
   
   // Note: Tracker is typically read-only (system-generated logs)
   // editable prop included for consistency but not actively used
 
   // Sort events by timestamp (newest first)
   // Defensive check: ensure events is an array before spreading
-  const events = Array.isArray(data.events) ? data.events : []
-  const sortedEvents = [...events].sort((a, b) => b.timestamp - a.timestamp)
+  const events = Array.isArray(data?.events) ? data.events : []
+  const sortedEvents = [...events].sort((a, b) => (b?.timestamp || 0) - (a?.timestamp || 0))
 
   // Relative time formatter
   const getRelativeTime = (timestamp: number) => {
@@ -74,12 +80,12 @@ export function TrackerLayout({
       
       <CardContent>
         <div className="space-y-0">
-          {sortedEvents.map((event) => {
+          {sortedEvents.map((event, eventIdx) => {
             const Icon = eventIcons[event.type] || Play
             
             return (
               <div
-                key={event.id}
+                key={event.id || `tracker-event-${eventIdx}`}
                 className="py-3 border-b border-border/20 last:border-0 flex items-start gap-3"
               >
                 <div className="mt-0.5">
@@ -99,7 +105,7 @@ export function TrackerLayout({
                   </div>
                   
                   <p className="text-sm text-foreground">
-                    {event.widgetName || `Widget ${event.widgetId.slice(-4)}`} {event.message}
+                    {event?.widgetName || (event?.widgetId ? `Widget ${event.widgetId.slice(-4)}` : 'Unknown Widget')} {event?.message || ''}
                   </p>
                   
                   {event.details && (

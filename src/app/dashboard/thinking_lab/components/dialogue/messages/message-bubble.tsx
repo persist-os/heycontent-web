@@ -84,7 +84,7 @@ export function MessageBubble({
             id={`message-${message.id}`}
             className={`
               ${isUser 
-                ? 'rounded-2xl px-5 sm:px-7 py-2 sm:py-3 bg-primary text-primary-foreground dark:text-black [&_*]:!text-primary-foreground dark:[&_*]:!text-black mr-1 sm:mr-2' 
+                ? 'rounded-2xl px-5 sm:px-7 py-2 sm:py-3 bg-primary text-primary-darker [&_*]:!text-primary-darker mr-1 sm:mr-2' 
                 : 'px-0 py-1 text-foreground'
               }
               relative w-full min-w-0
@@ -101,7 +101,7 @@ export function MessageBubble({
             ) : (
               <>
                 {/* Message content - show streaming content in real-time */}
-                <div className={`${isUser ? 'text-primary-foreground dark:text-black' : 'text-foreground'}`}>
+                <div className={`${isUser ? 'text-primary-darker' : 'text-foreground'}`}>
                   <MarkdownRenderer content={message.content} />
                 </div>
 

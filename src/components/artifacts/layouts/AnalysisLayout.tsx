@@ -19,7 +19,14 @@ export function AnalysisLayout({
   artifact,
   editable = false
 }: LayoutProps<AnalysisArtifact>) {
-  const { schema, data, metadata } = artifact
+  // Defensive: ensure all required properties exist
+  const schema = artifact?.schema || { layout: 'insights' as const }
+  const data = artifact?.data || { insights: [] }
+  const metadata = artifact?.metadata || {
+    version: 1,
+    lastUpdatedBy: 'unknown',
+    lastUpdatedAt: Date.now()
+  }
 
   // Get priority icon and color
   const getPriorityIndicator = (priority: 'high' | 'medium' | 'low') => {
@@ -43,12 +50,13 @@ export function AnalysisLayout({
   }
 
   // Group insights by category if provided
-  const groupedInsights = data.insights.reduce((acc, insight) => {
-    const category = insight.category || 'General'
+  const insights = Array.isArray(data.insights) ? data.insights : []
+  const groupedInsights = insights.reduce((acc, insight) => {
+    const category = insight?.category || 'General'
     if (!acc[category]) acc[category] = []
     acc[category].push(insight)
     return acc
-  }, {} as Record<string, typeof data.insights>)
+  }, {} as Record<string, typeof insights>)
 
   return (
     <Card className="bg-card/50 backdrop-blur-sm border border-primary/20 hover:bg-card/80 transition-all duration-300">
@@ -78,11 +86,11 @@ export function AnalysisLayout({
             )}
             
             <div className="space-y-3">
-              {insights.map((insight) => {
-                const { icon: Icon, color, bgColor } = getPriorityIndicator(insight.priority)
+              {insights.map((insight, insightIdx) => {
+                const { icon: Icon, color, bgColor } = getPriorityIndicator(insight.impact)
                 return (
                   <div
-                    key={insight.id}
+                    key={insight.id || `insight-${category}-${insightIdx}`}
                     className={`${bgColor} border border-border/20 rounded-lg p-4 transition-all duration-200 hover:bg-opacity-80`}
                   >
                     <div className="flex items-start gap-3">
@@ -93,7 +101,7 @@ export function AnalysisLayout({
                             {insight.title}
                           </h4>
                           <Badge variant="outline" className="text-xs capitalize">
-                            {insight.priority}
+                            {insight.impact}
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground">
@@ -109,7 +117,7 @@ export function AnalysisLayout({
         ))}
 
         {/* Chart visualization */}
-        {schema.showCharts && data.chartData && data.chartData.length > 0 && (
+        {schema?.showCharts && data?.chartData && Array.isArray(data.chartData) && data.chartData.length > 0 && (
           <div className="bg-muted/10 border border-border/20 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-4">
               <BarChartIcon className="w-4 h-4 text-primary" />

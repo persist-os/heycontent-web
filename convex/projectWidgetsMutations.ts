@@ -39,31 +39,31 @@ export const upsertProjectWidgets = mutation({
     userId: v.string(),
     
     // Widget data
-    categories: v.array(widgetCategoryValidator),
+    categories: v.optional(v.array(widgetCategoryValidator)),  // ✅ Optional for family transition
     widgets: v.array(widgetBatchValidator),
     
-    // Global layout settings
-    layout_type: v.string(),
-    columns: v.number(),
-    rows: v.number(),
+    // Global layout settings - ✅ ALL OPTIONAL for Phase 2 transition
+    layout_type: v.optional(v.string()),
+    columns: v.optional(v.number()),
+    rows: v.optional(v.number()),
     
-    // Global appearance
-    global_theme: v.string(),
-    color_scheme: v.string(),
-    font_style: v.string(),
+    // Global appearance - ✅ ALL OPTIONAL
+    global_theme: v.optional(v.string()),
+    color_scheme: v.optional(v.string()),
+    font_style: v.optional(v.string()),
     
-    // Customization settings
-    allow_customization: v.boolean(),
-    allow_reordering: v.boolean(),
-    allow_resizing: v.boolean(),
+    // Customization settings - ✅ ALL OPTIONAL
+    allow_customization: v.optional(v.boolean()),
+    allow_reordering: v.optional(v.boolean()),
+    allow_resizing: v.optional(v.boolean()),
     
-    // Technical settings
-    required_integrations: v.array(v.string()),
-    data_refresh_strategy: v.string(),
+    // Technical settings - ✅ ALL OPTIONAL
+    required_integrations: v.optional(v.array(v.string())),
+    data_refresh_strategy: v.optional(v.string()),
     
-    // Metadata
-    version: v.string(),
-    confidence: v.number(),
+    // Metadata - ✅ ALL OPTIONAL
+    version: v.optional(v.string()),
+    confidence: v.optional(v.number()),
     
     // Optional AI-generated timestamps (ignored)
     generated_at: v.optional(v.any()),
@@ -99,18 +99,20 @@ export const upsertProjectWidgets = mutation({
       throw new Error("Access denied: Fingerprint doesn't belong to this project");
     }
     
-    // Validate confidence
-    if (args.confidence < 0 || args.confidence > 1) {
+    // Validate confidence (if provided)
+    if (args.confidence !== undefined && (args.confidence < 0 || args.confidence > 1)) {
       throw new Error("Confidence must be between 0 and 1");
     }
     
     const now = Date.now();
     
-    // Clean categories - add display_order if missing
-    const cleanCategories = args.categories.map((category, index) => ({
-      ...category,
-      display_order: category.display_order ?? index + 1,
-    }));
+    // ✅ PHASE 2: Provide defaults for optional layout fields
+    const cleanCategories = args.categories 
+      ? args.categories.map((category, index) => ({
+          ...category,
+          display_order: category.display_order ?? index + 1,
+        }))
+      : [{ name: "General", display_order: 1 }];  // Default category
     
     // ========================================================================
     // STEP 1: Upsert Layout Configuration (project_widgets table)
@@ -122,24 +124,25 @@ export const upsertProjectWidgets = mutation({
       .filter((q) => q.eq(q.field("status"), "active"))
       .first();
     
+    // ✅ PHASE 2: Use defaults for optional layout fields during family transition
     const layoutData = {
       projectId: args.projectId,
       fingerprintId: args.fingerprintId,
       userId: args.userId,
       categories: cleanCategories,
-      layout_type: args.layout_type,
-      columns: args.columns,
-      rows: args.rows,
-      global_theme: args.global_theme,
-      color_scheme: args.color_scheme,
-      font_style: args.font_style,
-      allow_customization: args.allow_customization,
-      allow_reordering: args.allow_reordering,
-      allow_resizing: args.allow_resizing,
-      required_integrations: args.required_integrations,
-      data_refresh_strategy: args.data_refresh_strategy,
-      version: args.version,
-      confidence: args.confidence,
+      layout_type: args.layout_type ?? "grid",
+      columns: args.columns ?? 3,
+      rows: args.rows ?? 4,
+      global_theme: args.global_theme ?? "modern",
+      color_scheme: args.color_scheme ?? "default",
+      font_style: args.font_style ?? "inter",
+      allow_customization: args.allow_customization ?? true,
+      allow_reordering: args.allow_reordering ?? true,
+      allow_resizing: args.allow_resizing ?? true,
+      required_integrations: args.required_integrations ?? [],
+      data_refresh_strategy: args.data_refresh_strategy ?? "on_demand",
+      version: args.version ?? "1.0",
+      confidence: args.confidence ?? 0.8,
       status: "active",
     };
     
@@ -179,18 +182,51 @@ export const upsertProjectWidgets = mutation({
     const widgetIds: Id<"widgets">[] = [];
     
     for (const widget of args.widgets) {
-      // ✅ FIXED: Use spread operator to include ALL validated fields
-      // This ensures new fields (outputArtifacts, dependencyHints, etc.) are saved
-      const widgetId = await ctx.db.insert("widgets", {
-        ...widget,  // Includes ALL fields from widgetBatchValidator
-        // Override foreign keys and system fields
+      // ✅ PHASE 2: Bridge validator (camelCase) to DB schema (mixed case)
+      // Validator receives camelCase from Python's model_dump(by_alias=True)
+      // DB schema uses snake_case for old fields, camelCase for new fields
+      const widgetData = {
+        // === OLD FIELDS (snake_case in DB) ===
+        widget_id: widget.widgetId,                          // validator: widgetId → DB: widget_id
+        widget_type: widget.widgetType,                      // validator: widgetType → DB: widget_type
+        title: widget.title,
+        description: widget.description,
+        category: widget.category ?? "general",
+        priority: widget.priority ?? 5,
+        size: widget.size ?? "medium",
+        theme: widget.theme ?? "default",
+        position: widget.position ?? 0,
+        config: widget.config ?? {},
+        data_sources: widget.dataSource ?? [],               // validator: dataSource → DB: data_sources
+        update_frequency: widget.updateFrequency ?? "on_demand",  // validator: updateFrequency → DB: update_frequency
+        interactive: widget.interactive ?? true,
+        editable: widget.editable ?? true,
+        shareable: widget.shareable ?? false,
+        
+        // === NEW FIELDS (camelCase in DB) ===
+        // Phase 2 family fields (validator and DB both use camelCase)
+        familyIdentity: widget.familyIdentity,
+        agentRoster: widget.agentRoster,
+        
+        // Orchestration fields (validator and DB both use camelCase)
+        capabilities: widget.capabilities,
+        execution_history: widget.execution_history,
+        inputRequirements: widget.inputRequirements,
+        outputArtifacts: widget.outputArtifacts,
+        dependencyHints: widget.dependencyHints,
+        executionProfile: widget.executionProfile,
+        workflowStage: widget.workflowStage,
+        
+        // === SYSTEM FIELDS ===
         projectId: args.projectId,
         fingerprintId: args.fingerprintId,
         userId: args.userId,
-        status: "active",
+        status: "active" as const,
         createdAt: now,
         updatedAt: now,
-      });
+      };
+      
+      const widgetId = await ctx.db.insert("widgets", widgetData);
       widgetIds.push(widgetId);
     }
     

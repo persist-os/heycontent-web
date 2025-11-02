@@ -1,5 +1,7 @@
 import type { Config } from "tailwindcss";
 import tailwindcssAnimate from "tailwindcss-animate";
+import tailwindcssTypography from "@tailwindcss/typography";
+import tailwindScrollbar from "tailwind-scrollbar";
 
 const config = {
   darkMode: ["class"],
@@ -56,12 +58,18 @@ const config = {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			primary: {
-  				DEFAULT: 'hsl(var(--primary))',
-  				foreground: 'hsl(var(--primary-foreground))'
+  				DEFAULT: '#9ACBFF',           // P80 - Light cyan blue (readable in both modes)
+  				foreground: '#003355',        // P100 dark - Deep blue (for text on primary)
+  				light: '#E9F1FF',             // P100 light - Very light blue
+  				dark: '#004A79',              // P80 dark - Dark blue
+  				darker: '#003355'             // P100 dark - Darkest blue
   			},
   			secondary: {
-  				DEFAULT: 'hsl(var(--secondary))',
-  				foreground: 'hsl(var(--secondary-foreground))'
+  				DEFAULT: '#FFA312',           // Aldebaran - Brand orange
+  				foreground: '#472A00',        // S0 dark - Dark brown (for text on secondary)
+  				light: '#FFB963',             // S80 - Light amber
+  				dark: '#F09700',              // S70 - Darker orange
+  				darker: '#472A00'             // S0 dark - Darkest brown
   			},
   			destructive: {
   				DEFAULT: 'hsl(var(--destructive))',
@@ -157,7 +165,7 @@ const config = {
   		}
   	}
   },
-  plugins: [tailwindcssAnimate, require('@tailwindcss/typography'), require('tailwind-scrollbar')],
+  plugins: [tailwindcssAnimate, tailwindcssTypography, tailwindScrollbar],
 } satisfies Config;
 
 export default config;

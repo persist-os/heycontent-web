@@ -17,7 +17,15 @@ export function SummaryLayout({
   artifact,
   editable = false
 }: LayoutProps<SummaryArtifact>) {
-  const { schema, data, metadata } = artifact
+  // Defensive: ensure all required properties exist
+  const schema = artifact?.schema || { layout: 'card' as const, metrics: [] }
+  const metrics = Array.isArray(schema?.metrics) ? schema.metrics : []
+  const data = artifact?.data || { keyMetrics: {} }
+  const metadata = artifact?.metadata || {
+    version: 1,
+    lastUpdatedBy: 'unknown',
+    lastUpdatedAt: Date.now()
+  }
 
   // Format metric value based on format type
   const formatMetric = (value: any, format?: string, unit?: string) => {
@@ -64,18 +72,18 @@ export function SummaryLayout({
       <CardContent className="space-y-4">
         {/* Key metrics grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {schema.metrics.map((metric) => {
-            const value = data.keyMetrics[metric.key]
+          {metrics.map((metric, metricIdx) => {
+            const value = data?.keyMetrics?.[metric?.key || '']
             return (
               <div
-                key={metric.key}
+                key={metric?.key || `metric-${metricIdx}`}
                 className="bg-muted/20 hover:bg-muted/30 rounded-lg p-4 border border-border/20 transition-all duration-200"
               >
                 <div className="text-xs text-muted-foreground mb-1">
-                  {metric.label}
+                  {metric?.label || metric?.key || 'Metric'}
                 </div>
                 <div className="text-2xl font-semibold text-foreground">
-                  {formatMetric(value, metric.format, metric.unit)}
+                  {formatMetric(value, metric?.format, metric?.unit)}
                 </div>
               </div>
             )
@@ -83,7 +91,7 @@ export function SummaryLayout({
         </div>
 
         {/* Summary text if provided */}
-        {data.summaryText && (
+        {data?.summaryText && (
           <div className="bg-accent/5 border border-accent/20 rounded-lg p-4 mt-4">
             <p className="text-sm text-muted-foreground whitespace-pre-wrap">
               {data.summaryText}

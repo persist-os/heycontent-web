@@ -39,40 +39,42 @@ import { api } from '@/convex/_generated/api'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { T } from '@/components/translation/T'
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal'
+import { ArtifactRenderer } from '@/components/artifacts/ArtifactRenderer'
 
 /**
  * Overview Tab - Content preview and primary information
+ * 
+ * NEW ASYNC-FIRST ARCHITECTURE:
+ * - Widgets show family info and current status
+ * - Artifacts show rendered content
+ * - All other types show standard preview
  */
-export const OverviewTab = ({ item, itemType, config }: TabContentProps) => {
+export const OverviewTab = ({ item, itemType, config, projectId }: TabContentProps) => {
   const preview = getItemPreview(item, itemType)
-  const [userId, setUserId] = React.useState<string | null>(null)
+  const router = useRouter()
 
-  // Fetch latest widget output for widgets
-  const latestOutput = useQuery(
-    api.widgetOutputsQueries.getWidgetOutputData,
-    itemType === 'widget' && userId ? {
-      userId,
-      filters: { widgetId: item._id },
-      limit: 1,
-      orderBy: 'desc'
-    } : 'skip'
-  )
-
-  React.useEffect(() => {
-    const getUserId = async () => {
-      try {
-        const id = await getCurrentUserId()
-        setUserId(id)
-      } catch (error) {
-        console.error('Failed to get user ID:', error)
-      }
-    }
-    getUserId()
-  }, [])
-
-  const output = latestOutput && typeof latestOutput === 'object' && '_id' in latestOutput
-    ? latestOutput
-    : null
+  // Special rendering for artifacts
+  if (itemType === 'artifact') {
+    return (
+      <div className="space-y-4">
+        {/* Artifact Renderer - now handles database format internally */}
+        <ArtifactRenderer
+          artifact={item as any}
+          editable={false}
+        />
+        
+        {/* View Full Artifact Button */}
+        <Button
+          onClick={() => router.push(`/dashboard/living-projects/${projectId}/gallery?id=${item._id}`)}
+          className="w-full"
+          variant="outline"
+        >
+          <ExternalLink className="w-4 h-4 mr-2" />
+          <T context="panel.overview.view_full_artifact">View in Gallery</T>
+        </Button>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -89,39 +91,43 @@ export const OverviewTab = ({ item, itemType, config }: TabContentProps) => {
         </div>
       </div>
 
-      {/* Widget-specific: Latest Output */}
-      {itemType === 'widget' && output && (
+      {/* Widget-specific: Family Status */}
+      {itemType === 'widget' && (
         <div>
           <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-            <FileText className="w-4 h-4" />
-            <T context="panel.overview.latest_output">Latest Output</T>
+            <Layers className="w-4 h-4" />
+            <T context="panel.overview.family_info">Family Information</T>
           </h3>
-          
-          {output.prompts && output.prompts.length > 0 ? (
-            <div className="space-y-2">
-              <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
-                <Lightbulb className="w-3 h-3" />
-                <T context="panel.overview.prompts">Conversation Starters</T> ({output.prompts.length})
-              </h4>
-              {output.prompts.slice(0, 3).map((prompt: any, idx: number) => (
-                <div
-                  key={idx}
-                  className="bg-muted/30 rounded-md p-2 text-xs text-foreground/80 hover:bg-muted/50 transition-colors"
-                >
-                  {prompt.text}
+          <div className="space-y-3">
+            {/* Current Status */}
+            <div className="bg-muted/20 rounded-lg p-3 border border-border/20">
+              <div className="text-xs font-medium text-muted-foreground mb-1">
+                <T context="panel.overview.current_status">Current Status</T>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="text-sm font-medium text-foreground capitalize">
+                  {item.lastRunStatus || 'idle'}
                 </div>
-              ))}
-              {output.prompts.length > 3 && (
-                <div className="text-xs text-muted-foreground/60 text-center">
-                  +{output.prompts.length - 3} more prompts
+              </div>
+            </div>
+
+            {/* Family Identity */}
+            {item.familyIdentity && (
+              <div className="bg-blue-500/5 rounded-lg p-3 border border-blue-500/10">
+                <div className="text-xs font-medium text-muted-foreground mb-2">
+                  <T context="panel.overview.mission">Mission</T>
                 </div>
-              )}
+                <p className="text-xs text-foreground/80">{item.familyIdentity.mission}</p>
+              </div>
+            )}
+
+            {/* Info Message */}
+            <div className="text-xs text-muted-foreground/60 italic">
+              <T context="panel.overview.widget_execution_info">
+                This family executes automatically when you start the project. Check the constellation for real-time updates.
+              </T>
             </div>
-          ) : (
-            <div className="text-xs text-muted-foreground/60">
-              <T context="panel.overview.no_prompts">No conversation prompts generated</T>
-            </div>
-          )}
+          </div>
         </div>
       )}
 
@@ -273,109 +279,78 @@ export const MetadataTab = ({ item, itemType }: TabContentProps) => {
 
 /**
  * Actions Tab - Available actions for the item
+ * 
+ * NEW ASYNC-FIRST ARCHITECTURE:
+ * - Widgets: View-only (execution is project-level via "Start Project")
+ * - Artifacts: Edit, feedback, view in gallery
+ * - Notes/Conversations: Edit, delete, open full
  */
 export const ActionsTab = ({ item, itemType, projectId, onClose }: TabContentProps) => {
   const router = useRouter()
   const actions = useUnifiedActions(projectId)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [userId, setUserId] = React.useState<string | null>(null)
 
-  // Fetch latest widget output for widgets (same as OverviewTab)
-  const latestOutput = useQuery(
-    api.widgetOutputsQueries.getWidgetOutputData,
-    itemType === 'widget' && userId ? {
-      userId,
-      filters: { widgetId: item._id },
-      limit: 1,
-      orderBy: 'desc'
-    } : 'skip'
-  )
+  // Widgets (Families): View-only actions
+  if (itemType === 'widget') {
+    return (
+      <div className="space-y-3">
+        {/* View in Gallery */}
+        <Button
+          onClick={() => {
+            router.push(`/dashboard/living-projects/${projectId}/gallery?id=${item._id}&type=widget`)
+            onClose()
+          }}
+          className="w-full"
+          variant="outline"
+        >
+          <ExternalLink className="w-4 h-4 mr-2" />
+          <T context="panel.actions.view_in_gallery">View in Gallery</T>
+        </Button>
 
-  React.useEffect(() => {
-    const getUserId = async () => {
-      try {
-        const id = await getCurrentUserId()
-        setUserId(id)
-      } catch (error) {
-        console.error('Failed to get user ID:', error)
-      }
-    }
-    getUserId()
-  }, [])
+        {/* Info Message */}
+        <div className="bg-muted/30 rounded-lg p-3 border border-border/20">
+          <p className="text-xs text-muted-foreground">
+            <T context="panel.actions.widget_info">
+              Families execute automatically when you start the project. Check the constellation for real-time status.
+            </T>
+          </p>
+        </div>
+      </div>
+    )
+  }
 
-  // Parse the latest output
-  const output = latestOutput && typeof latestOutput === 'object' && '_id' in latestOutput
-    ? latestOutput
-    : null
+  // Artifacts: Edit, feedback, view actions
+  if (itemType === 'artifact') {
+    return (
+      <div className="space-y-3">
+        <Button
+          onClick={() => {
+            router.push(`/dashboard/living-projects/${projectId}/gallery?id=${item._id}&type=artifact`)
+            onClose()
+          }}
+          className="w-full"
+        >
+          <ExternalLink className="w-4 h-4 mr-2" />
+          <T context="panel.actions.view_full_artifact">View in Gallery</T>
+        </Button>
 
-  const hasRunAction = itemType === 'widget'
-  const hasEditAction = ['widget', 'note', 'conversation'].includes(itemType)
-  const hasDeleteAction = ['widget', 'note', 'conversation'].includes(itemType)
-  
-  // Check if we have a widget output available (from just-run result OR existing output)
-  const hasWidgetOutput = itemType === 'widget' && (
-    (actions.lastResult?.note_id) || 
-    (output?.noteId)
-  )
+        <Button
+          variant="outline"
+          className="w-full"
+        >
+          <Edit className="w-4 h-4 mr-2" />
+          <T context="panel.actions.edit_artifact">Edit Artifact</T>
+        </Button>
+      </div>
+    )
+  }
+
+  // Notes, Conversations, Crystals, Shards: Standard actions
+  const hasEditAction = ['note', 'conversation'].includes(itemType)
+  const hasDeleteAction = ['note', 'conversation'].includes(itemType)
 
   return (
     <div className="space-y-3">
-      {hasRunAction && (
-        <Button
-          onClick={() => actions.handleRun(item, itemType)}
-          disabled={actions.isRunning}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-        >
-          {actions.isRunning ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              <T context="panel.actions.running">Running...</T>
-            </>
-          ) : (
-            <>
-              <Play className="w-4 h-4 mr-2" />
-              <T context="panel.actions.run">Run Widget</T>
-            </>
-          )}
-        </Button>
-      )}
-
-      {hasWidgetOutput && (
-        <Button
-          onClick={() => {
-            // Priority: 1) fresh result, 2) queried output, 3) fallback
-            if (actions.lastResult?.note_id) {
-              launchThinkingLabWithOutput(
-                router,
-                {
-                  noteId: actions.lastResult.note_id,
-                  outputId: actions.lastResult.output_id
-                },
-                projectId,
-                item._id
-              )
-            } else if (output?.noteId) {
-              launchThinkingLabWithOutput(
-                router,
-                {
-                  noteId: output.noteId,
-                  outputId: output.outputId
-                },
-                projectId,
-                item._id
-              )
-            } else {
-              actions.handleLaunchLab(item, itemType)
-            }
-            onClose()
-          }}
-          className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
-        >
-          <Sparkles className="w-4 h-4 mr-2" />
-          <T context="panel.actions.go_to_lab">Go to Thinking Lab</T>
-        </Button>
-      )}
-
       <Button
         onClick={() => actions.handleOpenFull(item, itemType)}
         variant="outline"

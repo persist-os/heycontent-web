@@ -30,8 +30,12 @@ export function FieldEditor({
   onSave,
   className = ''
 }: FieldEditorProps) {
+  // Defensive: handle undefined/null value
+  const safeValue = value ?? ''
+  const safeOptions = Array.isArray(options) ? options : []
+  
   const [isEditing, setIsEditing] = useState(false)
-  const [editValue, setEditValue] = useState(value)
+  const [editValue, setEditValue] = useState(safeValue)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Focus input when editing starts
@@ -40,16 +44,23 @@ export function FieldEditor({
       inputRef.current.focus()
     }
   }, [isEditing])
+  
+  // Update editValue when value prop changes
+  useEffect(() => {
+    if (!isEditing) {
+      setEditValue(safeValue)
+    }
+  }, [safeValue, isEditing])
 
   const handleSave = () => {
-    if (editValue !== value) {
-      onSave(editValue)
+    if (editValue !== safeValue) {
+      onSave?.(editValue)
     }
     setIsEditing(false)
   }
 
   const handleCancel = () => {
-    setEditValue(value)
+    setEditValue(safeValue)
     setIsEditing(false)
   }
 
@@ -66,15 +77,17 @@ export function FieldEditor({
     const displayClass = editable
       ? `cursor-pointer border-b border-dashed border-primary/40 hover:border-primary/60 transition-colors ${className}`
       : className
+    
+    const displayValue = safeValue || (type === 'badge' ? 'N/A' : '-')
 
     return (
       <div onClick={() => editable && setIsEditing(true)}>
         {type === 'badge' ? (
           <Badge variant="outline" className={displayClass}>
-            {value}
+            {displayValue}
           </Badge>
         ) : (
-          <span className={displayClass}>{value}</span>
+          <span className={displayClass}>{displayValue}</span>
         )}
       </div>
     )
@@ -93,9 +106,9 @@ export function FieldEditor({
           aria-label="Edit field value"
           title="Select a value"
         >
-          {options.map((opt) => (
-            <option key={opt} value={opt}>
-              {opt}
+          {safeOptions.map((opt, idx) => (
+            <option key={opt || `option-${idx}`} value={opt}>
+              {opt || `Option ${idx + 1}`}
             </option>
           ))}
         </select>

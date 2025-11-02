@@ -19,7 +19,15 @@ export function StructuredListLayout({
   editable = false,
   onUpdate
 }: LayoutProps<StructuredListArtifact>) {
-  const { schema, data, metadata } = artifact
+  // Defensive: ensure all required properties exist
+  const schema = artifact?.schema || { layout: 'table' as const, fields: [] }
+  const fields = Array.isArray(schema?.fields) ? schema.fields : []
+  const data = Array.isArray(artifact?.data) ? artifact.data : []
+  const metadata = artifact?.metadata || {
+    version: 1,
+    lastUpdatedBy: 'unknown',
+    lastUpdatedAt: Date.now()
+  }
 
   // Handle field updates
   const handleFieldUpdate = (rowIndex: number, fieldKey: string, value: any) => {
@@ -31,7 +39,7 @@ export function StructuredListLayout({
   }
 
   // Card view for mobile, table for desktop
-  const isCardLayout = schema.layout === 'cards'
+  const isCardLayout = schema?.layout === 'cards'
 
   return (
     <Card className="bg-card/50 backdrop-blur-sm border border-primary/20 hover:bg-card/80 transition-all duration-300">
@@ -56,21 +64,21 @@ export function StructuredListLayout({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {data.map((row, idx) => (
               <div
-                key={idx}
+                key={`card-row-${idx}`}
                 className="bg-muted/20 hover:bg-muted/30 rounded-lg p-4 border border-border/20 transition-all duration-200"
               >
-                {schema.fields.map((field) => (
-                  <div key={field.key} className="mb-2 last:mb-0">
+                {fields.map((field, fieldIdx) => (
+                  <div key={`${field?.key || `field-${fieldIdx}`}`} className="mb-2 last:mb-0">
                     <span className="text-xs text-muted-foreground">
-                      {field.label || field.key}
+                      {field?.label || field?.key || 'Field'}
                     </span>
                     <div className="mt-1">
                       <FieldEditor
-                        value={row[field.key]}
-                        type={field.type}
-                        options={field.options}
-                        editable={editable && field.editable}
-                        onSave={(value) => handleFieldUpdate(idx, field.key, value)}
+                        value={row?.[field?.key || '']}
+                        type={field?.type || 'text'}
+                        options={field?.options}
+                        editable={editable && (field?.editable ?? false)}
+                        onSave={(value) => handleFieldUpdate(idx, field?.key || '', value)}
                         className="text-sm text-foreground"
                       />
                     </div>
@@ -85,12 +93,12 @@ export function StructuredListLayout({
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border/20">
-                  {schema.fields.map((field) => (
+                  {fields.map((field, fieldIdx) => (
                     <th
-                      key={field.key}
+                      key={`header-${field?.key || fieldIdx}`}
                       className="text-left text-sm font-medium text-muted-foreground px-4 py-3"
                     >
-                      {field.label || field.key}
+                      {field?.label || field?.key || 'Field'}
                     </th>
                   ))}
                 </tr>
@@ -98,17 +106,17 @@ export function StructuredListLayout({
               <tbody>
                 {data.map((row, idx) => (
                   <tr
-                    key={idx}
+                    key={`table-row-${idx}`}
                     className="border-b border-border/10 last:border-0 even:bg-muted/5 hover:bg-muted/10 transition-colors"
                   >
-                    {schema.fields.map((field) => (
-                      <td key={field.key} className="px-4 py-3 text-sm text-foreground">
+                    {fields.map((field, fieldIdx) => (
+                      <td key={`cell-${idx}-${field?.key || fieldIdx}`} className="px-4 py-3 text-sm text-foreground">
                         <FieldEditor
-                          value={row[field.key]}
-                          type={field.type}
-                          options={field.options}
-                          editable={editable && field.editable}
-                          onSave={(value) => handleFieldUpdate(idx, field.key, value)}
+                          value={row?.[field?.key || '']}
+                          type={field?.type || 'text'}
+                          options={field?.options}
+                          editable={editable && (field?.editable ?? false)}
+                          onSave={(value) => handleFieldUpdate(idx, field?.key || '', value)}
                         />
                       </td>
                     ))}

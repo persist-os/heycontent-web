@@ -219,7 +219,7 @@ export function IntelligenceTestPanel() {
         </div>
 
         {cognitiveFieldResult && (
-          <div className="space-y-2 rounded-md border border-blue-500/30 bg-blue-50 p-3 text-sm dark:bg-blue-950/20">
+          <div className="space-y-2 rounded-md border border-chart-1/30 bg-chart-1/5 p-3 text-sm dark:bg-chart-1/10">
             <div className="flex items-center gap-2">
               <Badge variant={cognitiveFieldResult.success ? 'default' : 'destructive'}>
                 {cognitiveFieldResult.success ? 'Field Created' : 'Failed'}
@@ -232,7 +232,7 @@ export function IntelligenceTestPanel() {
             {cognitiveFieldResult.success && cognitiveFieldResult.field_id && (
               <div className="space-y-1">
                 <Label className="text-xs">Cognitive Field ID</Label>
-                <div className="break-all rounded bg-white p-2 font-mono text-xs dark:bg-gray-900">
+                <div className="break-all rounded bg-card p-2 font-mono text-xs">
                   {cognitiveFieldResult.field_id}
                 </div>
               </div>

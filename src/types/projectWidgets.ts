@@ -28,6 +28,8 @@ export interface WidgetConfig {
   interactive: boolean;
   editable: boolean;
   shareable: boolean;
+  lastRunStatus?: 'idle' | 'running' | 'success' | 'failed'; // Execution status
+  lastRunAt?: number; // Timestamp of last run
 }
 
 export interface ProjectWidgetsData {
