@@ -16,7 +16,7 @@ export const subscriptionPlanSchemaFields = {
   // Stripe integration
   priceId: v.string(),              // Stripe price ID (flat fee)
   productId: v.string(),            // Stripe product ID
-  meteredPriceId: v.optional(v.string()), // Stripe metered price ID (usage-based)
+  meteredPriceId: v.union(v.string(), v.null()), // Stripe metered price ID (null for free tier)
   
   // Pricing
   amount: v.number(),               // Price in cents

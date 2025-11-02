@@ -104,9 +104,6 @@ import { contextEnrichmentDecisionSchemaFields } from "./types/contextEnrichment
 // Context Usage Tracking
 import { contextUsageSchemaFields } from "./types/contextUsage";
 
-// Execution Plans
-import { executionPlanSchemaFields } from "./types/executionPlan";
-
 export default defineSchema({
   // User Info
   users: defineTable(userSchemaFields)
@@ -324,13 +321,6 @@ export default defineSchema({
     .index("by_project", ["projectId"])
     .index("by_status", ["status"])
     .index("by_project_status", ["projectId", "status"]),
-
-  // Execution Plans - AI-generated widget execution plans
-  execution_plans: defineTable(executionPlanSchemaFields)
-    .index("by_project", ["projectId"])
-    .index("by_user", ["userId"])
-    .index("by_status", ["status"])
-    .index("by_created", ["createdAt"]),
 
   // Conversation Summaries - Real-time conversation analysis
   conversation_summaries: defineTable(conversationSummarySchemaFields)

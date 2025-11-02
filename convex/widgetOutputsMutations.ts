@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
-import { widgetOutputArtifactTypeValidator } from "./types/widgets";
+import { widgetOutputCreateValidator, widgetOutputUpdateValidator } from "./types/widgetOutput";
 
 /**
  * Widget Outputs Mutations - Optimized Batch Pattern
@@ -9,31 +9,14 @@ import { widgetOutputArtifactTypeValidator } from "./types/widgets";
  * Privacy: All operations verify user ownership
  */
 
-// Define operation schema once - no parameter rewriting
+// Define operation schema using proper validators
 const operationSchema = v.object({
   type: v.union(v.literal("create"), v.literal("update"), v.literal("delete")),
-  data: v.optional(v.object({
-    outputId: v.optional(v.string()),
-    widgetId: v.optional(v.union(v.string(), v.id("widgets"))),  // 🔄 Migration: supports both legacy string and Convex ID
-    projectId: v.optional(v.id("projects")),
-    userId: v.string(), // Required for all operations
-    noteId: v.optional(v.string()),
-    prompts: v.optional(v.array(v.object({
-      text: v.string(),
-      priority: v.number(),
-    }))),
-    openingMessage: v.optional(v.string()),  // AI's first conversational message
-    executionPrompt: v.optional(v.string()),  // User's custom prompt for widget execution
-    userRating: v.optional(v.union(v.literal(1), v.literal(0))),  // 1 = thumbs up, 0 = thumbs down
-    feedbackText: v.optional(v.string()),  // Optional text feedback
-    // ✅ ARTIFACT FIELDS - Added to match schema
-    artifactType: v.optional(widgetOutputArtifactTypeValidator),
-    artifactSchema: v.optional(v.any()),
-    artifactData: v.optional(v.any()),
-    createdAt: v.optional(v.number()),
-  })),
+  createData: v.optional(widgetOutputCreateValidator),
+  updateData: v.optional(widgetOutputUpdateValidator),
   id: v.optional(v.id("widget_outputs")),
   outputId: v.optional(v.string()), // For delete by outputId
+  userId: v.optional(v.string()), // For delete auth check
 });
 
 /**
@@ -41,8 +24,9 @@ const operationSchema = v.object({
  * Replaces create, deleteOutput, deleteByWidget with one function
  * 
  * Usage examples:
- * - Create: { type: "create", data: { outputId, widgetId, projectId, userId, noteId, prompts } }
- * - Delete: { type: "delete", outputId, data: { userId } }
+ * - Create: { type: "create", createData: { outputId, widgetId, projectId, userId, ... } }
+ * - Update: { type: "update", id: "...", updateData: { userId, artifactData, ... } }
+ * - Delete: { type: "delete", id: "...", userId: "..." }
  * 
  * Returns detailed results for each operation
  */
@@ -73,51 +57,64 @@ export const batchMutateWidgetOutputs = mutation({
 
         switch (op.type) {
           case "create":
-            if (!op.data) {
-              throw new Error("Data required for create operation");
+            if (!op.createData) {
+              throw new Error("createData required for create operation");
             }
-            // ✅ FIXED: Include artifact fields in insert
-            // This ensures new fields (artifactType, artifactSchema, artifactData) are saved
+            // Validator ensures all required fields are present
             resultId = await ctx.db.insert("widget_outputs", {
-              outputId: op.data.outputId!,  // Required
-              widgetId: op.data.widgetId!,  // Required
-              projectId: op.data.projectId!,  // Required
-              userId: op.data.userId,        // Required
-              noteId: op.data.noteId || "",  // Required in schema (default empty)
-              prompts: op.data.prompts || [], // Required (default empty array)
-              createdAt: op.data.createdAt || Date.now(),  // Required
+              outputId: op.createData.outputId,
+              widgetId: op.createData.widgetId,
+              projectId: op.createData.projectId,
+              userId: op.createData.userId,
+              noteId: op.createData.noteId || "",
+              prompts: op.createData.prompts || [],
+              createdAt: Date.now(), // Auto-generated
               // Optional fields
-              openingMessage: op.data.openingMessage,
-              executionPrompt: op.data.executionPrompt,
-              artifactType: op.data.artifactType,
-              artifactSchema: op.data.artifactSchema,
-              artifactData: op.data.artifactData,
-            } as any);  // Type assertion to bypass strict typing (fields are validated)
+              openingMessage: op.createData.openingMessage,
+              executionPrompt: op.createData.executionPrompt,
+              artifactType: op.createData.artifactType,
+              artifactSchema: op.createData.artifactSchema,
+              artifactData: op.createData.artifactData,
+              contributors: op.createData.contributors,
+              lastContributor: op.createData.lastContributor,
+              version: op.createData.version,
+              userApproved: op.createData.userApproved,
+            } as any);
             break;
 
           case "update":
-            if (!op.id || !op.data) {
-              throw new Error("ID and data required for update operation");
+            if (!op.id || !op.updateData) {
+              throw new Error("ID and updateData required for update operation");
             }
             const existing = await ctx.db.get(op.id);
-            if (!existing || existing.userId !== op.data.userId) {
+            if (!existing || existing.userId !== op.updateData.userId) {
               throw new Error("Output not found or access denied");
             }
-            // Only update fields that exist in schema
-            const updateData: any = {};
-            if (op.data.prompts) updateData.prompts = op.data.prompts;
-            if (op.data.noteId) updateData.noteId = op.data.noteId;
-            if (op.data.executionPrompt !== undefined) updateData.executionPrompt = op.data.executionPrompt;
-            if (op.data.userRating !== undefined) {
-              updateData.userRating = op.data.userRating;
-              updateData.ratedAt = Date.now();
+            // Build update object from validated updateData
+            const updateFields: any = {};
+            if (op.updateData.prompts !== undefined) updateFields.prompts = op.updateData.prompts;
+            if (op.updateData.noteId !== undefined) updateFields.noteId = op.updateData.noteId;
+            if (op.updateData.executionPrompt !== undefined) updateFields.executionPrompt = op.updateData.executionPrompt;
+            if (op.updateData.userRating !== undefined) {
+              updateFields.userRating = op.updateData.userRating;
+              updateFields.ratedAt = Date.now();
             }
-            if (op.data.feedbackText !== undefined) updateData.feedbackText = op.data.feedbackText;
-            await ctx.db.patch(op.id, updateData);
+            if (op.updateData.feedbackText !== undefined) updateFields.feedbackText = op.updateData.feedbackText;
+            if (op.updateData.artifactData !== undefined) updateFields.artifactData = op.updateData.artifactData;
+            if (op.updateData.artifactSchema !== undefined) updateFields.artifactSchema = op.updateData.artifactSchema;
+            if (op.updateData.contributors !== undefined) updateFields.contributors = op.updateData.contributors;
+            if (op.updateData.lastContributor !== undefined) updateFields.lastContributor = op.updateData.lastContributor;
+            if (op.updateData.version !== undefined) updateFields.version = op.updateData.version;
+            if (op.updateData.userApproved !== undefined) updateFields.userApproved = op.updateData.userApproved;
+            if (op.updateData.updatedAt !== undefined) updateFields.updatedAt = op.updateData.updatedAt;
+            await ctx.db.patch(op.id, updateFields);
             resultId = op.id;
             break;
 
           case "delete":
+            if (!op.userId) {
+              throw new Error("userId required for delete operation");
+            }
             let toDelete;
             if (op.id) {
               toDelete = await ctx.db.get(op.id);
@@ -130,7 +127,7 @@ export const batchMutateWidgetOutputs = mutation({
               throw new Error("ID or outputId required for delete operation");
             }
 
-            if (!toDelete || toDelete.userId !== op.data?.userId) {
+            if (!toDelete || toDelete.userId !== op.userId) {
               throw new Error("Output not found or access denied");
             }
             await ctx.db.delete(toDelete._id);

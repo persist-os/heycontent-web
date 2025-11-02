@@ -132,12 +132,12 @@ export const getUsageSummary = query({
       // Defensive: handle missing user or missing subscription gracefully
       if (!user) {
         console.error(`User not found: ${args.userId}`);
-        return { total: 0, included: 0, overage: 0 };
+        return { total: 0, included: 50, overage: 0 };  // Default to free tier
       }
       
       if (!user.subscription) {
         console.error(`No subscription found for user: ${args.userId}`);
-        return { total: 0, included: 0, overage: 0 };
+        return { total: 0, included: 50, overage: 0 };  // Default to free tier
       }
       
       const { currentPeriodStart, currentPeriodEnd, includedRequests } = user.subscription;
@@ -156,7 +156,7 @@ export const getUsageSummary = query({
       
       // Get included requests from subscription using price config
       let included: number;
-      if (typeof includedRequests === "number") {
+      if (typeof includedRequests === "number" && includedRequests > 0) {
         included = includedRequests;
       } else if (user.subscription.plan) {
         try {
@@ -172,10 +172,14 @@ export const getUsageSummary = query({
           console.log(`Using included requests: ${included} for plan: ${plan} (${interval})`);
         } catch (error) {
           console.error('Error getting price info:', error);
-          throw new Error('Failed to determine included requests from plan');
+          // Default to free tier instead of throwing
+          included = 50;
+          console.log('Falling back to free tier: 50 requests');
         }
       } else {
-        throw new Error('No includedRequests or valid plan found in subscription');
+        // Default to free tier instead of throwing
+        console.log('No includedRequests or valid plan, defaulting to free tier: 50 requests');
+        included = 50;
       }
       
       console.log(`Using included requests: ${included} for user: ${args.userId}`);

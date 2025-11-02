@@ -420,3 +420,99 @@ export const getJobStats = query({
   },
 });
 
+/**
+ * ✅ Get assignment (project) status by aggregating widget_execution jobs
+ * Frontend uses this reactively - NO POLLING NEEDED
+ */
+export const getAssignmentStatus = query({
+  args: {
+    projectId: v.string(),
+    userId: v.string(),
+  },
+  handler: async (ctx, { projectId, userId }) => {
+    // Get all widgets for this project
+    const widgets = await ctx.db
+      .query("widgets")
+      .withIndex("by_project", (q) => q.eq("projectId", projectId))
+      .collect();
+    
+    if (widgets.length === 0) {
+      return {
+        assignment_id: projectId,
+        overall_status: "not_started",
+        widgets: [],
+        artifacts: [],
+      };
+    }
+    
+    // Get all widget_execution jobs for this user's widgets
+    const jobs = await ctx.db
+      .query("background_jobs")
+      .withIndex("by_user_type_status", (q) =>
+        q.eq("userId", userId).eq("type", "widget_execution")
+      )
+      .filter((q) => q.eq(q.field("payload").projectId, projectId))
+      .collect();
+    
+    // Map jobs to widget IDs
+    const jobsByWidgetId = new Map();
+    for (const job of jobs) {
+      const widgetId = job.payload?.widget_id || job.payload?.widgetId;
+      if (widgetId) {
+        jobsByWidgetId.set(widgetId, job);
+      }
+    }
+    
+    // Build widget statuses
+    const widgetStatuses = widgets.map((widget) => {
+      const job = jobsByWidgetId.get(widget._id);
+      let status = "pending";
+      
+      if (job) {
+        if (job.status === "completed") status = "completed";
+        else if (job.status === "running" || job.status === "queued") status = "in_progress";
+        else if (job.status === "failed") status = "failed";
+      }
+      
+      return {
+        widget_id: widget._id,
+        title: widget.title || "Unnamed Widget",
+        status,
+      };
+    });
+    
+    // Determine overall status
+    const completedCount = widgetStatuses.filter((w) => w.status === "completed").length;
+    const inProgressCount = widgetStatuses.filter((w) => w.status === "in_progress").length;
+    
+    let overallStatus = "not_started";
+    if (completedCount === widgets.length) {
+      overallStatus = "completed";
+    } else if (inProgressCount > 0 || completedCount > 0) {
+      overallStatus = "active";
+    }
+    
+    // Check for pending questions (for needs_attention status)
+    const pendingQuestions = await ctx.db
+      .query("widget_questions")
+      .withIndex("by_project", (q) => q.eq("projectId", projectId))
+      .filter((q) => q.eq(q.field("status"), "pending"))
+      .collect();
+    
+    if (pendingQuestions.length > 0) {
+      overallStatus = "needs_attention";
+    }
+    
+    return {
+      assignment_id: projectId,
+      overall_status: overallStatus,
+      widgets: widgetStatuses,
+      artifacts: [], // Frontend queries artifacts separately
+      needs_user_input: pendingQuestions.length > 0 ? {
+        count: pendingQuestions.length,
+        message: "User input required"
+      } : undefined,
+    };
+  },
+});
+

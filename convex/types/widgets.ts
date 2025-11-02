@@ -81,20 +81,28 @@ export const widgetSchemaFields = {
   shareable: v.optional(v.boolean()),
   
   // Widget Capabilities (NEW - what widget agents can do)
-  capabilities: v.optional(v.object({
-    can_extract: v.optional(v.array(v.string())),
-    can_analyze: v.optional(v.array(v.string())),
-    can_generate: v.optional(v.array(v.string())),
-    can_track: v.optional(v.array(v.string())),
-  })),
+  // Note: v.union(v.null(), ...) allows explicit null values from backend
+  capabilities: v.optional(v.union(
+    v.null(),
+    v.object({
+      can_extract: v.optional(v.array(v.string())),
+      can_analyze: v.optional(v.array(v.string())),
+      can_generate: v.optional(v.array(v.string())),
+      can_track: v.optional(v.array(v.string())),
+    })
+  )),
   
   // Execution History (NEW - self-learning data)
-  execution_history: v.optional(v.object({
-    avg_quality_score: v.optional(v.number()),
-    avg_duration_minutes: v.optional(v.number()),
-    total_executions: v.optional(v.number()),
-    improvement_trend: v.optional(v.string()), // "increasing", "stable", "declining"
-  })),
+  // Note: v.union(v.null(), ...) allows explicit null values from backend
+  execution_history: v.optional(v.union(
+    v.null(),
+    v.object({
+      avg_quality_score: v.optional(v.number()),
+      avg_duration_minutes: v.optional(v.number()),
+      total_executions: v.optional(v.number()),
+      improvement_trend: v.optional(v.string()), // "increasing", "stable", "declining"
+    })
+  )),
   
   // Execution tracking
   lastRunAt: v.optional(v.number()),
@@ -225,6 +233,28 @@ export const widgetBatchValidator = v.object({
   interactive: v.boolean(),
   editable: v.boolean(),
   shareable: v.boolean(),
+  // Widget Capabilities (NEW - Phase 1.3)
+  // Note: v.union(v.null(), ...) allows explicit null values from backend
+  capabilities: v.optional(v.union(
+    v.null(),
+    v.object({
+      can_extract: v.optional(v.array(v.string())),
+      can_analyze: v.optional(v.array(v.string())),
+      can_generate: v.optional(v.array(v.string())),
+      can_track: v.optional(v.array(v.string())),
+    })
+  )),
+  // Execution History (NEW - Phase 1.3)
+  // Note: v.union(v.null(), ...) allows explicit null values from backend
+  execution_history: v.optional(v.union(
+    v.null(),
+    v.object({
+      avg_quality_score: v.optional(v.number()),
+      avg_duration_minutes: v.optional(v.number()),
+      total_executions: v.optional(v.number()),
+      improvement_trend: v.optional(v.string()),
+    })
+  )),
   // Orchestration metadata (optional) - using camelCase to match backend
   inputRequirements: v.optional(v.array(v.string())),
   outputArtifacts: v.optional(v.array(v.object({
@@ -266,6 +296,28 @@ export const widgetCreateValidator = v.object({
   interactive: v.boolean(),
   editable: v.boolean(),
   shareable: v.boolean(),
+  // Widget Capabilities (NEW - Phase 1.3)
+  // Note: v.union(v.null(), ...) allows explicit null values from backend
+  capabilities: v.optional(v.union(
+    v.null(),
+    v.object({
+      can_extract: v.optional(v.array(v.string())),
+      can_analyze: v.optional(v.array(v.string())),
+      can_generate: v.optional(v.array(v.string())),
+      can_track: v.optional(v.array(v.string())),
+    })
+  )),
+  // Execution History (NEW - Phase 1.3)
+  // Note: v.union(v.null(), ...) allows explicit null values from backend
+  execution_history: v.optional(v.union(
+    v.null(),
+    v.object({
+      avg_quality_score: v.optional(v.number()),
+      avg_duration_minutes: v.optional(v.number()),
+      total_executions: v.optional(v.number()),
+      improvement_trend: v.optional(v.string()),
+    })
+  )),
 });
 
 // Widget update validator (all fields optional)
@@ -283,6 +335,28 @@ export const widgetUpdateValidator = v.object({
   interactive: v.optional(v.boolean()),
   editable: v.optional(v.boolean()),
   shareable: v.optional(v.boolean()),
+  // Widget Capabilities (NEW - Phase 1.3)
+  // Note: v.union(v.null(), ...) allows explicit null values from backend
+  capabilities: v.optional(v.union(
+    v.null(),
+    v.object({
+      can_extract: v.optional(v.array(v.string())),
+      can_analyze: v.optional(v.array(v.string())),
+      can_generate: v.optional(v.array(v.string())),
+      can_track: v.optional(v.array(v.string())),
+    })
+  )),
+  // Execution History (NEW - Phase 1.3)
+  // Note: v.union(v.null(), ...) allows explicit null values from backend
+  execution_history: v.optional(v.union(
+    v.null(),
+    v.object({
+      avg_quality_score: v.optional(v.number()),
+      avg_duration_minutes: v.optional(v.number()),
+      total_executions: v.optional(v.number()),
+      improvement_trend: v.optional(v.string()),
+    })
+  )),
   lastRunAt: v.optional(v.number()),
   lastRunStatus: v.optional(widgetRunStatusValidator),
   status: v.optional(widgetStatusValidator),

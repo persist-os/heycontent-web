@@ -405,6 +405,31 @@ export default function AdminPage() {
 
           <IntelligenceTestPanel />
 
+          {/* Orchestration Test Lab - Phase 2.5 Testing */}
+          <Card className="border-purple-200 dark:border-purple-900 bg-gradient-to-br from-purple-50 to-background dark:from-purple-950/20 dark:to-background">
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                    <CardTitle className="text-xl">Orchestration Test Lab</CardTitle>
+                    <Badge className="text-xs">Phase 2.5</Badge>
+                  </div>
+                  <CardDescription className="text-sm">
+                    Test widget orchestration, dependencies, artifact locking, question storage, and status tracking.
+                  </CardDescription>
+                </div>
+                <Button 
+                  onClick={() => router.push('/admin/orchestration-test')}
+                  className="gap-2 bg-purple-600 hover:bg-purple-700"
+                >
+                  Open Test Lab
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+          </Card>
+
           {/* Convergence Admin Quick Access */}
           <Card className="border-blue-200 dark:border-blue-900 bg-gradient-to-br from-blue-50 to-background dark:from-blue-950/20 dark:to-background">
             <CardHeader>

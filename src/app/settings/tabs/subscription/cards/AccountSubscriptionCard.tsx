@@ -121,15 +121,27 @@ export const AccountSubscriptionCard: React.FC<AccountSubscriptionCardProps> = (
         </div>
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-2 mt-4">
-          <Button
-            size="lg"
-            variant="outline"
-            className="min-w-[120px]"
-            onClick={handleManageSubscription}
-            aria-label="Manage subscription settings"
-          >
-            Manage Subscription
-          </Button>
+          {!isSubscribed ? (
+            <Button
+              size="lg"
+              variant="default"
+              className="min-w-[120px]"
+              onClick={handleUpgrade}
+              aria-label="Subscribe to a paid plan"
+            >
+              Subscribe Now
+            </Button>
+          ) : (
+            <Button
+              size="lg"
+              variant="outline"
+              className="min-w-[120px]"
+              onClick={handleManageSubscription}
+              aria-label="Manage subscription settings"
+            >
+              Manage Subscription
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

@@ -55,7 +55,7 @@ export default function UpgradeModal({
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Fetch plans from Convex (cached, instant)
+  // Query plans from Convex (frontend database) - synced from backend on startup
   const convexPlans = useQuery(api.subscriptionPlansQueries.getAllPlans, {});
   const plans = convexPlans || null;
   const loading = convexPlans === undefined;
@@ -114,64 +114,29 @@ export default function UpgradeModal({
       };
     }).filter(Boolean);
   };
-  const planArray = getPlanArray();
+  
+  // Get plans and filter out free plan for non-registration contexts
+  const planArray = getPlanArray().filter(plan => {
+    // Free plan only shown during registration (where it's auto-selected)
+    // Not shown in settings/upgrade contexts
+    if (context !== 'registration' && plan && plan.id === 'free') {
+      return false;
+    }
+    return true;
+  });
 
   const handleSelectPlan = async (planId: string) => {
+    // Free tier is auto-initialized at registration, not selectable in upgrade modal
+    if (planId === 'free') {
+      console.warn('[UpgradeModal] Free plan not selectable from upgrade modal');
+      onClose();
+      return;
+    }
+    
     setSelectedPlan(planId);
     // Find the selected plan
     const selectedPlanData = planArray.find(plan => plan.id === planId);
     if (!selectedPlanData) {
-      return;
-    }
-    
-    // Handle free tier - create subscription via API
-    if (planId === 'free') {
-      setIsProcessing(true);
-      try {
-        const apiKey = await apiHelpers.getApiKey();
-        if (!apiKey) {
-          throw new Error('No API key found. Please log in again.');
-        }
-        
-        // Call the free tier subscription endpoint
-        const response = await fetch('/api/subscription/free-tier', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            userId: firebaseUser?.uid,
-            email: firebaseUser?.email || '',
-            name: firebaseUser?.displayName || ''
-          })
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Failed to create free subscription: ${response.status} ${errorText}`);
-        }
-        
-        const result = await response.json();
-        
-        if (result.success) {
-          // Free subscription created successfully
-          if (context === 'registration') {
-            onSelectPlan('free');
-          } else {
-            onClose();
-            // Refresh the page to show updated subscription status
-            window.location.reload();
-          }
-        } else {
-          throw new Error(result.error || 'Failed to create free subscription');
-        }
-      } catch (error) {
-        console.error('Error creating free subscription:', error);
-        // Handle error - could show a toast notification here
-      } finally {
-        setIsProcessing(false);
-      }
       return;
     }
     
@@ -213,7 +178,7 @@ export default function UpgradeModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={context === 'registration' || context === 'subscription_required' ? undefined : onClose}>
+    <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className={showCheckout ? "max-w-4xl w-[95vw] max-h-[95vh] overflow-auto" : "max-w-5xl max-h-[90vh] overflow-auto"}>
         <DialogHeader>
           <DialogTitle>Choose Your Plan</DialogTitle>

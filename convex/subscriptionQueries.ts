@@ -51,6 +51,51 @@ export const getUserSubscription = query({
   },
 });
 
+// Initialize free tier subscription (no Stripe required)
+export const initializeFreeTier = mutation({
+  args: {
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .unique();
+    
+    if (!user) throw new Error("User not found");
+    
+    const now = Date.now();
+    
+    // Check if already has valid subscription (includedRequests > 0)
+    if (user.subscription?.includedRequests && user.subscription.includedRequests > 0) {
+      console.log(`User ${args.userId} already has valid subscription, skipping free tier init`);
+      return { success: true, message: "Subscription already exists", userId: user._id.toString() };
+    }
+    
+    // Initialize or fix free tier - NO STRIPE DATA NEEDED
+    await ctx.db.patch(user._id, {
+      subscription: {
+        ...(user.subscription || {}),  // Preserve any existing Stripe data if present
+        status: "active",
+        plan: "monthly_free",
+        priceId: user.subscription?.priceId || "free",  // Keep existing price ID if Stripe subscription
+        currentPeriodStart: user.subscription?.currentPeriodStart || now,
+        currentPeriodEnd: user.subscription?.currentPeriodEnd || (now + (30 * 24 * 60 * 60 * 1000)),
+        cancelAtPeriodEnd: false,
+        includedRequests: 50,  // Always set to 50 for free tier
+        usedRequests: user.subscription?.usedRequests || 0,
+        ubpEnabled: false,
+        monthlyLimit: 0,
+        lastSyncedAt: now,
+      },
+      updatedAt: now
+    });
+    
+    console.log(`Free tier initialized/fixed for user ${args.userId}`);
+    return { success: true, message: "Free tier initialized", userId: user._id.toString() };
+  },
+});
+
 // Save subscription data (creation or full update)
 export const saveSubscription = mutation({
   args: {

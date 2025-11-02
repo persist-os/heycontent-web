@@ -10,6 +10,8 @@ import { handleGoogleRedirectResult } from '@/app/lib/google-auth';
 import { Logo } from '@/components/ui/logo';
 import { motion } from "framer-motion";
 import { T } from '@/components/translation';
+import { useMutation } from "convex/react";
+import { api } from "@/../convex/_generated/api";
 
 interface RegisterScreenProps {
   onSuccess?: (apiKey: string) => void;
@@ -23,6 +25,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
   const [processingGoogleAuth, setProcessingGoogleAuth] = useState(false);
   const router = useRouter();
   const { firebaseUser } = useAuth();
+  const initializeFreeTier = useMutation(api.subscriptionQueries.initializeFreeTier);
   
   const [step, setStep] = useState<'register' | 'payment' | 'chat'>('register');
 
@@ -88,73 +91,32 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
     return () => { mounted = false };
   }, []);
 
-  // Handle registration success
-  const handleRegisterSuccess = (registeredName: string) => {
+  // Handle registration success - auto-initialize free tier
+  const handleRegisterSuccess = async (
+    registeredName: string, 
+    apiKey: string,
+    userId: string,
+    userEmail: string
+  ) => {
     setName(registeredName);
     setRegistrationSuccess(true);
+    
+    // Auto-initialize free tier - DIRECT CONVEX CALL (no backend)
+    try {
+      console.log('[Registration] Auto-initializing free tier via Convex...', { userId });
+      
+      const result = await initializeFreeTier({ userId });
+      console.log('[Registration] Free tier initialized:', result);
+    } catch (error) {
+      console.error('[Registration] Error during free tier init:', error);
+      // Non-blocking: user can still proceed, middleware will enforce limits
+    }
   };
 
   const handleContinueAfterSuccess = () => {
     setRegistrationSuccess(false);
-    setStep('payment');
-    // Update URL to reflect current step
-    const url = new URL(window.location.href);
-    url.searchParams.set('step', 'payment');
-    router.replace(url.toString());
-  };
-
-  const handleUpgradeClose = () => {
-    // During registration, users MUST select a plan - no skipping allowed
-    // This prevents bypassing the subscription requirement
-    return;
-  };
-
-  const handleSelectPlan = async (planId: string) => {
-    if (planId === 'free') {
-      // Free tier selected - create free subscription first
-      try {
-        const apiKey = await getApiKey();
-        if (!apiKey) {
-          console.error('No API key found. Please log in again.');
-          return;
-        }
-        
-        // Call the free tier subscription endpoint
-        const response = await fetch('/api/subscription/free-tier', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            userId: firebaseUser?.uid,
-            email: firebaseUser?.email || '',
-            name: firebaseUser?.displayName || ''
-          })
-        });
-        
-        if (!response.ok) {
-          console.error('Failed to create free subscription');
-          return;
-        }
-        
-        const result = await response.json();
-        
-        if (result.success) {
-          // Free subscription created successfully - redirect to dashboard
-          setStep('chat');
-          router.push("/dashboard?welcome=true");
-        } else {
-          console.error('Failed to create free subscription:', result.error);
-        }
-      } catch (error) {
-        console.error('Error creating free subscription:', error);
-      }
-    } else {
-      // Paid plan selected - redirect to dashboard
-      setStep('chat');
-      router.push("/dashboard?welcome=true");
-    }
+    // Go straight to dashboard, skip plan selection
+    router.push("/dashboard?welcome=true");
   };
 
   // Show loading state while processing Google OAuth redirect
@@ -189,22 +151,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background/80 via-muted/20 to-background/80 p-4">
       <div className="w-full max-w-md">
-        {step === 'payment' && (
-          <div className="space-y-4">
-            <UpgradeModal
-              open={true}
-              onClose={() => {}} // Disable closing during registration
-              onSelectPlan={handleSelectPlan}
-              context="registration"
-            />
-            <div className="text-center">
-              <p className="text-muted-foreground mb-2 text-sm">
-                <T context="message.auth.select-plan">Please select a plan to continue</T>
-              </p>
-            </div>
-          </div>
-        )}
-        
         {step === 'register' && !registrationSuccess && (
           <>
             <RegistrationForm onSuccess={handleRegisterSuccess} />

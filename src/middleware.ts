@@ -8,7 +8,13 @@ function isLocalhost(request: NextRequest) {
 
 export function middleware(request: NextRequest) {
   const token = request.cookies.get('firebase-auth-token')?.value;
+  const apiKey = request.cookies.get('apiKey')?.value;
   const { pathname } = request.nextUrl;
+
+  // Gmail-style behavior: if logged in and on homepage, redirect to dashboard
+  if (pathname === '/' && (token || apiKey)) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
 
   // Public routes that don't need auth
   const publicRoutes = [
