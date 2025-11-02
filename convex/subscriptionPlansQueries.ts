@@ -49,7 +49,7 @@ export const getAllPlans = query({
         currency: plan.currency,
         interval: plan.interval,
         amount: plan.amount,
-        included_requests: plan.includedRequests,
+        includedRequests: plan.includedRequests,
         overage: plan.overage,
         features: plan.features,
         flat_price_id: plan.priceId,
