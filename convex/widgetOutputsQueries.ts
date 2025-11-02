@@ -8,6 +8,30 @@ import { query } from "./_generated/server";
  */
 
 /**
+ * Find existing artifact by projectId and artifactType
+ * Used for multi-widget collaboration on shared artifacts
+ */
+export const findArtifactByProjectAndType = query({
+  args: {
+    projectId: v.id("projects"),
+    artifactType: v.string(),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("widget_outputs")
+      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("artifactType"), args.artifactType),
+          q.eq(q.field("userId"), args.userId)
+        )
+      )
+      .first();
+  },
+});
+
+/**
  * Generic query helper for widget outputs
  * Handles dynamic index selection and filtering with user isolation
  */

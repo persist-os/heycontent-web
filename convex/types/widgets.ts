@@ -46,7 +46,8 @@ export const widgetOutputArtifactTypeValidator = v.union(
   v.literal("report"),
   v.literal("analysis"),
   v.literal("summary"),
-  v.literal("tracker")
+  v.literal("tracker"),
+  v.literal("timeline")
 );
 
 // Schema fields for individual widgets (unwrapped for defineTable)
@@ -63,21 +64,37 @@ export const widgetSchemaFields = {
   description: v.optional(v.string()),
   category: v.string(),
   
-  // Layout and appearance
-  priority: v.number(),
-  size: v.string(),
-  theme: v.string(),
-  position: v.number(),
+  // Layout and appearance (optional for backward compatibility - UI fields)
+  priority: v.optional(v.number()),
+  size: v.optional(v.string()),
+  theme: v.optional(v.string()),
+  position: v.optional(v.number()),
   
   // Configuration
-  config: v.any(),
+  config: v.optional(v.any()),
   data_sources: v.array(v.string()),
   update_frequency: v.string(),
   
-  // Permissions
-  interactive: v.boolean(),
-  editable: v.boolean(),
-  shareable: v.boolean(),
+  // Permissions (optional - UI fields)
+  interactive: v.optional(v.boolean()),
+  editable: v.optional(v.boolean()),
+  shareable: v.optional(v.boolean()),
+  
+  // Widget Capabilities (NEW - what widget agents can do)
+  capabilities: v.optional(v.object({
+    can_extract: v.optional(v.array(v.string())),
+    can_analyze: v.optional(v.array(v.string())),
+    can_generate: v.optional(v.array(v.string())),
+    can_track: v.optional(v.array(v.string())),
+  })),
+  
+  // Execution History (NEW - self-learning data)
+  execution_history: v.optional(v.object({
+    avg_quality_score: v.optional(v.number()),
+    avg_duration_minutes: v.optional(v.number()),
+    total_executions: v.optional(v.number()),
+    improvement_trend: v.optional(v.string()), // "increasing", "stable", "declining"
+  })),
   
   // Execution tracking
   lastRunAt: v.optional(v.number()),
@@ -91,25 +108,25 @@ export const widgetSchemaFields = {
   scheduledRunCount: v.optional(v.number()),
   requiresApproval: v.optional(v.boolean()),
   
-  // Orchestration metadata
-  input_requirements: v.optional(v.array(v.string())),
-  output_artifacts: v.optional(v.array(v.object({
+  // Orchestration metadata - camelCase to match backend serialization
+  inputRequirements: v.optional(v.array(v.string())),
+  outputArtifacts: v.optional(v.array(v.object({
     type: widgetOutputArtifactTypeValidator,
     description: v.string(),
-    feeds_into: v.array(v.string()),
+    feedsInto: v.array(v.string()),  // camelCase to match backend serialization
   }))),
-  dependency_hints: v.optional(v.object({
-    should_run_after: v.optional(v.array(v.string())),
-    should_run_before: v.optional(v.array(v.string())),
-    can_run_parallel_with: v.optional(v.array(v.string())),
+  dependencyHints: v.optional(v.object({
+    shouldRunAfter: v.optional(v.array(v.string())),
+    shouldRunBefore: v.optional(v.array(v.string())),
+    canRunParallelWith: v.optional(v.array(v.string())),
   })),
-  execution_profile: v.optional(v.object({
-    frequency_suggestion: v.string(),
-    typical_duration_minutes: v.number(),
-    requires_recent_data: v.boolean(),
-    skip_if_no_activity: v.boolean(),
+  executionProfile: v.optional(v.object({
+    frequencySuggestion: v.string(),
+    typicalDurationMinutes: v.number(),
+    requiresRecentData: v.boolean(),
+    skipIfNoActivity: v.boolean(),
   })),
-  workflow_stage: v.optional(widgetWorkflowStageValidator),
+  workflowStage: v.optional(widgetWorkflowStageValidator),
   
   // Metadata
   status: widgetStatusValidator,
@@ -208,25 +225,25 @@ export const widgetBatchValidator = v.object({
   interactive: v.boolean(),
   editable: v.boolean(),
   shareable: v.boolean(),
-  // Orchestration metadata (optional)
-  input_requirements: v.optional(v.array(v.string())),
-  output_artifacts: v.optional(v.array(v.object({
+  // Orchestration metadata (optional) - using camelCase to match backend
+  inputRequirements: v.optional(v.array(v.string())),
+  outputArtifacts: v.optional(v.array(v.object({
     type: widgetOutputArtifactTypeValidator,
     description: v.string(),
-    feeds_into: v.array(v.string()),
+    feedsInto: v.array(v.string()),  // camelCase to match backend serialization
   }))),
-  dependency_hints: v.optional(v.object({
-    should_run_after: v.optional(v.array(v.string())),
-    should_run_before: v.optional(v.array(v.string())),
-    can_run_parallel_with: v.optional(v.array(v.string())),
+  dependencyHints: v.optional(v.object({
+    shouldRunAfter: v.optional(v.array(v.string())),
+    shouldRunBefore: v.optional(v.array(v.string())),
+    canRunParallelWith: v.optional(v.array(v.string())),
   })),
-  execution_profile: v.optional(v.object({
-    frequency_suggestion: v.string(),
-    typical_duration_minutes: v.number(),
-    requires_recent_data: v.boolean(),
-    skip_if_no_activity: v.boolean(),
+  executionProfile: v.optional(v.object({
+    frequencySuggestion: v.string(),
+    typicalDurationMinutes: v.number(),
+    requiresRecentData: v.boolean(),
+    skipIfNoActivity: v.boolean(),
   })),
-  workflow_stage: v.optional(widgetWorkflowStageValidator),
+  workflowStage: v.optional(widgetWorkflowStageValidator),
 });
 
 // Widget create validator (for single widget creation - extends batch validator)
@@ -298,7 +315,7 @@ export type WidgetStatus = "active" | "archived" | "deleted";
 export type WidgetRunStatus = "idle" | "running" | "success" | "failed";
 export type WidgetScheduleFrequency = "manual" | "hourly" | "daily" | "weekly" | "monthly";
 export type WidgetWorkflowStage = "gathering" | "analysis" | "synthesis" | "tracking" | "reporting";
-export type WidgetOutputArtifactType = "structured_list" | "report" | "analysis" | "summary" | "tracker";
+export type WidgetOutputArtifactType = "structured_list" | "report" | "analysis" | "summary" | "tracker" | "timeline";
 
 export interface WidgetCategory {
   name: string;

@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
+import { widgetOutputArtifactTypeValidator } from "./types/widgets";
 
 /**
  * Widget Outputs Mutations - Optimized Batch Pattern
@@ -25,6 +26,11 @@ const operationSchema = v.object({
     executionPrompt: v.optional(v.string()),  // User's custom prompt for widget execution
     userRating: v.optional(v.union(v.literal(1), v.literal(0))),  // 1 = thumbs up, 0 = thumbs down
     feedbackText: v.optional(v.string()),  // Optional text feedback
+    // ✅ ARTIFACT FIELDS - Added to match schema
+    artifactType: v.optional(widgetOutputArtifactTypeValidator),
+    artifactSchema: v.optional(v.any()),
+    artifactData: v.optional(v.any()),
+    createdAt: v.optional(v.number()),
   })),
   id: v.optional(v.id("widget_outputs")),
   outputId: v.optional(v.string()), // For delete by outputId
@@ -70,17 +76,23 @@ export const batchMutateWidgetOutputs = mutation({
             if (!op.data) {
               throw new Error("Data required for create operation");
             }
+            // ✅ FIXED: Include artifact fields in insert
+            // This ensures new fields (artifactType, artifactSchema, artifactData) are saved
             resultId = await ctx.db.insert("widget_outputs", {
-              outputId: op.data.outputId!,
-              widgetId: op.data.widgetId!,
-              projectId: op.data.projectId!,
-              userId: op.data.userId,
-              noteId: op.data.noteId!,
-              prompts: op.data.prompts || [],
+              outputId: op.data.outputId!,  // Required
+              widgetId: op.data.widgetId!,  // Required
+              projectId: op.data.projectId!,  // Required
+              userId: op.data.userId,        // Required
+              noteId: op.data.noteId || "",  // Required in schema (default empty)
+              prompts: op.data.prompts || [], // Required (default empty array)
+              createdAt: op.data.createdAt || Date.now(),  // Required
+              // Optional fields
               openingMessage: op.data.openingMessage,
               executionPrompt: op.data.executionPrompt,
-              createdAt: Date.now(),
-            });
+              artifactType: op.data.artifactType,
+              artifactSchema: op.data.artifactSchema,
+              artifactData: op.data.artifactData,
+            } as any);  // Type assertion to bypass strict typing (fields are validated)
             break;
 
           case "update":

@@ -21,6 +21,17 @@ export const widgetOutputSchemaFields = {
   artifactSchema: v.optional(v.any()),  // JSON schema describing artifact structure
   artifactData: v.optional(v.any()),  // The actual structured data
   
+  // Collaboration (NEW - multi-widget artifact updates)
+  contributors: v.optional(v.array(v.string())),  // Widget IDs that contributed to this artifact
+  lastContributor: v.optional(v.string()),  // Last widget/user that edited
+  version: v.optional(v.number()),  // Version number for tracking updates
+  userApproved: v.optional(v.boolean()),  // Whether user approved this artifact
+  userEdits: v.optional(v.array(v.object({
+    timestamp: v.number(),
+    changes: v.any(),
+    userId: v.string(),
+  }))),  // User edit history
+  
   // Feedback
   userRating: v.optional(v.union(v.literal(1), v.literal(0))),  // 1 = thumbs up, 0 = thumbs down
   feedbackText: v.optional(v.string()),  // Optional text feedback for thumbs down

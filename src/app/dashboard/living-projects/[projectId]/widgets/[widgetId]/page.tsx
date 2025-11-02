@@ -1,8 +1,8 @@
 /**
- * WIDGET DASHBOARD PAGE
+ * UNIFIED WIDGET PAGE
  * 
- * Full-page view for comprehensive widget information, outputs, and management.
- * Designed to display all widget data with expandable sections to avoid visual overload.
+ * Combines artifact display + metadata + connected content into one optimal page.
+ * Design: Artifacts-first with contextual depth.
  */
 
 'use client'
@@ -14,28 +14,65 @@ import { api } from '@/convex/_generated/api'
 import { Id } from '@/convex/_generated/dataModel'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { Button } from '@/components/ui/button'
-import { Loader2 } from 'lucide-react'
-import { T, TButton, THeading } from '@/components/translation'
-import { useWidgetRunner } from '@/app/dashboard/living-projects/hooks/useWidgetRunner'
-import type { WidgetConfig } from '@/types/projectWidgets'
-import type { WidgetOutput } from './types'
-import { WidgetHeader } from './components/WidgetHeader'
-import { WidgetOutputCard } from './components/WidgetOutputCard'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { 
+  ArrowLeft,
+  Settings,
+  Play,
+  Loader2,
+  FileStack,
+  Activity,
+  Clock,
+  AlertCircle,
+  FileText,
+  List,
+  Lightbulb,
+  BarChart3,
+  Activity as ActivityIcon,
+  Clock as ClockIcon,
+  MessageSquare,
+  Sparkles,
+  Layers,
+  Plus
+} from 'lucide-react'
+import Link from 'next/link'
+import { MetadataCard } from '@/components/widgets/MetadataCard'
+import { ArtifactDisplayCard } from '@/components/widgets/ArtifactDisplayCard'
+import { WidgetSettingsDialog } from './components/WidgetSettingsDialog'
 import { ContentAttachmentPanel } from './components/ContentAttachmentPanel'
-import { ConnectedContentSection } from './components/ConnectedContentSection'
-import { launchThinkingLabWithOutput } from '@/app/dashboard/living-projects/utils/thinkingLabLauncher'
+import { useWidgetRunner } from '@/app/dashboard/living-projects/hooks/useWidgetRunner'
+import { Artifact } from '@/types/artifacts'
+import { formatDistanceToNow } from 'date-fns'
 
-export default function WidgetDashboardPage() {
+// Artifact type visuals
+const ARTIFACT_VISUALS = {
+  structured_list: { icon: List, color: 'text-blue-500', label: 'List' },
+  report: { icon: FileText, color: 'text-purple-500', label: 'Report' },
+  analysis: { icon: Lightbulb, color: 'text-amber-500', label: 'Analysis' },
+  summary: { icon: BarChart3, color: 'text-green-500', label: 'Summary' },
+  tracker: { icon: ActivityIcon, color: 'text-orange-500', label: 'Tracker' },
+  timeline: { icon: ClockIcon, color: 'text-indigo-500', label: 'Timeline' }
+}
+
+function getArtifactVisuals(type: string) {
+  return ARTIFACT_VISUALS[type as keyof typeof ARTIFACT_VISUALS] || {
+    icon: FileText,
+    color: 'text-muted-foreground',
+    label: type
+  }
+}
+
+export default function UnifiedWidgetPage() {
   const params = useParams()
   const router = useRouter()
   const projectId = params.projectId as Id<"projects">
-  const widgetId = params.widgetId as Id<"widgets">  // ✅ Convex ID type
+  const widgetId = params.widgetId as Id<"widgets">
 
   const [userId, setUserId] = useState<string | null>(null)
-  const [outputLimit, setOutputLimit] = useState(10)
-  const [expandedOutputs, setExpandedOutputs] = useState<Set<string>>(new Set())
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false)
   const [showAttachmentPanel, setShowAttachmentPanel] = useState(false)
-
   const { executeWidget, isRunning } = useWidgetRunner()
 
   // Get user ID
@@ -51,51 +88,51 @@ export default function WidgetDashboardPage() {
     getUserId()
   }, [])
 
-  // ✅ OPTIMIZED: Direct widget query using Convex ID (no table scan)
+  // Query widget configuration
   const widget = useQuery(
     api.widgetsQueries.getWidget,
     userId && widgetId ? { widgetId, userId } : 'skip'
-  ) as WidgetConfig | null | undefined
+  )
 
-  // ✅ OPTIMIZED: Direct outputs query with Convex ID filter
+  // Query widget outputs (which contain artifacts)
   const outputs = useQuery(
     api.widgetOutputsQueries.getWidgetOutputData,
     userId && widgetId ? {
       userId,
       filters: { widgetId },
-      limit: outputLimit,
+      limit: 10,
       orderBy: 'desc'
     } : 'skip'
-  ) as WidgetOutput[] | undefined
+  ) as any[] | undefined
 
-  // Query for connected content
+  // Query connected content
   const connectedNotes = useQuery(
     api.noteQueries.getNotesByWidgetId,
     userId && widgetId ? { widgetId, userId } : 'skip'
-  ) as any[] | undefined
+  )
 
   const connectedConversations = useQuery(
     api.chatQueries.getConversationsByWidgetId,
     userId && widgetId ? { widgetId, userId } : 'skip'
-  ) as any[] | undefined
+  )
 
   const connectedCrystals = useQuery(
     api.crystalQueries.getCrystalsByWidgetId,
     userId && widgetId ? { widgetId, userId } : 'skip'
-  ) as any[] | undefined
+  )
 
   const connectedShards = useQuery(
     api.shardQueries.getShardsByWidgetId,
     userId && widgetId ? { widgetId, userId } : 'skip'
-  ) as any[] | undefined
+  )
 
-
+  // Handle widget execution
   const handleRunWidget = async () => {
     if (!widget) return
     
     try {
       await executeWidget({
-        widgetId,  // ✅ Use Convex ID directly from URL params
+        widgetId,
         projectId
       })
     } catch (error) {
@@ -103,199 +140,385 @@ export default function WidgetDashboardPage() {
     }
   }
 
-  const handleOpenInLab = () => {
-    router.push(`/dashboard/thinking_lab?widgetId=${widgetId}&projectId=${projectId}`)
+  // Handle settings dialog
+  const handleOpenSettings = () => {
+    setShowSettingsDialog(true)
   }
 
-  const handleLaunchThinkingLab = (output: WidgetOutput) => {
-    // Use the unified launcher utility with full context
-    launchThinkingLabWithOutput(router, output, projectId, widgetId)
+  // Handle attach content
+  const handleAttachContent = () => {
+    setShowAttachmentPanel(true)
   }
 
-  const handleNoteClick = (noteId: string) => {
-    router.push(`/dashboard/thinking_lab?noteId=${noteId}&projectId=${projectId}&widgetId=${widgetId}`)
-  }
+  // Extract artifacts from latest output
+  const latestOutput = outputs?.[0]
+  const artifacts: Artifact[] = []
 
-  const handleConversationClick = (conversationId: string) => {
-    router.push(`/dashboard/thinking_lab?conversationId=${conversationId}&projectId=${projectId}&widgetId=${widgetId}`)
-  }
-
-  const toggleOutput = (outputId: string) => {
-    const newExpanded = new Set(expandedOutputs)
-    if (newExpanded.has(outputId)) {
-      newExpanded.delete(outputId)
+  if (latestOutput?.artifactData) {
+    if (Array.isArray(latestOutput.artifactData)) {
+      artifacts.push(...latestOutput.artifactData)
     } else {
-      newExpanded.add(outputId)
+      artifacts.push({
+        type: latestOutput.artifactType || 'unknown',
+        schema: latestOutput.artifactSchema || {},
+        data: latestOutput.artifactData || {},
+        metadata: {
+          version: 1,
+          lastUpdatedBy: 'system',
+          lastUpdatedAt: (latestOutput as any).createdAt || Date.now()
+        }
+      })
     }
-    setExpandedOutputs(newExpanded)
   }
 
-  if (!userId || !widget) {
+  // Calculate metadata
+  const widgetData = widget as any
+  const status = widgetData?.lastRunStatus || 'idle'
+  const lastRun = widgetData?.lastRunAt 
+    ? formatDistanceToNow(new Date(widgetData.lastRunAt), { addSuffix: true })
+    : 'Never'
+  const artifactCount = artifacts.length
+
+  // Extract attached content IDs
+  const attachedNoteIds = connectedNotes?.map((n: any) => n._id) || []
+  const attachedConversationIds = connectedConversations?.map((c: any) => c._id) || []
+  const attachedCrystalIds = connectedCrystals?.map((cr: any) => cr.crystal_id || cr._id) || []
+  const attachedShardIds = connectedShards?.map((s: any) => s._id) || []
+
+  // Loading state
+  if (!userId || widget === undefined) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex items-center gap-3">
-          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-          <span className="text-muted-foreground">
-            <T context="loading.widget">Loading widget...</T>
-          </span>
+      <div className="min-h-screen bg-background">
+        <div className="max-w-7xl mx-auto p-8 space-y-6">
+          <Skeleton className="h-32 w-full" />
+          <div className="grid grid-cols-3 gap-4">
+            <Skeleton className="h-24" />
+            <Skeleton className="h-24" />
+            <Skeleton className="h-24" />
+          </div>
+          <Skeleton className="h-96 w-full" />
         </div>
       </div>
     )
   }
 
-  const totalOutputs = outputs?.length || 0
-  const widgetData = widget as any
-  const lastRun = widgetData.lastRunAt ? new Date(widgetData.lastRunAt).toLocaleString() : 'Never'
-  const status = widgetData.lastRunStatus || 'idle'
-
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <WidgetHeader 
-        widget={widget}
-        projectId={projectId}
-        isRunning={isRunning}
-        onRunWidget={handleRunWidget}
-        onOpenInLab={handleOpenInLab}
-      />
-
-      {/* Main Content - New Layout */}
-      <div className="max-w-[1600px] mx-auto px-8 py-12 ml-[120px]">
-        {/* Widget Metadata Bar */}
-        <div className="
-          flex items-start gap-12 pb-12 mb-12
-          border-b border-border/30
-        ">
-          <div className="flex-1 grid grid-cols-3 gap-8">
-            <div className="
-              bg-card/50 backdrop-blur-sm
-              border border-border/40
-              rounded-2xl p-6
-              hover:bg-card/80 hover:border-border/60
-              transition-all duration-300
-            ">
-              <span className="text-sm text-muted-foreground">
-                <T context="widget.status">Status</T>
-              </span>
-              <p className="text-lg font-light text-foreground mt-1 capitalize">{status}</p>
-            </div>
-            <div className="
-              bg-card/50 backdrop-blur-sm
-              border border-border/40
-              rounded-2xl p-6
-              hover:bg-card/80 hover:border-border/60
-              transition-all duration-300
-            ">
-              <span className="text-sm text-muted-foreground">
-                <T context="widget.last_run">Last Run</T>
-              </span>
-              <p className="text-lg font-light text-foreground mt-1">{lastRun}</p>
-            </div>
-            <div className="
-              bg-primary/10 backdrop-blur-sm
-              border border-primary/20
-              rounded-2xl p-6
-              hover:bg-primary/15 hover:border-primary/30
-              transition-all duration-300
-            ">
-              <span className="text-sm text-muted-foreground">
-                <T context="widget.total_outputs">Total Outputs</T>
-              </span>
-              <p className="text-lg font-light text-foreground mt-1">{totalOutputs}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Two Column Layout */}
-        <div className="grid grid-cols-1 xl:grid-cols-5 gap-16">
-          {/* Left Column - Outputs (Wider) */}
-          <div className="xl:col-span-3 space-y-8">
-            <div className="flex items-baseline gap-6">
-              <THeading level={2} className="text-3xl font-light tracking-tight text-foreground">
-                <T context="widget.outputs">Outputs</T>
-              </THeading>
-              <span className="text-sm text-muted-foreground">
-                <T context="widget.total_count">{totalOutputs} total</T>
-              </span>
+      {/* HEADER */}
+      <div className="bg-card/80 backdrop-blur-lg border-b border-border/30 shadow-sm">
+        <div className="max-w-7xl mx-auto p-8">
+          <div className="flex items-start justify-between gap-8">
+            {/* Left: Title & Description */}
+            <div className="flex-1 space-y-4">
+              <Link href={`/dashboard/living-projects/${projectId}`}>
+                <Button variant="ghost" size="sm" className="gap-2 -ml-2 mb-2">
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to Project
+                </Button>
+              </Link>
+              
+              <div>
+                <h1 className="text-4xl font-light tracking-tight text-foreground">
+                  {widget.title}
+                </h1>
+                <p className="text-muted-foreground mt-2 max-w-3xl">
+                  {widget.description}
+                </p>
+              </div>
             </div>
 
-            <div className="space-y-4">
-              {!outputs || outputs.length === 0 ? (
-                <div className="
-                  bg-primary/5 backdrop-blur-sm
-                  border border-dashed border-primary/30
-                  rounded-2xl p-16 text-center
-                  hover:bg-primary/10 hover:border-primary/40
-                  transition-all duration-300
-                ">
-                  <p className="text-base text-muted-foreground mb-8 leading-relaxed">
-                    <T context="widget.empty_state">Run this widget to generate your first output</T>
-                  </p>
-                  <Button
-                    onClick={handleRunWidget}
-                    disabled={isRunning}
-                    variant="outline"
-                    className="
-                      bg-primary text-primary-foreground
-                      hover:bg-primary/90
-                      transition-all duration-300
-                    "
-                  >
-                    <T context="button.run_widget_now">Run Widget Now</T>
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  {outputs.map((output) => (
-                    <WidgetOutputCard
-                      key={output.outputId}
-                      output={output}
-                      isExpanded={expandedOutputs.has(output.outputId)}
-                      onToggle={() => toggleOutput(output.outputId)}
-                      onLaunchLab={() => handleLaunchThinkingLab(output)}
-                    />
-                  ))}
-
-                  {outputs && outputs.length >= outputLimit && (
-                    <div className="flex justify-center pt-4">
-                      <Button
-                        variant="ghost"
-                        onClick={() => setOutputLimit(prev => prev + 10)}
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        <T context="button.load_more">Load More</T>
-                      </Button>
-                    </div>
-                  )}
-                </>
-              )}
+            {/* Right: Actions */}
+            <div className="flex items-center gap-3 pt-8">
+              <Button
+                onClick={handleRunWidget}
+                disabled={isRunning}
+                className="gap-2"
+              >
+                {isRunning ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Running
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-4 w-4" />
+                    Run Widget
+                  </>
+                )}
+              </Button>
+              
+              <Button variant="ghost" size="icon" onClick={handleOpenSettings}>
+                <Settings className="h-4 w-4" />
+              </Button>
             </div>
-          </div>
-
-          {/* Right Column - Connected Content */}
-          <div className="xl:col-span-2">
-            <ConnectedContentSection
-              widgetId={widgetId}
-              userId={userId}
-              onNoteClick={handleNoteClick}
-              onConversationClick={handleConversationClick}
-              onAddContent={() => setShowAttachmentPanel(true)}
-            />
           </div>
         </div>
       </div>
 
+      {/* METADATA BAR */}
+      <div className="max-w-7xl mx-auto p-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <MetadataCard
+            label="Status"
+            value={status}
+            icon={Activity}
+          />
+          <MetadataCard
+            label="Last Run"
+            value={lastRun}
+            icon={Clock}
+          />
+          <MetadataCard
+            label="Artifacts"
+            value={artifactCount}
+            icon={FileStack}
+            variant="accent"
+          />
+        </div>
+      </div>
+
+      {/* MAIN CONTENT: 70/30 SPLIT */}
+      <div className="max-w-7xl mx-auto px-8 pb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-[70%_30%] gap-8">
+          {/* LEFT: ARTIFACTS (Primary - 70%) */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-3">
+              <FileStack className="h-6 w-6 text-muted-foreground" />
+              <h2 className="text-2xl font-semibold text-foreground">
+                Widget Artifacts
+              </h2>
+            </div>
+
+            {artifacts.length === 0 ? (
+              /* Empty State */
+              <Card className="bg-card/30 border-dashed border-border/40">
+                <CardContent className="flex flex-col items-center justify-center py-16 px-8 text-center">
+                  <AlertCircle className="h-16 w-16 text-muted-foreground/50 mb-6" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">
+                    No Artifacts Yet
+                  </h3>
+                  <p className="text-muted-foreground max-w-sm mb-6">
+                    Execute this widget to generate artifacts. Artifacts are structured outputs that can be displayed, edited, and shared.
+                  </p>
+                  <Button onClick={handleRunWidget} disabled={isRunning}>
+                    {isRunning ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Executing...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="h-4 w-4 mr-2" />
+                        Execute Widget
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : artifacts.length === 1 ? (
+              /* Single Artifact */
+              <ArtifactDisplayCard
+                artifact={artifacts[0]}
+                editable={true}
+                widgetTitle={widget.title}
+              />
+            ) : (
+              /* Multiple Artifacts - Tabs */
+              <Tabs defaultValue={`${artifacts[0].type}-0`} className="w-full">
+                <TabsList className="bg-muted/30 p-1 rounded-lg grid gap-1 w-full" style={{ gridTemplateColumns: `repeat(${artifacts.length}, 1fr)` }}>
+                  {artifacts.map((artifact, index) => {
+                    const visuals = getArtifactVisuals(artifact.type)
+                    const Icon = visuals.icon
+                    const tabValue = `${artifact.type}-${index}`
+
+                    return (
+                      <TabsTrigger
+                        key={tabValue}
+                        value={tabValue}
+                        className="gap-2 transition-all duration-200"
+                      >
+                        <Icon className={`h-4 w-4 ${visuals.color}`} />
+                        {visuals.label}
+                      </TabsTrigger>
+                    )
+                  })}
+                </TabsList>
+
+                {artifacts.map((artifact, index) => {
+                  const tabValue = `${artifact.type}-${index}`
+                  return (
+                    <TabsContent 
+                      key={tabValue} 
+                      value={tabValue}
+                      className="animate-in fade-in-50 slide-in-from-bottom-2 duration-200 mt-6"
+                    >
+                      <ArtifactDisplayCard
+                        artifact={artifact}
+                        editable={true}
+                        widgetTitle={widget.title}
+                      />
+                    </TabsContent>
+                  )
+                })}
+              </Tabs>
+            )}
+          </div>
+
+          {/* RIGHT: SIDEBAR (Secondary - 30%) */}
+          <div className="space-y-6">
+            {/* Connected Content */}
+            <Card className="bg-card/50 backdrop-blur-sm border-border/40 hover:bg-card/80 transition-all duration-300">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Layers className="h-5 w-5" />
+                  Connected Content
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Notes */}
+                {connectedNotes && connectedNotes.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-foreground">Notes</span>
+                      <span className="text-xs text-muted-foreground">{connectedNotes.length}</span>
+                    </div>
+                    <div className="space-y-1">
+                      {connectedNotes.slice(0, 3).map((note: any) => (
+                        <button
+                          key={note._id}
+                          onClick={() => router.push(`/dashboard/thinking_lab?noteId=${note._id}`)}
+                          className="w-full text-left text-sm text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors rounded px-2 py-1 truncate"
+                        >
+                          <FileText className="h-3 w-3 inline mr-2" />
+                          {note.title || 'Untitled Note'}
+                        </button>
+                      ))}
+                      {connectedNotes.length > 3 && (
+                        <button className="text-xs text-primary hover:text-primary/80 w-full text-left px-2 py-1">
+                          + View all ({connectedNotes.length - 3} more)
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Conversations */}
+                {connectedConversations && connectedConversations.length > 0 && (
+                  <>
+                    <div className="border-t border-border/30 my-4" />
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-foreground">Conversations</span>
+                        <span className="text-xs text-muted-foreground">{connectedConversations.length}</span>
+                      </div>
+                      <div className="space-y-1">
+                        {connectedConversations.slice(0, 3).map((conv: any) => (
+                          <button
+                            key={conv._id}
+                            onClick={() => router.push(`/dashboard/thinking_lab?conversationId=${conv._id}`)}
+                            className="w-full text-left text-sm text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors rounded px-2 py-1 truncate"
+                          >
+                            <MessageSquare className="h-3 w-3 inline mr-2" />
+                            {conv.title || 'Untitled Conversation'}
+                          </button>
+                        ))}
+                        {connectedConversations.length > 3 && (
+                          <button className="text-xs text-primary hover:text-primary/80 w-full text-left px-2 py-1">
+                            + View all ({connectedConversations.length - 3} more)
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Crystals & Shards */}
+                {((connectedCrystals && connectedCrystals.length > 0) || 
+                  (connectedShards && connectedShards.length > 0)) && (
+                  <>
+                    <div className="border-t border-border/30 my-4" />
+                    <div className="grid grid-cols-2 gap-4">
+                      {connectedCrystals && connectedCrystals.length > 0 && (
+                        <div>
+                          <span className="text-xs text-muted-foreground">Crystals</span>
+                          <p className="text-lg font-light text-foreground">{connectedCrystals.length}</p>
+                        </div>
+                      )}
+                      {connectedShards && connectedShards.length > 0 && (
+                        <div>
+                          <span className="text-xs text-muted-foreground">Shards</span>
+                          <p className="text-lg font-light text-foreground">{connectedShards.length}</p>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {/* Empty State */}
+                {(!connectedNotes || connectedNotes.length === 0) &&
+                 (!connectedConversations || connectedConversations.length === 0) &&
+                 (!connectedCrystals || connectedCrystals.length === 0) &&
+                 (!connectedShards || connectedShards.length === 0) && (
+                  <div className="text-center py-8">
+                    <p className="text-sm text-muted-foreground">
+                      No connected content yet
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions */}
+            <Card className="bg-primary/5 border-primary/20">
+              <CardHeader>
+                <CardTitle className="text-lg">Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button 
+                  variant="outline" 
+                  className="w-full gap-2 justify-start"
+                  onClick={() => router.push(`/dashboard/thinking_lab?widgetId=${widgetId}&projectId=${projectId}`)}
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Open in Thinking Lab
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full gap-2 justify-start"
+                  onClick={handleAttachContent}
+                >
+                  <Plus className="h-4 w-4" />
+                  Attach Content
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+
+      {/* Settings Dialog */}
+      {widget && userId && (
+        <WidgetSettingsDialog
+          widget={widget}
+          isOpen={showSettingsDialog}
+          onClose={() => setShowSettingsDialog(false)}
+          projectId={projectId}
+          userId={userId}
+        />
+      )}
+
       {/* Attachment Panel */}
-      {showAttachmentPanel && (
+      {userId && (
         <ContentAttachmentPanel
           widgetId={widgetId}
+          projectId={projectId}
           userId={userId}
           isOpen={showAttachmentPanel}
           onClose={() => setShowAttachmentPanel(false)}
-          attachedNoteIds={connectedNotes?.map(n => n._id) || []}
-          attachedConversationIds={connectedConversations?.map(c => c._id) || []}
-          attachedCrystalIds={connectedCrystals?.map(c => c._id) || []}
-          attachedShardIds={connectedShards?.map(s => s._id) || []}
+          attachedNoteIds={attachedNoteIds}
+          attachedConversationIds={attachedConversationIds}
+          attachedCrystalIds={attachedCrystalIds}
+          attachedShardIds={attachedShardIds}
         />
       )}
     </div>

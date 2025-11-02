@@ -27,7 +27,7 @@ export function WidgetHeader({
   projectId, 
   isRunning, 
   onRunWidget,
-  onOpenInLab 
+  onOpenInLab
 }: WidgetHeaderProps) {
   const router = useRouter()
 

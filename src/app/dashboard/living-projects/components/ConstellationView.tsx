@@ -316,12 +316,12 @@ export function ConstellationView() {
 
       {/* Top Right Controls */}
       <div className="absolute top-6 right-6 z-10 flex flex-col items-end gap-4">
-        {/* New Project Button */}
+        {/* New Assignment Button */}
         <Button
           onClick={() => setShowCreateModal(true)}
           className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-xl shadow-primary/20 ring-1 ring-primary/30"
         >
-          <T context="constellation.button.new_project">New Project</T>
+          <T context="constellation.button.new_project">New Assignment</T>
         </Button>
         
         {/* Minimap */}

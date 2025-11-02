@@ -31,6 +31,7 @@ import { fingerprintEvolutionSignalSchemaFields } from "./types/fingerprintEvolu
 // Widgets
 import { widgetSchemaFields, projectWidgetsSchemaFields } from "./types/widgets";
 import { widgetOutputSchemaFields } from "./types/widgetOutput";
+import { widgetQuestionSchemaFields } from "./types/widgetQuestion";
 
 // Briefing System
 import { briefingEventSchemaFields } from "./types/briefingEvent";
@@ -296,7 +297,7 @@ export default defineSchema({
   .index("by_widget_id", ["projectId", "widget_id"]) // For legacy lookups
   .index("by_created", ["createdAt"])
   .index("by_schedule", ["nextScheduledRun", "scheduleEnabled"])
-  .index("by_workflow_stage", ["projectId", "workflow_stage"]), // For orchestration queries
+  .index("by_workflow_stage", ["projectId", "workflowStage"]), // For orchestration queries - camelCase
 
   // ============================================================================
   // PROJECT WIDGET LAYOUTS - Layout configuration and categories
@@ -316,6 +317,13 @@ export default defineSchema({
     .index("by_output_id", ["outputId"])
     .index("by_rating", ["widgetId", "userRating"])  // For analyzing widget quality
     .index("by_user", ["userId"]),
+
+  // Widget Questions (for proactive widget input requests)
+  widget_questions: defineTable(widgetQuestionSchemaFields)
+    .index("by_widget", ["widgetId"])
+    .index("by_project", ["projectId"])
+    .index("by_status", ["status"])
+    .index("by_project_status", ["projectId", "status"]),
 
   // Execution Plans - AI-generated widget execution plans
   execution_plans: defineTable(executionPlanSchemaFields)

@@ -42,7 +42,9 @@ export function TimelineLayout({
   // For Phase 2, we mark it as supporting editable prop but don't implement full editing yet
 
   // Sort events by timestamp (newest first)
-  const sortedEvents = [...data.events].sort((a, b) => b.timestamp - a.timestamp)
+  // Defensive check: ensure events is an array before spreading
+  const events = Array.isArray(data.events) ? data.events : []
+  const sortedEvents = [...events].sort((a, b) => b.timestamp - a.timestamp)
 
   // Get event type config
   const getEventTypeConfig = (eventType: string) => {

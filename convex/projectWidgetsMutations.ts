@@ -179,25 +179,14 @@ export const upsertProjectWidgets = mutation({
     const widgetIds: Id<"widgets">[] = [];
     
     for (const widget of args.widgets) {
+      // ✅ FIXED: Use spread operator to include ALL validated fields
+      // This ensures new fields (outputArtifacts, dependencyHints, etc.) are saved
       const widgetId = await ctx.db.insert("widgets", {
+        ...widget,  // Includes ALL fields from widgetBatchValidator
+        // Override foreign keys and system fields
         projectId: args.projectId,
         fingerprintId: args.fingerprintId,
         userId: args.userId,
-        widget_id: widget.widget_id,
-        widget_type: widget.widget_type,
-        title: widget.title,
-        description: widget.description,
-        category: widget.category,
-        priority: widget.priority,
-        size: widget.size,
-        theme: widget.theme,
-        position: widget.position,
-        config: widget.config,
-        data_sources: widget.data_sources,
-        update_frequency: widget.update_frequency,
-        interactive: widget.interactive,
-        editable: widget.editable,
-        shareable: widget.shareable,
         status: "active",
         createdAt: now,
         updatedAt: now,

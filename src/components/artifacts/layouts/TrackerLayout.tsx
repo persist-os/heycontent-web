@@ -40,7 +40,9 @@ export function TrackerLayout({
   // editable prop included for consistency but not actively used
 
   // Sort events by timestamp (newest first)
-  const sortedEvents = [...data.events].sort((a, b) => b.timestamp - a.timestamp)
+  // Defensive check: ensure events is an array before spreading
+  const events = Array.isArray(data.events) ? data.events : []
+  const sortedEvents = [...events].sort((a, b) => b.timestamp - a.timestamp)
 
   // Relative time formatter
   const getRelativeTime = (timestamp: number) => {

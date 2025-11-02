@@ -56,7 +56,7 @@ export function CreateProjectModal({
     }
     
     try {
-      // Create project with all attached content
+      // Create assignment (project in backend) with all attached content
       await onCreateProject(
         name.trim(), 
         description.trim() || undefined,
@@ -75,7 +75,7 @@ export function CreateProjectModal({
       setAttachedShardIds([])
       onClose()
     } catch (error) {
-      console.error('Failed to create project:', error)
+      console.error('Failed to create assignment (project):', error)
     } finally {
       if (externalIsCreating === undefined) {
         setInternalIsLoading(false)
@@ -134,9 +134,9 @@ export function CreateProjectModal({
               <div className="space-y-3">
                 <DialogTitle className="text-3xl font-light tracking-tight text-foreground">
                   {defaultName ? (
-                    <T context="project.modal.title.new">New project</T>
+                    <T context="project.modal.title.new">New assignment</T>
                   ) : (
-                    <T context="project.modal.title.living">Living project</T>
+                    <T context="project.modal.title.living">Living assignment</T>
                   )}
                 </DialogTitle>
                 
@@ -146,11 +146,11 @@ export function CreateProjectModal({
               <DialogDescription className="text-muted-foreground/80 leading-relaxed text-base ml-1">
                 {defaultName ? (
                   <T context="project.modal.description.transform">
-                    Turn your note into a smart project workspace that learns and grows with you. Your project will ask questions about your goals, help you plan, and remember everything you discuss together.
+                    Turn your note into a smart assignment workspace that learns and grows with you. Your assignment will ask questions about your goals, help you plan, and remember everything you discuss together.
                   </T>
                 ) : (
                   <T context="project.modal.description.evolve">
-                    Create a project that learns about your goals through natural conversation. Just talk about what you want to build, learn, or achieve. Your project will ask questions, help you think through ideas, and remember your progress as you work together.
+                    Create an assignment that learns about your goals through natural conversation. Just talk about what you want to build, learn, or achieve. Your assignment will ask questions, help you think through ideas, and remember your progress as you work together.
                   </T>
                 )}
               </DialogDescription>
@@ -161,7 +161,7 @@ export function CreateProjectModal({
             <div className="space-y-6">
               <div className="space-y-3">
                 <Label htmlFor="project-name" className="text-sm font-medium text-foreground/90">
-                  <T context="project.modal.label.name">Project name</T>
+                  <T context="project.modal.label.name">Assignment name</T>
                 </Label>
                 <Input
                   id="project-name"
@@ -317,7 +317,7 @@ export function CreateProjectModal({
                   </div>
                 ) : (
                   defaultName ? (
-                    <T context="project.modal.button.create_project">Create project</T>
+                    <T context="project.modal.button.create_project">Create assignment</T>
                   ) : (
                     <T context="project.modal.button.begin_discovery">Start conversation</T>
                   )
