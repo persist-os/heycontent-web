@@ -1,11 +1,14 @@
 /**
  * ARTIFACT TYPE DEFINITIONS
  * 
+ * CRITICAL: Matches convex/types/artifact.ts EXACTLY
+ * 
  * Universal artifact system for schema-driven widget output rendering.
  * Eliminates the need for specialized components per artifact type.
  */
 
 import { WidgetOutputArtifactType } from '@/convex/types/widgets'
+import { Id } from '@/convex/_generated/dataModel'
 
 /**
  * Base artifact metadata
@@ -51,7 +54,7 @@ export interface EventTypeDefinition {
  */
 export interface StructuredListArtifact {
   type: 'structured_list'
-  schema: {
+  data_model: {
     layout: 'table' | 'cards'
     fields: FieldDefinition[]
     groupBy?: string
@@ -59,6 +62,14 @@ export interface StructuredListArtifact {
   }
   data: Array<Record<string, any>>
   metadata: ArtifactMetadata
+  tags?: string[]
+  // Convex IDs
+  _id: Id<"artifacts">
+  projectId: Id<"projects">
+  widgetId: Id<"widgets">
+  userId: string
+  createdAt: number
+  updatedAt: number
 }
 
 /**
@@ -69,7 +80,7 @@ export interface StructuredListArtifact {
  */
 export interface TimelineArtifact {
   type: 'timeline'
-  schema: {
+  data_model: {
     layout: 'timeline'
     eventTypes: EventTypeDefinition[]
     groupBy?: 'date' | 'type'
@@ -85,6 +96,14 @@ export interface TimelineArtifact {
     }>
   }
   metadata: ArtifactMetadata
+  tags?: string[]
+  // Convex IDs
+  _id: Id<"artifacts">
+  projectId: Id<"projects">
+  widgetId: Id<"widgets">
+  userId: string
+  createdAt: number
+  updatedAt: number
 }
 
 /**
@@ -95,7 +114,7 @@ export interface TimelineArtifact {
  */
 export interface TrackerArtifact {
   type: 'tracker'
-  schema: {
+  data_model: {
     layout: 'tracker'
     eventTypes: EventTypeDefinition[]
   }
@@ -103,7 +122,7 @@ export interface TrackerArtifact {
     events: Array<{
       id: string
       timestamp: number
-      type: 'execution' | 'update' | 'error' | 'success'
+      type: string  // Matches Python: type: str (flexible event types)
       widgetId: string
       widgetName?: string
       message: string
@@ -112,6 +131,14 @@ export interface TrackerArtifact {
     }>
   }
   metadata: ArtifactMetadata
+  tags?: string[]
+  // Convex IDs
+  _id: Id<"artifacts">
+  projectId: Id<"projects">
+  widgetId: Id<"widgets">
+  userId: string
+  createdAt: number
+  updatedAt: number
 }
 
 /**
@@ -122,7 +149,7 @@ export interface TrackerArtifact {
  */
 export interface ReportArtifact {
   type: 'report'
-  schema: {
+  data_model: {
     layout: 'markdown'
     sections?: Array<{
       id: string
@@ -131,7 +158,7 @@ export interface ReportArtifact {
     }>
   }
   data: {
-    markdown: string
+    markdown?: string  // Optional: matches Python Optional[str]
     sections?: Array<{
       id: string
       title: string
@@ -139,6 +166,14 @@ export interface ReportArtifact {
     }>
   }
   metadata: ArtifactMetadata
+  tags?: string[]
+  // Convex IDs
+  _id: Id<"artifacts">
+  projectId: Id<"projects">
+  widgetId: Id<"widgets">
+  userId: string
+  createdAt: number
+  updatedAt: number
 }
 
 /**
@@ -149,7 +184,7 @@ export interface ReportArtifact {
  */
 export interface AnalysisArtifact {
   type: 'analysis'
-  schema: {
+  data_model: {
     layout: 'insights'
     showCharts?: boolean
     chartType?: 'bar' | 'line' | 'pie'
@@ -167,6 +202,14 @@ export interface AnalysisArtifact {
     chartData?: Record<string, any>
   }
   metadata: ArtifactMetadata
+  tags?: string[]
+  // Convex IDs
+  _id: Id<"artifacts">
+  projectId: Id<"projects">
+  widgetId: Id<"widgets">
+  userId: string
+  createdAt: number
+  updatedAt: number
 }
 
 /**
@@ -177,7 +220,7 @@ export interface AnalysisArtifact {
  */
 export interface SummaryArtifact {
   type: 'summary'
-  schema: {
+  data_model: {
     layout: 'card'
     metrics: Array<{
       key: string
@@ -191,6 +234,14 @@ export interface SummaryArtifact {
     summaryText?: string
   }
   metadata: ArtifactMetadata
+  tags?: string[]
+  // Convex IDs
+  _id: Id<"artifacts">
+  projectId: Id<"projects">
+  widgetId: Id<"widgets">
+  userId: string
+  createdAt: number
+  updatedAt: number
 }
 
 /**

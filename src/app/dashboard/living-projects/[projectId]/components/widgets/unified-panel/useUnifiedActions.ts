@@ -11,7 +11,6 @@ import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
-import { useWidgetRunner } from '@/app/dashboard/living-projects/hooks/useWidgetRunner'
 import { DetailItemType } from '@/app/dashboard/living-projects/types/unifiedDetailsPanel'
 import { launchThinkingLabWithOutput } from '@/app/dashboard/living-projects/utils/thinkingLabLauncher'
 import { toast } from 'sonner'
@@ -36,10 +35,11 @@ export interface UnifiedActionsReturn {
  */
 export function useUnifiedActions(projectId: string): UnifiedActionsReturn {
   const router = useRouter()
-  const { executeWidget, isRunning, lastResult } = useWidgetRunner()
+  const [isRunning] = useState(false) // Widget execution moved to project-level
   const [isUpdating, setIsUpdating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [lastResult] = useState<any | null>(null) // Widget execution moved to project-level
 
   // Convex mutations
   const updateWidget = useMutation(api.projectWidgetsMutations.updateWidget)
@@ -47,23 +47,17 @@ export function useUnifiedActions(projectId: string): UnifiedActionsReturn {
   // TODO: Add other mutations for notes, conversations as needed
 
   /**
-   * Handle run action (primarily for widgets)
+   * Handle run action (now project-level only)
+   * Widget execution has been moved to project-level "Start Project" button
    */
   const handleRun = useCallback(async (item: any, itemType: DetailItemType) => {
     try {
       setError(null)
       
       if (itemType === 'widget') {
-        const result = await executeWidget({
-          widgetId: item._id,
-          projectId
+        toast.info('Widget execution is now project-level', {
+          description: 'Use the "Start Project" button to run all widgets'
         })
-        
-        if (result) {
-          toast.success('Widget executed successfully!', {
-            description: `Generated note with ${result.prompts?.length || 0} conversation prompts`
-          })
-        }
       } else {
         toast.error('Run action not supported for this item type')
       }
@@ -73,7 +67,7 @@ export function useUnifiedActions(projectId: string): UnifiedActionsReturn {
       toast.error('Action failed', { description: errorMessage })
       throw err
     }
-  }, [executeWidget, projectId])
+  }, [projectId])
 
   /**
    * Handle edit action for any item type

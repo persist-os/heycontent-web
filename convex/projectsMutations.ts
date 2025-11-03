@@ -68,6 +68,12 @@ export const createProject = mutation({
         // No fingerprint initially - created during discovery
         fingerprintId: undefined,
         
+        // Budget tracking (placeholders - ON HOLD for usage tracking)
+        dailyLlmBudget: 50,              // Default limit
+        llmCallsToday: 0,                // No usage yet
+        budgetLastReset: now,            // Initialize to creation time
+        isActive: true,                  // Projects start active
+        
         // Timestamps
         createdAt: now,
         updatedAt: now,

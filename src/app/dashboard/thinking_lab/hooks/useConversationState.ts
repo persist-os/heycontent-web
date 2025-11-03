@@ -48,11 +48,31 @@ export function useConversationState(
   // ADD THIS: Convex mutation for adding messages directly
   const addMessageToConversation = useMutation(api.chatMutations.addMessageToConversation)
 
-  // Load conversation from Convex
+  // Query for project-scoped conversation when projectId is provided
+  const projectConversation = useQuery(
+    api.chatQueries.getProjectScopedConversation,
+    projectId && userId ? { projectId: projectId as any, userId } : "skip"
+  )
+
+  // Load conversation from Convex (either by conversationId OR from project query)
   const conversation = useQuery(
     api.chatQueries.getConversation,
     conversationId && userId ? { userId, conversationId: conversationId as Id<"conversations"> } : "skip"
   )
+  
+  // Auto-set conversationId when project conversation is found
+  // Reset conversationId when switching projects or back to main chat
+  useEffect(() => {
+    if (projectId && projectConversation?._id) {
+      // Set to project conversation
+      if (conversationId !== projectConversation._id) {
+        setConversationId(projectConversation._id)
+      }
+    } else if (!projectId && conversationId) {
+      // Clear conversationId when returning to main chat (will trigger creation of new general conversation)
+      setConversationId(undefined)
+    }
+  }, [projectId, projectConversation, conversationId])
 
   // Fetch widget output data when widgetOutputId is present
   const widgetOutput = useQuery(

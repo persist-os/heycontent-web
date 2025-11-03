@@ -21,6 +21,22 @@ export const messageSchemaFields = {
   // Optional Hidden Context
   context: v.optional(v.string()),
   
+  // Message Content Types (OPTIONAL for backward compatibility)
+  contentType: v.optional(v.union(
+    v.literal("text"),              // Normal chat message (default)
+    v.literal("family_question"),   // Family asking user
+    v.literal("family_update"),     // Family activity notification
+    v.literal("preflight_questions") // Pre-flight question batch
+  )),
+  
+  // Family-specific metadata (OPTIONAL for backward compatibility)
+  familyMetadata: v.optional(v.object({
+    familyId: v.union(v.string(), v.id("widgets")),
+    familyName: v.string(),
+    questionId: v.optional(v.id("widget_questions")),  // Link to question record
+    context: v.optional(v.string())  // Why asking
+  })),
+  
   // File Attachments - Metadata only, actual files in GCS
   fileAttachments: v.optional(v.array(v.object({
     file_url: v.string(),
@@ -57,6 +73,18 @@ export const messageInputValidator = v.object({
   role: messageRoleValidator,
   timestamp: v.number(),
   context: v.optional(v.string()),
+  contentType: v.optional(v.union(
+    v.literal("text"),
+    v.literal("family_question"),
+    v.literal("family_update"),
+    v.literal("preflight_questions")
+  )),
+  familyMetadata: v.optional(v.object({
+    familyId: v.union(v.string(), v.id("widgets")),
+    familyName: v.string(),
+    questionId: v.optional(v.id("widget_questions")),
+    context: v.optional(v.string())
+  })),
   fileAttachments: v.optional(v.array(v.object({
     file_url: v.string(),
     original_filename: v.string(),

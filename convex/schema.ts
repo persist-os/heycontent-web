@@ -33,6 +33,9 @@ import { widgetSchemaFields, projectWidgetsSchemaFields } from "./types/widgets"
 import { widgetOutputSchemaFields } from "./types/widgetOutput";
 import { widgetQuestionSchemaFields } from "./types/widgetQuestion";
 
+// Artifacts
+import { artifactSchemaFields } from "./types/artifact";
+
 // Briefing System
 import { briefingEventSchemaFields } from "./types/briefingEvent";
 import { briefingPreferencesSchemaFields } from "./types/briefingPreferences";
@@ -321,6 +324,12 @@ export default defineSchema({
     .index("by_project", ["projectId"])
     .index("by_status", ["status"])
     .index("by_project_status", ["projectId", "status"]),
+
+  // Artifacts - Generated content from families (clean separation from execution tracking)
+  artifacts: defineTable(artifactSchemaFields)
+    .index("by_project", ["projectId"])
+    .index("by_widget", ["widgetId"])
+    .index("by_user", ["userId"]),
 
   // Conversation Summaries - Real-time conversation analysis
   conversation_summaries: defineTable(conversationSummarySchemaFields)

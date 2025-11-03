@@ -25,6 +25,12 @@ export const projectSchemaFields = {
   fingerprintId: v.optional(v.id("project_fingerprints")),
   analysisIds: v.optional(v.array(v.string())),
   
+  // Budget Tracking (ON HOLD - placeholders for future usage tracking)
+  dailyLlmBudget: v.optional(v.number()),           // User-set limit (default 50)
+  llmCallsToday: v.optional(v.number()),            // Current usage
+  budgetLastReset: v.optional(v.number()),          // Timestamp of last reset
+  isActive: v.optional(v.boolean()),                // Active/inactive state
+  
   // Constellation Layout Cache (recalculated manually)
   constellationLayout: v.optional(v.object({
     version: v.number(),
@@ -87,6 +93,11 @@ export interface Project {
   shardIds?: string[];
   fingerprintId?: string;
   analysisIds?: string[];
+  // Budget tracking (placeholders - ON HOLD)
+  dailyLlmBudget: number;
+  llmCallsToday: number;
+  budgetLastReset: number;
+  isActive: boolean;
   constellationLayout?: ConstellationLayout;
   createdAt: number;
   updatedAt: number;

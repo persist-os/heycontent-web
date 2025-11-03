@@ -1,42 +1,23 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { useQuery } from 'convex/react'
-import { api } from '@/convex/_generated/api'
-import { getCurrentUserId } from '@/app/lib/api-helpers'
+import React, { useState } from 'react'
 import { AssignmentItem } from './AssignmentItem'
 import { ChevronDown, Plus, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
+
+interface AssignmentsSectionProps {
+  projects: any[] | undefined
+}
 
 /**
  * AssignmentsSection - Active assignments/projects section
  * 
  * Displays active projects with progress tracking
  */
-export function AssignmentsSection() {
+export function AssignmentsSection({ projects }: AssignmentsSectionProps) {
   const router = useRouter()
-  const [userId, setUserId] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<'recent' | 'oldest' | 'name'>('recent')
-
-  // Get user ID on component mount
-  useEffect(() => {
-    const getUserId = async () => {
-      try {
-        const id = await getCurrentUserId()
-        setUserId(id)
-      } catch (error) {
-        console.error('Failed to get user ID:', error)
-      }
-    }
-    getUserId()
-  }, [])
-  
-  // Query user's projects (these are "assignments")
-  const projects = useQuery(
-    api.projectsQueries.getByUser,
-    userId ? { userId, limit: 6 } : 'skip' // Query 6 to have buffer for sorting
-  )
 
   // Loading state
   if (projects === undefined) {

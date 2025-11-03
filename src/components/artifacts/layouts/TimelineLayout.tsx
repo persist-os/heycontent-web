@@ -37,7 +37,7 @@ export function TimelineLayout({
   editable = false 
 }: LayoutProps<TimelineArtifact>) {
   // Defensive: ensure all required properties exist
-  const schema = artifact?.schema || { layout: 'timeline' as const, eventTypes: [] }
+  const data_model = artifact?.data_model || { layout: 'timeline' as const, eventTypes: [] }
   const data = artifact?.data || { events: [] }
   const metadata = artifact?.metadata || {
     version: 1,
@@ -55,8 +55,8 @@ export function TimelineLayout({
 
   // Get event type config
   const getEventTypeConfig = (eventType: string) => {
-    return Array.isArray(schema?.eventTypes) 
-      ? schema.eventTypes.find(t => t?.type === eventType)
+    return Array.isArray(data_model?.eventTypes) 
+      ? data_model.eventTypes.find(t => t?.type === eventType)
       : undefined
   }
 

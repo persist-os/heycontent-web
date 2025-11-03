@@ -41,10 +41,10 @@ function UnsupportedArtifact({ artifact }: { artifact: Artifact }) {
           <p>This artifact type is not yet supported.</p>
           <details className="mt-4">
             <summary className="cursor-pointer hover:text-foreground">
-              Show artifact schema
+              Show artifact data model
             </summary>
             <pre className="mt-2 p-4 bg-muted/10 rounded-lg overflow-auto text-xs">
-              {JSON.stringify(artifact.schema, null, 2)}
+              {JSON.stringify(artifact.data_model, null, 2)}
             </pre>
           </details>
         </div>
@@ -73,34 +73,13 @@ export function ArtifactRenderer({
     )
   }
 
-  // Normalize database format to expected format
-  // Database uses: artifactType, artifactSchema, artifactData
-  // Renderer expects: type, schema, data, metadata
-  const artifactAny = artifact as any
-  
-  // Defensive normalization with fallbacks
-  const normalizedArtifact: Artifact = {
-    type: artifactAny?.artifactType || artifactAny?.type || 'unknown',
-    schema: artifactAny?.artifactSchema || artifactAny?.schema || {},
-    data: artifactAny?.artifactData || artifactAny?.data || {},
-    metadata: artifactAny?.metadata || {
-      version: artifactAny?.version || 1,
-      lastUpdatedBy: artifactAny?.lastContributor || artifactAny?.widgetId || 'unknown',
-      lastUpdatedAt: artifactAny?.updatedAt || artifactAny?.createdAt || Date.now(),
-      editHistory: (Array.isArray(artifactAny?.userEdits) ? artifactAny.userEdits : []).map((edit: any) => ({
-        timestamp: edit?.timestamp || Date.now(),
-        widgetId: edit?.userId || 'unknown',
-        changes: JSON.stringify(edit?.changes || {})
-      }))
-    }
-  } as Artifact
-
   // Type-based routing to layout components
-  switch (normalizedArtifact.type) {
+  // Artifact now comes from clean artifacts table - no normalization needed!
+  switch (artifact.type) {
     case 'structured_list':
       return (
         <StructuredListLayout
-          artifact={normalizedArtifact}
+          artifact={artifact}
           editable={editable}
           onUpdate={onUpdate}
         />
@@ -109,7 +88,7 @@ export function ArtifactRenderer({
     case 'timeline':
       return (
         <TimelineLayout
-          artifact={normalizedArtifact}
+          artifact={artifact}
           editable={editable}
           onUpdate={onUpdate}
         />
@@ -118,7 +97,7 @@ export function ArtifactRenderer({
     case 'tracker':
       return (
         <TrackerLayout
-          artifact={normalizedArtifact}
+          artifact={artifact}
           editable={editable}
           onUpdate={onUpdate}
         />
@@ -127,7 +106,7 @@ export function ArtifactRenderer({
     case 'report':
       return (
         <ReportLayout
-          artifact={normalizedArtifact}
+          artifact={artifact}
           editable={editable}
           onUpdate={onUpdate}
         />
@@ -136,7 +115,7 @@ export function ArtifactRenderer({
     case 'analysis':
       return (
         <AnalysisLayout
-          artifact={normalizedArtifact}
+          artifact={artifact}
           editable={editable}
           onUpdate={onUpdate}
         />
@@ -145,14 +124,14 @@ export function ArtifactRenderer({
     case 'summary':
       return (
         <SummaryLayout
-          artifact={normalizedArtifact}
+          artifact={artifact}
           editable={editable}
           onUpdate={onUpdate}
         />
       )
     
     default:
-      return <UnsupportedArtifact artifact={normalizedArtifact} />
+      return <UnsupportedArtifact artifact={artifact} />
   }
 }
 

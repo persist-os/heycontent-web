@@ -17,7 +17,6 @@ import {
   MessageCircle, 
   Gem, 
   Sparkles,
-  PlayCircle,
   MoreHorizontal,
   Filter,
   Search,
@@ -185,12 +184,6 @@ export function ProjectGridView({
     }
   }
 
-  // Handle card click - widgets now managed via ProjectControlPanel
-  const handleCardAction = (content: ContentCardData) => {
-    // Card clicks open the unified details panel
-    // Widget execution is now controlled via "Start Project" button
-  }
-
   // Convert items to ContentCardData format
   const cardData: ContentCardData[] = useMemo(() => {
     return sortedItems.map(item => ({
@@ -336,9 +329,6 @@ export function ProjectGridView({
               <ContentCard
                 content={card}
                 onClick={handleCardClick}
-                onAction={card.type === 'widget' ? handleCardAction : undefined}
-                actionIcon={card.type === 'widget' ? PlayCircle : undefined}
-                actionLabel={card.type === 'widget' ? 'Run widget' : undefined}
                 showMetadata={true}
                 variant={viewMode === 'list' ? 'compact' : 'default'}
               />

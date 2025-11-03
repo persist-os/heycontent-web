@@ -61,3 +61,54 @@ export const getWidgetQuestions = query({
   },
 });
 
+/**
+ * Get all pending questions for a user across all projects (for homepage display)
+ * Joins with projects and widgets to get display names
+ */
+export const getUserPendingQuestions = query({
+  args: {
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Get all pending questions for user
+    const questions = await ctx.db
+      .query("widget_questions")
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("userId"), args.userId),
+          q.eq(q.field("status"), "pending")
+        )
+      )
+      .order("desc")
+      .take(10);  // Limit to 10 most recent
+    
+    // Enrich with project and widget names
+    const enrichedQuestions = await Promise.all(
+      questions.map(async (question) => {
+        const project = await ctx.db.get(question.projectId);
+        
+        // Handle both string and Convex ID for widgetId
+        let widget = null;
+        if (typeof question.widgetId === "string") {
+          // String ID - try to find by string match (legacy)
+          widget = await ctx.db
+            .query("widgets")
+            .filter((q) => q.eq(q.field("_id"), question.widgetId))
+            .first();
+        } else {
+          // Convex ID
+          widget = await ctx.db.get(question.widgetId);
+        }
+        
+        return {
+          ...question,
+          projectName: project?.name || "Unknown Project",
+          familyName: widget?.familyIdentity?.familyName || widget?.title || "Widget",
+        };
+      })
+    );
+    
+    return enrichedQuestions;
+  },
+});
+

@@ -88,115 +88,104 @@ export function ChatInputBox({ value, onChange, onSend, isLoading = false }: Cha
   }, [])
 
   return (
-    <div 
-      className={cn(
-        "relative w-full",
-        "rounded-[2rem] p-1",
-        "bg-gradient-to-r from-primary/60 via-primary-light/50 to-primary-dark/40",
-        "shadow-xl shadow-primary/20",
-        "border border-primary/30"
-      )}
-    >
-      {/* Inner container with glassmorphic effect */}
-      <div className="relative flex flex-col gap-2">
-        
-        {/* File attachments preview */}
-        {fileAttachments.length > 0 && (
-          <div className="flex flex-wrap gap-2 px-6 pt-3">
-            {fileAttachments.map((file, index) => {
-              const fileIcon = getFileTypeIcon(file.file_metadata.content_type)
-              return (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-lg border border-primary/20"
+    <div className="relative flex flex-col gap-2">
+      {/* File attachments preview */}
+      {fileAttachments.length > 0 && (
+        <div className="flex flex-wrap gap-2 px-6 pt-3">
+          {fileAttachments.map((file, index) => {
+            const fileIcon = getFileTypeIcon(file.file_metadata.content_type)
+            return (
+              <div
+                key={index}
+                className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-lg border border-primary/20"
+              >
+                <span className="text-base">{fileIcon}</span>
+                <span className="text-sm text-foreground max-w-[150px] truncate">
+                  {file.file_metadata.original_filename}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {formatFileSize(file.file_metadata.file_size)}
+                </span>
+                <button
+                  onClick={() => removeFileAttachment(index)}
+                  className="ml-1 p-1 hover:bg-destructive/20 rounded transition-colors"
+                  aria-label="Remove file"
                 >
-                  <span className="text-base">{fileIcon}</span>
-                  <span className="text-sm text-foreground max-w-[150px] truncate">
-                    {file.file_metadata.original_filename}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {formatFileSize(file.file_metadata.file_size)}
-                  </span>
-                  <button
-                    onClick={() => removeFileAttachment(index)}
-                    className="ml-1 p-1 hover:bg-destructive/20 rounded transition-colors"
-                    aria-label="Remove file"
-                  >
-                    <X className="w-3 h-3 text-muted-foreground hover:text-destructive" />
-                  </button>
-                </div>
-              )
-            })}
-          </div>
-        )}
+                  <X className="w-3 h-3 text-muted-foreground hover:text-destructive" />
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      )}
 
-        <div className="flex items-center gap-3 px-6 py-4 rounded-[2rem] bg-background/80 backdrop-blur-xl">
-          {/* Hidden file input */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept="*/*"
-            onChange={handleFileInputChange}
-            className="hidden"
-            aria-label="File input"
-          />
+      {/* Input row */}
+      <div className="flex items-center gap-3 px-6 py-4">
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept="*/*"
+          onChange={handleFileInputChange}
+          className="hidden"
+          aria-label="File input"
+        />
+        
+        {/* Input field */}
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="What can I help you with?"
+          disabled={isLoading}
+          className={cn(
+            "flex-1 bg-transparent border-none outline-none",
+            "text-foreground placeholder:text-muted-foreground",
+            "text-base",
+            isLoading && "opacity-50 cursor-not-allowed"
+          )}
+        />
+        
+        {/* Action Icons */}
+        <div className="flex items-center gap-2">
           
-          {/* Input field */}
-          <input
-            type="text"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="What can I help you with?"
-            disabled={isLoading}
+          {/* Attach */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              console.log('Paperclip clicked, fileInputRef:', fileInputRef.current)
+              fileInputRef.current?.click()
+            }}
+            disabled={isUploading}
             className={cn(
-              "flex-1 bg-transparent border-none outline-none",
-              "text-foreground placeholder:text-muted-foreground",
-              "text-base",
-              isLoading && "opacity-50 cursor-not-allowed"
+              "p-2 rounded-lg hover:bg-foreground/5 transition-colors",
+              isUploading && "opacity-50 cursor-not-allowed"
             )}
-          />
-          
-          {/* Action Icons */}
-          <div className="flex items-center gap-2">
-            
-            {/* Attach */}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                console.log('Paperclip clicked, fileInputRef:', fileInputRef.current)
-                fileInputRef.current?.click()
-              }}
-              disabled={isUploading}
-              className={cn(
-                "p-2 rounded-lg hover:bg-foreground/5 transition-colors",
-                isUploading && "opacity-50 cursor-not-allowed"
-              )}
-              aria-label="Attach file"
-            >
-              <Paperclip className="w-5 h-5 text-muted-foreground hover:text-foreground" />
-            </button>
+            aria-label="Attach file"
+          >
+            <Paperclip className="w-5 h-5 text-muted-foreground hover:text-foreground" />
+          </button>
 
-            {/* Send */}
-            <button
-              type="button"
-              onClick={handleSend}
-              disabled={!value.trim() || isLoading || isUploading}
-              className={cn(
-                "p-2 rounded-lg transition-all",
-                value.trim() && !isLoading && !isUploading
-                  ? "bg-gradient-to-r from-primary to-primary-dark text-primary-darker hover:shadow-lg hover:shadow-primary/30"
-                  : "bg-muted/20 text-muted-foreground cursor-not-allowed"
-              )}
-              aria-label="Send message"
-            >
-              <Send className="w-5 h-5" />
-            </button>
-            
-          </div>
+          {/* Send */}
+          <button
+            type="button"
+            onClick={handleSend}
+            disabled={!value.trim() || isLoading || isUploading}
+            className={cn(
+              "p-2 rounded-lg transition-all",
+              value.trim() && !isLoading && !isUploading
+                ? "bg-gradient-to-r from-primary to-primary-dark text-primary-darker hover:shadow-lg hover:shadow-primary/30"
+                : "bg-muted/20 text-muted-foreground cursor-not-allowed"
+            )}
+            aria-label="Send message"
+          >
+            <Send className="w-5 h-5" />
+          </button>
+          
         </div>
       </div>
     </div>

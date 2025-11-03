@@ -20,7 +20,7 @@ export function AnalysisLayout({
   editable = false
 }: LayoutProps<AnalysisArtifact>) {
   // Defensive: ensure all required properties exist
-  const schema = artifact?.schema || { layout: 'insights' as const }
+  const data_model = artifact?.data_model || { layout: 'insights' as const }
   const data = artifact?.data || { insights: [] }
   const metadata = artifact?.metadata || {
     version: 1,
@@ -117,7 +117,7 @@ export function AnalysisLayout({
         ))}
 
         {/* Chart visualization */}
-        {schema?.showCharts && data?.chartData && Array.isArray(data.chartData) && data.chartData.length > 0 && (
+        {data_model?.showCharts && data?.chartData && Array.isArray(data.chartData) && data.chartData.length > 0 && (
           <div className="bg-muted/10 border border-border/20 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-4">
               <BarChartIcon className="w-4 h-4 text-primary" />
@@ -127,7 +127,7 @@ export function AnalysisLayout({
               </Badge>
             </div>
             <ResponsiveContainer width="100%" height={300}>
-              {schema.chartType === 'bar' ? (
+              {data_model.chartType === 'bar' ? (
                 <BarChart data={data.chartData}>
                   <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                   <XAxis 
@@ -154,7 +154,7 @@ export function AnalysisLayout({
                     radius={[4, 4, 0, 0]}
                   />
                 </BarChart>
-              ) : schema.chartType === 'line' ? (
+              ) : data_model.chartType === 'line' ? (
                 <LineChart data={data.chartData}>
                   <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                   <XAxis 

@@ -24,7 +24,7 @@ export function ReportLayout({
   onUpdate
 }: LayoutProps<ReportArtifact>) {
   // Defensive: ensure all required properties exist
-  const schema = artifact?.schema || { layout: 'markdown' as const }
+  const data_model = artifact?.data_model || { layout: 'markdown' as const }
   const data = artifact?.data || { markdown: '', sections: [] }
   const metadata = artifact?.metadata || {
     version: 1,

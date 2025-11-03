@@ -20,8 +20,8 @@ export function StructuredListLayout({
   onUpdate
 }: LayoutProps<StructuredListArtifact>) {
   // Defensive: ensure all required properties exist
-  const schema = artifact?.schema || { layout: 'table' as const, fields: [] }
-  const fields = Array.isArray(schema?.fields) ? schema.fields : []
+  const data_model = artifact?.data_model || { layout: 'table' as const, fields: [] }
+  const fields = Array.isArray(data_model?.fields) ? data_model.fields : []
   const data = Array.isArray(artifact?.data) ? artifact.data : []
   const metadata = artifact?.metadata || {
     version: 1,
@@ -39,7 +39,7 @@ export function StructuredListLayout({
   }
 
   // Card view for mobile, table for desktop
-  const isCardLayout = schema?.layout === 'cards'
+  const isCardLayout = data_model?.layout === 'cards'
 
   return (
     <Card className="bg-card/50 backdrop-blur-sm border border-primary/20 hover:bg-card/80 transition-all duration-300">

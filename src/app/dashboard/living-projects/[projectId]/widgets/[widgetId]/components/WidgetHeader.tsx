@@ -9,24 +9,19 @@
 import React from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Loader2 } from 'lucide-react'
 import { Id } from '@/convex/_generated/dataModel'
 import type { WidgetConfig } from '@/types/projectWidgets'
-import { T, TButton } from '@/components/translation'
+import { T } from '@/components/translation'
 
 interface WidgetHeaderProps {
   widget: WidgetConfig
   projectId: Id<"projects">
-  isRunning: boolean
-  onRunWidget: () => void
   onOpenInLab: () => void
 }
 
 export function WidgetHeader({ 
   widget, 
   projectId, 
-  isRunning, 
-  onRunWidget,
   onOpenInLab
 }: WidgetHeaderProps) {
   const router = useRouter()
@@ -88,24 +83,6 @@ export function WidgetHeader({
               "
             >
               <T context="button.open_lab">Open in Lab</T>
-            </Button>
-            <Button
-              onClick={onRunWidget}
-              disabled={isRunning}
-              variant="outline"
-              className="
-                hover:bg-primary/5 hover:border-primary/30
-                transition-all duration-300
-              "
-            >
-              {isRunning ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  <T context="button.running">Running</T>
-                </>
-              ) : (
-                <T context="button.run_widget">Run Widget</T>
-              )}
             </Button>
           </div>
         </div>

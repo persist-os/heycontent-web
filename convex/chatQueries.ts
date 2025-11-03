@@ -149,6 +149,33 @@ export const getConversationsByProjectId = query({
 });
 
 /**
+ * Get the project-scoped conversation for a project (ONE conversation per project)
+ * Used for widget communication and family questions
+ */
+export const getProjectScopedConversation = query({
+  args: {
+    projectId: v.id("projects"),
+    userId: v.string(),
+  },
+  handler: async (ctx, { projectId, userId }) => {
+    try {
+      const conversations = await ctx.db
+        .query("conversations")
+        .withIndex("by_user_project", (q) =>
+          q.eq("userId", userId).eq("projectId", projectId)
+        )
+        .filter((q) => q.eq(q.field("conversationType"), "project_scoped"))
+        .first();
+
+      return conversations;
+    } catch (error) {
+      console.error('Error fetching project-scoped conversation:', error);
+      return null;
+    }
+  },
+});
+
+/**
  * Get multiple conversations by their IDs (batch fetch for context enrichment)
  * @param conversationIds - Array of conversation IDs to fetch
  * @param userId - The user ID for authorization

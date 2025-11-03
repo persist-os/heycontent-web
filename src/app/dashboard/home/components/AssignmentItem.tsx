@@ -147,18 +147,7 @@ export function AssignmentItem({ project }: AssignmentItemProps) {
           onClick={() => router.push(`/dashboard/living-projects/${project._id}`)}
           className="gap-2"
         >
-          <Pencil className="w-4 h-4" />
-          Edit Assignment
-        </Button>
-        
-        <Button
-          variant="default"
-          size="sm"
-          onClick={() => router.push(`/dashboard/living-projects/${project._id}`)}
-          className="gap-2 bg-primary/20 text-primary-darker border border-primary/30 hover:bg-primary/30"
-        >
-          <Plus className="w-4 h-4" />
-          New Widget
+          Open in Constellation
         </Button>
         
         <Button

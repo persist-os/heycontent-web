@@ -1,39 +1,20 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { useQuery } from 'convex/react'
-import { api } from '@/convex/_generated/api'
-import { getCurrentUserId } from '@/app/lib/api-helpers'
+import React from 'react'
 import { ArtifactCard } from './ArtifactCard'
 import { ArrowRight } from 'lucide-react'
 import Link from 'next/link'
+
+interface ArtifactsSectionProps {
+  artifacts: any[] | undefined
+}
 
 /**
  * ArtifactsSection - "Delivered to You" section
  * 
  * Displays recent artifacts (widget outputs) across all projects
  */
-export function ArtifactsSection() {
-  const [userId, setUserId] = useState<string | null>(null)
-
-  // Get user ID on component mount
-  useEffect(() => {
-    const getUserId = async () => {
-      try {
-        const id = await getCurrentUserId()
-        setUserId(id)
-      } catch (error) {
-        console.error('Failed to get user ID:', error)
-      }
-    }
-    getUserId()
-  }, [])
-  
-  // Query recent artifacts for user (limit: 3 for homepage)
-  const artifacts = useQuery(
-    api.widgetOutputsQueries.getRecentArtifacts,
-    userId ? { userId, limit: 3 } : 'skip'
-  )
+export function ArtifactsSection({ artifacts }: ArtifactsSectionProps) {
   // Loading state
   if (artifacts === undefined) {
     return (

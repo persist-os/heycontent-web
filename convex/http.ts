@@ -25,7 +25,8 @@ app.use('*', async (c, next) => {
   
   // Determine domain for better tracking
   let domain = 'unknown';
-  if (path.includes('/notes')) domain = 'notes';
+  if (path.includes('/artifacts')) domain = 'artifacts';
+  else if (path.includes('/notes')) domain = 'notes';
   else if (path.includes('/users')) domain = 'users';
   else if (path.includes('/stardust')) domain = 'stardust';
   else if (path.includes('/projectSeeds')) domain = 'project_seeds';
@@ -1389,6 +1390,39 @@ app.get("/api/feedback/low-rated", async (c) => {
       success: false, 
       error: "Failed to get low-rated content",
       message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get project-scoped conversation (ONE conversation per project for widget communication)
+app.post("/api/conversations/getProjectScoped", async (c) => {
+  try {
+    const ctx = c.env;
+    const { projectId, userId } = await c.req.json();
+    
+    // Validate required fields
+    if (!projectId || !userId) {
+      return c.json({ 
+        success: false, 
+        error: "projectId and userId are required" 
+      }, 400);
+    }
+    
+    const conversation = await ctx.runQuery(api.chatQueries.getProjectScopedConversation, {
+      projectId: projectId as any,
+      userId
+    });
+    
+    return c.json({ 
+      success: true, 
+      data: conversation 
+    });
+  } catch (error) {
+    console.error('Get project-scoped conversation error:', error);
+    return c.json({ 
+      success: false, 
+      error: `Failed to get project-scoped conversation: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      data: null 
     }, 500);
   }
 });
@@ -3700,6 +3734,113 @@ app.post("/api/widgetOutputs/mutate", async (c) => {
     return c.json({ 
       error: "Internal server error",
       message: error.message || "Unknown error"
+    }, 500);
+  }
+});
+
+// ARTIFACT ROUTES - Clean artifact storage (replaces widget_outputs for artifacts)
+
+/**
+ * POST /api/artifacts/create
+ * Create new artifact
+ */
+app.post("/api/artifacts/create", async (c) => {
+  try {
+    const requestBody = await c.req.json();
+    const artifactId = await c.env.runMutation(api.artifactMutations.createArtifact, requestBody);
+    return c.json({ success: true, data: artifactId });
+  } catch (error: any) {
+    console.error("Create artifact error:", error);
+    return c.json({ 
+      error: "Failed to create artifact",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * PATCH /api/artifacts/:artifactId
+ * Update artifact
+ */
+app.patch("/api/artifacts/:artifactId", async (c) => {
+  try {
+    const artifactId = c.req.param("artifactId");
+    const requestBody = await c.req.json();
+    
+    await c.env.runMutation(api.artifactMutations.updateArtifact, {
+      artifactId: artifactId as any,
+      ...requestBody
+    });
+    
+    return c.json({ success: true });
+  } catch (error: any) {
+    console.error("Update artifact error:", error);
+    return c.json({ 
+      error: "Failed to update artifact",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * DELETE /api/artifacts/:artifactId
+ * Delete artifact
+ */
+app.delete("/api/artifacts/:artifactId", async (c) => {
+  try {
+    const artifactId = c.req.param("artifactId");
+    await c.env.runMutation(api.artifactMutations.deleteArtifact, {
+      artifactId: artifactId as any
+    });
+    
+    return c.json({ success: true });
+  } catch (error: any) {
+    console.error("Delete artifact error:", error);
+    return c.json({ 
+      error: "Failed to delete artifact",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * GET /api/artifacts/project/:projectId
+ * Get all artifacts for a project
+ */
+app.get("/api/artifacts/project/:projectId", async (c) => {
+  try {
+    const projectId = c.req.param("projectId");
+    const artifacts = await c.env.runQuery(api.artifactQueries.getProjectArtifacts, {
+      projectId: projectId as any
+    });
+    
+    return c.json({ success: true, data: artifacts });
+  } catch (error: any) {
+    console.error("Get project artifacts error:", error);
+    return c.json({ 
+      error: "Failed to get project artifacts",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * GET /api/artifacts/widget/:widgetId
+ * Get all artifacts for a widget
+ */
+app.get("/api/artifacts/widget/:widgetId", async (c) => {
+  try {
+    const widgetId = c.req.param("widgetId");
+    const artifacts = await c.env.runQuery(api.artifactQueries.getWidgetArtifacts, {
+      widgetId: widgetId as any
+    });
+    
+    return c.json({ success: true, data: artifacts });
+  } catch (error: any) {
+    console.error("Get widget artifacts error:", error);
+    return c.json({ 
+      error: "Failed to get widget artifacts",
+      message: error.message || "Internal Server Error"
     }, 500);
   }
 });

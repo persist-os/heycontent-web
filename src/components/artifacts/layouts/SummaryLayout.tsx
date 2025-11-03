@@ -18,8 +18,8 @@ export function SummaryLayout({
   editable = false
 }: LayoutProps<SummaryArtifact>) {
   // Defensive: ensure all required properties exist
-  const schema = artifact?.schema || { layout: 'card' as const, metrics: [] }
-  const metrics = Array.isArray(schema?.metrics) ? schema.metrics : []
+  const data_model = artifact?.data_model || { layout: 'card' as const, metrics: [] }
+  const metrics = Array.isArray(data_model?.metrics) ? data_model.metrics : []
   const data = artifact?.data || { keyMetrics: {} }
   const metadata = artifact?.metadata || {
     version: 1,
