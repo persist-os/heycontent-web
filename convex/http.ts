@@ -5898,5 +5898,135 @@ app.post("/api/convergence/optimization-runs", async (c) => {
   }
 });
 
+// ============================================================================
+// UNIVERSAL PROMPT SYSTEM
+// ============================================================================
+
+/**
+ * Create a single prompt block
+ */
+app.post("/api/prompts/create", async (c) => {
+  try {
+    const args = await c.req.json();
+    const promptId = await c.env.runMutation(api.promptsMutations.createPromptBlock, args);
+    
+    return c.json({
+      success: true,
+      data: promptId
+    });
+  } catch (error: any) {
+    console.error("[PROMPTS] Create prompt block error:", error);
+    return c.json({
+      success: false,
+      error: error.message || "Failed to create prompt block"
+    }, 500);
+  }
+});
+
+/**
+ * Batch create prompt blocks (for migration)
+ */
+app.post("/api/prompts/batchCreate", async (c) => {
+  try {
+    const args = await c.req.json();
+    const result = await c.env.runMutation(api.promptsMutations.batchCreatePromptBlocks, args);
+    
+    return c.json({
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    console.error("[PROMPTS] Batch create prompts error:", error);
+    return c.json({
+      success: false,
+      error: error.message || "Failed to batch create prompts"
+    }, 500);
+  }
+});
+
+/**
+ * Query prompts by tags
+ */
+app.post("/api/prompts/query/tags", async (c) => {
+  try {
+    const args = await c.req.json();
+    const prompts = await c.env.runQuery(api.promptsQueries.queryPromptsByTags, args);
+    
+    return c.json({
+      success: true,
+      data: prompts
+    });
+  } catch (error: any) {
+    console.error("[PROMPTS] Query by tags error:", error);
+    return c.json({
+      success: false,
+      error: error.message || "Failed to query prompts"
+    }, 500);
+  }
+});
+
+/**
+ * Query prompts by scope
+ */
+app.post("/api/prompts/query/scope", async (c) => {
+  try {
+    const args = await c.req.json();
+    const prompts = await c.env.runQuery(api.promptsQueries.queryPromptsByScope, args);
+    
+    return c.json({
+      success: true,
+      data: prompts
+    });
+  } catch (error: any) {
+    console.error("[PROMPTS] Query by scope error:", error);
+    return c.json({
+      success: false,
+      error: error.message || "Failed to query prompts"
+    }, 500);
+  }
+});
+
+/**
+ * Update effectiveness metrics
+ */
+app.post("/api/prompts/effectiveness", async (c) => {
+  try {
+    const args = await c.req.json();
+    const result = await c.env.runMutation(api.promptsMutations.updateEffectiveness, args);
+    
+    return c.json({
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    console.error("[PROMPTS] Update effectiveness error:", error);
+    return c.json({
+      success: false,
+      error: error.message || "Failed to update effectiveness"
+    }, 500);
+  }
+});
+
+/**
+ * Query prompts by tags (for universal prompt engine)
+ */
+app.post("/api/prompts/queryByTags", async (c) => {
+  try {
+    const body = await c.req.json();
+    
+    const prompts = await c.env.runQuery(api.promptsQueries.queryByTags, {
+      tags: body.tags || [],
+      scope: body.scope,
+      scopeId: body.scopeId,
+      effectivenessThreshold: body.effectivenessThreshold || 0.0
+    });
+    
+    return c.json({ success: true, data: prompts });
+  } catch (error: any) {
+    console.error("[http.ts] /api/prompts/queryByTags error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 const router = new HttpRouterWithHono(app);
 export default router;

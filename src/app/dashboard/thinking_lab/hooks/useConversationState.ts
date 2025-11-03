@@ -26,10 +26,12 @@ export function useConversationState(
   projectId?: string, 
   widgetId?: string, 
   widgetOutputId?: string,
-  getNotepadContext?: () => { content: string; title: string } | null
+  getNotepadContext?: () => { content: string; title: string } | null,
+  chatId?: string
 ) {
   // Local state - clean and minimal
-  const [conversationId, setConversationId] = useState<string | undefined>()
+  // Initialize with chatId if provided (for loading existing conversations)
+  const [conversationId, setConversationId] = useState<string | undefined>(chatId)
   const [isStreaming, setIsStreaming] = useState(false)
   const [optimisticMessages, setOptimisticMessages] = useState<OptimisticMessage[]>([])
   const [streamingContent, setStreamingContent] = useState('')
@@ -63,6 +65,13 @@ export function useConversationState(
   // Track previous projectId to detect switches
   const prevProjectIdRef = useRef<string | undefined>(projectId)
   
+  // Load conversation from chatId when provided (e.g., from URL)
+  useEffect(() => {
+    if (chatId && !conversationId) {
+      setConversationId(chatId)
+    }
+  }, [chatId, conversationId])
+  
   // Auto-set conversationId when project conversation is found
   // Reset conversationId when switching projects or back to main chat
   useEffect(() => {
@@ -73,15 +82,16 @@ export function useConversationState(
       if (conversationId !== projectConversation._id) {
         setConversationId(projectConversation._id)
       }
-    } else if (!projectId && prevProjectId && conversationId) {
+    } else if (!projectId && prevProjectId && conversationId && !chatId) {
       // ONLY clear conversationId when SWITCHING from project to non-project
       // (prevProjectId exists but projectId doesn't = we just switched away from a project)
+      // BUT don't clear if we have a chatId (user opened a specific conversation)
       setConversationId(undefined)
     }
     
     // Update ref for next render
     prevProjectIdRef.current = projectId
-  }, [projectId, projectConversation, conversationId])
+  }, [projectId, projectConversation, conversationId, chatId])
 
   // Fetch widget output data when widgetOutputId is present
   const widgetOutput = useQuery(

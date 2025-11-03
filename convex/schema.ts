@@ -28,6 +28,9 @@ import { projectFingerprintSchemaFields } from "./types/projectFingerprint";
 import { fingerprintEvolutionHistorySchemaFields } from "./types/fingerprintEvolutionHistory";
 import { fingerprintEvolutionSignalSchemaFields } from "./types/fingerprintEvolutionSignal";
 
+// Prompts (Universal Prompt System)
+import { promptSchemaFields } from "./types/prompt";
+
 // Widgets
 import { widgetSchemaFields, projectWidgetsSchemaFields } from "./types/widgets";
 import { widgetOutputSchemaFields } from "./types/widgetOutput";
@@ -656,4 +659,27 @@ export default defineSchema({
     .index("by_system_name", ["system_name"])
     .index("by_score", ["system_name", "score"])
     .index("by_run_id", ["optimization_run_id"]),
+
+  /**
+   * Universal Prompt System - Living, learning prompt blocks
+   * 
+   * Replaces static .txt files with queryable, versionable, learnable prompts.
+   * 
+   * Prompts are discovered via tags, not prescribed via hierarchy.
+   * Effectiveness scores enable continuous learning and improvement.
+   * 
+   * Use cases:
+   * - Platform identity prompts (all widgets inherit)
+   * - Project-specific customizations
+   * - Widget-owned prompts (portable)
+   * - Operation-specific instructions
+   * - Learned patterns (auto-discovered)
+   */
+  prompts: defineTable(promptSchemaFields)
+    .index("by_tags", ["tags"])
+    .index("by_scope", ["scope", "scopeId"])
+    .index("by_effectiveness", ["effectiveness"])
+    .index("by_type", ["type"])
+    .index("by_scope_and_tags", ["scope", "tags"])
+    .index("by_parent", ["parentId"]),
 });

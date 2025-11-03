@@ -113,7 +113,7 @@ function FullThinkingLabInternal({
     handleQuoteToNotepad,
     clearQuotedContent,
     setInputValue
-  } = useConversationState(userId, projectId, widgetId, widgetOutputId, notepadContext.getNotepadContent)
+  } = useConversationState(userId, projectId, widgetId, widgetOutputId, notepadContext.getNotepadContent, chatId)
 
   // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
   // Input ref

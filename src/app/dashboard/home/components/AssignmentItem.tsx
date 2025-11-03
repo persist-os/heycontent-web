@@ -150,6 +150,34 @@ export function AssignmentItem({ project }: AssignmentItemProps) {
           Open in Constellation
         </Button>
         
+        {/* Status-aware action button */}
+        {project.status === "sleeping" ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              // Wake project by calling wake endpoint
+              try {
+                setIsPausing(true)
+                const response = await fetch(`/api/projects/${project._id}/wake`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                });
+                if (!response.ok) {
+                  throw new Error('Failed to wake project');
+                }
+              } catch (error) {
+                console.error('Failed to wake project:', error);
+              } finally {
+                setIsPausing(false)
+              }
+            }}
+            disabled={isPausing}
+            className="gap-2 text-primary hover:text-primary-dark"
+          >
+            💤 Wake Project
+          </Button>
+        ) : (
         <Button
           variant="ghost"
           size="sm"
@@ -160,6 +188,7 @@ export function AssignmentItem({ project }: AssignmentItemProps) {
           <Pause className="w-4 h-4" />
           {project.archived ? 'Resume' : 'Pause'}
         </Button>
+        )}
         
         <AlertDialog>
           <AlertDialogTrigger asChild>

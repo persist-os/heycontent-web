@@ -31,6 +31,15 @@ export const projectSchemaFields = {
   budgetLastReset: v.optional(v.number()),          // Timestamp of last reset
   isActive: v.optional(v.boolean()),                // Active/inactive state
   
+  // Project Status Lifecycle
+  status: v.optional(v.union(
+    v.literal("fresh"),
+    v.literal("working"),
+    v.literal("stable"),
+    v.literal("sleeping"),
+    v.literal("archived")
+  )),
+  
   // Constellation Layout Cache (recalculated manually)
   constellationLayout: v.optional(v.object({
     version: v.number(),
@@ -98,6 +107,7 @@ export interface Project {
   llmCallsToday: number;
   budgetLastReset: number;
   isActive: boolean;
+  status?: "fresh" | "working" | "stable" | "sleeping" | "archived";
   constellationLayout?: ConstellationLayout;
   createdAt: number;
   updatedAt: number;

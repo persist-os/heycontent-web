@@ -63,7 +63,8 @@ export function HomepageChat({
     activeProjectId ?? undefined, // projectId for project-scoped chat
     undefined, // no widgetId
     undefined, // no widgetOutputId
-    undefined  // no notepad context
+    undefined, // no notepad context
+    undefined  // no chatId (HomepageChat always creates new or uses project conversation)
   )
 
   // REUSE: useMessageList hook - combines all message sources
@@ -175,6 +176,7 @@ export function HomepageChat({
             onChange={setInputValue}
             onSend={handleSend}
             isLoading={isStreaming}
+            conversationId={conversationId}
           />
         </div>
       </div>

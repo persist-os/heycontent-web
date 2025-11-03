@@ -89,16 +89,13 @@ export const createProject = mutation({
 
 /**
  * Update project basic info
- * Used by: Project settings, renaming
+ * Used by: Project settings, renaming, status updates, budget tracking
  */
 export const updateProject = mutation({
   args: {
     projectId: v.id("projects"),
     userId: v.string(),
-    updates: v.object({
-      name: v.optional(v.string()),
-      description: v.optional(v.string()),
-    }),
+    updates: v.any(),  // Allow any updates for flexibility (status, budget, etc.)
   },
   handler: async (ctx, { projectId, userId, updates }) => {
     // Validate project ownership
@@ -136,6 +133,15 @@ export const updateProject = mutation({
       }
       updateData.description = sanitizedDescription;
     }
+    
+    // Allow other updates (status, budget fields, etc.)
+    // These are passed through without validation as they're system-controlled
+    const allowedSystemFields = ['status', 'llmCallsToday', 'dailyLlmBudget', 'budgetLastReset', 'isActive'];
+    allowedSystemFields.forEach(field => {
+      if (updates[field] !== undefined) {
+        updateData[field] = updates[field];
+      }
+    });
     
     await ctx.db.patch(projectId, updateData);
     

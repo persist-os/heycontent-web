@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useRef, useState, useCallback, useEffect } from 'react'
-import { AtSign, Paperclip, Send, Mic, X } from 'lucide-react'
+import { AtSign, Paperclip, Send, Mic, X, FlaskConical } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { uploadFile, formatFileSize, getFileTypeIcon, type FileUploadResponse } from '@/lib/file-upload'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
@@ -11,6 +12,7 @@ interface ChatInputBoxProps {
   onChange: (value: string) => void
   onSend: (message: string, fileAttachments?: FileUploadResponse[]) => void
   isLoading?: boolean
+  conversationId?: string | null
 }
 
 /**
@@ -20,9 +22,11 @@ interface ChatInputBoxProps {
  * - Gradient background (amber to blue)
  * - Glassmorphism effect
  * - Action icons (@mention, attach, voice, send)
+ * - Open in Thinking Lab button (when conversationId available)
  * - Controlled component for chat integration
  */
-export function ChatInputBox({ value, onChange, onSend, isLoading = false }: ChatInputBoxProps) {
+export function ChatInputBox({ value, onChange, onSend, isLoading = false, conversationId }: ChatInputBoxProps) {
+  const router = useRouter()
   const [userId, setUserId] = useState<string | null>(null)
   const [fileAttachments, setFileAttachments] = useState<FileUploadResponse[]>([])
   const [isUploading, setIsUploading] = useState(false)
@@ -86,6 +90,12 @@ export function ChatInputBox({ value, onChange, onSend, isLoading = false }: Cha
   const removeFileAttachment = useCallback((index: number) => {
     setFileAttachments(prev => prev.filter((_, i) => i !== index))
   }, [])
+
+  const handleOpenInThinkingLab = useCallback(() => {
+    if (conversationId) {
+      router.push(`/dashboard/thinking_lab?chatId=${conversationId}`)
+    }
+  }, [conversationId, router])
 
   return (
     <div className="relative flex flex-col gap-2">
@@ -173,6 +183,22 @@ export function ChatInputBox({ value, onChange, onSend, isLoading = false }: Cha
               <Paperclip className="w-5 h-5 text-muted-foreground hover:text-foreground" />
             )}
           </button>
+
+          {/* Open in Thinking Lab - Only show when conversation exists */}
+          {conversationId && (
+            <button
+              type="button"
+              onClick={handleOpenInThinkingLab}
+              className={cn(
+                "p-2 rounded-lg hover:bg-foreground/5 transition-colors group",
+                "relative"
+              )}
+              aria-label="Open in Thinking Lab"
+              title="Open in Thinking Lab"
+            >
+              <FlaskConical className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+            </button>
+          )}
 
           {/* Send */}
           <button
