@@ -7,6 +7,7 @@ import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { GreetingHeader } from './GreetingHeader'
 import { HomepageChat } from './HomepageChat'
 import { PendingQuestionsSection } from './PendingQuestionsSection'
+import { ActivityFeed } from './ActivityFeed'
 import { ArtifactsSection } from './ArtifactsSection'
 import { AssignmentsSection } from './AssignmentsSection'
 
@@ -94,6 +95,9 @@ export function HomeScreen() {
           questions={pendingQuestions}
           onQuestionClick={handleQuestionClick}
         />
+        
+        {/* Activity Feed - recent family updates */}
+        <ActivityFeed userId={userId} />
         
         {/* Artifacts Section */}
         <ArtifactsSection artifacts={artifacts} />

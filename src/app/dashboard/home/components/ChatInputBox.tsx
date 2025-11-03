@@ -121,14 +121,25 @@ export function ChatInputBox({ value, onChange, onSend, isLoading = false }: Cha
 
       {/* Input row */}
       <div className="flex items-center gap-3 px-6 py-4">
-        {/* Hidden file input */}
+        {/* Hidden file input - using sr-only pattern for better browser compatibility */}
         <input
+          id="file-upload-input"
           ref={fileInputRef}
           type="file"
           multiple
           accept="image/*,.pdf,.doc,.docx,.txt,.csv,.xlsx,.xls"
           onChange={handleFileInputChange}
-          className="hidden"
+          style={{
+            position: 'absolute',
+            width: '1px',
+            height: '1px',
+            padding: 0,
+            margin: '-1px',
+            overflow: 'hidden',
+            clip: 'rect(0, 0, 0, 0)',
+            whiteSpace: 'nowrap',
+            border: 0
+          }}
           aria-label="Select files to attach"
         />
         
@@ -151,14 +162,12 @@ export function ChatInputBox({ value, onChange, onSend, isLoading = false }: Cha
         {/* Action Icons */}
         <div className="flex items-center gap-2">
           
-          {/* Attach */}
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
+          {/* Attach - using label for better file dialog triggering */}
+          <label
+            htmlFor="file-upload-input"
             className={cn(
-              "p-2 rounded-lg hover:bg-foreground/5 transition-colors",
-              isUploading && "opacity-50 cursor-not-allowed"
+              "p-2 rounded-lg hover:bg-foreground/5 transition-colors cursor-pointer inline-flex items-center justify-center",
+              isUploading && "opacity-50 cursor-not-allowed pointer-events-none"
             )}
             aria-label="Attach file"
           >
@@ -167,7 +176,7 @@ export function ChatInputBox({ value, onChange, onSend, isLoading = false }: Cha
             ) : (
               <Paperclip className="w-5 h-5 text-muted-foreground hover:text-foreground" />
             )}
-          </button>
+          </label>
 
           {/* Send */}
           <button

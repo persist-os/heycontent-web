@@ -127,3 +127,29 @@ export const isConversationMigrated = query({
   },
 });
 
+/**
+ * Get recent family activity messages for activity feed
+ * Includes family_question and family_update messages
+ */
+export const getRecentFamilyUpdates = query({
+  args: {
+    userId: v.string(),
+    limit: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_user_timestamp", (q) => q.eq("userId", args.userId))
+      .order("desc")
+      .take(args.limit * 2);  // Get more to filter
+
+    // Filter for family messages only
+    const familyMessages = messages.filter(msg => 
+      !msg.deletedAt && 
+      (msg.contentType === "family_question" || msg.contentType === "family_update")
+    );
+
+    return familyMessages.slice(0, args.limit);
+  },
+});
+

@@ -116,7 +116,7 @@ export function AssignmentItem({ project }: AssignmentItemProps) {
             {project.description.length > 30 ? project.description.slice(0, 30) + '...' : project.description}
           </span>
         )}
-        <span className="px-3 py-1 rounded-full bg-primary/20 border border-primary/30 text-sm text-primary-darker font-medium">
+        <span className="px-3 py-1 rounded-full bg-primary/20 border border-primary/30 text-sm text-primary font-medium">
           {project.noteCount || 0} notes • {project.conversationCount || 0} chats
         </span>
       </div>
