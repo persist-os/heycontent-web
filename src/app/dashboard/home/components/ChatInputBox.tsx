@@ -121,26 +121,15 @@ export function ChatInputBox({ value, onChange, onSend, isLoading = false }: Cha
 
       {/* Input row */}
       <div className="flex items-center gap-3 px-6 py-4">
-        {/* Hidden file input - using sr-only pattern for better browser compatibility */}
+        {/* Hidden file input */}
         <input
-          id="file-upload-input"
           ref={fileInputRef}
           type="file"
           multiple
-          accept="image/*,.pdf,.doc,.docx,.txt,.csv,.xlsx,.xls"
+          accept="*/*"
           onChange={handleFileInputChange}
-          style={{
-            position: 'absolute',
-            width: '1px',
-            height: '1px',
-            padding: 0,
-            margin: '-1px',
-            overflow: 'hidden',
-            clip: 'rect(0, 0, 0, 0)',
-            whiteSpace: 'nowrap',
-            border: 0
-          }}
-          aria-label="Select files to attach"
+          className="hidden"
+          aria-label="File input"
         />
         
         {/* Input field */}
@@ -155,6 +144,7 @@ export function ChatInputBox({ value, onChange, onSend, isLoading = false }: Cha
             "flex-1 bg-transparent border-none outline-none",
             "text-foreground placeholder:text-muted-foreground",
             "text-base",
+            "focus:outline-none focus:ring-0 focus:border-none",
             isLoading && "opacity-50 cursor-not-allowed"
           )}
         />
@@ -162,12 +152,18 @@ export function ChatInputBox({ value, onChange, onSend, isLoading = false }: Cha
         {/* Action Icons */}
         <div className="flex items-center gap-2">
           
-          {/* Attach - using label for better file dialog triggering */}
-          <label
-            htmlFor="file-upload-input"
+          {/* Attach */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              fileInputRef.current?.click()
+            }}
+            disabled={isUploading}
             className={cn(
-              "p-2 rounded-lg hover:bg-foreground/5 transition-colors cursor-pointer inline-flex items-center justify-center",
-              isUploading && "opacity-50 cursor-not-allowed pointer-events-none"
+              "p-2 rounded-lg hover:bg-foreground/5 transition-colors",
+              isUploading && "opacity-50 cursor-not-allowed"
             )}
             aria-label="Attach file"
           >
@@ -176,7 +172,7 @@ export function ChatInputBox({ value, onChange, onSend, isLoading = false }: Cha
             ) : (
               <Paperclip className="w-5 h-5 text-muted-foreground hover:text-foreground" />
             )}
-          </label>
+          </button>
 
           {/* Send */}
           <button
