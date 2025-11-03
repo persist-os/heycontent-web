@@ -63,8 +63,7 @@ export function HomepageChat({
     activeProjectId ?? undefined, // projectId for project-scoped chat
     undefined, // no widgetId
     undefined, // no widgetOutputId
-    undefined, // no notepad context
-    activeProjectId ? "project_scoped" : "general" // conversation type
+    undefined  // no notepad context
   )
 
   // REUSE: useMessageList hook - combines all message sources

@@ -60,18 +60,27 @@ export function useConversationState(
     conversationId && userId ? { userId, conversationId: conversationId as Id<"conversations"> } : "skip"
   )
   
+  // Track previous projectId to detect switches
+  const prevProjectIdRef = useRef<string | undefined>(projectId)
+  
   // Auto-set conversationId when project conversation is found
   // Reset conversationId when switching projects or back to main chat
   useEffect(() => {
+    const prevProjectId = prevProjectIdRef.current
+    
     if (projectId && projectConversation?._id) {
       // Set to project conversation
       if (conversationId !== projectConversation._id) {
         setConversationId(projectConversation._id)
       }
-    } else if (!projectId && conversationId) {
-      // Clear conversationId when returning to main chat (will trigger creation of new general conversation)
+    } else if (!projectId && prevProjectId && conversationId) {
+      // ONLY clear conversationId when SWITCHING from project to non-project
+      // (prevProjectId exists but projectId doesn't = we just switched away from a project)
       setConversationId(undefined)
     }
+    
+    // Update ref for next render
+    prevProjectIdRef.current = projectId
   }, [projectId, projectConversation, conversationId])
 
   // Fetch widget output data when widgetOutputId is present
