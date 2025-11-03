@@ -16,8 +16,10 @@ import { AssignmentsSection } from './AssignmentsSection'
  * Primary landing page displaying:
  * - Personalized greeting from Ambient Insights
  * - Chat input for quick interactions
- * - Recent artifacts (delivered content)
+ * - Recent artifacts from new artifacts table (delivered content)
  * - Active assignments (projects in progress)
+ * 
+ * CRITICAL: Uses api.artifactQueries.getUserArtifacts (not widget_outputs)
  */
 export function HomeScreen() {
   const [userId, setUserId] = useState<string | null>(null)
@@ -53,8 +55,8 @@ export function HomeScreen() {
   )
   
   const artifacts = useQuery(
-    api.widgetOutputsQueries.getRecentArtifacts,
-    userId ? { userId, limit: 3 } : 'skip'
+    api.artifactQueries.getUserArtifacts,
+    userId ? { userId, limit: 9 } : 'skip'
   )
   
   const pendingQuestions = useQuery(

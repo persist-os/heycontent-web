@@ -126,10 +126,10 @@ export function ChatInputBox({ value, onChange, onSend, isLoading = false }: Cha
           ref={fileInputRef}
           type="file"
           multiple
-          accept="*/*"
+          accept="image/*,.pdf,.doc,.docx,.txt,.csv,.xlsx,.xls"
           onChange={handleFileInputChange}
           className="hidden"
-          aria-label="File input"
+          aria-label="Select files to attach"
         />
         
         {/* Input field */}
@@ -154,12 +154,7 @@ export function ChatInputBox({ value, onChange, onSend, isLoading = false }: Cha
           {/* Attach */}
           <button
             type="button"
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              console.log('Paperclip clicked, fileInputRef:', fileInputRef.current)
-              fileInputRef.current?.click()
-            }}
+            onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
             className={cn(
               "p-2 rounded-lg hover:bg-foreground/5 transition-colors",
@@ -167,7 +162,11 @@ export function ChatInputBox({ value, onChange, onSend, isLoading = false }: Cha
             )}
             aria-label="Attach file"
           >
-            <Paperclip className="w-5 h-5 text-muted-foreground hover:text-foreground" />
+            {isUploading ? (
+              <div className="w-5 h-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+            ) : (
+              <Paperclip className="w-5 h-5 text-muted-foreground hover:text-foreground" />
+            )}
           </button>
 
           {/* Send */}

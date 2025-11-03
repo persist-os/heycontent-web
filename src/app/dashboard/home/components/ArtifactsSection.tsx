@@ -12,7 +12,8 @@ interface ArtifactsSectionProps {
 /**
  * ArtifactsSection - "Delivered to You" section
  * 
- * Displays recent artifacts (widget outputs) across all projects
+ * Displays recent artifacts from the new artifacts table
+ * CRITICAL: Uses api.artifactQueries.getUserArtifacts (not widget_outputs)
  */
 export function ArtifactsSection({ artifacts }: ArtifactsSectionProps) {
   // Loading state
@@ -20,7 +21,7 @@ export function ArtifactsSection({ artifacts }: ArtifactsSectionProps) {
     return (
       <div className="space-y-4">
         <div className="flex gap-6 overflow-x-auto pb-2">
-          {[1, 2, 3].map((i) => (
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
             <div key={i} className="w-80 h-44 rounded-2xl bg-muted/30 animate-pulse" />
           ))}
         </div>

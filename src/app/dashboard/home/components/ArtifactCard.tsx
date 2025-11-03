@@ -12,9 +12,9 @@ interface ArtifactCardProps {
 /**
  * ArtifactCard - Individual artifact card with gradient styling
  * 
- * Displays:
- * - Artifact name
- * - Project/widget tag
+ * Displays artifacts from new artifacts table:
+ * - Artifact type (formatted as title)
+ * - Tags or version badge
  * - Type/date metadata
  * - Click to navigate to artifact
  */
@@ -22,9 +22,9 @@ export function ArtifactCard({ artifact }: ArtifactCardProps) {
   const router = useRouter()
 
   const handleClick = () => {
-    // Navigate to artifact detail
+    // Navigate to unified gallery view with artifact selected
     if (artifact.projectId) {
-      router.push(`/dashboard/living-projects/${artifact.projectId}/artifacts/${artifact._id}`)
+      router.push(`/dashboard/living-projects/${artifact.projectId}/gallery?id=${artifact._id}`)
     }
   }
 
@@ -57,20 +57,27 @@ export function ArtifactCard({ artifact }: ArtifactCardProps) {
         {/* Top: Artifact name */}
         <div>
           <h3 className="text-lg font-semibold text-foreground line-clamp-2 pr-8">
-            {artifact.artifactName || artifact.title || artifact.widgetId || 'Untitled Artifact'}
+            {/* Format type for display (e.g., "structured_list" → "Structured List") */}
+            {artifact.type?.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'Artifact'}
           </h3>
         </div>
         
-        {/* Middle: Project/widget tag */}
+        {/* Middle: Tags */}
         <div>
-          <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-primary/30 border border-primary/50 text-sm text-primary-darker font-semibold shadow-sm">
-            {artifact.projectName || 'Project'}
-          </span>
+          {artifact.tags && artifact.tags.length > 0 ? (
+            <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-primary/30 border border-primary/50 text-sm text-primary-darker font-semibold shadow-sm">
+              {artifact.tags[0]}
+            </span>
+          ) : (
+            <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-primary/30 border border-primary/50 text-sm text-primary-darker font-semibold shadow-sm">
+              v{artifact.metadata?.version || 1}
+            </span>
+          )}
         </div>
         
         {/* Bottom: Metadata */}
         <div className="text-sm font-medium text-muted-foreground">
-          {artifact.artifactType || 'output'} • {new Date(artifact.createdAt || Date.now()).toLocaleDateString()}
+          {artifact.type || 'artifact'} • {new Date(artifact.createdAt || Date.now()).toLocaleDateString()}
         </div>
         
       </div>
