@@ -34,7 +34,7 @@ export function ArtifactsSection({ artifacts }: ArtifactsSectionProps) {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold text-foreground">Delivered to You <span className="text-pink-500">♡33</span></h2>
+          <h2 className="text-2xl font-semibold text-foreground">Delivered to You</h2>
           <Link 
             href="/dashboard/living-projects"
             className="flex items-center gap-2 text-sm text-primary-dark hover:text-primary transition-colors font-medium"

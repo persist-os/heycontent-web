@@ -1519,7 +1519,7 @@ app.post("/api/projects/updateProject", async (c) => {
 // Create project
 app.post("/api/projects/create", async (c) => {
   const ctx = c.env;
-  const { userId, name, description, noteIds, conversationIds, crystalIds, shardIds } = await c.req.json();
+  const { userId, name, description, noteIds, conversationIds, cognitiveFieldIds, shardIds } = await c.req.json();
   
   try {
     const projectId = await ctx.runMutation(api.projectsMutations.createProject, {
@@ -1528,7 +1528,7 @@ app.post("/api/projects/create", async (c) => {
       description,
       noteIds,
       conversationIds,
-      crystalIds,
+      cognitiveFieldIds,
       shardIds
     });
     return c.json({ success: true, projectId });

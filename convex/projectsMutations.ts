@@ -2,6 +2,12 @@ import { v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { api } from "./_generated/api";
+import { 
+  projectCreateValidator,
+  projectUpdateValidator,
+  contentTypeValidator,
+  constellationLayoutValidator
+} from "./types/project";
 
 /**
  * Optimized Projects Mutations
@@ -16,17 +22,10 @@ import { api } from "./_generated/api";
 /**
  * Create a new project - Clean implementation
  * Used by: Frontend project creation, backend discovery
+ * ✅ FOLLOWS CONVEX_SAVE_ABSOLUTE_LAW.md - Uses centralized validator
  */
 export const createProject = mutation({
-  args: {
-    userId: v.string(),
-    name: v.string(),
-    description: v.optional(v.string()),
-    noteIds: v.optional(v.array(v.string())),
-    conversationIds: v.optional(v.array(v.string())),
-    crystalIds: v.optional(v.array(v.string())),
-    shardIds: v.optional(v.array(v.string())),
-  },
+  args: projectCreateValidator,
   returns: v.id("projects"),
   handler: async (ctx, args) => {
     // Validate inputs
@@ -90,12 +89,13 @@ export const createProject = mutation({
 /**
  * Update project basic info
  * Used by: Project settings, renaming, status updates, budget tracking
+ * ✅ FOLLOWS CONVEX_SAVE_ABSOLUTE_LAW.md - Uses centralized validator
  */
 export const updateProject = mutation({
   args: {
     projectId: v.id("projects"),
     userId: v.string(),
-    updates: v.any(),  // Allow any updates for flexibility (status, budget, etc.)
+    updates: projectUpdateValidator,
   },
   handler: async (ctx, { projectId, userId, updates }) => {
     // Validate project ownership
@@ -156,18 +156,13 @@ export const updateProject = mutation({
 /**
  * Add content to project - Unified function for all content types
  * Used by: Content creation, association
+ * ✅ FOLLOWS CONVEX_SAVE_ABSOLUTE_LAW.md - Uses centralized validator
  */
 export const addContent = mutation({
   args: {
     projectId: v.id("projects"),
     userId: v.string(),
-    contentType: v.union(
-      v.literal("note"),
-      v.literal("conversation"),
-      v.literal("crystal"),
-      v.literal("shard"),
-      v.literal("stardust")
-    ),
+    contentType: contentTypeValidator,
     contentId: v.string(),
   },
   handler: async (ctx, { projectId, userId, contentType, contentId }) => {
@@ -186,6 +181,7 @@ export const addContent = mutation({
       note: "noteIds",
       conversation: "conversationIds",
       crystal: "crystalIds",
+      cognitiveField: "cognitiveFieldIds",
       shard: "shardIds",
       stardust: "stardustIds",
     };
@@ -210,6 +206,7 @@ export const addContent = mutation({
     const signalTypeMap: Record<string, string> = {
       note: "note_added",
       crystal: "crystal_added",
+      cognitiveField: "cognitive_field_added",
       shard: "shard_added",
     };
     
@@ -234,18 +231,13 @@ export const addContent = mutation({
 /**
  * Remove content from project
  * Used by: Content removal, cleanup
+ * ✅ FOLLOWS CONVEX_SAVE_ABSOLUTE_LAW.md - Uses centralized validator
  */
 export const removeContent = mutation({
   args: {
     projectId: v.id("projects"),
     userId: v.string(),
-    contentType: v.union(
-      v.literal("note"),
-      v.literal("conversation"),
-      v.literal("crystal"),
-      v.literal("shard"),
-      v.literal("stardust")
-    ),
+    contentType: contentTypeValidator,
     contentId: v.string(),
   },
   handler: async (ctx, { projectId, userId, contentType, contentId }) => {
@@ -264,6 +256,7 @@ export const removeContent = mutation({
       note: "noteIds",
       conversation: "conversationIds",
       crystal: "crystalIds",
+      cognitiveField: "cognitiveFieldIds",
       shard: "shardIds",
       stardust: "stardustIds",
     };
@@ -286,19 +279,14 @@ export const removeContent = mutation({
 /**
  * Bulk add content to project
  * Used by: Bulk operations, migration
+ * ✅ FOLLOWS CONVEX_SAVE_ABSOLUTE_LAW.md - Uses centralized validator
  */
 export const addMultipleContent = mutation({
   args: {
     projectId: v.id("projects"),
     userId: v.string(),
     content: v.array(v.object({
-      type: v.union(
-        v.literal("note"),
-        v.literal("conversation"),
-        v.literal("crystal"),
-        v.literal("shard"),
-        v.literal("stardust")
-      ),
+      type: contentTypeValidator,
       id: v.string(),
     })),
   },
@@ -451,6 +439,7 @@ export const deleteProject = mutation({
  * Archive/unarchive project
  * Used by: Project organization, pause/resume functionality
  * Production-ready implementation with schema support
+ * ✅ FOLLOWS CONVEX_SAVE_ABSOLUTE_LAW.md - Uses status field correctly
  */
 export const toggleArchive = mutation({
   args: {
@@ -469,9 +458,9 @@ export const toggleArchive = mutation({
       throw new Error("Access denied: You don't own this project");
     }
     
-    // Update archived state
+    // Update status field (not archived field - doesn't exist in schema)
     await ctx.db.patch(projectId, {
-      archived,
+      status: archived ? "archived" : "working",
       updatedAt: Date.now(),
     });
     
@@ -486,32 +475,13 @@ export const toggleArchive = mutation({
 /**
  * Save constellation layout for a project
  * Used by: Layout calculation and caching
+ * ✅ FOLLOWS CONVEX_SAVE_ABSOLUTE_LAW.md - Uses centralized validator
  */
 export const saveConstellationLayout = mutation({
   args: {
     projectId: v.id("projects"),
     userId: v.string(),
-    layout: v.object({
-      version: v.number(),
-      calculatedAt: v.number(),
-      items: v.array(v.object({
-        itemId: v.string(),
-        itemType: v.union(
-          v.literal("widget"),
-          v.literal("note"), 
-          v.literal("conversation"),
-          v.literal("crystal"),
-          v.literal("shard"),
-          v.literal("stardust")
-        ),
-        x: v.number(),
-        y: v.number(),
-        size: v.string(),
-        importance: v.number(),
-      })),
-      canvasWidth: v.number(),
-      canvasHeight: v.number(),
-    }),
+    layout: constellationLayoutValidator,
   },
   handler: async (ctx, { projectId, userId, layout }) => {
     // Validate project ownership

@@ -17,13 +17,14 @@ export const contentTypeValidator = v.union(
   v.literal("cognitive_field"),
   v.literal("crystal"), // Keep for backwards compatibility with existing data
   v.literal("shard"),
-  v.literal("stardust")
+  v.literal("stardust"),
+  v.literal("message")  // For semantic message search
 );
 
 /**
  * TypeScript type derived from validator
  */
-export type ContentType = "conversation" | "note" | "cognitive_field" | "crystal" | "shard" | "stardust";
+export type ContentType = "conversation" | "note" | "cognitive_field" | "crystal" | "shard" | "stardust" | "message";
 
 /**
  * Array of content types validator - for filters
@@ -33,7 +34,7 @@ export const contentTypesArrayValidator = v.optional(v.array(contentTypeValidato
 /**
  * All valid content types as constant array
  */
-export const CONTENT_TYPES: readonly ContentType[] = ["conversation", "note", "cognitive_field", "crystal", "shard", "stardust"] as const;
+export const CONTENT_TYPES: readonly ContentType[] = ["conversation", "note", "cognitive_field", "crystal", "shard", "stardust", "message"] as const;
 
 /**
  * Embedding operation types

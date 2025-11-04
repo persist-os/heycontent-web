@@ -22,6 +22,25 @@ export const createConversation = mutation({
     },
     handler: async (ctx, args) => {
       try {
+        let projectId = args.projectId;
+        
+        // 🎯 UNIFIED ASSIGNMENTS: Every conversation needs a project (1:1 relationship)
+        // If no project provided, create one automatically
+        if (!projectId) {
+          projectId = await ctx.db.insert("projects", {
+            userId: args.userId,
+            name: args.title,
+            description: "", // Will be filled by first message
+            status: "fresh", // New status for projects just created
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            // conversationId will be set after conversation is created (below)
+          });
+          
+          console.log(`[createConversation] Created project ${projectId} for new conversation`);
+        }
+        
+        // Create conversation linked to project
         const conversationId = await ctx.db.insert("conversations", {
           userId: args.userId,
           title: args.title,
@@ -31,12 +50,20 @@ export const createConversation = mutation({
           createdAt: Date.now(),
           updatedAt: Date.now(),
           starred: false,
-          // NEW: Include context fields if provided
-          projectId: args.projectId,
+          // Always link to project (1:1 relationship)
+          projectId: projectId,
           widgetId: args.widgetId,
           widgetOutputId: args.widgetOutputId,
-          conversationType: args.conversationType,
+          conversationType: args.conversationType || "project_scoped", // Default to project_scoped
         });
+        
+        // Update project with conversationId (bidirectional link)
+        await ctx.db.patch(projectId, {
+          conversationId: conversationId,
+          updatedAt: Date.now(),
+        });
+
+        console.log(`[createConversation] Created conversation ${conversationId} linked to project ${projectId}`);
 
         // Note: Embeddings are generated automatically by the backend after conversation is stored
 

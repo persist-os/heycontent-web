@@ -142,7 +142,12 @@ export default defineSchema({
   .index("by_conversation_role", ["conversationId", "role"])
   .index("by_user", ["userId", "createdAt"])
   .index("by_timestamp", ["timestamp"])
-  .index("by_user_timestamp", ["userId", "timestamp"]),
+  .index("by_user_timestamp", ["userId", "timestamp"])
+  .vectorIndex("by_embedding", {  // Semantic search over messages
+    vectorField: "embedding",
+    dimensions: 768,  // Google text-embedding-004
+    filterFields: ["conversationId", "userId"]
+  }),
 
   // Notes
   notes: defineTable(noteSchemaFields)

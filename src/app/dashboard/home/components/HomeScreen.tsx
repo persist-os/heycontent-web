@@ -5,6 +5,7 @@ import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { GreetingHeader } from './GreetingHeader'
+import { HomepageChat } from './HomepageChat'
 import { ThreadQuickAccess } from './ThreadQuickAccess'
 import { ArtifactsSection } from './ArtifactsSection'
 import { AssignmentsSection } from './AssignmentsSection'
@@ -22,6 +23,7 @@ import { AssignmentsSection } from './AssignmentsSection'
  */
 export function HomeScreen() {
   const [userId, setUserId] = useState<string | null>(null)
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null)
 
   // Get user ID on component mount
   useEffect(() => {
@@ -35,6 +37,11 @@ export function HomeScreen() {
     }
     getUserId()
   }, [])
+  
+  // Handle returning to main chat from project chat
+  const handleBackToMainChat = () => {
+    setActiveProjectId(null)
+  }
 
   // Centralized Convex queries (ONE per data type)
   const userInfo = useQuery(
@@ -64,7 +71,14 @@ export function HomeScreen() {
         {/* Greeting Header */}
         <GreetingHeader insights={insights} userName={userInfo?.name} />
         
-        {/* ✨ NEW: Thread Quick Access - Replaces 3 sections */}
+        {/* ✨ HomepageChat - Hero element for starting conversations */}
+        <HomepageChat 
+          userId={userId}
+          activeProjectId={activeProjectId}
+          onBackToMainChat={handleBackToMainChat}
+        />
+        
+        {/* Thread Quick Access */}
         <ThreadQuickAccess userId={userId} />
         
         {/* Artifacts Section */}

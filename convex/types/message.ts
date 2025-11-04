@@ -58,6 +58,9 @@ export const messageSchemaFields = {
   createdAt: v.number(),
   updatedAt: v.number(),
 
+  // Embedding for semantic search (OPTIONAL for backward compatibility)
+  embedding: v.optional(v.array(v.number())),  // 768d Google text-embedding-004
+
   // Suggestions
   suggestions: v.optional(v.any()),
   

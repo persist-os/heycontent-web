@@ -5,7 +5,7 @@ import { Pencil, Plus, Trash, Pause } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { useMutation } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import {
   AlertDialog,
@@ -40,6 +40,13 @@ export function AssignmentItem({ project }: AssignmentItemProps) {
   // Mutations
   const toggleArchive = useMutation(api.projectsMutations.toggleArchive)
   const deleteProject = useMutation(api.projectsMutations.deleteProject)
+  const createConversation = useMutation(api.chatMutations.createConversation)
+  
+  // Get project conversation
+  const projectConversation = useQuery(
+    api.chatQueries.getProjectScopedConversation,
+    project?._id && project?.userId ? { projectId: project._id, userId: project.userId } : 'skip'
+  )
 
   // Calculate relative time
   const relativeTime = useMemo(() => {
@@ -148,6 +155,42 @@ export function AssignmentItem({ project }: AssignmentItemProps) {
           className="gap-2"
         >
           Open in Constellation
+        </Button>
+        
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={async () => {
+            if (projectConversation?._id) {
+              // Conversation exists, navigate to it
+              router.push(`/dashboard/thinking_lab/${projectConversation._id}`)
+            } else {
+              // No conversation yet, create one
+              try {
+                const conversationId = await createConversation({
+                  userId: project.userId,
+                  title: `${project.name} - Conversation`,
+                  projectId: project._id,
+                  conversationType: "project_scoped"
+                })
+                
+                if (conversationId) {
+                  router.push(`/dashboard/thinking_lab/${conversationId}`)
+                } else {
+                  // Fallback if creation failed
+                  router.push(`/dashboard/thinking_lab?projectId=${project._id}`)
+                }
+              } catch (error) {
+                console.error('Failed to create conversation:', error)
+                // Fallback to project context mode
+                router.push(`/dashboard/thinking_lab?projectId=${project._id}`)
+              }
+            }
+          }}
+          className="gap-2"
+          disabled={!project._id}
+        >
+          Open Conversation
         </Button>
         
         {/* Status-aware action button */}
