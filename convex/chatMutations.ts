@@ -261,3 +261,26 @@ handler: async (ctx, args) => {
     return { success: true, starred: !conversation.starred };
 },
 });
+
+/**
+ * Patch message with embedding (called by backend PostAction)
+ */
+export const patchMessageEmbedding = mutation({
+  args: {
+    messageId: v.id("messages"),
+    embedding: v.array(v.number())
+  },
+  handler: async (ctx, { messageId, embedding }) => {
+    // Validate dimensions
+    if (embedding.length !== 768) {
+      throw new Error(`Invalid embedding dimensions: ${embedding.length} (expected 768)`);
+    }
+    
+    await ctx.db.patch(messageId, {
+      embedding: embedding,
+      updatedAt: Date.now()
+    });
+    
+    return { success: true };
+  }
+});

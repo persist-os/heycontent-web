@@ -25,6 +25,7 @@ import { cognitiveFieldSchemaFields } from "./types/cognitiveField";
 // Projects
 import { projectSchemaFields } from "./types/project";
 import { projectFingerprintSchemaFields } from "./types/projectFingerprint";
+import { assignmentFingerprintSchemaFields } from "./types/assignmentFingerprint";
 import { fingerprintEvolutionHistorySchemaFields } from "./types/fingerprintEvolutionHistory";
 import { fingerprintEvolutionSignalSchemaFields } from "./types/fingerprintEvolutionSignal";
 
@@ -281,6 +282,13 @@ export default defineSchema({
   .index("by_status", ["status"])
   .index("by_creation", ["created_at"])
   .index("by_evolution", ["last_evolution"]),
+
+  // Assignment Fingerprints - Simplified schema for Living Projects paradigm
+  // Tracks project understanding and AI usage intent from conversations
+  assignment_fingerprints: defineTable(assignmentFingerprintSchemaFields)
+  .index("by_project", ["projectId"])
+  .index("by_user", ["userId"])
+  .index("by_project_user", ["projectId", "userId"]),
 
   // Fingerprint Evolution History - Separate table for AI access and querying
   fingerprint_evolution_history: defineTable(fingerprintEvolutionHistorySchemaFields)

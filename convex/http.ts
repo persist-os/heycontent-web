@@ -47,6 +47,7 @@ app.use('*', async (c, next) => {
   else if (path.includes('/backgroundJobs') || path.includes('/background')) domain = 'background_jobs';
   else if (path.includes('/briefing')) domain = 'briefing';
   else if (path.includes('/agnoRunEvents')) domain = 'agno_run_events';
+  else if (path.includes('/chat')) domain = 'chat';
   
   console.log(`🔵 [${domain.toUpperCase()}] ${method} ${path} - START`);
   
@@ -230,6 +231,63 @@ app.post("/api/chat/getMultiple", async (c) => {
     return c.json({ 
       success: false, 
       error: "Failed to get multiple conversations",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get recent messages from conversation (for embedding PostAction)
+app.post("/api/chat/getRecentMessages", async (c) => {
+  const ctx = c.env;
+  
+  try {
+    const { conversationId, limit } = await c.req.json();
+    
+    if (!conversationId) {
+      return c.json({ error: "Missing required field: conversationId" }, 400);
+    }
+    
+    const messages = await ctx.runQuery(api.chatQueries.getRecentMessages, {
+      conversationId,
+      limit: limit || 10
+    });
+    
+    return c.json({ success: true, data: messages });
+  } catch (error: any) {
+    console.error("Failed to get recent messages:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get recent messages",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Patch message with embedding (for embedding PostAction)
+app.post("/api/chat/patchMessageEmbedding", async (c) => {
+  const ctx = c.env;
+  
+  try {
+    const { messageId, embedding } = await c.req.json();
+    
+    if (!messageId) {
+      return c.json({ error: "Missing required field: messageId" }, 400);
+    }
+    if (!embedding || !Array.isArray(embedding)) {
+      return c.json({ error: "Missing or invalid embedding array" }, 400);
+    }
+    
+    const result = await ctx.runMutation(api.chatMutations.patchMessageEmbedding, {
+      messageId,
+      embedding
+    });
+    
+    return c.json(result);
+  } catch (error: any) {
+    console.error("Failed to patch message embedding:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to patch message embedding",
       message: error.message || "Internal Server Error"
     }, 500);
   }
@@ -3634,6 +3692,62 @@ app.post("/api/fingerprintSignals/getAllByUser", async (c) => {
     return c.json({ 
       success: false, 
       error: "Failed to get user signals",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// ASSIGNMENT FINGERPRINT ROUTES - Living Projects simplified fingerprints
+
+/**
+ * POST /api/assignment-fingerprints/mutate
+ * Unified endpoint for create/update operations on assignment fingerprints
+ * Following Pattern 2 (Backend-to-Convex Bridge) from patterns.md
+ */
+app.post("/api/assignment-fingerprints/mutate", async (c) => {
+  try {
+    const body = await c.req.json();
+    const result = await c.env.runMutation(
+      api.assignmentFingerprintMutations.mutateAssignmentFingerprint,
+      body
+    );
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Failed to mutate assignment fingerprint:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to mutate assignment fingerprint",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/assignment-fingerprints/getByProject
+ * Get assignment fingerprint by project ID
+ * ✅ SECURITY: Requires userId for ownership validation
+ */
+app.post("/api/assignment-fingerprints/getByProject", async (c) => {
+  try {
+    const { projectId, userId } = await c.req.json();
+    
+    if (!userId) {
+      return c.json({ 
+        success: false, 
+        error: "userId is required" 
+      }, 400);
+    }
+    
+    const fingerprint = await c.env.runQuery(
+      api.assignmentFingerprintQueries.getByProject,
+      { projectId, userId }
+    );
+    return c.json({ success: true, data: fingerprint });
+  } catch (error: any) {
+    console.error("Failed to get assignment fingerprint:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get assignment fingerprint",
       message: error.message || "Internal Server Error"
     }, 500);
   }

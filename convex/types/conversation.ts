@@ -33,7 +33,8 @@ export const conversationSchemaFields = {
       v.literal("text"),
       v.literal("family_question"),
       v.literal("family_update"),
-      v.literal("preflight_questions")
+      v.literal("preflight_questions"),
+      v.literal("widget_coordination")  // Agent-to-agent coordination (A2A)
     )),
     familyMetadata: v.optional(v.object({
       familyId: v.union(v.string(), v.id("widgets")),

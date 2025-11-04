@@ -239,7 +239,7 @@ export const getRecentThreads = query({
       
       return {
         _id: conv._id,
-        title: conv.title || conv.projectName || 'Main Chat',
+        title: conv.title || 'Main Chat',
         threadType: conv.projectId ? 'project' as const : 'main' as const,
         lastMessagePreview: lastMessage?.content?.slice(0, 150),
         messageCount: messages.length,
@@ -275,7 +275,7 @@ export const getAllUserThreads = query({
       
       return {
         _id: conv._id,
-        title: conv.title || conv.projectName || 'Main Chat',
+        title: conv.title || 'Main Chat',
         threadType: conv.projectId ? 'project' as const : 'main' as const,
         lastMessagePreview: lastMessage?.content?.slice(0, 100),
         messageCount: messages.length,
@@ -283,6 +283,26 @@ export const getAllUserThreads = query({
         hasUnread: false, // TODO: Implement
       };
     });
+  }
+});
+
+/**
+ * Get recent messages from conversation (for embedding PostAction)
+ */
+export const getRecentMessages = query({
+  args: {
+    conversationId: v.id("conversations"),
+    limit: v.number()
+  },
+  handler: async (ctx, { conversationId, limit }) => {
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_conversation", (q) => q.eq("conversationId", conversationId))
+      .order("desc")  // Most recent first
+      .take(limit);
+    
+    // Return in chronological order (oldest first)
+    return messages.reverse();
   }
 });
 
