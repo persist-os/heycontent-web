@@ -77,27 +77,6 @@ export function ThreadQuickAccess({ userId }: ThreadQuickAccessProps) {
           <ThreadCard key={thread._id} thread={thread} />
         ))}
       </div>
-      
-      {/* New Conversation & Assignment Buttons */}
-      <div className="flex justify-center gap-3 pt-2">
-        <Button 
-          variant="outline"
-          onClick={() => router.push('/dashboard/thinking_lab')}
-          className="gap-2"
-        >
-          <MessageSquarePlus className="w-4 h-4" />
-          New Conversation
-        </Button>
-        
-        <Button 
-          variant="outline"
-          onClick={() => router.push('/dashboard/thinking_lab?newProject=true')}
-          className="gap-2"
-        >
-          <MessageSquarePlus className="w-4 h-4" />
-          New Assignment
-        </Button>
-      </div>
     </div>
   )
 }
