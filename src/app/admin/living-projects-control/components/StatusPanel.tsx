@@ -16,14 +16,14 @@ import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { Id } from '@/convex/_generated/dataModel'
-import { getCurrentUserId } from '@/app/lib/api-helpers'
+import { getCurrentUserIdSync } from '@/app/lib/api-helpers'
 
 interface StatusPanelProps {
   projectId: Id<"projects">
 }
 
 export function StatusPanel({ projectId }: StatusPanelProps) {
-  const userId = getCurrentUserId()
+  const userId = getCurrentUserIdSync()  // ✅ Synchronous - returns string | null immediately
 
   // LOT's Pattern 2: Get single project with full details
   const project = useQuery(api.projectsQueries.getById, { 
@@ -57,9 +57,11 @@ export function StatusPanel({ projectId }: StatusPanelProps) {
   const budgetLimit = project.dailyLlmBudget || 100
   const budgetPercent = Math.min((budgetUsed / budgetLimit) * 100, 100)
   
-  const activeWidgets = widgets?.filter(w => w.status === 'active').length || 0
-  const archivedWidgets = widgets?.filter(w => w.status === 'archived').length || 0
-  const totalWidgets = widgets?.length || 0
+  // ✅ Defensive: Ensure widgets is an array before filtering
+  const widgetsArray = Array.isArray(widgets) ? widgets : []
+  const activeWidgets = widgetsArray.filter(w => w.status === 'active').length
+  const archivedWidgets = widgetsArray.filter(w => w.status === 'archived').length
+  const totalWidgets = widgetsArray.length
 
   return (
     <Card className="bg-card p-6">

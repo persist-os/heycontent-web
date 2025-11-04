@@ -92,7 +92,7 @@ function FullThinkingLabInternal({
   const router = useRouter()
   
   // Sidebar state
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   
   // Use the notepad context
   const notepadContext = useNotepadContext()

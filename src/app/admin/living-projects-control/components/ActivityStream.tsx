@@ -18,25 +18,28 @@ import { Card } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { Id } from '@/convex/_generated/dataModel'
+import { getCurrentUserIdSync } from '@/app/lib/api-helpers'
 
 interface ActivityStreamProps {
   projectId: Id<"projects">
 }
 
 export function ActivityStream({ projectId }: ActivityStreamProps) {
+  const userId = getCurrentUserIdSync()  // ✅ Extract userId for auth
+  
   // LOT's Pattern 4 (Step 1): Get project conversation
   const conversation = useQuery(api.chatQueries.getProjectScopedConversation, {
-    projectId
+    projectId,
+    userId: userId || ''  // ✅ Pass required userId parameter
   })
 
   // LOT's Pattern 4 (Step 2): Get messages if conversation exists
+  // ✅ CORRECT Convex conditional query pattern
   const messages = useQuery(
-    conversation?._id 
-      ? api.messagesQueries.getConversationMessages
-      : null,
+    api.messagesQueries.getConversationMessages,
     conversation?._id 
       ? { conversationId: conversation._id }
-      : 'skip' as any
+      : "skip"  // Skip query if no conversation yet
   )
 
   if (messages === undefined) {

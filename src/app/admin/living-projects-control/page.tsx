@@ -13,7 +13,7 @@
 import { useState } from 'react'
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
-import { getCurrentUserId } from '@/app/lib/api-helpers'
+import { getCurrentUserIdSync } from '@/app/lib/api-helpers'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { 
@@ -26,7 +26,7 @@ import type { Id } from '@/convex/_generated/dataModel'
 
 export default function LivingProjectsControlPage() {
   const [selectedProjectId, setSelectedProjectId] = useState<Id<"projects"> | null>(null)
-  const userId = getCurrentUserId()
+  const userId = getCurrentUserIdSync()  // ✅ Synchronous - returns string | null immediately
   
   // Use EXISTING Convex query - already reactive!
   const projects = useQuery(api.projectsQueries.getByUser, { 
