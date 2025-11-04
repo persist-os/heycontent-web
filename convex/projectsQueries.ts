@@ -234,6 +234,9 @@ export const getByUser = query({
       name: project.name,
       description: project.description,
       
+      // Living Projects Status
+      status: project.status,
+      
       // Summary counts for dashboard
       totalContent: (
         (project.noteIds || []).length +

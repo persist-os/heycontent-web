@@ -20,7 +20,6 @@ import { FloatingWidgetCard } from './FloatingWidgetCard'
 import { ArtifactCard } from './ArtifactCard'
 import { ProjectFingerprint } from './ProjectFingerprint'
 import { ProjectControlPanel } from '../ProjectControlPanel'
-import { BudgetIndicator } from '../BudgetIndicator'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { T } from '@/components/translation/T'
 import { deriveFamilyStatus, type FamilyStatus } from '@/app/types/family-status'
@@ -343,14 +342,6 @@ export function ConstellationCanvas({
         />
       </div>
 
-      {/* Budget Indicator - Left side, stacked above navigation controls */}
-      <div className="absolute bottom-40 left-4 z-10 pointer-events-auto">
-        <BudgetIndicator
-          budgetUsed={0} // TODO: Track from background jobs
-          budgetTotal={50} // TODO: Get from project.dailyLlmBudget
-        />
-      </div>
-
       {/* Navigation Controls - Bottom Left */}
       <ConstellationControls
         scale={transform.scale}
@@ -373,8 +364,8 @@ export function ConstellationCanvas({
         </div>
       )}
 
-      {/* Minimap - Top Right, positioned below ProjectControlPanel */}
-      <div className="absolute top-44 right-4 z-10 max-sm:top-40 max-sm:right-2">
+      {/* Minimap - Bottom Right (moved from top to avoid overlap with ProjectControlPanel) */}
+      <div className="absolute bottom-8 right-4 z-10">
         <ConstellationMinimap
           positions={[
             ...widgetPositions.map(p => ({ id: p.item._id, x: p.x, y: p.y, size: p.size, importance: 1, type: 'widget' as const })),

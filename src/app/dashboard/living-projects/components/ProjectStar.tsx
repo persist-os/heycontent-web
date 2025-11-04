@@ -16,6 +16,7 @@ interface Project {
   name: string
   description?: string
   fingerprintId?: string
+  status?: string
   createdAt: number
   updatedAt: number
 }
@@ -266,15 +267,37 @@ export function ProjectStar({
           )}
         </div>
 
-        {/* Importance indicator - subtle corner accent */}
-        <div 
-          className={`
-            absolute top-0 right-0 w-3 h-3 rounded-bl-lg rounded-tr-lg
-            transition-opacity duration-300
-            ${importance > 0.7 ? 'bg-blue-400/30' : importance > 0.4 ? 'bg-blue-400/20' : 'bg-blue-400/10'}
-            ${isHighlighted ? 'opacity-100' : 'opacity-60'}
-          `}
-        />
+        {/* Project Status Indicators - Living Projects states */}
+        {project.status === 'working' && (
+          <div 
+            className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-green-500 dark:bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-500/50"
+            title="Working - AI actively executing"
+          />
+        )}
+        {project.status === 'sleeping' && (
+          <div 
+            className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-blue-500 dark:bg-blue-400 rounded-full animate-bounce shadow-lg shadow-blue-500/50"
+            title="Sleeping - Budget exceeded or paused"
+          />
+        )}
+        {project.status === 'stable' && (
+          <div 
+            className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-emerald-500 dark:bg-emerald-400 rounded-full shadow-lg shadow-emerald-500/50"
+            title="Stable - All work complete, ready to resume"
+          />
+        )}
+        
+        {/* Importance indicator - subtle corner accent (only if no status indicator) */}
+        {!project.status && (
+          <div 
+            className={`
+              absolute top-0 right-0 w-3 h-3 rounded-bl-lg rounded-tr-lg
+              transition-opacity duration-300
+              ${importance > 0.7 ? 'bg-blue-400/30' : importance > 0.4 ? 'bg-blue-400/20' : 'bg-blue-400/10'}
+              ${isHighlighted ? 'opacity-100' : 'opacity-60'}
+            `}
+          />
+        )}
       </div>
 
       {/* Delete Project Modal */}

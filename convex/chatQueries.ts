@@ -213,3 +213,76 @@ export const getMultiple = query({
   },
 });
 
+/**
+ * Get recent threads for homepage thread cards
+ * Returns formatted thread data with message previews
+ * @param userId - The user ID
+ * @param limit - Number of threads to return (default: 4)
+ */
+export const getRecentThreads = query({
+  args: {
+    userId: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { userId, limit = 4 }) => {
+    // Get user's conversations (threads)
+    const conversations = await ctx.db
+      .query("conversations")
+      .withIndex("by_user", q => q.eq("userId", userId))
+      .order("desc")
+      .take(limit);
+    
+    // Format for ThreadCard component
+    return conversations.map(conv => {
+      const messages = conv.messages || [];
+      const lastMessage = messages[messages.length - 1];
+      
+      return {
+        _id: conv._id,
+        title: conv.title || conv.projectName || 'Main Chat',
+        threadType: conv.projectId ? 'project' as const : 'main' as const,
+        lastMessagePreview: lastMessage?.content?.slice(0, 150),
+        messageCount: messages.length,
+        lastMessageAt: conv.updatedAt || conv._creationTime,
+        hasUnread: false, // TODO: Implement unread tracking
+        projectId: conv.projectId
+      };
+    });
+  }
+});
+
+/**
+ * Get all user threads for thread sidebar
+ * Similar to getRecentThreads but returns all threads
+ * @param userId - The user ID
+ */
+export const getAllUserThreads = query({
+  args: {
+    userId: v.string(),
+  },
+  handler: async (ctx, { userId }) => {
+    // Get ALL user conversations
+    const conversations = await ctx.db
+      .query("conversations")
+      .withIndex("by_user", q => q.eq("userId", userId))
+      .order("desc")
+      .collect();
+    
+    // Format for ThreadItem component
+    return conversations.map(conv => {
+      const messages = conv.messages || [];
+      const lastMessage = messages[messages.length - 1];
+      
+      return {
+        _id: conv._id,
+        title: conv.title || conv.projectName || 'Main Chat',
+        threadType: conv.projectId ? 'project' as const : 'main' as const,
+        lastMessagePreview: lastMessage?.content?.slice(0, 100),
+        messageCount: messages.length,
+        lastMessageAt: conv.updatedAt || conv._creationTime,
+        hasUnread: false, // TODO: Implement
+      };
+    });
+  }
+});
+

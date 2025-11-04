@@ -38,6 +38,7 @@ export interface Message {
   searchStatus?: string;
   statusHistory?: string[]; // Array of all status updates for progressive thinking
   fileAttachments?: FileAttachment[]; // File attachments for this message
+  contentType?: 'text' | 'family_question' | 'family_update' | 'preflight_questions' | 'widget_coordination'; // Message content type
   metadata?: {
     suggestions?: any[];
     [key: string]: any;

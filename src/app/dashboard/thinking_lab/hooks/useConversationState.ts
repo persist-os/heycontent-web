@@ -66,11 +66,22 @@ export function useConversationState(
   const prevProjectIdRef = useRef<string | undefined>(projectId)
   
   // Load conversation from chatId when provided (e.g., from URL)
+  // CRITICAL: Update conversationId whenever chatId changes (thread switching)
   useEffect(() => {
-    if (chatId && !conversationId) {
+    if (chatId && chatId !== conversationId) {
+      // Clear streaming state when switching threads
+      setIsStreaming(false)
+      setStreamingContent('')
+      setCurrentStreamingId(null)
+      setOptimisticMessages([])
+      setError(undefined)
+      // Set new conversation
       setConversationId(chatId)
+    } else if (!chatId && !projectId && conversationId) {
+      // If no chatId and no projectId, clear conversation (new thread)
+      setConversationId(undefined)
     }
-  }, [chatId, conversationId])
+  }, [chatId, projectId])
   
   // Auto-set conversationId when project conversation is found
   // Reset conversationId when switching projects or back to main chat

@@ -21,6 +21,7 @@ interface Project {
   _id: string
   name: string
   description?: string
+  status?: string
   fingerprintId?: string
   createdAt: number
   updatedAt: number
@@ -323,17 +324,18 @@ export function ConstellationView() {
         </div>
       </div>
 
-      {/* Top Right Controls */}
-      <div className="absolute top-6 right-6 z-10 flex flex-col items-end gap-4">
-        {/* New Assignment Button */}
+      {/* Top Right - New Assignment Button */}
+      <div className="absolute top-6 right-6 z-10">
         <Button
           onClick={() => setShowCreateModal(true)}
           className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-xl shadow-primary/20 ring-1 ring-primary/30"
         >
           <T context="constellation.button.new_project">New Assignment</T>
         </Button>
-        
-        {/* Minimap */}
+      </div>
+
+      {/* Bottom Right - Minimap */}
+      <div className="absolute bottom-6 right-6 z-10">
         <div className="bg-background/80 backdrop-blur-sm border border-border/40 rounded-lg shadow-xl overflow-hidden">
           <ConstellationMinimap
             positions={layout.positions}
@@ -347,13 +349,13 @@ export function ConstellationView() {
         </div>
       </div>
 
-      {/* Navigation Controls */}
+      {/* Bottom Left - Navigation Controls */}
       <ConstellationControls
         scale={transform.scale}
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
         onReset={resetView}
-        className="absolute bottom-6 left-20 z-10"
+        className="absolute bottom-6 left-6 z-10"
       />
 
 

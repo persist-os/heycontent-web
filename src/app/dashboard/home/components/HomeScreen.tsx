@@ -5,9 +5,7 @@ import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { GreetingHeader } from './GreetingHeader'
-import { HomepageChat } from './HomepageChat'
-import { PendingQuestionsSection } from './PendingQuestionsSection'
-import { ActivityFeed } from './ActivityFeed'
+import { ThreadQuickAccess } from './ThreadQuickAccess'
 import { ArtifactsSection } from './ArtifactsSection'
 import { AssignmentsSection } from './AssignmentsSection'
 
@@ -16,15 +14,14 @@ import { AssignmentsSection } from './AssignmentsSection'
  * 
  * Primary landing page displaying:
  * - Personalized greeting from Ambient Insights
- * - Chat input for quick interactions
- * - Recent artifacts from new artifacts table (delivered content)
+ * - Thread cards (replaces chat box, pending questions, activity feed)
+ * - Recent artifacts from artifacts table
  * - Active assignments (projects in progress)
  * 
- * CRITICAL: Uses api.artifactQueries.getUserArtifacts (not widget_outputs)
+ * CRITICAL: Unified threads replace 3 separate sections (70% UI reduction)
  */
 export function HomeScreen() {
   const [userId, setUserId] = useState<string | null>(null)
-  const [activeProjectId, setActiveProjectId] = useState<string | null>(null)
 
   // Get user ID on component mount
   useEffect(() => {
@@ -59,45 +56,16 @@ export function HomeScreen() {
     api.artifactQueries.getUserArtifacts,
     userId ? { userId, limit: 9 } : 'skip'
   )
-  
-  const pendingQuestions = useQuery(
-    api.widgetQuestionsQueries.getUserPendingQuestions,
-    userId ? { userId } : 'skip'
-  )
-
-  // Handle question click - switches to project chat
-  // The question is already in the conversation as an assistant message (from Task 2.4)
-  const handleQuestionClick = (projectId: string) => {
-    setActiveProjectId(projectId)
-  }
-
-  // Handle switching back to main chat
-  const handleBackToMainChat = () => {
-    setActiveProjectId(null)
-  }
 
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-6 pt-16 pb-8 space-y-8">
         
-        {/* Pass data via props */}
+        {/* Greeting Header */}
         <GreetingHeader insights={insights} userName={userInfo?.name} />
         
-        {/* Chat - with messages and input */}
-        <HomepageChat 
-          userId={userId} 
-          activeProjectId={activeProjectId}
-          onBackToMainChat={handleBackToMainChat}
-        />
-        
-        {/* Pending Questions - only shown if questions exist */}
-        <PendingQuestionsSection 
-          questions={pendingQuestions}
-          onQuestionClick={handleQuestionClick}
-        />
-        
-        {/* Activity Feed - recent family updates */}
-        <ActivityFeed userId={userId} />
+        {/* ✨ NEW: Thread Quick Access - Replaces 3 sections */}
+        <ThreadQuickAccess userId={userId} />
         
         {/* Artifacts Section */}
         <ArtifactsSection artifacts={artifacts} />

@@ -23,10 +23,11 @@ export const messageSchemaFields = {
   
   // Message Content Types (OPTIONAL for backward compatibility)
   contentType: v.optional(v.union(
-    v.literal("text"),              // Normal chat message (default)
-    v.literal("family_question"),   // Family asking user
-    v.literal("family_update"),     // Family activity notification
-    v.literal("preflight_questions") // Pre-flight question batch
+    v.literal("text"),                 // Normal chat message (default)
+    v.literal("family_question"),      // Family asking user
+    v.literal("family_update"),        // Family activity notification
+    v.literal("preflight_questions"),  // Pre-flight question batch
+    v.literal("widget_coordination")   // Agent-to-agent coordination (A2A)
   )),
   
   // Family-specific metadata (OPTIONAL for backward compatibility)
@@ -77,7 +78,8 @@ export const messageInputValidator = v.object({
     v.literal("text"),
     v.literal("family_question"),
     v.literal("family_update"),
-    v.literal("preflight_questions")
+    v.literal("preflight_questions"),
+    v.literal("widget_coordination")
   )),
   familyMetadata: v.optional(v.object({
     familyId: v.union(v.string(), v.id("widgets")),

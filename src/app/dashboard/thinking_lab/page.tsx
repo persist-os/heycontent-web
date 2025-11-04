@@ -5,12 +5,14 @@
  *
  * Main page for the integrated thinking lab experience.
  * Provides dialogue, reflection, and insight capabilities in one interface.
+ * 
+ * NOTE: ThreadSidebar, ThreadItem, and NotepadPanel components created for future integration.
+ * Currently using existing FullThinkingLab composition which has resizable panes.
  */
 
 import React, { useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { FullThinkingLab } from './compositions/LabCompositions'
-// Removed dialogueStore import - using conversation hooks instead
 
 /**
  * Validates that a URL parameter is a valid non-empty string

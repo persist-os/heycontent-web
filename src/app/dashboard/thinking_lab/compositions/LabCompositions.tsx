@@ -9,6 +9,7 @@
  */
 
 import React, { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { MarkdownNotepad } from '../components/notepad/MarkdownNotepad'
 import { useResizablePanes } from '../hooks/useResizablePanes'
 import { ContextIndicator } from '../components/ContextIndicator'
@@ -19,6 +20,7 @@ import { useMessageList } from '../hooks/useMessageList'
 import { useConversationState } from '../hooks/useConversationState'
 import { useOptimizedAuth } from '../components/notepad/hooks/useOptimizedAuth'
 import { NotepadProvider, useNotepadContext } from '../contexts/NotepadContext'
+import { ThreadSidebar } from '../components/ThreadSidebar'
 
 // =============================================================================
 // PANEL COMPONENTS
@@ -87,6 +89,10 @@ function FullThinkingLabInternal({
   // Auth and user
   const { user, isLoading: authLoading } = useOptimizedAuth()
   const userId = user?.uid
+  const router = useRouter()
+  
+  // Sidebar state
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   
   // Use the notepad context
   const notepadContext = useNotepadContext()
@@ -118,6 +124,18 @@ function FullThinkingLabInternal({
   // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
   // Input ref
   const inputRef = React.useRef<HTMLTextAreaElement>(null)
+  
+  // Thread navigation handlers
+  const handleThreadSelect = React.useCallback((threadId: string) => {
+    const params = new URLSearchParams()
+    params.set('chatId', threadId)
+    if (projectId) params.set('projectId', projectId)
+    router.push(`/dashboard/thinking_lab?${params.toString()}`)
+  }, [router, projectId])
+  
+  const handleNewThread = React.useCallback(() => {
+    router.push('/dashboard/thinking_lab')
+  }, [router])
 
   // Use existing useMessageList hook with clean props
   const messageList = useMessageList({
@@ -190,41 +208,56 @@ function FullThinkingLabInternal({
         onRestoreNotepad={handleNotepadExpand}
       />
 
-      {/* Resizable Split Panes */}
-      <div ref={resizable.containerRef} className="flex flex-1 overflow-hidden">
-        {/* Chat Panel */}
-        <div style={resizable.styles.leftPanelStyle} className="flex flex-col h-full overflow-hidden">
-          <div className="flex-1 overflow-hidden">
-            <ChatPanel 
-              messages={messageList}
-              onInputPopulate={handleInputPopulate}
-              onQuoteToNotepad={handleQuoteToNotepad}
-              widgetOutputId={widgetOutputId}
-              isFullScreen={isChatFullScreen}
-              onRestoreNotepad={handleNotepadExpand}
-              onCloseChat={closeChat}
-              suggestions={suggestions}
-              sendMessage={sendMessage}
-              startNewConversation={startNewConversation}
-              isLoading={isStreaming}
-              error={error}
+      {/* Main Layout: Sidebar + Resizable Panes */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Thread Sidebar */}
+        {userId && (
+          <ThreadSidebar
+            userId={userId}
+            activeThreadId={chatId}
+            onThreadSelect={handleThreadSelect}
+            onNewThread={handleNewThread}
+            isCollapsed={sidebarCollapsed}
+            onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+          />
+        )}
+
+        {/* Resizable Split Panes - Chat + Notepad */}
+        <div ref={resizable.containerRef} className="flex flex-1 overflow-hidden">
+          {/* Chat Panel */}
+          <div style={resizable.styles.leftPanelStyle} className="flex flex-col h-full overflow-hidden">
+            <div className="flex-1 overflow-hidden">
+              <ChatPanel 
+                messages={messageList}
+                onInputPopulate={handleInputPopulate}
+                onQuoteToNotepad={handleQuoteToNotepad}
+                widgetOutputId={widgetOutputId}
+                isFullScreen={isChatFullScreen}
+                onRestoreNotepad={handleNotepadExpand}
+                onCloseChat={closeChat}
+                suggestions={suggestions}
+                sendMessage={sendMessage}
+                startNewConversation={startNewConversation}
+                isLoading={isStreaming}
+                error={error}
+              />
+            </div>
+            
+            {/* Chat Input */}
+            <div className="border-t border-primary/20 backdrop-blur-sm bg-card/30 flex-shrink-0 shadow-inner shadow-primary/5">
+              {inputComponent}
+            </div>
+          </div>
+
+          {/* Notepad Panel */}
+          <div style={resizable.styles.rightPanelStyle} className="flex flex-col h-full overflow-hidden">
+            <NotepadPanel
+              noteId={noteId}
+              quotedContent={quotedContent}
+              onClearQuoted={clearQuotedContent}
+              onClose={handleNotepadClose}
             />
           </div>
-          
-          {/* Chat Input */}
-          <div className="border-t border-primary/20 backdrop-blur-sm bg-card/30 flex-shrink-0 shadow-inner shadow-primary/5">
-            {inputComponent}
-          </div>
-        </div>
-
-        {/* Notepad Panel */}
-        <div style={resizable.styles.rightPanelStyle} className="flex flex-col h-full overflow-hidden">
-          <NotepadPanel
-            noteId={noteId}
-            quotedContent={quotedContent}
-            onClearQuoted={clearQuotedContent}
-            onClose={handleNotepadClose}
-          />
         </div>
       </div>
     </div>

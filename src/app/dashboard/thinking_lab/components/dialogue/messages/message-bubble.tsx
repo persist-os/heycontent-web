@@ -51,6 +51,7 @@ export function MessageBubble({
   onContentClick
 }: MessageBubbleProps) {
   const isUser = message.role === 'user'
+  const isCoordination = message.contentType === 'widget_coordination'
   
   const { text: sendToNotepadTooltip } = useTranslation('Send full message to notepad', {
     context: 'message.quote_to_notepad'
@@ -83,7 +84,9 @@ export function MessageBubble({
           <div
             id={`message-${message.id}`}
             className={`
-              ${isUser 
+              ${isCoordination
+                ? 'rounded-2xl px-5 sm:px-7 py-2 sm:py-3 bg-blue-50 dark:bg-blue-950 text-blue-900 dark:text-blue-100 border border-blue-200 dark:border-blue-800'
+                : isUser 
                 ? 'rounded-2xl px-5 sm:px-7 py-2 sm:py-3 bg-primary text-primary-darker [&_*]:!text-primary-darker mr-1 sm:mr-2' 
                 : 'px-0 py-1 text-foreground'
               }
@@ -100,8 +103,16 @@ export function MessageBubble({
               </div>
             ) : (
               <>
+                {/* Coordination badge for A2A messages */}
+                {isCoordination && (
+                  <div className="flex items-center gap-2 mb-2 text-sm font-medium text-blue-700 dark:text-blue-300">
+                    <span className="text-lg">🤝</span>
+                    <span>Widget Coordination</span>
+                  </div>
+                )}
+                
                 {/* Message content - show streaming content in real-time */}
-                <div className={`${isUser ? 'text-primary-darker' : 'text-foreground'}`}>
+                <div className={`${isCoordination ? 'text-blue-900 dark:text-blue-100' : isUser ? 'text-primary-darker' : 'text-foreground'}`}>
                   <MarkdownRenderer content={message.content} />
                 </div>
 

@@ -17,7 +17,14 @@ import {
   Zap,
   TrendingUp,
   BarChart3,
-  Radio
+  Radio,
+  Activity,
+  FileText,
+  Save,
+  X,
+  Edit2,
+  Trash2,
+  Search
 } from 'lucide-react';
 import { DashboardNav } from '../dashboard/_components/dashboard-nav';
 import { TestLabCard } from './components/TestLabCard';
@@ -26,6 +33,13 @@ import { TestingHubSection } from './components/TestingHubSection';
 import { FeedbackDetailModal } from './components/FeedbackDetailModal';
 import { FeedbackFilters } from './components/FeedbackFilters';
 import { IntelligenceTestPanel } from './components/IntelligenceTestPanel';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
+import type { Id } from '@/convex/_generated/dataModel';
 
 // Import role styling from original
 const roleColors = {
@@ -61,6 +75,13 @@ export default function AdminPage() {
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [activeStatusTab, setActiveStatusTab] = useState('all');
+  
+  // Prompts tab state
+  const [promptSearch, setPromptSearch] = useState('');
+  const [editingPromptId, setEditingPromptId] = useState<Id<"prompts"> | null>(null);
+  const [editPromptContent, setEditPromptContent] = useState('');
+  const [editPromptTags, setEditPromptTags] = useState('');
+  const [editPromptDescription, setEditPromptDescription] = useState('');
 
   // Fetch data
   const feedback = useQuery(api.feedback.listFeedback, {
@@ -73,8 +94,11 @@ export default function AdminPage() {
   const users = useQuery(api.auth.getUsersWithRoles, 
     firebaseUser?.uid ? { adminUserId: firebaseUser.uid } : "skip"
   );
+  const prompts = useQuery(api.promptsQueries.getAllPrompts, { limit: 200 });
 
   const updateStatus = useMutation(api.feedback.updateFeedbackStatus);
+  const updatePrompt = useMutation(api.promptsMutations.updatePromptBlock);
+  const deletePrompt = useMutation(api.promptsMutations.deletePromptBlock);
 
   // Loading state
   if (firebaseUser === undefined) {
@@ -195,6 +219,61 @@ export default function AdminPage() {
     return colors[priority] || colors.medium;
   };
 
+  // Prompt handlers
+  const handleEditPrompt = (prompt: any) => {
+    setEditingPromptId(prompt._id);
+    setEditPromptContent(prompt.content);
+    setEditPromptTags(prompt.tags.join(', '));
+    setEditPromptDescription(prompt.description || '');
+  };
+
+  const handleSavePrompt = async () => {
+    if (!editingPromptId) return;
+
+    try {
+      await updatePrompt({
+        promptId: editingPromptId,
+        content: editPromptContent,
+        tags: editPromptTags.split(',').map(t => t.trim()).filter(t => t.length > 0),
+        description: editPromptDescription || undefined
+      });
+      toast.success('Prompt updated successfully');
+      setEditingPromptId(null);
+    } catch (error) {
+      toast.error(`Failed to update: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const handleCancelEditPrompt = () => {
+    setEditingPromptId(null);
+    setEditPromptContent('');
+    setEditPromptTags('');
+    setEditPromptDescription('');
+  };
+
+  const handleDeletePrompt = async (promptId: Id<"prompts">) => {
+    if (!confirm('Are you sure you want to delete this prompt?')) return;
+
+    try {
+      await deletePrompt({ promptId });
+      toast.success('Prompt deleted');
+    } catch (error) {
+      toast.error(`Failed to delete: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  // Filter prompts
+  const filteredPrompts = prompts?.filter(p => {
+    if (!promptSearch) return true;
+    const search = promptSearch.toLowerCase();
+    return (
+      p.content.toLowerCase().includes(search) ||
+      p.description?.toLowerCase().includes(search) ||
+      p.tags.some((tag: string) => tag.toLowerCase().includes(search)) ||
+      p.type.toLowerCase().includes(search)
+    );
+  }) || [];
+
   // Filter feedback
   const filteredFeedback = feedback?.feedback?.filter((item: any) => {
     if (search && !item.title.toLowerCase().includes(search.toLowerCase()) &&
@@ -220,7 +299,7 @@ export default function AdminPage() {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="overview">
                 <TrendingUp className="h-4 w-4 mr-2" />
                 Overview
@@ -232,6 +311,10 @@ export default function AdminPage() {
               <TabsTrigger value="users">
                 <Users className="h-4 w-4 mr-2" />
                 Users
+              </TabsTrigger>
+              <TabsTrigger value="prompts">
+                <FileText className="h-4 w-4 mr-2" />
+                Prompts
               </TabsTrigger>
               <TabsTrigger value="testing">
                 <Zap className="h-4 w-4 mr-2" />
@@ -261,7 +344,14 @@ export default function AdminPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <TestLabCard
+                  title="Living Projects Control"
+                  description="Real-time decision engine monitoring and manual controls"
+                  icon={Activity}
+                  colorVariant="blue"
+                  href="/admin/living-projects-control"
+                />
                 <TestLabCard
                   title="Intelligence Testing"
                   description="Test shard extraction, stardust, and cognitive field generation"
@@ -396,6 +486,181 @@ export default function AdminPage() {
               </Card>
             </TabsContent>
 
+            <TabsContent value="prompts" className="space-y-6">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search prompts by content, tags, or type..."
+                  value={promptSearch}
+                  onChange={(e) => setPromptSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-4">
+                <Card className="p-4">
+                  <div className="text-sm text-muted-foreground">Total Prompts</div>
+                  <div className="text-2xl font-bold text-foreground">{prompts?.length || 0}</div>
+                </Card>
+                <Card className="p-4">
+                  <div className="text-sm text-muted-foreground">Filtered Results</div>
+                  <div className="text-2xl font-bold text-foreground">{filteredPrompts.length}</div>
+                </Card>
+                <Card className="p-4">
+                  <div className="text-sm text-muted-foreground">Editing</div>
+                  <div className="text-2xl font-bold text-foreground">{editingPromptId ? '1' : '0'}</div>
+                </Card>
+              </div>
+
+              {/* Prompts List */}
+              <ScrollArea className="h-[calc(100vh-400px)]">
+                <div className="space-y-4">
+                  {filteredPrompts.map((prompt: any) => (
+                    <Card key={prompt._id} className="p-6">
+                      {editingPromptId === prompt._id ? (
+                        // Edit Mode
+                        <div className="space-y-4">
+                          <div>
+                            <label className="text-sm font-medium text-foreground mb-2 block">
+                              Content
+                            </label>
+                            <Textarea
+                              value={editPromptContent}
+                              onChange={(e) => setEditPromptContent(e.target.value)}
+                              rows={8}
+                              className="font-mono text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-sm font-medium text-foreground mb-2 block">
+                              Tags (comma-separated)
+                            </label>
+                            <Input
+                              value={editPromptTags}
+                              onChange={(e) => setEditPromptTags(e.target.value)}
+                              placeholder="tag1, tag2, tag3"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-sm font-medium text-foreground mb-2 block">
+                              Description (optional)
+                            </label>
+                            <Input
+                              value={editPromptDescription}
+                              onChange={(e) => setEditPromptDescription(e.target.value)}
+                              placeholder="Brief description"
+                            />
+                          </div>
+
+                          <div className="flex gap-2">
+                            <Button onClick={handleSavePrompt} className="flex items-center gap-2">
+                              <Save className="h-4 w-4" />
+                              Save
+                            </Button>
+                            <Button onClick={handleCancelEditPrompt} variant="outline" className="flex items-center gap-2">
+                              <X className="h-4 w-4" />
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        // View Mode
+                        <div>
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge variant="outline">{prompt.type}</Badge>
+                                <Badge variant="outline">{prompt.scope}</Badge>
+                                {prompt.scopeId && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {prompt.scopeId.slice(0, 8)}...
+                                  </Badge>
+                                )}
+                              </div>
+                              {prompt.description && (
+                                <p className="text-sm text-muted-foreground">{prompt.description}</p>
+                              )}
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={() => handleEditPrompt(prompt)}
+                                variant="outline"
+                                size="sm"
+                              >
+                                <Edit2 className="h-3 w-3 mr-1" />
+                                Edit
+                              </Button>
+                              <Button
+                                onClick={() => handleDeletePrompt(prompt._id)}
+                                variant="outline"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-3 w-3 mr-1" />
+                                Delete
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div className="bg-muted/30 rounded-lg p-4 mb-4">
+                            <pre className="text-sm whitespace-pre-wrap font-mono text-foreground">
+                              {prompt.content}
+                            </pre>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2 mb-4">
+                            {prompt.tags.map((tag: string, i: number) => (
+                              <Badge key={i} variant="secondary">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+
+                          <div className="flex gap-6 text-sm">
+                            <div>
+                              <span className="text-muted-foreground">Effectiveness:</span>{' '}
+                              <span className="font-medium text-foreground">
+                                {((prompt.effectiveness || 0) * 100).toFixed(1)}%
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Usage:</span>{' '}
+                              <span className="font-medium text-foreground">{prompt.usageCount || 0}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Success:</span>{' '}
+                              <span className="font-medium text-foreground">
+                                {((prompt.successRate || 0) * 100).toFixed(1)}%
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Version:</span>{' '}
+                              <span className="font-medium text-foreground">{prompt.version}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </Card>
+                  ))}
+                </div>
+              </ScrollArea>
+
+              {filteredPrompts.length === 0 && (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">No prompts found</p>
+                  {promptSearch && (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Try adjusting your search term
+                    </p>
+                  )}
+                </div>
+              )}
+            </TabsContent>
+
             <TabsContent value="testing">
               <TestingHubSection />
             </TabsContent>
@@ -409,6 +674,7 @@ export default function AdminPage() {
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           onStatusUpdate={handleStatusUpdate}
+          users={users || []}
         />
       )}
     </div>

@@ -2,13 +2,14 @@
 
 import React, { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useQuery } from 'convex/react'
+import { useQuery, useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { useConversationState } from '@/app/dashboard/thinking_lab/hooks/useConversationState'
 import { useMessageList } from '@/app/dashboard/thinking_lab/hooks/useMessageList'
 import { ChatInputBox } from './ChatInputBox'
 import ChatMessagesList from '@/app/dashboard/thinking_lab/components/dialogue/components/ChatMessagesList'
-import { ArrowRight, Home } from 'lucide-react'
+import { ArrowRight, Home, RotateCcw } from 'lucide-react'
+import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDialog'
 
 interface HomepageChatProps {
   userId: string | null
@@ -36,7 +37,12 @@ export function HomepageChat({
   onBackToMainChat
 }: HomepageChatProps) {
   const [inputValue, setInputValue] = useState('')
+  const [showResetDialog, setShowResetDialog] = useState(false)
+  const [isResetting, setIsResetting] = useState(false)
   const router = useRouter()
+  
+  // Mutation for deleting conversation
+  const deleteConversation = useMutation(api.chatMutations.deleteConversation)
 
   // Get project name for header display
   const project = useQuery(
@@ -58,6 +64,7 @@ export function HomepageChat({
     currentStreamingId,
     messages,
     sendMessage,
+    startNewConversation,
   } = useConversationState(
     userId ?? undefined,
     activeProjectId ?? undefined, // projectId for project-scoped chat
@@ -102,6 +109,31 @@ export function HomepageChat({
     }
   }, [sendMessage])
 
+  // Handle conversation reset
+  const handleResetConversation = useCallback(async () => {
+    if (!conversationId || !userId) return
+
+    setIsResetting(true)
+    try {
+      // Delete the conversation from Convex
+      await deleteConversation({
+        conversationId,
+        userId,
+      })
+      
+      // Clear local state - this will allow a fresh conversation to be created
+      startNewConversation()
+      
+      // Close the dialog
+      setShowResetDialog(false)
+    } catch (error) {
+      console.error('Failed to reset conversation:', error)
+      alert('Failed to reset conversation. Please try again.')
+    } finally {
+      setIsResetting(false)
+    }
+  }, [conversationId, userId, deleteConversation, startNewConversation])
+
   return (
     <div className="space-y-4">
       {/* Unified Chat Container - Messages + Input in one cohesive gradient box */}
@@ -130,6 +162,18 @@ export function HomepageChat({
                     </p>
                   </div>
                 </div>
+                {/* Reset conversation button - only show if conversation exists */}
+                {conversationId && messages.length > 0 && (
+                  <button
+                    onClick={() => setShowResetDialog(true)}
+                    disabled={isResetting}
+                    className="flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Reset conversation"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Reset
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -180,6 +224,18 @@ export function HomepageChat({
           />
         </div>
       </div>
+
+      {/* Reset Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={showResetDialog}
+        onClose={() => setShowResetDialog(false)}
+        onConfirm={handleResetConversation}
+        title="Reset Conversation"
+        description="Are you sure you want to reset this conversation? This will delete all messages and start fresh. This action cannot be undone."
+        confirmText="Reset"
+        cancelText="Cancel"
+        isLoading={isResetting}
+      />
     </div>
   )
 }
