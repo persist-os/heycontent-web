@@ -86,7 +86,7 @@ export function HomepageChat({
   // Navigate to Thinking Lab with conversation
   const openInThinkingLab = useCallback(() => {
     if (conversationId) {
-      router.push(`/dashboard/thinking-lab?chatId=${conversationId}`)
+      router.push(`/dashboard/thinking_lab?chatId=${conversationId}`)
     }
   }, [conversationId, router])
 
