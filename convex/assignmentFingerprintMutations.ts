@@ -47,7 +47,16 @@ export const mutateAssignmentFingerprint = mutation({
         
         const now = Date.now();
         const fingerprintId = await ctx.db.insert("assignment_fingerprints", {
-          ...createData,
+          projectId,
+          userId,
+          insights: createData.insights || [],           // NEW: Structured insights
+          currentGoals: createData.currentGoals,          // NEW: Fast-access summaries
+          currentConstraints: createData.currentConstraints,
+          currentTimeline: createData.currentTimeline,
+          widgetPreferences: createData.widgetPreferences,
+          version: createData.version || 1,              // NEW: Schema version
+          totalInsights: createData.totalInsights || 0,  // NEW: Insight count
+          lastEvolution: now,                            // NEW: Evolution tracking
           createdAt: now,
           updatedAt: now,
         });
@@ -60,20 +69,59 @@ export const mutateAssignmentFingerprint = mutation({
         }
         
         // ✅ SECURITY: Find fingerprint with userId validation (compound index)
-        const existing = await ctx.db
+        let existing = await ctx.db
           .query("assignment_fingerprints")
           .withIndex("by_project_user", (q) => 
             q.eq("projectId", projectId).eq("userId", userId)
           )
           .first();
         
+        // ✅ UPSERT: If fingerprint doesn't exist, create it automatically
         if (!existing) {
-          throw new Error(`No fingerprint found for project ${projectId} and user ${userId}`);
+          // Validate project ownership before creating
+          const project = await ctx.db.get(projectId);
+          if (!project) {
+            throw new Error("Project not found");
+          }
+          if (project.userId !== userId) {
+            throw new Error("Access denied: You don't own this project");
+          }
+          
+          const now = Date.now();
+          const newId = await ctx.db.insert("assignment_fingerprints", {
+            projectId,
+            userId,
+            insights: [],
+            version: 1,
+            totalInsights: 0,
+            lastEvolution: now,
+            createdAt: now,
+            updatedAt: now,
+          });
+          
+          // Fetch the newly created fingerprint
+          existing = await ctx.db.get(newId);
+          if (!existing) {
+            throw new Error("Failed to create fingerprint");
+          }
         }
+        
+        // ✅ CRITICAL: Append insights, don't replace (preserves history)
+        const updatedInsights = updateData.insights
+          ? [...(existing.insights || []), ...updateData.insights]  // APPEND mode
+          : existing.insights;
+        
+        const updatedTotalInsights = updatedInsights?.length || existing.totalInsights || 0;
         
         // Merge update fields
         await ctx.db.patch(existing._id, {
-          ...updateData,
+          insights: updatedInsights,              // NEW: Appended insights
+          currentGoals: updateData.currentGoals !== undefined ? updateData.currentGoals : existing.currentGoals,
+          currentConstraints: updateData.currentConstraints !== undefined ? updateData.currentConstraints : existing.currentConstraints,
+          currentTimeline: updateData.currentTimeline !== undefined ? updateData.currentTimeline : existing.currentTimeline,
+          widgetPreferences: updateData.widgetPreferences !== undefined ? updateData.widgetPreferences : existing.widgetPreferences,
+          totalInsights: updatedTotalInsights,    // NEW: Updated count
+          lastEvolution: updateData.lastEvolution || existing.lastEvolution,
           updatedAt: Date.now(),
         });
         

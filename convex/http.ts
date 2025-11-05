@@ -3753,6 +3753,60 @@ app.post("/api/assignment-fingerprints/getByProject", async (c) => {
   }
 });
 
+/**
+ * POST /api/assignment-fingerprints/queryInsights
+ * Query insights by category, time, confidence
+ * ✅ SECURITY: Requires userId for ownership validation
+ */
+app.post("/api/assignment-fingerprints/queryInsights", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { projectId, userId, category, since, minConfidence, limit } = body;
+    
+    if (!projectId || !userId) {
+      return c.json({ success: false, error: "Missing projectId or userId" }, 400);
+    }
+    
+    const insights = await c.env.runQuery(api.assignmentFingerprintQueries.queryInsights, {
+      projectId,
+      userId,
+      category,
+      since,
+      minConfidence,
+      limit,
+    });
+    
+    return c.json({ success: true, data: insights });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+/**
+ * POST /api/assignment-fingerprints/getCurrentPreferences
+ * Get current preferences - FAST query for A2A coordination
+ * ✅ SECURITY: Requires userId for ownership validation
+ */
+app.post("/api/assignment-fingerprints/getCurrentPreferences", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { projectId, userId } = body;
+    
+    if (!projectId || !userId) {
+      return c.json({ success: false, error: "Missing projectId or userId" }, 400);
+    }
+    
+    const preferences = await c.env.runQuery(
+      api.assignmentFingerprintQueries.getCurrentPreferences,
+      { projectId, userId }
+    );
+    
+    return c.json({ success: true, data: preferences });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 // WIDGET OUTPUTS ROUTES - Generic pattern for widget execution outputs
 
 /**
