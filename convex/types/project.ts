@@ -26,7 +26,7 @@ export const projectSchemaFields = {
   shardIds: v.optional(v.array(v.string())),
   
   // AI Intelligence Integration
-  fingerprintId: v.optional(v.id("project_fingerprints")),
+  fingerprintId: v.optional(v.any()),
   analysisIds: v.optional(v.array(v.string())),
   
   // Budget Tracking (ON HOLD - placeholders for future usage tracking)
@@ -193,7 +193,7 @@ export interface Project {
   crystalIds?: string[];
   cognitiveFieldIds?: string[];
   shardIds?: string[];
-  fingerprintId?: string;
+  fingerprintId?: any;
   analysisIds?: string[];
   // Budget tracking (placeholders - ON HOLD)
   dailyLlmBudget: number;

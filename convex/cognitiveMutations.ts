@@ -345,3 +345,55 @@ export const deleteCognitiveField = mutation({
     return true;
   },
 });
+
+/**
+ * Update a single layer of a cognitive field
+ * 
+ * PHILOSOPHY: Update one layer at a time, not all layers.
+ * This is the RECOMMENDED way to update cognitive fields based on intelligent layer selection.
+ * 
+ * Layer mapping:
+ * - 1: coreField (Machine Substrate)
+ * - 2: semanticMetadata (A2A Language)
+ * - 3: transparencyLayer (Human-readable)
+ * - 4: crossDomainLayer (Creative discovery)
+ * - 5: userPreferences (Learned patterns)
+ */
+export const updateCognitiveFieldLayer = mutation({
+  args: {
+    fieldId: v.id("cognitive_fields"),
+    layerNumber: v.number(),
+    layerData: v.any(),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, { fieldId, layerNumber, layerData }) => {
+    // Validate layer number
+    if (layerNumber < 1 || layerNumber > 5) {
+      throw new Error(`Invalid layer number: ${layerNumber}. Must be 1-5.`);
+    }
+    
+    // Map layer number to field name
+    const layerFieldMap: Record<number, string> = {
+      1: "coreField",
+      2: "semanticMetadata",
+      3: "transparencyLayer",
+      4: "crossDomainLayer",
+      5: "userPreferences"
+    };
+    
+    const fieldName = layerFieldMap[layerNumber];
+    
+    // Create update data with single layer
+    const updateData: any = {
+      [fieldName]: layerData
+    };
+    
+    // Update the field directly
+    await ctx.db.patch(fieldId, {
+      ...updateData,
+      updatedAt: Date.now()
+    });
+    
+    return true;
+  }
+});

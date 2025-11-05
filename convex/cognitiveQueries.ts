@@ -93,6 +93,31 @@ export const getAllCognitiveFields = query({
 });
 
 /**
+ * Get cognitive field by conversation (1:1 relationship)
+ */
+export const getCognitiveFieldByConversation = query({
+  args: { 
+    conversationId: v.string(),
+    userId: v.string()
+  },
+  handler: async (ctx, { conversationId, userId }) => {
+    try {
+      // Use compound index for efficient per-conversation query with ownership validation
+      const field = await ctx.db.query("cognitive_fields")
+        .withIndex("by_conversation_user", (q) => 
+          q.eq("conversationId", conversationId).eq("userId", userId)
+        )
+        .first();
+      
+      return field || null;
+    } catch (error) {
+      console.error("Error getting cognitive field by conversation:", error);
+      throw error;
+    }
+  },
+});
+
+/**
  * Count cognitive fields for a user
  */
 export const countCognitiveFields = query({

@@ -339,7 +339,7 @@ export const linkFingerprint = mutation({
   args: {
     projectId: v.id("projects"),
     userId: v.string(),
-    fingerprintId: v.id("project_fingerprints"),
+    fingerprintId: v.any(),
   },
   handler: async (ctx, { projectId, userId, fingerprintId }) => {
     // Validate project ownership
@@ -356,10 +356,6 @@ export const linkFingerprint = mutation({
     const fingerprint = await ctx.db.get(fingerprintId);
     if (!fingerprint) {
       throw new Error("Fingerprint not found");
-    }
-    
-    if (fingerprint.userId !== userId) {
-      throw new Error("Access denied: You don't own this fingerprint");
     }
     
     await ctx.db.patch(projectId, {

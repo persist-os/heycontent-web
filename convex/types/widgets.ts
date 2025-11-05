@@ -8,10 +8,17 @@
 import { v } from "convex/values";
 
 // Widget status validator
+// ✅ Updated to include execution statuses that decision engine checks for
 export const widgetStatusValidator = v.union(
-  v.literal("active"),
-  v.literal("archived"),
-  v.literal("deleted")
+  v.literal("pending"),     // Widget created, waiting for execution
+  v.literal("ready"),        // Widget ready to execute
+  v.literal("needs_input"),  // Widget paused, waiting for user input
+  v.literal("working"),      // Widget currently executing
+  v.literal("completed"),    // Widget finished successfully
+  v.literal("failed"),       // Widget execution failed
+  v.literal("active"),       // Legacy status (kept for compatibility)
+  v.literal("archived"),     // Widget archived by user
+  v.literal("deleted")       // Widget soft-deleted
 );
 
 // Widget run status validator
@@ -54,7 +61,7 @@ export const widgetOutputArtifactTypeValidator = v.union(
 export const widgetSchemaFields = {
   // Foreign keys - establish relationships
   projectId: v.id("projects"),
-  fingerprintId: v.id("project_fingerprints"),
+  fingerprintId: v.any(),
   userId: v.string(),
   
   // Widget identity
@@ -167,7 +174,7 @@ export const widgetSchemaFields = {
 export const projectWidgetsSchemaFields = {
   // Foreign keys
   projectId: v.id("projects"),
-  fingerprintId: v.id("project_fingerprints"),
+  fingerprintId: v.any(),
   userId: v.string(),
 
   // Widget categories for organization
@@ -317,7 +324,7 @@ export const widgetBatchValidator = v.object({
 // Widget create validator (for single widget creation - extends batch validator)
 export const widgetCreateValidator = v.object({
   projectId: v.id("projects"),
-  fingerprintId: v.id("project_fingerprints"),
+  fingerprintId: v.any(),
   userId: v.string(),
   widget_id: v.string(),
   widget_type: v.string(),
@@ -423,7 +430,17 @@ export const widgetValidator = v.object(widgetSchemaFields);
 export const projectWidgetsValidator = v.object(projectWidgetsSchemaFields);
 
 // Type exports
-export type WidgetStatus = "active" | "archived" | "deleted";
+// ✅ Updated to match widgetStatusValidator with all execution statuses
+export type WidgetStatus = 
+  | "pending"      // Widget created, waiting for execution
+  | "ready"        // Widget ready to execute
+  | "needs_input"  // Widget paused, waiting for user input
+  | "working"      // Widget currently executing
+  | "completed"    // Widget finished successfully
+  | "failed"       // Widget execution failed
+  | "active"       // Legacy status (kept for compatibility)
+  | "archived"     // Widget archived by user
+  | "deleted";     // Widget soft-deleted
 export type WidgetRunStatus = "idle" | "running" | "success" | "failed";
 export type WidgetScheduleFrequency = "manual" | "hourly" | "daily" | "weekly" | "monthly";
 export type WidgetWorkflowStage = "gathering" | "analysis" | "synthesis" | "tracking" | "reporting";
@@ -457,7 +474,7 @@ export interface WidgetExecutionProfile {
 
 export interface Widget {
   projectId: string;
-  fingerprintId: string;
+  fingerprintId: any;
   userId: string;
   widget_id: string;
   widget_type: string;
@@ -494,7 +511,7 @@ export interface Widget {
 
 export interface ProjectWidgets {
   projectId: string;
-  fingerprintId: string;
+  fingerprintId: any;
   userId: string;
   categories: WidgetCategory[];
   layout_type: string;

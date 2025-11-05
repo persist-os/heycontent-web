@@ -290,7 +290,7 @@ export const getAllUserThreads = query({
  * Get recent messages from conversation (for embedding PostAction)
  */
 export const getRecentMessages = query({
-  args: {
+  args: { 
     conversationId: v.id("conversations"),
     limit: v.number()
   },
@@ -303,6 +303,6 @@ export const getRecentMessages = query({
     
     // Return in chronological order (oldest first)
     return messages.reverse();
-  }
+        }
 });
 

@@ -442,6 +442,9 @@ export default defineSchema({
     // Layer 4: User Preferences (A2A Coordination) - How user wants things done and responses
     cognitive_fields: defineTable(cognitiveFieldSchemaFields)
       .index("by_user", ["userId"])
+      .index("by_conversation", ["conversationId"])  // Per-conversation queries
+      .index("by_project", ["projectId"])  // Per-project queries
+      .index("by_conversation_user", ["conversationId", "userId"])  // Efficient per-conversation with ownership
       .index("by_status", ["userId", "status"])
       .index("by_created", ["userId", "createdAt"])
       .index("by_updated", ["userId", "updatedAt"])

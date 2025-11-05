@@ -5461,6 +5461,20 @@ app.post("/api/cognative/getNeedingOptimization", async (c) => {
   }
 });
 
+app.post("/api/cognative/getByConversation", async (c) => {
+  try {
+    const body = await c.req.json();
+    const field = await c.env.runQuery(api.cognitiveQueries.getCognitiveFieldByConversation, body);
+    return c.json({ success: true, data: field });
+  } catch (error: any) {
+    console.error("[COGNATIVE_GET_BY_CONVERSATION] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get cognative field by conversation"
+    }, 500);
+  }
+});
+
 // ============================================================================
 // CONVERGENCE PRESET CONFIGS
 // ============================================================================
@@ -6192,6 +6206,63 @@ app.post("/api/prompts/queryByTags", async (c) => {
     return c.json({ success: true, data: prompts });
   } catch (error: any) {
     console.error("[http.ts] /api/prompts/queryByTags error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// SEMANTIC MESSAGE SEARCH ROUTE
+/**
+ * POST /api/messages/semantic-search
+ * Semantic search messages using pre-computed embedding
+ * ✅ SECURITY: Requires userId and validates conversation ownership
+ * 
+ * Backend should:
+ * 1. Generate embedding using embedding_service.py
+ * 2. Call this endpoint with pre-computed embedding
+ * 3. Get semantic search results
+ */
+app.post("/api/messages/semantic-search", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { conversationId, userId, queryEmbedding, limit } = body;
+    
+    // Validate required fields
+    if (!conversationId || !userId) {
+      return c.json({ 
+        success: false, 
+        error: "Missing required fields: conversationId, userId" 
+      }, 400);
+    }
+    
+    if (!queryEmbedding || !Array.isArray(queryEmbedding)) {
+      return c.json({ 
+        success: false, 
+        error: "queryEmbedding must be an array of numbers" 
+      }, 400);
+    }
+    
+    // Validate user owns conversation
+    const conversation = await c.env.runQuery(
+      api.chatQueries.getConversationById,
+      { conversationId, userId }
+    );
+    
+    if (!conversation) {
+      return c.json({ 
+        success: false, 
+        error: "Conversation not found or access denied" 
+      }, 401);
+    }
+    
+    // Perform semantic search using internal query
+    const results = await c.env.runQuery(
+      api.messagesQueries.searchMessagesByEmbedding,
+      { conversationId, queryEmbedding, limit }
+    );
+    
+    return c.json({ success: true, data: results });
+  } catch (error: any) {
+    console.error("[http.ts] /api/messages/semantic-search error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });

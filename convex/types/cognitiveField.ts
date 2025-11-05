@@ -203,6 +203,8 @@ export const cognitiveFieldSchemaFields = {
   // Core identification
   userId: v.optional(v.string()),
   fieldId: v.optional(v.string()),
+  conversationId: v.string(),  // REQUIRED: 1:1 link to conversation
+  projectId: v.id("projects"),  // REQUIRED: Project context
   
   // Field status and lifecycle
   status: v.optional(fieldStatusValidator),
@@ -247,6 +249,8 @@ export const cognitiveFieldValidator = v.object(cognitiveFieldSchemaFields);
 export const cognitiveFieldCreateValidator = v.object({
   userId: v.string(),
   fieldId: v.string(),
+  conversationId: v.string(),  // REQUIRED: 1:1 link to conversation
+  projectId: v.id("projects"),  // REQUIRED: Project context
   sourceShardIds: v.array(v.string()),
   sourceStardustIds: v.array(v.string()),
   coreField: v.any(),
@@ -419,6 +423,8 @@ export type CrossDomainLayer = {
 export interface CognitiveField {
   userId?: string;
   fieldId?: string;
+  conversationId: string;  // REQUIRED: 1:1 link to conversation
+  projectId: string;  // REQUIRED: Project context (stored as Convex ID)
   status?: FieldStatus;
   createdAt?: number;
   updatedAt?: number;

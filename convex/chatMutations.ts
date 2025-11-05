@@ -65,6 +65,28 @@ export const createConversation = mutation({
 
         console.log(`[createConversation] Created conversation ${conversationId} linked to project ${projectId}`);
 
+        // Create cognitive field for conversation (per-conversation intelligence)
+        // Use mutation to leverage validators - no hardcoded structure
+        try {
+          const currentTime = Date.now();
+          await ctx.runMutation(api.cognitiveMutations.createCognitiveField, {
+            userId: args.userId,
+            conversationId: conversationId as string,
+            projectId: projectId,
+            fieldId: `cf_${conversationId}_${currentTime}`,
+            sourceShardIds: [],
+            sourceStardustIds: [],
+            coreField: {},
+            semanticMetadata: {},
+            transparencyLayer: {}
+          });
+          
+          console.log(`[createConversation] Created cognitive field for conversation ${conversationId}`);
+        } catch (cfError) {
+          // Log error but don't block conversation creation
+          console.warn(`[createConversation] Failed to create cognitive field: ${cfError instanceof Error ? cfError.message : 'Unknown error'}`);
+        }
+
         // Note: Embeddings are generated automatically by the backend after conversation is stored
 
         return conversationId;
@@ -126,15 +148,7 @@ handler: async (ctx, args) => {
       updatedAt: now,
     });
 
-    // 2. Write to LEGACY messages array (for backward compatibility during migration)
-    const updatedMessages = [...(conversation.messages || []), args.message];
-    
-    await ctx.db.patch(args.conversationId as any, {
-      messages: updatedMessages,
-      messageCount: sequence + 1,
-      lastMessageAt: args.message.timestamp,
-      updatedAt: now,
-    });
+
 
     // ✅ TRACK INTELLIGENCE: Only track user messages for activity monitoring
     if (args.message.role === "user") {
