@@ -1,7 +1,7 @@
 /**
- * Widget Execution Service
+ * Widget Service
  * 
- * Handles widget execution through the Next.js API route
+ * Handles widget generation and execution through the Next.js API route
  * Follows frontend-backend connection rules: service → Next.js API → backend
  */
 
@@ -47,6 +47,31 @@ export interface WidgetOutputData {
   }>;
   executionPrompt?: string;  // User's custom prompt that was used for execution
   createdAt: number;
+}
+
+/**
+ * Widget generation request parameters
+ */
+export interface WidgetGenerationRequest {
+  projectId: string;
+  widgetDescription: string;  // Natural language description of desired widget family
+}
+
+/**
+ * Widget generation response
+ */
+export interface WidgetGenerationResponse {
+  success: boolean;
+  widgets_id?: string;
+  error?: string;
+  metadata?: {
+    generated_at: string;
+    project_id: string;
+    fingerprint_id?: string;
+    user_id: string;
+    widget_type?: string;
+    single_widget_mode: boolean;
+  };
 }
 
 /**
@@ -151,6 +176,80 @@ export async function getWidgetStatus(widgetId: string): Promise<WidgetOutputDat
   } catch (error) {
     console.error('[WidgetService] Error getting widget status:', error);
     return null;
+  }
+}
+
+/**
+ * Generate a new widget family based on natural language description
+ * 
+ * @param params Widget generation parameters
+ * @returns Widget generation result with widgets_id
+ * 
+ * @throws {AuthenticationError} If user is not authenticated
+ * @throws {Error} If generation fails
+ */
+export async function generateWidget(params: WidgetGenerationRequest): Promise<WidgetGenerationResponse> {
+  const { projectId, widgetDescription } = params;
+
+  // Auth readiness and userId resolution
+  let userId: string | null = null;
+  const ready = await waitForAuthReady(5, 150);
+  
+  if (ready) {
+    try {
+      userId = await getCurrentUserId();
+    } catch (_) {
+      // Will retry below
+    }
+  }
+
+  if (!userId) {
+    // Retry for auth timing issues with longer timeout
+    const readyAgain = await waitForAuthReady(8, 300);
+    if (!readyAgain) {
+      throw new AuthenticationError('Authentication state not ready. Please wait and try again.');
+    }
+    userId = await getCurrentUserId();
+  }
+
+  try {
+    console.log('[WidgetService] Generating widget:', {
+      projectId,
+      descriptionLength: widgetDescription.length,
+      userId
+    });
+
+    // Call Next.js API route (thin wrapper that forwards to backend)
+    const requestBody: any = {
+      project_id: projectId,
+      widget_description: widgetDescription,
+      user_id: userId
+    };
+
+    const response = await fetchWithApiKey('/api/widgets/generate', {
+      method: 'POST',
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('[WidgetService] Generation failed:', response.status, errorData);
+      throw new Error(errorData.error || errorData.detail || `Widget generation failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    console.log('[WidgetService] Widget generated successfully:', {
+      success: data.success,
+      widgets_id: data.widgets_id,
+      widget_type: data.metadata?.widget_type
+    });
+
+    return data;
+
+  } catch (error) {
+    console.error('[WidgetService] Error generating widget:', error);
+    throw error;
   }
 }
 

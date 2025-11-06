@@ -203,7 +203,7 @@ export const cognitiveFieldSchemaFields = {
   // Core identification
   userId: v.optional(v.string()),
   fieldId: v.optional(v.string()),
-  conversationId: v.string(),  // REQUIRED: 1:1 link to conversation
+  conversationId: v.optional(v.string()),  // Optional: conversation-level fields have this, project-level don't
   projectId: v.id("projects"),  // REQUIRED: Project context
   
   // Field status and lifecycle
@@ -249,7 +249,7 @@ export const cognitiveFieldValidator = v.object(cognitiveFieldSchemaFields);
 export const cognitiveFieldCreateValidator = v.object({
   userId: v.string(),
   fieldId: v.string(),
-  conversationId: v.string(),  // REQUIRED: 1:1 link to conversation
+  conversationId: v.optional(v.string()),  // Optional: conversation-level fields have this, project-level don't
   projectId: v.id("projects"),  // REQUIRED: Project context
   sourceShardIds: v.array(v.string()),
   sourceStardustIds: v.array(v.string()),

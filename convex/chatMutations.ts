@@ -4,16 +4,132 @@ import { api } from "./_generated/api";
 import { internal } from "./_generated/api";
 import { messageArrayValidator, messageInputValidator } from "./types/message";
 
+/**
+ * 🎯 ATOMIC INITIALIZATION: Create Project + Conversation + Assignment Fingerprint + ONE Cognitive Field
+ * 
+ * This is the ONLY entry point for creating conversations.
+ * ALWAYS creates all four entities together atomically.
+ * 
+ * Every conversation IS an assignment with:
+ * - Project (context container)
+ * - Assignment Fingerprint (project intelligence)
+ * - Conversation (dialogue history)
+ * - ONE unified Cognitive Field (shared intelligence substrate)
+ */
+export const initializeConversation = mutation({
+  args: {
+    userId: v.string(),
+    title: v.string(),
+    messages: v.optional(messageArrayValidator),
+    // Optional widget context
+    widgetId: v.optional(v.union(v.string(), v.id("widgets"))),
+    widgetOutputId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const currentTime = Date.now();
+      
+      // 1. Create Project
+      const projectId = await ctx.db.insert("projects", {
+        userId: args.userId,
+        name: args.title,
+        description: "",
+        noteIds: [],
+        conversationIds: [],
+        crystalIds: [],
+        shardIds: [],
+        stardustIds: [],
+        fingerprintId: undefined, // Will be set below
+        dailyLlmBudget: 50,
+        llmCallsToday: 0,
+        budgetLastReset: currentTime,
+        isActive: true,
+        createdAt: currentTime,
+        updatedAt: currentTime,
+      });
+      
+      console.log(`[initializeConversation] ✅ Created project ${projectId}`);
+      
+      // 2. Create Assignment Fingerprint
+      const fingerprintId = await ctx.runMutation(api.assignmentFingerprintMutations.mutateAssignmentFingerprint, {
+        operation: "create",
+        projectId: projectId,
+        userId: args.userId,
+        createData: {
+          currentGoals: [],
+          currentConstraints: [],
+          widgetPreferences: undefined,
+          version: 1,
+          totalInsights: 0,
+        },
+      });
+      
+      console.log(`[initializeConversation] ✅ Created assignment fingerprint ${fingerprintId}`);
+      
+      // 3. Create Conversation (assignment dialogue)
+      const conversationId = await ctx.db.insert("conversations", {
+        userId: args.userId,
+        title: args.title,
+        messages: args.messages || [],
+        messageCount: args.messages?.length || 0,
+        lastMessageAt: args.messages && args.messages.length > 0 ? args.messages[args.messages.length - 1].timestamp : undefined,
+        createdAt: currentTime,
+        updatedAt: currentTime,
+        starred: false,
+        projectId: projectId,
+        widgetId: args.widgetId,
+        widgetOutputId: args.widgetOutputId,
+        conversationType: "project_scoped",  // All conversations are assignments
+      });
+      
+      console.log(`[initializeConversation] ✅ Created conversation ${conversationId}`);
+      
+      // 4. Create ONE Cognitive Field (shared by BOTH project AND conversation)
+      await ctx.runMutation(api.cognitiveMutations.createCognitiveField, {
+        userId: args.userId,
+        projectId: projectId,
+        conversationId: conversationId,  // Links to BOTH
+        fieldId: `cf_unified_${projectId}_${conversationId}_${currentTime}`,
+        sourceShardIds: [],
+        sourceStardustIds: [],
+        coreField: {},
+        semanticMetadata: {},
+        transparencyLayer: {},
+      });
+      
+      console.log(`[initializeConversation] ✅ Created unified cognitive field`);
+      
+      // 5. Link everything together
+      await ctx.db.patch(projectId, {
+        fingerprintId: fingerprintId,
+        conversationId: conversationId,
+        updatedAt: currentTime,
+      });
+      
+      console.log(`[initializeConversation] 🎉 COMPLETE: All 4 entities created and linked`);
+      console.log(`[initializeConversation] 📊 Project: ${projectId}, Conversation: ${conversationId}, Fingerprint: ${fingerprintId}`);
+
+      return conversationId;
+    } catch (error) {
+      console.error('[initializeConversation] Failed:', error);
+      throw new Error(`Failed to initialize conversation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
+
+/**
+ * @deprecated Use initializeConversation instead
+ * This is kept for backward compatibility only - just delegates to initializeConversation
+ */
 export const createConversation = mutation({
     args: {
       userId: v.string(),
       title: v.string(),
       messages: v.optional(messageArrayValidator),
-      // NEW: Optional project/widget context fields
-      projectId: v.optional(v.id("projects")),
-      widgetId: v.optional(v.union(v.string(), v.id("widgets"))),  // 🔄 Migration: supports both legacy string and Convex ID
+      projectId: v.optional(v.id("projects")),  // Ignored - always creates new project
+      widgetId: v.optional(v.union(v.string(), v.id("widgets"))),
       widgetOutputId: v.optional(v.string()),
-      conversationType: v.optional(v.union(
+      conversationType: v.optional(v.union(  // Ignored - all conversations are assignments
         v.literal("general"),
         v.literal("widget_prompt"),
         v.literal("project_scoped"),
@@ -21,86 +137,14 @@ export const createConversation = mutation({
       )),
     },
     handler: async (ctx, args) => {
-      try {
-        let projectId = args.projectId;
-        
-        // 🎯 UNIFIED ASSIGNMENTS: Every conversation needs a project (1:1 relationship)
-        // If no project provided, create one automatically
-        if (!projectId) {
-          projectId = await ctx.db.insert("projects", {
-            userId: args.userId,
-            name: args.title,
-            description: "", // Will be filled by first message
-            status: "fresh", // New status for projects just created
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-            // conversationId will be set after conversation is created (below)
-          });
-          
-          console.log(`[createConversation] Created project ${projectId} for new conversation`);
-        }
-        
-        // Create conversation linked to project
-        const conversationId = await ctx.db.insert("conversations", {
-          userId: args.userId,
-          title: args.title,
-          messages: args.messages || [],
-          messageCount: args.messages?.length || 0,
-          lastMessageAt: args.messages && args.messages.length > 0 ? args.messages[args.messages.length - 1].timestamp : undefined,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          starred: false,
-          // Always link to project (1:1 relationship)
-          projectId: projectId,
-          widgetId: args.widgetId,
-          widgetOutputId: args.widgetOutputId,
-          conversationType: args.conversationType || "project_scoped", // Default to project_scoped
-        });
-        
-        // Update project with conversationId (bidirectional link)
-        await ctx.db.patch(projectId, {
-          conversationId: conversationId,
-          updatedAt: Date.now(),
-        });
-
-        console.log(`[createConversation] Created conversation ${conversationId} linked to project ${projectId}`);
-
-        // Create cognitive field for conversation (per-conversation intelligence)
-        // Use mutation to leverage validators - no hardcoded structure
-        try {
-          const currentTime = Date.now();
-          await ctx.runMutation(api.cognitiveMutations.createCognitiveField, {
-            userId: args.userId,
-            conversationId: conversationId as string,
-            projectId: projectId,
-            fieldId: `cf_${conversationId}_${currentTime}`,
-            sourceShardIds: [],
-            sourceStardustIds: [],
-            coreField: {},
-            semanticMetadata: {},
-            transparencyLayer: {}
-          });
-          
-          console.log(`[createConversation] Created cognitive field for conversation ${conversationId}`);
-        } catch (cfError) {
-          // Log error but don't block conversation creation
-          console.warn(`[createConversation] Failed to create cognitive field: ${cfError instanceof Error ? cfError.message : 'Unknown error'}`);
-        }
-
-        // Note: Embeddings are generated automatically by the backend after conversation is stored
-
-        return conversationId;
-      } catch (error) {
-        console.error('Create conversation mutation error:', error);
-        console.error('Create conversation mutation error details:', {
-          errorMessage: error instanceof Error ? error.message : 'Unknown error',
-          errorStack: error instanceof Error ? error.stack : 'No stack',
-          userId: args.userId,
-          title: args.title,
-          messageCount: args.messages?.length || 0
-        });
-        throw new Error(`Failed to create conversation: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
+      // Delegate to the atomic initialization
+      return await ctx.runMutation(api.chatMutations.initializeConversation, {
+        userId: args.userId,
+        title: args.title,
+        messages: args.messages,
+        widgetId: args.widgetId,
+        widgetOutputId: args.widgetOutputId,
+      });
     },
   });
   

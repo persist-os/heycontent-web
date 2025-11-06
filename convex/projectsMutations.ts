@@ -52,6 +52,8 @@ export const createProject = mutation({
     const now = Date.now();
     
     try {
+      // NOTE: Projects should ONLY be created via initializeConversation
+      // This mutation is kept for backward compatibility and special cases only
       const projectId = await ctx.db.insert("projects", {
         userId: args.userId,
         name: sanitizedName,
@@ -64,7 +66,7 @@ export const createProject = mutation({
         shardIds: args.shardIds || [],
         stardustIds: [],
         
-        // No fingerprint initially - created during discovery
+        // No fingerprint - should be created via initializeConversation
         fingerprintId: undefined,
         
         // Budget tracking (placeholders - ON HOLD for usage tracking)

@@ -20,9 +20,11 @@ import { FloatingWidgetCard } from './FloatingWidgetCard'
 import { ArtifactCard } from './ArtifactCard'
 import { ProjectFingerprint } from './ProjectFingerprint'
 import { ProjectControlPanel } from '../ProjectControlPanel'
+import { SpawnWidgetDialog } from './SpawnWidgetDialog'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { T } from '@/components/translation/T'
 import { deriveFamilyStatus, type FamilyStatus } from '@/app/types/family-status'
+import { Sparkles } from 'lucide-react'
 
 interface ConstellationCanvasProps {
   widgets: WidgetConfig[]
@@ -100,6 +102,9 @@ export function ConstellationCanvas({
     width: typeof window !== 'undefined' ? window.innerWidth : 1200,
     height: typeof window !== 'undefined' ? window.innerHeight : 800
   })
+  
+  // Spawn widget dialog state
+  const [isSpawnDialogOpen, setIsSpawnDialogOpen] = useState(false)
   
   // Handle content card click - delegate to parent (deprecated)
   const handleContentOpen = useCallback((id: string, type: string) => {
@@ -334,13 +339,36 @@ export function ConstellationCanvas({
         </div>
       </div>
 
-      {/* Project Control Panel - Top Right */}
-      <div className="absolute top-4 right-4 z-10">
+      {/* Project Control Panel and Spawn Widget Button - Top Right */}
+      <div className="absolute top-4 right-4 z-10 flex items-start gap-3">
+        {/* Spawn Widget Button */}
+        <button
+          onClick={() => setIsSpawnDialogOpen(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground backdrop-blur-lg border border-primary/20 rounded-xl hover:shadow-lg hover:shadow-primary/20 transition-all duration-200"
+          title="Spawn Widget Family"
+        >
+          <Sparkles className="w-4 h-4" />
+          <span className="text-sm font-medium">
+            <T context="constellation.button.spawn_widget">Spawn Widget</T>
+          </span>
+        </button>
+        
         <ProjectControlPanel
           projectId={projectId}
           userId={userId || ''}
         />
       </div>
+      
+      {/* Spawn Widget Dialog */}
+      <SpawnWidgetDialog
+        projectId={projectId}
+        isOpen={isSpawnDialogOpen}
+        onClose={() => setIsSpawnDialogOpen(false)}
+        onSuccess={(widgetsId) => {
+          console.log('[ConstellationCanvas] Widget generated:', widgetsId)
+          // Widgets will auto-refresh via Convex reactivity
+        }}
+      />
 
       {/* Navigation Controls - Bottom Left */}
       <ConstellationControls

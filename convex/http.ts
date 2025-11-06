@@ -109,6 +109,48 @@ app.get("/api/users/lookup/subscription/:subscriptionId", async (c) => {
 // Persona system has been deprecated and removed
 
 // Conversations
+
+// 🎯 ATOMIC INITIALIZATION: Create Project + Conversation + Fingerprint + Cognitive Field
+app.post("/api/users/:id/initialize_conversation", async (c) => {
+  try {
+    const ctx = c.env;
+    const userId = c.req.param("id");
+    const { title, messages, widgetId, widgetOutputId } = await c.req.json();
+    
+    // Validate required fields
+    if (!title || !messages || !Array.isArray(messages)) {
+      return c.json({ 
+        success: false, 
+        error: "title and messages are required" 
+      }, 400);
+    }
+    
+    // Add timestamps to messages if they don't have them
+    const messagesWithTimestamps = messages.map((message: any) => ({
+      ...message,
+      timestamp: message.timestamp || Date.now(),
+    }));
+    
+    const conversationId = await ctx.runMutation(api.chatMutations.initializeConversation, {
+      userId,
+      title,
+      messages: messagesWithTimestamps,
+      widgetId,
+      widgetOutputId,
+    });
+    
+    return c.json({ success: true, data: conversationId });
+  } catch (error) {
+    console.error('[initialize_conversation] Error:', error);
+    return c.json({ 
+      success: false, 
+      error: `Initialize conversation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      data: null 
+    }, 500);
+  }
+});
+
+// @deprecated Use initialize_conversation instead
 app.post("/api/users/:id/create_conversation", async (c) => {
   try {
     const ctx = c.env;
