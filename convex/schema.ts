@@ -64,6 +64,7 @@ import { messageSchemaFields } from "./types/message";
 import { noteSchemaFields } from "./types/note";
 import { conversationSummarySchemaFields } from "./types/conversationSummary";
 import { sharedNoteSchemaFields } from "./types/sharedNote";
+import { a2aNoteSchemaFields } from "./types/a2aNote";
 
 // Intelligence System
 import { crystalIntelligenceSchemaFields } from "./types/crystalIntelligence";
@@ -172,6 +173,13 @@ export default defineSchema({
   .index("by_shared_user", ["sharedWithUserId"])
   .index("by_owner", ["ownerId"])
   .index("by_note_user", ["noteId", "sharedWithUserId"]),
+
+  // A2A (Agent-to-Agent) Notes - for agent network communication
+  a2a_notes: defineTable(a2aNoteSchemaFields)
+  .index("by_agent", ["agentId"])
+  .index("by_conversation", ["conversationId"])
+  .index("by_project", ["projectId"])
+  .index("by_created", ["createdAt"]),
 
   // Projects
   // ============================================================================

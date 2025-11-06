@@ -5476,6 +5476,64 @@ app.post("/api/cognative/getByConversation", async (c) => {
 });
 
 // ============================================================================
+// A2A (AGENT-TO-AGENT) NOTES
+// ============================================================================
+
+/**
+ * Store A2A note for agent network communication
+ */
+app.post("/api/a2a/store", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { agentId, report, conversationId, projectId } = body;
+    
+    // Build args - only include optional fields if they have values
+    const args: any = {
+      agentId,
+      report,
+      createdAt: Date.now()
+    };
+    
+    if (conversationId) args.conversationId = conversationId;
+    if (projectId) args.projectId = projectId;
+    
+    const noteId = await c.env.runMutation(internal.a2aMutations.storeA2ANote, args);
+    
+    return c.json({ success: true, data: noteId });
+  } catch (error: any) {
+    console.error("[A2A_STORE] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to store A2A note"
+    }, 500);
+  }
+});
+
+/**
+ * Get latest A2A notes for context
+ */
+app.post("/api/a2a/latest", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { conversationId, projectId, limit = 5 } = body;
+    
+    const notes = await c.env.runQuery(internal.a2aQueries.getLatestA2ANotes, {
+      conversationId,
+      projectId,
+      limit
+    });
+    
+    return c.json({ success: true, data: notes });
+  } catch (error: any) {
+    console.error("[A2A_LATEST] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get A2A notes"
+    }, 500);
+  }
+});
+
+// ============================================================================
 // CONVERGENCE PRESET CONFIGS
 // ============================================================================
 

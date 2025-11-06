@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { UniversalApiTester } from './UniversalApiTester';
 import { IntelligenceTestPanel } from './IntelligenceTestPanel';
 import { ArtifactTestingGround } from './ArtifactTestingGround';
-import { Zap, Brain, Boxes, Settings } from 'lucide-react';
+import { MultiAgentTestPanel } from './MultiAgentTestPanel';
+import { Zap, Brain, Boxes, Settings, Users } from 'lucide-react';
 
 export function TestingHubSection() {
   const [activeTestTab, setActiveTestTab] = useState('api-tester');
@@ -22,7 +23,7 @@ export function TestingHubSection() {
       </div>
 
       <Tabs value={activeTestTab} onValueChange={setActiveTestTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="api-tester" className="gap-2">
             <Zap className="h-4 w-4" />
             API Tester
@@ -30,6 +31,10 @@ export function TestingHubSection() {
           <TabsTrigger value="intelligence" className="gap-2">
             <Brain className="h-4 w-4" />
             Intelligence
+          </TabsTrigger>
+          <TabsTrigger value="multi-agent" className="gap-2">
+            <Users className="h-4 w-4" />
+            Multi-Agent
           </TabsTrigger>
           <TabsTrigger value="artifacts" className="gap-2">
             <Boxes className="h-4 w-4" />
@@ -71,6 +76,22 @@ export function TestingHubSection() {
           </Card>
           
           <IntelligenceTestPanel />
+        </TabsContent>
+
+        <TabsContent value="multi-agent" className="space-y-4">
+          <Card className="border-blue-500/30 bg-gradient-to-br from-blue-500/5 to-background">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <CardTitle>Multi-Agent Coordination Testing</CardTitle>
+              </div>
+              <CardDescription>
+                Test widget families with multi-agent execution, dependency graphs, and specialist spawning
+              </CardDescription>
+            </CardHeader>
+          </Card>
+          
+          <MultiAgentTestPanel />
         </TabsContent>
 
         <TabsContent value="artifacts" className="space-y-4">

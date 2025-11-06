@@ -10,6 +10,8 @@
 
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQuery } from 'convex/react'
+import { api } from '../../../../../convex/_generated/api'
 import { MarkdownNotepad } from '../components/notepad/MarkdownNotepad'
 import { useResizablePanes } from '../hooks/useResizablePanes'
 import { ContextIndicator } from '../components/ContextIndicator'
@@ -21,6 +23,7 @@ import { useConversationState } from '../hooks/useConversationState'
 import { useOptimizedAuth } from '../components/notepad/hooks/useOptimizedAuth'
 import { NotepadProvider, useNotepadContext } from '../contexts/NotepadContext'
 import { ThreadSidebar } from '../components/ThreadSidebar'
+import { ArtifactRenderer } from '@/components/artifacts/ArtifactRenderer'
 
 // =============================================================================
 // PANEL COMPONENTS
@@ -60,6 +63,49 @@ const NotepadPanel = React.memo<{
 
 NotepadPanel.displayName = 'NotepadPanel'
 
+const ArtifactPanel = React.memo<{
+  projectId?: string
+  userId?: string
+}>(({ projectId, userId }) => {
+  // Fetch artifacts for project
+  const artifacts = useQuery(
+    api.widgetOutputsQueries.getProjectArtifacts,
+    projectId && userId ? { projectId, userId } : "skip"
+  )
+  
+  if (!artifacts || artifacts.length === 0) {
+    return (
+      <div className="h-full flex items-center justify-center p-6">
+        <div className="text-center text-muted-foreground">
+          <p className="text-lg">No artifacts yet</p>
+          <p className="text-sm mt-2">Artifacts will appear here as widgets work in the background</p>
+        </div>
+      </div>
+    )
+  }
+  
+  return (
+    <div className="h-full overflow-y-auto p-4 bg-background">
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold mb-4 text-foreground">Project Artifacts ({artifacts.length})</h3>
+        {artifacts.map((artifact: any) => (
+          <ArtifactRenderer 
+            key={artifact._id}
+            artifact={artifact}
+            editable={true}
+            onUpdate={async (updated: any) => {
+              // TODO: Wire up artifact updates through API
+              console.log('Artifact update:', updated)
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  )
+})
+
+ArtifactPanel.displayName = 'ArtifactPanel'
+
 // =============================================================================
 // MAIN COMPOSITION
 // =============================================================================
@@ -93,6 +139,9 @@ function FullThinkingLabInternal({
   
   // Sidebar state
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
+  
+  // Right panel mode (notepad or artifacts)
+  const [rightPanelMode, setRightPanelMode] = useState<'notepad' | 'artifacts'>('notepad')
   
   // Use the notepad context
   const notepadContext = useNotepadContext()
@@ -249,14 +298,46 @@ function FullThinkingLabInternal({
             </div>
           </div>
 
-          {/* Notepad Panel */}
+          {/* Right Panel (Notepad or Artifacts) */}
           <div style={resizable.styles.rightPanelStyle} className="flex flex-col h-full overflow-hidden">
-            <NotepadPanel
-              noteId={noteId}
-              quotedContent={quotedContent}
-              onClearQuoted={clearQuotedContent}
-              onClose={handleNotepadClose}
-            />
+            {/* Panel Mode Toggle */}
+            <div className="border-b border-border/20 p-2 flex gap-2 bg-card/50 backdrop-blur-sm">
+              <button
+                onClick={() => setRightPanelMode('notepad')}
+                className={`px-3 py-1 rounded text-sm transition-colors ${
+                  rightPanelMode === 'notepad'
+                    ? 'bg-primary text-primary-foreground font-semibold'
+                    : 'hover:bg-accent text-muted-foreground'
+                }`}
+              >
+                Notepad
+              </button>
+              <button
+                onClick={() => setRightPanelMode('artifacts')}
+                className={`px-3 py-1 rounded text-sm transition-colors ${
+                  rightPanelMode === 'artifacts'
+                    ? 'bg-primary text-primary-foreground font-semibold'
+                    : 'hover:bg-accent text-muted-foreground'
+                }`}
+              >
+                Artifacts
+              </button>
+            </div>
+            
+            {/* Conditional Panel Rendering */}
+            {rightPanelMode === 'notepad' ? (
+              <NotepadPanel
+                noteId={noteId}
+                quotedContent={quotedContent}
+                onClearQuoted={clearQuotedContent}
+                onClose={handleNotepadClose}
+              />
+            ) : (
+              <ArtifactPanel
+                projectId={projectId}
+                userId={userId}
+              />
+            )}
           </div>
         </div>
       </div>

@@ -13,6 +13,8 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as a2aMutations from "../a2aMutations.js";
+import type * as a2aQueries from "../a2aQueries.js";
 import type * as agnoRunEvents from "../agnoRunEvents.js";
 import type * as ambientInsights from "../ambientInsights.js";
 import type * as apiKeys from "../apiKeys.js";
@@ -117,6 +119,7 @@ import type * as subscriptionQueries from "../subscriptionQueries.js";
 import type * as testHelpers from "../testHelpers.js";
 import type * as translationMutations from "../translationMutations.js";
 import type * as translationQueries from "../translationQueries.js";
+import type * as types_a2aNote from "../types/a2aNote.js";
 import type * as types_agnoRunEvent from "../types/agnoRunEvent.js";
 import type * as types_ambientInsight from "../types/ambientInsight.js";
 import type * as types_apiKey from "../types/apiKey.js";
@@ -203,6 +206,8 @@ import type * as widgetsQueries from "../widgetsQueries.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  a2aMutations: typeof a2aMutations;
+  a2aQueries: typeof a2aQueries;
   agnoRunEvents: typeof agnoRunEvents;
   ambientInsights: typeof ambientInsights;
   apiKeys: typeof apiKeys;
@@ -307,6 +312,7 @@ declare const fullApi: ApiFromModules<{
   testHelpers: typeof testHelpers;
   translationMutations: typeof translationMutations;
   translationQueries: typeof translationQueries;
+  "types/a2aNote": typeof types_a2aNote;
   "types/agnoRunEvent": typeof types_agnoRunEvent;
   "types/ambientInsight": typeof types_ambientInsight;
   "types/apiKey": typeof types_apiKey;

@@ -49,12 +49,12 @@ export const queryCognitiveField = query({
         query = query.order(orderBy);
       }
 
-      // Apply limit if specified
-      if (limit) {
-        query = query.take(limit);
-      }
-
-      const results = await query.collect();
+      // Apply limit if specified - use .take() OR .collect(), not both
+      // .take() returns Promise directly, can't chain .collect() after it
+      const results = limit 
+        ? await query.take(limit) 
+        : await query.collect();
+      
       return results;
     } catch (error) {
       console.error("Error querying cognitive fields:", error);
