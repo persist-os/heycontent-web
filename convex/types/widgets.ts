@@ -429,6 +429,164 @@ export const projectWidgetsUpdateValidator = v.object({
 export const widgetValidator = v.object(widgetSchemaFields);
 export const projectWidgetsValidator = v.object(projectWidgetsSchemaFields);
 
+// ============================================================================
+// QUERY ARGUMENT VALIDATORS
+// ============================================================================
+
+// Get widget by Convex ID
+export const getWidgetArgsValidator = v.object({
+  widgetId: v.id("widgets"),
+  userId: v.optional(v.string()),
+});
+
+// Get widget by string ID (legacy)
+export const getWidgetByStringIdArgsValidator = v.object({
+  projectId: v.id("projects"),
+  widget_id: v.string(),
+  userId: v.optional(v.string()),
+});
+
+// Get project widgets
+export const getProjectWidgetsArgsValidator = v.object({
+  projectId: v.id("projects"),
+  userId: v.optional(v.string()),
+  includeArchived: v.optional(v.boolean()),
+});
+
+// Get widgets by category
+export const getWidgetsByCategoryArgsValidator = v.object({
+  projectId: v.id("projects"),
+  category: v.string(),
+  userId: v.optional(v.string()),
+});
+
+// Get user widgets
+export const getUserWidgetsArgsValidator = v.object({
+  userId: v.string(),
+  limit: v.optional(v.number()),
+});
+
+// Get widgets by execution status
+export const getWidgetsByExecutionStatusArgsValidator = v.object({
+  projectId: v.id("projects"),
+  userId: v.string(),
+  status: widgetRunStatusValidator,
+});
+
+// Get widget count
+export const getWidgetCountArgsValidator = v.object({
+  projectId: v.id("projects"),
+  userId: v.optional(v.string()),
+  includeArchived: v.optional(v.boolean()),
+});
+
+// Search widgets
+export const searchWidgetsArgsValidator = v.object({
+  projectId: v.id("projects"),
+  userId: v.string(),
+  searchTerm: v.string(),
+  limit: v.optional(v.number()),
+});
+
+// Get recently updated widgets
+export const getRecentlyUpdatedWidgetsArgsValidator = v.object({
+  userId: v.string(),
+  limit: v.optional(v.number()),
+});
+
+// Project widgets layout queries
+export const getProjectWidgetLayoutArgsValidator = v.object({
+  projectId: v.id("projects"),
+  userId: v.optional(v.string()),
+});
+
+export const getProjectWidgetsByIdArgsValidator = v.object({
+  widgetsId: v.id("project_widgets"),
+  userId: v.optional(v.string()),
+});
+
+export const getProjectWidgetsByProjectArgsValidator = v.object({
+  projectId: v.id("projects"),
+  userId: v.optional(v.string()),
+});
+
+export const getWidgetByIdArgsValidator = v.object({
+  projectId: v.id("projects"),
+  widgetId: v.string(),
+  userId: v.optional(v.string()),
+});
+
+export const getProjectWidgetsSummaryArgsValidator = v.object({
+  projectId: v.id("projects"),
+  userId: v.optional(v.string()),
+});
+
+export const hasWidgetsArgsValidator = v.object({
+  projectId: v.id("projects"),
+  userId: v.optional(v.string()),
+});
+
+// ============================================================================
+// MUTATION ARGUMENT VALIDATORS
+// ============================================================================
+
+// Batch create widgets
+export const batchCreateWidgetsArgsValidator = v.object({
+  projectId: v.id("projects"),
+  fingerprintId: v.any(),
+  userId: v.string(),
+  widgets: v.array(widgetBatchValidator),
+});
+
+// Update widget
+export const updateWidgetArgsValidator = v.object({
+  widgetId: v.id("widgets"),
+  userId: v.string(),
+  updates: widgetUpdateValidator,
+});
+
+// Delete widget
+export const deleteWidgetArgsValidator = v.object({
+  widgetId: v.id("widgets"),
+  userId: v.string(),
+  hardDelete: v.optional(v.boolean()),
+});
+
+// Delete project widgets
+export const deleteProjectWidgetsArgsValidator = v.object({
+  projectId: v.id("projects"),
+  userId: v.string(),
+  hardDelete: v.optional(v.boolean()),
+});
+
+// Update widget execution
+export const updateWidgetExecutionArgsValidator = v.object({
+  widgetId: v.id("widgets"),
+  userId: v.string(),
+  status: widgetRunStatusValidator,
+});
+
+// Update widget layout
+export const updateWidgetLayoutArgsValidator = v.object({
+  projectId: v.id("projects"),
+  userId: v.string(),
+  updates: projectWidgetsUpdateValidator,
+});
+
+// Project widget mutations (for backward compatibility)
+export const updateProjectWidgetArgsValidator = v.object({
+  projectId: v.id("projects"),
+  userId: v.string(),
+  widgetId: v.id("widgets"),
+  updates: widgetUpdateValidator,
+});
+
+export const deleteProjectWidgetArgsValidator = v.object({
+  projectId: v.id("projects"),
+  userId: v.string(),
+  widgetId: v.id("widgets"),
+});
+
 // Type exports
 // ✅ Updated to match widgetStatusValidator with all execution statuses
 export type WidgetStatus = 

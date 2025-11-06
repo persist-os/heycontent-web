@@ -4,9 +4,11 @@ import { Id } from "./_generated/dataModel";
 import { api } from "./_generated/api";
 import {
   widgetCreateValidator,
-  widgetBatchValidator,
-  widgetUpdateValidator,
-  widgetRunStatusValidator
+  batchCreateWidgetsArgsValidator,
+  updateWidgetArgsValidator,
+  deleteWidgetArgsValidator,
+  deleteProjectWidgetsArgsValidator,
+  updateWidgetExecutionArgsValidator,
 } from "./types/widgets";
 
 /**
@@ -60,7 +62,7 @@ export const createWidget = mutation({
       shareable: args.shareable,
       lastRunAt: undefined,
       lastRunStatus: undefined,
-      status: "pending",  // ✅ Changed from "active" to "pending" so decision engine will execute
+      status: "active",  // ✅ Widgets are active immediately (decision engine removed)
       createdAt: now,
       updatedAt: now,
     });
@@ -78,12 +80,7 @@ export const createWidget = mutation({
  * Used by backend widget generation
  */
 export const batchCreateWidgets = mutation({
-  args: {
-    projectId: v.id("projects"),
-    fingerprintId: v.any(),
-    userId: v.string(),
-    widgets: v.array(widgetBatchValidator),
-  },
+  args: batchCreateWidgetsArgsValidator,
   returns: v.object({
     success: v.boolean(),
     widgetIds: v.array(v.id("widgets")),
@@ -128,7 +125,7 @@ export const batchCreateWidgets = mutation({
         dependencyHints: widget.dependencyHints,
         executionProfile: widget.executionProfile,
         workflowStage: widget.workflowStage,
-        status: "pending",  // ✅ Changed from "active" to "pending" so decision engine will execute
+        status: "active",  // ✅ Widgets are active immediately (decision engine removed)
         createdAt: now,
         updatedAt: now,
       });
@@ -148,11 +145,7 @@ export const batchCreateWidgets = mutation({
  * Much more efficient than updating array elements
  */
 export const updateWidget = mutation({
-  args: {
-    widgetId: v.id("widgets"),
-    userId: v.string(),
-    updates: widgetUpdateValidator,
-  },
+  args: updateWidgetArgsValidator,
   returns: v.object({
     success: v.boolean(),
   }),
@@ -195,11 +188,7 @@ export const updateWidget = mutation({
  * Delete a single widget (soft delete by setting status)
  */
 export const deleteWidget = mutation({
-  args: {
-    widgetId: v.id("widgets"),
-    userId: v.string(),
-    hardDelete: v.optional(v.boolean()),
-  },
+  args: deleteWidgetArgsValidator,
   returns: v.object({
     success: v.boolean(),
   }),
@@ -237,11 +226,7 @@ export const deleteWidget = mutation({
  * Used when deleting a project or regenerating widgets
  */
 export const deleteProjectWidgets = mutation({
-  args: {
-    projectId: v.id("projects"),
-    userId: v.string(),
-    hardDelete: v.optional(v.boolean()),
-  },
+  args: deleteProjectWidgetsArgsValidator,
   returns: v.object({
     success: v.boolean(),
     deletedCount: v.number(),
@@ -290,11 +275,7 @@ export const deleteProjectWidgets = mutation({
  * Used when widgets are run by backend
  */
 export const updateWidgetExecution = mutation({
-  args: {
-    widgetId: v.id("widgets"),
-    userId: v.string(),
-    status: widgetRunStatusValidator,
-  },
+  args: updateWidgetExecutionArgsValidator,
   returns: v.object({
     success: v.boolean(),
   }),

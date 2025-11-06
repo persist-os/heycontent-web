@@ -1,5 +1,13 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
+import {
+  getProjectWidgetLayoutArgsValidator,
+  getProjectWidgetsByIdArgsValidator,
+  getProjectWidgetsByProjectArgsValidator,
+  getWidgetByIdArgsValidator,
+  getProjectWidgetsSummaryArgsValidator,
+  hasWidgetsArgsValidator,
+} from "./types/widgets";
 
 /**
  * Project Widget Layout Queries
@@ -20,10 +28,7 @@ import { query } from "./_generated/server";
  * Get layout configuration only (no individual widgets)
  */
 export const getProjectWidgetLayout = query({
-  args: {
-    projectId: v.id("projects"),
-    userId: v.optional(v.string()),
-  },
+  args: getProjectWidgetLayoutArgsValidator,
   returns: v.union(v.null(), v.any()),
   handler: async (ctx, { projectId, userId }) => {
     // Validate project access if userId provided
@@ -37,8 +42,7 @@ export const getProjectWidgetLayout = query({
     const layout = await ctx.db
       .query("project_widgets")
       .withIndex("by_project", (q) => q.eq("projectId", projectId))
-      .filter((q) => q.eq(q.field("status"), "active"))
-      .first();
+      .first();  // No status filter - show everything
 
     if (!layout) {
       return null;
@@ -64,10 +68,7 @@ export const getProjectWidgetLayout = query({
  * This maintains compatibility with existing code
  */
 export const getProjectWidgets = query({
-  args: {
-    widgetsId: v.id("project_widgets"),
-    userId: v.optional(v.string()),
-  },
+  args: getProjectWidgetsByIdArgsValidator,
   returns: v.union(v.null(), v.any()),
   handler: async (ctx, { widgetsId, userId }) => {
     const layout = await ctx.db.get(widgetsId);
@@ -81,11 +82,10 @@ export const getProjectWidgets = query({
       return null;
     }
 
-    // Get all widgets for this project
+    // Get all widgets for this project (no status filter - show everything)
     const widgets = await ctx.db
       .query("widgets")
       .withIndex("by_project", (q) => q.eq("projectId", layout.projectId))
-      .filter((q) => q.eq(q.field("status"), "active"))
       .collect();
 
     // Sort by position
@@ -113,12 +113,12 @@ export const getProjectWidgets = query({
         shareable: w.shareable,
         lastRunAt: w.lastRunAt,
         lastRunStatus: w.lastRunStatus,
-        // Orchestration metadata
-        input_requirements: w.input_requirements,
-        output_artifacts: w.output_artifacts,
-        dependency_hints: w.dependency_hints,
-        execution_profile: w.execution_profile,
-        workflow_stage: w.workflow_stage,
+        // Orchestration metadata (camelCase to match DB schema)
+        inputRequirements: w.inputRequirements,
+        outputArtifacts: w.outputArtifacts,
+        dependencyHints: w.dependencyHints,
+        executionProfile: w.executionProfile,
+        workflowStage: w.workflowStage,
       })),
     };
   },
@@ -129,10 +129,7 @@ export const getProjectWidgets = query({
  * Primary access pattern for project dashboard
  */
 export const getProjectWidgetsByProject = query({
-  args: {
-    projectId: v.id("projects"),
-    userId: v.optional(v.string()),
-  },
+  args: getProjectWidgetsByProjectArgsValidator,
   returns: v.union(v.null(), v.any()),
   handler: async (ctx, { projectId, userId }) => {
     // Validate project access if userId provided
@@ -147,8 +144,7 @@ export const getProjectWidgetsByProject = query({
     const layout = await ctx.db
       .query("project_widgets")
       .withIndex("by_project", (q) => q.eq("projectId", projectId))
-      .filter((q) => q.eq(q.field("status"), "active"))
-      .first();
+      .first();  // No status filter - show everything
 
     if (!layout) {
       return null;
@@ -159,11 +155,10 @@ export const getProjectWidgetsByProject = query({
       return null;
     }
 
-    // Get all widgets for this project
+    // Get all widgets for this project (no status filter - show everything)
     const widgets = await ctx.db
       .query("widgets")
       .withIndex("by_project", (q) => q.eq("projectId", projectId))
-      .filter((q) => q.eq(q.field("status"), "active"))
       .collect();
 
     // Filter by user if provided
@@ -196,12 +191,12 @@ export const getProjectWidgetsByProject = query({
         shareable: w.shareable,
         lastRunAt: w.lastRunAt,
         lastRunStatus: w.lastRunStatus,
-        // Orchestration metadata
-        input_requirements: w.input_requirements,
-        output_artifacts: w.output_artifacts,
-        dependency_hints: w.dependency_hints,
-        execution_profile: w.execution_profile,
-        workflow_stage: w.workflow_stage,
+        // Orchestration metadata (camelCase to match DB schema)
+        inputRequirements: w.inputRequirements,
+        outputArtifacts: w.outputArtifacts,
+        dependencyHints: w.dependencyHints,
+        executionProfile: w.executionProfile,
+        workflowStage: w.workflowStage,
       })),
     };
   },
@@ -212,11 +207,7 @@ export const getProjectWidgetsByProject = query({
  * Used by: Widget execution, individual widget operations
  */
 export const getWidgetById = query({
-  args: {
-    projectId: v.id("projects"),
-    widgetId: v.string(),
-    userId: v.optional(v.string()),
-  },
+  args: getWidgetByIdArgsValidator,
   returns: v.union(v.null(), v.any()),
   handler: async (ctx, { projectId, widgetId, userId }) => {
     // Validate project access if userId provided
@@ -233,8 +224,7 @@ export const getWidgetById = query({
       .withIndex("by_widget_id", (q) =>
         q.eq("projectId", projectId).eq("widget_id", widgetId)
       )
-      .filter((q) => q.eq(q.field("status"), "active"))
-      .first();
+      .first();  // No status filter - show everything
 
     if (!widget) {
       return null;
@@ -264,12 +254,12 @@ export const getWidgetById = query({
       shareable: widget.shareable,
       lastRunAt: widget.lastRunAt,
       lastRunStatus: widget.lastRunStatus,
-      // Orchestration metadata
-      input_requirements: widget.input_requirements,
-      output_artifacts: widget.output_artifacts,
-      dependency_hints: widget.dependency_hints,
-      execution_profile: widget.execution_profile,
-      workflow_stage: widget.workflow_stage,
+      // Orchestration metadata (camelCase to match DB schema)
+      inputRequirements: widget.inputRequirements,
+      outputArtifacts: widget.outputArtifacts,
+      dependencyHints: widget.dependencyHints,
+      executionProfile: widget.executionProfile,
+      workflowStage: widget.workflowStage,
     };
   },
 });
@@ -283,10 +273,7 @@ export const getWidgetById = query({
  * More efficient than returning full widget data
  */
 export const getProjectWidgetsSummary = query({
-  args: {
-    projectId: v.id("projects"),
-    userId: v.optional(v.string()),
-  },
+  args: getProjectWidgetsSummaryArgsValidator,
   returns: v.union(
     v.null(),
     v.object({
@@ -308,8 +295,7 @@ export const getProjectWidgetsSummary = query({
     const layout = await ctx.db
       .query("project_widgets")
       .withIndex("by_project", (q) => q.eq("projectId", projectId))
-      .filter((q) => q.eq(q.field("status"), "active"))
-      .first();
+      .first();  // No status filter - show everything
 
     if (!layout) {
       return null;
@@ -320,11 +306,10 @@ export const getProjectWidgetsSummary = query({
       return null;
     }
 
-    // Get widget IDs only
+    // Get widget IDs only (no status filter - show everything)
     const widgets = await ctx.db
       .query("widgets")
       .withIndex("by_project", (q) => q.eq("projectId", projectId))
-      .filter((q) => q.eq(q.field("status"), "active"))
       .collect();
 
     const userWidgets = userId 
@@ -343,10 +328,7 @@ export const getProjectWidgetsSummary = query({
  * Check if project has widgets configured
  */
 export const hasWidgets = query({
-  args: {
-    projectId: v.id("projects"),
-    userId: v.optional(v.string()),
-  },
+  args: hasWidgetsArgsValidator,
   returns: v.boolean(),
   handler: async (ctx, { projectId, userId }) => {
     // Validate project access if userId provided
@@ -361,8 +343,7 @@ export const hasWidgets = query({
     const layout = await ctx.db
       .query("project_widgets")
       .withIndex("by_project", (q) => q.eq("projectId", projectId))
-      .filter((q) => q.eq(q.field("status"), "active"))
-      .first();
+      .first();  // No status filter - show everything
 
     if (!layout) {
       return false;
@@ -373,11 +354,10 @@ export const hasWidgets = query({
       return false;
     }
 
-    // Check if any widgets exist
+    // Check if any widgets exist (no status filter - show everything)
     const widgets = await ctx.db
       .query("widgets")
       .withIndex("by_project", (q) => q.eq("projectId", projectId))
-      .filter((q) => q.eq(q.field("status"), "active"))
       .first();
 
     return widgets !== null;

@@ -4,8 +4,10 @@ import { Id } from "./_generated/dataModel";
 import { 
   widgetCategoryValidator,
   widgetBatchValidator,
-  widgetUpdateValidator,
-  projectWidgetsUpdateValidator
+  updateWidgetLayoutArgsValidator,
+  deleteProjectWidgetsArgsValidator,
+  updateProjectWidgetArgsValidator,
+  deleteProjectWidgetArgsValidator,
 } from "./types/widgets";
 
 /**
@@ -214,7 +216,7 @@ export const upsertProjectWidgets = mutation({
         projectId: args.projectId,
         fingerprintId: args.fingerprintId,
         userId: args.userId,
-        status: "pending" as const,  // ✅ Changed from "active" to "pending" so decision engine will execute them
+        status: "active" as const,  // ✅ Widgets are active immediately (decision engine removed)
         createdAt: now,
         updatedAt: now,
       };
@@ -235,11 +237,7 @@ export const upsertProjectWidgets = mutation({
  * Update only the layout configuration, not individual widgets
  */
 export const updateWidgetLayout = mutation({
-  args: {
-    projectId: v.id("projects"),
-    userId: v.string(),
-    updates: projectWidgetsUpdateValidator,
-  },
+  args: updateWidgetLayoutArgsValidator,
   returns: v.object({
     success: v.boolean(),
   }),
@@ -287,10 +285,7 @@ export const updateWidgetLayout = mutation({
  * Delete both layout and all individual widgets for a project
  */
 export const deleteProjectWidgets = mutation({
-  args: {
-    projectId: v.id("projects"),
-    userId: v.string(),
-  },
+  args: deleteProjectWidgetsArgsValidator,
   returns: v.object({
     success: v.boolean(),
     deletedWidgetCount: v.number(),
@@ -345,12 +340,7 @@ export const deleteProjectWidgets = mutation({
  * Update a single widget using Convex ID
  */
 export const updateWidget = mutation({
-  args: {
-    projectId: v.id("projects"),
-    userId: v.string(),
-    widgetId: v.id("widgets"), // Use Convex ID
-    updates: widgetUpdateValidator,
-  },
+  args: updateProjectWidgetArgsValidator,
   returns: v.object({
     success: v.boolean(),
   }),
@@ -381,11 +371,7 @@ export const updateWidget = mutation({
  * Delete a single widget using Convex ID
  */
 export const deleteWidget = mutation({
-  args: {
-    projectId: v.id("projects"),
-    userId: v.string(),
-    widgetId: v.id("widgets"), // Use Convex ID
-  },
+  args: deleteProjectWidgetArgsValidator,
   returns: v.object({
     success: v.boolean(),
   }),

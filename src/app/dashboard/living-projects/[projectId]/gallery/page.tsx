@@ -1,9 +1,10 @@
 'use client';
 
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
-import { Suspense } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { UnifiedGalleryView } from '@/components/gallery';
 import { useGalleryItems } from '@/hooks/useGalleryItems';
+import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -11,9 +12,19 @@ function GalleryContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const [userId, setUserId] = useState<string | null>(null);
   
   const projectId = params.projectId as string;
   const initialItemId = searchParams.get('id') as string;
+  
+  // Get current user
+  useEffect(() => {
+    const fetchUserId = async () => {
+      const id = await getCurrentUserId();
+      setUserId(id);
+    };
+    fetchUserId();
+  }, []);
   
   // Fetch ALL items (both artifacts and widgets)
   const { items, isLoading } = useGalleryItems(projectId || '');
@@ -56,6 +67,7 @@ function GalleryContent() {
       initialItemId={initialItemId}
       items={items}
       onClose={handleClose}
+      userId={userId || undefined}
     />
   );
 }

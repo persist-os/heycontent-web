@@ -21,14 +21,16 @@ import { GallerySidebar } from './GallerySidebar'
 import { GalleryNavigation } from './GalleryNavigation'
 import { useGalleryNavigation } from '@/hooks/useGalleryNavigation'
 import { ArtifactRenderer } from '@/components/artifacts/ArtifactRenderer'
+import { WidgetDetailView } from './WidgetDetailView'
 import { cn } from '@/lib/utils'
 
 export function UnifiedGalleryView({
   projectId,
   initialItemId,
   items,
-  onClose
-}: UnifiedGalleryViewProps) {
+  onClose,
+  userId
+}: UnifiedGalleryViewProps & { userId?: string }) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   
   const {
@@ -99,47 +101,16 @@ export function UnifiedGalleryView({
         </div>
       )
     } else {
-      // Widget display with gradient card
-      return (
-        <div className={cn(
-          "rounded-xl p-8 border backdrop-blur-lg",
-          "bg-gradient-to-br from-purple-500/5 via-indigo-500/5 to-purple-500/3",
-          "border-purple-500/20"
-        )}>
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-3xl font-bold text-foreground mb-3">
-                {currentItem.title}
-              </h2>
-              <p className="text-muted-foreground text-lg">
-                {currentItem.description}
-              </p>
-            </div>
-            
-            {/* Widget metadata grid with gradient backgrounds */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className={cn(
-                "p-4 rounded-lg backdrop-blur-sm",
-                "bg-gradient-to-br from-indigo-500/10 to-purple-500/5",
-                "border border-indigo-500/20"
-              )}>
-                <span className="text-sm text-muted-foreground block mb-1">Type</span>
-                <p className="text-foreground font-medium">
-                  {(currentItem as any).widget_type || (currentItem as any).widgetType || 'Widget'}
-                </p>
-              </div>
-              <div className={cn(
-                "p-4 rounded-lg backdrop-blur-sm",
-                "bg-gradient-to-br from-purple-500/10 to-indigo-500/5",
-                "border border-purple-500/20"
-              )}>
-                <span className="text-sm text-muted-foreground block mb-1">Category</span>
-                <p className="text-foreground font-medium">
-                  {(currentItem as any).category || 'Uncategorized'}
-                </p>
-              </div>
-            </div>
-          </div>
+      // Widget display with comprehensive detail view
+      return userId ? (
+        <WidgetDetailView 
+          widget={currentItem} 
+          userId={userId}
+          projectId={projectId}
+        />
+      ) : (
+        <div className="text-center py-8 text-muted-foreground">
+          <p>User authentication required to view widget details</p>
         </div>
       )
     }
