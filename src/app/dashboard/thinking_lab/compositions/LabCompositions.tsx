@@ -23,7 +23,7 @@ import { useConversationState } from '../hooks/useConversationState'
 import { useOptimizedAuth } from '../components/notepad/hooks/useOptimizedAuth'
 import { NotepadProvider, useNotepadContext } from '../contexts/NotepadContext'
 import { ThreadSidebar } from '../components/ThreadSidebar'
-import { ArtifactRenderer } from '@/components/artifacts/ArtifactRenderer'
+import { ArtifactPanel } from '../components/ArtifactPanel'
 
 // =============================================================================
 // PANEL COMPONENTS
@@ -62,49 +62,6 @@ const NotepadPanel = React.memo<{
 })
 
 NotepadPanel.displayName = 'NotepadPanel'
-
-const ArtifactPanel = React.memo<{
-  projectId?: string
-  userId?: string
-}>(({ projectId, userId }) => {
-  // Fetch artifacts for project
-  const artifacts = useQuery(
-    api.widgetOutputsQueries.getProjectArtifacts,
-    projectId && userId ? { projectId, userId } : "skip"
-  )
-  
-  if (!artifacts || artifacts.length === 0) {
-    return (
-      <div className="h-full flex items-center justify-center p-6">
-        <div className="text-center text-muted-foreground">
-          <p className="text-lg">No artifacts yet</p>
-          <p className="text-sm mt-2">Artifacts will appear here as widgets work in the background</p>
-        </div>
-      </div>
-    )
-  }
-  
-  return (
-    <div className="h-full overflow-y-auto p-4 bg-background">
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold mb-4 text-foreground">Project Artifacts ({artifacts.length})</h3>
-        {artifacts.map((artifact: any) => (
-          <ArtifactRenderer 
-            key={artifact._id}
-            artifact={artifact}
-            editable={true}
-            onUpdate={async (updated: any) => {
-              // TODO: Wire up artifact updates through API
-              console.log('Artifact update:', updated)
-            }}
-          />
-        ))}
-      </div>
-    </div>
-  )
-})
-
-ArtifactPanel.displayName = 'ArtifactPanel'
 
 // =============================================================================
 // MAIN COMPOSITION
@@ -335,7 +292,6 @@ function FullThinkingLabInternal({
             ) : (
               <ArtifactPanel
                 projectId={projectId}
-                userId={userId}
               />
             )}
           </div>

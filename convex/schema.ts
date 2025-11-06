@@ -112,6 +112,9 @@ import { contextEnrichmentDecisionSchemaFields } from "./types/contextEnrichment
 // Context Usage Tracking
 import { contextUsageSchemaFields } from "./types/contextUsage";
 
+// Tool Call Tracking
+import { toolCallSchemaFields } from "./types/toolCall";
+
 export default defineSchema({
   // User Info
   users: defineTable(userSchemaFields)
@@ -144,12 +147,7 @@ export default defineSchema({
   .index("by_conversation_role", ["conversationId", "role"])
   .index("by_user", ["userId", "createdAt"])
   .index("by_timestamp", ["timestamp"])
-  .index("by_user_timestamp", ["userId", "timestamp"])
-  .vectorIndex("by_embedding", {  // Semantic search over messages
-    vectorField: "embedding",
-    dimensions: 768,  // Google text-embedding-004
-    filterFields: ["conversationId", "userId"]
-  }),
+  .index("by_user_timestamp", ["userId", "timestamp"]),
 
   // Notes
   notes: defineTable(noteSchemaFields)
@@ -540,6 +538,14 @@ export default defineSchema({
   .index("by_user", ["userId"])
   .index("by_timestamp", ["timestamp"])
   .index("by_output_type", ["outputType"]),
+
+  // Tool Call Tracking
+  tool_call_logs: defineTable(toolCallSchemaFields)
+    .index("by_user", ["userId", "timestamp"])
+    .index("by_session", ["sessionId", "timestamp"])
+    .index("by_agent", ["agentType", "timestamp"])
+    .index("by_run", ["runId"])
+    .index("by_user_agent", ["userId", "agentType", "timestamp"]),
 
   // Stripe Webhook Events Tracking
   webhook_events: defineTable(webhookEventSchemaFields)

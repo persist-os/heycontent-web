@@ -263,36 +263,6 @@ app.post("/api/chat/getRecentMessages", async (c) => {
   }
 });
 
-// Patch message with embedding (for embedding PostAction)
-app.post("/api/chat/patchMessageEmbedding", async (c) => {
-  const ctx = c.env;
-  
-  try {
-    const { messageId, embedding } = await c.req.json();
-    
-    if (!messageId) {
-      return c.json({ error: "Missing required field: messageId" }, 400);
-    }
-    if (!embedding || !Array.isArray(embedding)) {
-      return c.json({ error: "Missing or invalid embedding array" }, 400);
-    }
-    
-    const result = await ctx.runMutation(api.chatMutations.patchMessageEmbedding, {
-      messageId,
-      embedding
-    });
-    
-    return c.json(result);
-  } catch (error: any) {
-    console.error("Failed to patch message embedding:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to patch message embedding",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
 // Get single conversation by ID (for backend toolkit access)
 app.post("/api/chat/conversation/get", async (c) => {
   const ctx = c.env;
@@ -3101,6 +3071,40 @@ app.post("/api/context/update_engagement", async (c) => {
     return c.json(result);
   } catch (error: any) {
     console.error("[ContextUsage] Update engagement error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// ============================================================================
+// TOOL CALL TRACKING
+// ============================================================================
+
+/**
+ * Track tool calls from agent runs
+ */
+app.post("/api/tools/track_calls", async (c) => {
+  const ctx = c.env;
+  try {
+    const args = await c.req.json();
+    const result = await ctx.runMutation(api.toolCallMutations.trackToolCalls, args);
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ToolCallTracking] Track calls error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+/**
+ * Update engagement score for a tool call log
+ */
+app.post("/api/tools/update_engagement", async (c) => {
+  const ctx = c.env;
+  try {
+    const args = await c.req.json();
+    const result = await ctx.runMutation(api.toolCallMutations.updateToolCallEngagement, args);
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ToolCallTracking] Update engagement error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -6268,62 +6272,6 @@ app.post("/api/prompts/queryByTags", async (c) => {
   }
 });
 
-// SEMANTIC MESSAGE SEARCH ROUTE
-/**
- * POST /api/messages/semantic-search
- * Semantic search messages using pre-computed embedding
- * ✅ SECURITY: Requires userId and validates conversation ownership
- * 
- * Backend should:
- * 1. Generate embedding using embedding_service.py
- * 2. Call this endpoint with pre-computed embedding
- * 3. Get semantic search results
- */
-app.post("/api/messages/semantic-search", async (c) => {
-  try {
-    const body = await c.req.json();
-    const { conversationId, userId, queryEmbedding, limit } = body;
-    
-    // Validate required fields
-    if (!conversationId || !userId) {
-      return c.json({ 
-        success: false, 
-        error: "Missing required fields: conversationId, userId" 
-      }, 400);
-    }
-    
-    if (!queryEmbedding || !Array.isArray(queryEmbedding)) {
-      return c.json({ 
-        success: false, 
-        error: "queryEmbedding must be an array of numbers" 
-      }, 400);
-    }
-    
-    // Validate user owns conversation
-    const conversation = await c.env.runQuery(
-      api.chatQueries.getConversationById,
-      { conversationId, userId }
-    );
-    
-    if (!conversation) {
-      return c.json({ 
-        success: false, 
-        error: "Conversation not found or access denied" 
-      }, 401);
-    }
-    
-    // Perform semantic search using internal query
-    const results = await c.env.runQuery(
-      api.messagesQueries.searchMessagesByEmbedding,
-      { conversationId, queryEmbedding, limit }
-    );
-    
-    return c.json({ success: true, data: results });
-  } catch (error: any) {
-    console.error("[http.ts] /api/messages/semantic-search error:", error);
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
+// Export the router (required by Convex)
 const router = new HttpRouterWithHono(app);
 export default router;

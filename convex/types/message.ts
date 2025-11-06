@@ -58,8 +58,9 @@ export const messageSchemaFields = {
   createdAt: v.number(),
   updatedAt: v.number(),
 
-  // Embedding for semantic search (OPTIONAL for backward compatibility)
-  embedding: v.optional(v.array(v.number())),  // 768d Google text-embedding-004
+  // DEPRECATED: Embedding field (now stored in contentEmbeddings table)
+  // Kept for backward compatibility during migration, will be removed
+  // embedding: v.optional(v.array(v.number())),  // 768d Google text-embedding-004
 
   // Suggestions
   suggestions: v.optional(v.any()),

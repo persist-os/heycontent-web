@@ -117,6 +117,7 @@ import type * as subscriptionPlansMutations from "../subscriptionPlansMutations.
 import type * as subscriptionPlansQueries from "../subscriptionPlansQueries.js";
 import type * as subscriptionQueries from "../subscriptionQueries.js";
 import type * as testHelpers from "../testHelpers.js";
+import type * as toolCallMutations from "../toolCallMutations.js";
 import type * as translationMutations from "../translationMutations.js";
 import type * as translationQueries from "../translationQueries.js";
 import type * as types_a2aNote from "../types/a2aNote.js";
@@ -173,6 +174,7 @@ import type * as types_sharedContent from "../types/sharedContent.js";
 import type * as types_sharedNote from "../types/sharedNote.js";
 import type * as types_stardust from "../types/stardust.js";
 import type * as types_subscriptionPlan from "../types/subscriptionPlan.js";
+import type * as types_toolCall from "../types/toolCall.js";
 import type * as types_translation from "../types/translation.js";
 import type * as types_usageEvent from "../types/usageEvent.js";
 import type * as types_user from "../types/user.js";
@@ -310,6 +312,7 @@ declare const fullApi: ApiFromModules<{
   subscriptionPlansQueries: typeof subscriptionPlansQueries;
   subscriptionQueries: typeof subscriptionQueries;
   testHelpers: typeof testHelpers;
+  toolCallMutations: typeof toolCallMutations;
   translationMutations: typeof translationMutations;
   translationQueries: typeof translationQueries;
   "types/a2aNote": typeof types_a2aNote;
@@ -366,6 +369,7 @@ declare const fullApi: ApiFromModules<{
   "types/sharedNote": typeof types_sharedNote;
   "types/stardust": typeof types_stardust;
   "types/subscriptionPlan": typeof types_subscriptionPlan;
+  "types/toolCall": typeof types_toolCall;
   "types/translation": typeof types_translation;
   "types/usageEvent": typeof types_usageEvent;
   "types/user": typeof types_user;
