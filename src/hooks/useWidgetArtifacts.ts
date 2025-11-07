@@ -36,14 +36,17 @@ export function useWidgetArtifacts({
   userId,
   listenTo = []
 }: UseWidgetArtifactsProps) {
-  // Query widget outputs for subscribed widgets
-  // Note: This will work once backend creates outputs with artifact data
-  const outputs = useQuery(
-    api.widgetOutputsQueries.getWidgetOutputData,
+  // Query artifacts for subscribed widgets
+  // Note: We query artifacts for each widget we're listening to
+  // Since Convex doesn't support querying multiple widgetIds at once,
+  // we'll need to query each widget separately or use queryArtifacts with userId
+  // For now, we'll use queryArtifacts with userId and filter client-side
+  const allArtifacts = useQuery(
+    api.artifactQueries.queryArtifacts,
     listenTo.length > 0 && userId
       ? {
           userId,
-          filters: {},  // Will be enhanced to filter by widgetId array
+          filters: {},  // No filters - get all user artifacts, filter client-side
           limit: 100,
           orderBy: 'desc'
         }
@@ -51,39 +54,40 @@ export function useWidgetArtifacts({
   )
 
   /**
-   * Transform outputs into subscribed artifacts
+   * Transform artifacts into subscribed artifacts
    * Filters to only include widgets we're listening to
    */
   const subscribedArtifacts = useMemo(() => {
-    if (!outputs || !Array.isArray(outputs)) {
+    if (!allArtifacts || !Array.isArray(allArtifacts)) {
       return []
     }
 
     const artifacts: SubscribedArtifact[] = []
 
-    for (const output of outputs) {
-      // Check if this output is from a widget we're listening to
-      const outputAny = output as any
+    for (const artifact of allArtifacts) {
+      // Check if this artifact is from a widget we're listening to
+      const artifactAny = artifact as any
       
       if (
-        listenTo.includes(outputAny.widgetId) &&
-        outputAny.artifactType &&
-        outputAny.artifactData
+        artifactAny.widgetId &&
+        listenTo.includes(artifactAny.widgetId) &&
+        artifactAny.type &&
+        artifactAny.data
       ) {
         artifacts.push({
-          widgetId: outputAny.widgetId,
-          outputId: outputAny.outputId,
+          widgetId: artifactAny.widgetId,
+          outputId: artifactAny._id, // Use artifact ID as outputId for compatibility
           artifact: {
-            type: outputAny.artifactType,
-            schema: outputAny.artifactSchema,
-            data: outputAny.artifactData,
-            metadata: {
+            type: artifactAny.type,
+            schema: artifactAny.data_model,
+            data: artifactAny.data,
+            metadata: artifactAny.metadata || {
               version: 1,
-              lastUpdatedBy: outputAny.widgetId,
-              lastUpdatedAt: outputAny.createdAt
+              lastUpdatedBy: artifactAny.userId,
+              lastUpdatedAt: artifactAny.createdAt
             }
           } as Artifact,
-          timestamp: outputAny.createdAt
+          timestamp: artifactAny.createdAt || artifactAny._creationTime
         })
       }
     }
@@ -99,7 +103,7 @@ export function useWidgetArtifacts({
     }
 
     return Array.from(latestByWidget.values())
-  }, [outputs, listenTo])
+  }, [allArtifacts, listenTo])
 
   /**
    * Get artifact from a specific widget
@@ -120,7 +124,7 @@ export function useWidgetArtifacts({
     subscribedArtifacts,
     getArtifactFrom,
     hasAllArtifacts,
-    isLoading: outputs === undefined
+    isLoading: allArtifacts === undefined
   }
 }
 

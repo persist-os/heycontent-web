@@ -16,6 +16,7 @@ function GalleryContent() {
   
   const projectId = params.projectId as string;
   const initialItemId = searchParams.get('id') as string;
+  const conversationId = searchParams.get('conversationId') as string | null;
   
   // Get current user
   useEffect(() => {
@@ -27,15 +28,20 @@ function GalleryContent() {
   }, []);
   
   // Fetch ALL items (both artifacts and widgets)
-  const { items, isLoading } = useGalleryItems(projectId || '');
+  // Supports both projectId and conversationId (like ArtifactPanel pattern)
+  const { items, isLoading, effectiveProjectId } = useGalleryItems({
+    projectId: projectId || undefined,
+    conversationId: conversationId || undefined,
+    userId: userId || undefined
+  });
   
   // Validate parameters
-  if (!initialItemId || !projectId) {
+  if (!initialItemId || (!projectId && !conversationId)) {
     return (
       <div className="container mx-auto py-8">
         <Card className="bg-card/50 backdrop-blur-sm border border-border/40">
           <CardContent className="py-8 text-center">
-            <p className="text-muted-foreground">Invalid gallery parameters. Please provide an item ID.</p>
+            <p className="text-muted-foreground">Invalid gallery parameters. Please provide an item ID and either a project ID or conversation ID.</p>
           </CardContent>
         </Card>
       </div>
@@ -56,14 +62,36 @@ function GalleryContent() {
     );
   }
   
-  // Navigate back to project
+  // Navigate back to project or conversation
   const handleClose = () => {
-    router.push(`/dashboard/living-projects/${projectId}`);
+    if (projectId) {
+      router.push(`/dashboard/living-projects/${projectId}`);
+    } else if (conversationId) {
+      router.push(`/dashboard/thinking_lab?conversationId=${conversationId}`);
+    } else {
+      router.push('/dashboard');
+    }
   };
+  
+  // Use effectiveProjectId from hook (handles conversationId -> projectId resolution)
+  // Fallback to projectId from URL params if available
+  const finalProjectId = effectiveProjectId || projectId || '';
+  
+  if (!finalProjectId) {
+    return (
+      <div className="container mx-auto py-8">
+        <Card className="bg-card/50 backdrop-blur-sm border border-border/40">
+          <CardContent className="py-8 text-center">
+            <p className="text-muted-foreground">Unable to determine project context. Please try again.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
   
   return (
     <UnifiedGalleryView
-      projectId={projectId}
+      projectId={finalProjectId}
       initialItemId={initialItemId}
       items={items}
       onClose={handleClose}

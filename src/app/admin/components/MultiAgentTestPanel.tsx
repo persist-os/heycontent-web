@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { fetchWithApiKey, getCurrentUserId } from '@/app/lib/api-helpers';
-import { Users, Play, Clock, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { ArtifactRenderer } from '@/components/artifacts/ArtifactRenderer';
 
 type AgentExecutionInfo = {
   agent_id: string;
@@ -293,7 +293,7 @@ export function MultiAgentTestPanel() {
                       <div key={idx} className="rounded border bg-card p-3 text-sm">
                         <div className="flex items-center justify-between mb-2">
                           <Badge variant="outline">
-                            {artifact.artifact_type || artifact.artifactType || 'Unknown Type'}
+                            {artifact.type || artifact.artifact_type || artifact.artifactType || 'Unknown Type'}
                           </Badge>
                           {artifact.metadata?.multiAgent && (
                             <Badge variant="outline" className="text-xs">
@@ -301,9 +301,13 @@ export function MultiAgentTestPanel() {
                             </Badge>
                           )}
                         </div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-xs text-muted-foreground mb-2">
                           {artifact.metadata?.action === 'update' ? 'Updated' : 'Created'} •{' '}
                           {artifact.metadata?.familyName || 'Unknown Family'}
+                        </div>
+                        {/* Render artifact using ArtifactRenderer */}
+                        <div className="mt-3">
+                          <ArtifactRenderer artifact={artifact} editable={false} />
                         </div>
                       </div>
                     ))}

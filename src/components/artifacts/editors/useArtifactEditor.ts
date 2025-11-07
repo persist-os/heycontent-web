@@ -34,8 +34,8 @@ export function useArtifactEditor({
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Convex mutation (will be implemented when backend is ready)
-  // const updateArtifact = useMutation(api.widgetOutputsMutations.updateArtifactData)
+  // Convex mutation for updating artifacts
+  const updateArtifact = useMutation(api.artifactMutations.updateArtifact)
 
   /**
    * Update a field in the artifact data
@@ -57,14 +57,14 @@ export function useArtifactEditor({
         onUpdate(newData)
       }
 
-      // TODO: Save to Convex when backend is ready
-      // setIsSaving(true)
-      // await updateArtifact({
-      //   outputId,
-      //   artifactData: newData,
-      //   widgetId
-      // })
-      // setIsSaving(false)
+      // Save to Convex
+      setIsSaving(true)
+      await updateArtifact({
+        artifactId: outputId as any, // outputId is actually artifactId in new system
+        data: newData,
+        updatedBy: widgetId
+      })
+      setIsSaving(false)
 
       setError(null)
       return true

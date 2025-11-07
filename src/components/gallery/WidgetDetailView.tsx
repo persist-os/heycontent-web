@@ -315,7 +315,7 @@ export function WidgetDetailView({ widget, userId, projectId }: WidgetDetailView
                     v{artifact.metadata?.version || '1.0'}
                   </Badge>
                 </div>
-                {artifact.content && (
+                {artifact.data && (
                   <div className="mt-3">
                     <ArtifactRenderer 
                       artifact={artifact} 

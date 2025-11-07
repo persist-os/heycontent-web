@@ -50,6 +50,9 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("constellation")
   const menuRef = useRef<HTMLDivElement>(null)
   
+  // Validate projectId - must be a valid Convex ID (not "project-discovery" or other invalid values)
+  const isValidProjectId = projectId && projectId !== 'project-discovery' && projectId.length > 0
+  
   // Unified panel management (replaces separate widget/content panel state)
   const {
     instances: panelInstances,
@@ -60,8 +63,8 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
 
   // Track project open
   useEffect(() => {
-    if (projectId) trackProjectOpen(projectId)
-  }, [projectId, trackProjectOpen])
+    if (isValidProjectId) trackProjectOpen(projectId)
+  }, [projectId, isValidProjectId, trackProjectOpen])
 
   // Get user ID on component mount
   useEffect(() => {
@@ -76,10 +79,10 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
     getUserId()
   }, [])
 
-  // Data fetching
+  // Data fetching - skip if projectId is invalid
   const project = useQuery(
     api.projectsQueries.getById,
-    projectId && userId ? { 
+    isValidProjectId && userId ? { 
       projectId: projectId as any,
       userId: userId,
       includeContent: true // Include content items for constellation view
@@ -88,22 +91,21 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
 
   const projectWidgets = useQuery(
     api.projectWidgetsQueries.getProjectWidgetsByProject,
-    projectId ? { projectId: projectId as any } : 'skip'
+    isValidProjectId ? { projectId: projectId as any } : 'skip'
   )
 
   // Fetch artifacts for constellation display
   const artifacts = useQuery(
-    api.widgetOutputsQueries.getProjectArtifacts,
-    projectId && userId ? { 
-      projectId: projectId as any,
-      userId: userId 
+    api.artifactQueries.getProjectArtifacts,
+    isValidProjectId ? { 
+      projectId: projectId as any
     } : 'skip'
   )
 
   // Fetch assignment fingerprint
   const assignmentFingerprint = useQuery(
     api.assignmentFingerprintQueries.getByProject,
-    projectId && userId ? { 
+    isValidProjectId && userId ? { 
       projectId: projectId as any,
       userId: userId
     } : 'skip'

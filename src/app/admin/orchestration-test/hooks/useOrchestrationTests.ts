@@ -235,12 +235,11 @@ export function useOrchestrationTests(currentUserId: string | null) {
     addLog('Checking artifacts for collaboration...');
     
     try {
-      const response = await fetchWithApiKey(`/api/widgetOutputs/query`, {
+      const response = await fetchWithApiKey(`/api/artifacts/query`, {
         method: 'POST',
         body: JSON.stringify({
           userId: firebaseUserId,
-          useIndex: 'by_project',
-          indexFields: { projectId: testProjectId }
+          filters: { projectId: testProjectId }
         })
       });
 

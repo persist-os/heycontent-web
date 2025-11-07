@@ -340,9 +340,140 @@ handler: async (ctx, args) => {
         throw new Error("Unauthorized access to conversation");
     }
 
-    // Delete the conversation
-    await ctx.db.delete(conversation._id);
-    return { success: true };
+    const summary: Record<string, any> = { errors: [] };
+    const BATCH_SIZE = 50;
+
+    // Helper for batch deletion with resilient error handling (Gold Standard pattern)
+    async function batchDelete(table: string, getQuery: () => Promise<any[]>) {
+        let deleted = 0;
+        const errors: any[] = [];
+        try {
+            let hasMore = true;
+            while (hasMore) {
+                const items = await getQuery();
+                if (!items || items.length === 0) break;
+                for (const item of items) {
+                    try {
+                        await ctx.db.delete(item._id);
+                        deleted++;
+                    } catch (err) {
+                        errors.push({ id: item._id, error: String(err) });
+                    }
+                }
+                hasMore = items.length === BATCH_SIZE;
+            }
+            summary[table] = { deleted, errors };
+            if (errors.length > 0) summary.errors.push({ table, errors });
+        } catch (err) {
+            // Table or index might not exist - log but continue
+            summary[table] = { deleted, errors: [{ table, error: String(err) }] };
+            summary.errors.push({ table, error: String(err) });
+        }
+    }
+
+    // 1. Delete all messages with conversationId (children of conversation)
+    await batchDelete("messages", () =>
+        ctx.db.query("messages")
+            .withIndex("by_conversation", (q) => q.eq("conversationId", args.conversationId as any))
+            .take(BATCH_SIZE)
+    );
+
+    // 2. Delete cognitive field with conversationId (if exists)
+    const cognitiveField = await ctx.db
+        .query("cognitive_fields")
+        .withIndex("by_conversation", (q) => q.eq("conversationId", args.conversationId as any))
+        .first();
+    if (cognitiveField) {
+        try {
+            await ctx.db.delete(cognitiveField._id);
+            summary["cognitive_fields"] = { deleted: 1, errors: [] };
+        } catch (err) {
+            summary["cognitive_fields"] = { deleted: 0, errors: [{ id: cognitiveField._id, error: String(err) }] };
+            summary.errors.push({ table: "cognitive_fields", errors: [{ id: cognitiveField._id, error: String(err) }] });
+        }
+    }
+
+    // 3. Delete assignment fingerprint with conversationId (if exists)
+    // Query by projectId and filter by conversationId since conversationId is optional
+    if (conversation.projectId) {
+        const fingerprint = await ctx.db
+            .query("assignment_fingerprints")
+            .withIndex("by_project_user", (q) => 
+                q.eq("projectId", conversation.projectId).eq("userId", args.userId)
+            )
+            .first();
+        if (fingerprint && fingerprint.conversationId === args.conversationId) {
+            try {
+                await ctx.db.delete(fingerprint._id);
+                summary["assignment_fingerprints"] = { deleted: 1, errors: [] };
+            } catch (err) {
+                summary["assignment_fingerprints"] = { deleted: 0, errors: [{ id: fingerprint._id, error: String(err) }] };
+                summary.errors.push({ table: "assignment_fingerprints", errors: [{ id: fingerprint._id, error: String(err) }] });
+            }
+        }
+    }
+
+    // 4. Delete artifacts with conversationId (query by projectId and filter by conversationId)
+    if (conversation.projectId) {
+        await batchDelete("artifacts", async () => {
+            const allArtifacts = await ctx.db
+                .query("artifacts")
+                .withIndex("by_project", (q) => q.eq("projectId", conversation.projectId))
+                .take(BATCH_SIZE);
+            return allArtifacts.filter((artifact: any) => artifact.conversationId === args.conversationId);
+        });
+    }
+
+    // 5. Project cleanup: Check if 1:1 relationship exists
+    if (conversation.projectId) {
+        const projectDoc = await ctx.db.get(conversation.projectId as any);
+        if (projectDoc && 'userId' in projectDoc && 'name' in projectDoc) {
+            // Type guard: ensure it's a project document
+            const project = projectDoc as any;
+            
+            // Check if project has only one conversation (1:1 relationship)
+            const projectConversations = await ctx.db
+                .query("conversations")
+                .withIndex("by_project", (q) => q.eq("projectId", conversation.projectId))
+                .collect();
+            
+            if (projectConversations.length === 1) {
+                // Only one conversation - delete project (will cascade via Phase 2)
+                try {
+                    await ctx.db.delete(conversation.projectId as any);
+                    summary["projects"] = { deleted: 1, errors: [] };
+                } catch (err) {
+                    summary["projects"] = { deleted: 0, errors: [{ id: conversation.projectId, error: String(err) }] };
+                    summary.errors.push({ table: "projects", errors: [{ id: conversation.projectId, error: String(err) }] });
+                }
+            } else {
+                // Multiple conversations - update project metadata (remove conversationId from arrays)
+                try {
+                    const conversationIds = (project as any).conversationIds as string[] | undefined;
+                    const updatedConversationIds = (conversationIds || []).filter((id: string) => id !== args.conversationId);
+                    await ctx.db.patch(conversation.projectId as any, {
+                        conversationIds: updatedConversationIds,
+                        updatedAt: Date.now(),
+                    });
+                    summary["projects"] = { updated: true, errors: [] };
+                } catch (err) {
+                    summary["projects"] = { updated: false, errors: [{ id: conversation.projectId, error: String(err) }] };
+                    summary.errors.push({ table: "projects", errors: [{ id: conversation.projectId, error: String(err) }] });
+                }
+            }
+        }
+    }
+
+    // 6. Delete the conversation record LAST
+    try {
+        await ctx.db.delete(conversation._id);
+        summary["conversations"] = { deleted: 1, errors: [] };
+    } catch (err) {
+        summary["conversations"] = { deleted: 0, errors: [{ id: conversation._id, error: String(err) }] };
+        summary.errors.push({ table: "conversations", errors: [{ id: conversation._id, error: String(err) }] });
+    }
+
+    return { success: summary.errors.length === 0, summary };
 },
 });
 

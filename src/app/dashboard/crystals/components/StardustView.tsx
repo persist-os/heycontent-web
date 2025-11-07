@@ -66,17 +66,8 @@ const StardustCard: React.FC<StardustCardProps> = ({ stardust, userId }) => {
   };
 
   const handleManualPromotion = () => {
-    // Navigate to project-discovery with stardust pre-fill
-    const shardIds = (stardust.sourceShardIds || []).join(',');
-    const params = new URLSearchParams({
-      mode: 'create',
-      name: stardust.suggestedProjectName || stardust.name,
-      description: stardust.suggestedProjectDescription || stardust.description || '',
-      stardustId: stardust._id,
-      ...(shardIds && { shardIds })
-    });
-    
-    window.location.href = `/dashboard/living-projects/project-discovery?${params}`;
+    // Navigate to thinking lab to create project
+    window.location.href = `/dashboard/thinking_lab`;
   };
 
   const formatTimestamp = (timestamp: number) => {

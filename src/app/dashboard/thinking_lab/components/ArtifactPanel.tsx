@@ -14,10 +14,13 @@
 
 import React from 'react'
 import { useQuery } from 'convex/react'
+import { useRouter } from 'next/navigation'
 import { api } from '../../../../../convex/_generated/api'
 import { Id } from '../../../../../convex/_generated/dataModel'
 import { ArtifactRenderer } from '@/components/artifacts/ArtifactRenderer'
 import { Artifact } from '@/types/artifacts'
+import { Button } from '@/components/ui/button'
+import { ExternalLink } from 'lucide-react'
 
 interface ArtifactPanelProps {
   projectId?: string
@@ -43,6 +46,8 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   userId,
   className = '' 
 }) => {
+  const router = useRouter()
+  
   // Step 1: If conversationId provided, fetch conversation to get projectId
   const conversation = useQuery(
     api.chatQueries.getConversation,
@@ -113,9 +118,29 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   return (
     <div className={`h-full overflow-y-auto p-4 bg-background ${className}`}>
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold mb-4 text-foreground">
-          Project Artifacts ({artifacts.length})
-        </h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-foreground">
+            Project Artifacts ({artifacts.length})
+          </h3>
+          {effectiveProjectId && artifacts.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                // Open gallery with first artifact, or just open gallery if no artifacts
+                const firstArtifactId = artifacts[0]?._id
+                if (firstArtifactId) {
+                  router.push(`/dashboard/living-projects/${effectiveProjectId}/gallery?id=${firstArtifactId}`)
+                } else {
+                  router.push(`/dashboard/living-projects/${effectiveProjectId}/gallery`)
+                }
+              }}
+            >
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Open in Unified View
+            </Button>
+          )}
+        </div>
         {artifacts.map((artifact: Artifact) => (
           <ArtifactRenderer 
             key={artifact._id}

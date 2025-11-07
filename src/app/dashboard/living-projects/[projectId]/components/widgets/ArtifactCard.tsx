@@ -143,7 +143,7 @@ const getArtifactStyling = (artifactType: string) => {
  * Extract readable preview from artifact data
  */
 const getArtifactPreview = (artifact: any) => {
-  const type = artifact.artifactType
+  const type = artifact.type  // Fixed: use artifact.type instead of artifact.artifactType
   const data = artifact.data
   
   if (!data) return 'No data'
@@ -213,7 +213,7 @@ export function ArtifactCard({
 }: ArtifactCardProps) {
   
   const { width, height } = getCardDimensions(size)
-  const styling = getArtifactStyling(artifact.artifactType)
+  const styling = getArtifactStyling(artifact.type)  // Fixed: use artifact.type instead of artifact.artifactType
   const Icon = styling.icon
   const preview = getArtifactPreview(artifact)
   

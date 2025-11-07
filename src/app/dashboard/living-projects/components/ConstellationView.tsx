@@ -133,35 +133,19 @@ export function ConstellationView() {
     crystalIds?: string[],
     shardIds?: string[]
   ): Promise<string> => {
-    const params = new URLSearchParams({
-      mode: 'create',
-      name,
-      ...(description && { description }),
-      ...(noteIds && noteIds.length > 0 && { noteIds: noteIds.join(',') }),
-      ...(conversationIds && conversationIds.length > 0 && { conversationIds: conversationIds.join(',') }),
-      ...(crystalIds && crystalIds.length > 0 && { crystalIds: crystalIds.join(',') }),
-      ...(shardIds && shardIds.length > 0 && { shardIds: shardIds.join(',') })
-    })
-    router.push(`/dashboard/living-projects/project-discovery?${params}`)
+    // Navigate to thinking lab to create project via chat
+    router.push(`/dashboard/thinking_lab`)
     return 'temp-id' // Return temp ID since we're navigating away
   }, [router])
 
   // Handle clicking on a project - Navigate to project page
   const handleProjectClick = useCallback((project: Project) => {
-    if (project.fingerprintId) {
-      router.push(`/dashboard/living-projects/${project._id}`)
-    } else {
-      router.push(`/dashboard/living-projects/project-discovery?projectId=${project._id}`)
-    }
+    router.push(`/dashboard/living-projects/${project._id}`)
   }, [router])
 
   // Handle double-click on a project - Navigate to project page
   const handleProjectDoubleClick = useCallback((project: Project) => {
-    if (project.fingerprintId) {
-      router.push(`/dashboard/living-projects/${project._id}`)
-    } else {
-      router.push(`/dashboard/living-projects/project-discovery?projectId=${project._id}`)
-    }
+    router.push(`/dashboard/living-projects/${project._id}`)
   }, [router])
 
   // Handle minimap viewport click

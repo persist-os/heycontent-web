@@ -104,22 +104,11 @@ export function useConversationState(
     prevProjectIdRef.current = projectId
   }, [projectId, projectConversation, conversationId, chatId])
 
-  // Fetch widget output data when widgetOutputId is present
-  const widgetOutput = useQuery(
-    api.widgetOutputsQueries.getWidgetOutputData,
-    widgetOutputId && userId ? { 
-      userId,
-      filters: { outputId: widgetOutputId },
-      limit: 1
-    } : 'skip'
-  )
-
-  // Extract opening message from widget output
-  const openingMessage = React.useMemo(() => {
-    if (!widgetOutput) return null
-    const output = Array.isArray(widgetOutput) ? widgetOutput[0] : widgetOutput
-    return output?.openingMessage || null
-  }, [widgetOutput])
+  // NOTE: widgetOutputId is a legacy field from widget outputs table
+  // Artifacts don't have outputId, so we can't query by it
+  // If opening message is needed, it should come from the widget or conversation context
+  // For now, we skip this query since artifacts don't support outputId lookup
+  const openingMessage = null
   
   // Extract messages and suggestions - memoized to prevent unnecessary re-renders
   const messages = React.useMemo(() => conversation?.messages || [], [conversation?.messages])

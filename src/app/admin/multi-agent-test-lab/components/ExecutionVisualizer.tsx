@@ -2,15 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import {
-  Users,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
-  Layers,
-  Box,
-} from 'lucide-react';
+import { ArtifactRenderer } from '@/components/artifacts/ArtifactRenderer';
 
 type ExecutionVisualizerProps = {
   result: any;
@@ -162,7 +154,7 @@ export function ExecutionVisualizer({ result, scenario }: ExecutionVisualizerPro
               <div key={idx} className="p-3 rounded border bg-card">
                 <div className="flex items-center justify-between mb-2">
                   <Badge variant="outline">
-                    {artifact.artifact_type || artifact.artifactType || 'Unknown'}
+                    {artifact.type || artifact.artifact_type || artifact.artifactType || 'Unknown'}
                   </Badge>
                   <div className="flex gap-2">
                     {artifact.metadata?.multiAgent && (
@@ -175,9 +167,13 @@ export function ExecutionVisualizer({ result, scenario }: ExecutionVisualizerPro
                     </Badge>
                   </div>
                 </div>
-                <div className="text-xs text-muted-foreground">
+                <div className="text-xs text-muted-foreground mb-2">
                   Family: {artifact.metadata?.familyName || 'Unknown'} •{' '}
                   Widget: {artifact.metadata?.widgetTitle || 'Unknown'}
+                </div>
+                {/* Render artifact using ArtifactRenderer */}
+                <div className="mt-3">
+                  <ArtifactRenderer artifact={artifact} editable={false} />
                 </div>
               </div>
             ))}

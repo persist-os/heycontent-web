@@ -5,8 +5,8 @@ import { api } from '@/convex/_generated/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ArtifactRenderer } from '@/components/artifacts/ArtifactRenderer'
 import { FileText, Lock, Users, CheckCircle, RefreshCw } from 'lucide-react';
-import { Id } from '@/convex/_generated/dataModel';
 
 interface ArtifactTestingViewProps {
   testProjectId: string;
@@ -17,19 +17,16 @@ interface ArtifactTestingViewProps {
 export function ArtifactTestingView({ testProjectId, currentUserId, onRunArtifactTest }: ArtifactTestingViewProps) {
   // ✅ Auto-query artifacts for the current project
   const artifacts = useQuery(
-    api.widgetOutputsQueries.getWidgetOutputData,
-    testProjectId && currentUserId
+    api.artifactQueries.getProjectArtifacts,
+    testProjectId
       ? {
-          userId: currentUserId,
-          filters: { projectId: testProjectId as Id<"projects"> },
+          projectId: testProjectId as Id<"projects">,
         }
       : 'skip'
   );
 
-  // Filter to only show items with artifact data
-  const artifactOutputs = Array.isArray(artifacts) 
-    ? artifacts.filter(output => output.artifactType && output.artifactData)
-    : [];
+  // Artifacts are already in the correct format
+  const artifactOutputs = Array.isArray(artifacts) ? artifacts : [];
 
   return (
     <Card>
@@ -95,49 +92,34 @@ export function ArtifactTestingView({ testProjectId, currentUserId, onRunArtifac
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <FileText className="h-4 w-4 text-blue-500" />
-                            <span className="font-medium">{artifact.artifactType}</span>
-                            {artifact.userApproved && (
-                              <Badge variant="outline" className="text-xs bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700">
-                                <CheckCircle className="h-3 w-3 mr-1" />
-                                Approved
-                              </Badge>
-                            )}
+                            <span className="font-medium">{artifact.type}</span>
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            Output ID: {artifact.outputId}
+                            Artifact ID: {artifact._id}
                           </div>
                         </div>
                         <Badge variant="outline" className="text-xs">
-                          v{artifact.version || 1}
+                          v{artifact.metadata?.version || 1}
                         </Badge>
                       </div>
 
                       {/* Collaboration Info */}
-                      {artifact.contributors && artifact.contributors.length > 0 && (
+                      {artifact.metadata?.lastUpdatedBy && (
                         <div className="flex items-center gap-2 text-xs">
                           <Users className="h-3 w-3 text-green-500" />
                           <span className="text-muted-foreground">
-                            {artifact.contributors.length} contributor{artifact.contributors.length !== 1 ? 's' : ''}
+                            Last updated by: {artifact.metadata.lastUpdatedBy.substring(0, 8)}...
                           </span>
-                          {artifact.lastContributor && (
-                            <span className="text-muted-foreground">
-                              · Last: {artifact.lastContributor.substring(0, 8)}...
-                            </span>
-                          )}
                         </div>
                       )}
 
-                      {/* Artifact Data Preview */}
-                      {artifact.artifactData && (
-                        <details className="text-xs">
-                          <summary className="cursor-pointer text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
-                            View artifact data
-                          </summary>
-                          <pre className="mt-2 p-2 bg-muted rounded overflow-x-auto text-xs border">
-                            {JSON.stringify(artifact.artifactData, null, 2)}
-                          </pre>
-                        </details>
-                      )}
+                      {/* Artifact Renderer */}
+                      <div className="mt-3">
+                        <ArtifactRenderer 
+                          artifact={artifact} 
+                          editable={false}
+                        />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

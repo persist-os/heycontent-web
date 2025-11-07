@@ -2,12 +2,14 @@
  * UNIFIED GALLERY ITEMS HOOK
  * 
  * Fetches BOTH artifacts AND widgets for a project, merges and sorts them.
+ * Supports querying by conversation OR project (like ArtifactPanel pattern).
  * No type parameter needed - returns all items together.
  * 
  * PATTERN COMPLIANCE:
  * - Uses artifactQueries.getProjectArtifacts for new artifacts table
  * - Uses widgetsQueries.getProjectWidgets for widgets
  * - Merges and sorts by most recent first
+ * - Supports conversationId OR projectId (fetches conversation to get projectId if needed)
  * 
  * CRITICAL: Queries the NEW artifacts table (not widget_outputs)
  */
@@ -19,15 +21,35 @@ import { GalleryItem } from '@/types/gallery'
 import { getCurrentUserIdSync } from '@/app/lib/api-helpers'
 import type { Id } from '@/convex/_generated/dataModel'
 
-export function useGalleryItems(projectId: string) {
-  const userId = getCurrentUserIdSync()
+interface UseGalleryItemsProps {
+  projectId?: string
+  conversationId?: string
+  userId?: string
+}
+
+export function useGalleryItems(props: UseGalleryItemsProps | string) {
+  // Support both old signature (projectId string) and new signature (props object)
+  const projectId = typeof props === 'string' ? props : props.projectId
+  const conversationId = typeof props === 'string' ? undefined : props.conversationId
+  const userId = typeof props === 'string' ? getCurrentUserIdSync() : (props.userId || getCurrentUserIdSync())
   
-  console.log('[useGalleryItems] Hook called with:', { projectId, userId })
+  console.log('[useGalleryItems] Hook called with:', { projectId, conversationId, userId })
   
-  // Fetch BOTH artifacts AND widgets
+  // Step 1: If conversationId provided, fetch conversation to get projectId
+  const conversation = useQuery(
+    api.chatQueries.getConversation,
+    conversationId && userId 
+      ? { conversationId: conversationId as Id<"conversations">, userId }
+      : "skip"
+  )
+
+  // Step 2: Determine effective projectId (from conversation or direct prop)
+  const effectiveProjectId = conversation?.projectId || projectId
+  
+  // Fetch BOTH artifacts AND widgets using effective projectId
   const artifacts = useQuery(
     api.artifactQueries.getProjectArtifacts,
-    projectId ? { projectId: projectId as Id<'projects'> } : 'skip'
+    effectiveProjectId ? { projectId: effectiveProjectId as Id<'projects'> } : 'skip'
   )
   
   console.log('[useGalleryItems] Artifacts query result:', { 
@@ -38,8 +60,8 @@ export function useGalleryItems(projectId: string) {
   
   const widgets = useQuery(
     api.widgetsQueries.getProjectWidgets,
-    userId && projectId ? { 
-      projectId: projectId as Id<'projects'>, 
+    userId && effectiveProjectId ? { 
+      projectId: effectiveProjectId as Id<'projects'>, 
       userId,
       includeArchived: true  // ✅ Show ALL widgets (active, pending, ready, etc.) not just "active"
     } : 'skip'
@@ -49,7 +71,7 @@ export function useGalleryItems(projectId: string) {
     widgets, 
     isLoading: widgets === undefined,
     count: widgets?.length,
-    querySkipped: !userId || !projectId 
+    querySkipped: !userId || !effectiveProjectId 
   })
   
   // Merge and normalize into unified list
@@ -89,10 +111,15 @@ export function useGalleryItems(projectId: string) {
     return merged
   }, [artifacts, widgets])
   
+  // Loading state: waiting for conversation or artifacts/widgets
+  const isLoadingConversation = conversationId && userId && conversation === undefined
+  const isLoadingItems = effectiveProjectId && (artifacts === undefined || widgets === undefined)
+  
   return {
     items: allItems,
-    isLoading: artifacts === undefined || widgets === undefined,
+    isLoading: isLoadingConversation || isLoadingItems,
     isEmpty: allItems.length === 0,
+    effectiveProjectId: effectiveProjectId || undefined,
     error: null // Convex handles errors internally
   }
 }

@@ -3727,16 +3727,16 @@ app.get("/api/artifacts/widget/:widgetId", async (c) => {
 });
 
 /**
- * POST /api/widgetOutputs/query
- * Flexible query endpoint for artifacts (backend compatibility)
- * Maps to artifacts table - supports filtering by projectId, widgetId, outputId (legacy)
+ * POST /api/artifacts/query
+ * Flexible query endpoint for artifacts
+ * Supports filtering by projectId, widgetId
  * 
  * Follows CONVEX_SAVE_ABSOLUTE_LAW patterns:
  * - Returns { success: true, data: [...] } format
  * - Handles errors gracefully
  * - Validates userId for ownership
  */
-app.post("/api/widgetOutputs/query", async (c) => {
+app.post("/api/artifacts/query", async (c) => {
   try {
     const ctx = c.env;
     const { userId, filters, limit, orderBy } = await c.req.json();
@@ -3764,7 +3764,7 @@ app.post("/api/widgetOutputs/query", async (c) => {
     console.error("[WIDGET_OUTPUTS_QUERY] Error:", error);
     return c.json({
       success: false,
-      error: error.message || "Failed to query widget outputs"
+      error: error.message || "Failed to query artifacts"
     }, 500);
   }
 });
