@@ -305,11 +305,6 @@ export const deleteUserAndData = mutation({
       ctx.db.query("project_widgets").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
     
-    // Widget Outputs
-    await batchDelete("widget_outputs", () =>
-      ctx.db.query("widget_outputs").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    
     // Project Fingerprints
     await batchDelete("project_fingerprints", () =>
       ctx.db.query("project_fingerprints").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)

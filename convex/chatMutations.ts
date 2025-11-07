@@ -67,7 +67,7 @@ export const initializeConversation = mutation({
       console.log(`[initializeConversation] ✅ Created assignment fingerprint ${fingerprintId}`);
       
       // 3. Create Conversation (assignment dialogue)
-      const conversationId = await ctx.db.insert("conversations", {
+      const conversationData: any = {
         userId: args.userId,
         title: args.title,
         messages: args.messages || [],
@@ -77,19 +77,27 @@ export const initializeConversation = mutation({
         updatedAt: currentTime,
         starred: false,
         projectId: projectId,
-        widgetId: args.widgetId,
-        widgetOutputId: args.widgetOutputId,
         conversationType: "project_scoped",  // All conversations are assignments
-      });
+      };
+      
+      // Add optional widget context if provided
+      if (args.widgetId) {
+        conversationData.widgetId = args.widgetId;
+      }
+      // Note: widgetOutputId is not stored in conversation schema
+      // It's only used for context during creation
+      
+      const conversationId = await ctx.db.insert("conversations", conversationData);
       
       console.log(`[initializeConversation] ✅ Created conversation ${conversationId}`);
       
       // 4. Create ONE Cognitive Field (shared by BOTH project AND conversation)
+      const fieldId = `cf_unified_${projectId}_${conversationId}_${currentTime}`;
       await ctx.runMutation(api.cognitiveMutations.createCognitiveField, {
         userId: args.userId,
         projectId: projectId,
         conversationId: conversationId,  // Links to BOTH
-        fieldId: `cf_unified_${projectId}_${conversationId}_${currentTime}`,
+        fieldId: fieldId,
         sourceShardIds: [],
         sourceStardustIds: [],
         coreField: {},
@@ -97,7 +105,7 @@ export const initializeConversation = mutation({
         transparencyLayer: {},
       });
       
-      console.log(`[initializeConversation] ✅ Created unified cognitive field`);
+      console.log(`[initializeConversation] ✅ Created unified cognitive field ${fieldId}`);
       
       // 5. Link everything together
       await ctx.db.patch(projectId, {
@@ -107,9 +115,14 @@ export const initializeConversation = mutation({
       });
       
       console.log(`[initializeConversation] 🎉 COMPLETE: All 4 entities created and linked`);
-      console.log(`[initializeConversation] 📊 Project: ${projectId}, Conversation: ${conversationId}, Fingerprint: ${fingerprintId}`);
+      console.log(`[initializeConversation] 📊 Project: ${projectId}, Conversation: ${conversationId}, Fingerprint: ${fingerprintId}, Field: ${fieldId}`);
 
-      return conversationId;
+      return {
+        conversationId,
+        projectId,
+        fingerprintId,
+        cognitiveFieldId: fieldId
+      };
     } catch (error) {
       console.error('[initializeConversation] Failed:', error);
       throw new Error(`Failed to initialize conversation: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -138,13 +151,15 @@ export const createConversation = mutation({
     },
     handler: async (ctx, args) => {
       // Delegate to the atomic initialization
-      return await ctx.runMutation(api.chatMutations.initializeConversation, {
+      const result = await ctx.runMutation(api.chatMutations.initializeConversation, {
         userId: args.userId,
         title: args.title,
         messages: args.messages,
         widgetId: args.widgetId,
         widgetOutputId: args.widgetOutputId,
       });
+      // Return conversationId for backward compatibility
+      return result.conversationId;
     },
   });
   

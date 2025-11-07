@@ -43,6 +43,7 @@ export const insightEntryValidator = v.object({
 
 export const assignmentFingerprintSchemaFields = {
   projectId: v.id("projects"),
+  conversationId: v.optional(v.id("conversations")),
   userId: v.string(),
   
   // NEW: Structured insights array (temporal history)

@@ -62,6 +62,7 @@ export const widgetSchemaFields = {
   // Foreign keys - establish relationships
   projectId: v.id("projects"),
   fingerprintId: v.any(),
+  conversationId: v.optional(v.id("conversations")),
   userId: v.string(),
   
   // Widget identity

@@ -45,6 +45,7 @@ export const artifactSchemaFields = {
   // BACKEND-SET RELATIONSHIPS (Convex IDs)
   projectId: v.id("projects"),
   widgetId: v.optional(v.id("widgets")),    // Optional: project-level artifacts may not be linked to a widget
+  conversationId: v.optional(v.id("conversations")),
   userId: v.string(),                       // Firebase UID (not Convex ID)
   
   // CONVEX AUTO-GENERATED

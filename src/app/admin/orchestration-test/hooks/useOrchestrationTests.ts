@@ -35,7 +35,7 @@ export function useOrchestrationTests(currentUserId: string | null) {
   const [assignmentStatus, setAssignmentStatus] = useState<AssignmentStatus | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
 
-  const createProject = useMutation(api.projectsMutations.createProject);
+  const initializeConversation = useMutation(api.chatMutations.initializeConversation);
   const createFingerprint = useMutation(api.projectFingerprintMutations.create);
 
   const addLog = useCallback((message: string) => {
@@ -65,23 +65,25 @@ export function useOrchestrationTests(currentUserId: string | null) {
     addLog(`Creating test assignment: "${testProjectName}"...`);
     
     try {
-      const newProjectId = await createProject({
+      // Use initializeConversation to create project atomically
+      const result = await initializeConversation({
         userId: currentUserId,
-        name: testProjectName,
-        description: 'Test project for orchestration testing with multiple widgets and dependencies'
+        title: testProjectName,
+        messages: []
       });
 
+      // initializeConversation returns { conversationId, projectId, fingerprintId, cognitiveFieldId }
+      const newProjectId = result.projectId;
+      const fingerprintId = result.fingerprintId;
+
       addLog(`✓ Created project: ${newProjectId}`);
+      addLog(`✓ Created conversation: ${result.conversationId}`);
+      addLog(`✓ Created fingerprint: ${fingerprintId}`);
+      addLog(`✓ Created cognitive field: ${result.cognitiveFieldId}`);
       
-      // Auto-create fingerprint
-      await createFingerprint({
-        projectId: newProjectId,
-        userId: currentUserId,
-        name: testProjectName,
-        description: 'Test project for orchestration testing'
-      });
+      // Note: Fingerprint is already created by initializeConversation
+      // No need to call createFingerprint separately
       
-      addLog(`✓ Created fingerprint for project`);
       updateTestStatus('test1', 'pass', `Created: ${newProjectId}`);
       return newProjectId;
     } catch (error: any) {
@@ -89,7 +91,7 @@ export function useOrchestrationTests(currentUserId: string | null) {
       addLog(`ERROR: ${error.message}`);
       return null;
     }
-  }, [currentUserId, createProject, createFingerprint, updateTestStatus, addLog]);
+  }, [currentUserId, initializeConversation, updateTestStatus, addLog]);
 
   // Test 1.5: Generate Widgets
   const runTest1_5_GenerateWidgets = useCallback(async (testProjectId: string) => {

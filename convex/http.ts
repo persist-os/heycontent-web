@@ -130,7 +130,7 @@ app.post("/api/users/:id/initialize_conversation", async (c) => {
       timestamp: message.timestamp || Date.now(),
     }));
     
-    const conversationId = await ctx.runMutation(api.chatMutations.initializeConversation, {
+    const result = await ctx.runMutation(api.chatMutations.initializeConversation, {
       userId,
       title,
       messages: messagesWithTimestamps,
@@ -138,7 +138,8 @@ app.post("/api/users/:id/initialize_conversation", async (c) => {
       widgetOutputId,
     });
     
-    return c.json({ success: true, data: conversationId });
+    // initializeConversation returns { conversationId, projectId, fingerprintId, cognitiveFieldId }
+    return c.json({ success: true, data: result });
   } catch (error) {
     console.error('[initialize_conversation] Error:', error);
     return c.json({ 
@@ -1178,6 +1179,15 @@ app.post("/api/users/:id/usage/log", async (c) => {
   });
   
   return c.json({ success: true });
+});
+
+// Check if usage event exists (idempotency check)
+app.post("/api/usageEvents/checkUsageEventExists", async (c) => {
+  const ctx = c.env;
+  const { requestId } = await c.req.json();
+  if (!requestId) return c.json({ success: false, error: "Missing requestId" }, 400);
+  const exists = await ctx.runQuery(api.usageEvents.checkUsageEventExists, { requestId });
+  return c.json({ success: true, exists });
 });
 
 // Get usage summary for a user
@@ -3571,71 +3581,6 @@ app.post("/api/assignment-fingerprints/getCurrentPreferences", async (c) => {
   }
 });
 
-// WIDGET OUTPUTS ROUTES - Generic pattern for widget execution outputs
-
-/**
- * POST /api/widgetOutputs/query
- * Generic query endpoint for widget outputs with dynamic filtering
- */
-app.post("/api/widgetOutputs/query", async (c) => {
-  try {
-    const requestBody = await c.req.json();
-    
-    // Validate required fields
-    if (!requestBody.userId) {
-      return c.json({
-        error: "userId is required",
-        success: false
-      }, 400);
-    }
-
-    const result = await c.env.runQuery(api.widgetOutputsQueries.getWidgetOutputData, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    console.error("Widget outputs query error:", error);
-    return c.json({ 
-      error: "Internal server error",
-      message: error.message || "Unknown error"
-    }, 500);
-  }
-});
-
-/**
- * POST /api/widgetOutputs/mutate
- * Batch mutation endpoint for widget outputs (create/update/delete)
- */
-app.post("/api/widgetOutputs/mutate", async (c) => {
-  try {
-    const requestBody = await c.req.json();
-    
-    // Validate operations array
-    if (!Array.isArray(requestBody.operations) || requestBody.operations.length === 0) {
-      return c.json({
-        error: "operations array is required and must not be empty",
-        success: false
-      }, 400);
-    }
-
-    const result = await c.env.runMutation(api.widgetOutputsMutations.batchMutateWidgetOutputs, requestBody);
-    
-    if (result.success) {
-      return c.json({ success: true, data: result });
-    } else {
-      return c.json({
-        success: false,
-        error: "Batch operation partially failed",
-        details: result.results
-      }, 400);
-    }
-  } catch (error: any) {
-    console.error("Widget outputs mutation error:", error);
-    return c.json({ 
-      error: "Internal server error",
-      message: error.message || "Unknown error"
-    }, 500);
-  }
-});
-
 // ARTIFACT ROUTES - Clean artifact storage (replaces widget_outputs for artifacts)
 
 /**
@@ -3739,6 +3684,49 @@ app.get("/api/artifacts/widget/:widgetId", async (c) => {
     return c.json({ 
       error: "Failed to get widget artifacts",
       message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/widgetOutputs/query
+ * Flexible query endpoint for artifacts (backend compatibility)
+ * Maps to artifacts table - supports filtering by projectId, widgetId, outputId (legacy)
+ * 
+ * Follows CONVEX_SAVE_ABSOLUTE_LAW patterns:
+ * - Returns { success: true, data: [...] } format
+ * - Handles errors gracefully
+ * - Validates userId for ownership
+ */
+app.post("/api/widgetOutputs/query", async (c) => {
+  try {
+    const ctx = c.env;
+    const { userId, filters, limit, orderBy } = await c.req.json();
+    
+    if (!userId) {
+      return c.json({
+        success: false,
+        error: "Missing required field: userId"
+      }, 400);
+    }
+    
+    // Build args conditionally (per LAW #7: Optional fields)
+    const args: any = { userId };
+    if (filters) args.filters = filters;
+    if (limit) args.limit = limit;
+    if (orderBy) args.orderBy = orderBy;
+    
+    const artifacts = await ctx.runQuery(api.artifactQueries.queryArtifacts, args);
+    
+    return c.json({
+      success: true,
+      data: artifacts
+    });
+  } catch (error: any) {
+    console.error("[WIDGET_OUTPUTS_QUERY] Error:", error);
+    return c.json({
+      success: false,
+      error: error.message || "Failed to query widget outputs"
     }, 500);
   }
 });

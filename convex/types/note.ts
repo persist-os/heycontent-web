@@ -42,7 +42,6 @@ export const noteSchemaFields = {
   widgetId: v.optional(v.union(v.string(), v.id("widgets"))),  // 🔄 Migration: supports both legacy string and Convex ID
   isWidgetOutput: v.optional(v.boolean()),
   projectId: v.optional(v.id("projects")),
-  widgetOutputId: v.optional(v.string()), // Links to specific widget output
 };
 
 export const noteValidator = v.object(noteSchemaFields);

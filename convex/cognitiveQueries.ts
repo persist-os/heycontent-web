@@ -24,15 +24,33 @@ export const queryCognitiveField = query({
     try {
       let query;
       
-      // Start with base query using by_user index for cognitive_fields table only
+      // Index field mappings: which indexes include userId
+      // CRITICAL: Only filter by userId in index query builder if index includes it
+      const indexesWithUserId = ["by_user", "by_conversation_user", "by_status", "by_created", "by_updated", "by_usage", "by_optimization", "by_archived"];
+      const indexIncludesUserId = useIndex ? indexesWithUserId.includes(useIndex) : false;
+      
+      // Start with base query using specified index or default to by_user
       if (useIndex && indexFields) {
         query = ctx.db.query("cognitive_fields").withIndex(useIndex as any, (q: any) => {
-          let queryBuilder = q.eq("userId", userId);
+          let queryBuilder = q;
+          
+          // Only filter by userId in index query builder if index includes it
+          if (indexIncludesUserId) {
+            queryBuilder = queryBuilder.eq("userId", userId);
+          }
+          
+          // Filter by index fields (these must be part of the index)
           Object.entries(indexFields).forEach(([field, value]) => {
             queryBuilder = queryBuilder.eq(field, value);
           });
+          
           return queryBuilder;
         });
+        
+        // If index doesn't include userId, filter by it after the index query
+        if (!indexIncludesUserId) {
+          query = query.filter((q: any) => q.eq(q.field("userId"), userId));
+        }
       } else {
         query = ctx.db.query("cognitive_fields").withIndex("by_user", (q) => q.eq("userId", userId));
       }

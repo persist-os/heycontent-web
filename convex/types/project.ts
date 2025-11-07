@@ -17,6 +17,9 @@ export const projectSchemaFields = {
   // Primary Conversation (1:1 relationship for Unified Assignments)
   conversationId: v.optional(v.string()),
   
+  // Unified Cognitive Field (1:1 relationship for Unified Assignments)
+  cognitiveFieldId: v.optional(v.id("cognitive_fields")),
+  
   // Content ID Arrays - Enable efficient batch content fetching
   noteIds: v.optional(v.array(v.string())),
   conversationIds: v.optional(v.array(v.string())),

@@ -31,7 +31,6 @@ import { promptSchemaFields } from "./types/prompt";
 
 // Widgets
 import { widgetSchemaFields, projectWidgetsSchemaFields } from "./types/widgets";
-import { widgetOutputSchemaFields } from "./types/widgetOutput";
 
 // Artifacts
 import { artifactSchemaFields } from "./types/artifact";
@@ -135,7 +134,6 @@ export default defineSchema({
   .index("by_creation", ["createdAt"])
   .index("by_user_project", ["userId", "projectId"])
   .index("by_user_widget", ["userId", "widgetId"])
-  .index("by_widget_output", ["widgetOutputId"])
   .index("by_project", ["projectId"])
   .index("by_type", ["conversationType"]),
 
@@ -153,8 +151,7 @@ export default defineSchema({
   .index("by_creation", ["createdAt"])
   .index("by_type", ["type"])
   .index("by_folder", ["folderId"])
-  .index("by_widget", ["widgetId"])
-  .index("by_widget_output", ["widgetOutputId"]),
+  .index("by_widget", ["widgetId"]),
 
   // Folders
   folders: defineTable(folderSchemaFields)
@@ -311,14 +308,6 @@ export default defineSchema({
   .index("by_user", ["userId"])
   .index("by_status", ["status"])
   .index("by_created", ["createdAt"]),
-
-  // Widget Outputs - Generated deliverables from widget execution
-  widget_outputs: defineTable(widgetOutputSchemaFields)
-    .index("by_widget", ["widgetId"])
-    .index("by_project", ["projectId"])
-    .index("by_output_id", ["outputId"])
-    .index("by_rating", ["widgetId", "userRating"])  // For analyzing widget quality
-    .index("by_user", ["userId"]),
 
   // Artifacts - Generated content from families (clean separation from execution tracking)
   artifacts: defineTable(artifactSchemaFields)

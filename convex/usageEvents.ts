@@ -62,6 +62,27 @@ export const logUsageEvent = mutation({
   },
 });
 
+/**
+ * Check if a usage event with the given requestId already exists (idempotency check).
+ * Returns true if exists, false otherwise.
+ * 
+ * BRUTAL IDEMPOTENCY: Prevents duplicate usage logs from retries or recursive calls.
+ */
+export const checkUsageEventExists = query({
+  args: {
+    requestId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Use filter query (no index needed for idempotency check)
+    const existing = await ctx.db
+      .query("usageEvents")
+      .filter((q) => q.eq(q.field("requestId"), args.requestId))
+      .first();
+    
+    return existing !== null;
+  },
+});
+
 export const listUsageEvents = query({
   args: { 
     userId: v.string(), 

@@ -7,7 +7,7 @@
  * - Statistics and monitoring
  */
 
-import { mutation, query } from "./_generated/server";
+import { mutation, query, action } from "./_generated/server";
 import { v } from "convex/values";
 import { 
   jobTypeValidator, 
@@ -502,6 +502,67 @@ export const getAssignmentStatus = query({
       widgets: widgetStatuses,
       artifacts: [], // Frontend queries artifacts separately
     };
+  },
+});
+
+/**
+ * Enqueue job to Redis queue after Convex record creation.
+ * 
+ * Called by frontend after creating job record via mutation.
+ * Completes the atomic job creation pattern: Convex record → Redis enqueue.
+ * 
+ * This action calls the backend HTTP endpoint to enqueue the job to Redis,
+ * allowing workers to pick it up for execution.
+ */
+export const enqueueToRedis = action({
+  args: {
+    jobId: v.string(),
+    jobType: jobTypeValidator,
+    userId: v.string(),
+    payload: v.any(),
+    priority: jobPriorityValidator,
+  },
+  handler: async (ctx, { jobId, jobType, userId, payload, priority }) => {
+    try {
+      const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
+      
+      if (!backendUrl) {
+        throw new Error("BACKEND_URL not configured");
+      }
+      
+      const response = await fetch(`${backendUrl}/api/v1/background-jobs/enqueue`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          jobId,
+          jobType,
+          userId,
+          payload,
+          priority,
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Backend returned ${response.status}: ${errorText}`);
+      }
+      
+      const data = await response.json();
+      
+      return {
+        success: true,
+        jobId: data.jobId,
+        redisMessageId: data.redisMessageId,
+      };
+    } catch (error) {
+      console.error(`[ENQUEUE_TO_REDIS] Failed to enqueue job ${jobId}:`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
   },
 });
 

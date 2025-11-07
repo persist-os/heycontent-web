@@ -24,67 +24,26 @@ import {
  * Used by: Frontend project creation, backend discovery
  * ✅ FOLLOWS CONVEX_SAVE_ABSOLUTE_LAW.md - Uses centralized validator
  */
+/**
+ * @deprecated DEPRECATED - Use initializeConversation instead
+ * 
+ * ⚠️ CRITICAL: This mutation creates INCOMPLETE projects without conversations.
+ * Projects MUST be created atomically with conversations via initializeConversation.
+ * 
+ * This mutation violates LAW IV (Atomicity) and breaks orchestrator functionality.
+ * 
+ * Migration: Replace all createProject() calls with initializeConversation().
+ * The new function creates Project + Conversation + Fingerprint + Cognitive Field atomically.
+ */
 export const createProject = mutation({
   args: projectCreateValidator,
   returns: v.id("projects"),
   handler: async (ctx, args) => {
-    // Validate inputs
-    if (!args.userId || args.userId.trim() === '') {
-      throw new Error("Valid user ID is required");
-    }
-    
-    if (!args.name || args.name.trim() === '') {
-      throw new Error("Project name is required");
-    }
-    
-    // Sanitize and validate name length
-    const sanitizedName = args.name.trim();
-    if (sanitizedName.length > 100) {
-      throw new Error("Project name must be 100 characters or less");
-    }
-    
-    // Sanitize description if provided
-    const sanitizedDescription = args.description?.trim() || undefined;
-    if (sanitizedDescription && sanitizedDescription.length > 500) {
-      throw new Error("Project description must be 500 characters or less");
-    }
-    
-    const now = Date.now();
-    
-    try {
-      // NOTE: Projects should ONLY be created via initializeConversation
-      // This mutation is kept for backward compatibility and special cases only
-      const projectId = await ctx.db.insert("projects", {
-        userId: args.userId,
-        name: sanitizedName,
-        description: sanitizedDescription,
-        
-        // Initialize content arrays with provided content or empty
-        noteIds: args.noteIds || [],
-        conversationIds: args.conversationIds || [],
-        crystalIds: args.crystalIds || [],
-        shardIds: args.shardIds || [],
-        stardustIds: [],
-        
-        // No fingerprint - should be created via initializeConversation
-        fingerprintId: undefined,
-        
-        // Budget tracking (placeholders - ON HOLD for usage tracking)
-        dailyLlmBudget: 50,              // Default limit
-        llmCallsToday: 0,                // No usage yet
-        budgetLastReset: now,            // Initialize to creation time
-        isActive: true,                  // Projects start active
-        
-        // Timestamps
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      return projectId;
-    } catch (error) {
-      console.error("Failed to create project:", error);
-      throw new Error("Failed to create project");
-    }
+    throw new Error(
+      "createProject is DEPRECATED. Use initializeConversation instead. " +
+      "Projects must be created atomically with conversations to ensure complete state. " +
+      "See chatMutations.ts:initializeConversation for the correct pattern."
+    );
   },
 });
 

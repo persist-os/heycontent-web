@@ -51,7 +51,6 @@ export const conversationSchemaFields = {
   // Project & Widget Context - Links conversations to their originating context
   projectId: v.optional(v.id("projects")),
   widgetId: v.optional(v.union(v.string(), v.id("widgets"))),
-  widgetOutputId: v.optional(v.string()),
   
   // Conversation type/source for filtering and UI
   conversationType: v.optional(conversationTypeValidator),

@@ -177,7 +177,6 @@ import type * as types_user from "../types/user.js";
 import type * as types_userActivityCounter from "../types/userActivityCounter.js";
 import type * as types_userPreference from "../types/userPreference.js";
 import type * as types_webhookEvent from "../types/webhookEvent.js";
-import type * as types_widgetOutput from "../types/widgetOutput.js";
 import type * as types_widgets from "../types/widgets.js";
 import type * as usageEvents from "../usageEvents.js";
 import type * as userActions from "../userActions.js";
@@ -187,8 +186,6 @@ import type * as vectorSearch from "../vectorSearch.js";
 import type * as vectorSearchMutations from "../vectorSearchMutations.js";
 import type * as webhookEvents from "../webhookEvents.js";
 import type * as widgetContentMutations from "../widgetContentMutations.js";
-import type * as widgetOutputsMutations from "../widgetOutputsMutations.js";
-import type * as widgetOutputsQueries from "../widgetOutputsQueries.js";
 import type * as widgetsMutations from "../widgetsMutations.js";
 import type * as widgetsQueries from "../widgetsQueries.js";
 
@@ -365,7 +362,6 @@ declare const fullApi: ApiFromModules<{
   "types/userActivityCounter": typeof types_userActivityCounter;
   "types/userPreference": typeof types_userPreference;
   "types/webhookEvent": typeof types_webhookEvent;
-  "types/widgetOutput": typeof types_widgetOutput;
   "types/widgets": typeof types_widgets;
   usageEvents: typeof usageEvents;
   userActions: typeof userActions;
@@ -375,8 +371,6 @@ declare const fullApi: ApiFromModules<{
   vectorSearchMutations: typeof vectorSearchMutations;
   webhookEvents: typeof webhookEvents;
   widgetContentMutations: typeof widgetContentMutations;
-  widgetOutputsMutations: typeof widgetOutputsMutations;
-  widgetOutputsQueries: typeof widgetOutputsQueries;
   widgetsMutations: typeof widgetsMutations;
   widgetsQueries: typeof widgetsQueries;
 }>;
