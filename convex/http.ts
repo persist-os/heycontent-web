@@ -1193,20 +1193,28 @@ app.post("/api/users/:id/usage/log", async (c) => {
     ...(requestId && { requestId }),
   };
   
+  // Log the event (always succeeds - analytics)
   await ctx.runMutation(api.usageEvents.logUsageEvent, eventData);
   
-  // Update user's usage field with all available context
-  await ctx.runMutation(api.usageEvents.updateUserUsage, { 
-    userId, 
-    qty,
-    endpoint,
-    method,
-    path,
-    statusCode: statusCode ? Number(statusCode) : undefined,
-    userAgent,
-    ip,
-    requestId,  // Pass through the requestId
-  });
+  // Update subscription (non-blocking - skip for system user)
+  if (userId !== "system") {
+    try {
+      await ctx.runMutation(api.usageEvents.updateUserUsage, { 
+        userId, 
+        qty,
+        endpoint,
+        method,
+        path,
+        statusCode: statusCode ? Number(statusCode) : undefined,
+        userAgent,
+        ip,
+        requestId,  // Pass through the requestId
+      });
+    } catch (error) {
+      // Log but don't fail - analytics logging succeeded
+      console.warn(`[UsageLog] Subscription update failed for ${userId}:`, error);
+    }
+  }
   
   return c.json({ success: true });
 });

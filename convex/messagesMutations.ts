@@ -44,7 +44,7 @@ export const addMessage = mutation({
     const now = Date.now();
     const sequence = conversation.messageCount || 0;
 
-    // Write to NEW messages table only (no dual write)
+    // Write to NEW messages table and update conversation messageIds array (Pattern 13: Atomic Parent-Child Updates)
     const messageId = await ctx.db.insert("messages", {
       conversationId: args.conversationId,
       userId: args.userId,
@@ -60,11 +60,12 @@ export const addMessage = mutation({
       updatedAt: now,
     });
 
-    // Update conversation metadata (messageCount, lastMessageAt, updatedAt)
+    // Update conversation metadata atomically (Pattern 13: Atomic Parent-Child Updates)
     await ctx.db.patch(args.conversationId, {
       messageCount: sequence + 1,
       lastMessageAt: args.timestamp,
       updatedAt: now,
+      messageIds: [...(conversation.messageIds || []), messageId],  // Append message ID
     });
 
     // 3. Track intelligence activity (only for user messages)

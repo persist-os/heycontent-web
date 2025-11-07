@@ -71,6 +71,8 @@ export const initializeConversation = mutation({
         userId: args.userId,
         title: args.title,
         messages: args.messages || [],
+        // Initialize messageIds array (Pattern 13: Atomic Parent-Child Updates)
+        messageIds: [],
         messageCount: args.messages?.length || 0,
         lastMessageAt: args.messages && args.messages.length > 0 ? args.messages[args.messages.length - 1].timestamp : undefined,
         createdAt: currentTime,
@@ -208,6 +210,8 @@ export const createConversationForProject = mutation({
         userId: args.userId,
         title: args.title,
         messages: args.messages || [],
+        // Initialize messageIds array (Pattern 13: Atomic Parent-Child Updates)
+        messageIds: [],
         messageCount: args.messages?.length || 0,
         lastMessageAt: args.messages && args.messages.length > 0 ? args.messages[args.messages.length - 1].timestamp : undefined,
         createdAt: currentTime,
@@ -267,10 +271,10 @@ handler: async (ctx, args) => {
     const now = Date.now();
     const sequence = conversation.messageCount || (conversation.messages || []).length;
 
-    // 🔄 DUAL-WRITE: Write to BOTH new messages table AND legacy array
+    // 🔄 DUAL-WRITE: Write to BOTH new messages table AND update conversation messageIds array
     
     // 1. Write to NEW messages table
-    await ctx.db.insert("messages", {
+    const messageId = await ctx.db.insert("messages", {
       conversationId: args.conversationId as any,
       userId: args.userId,
       content: args.message.content,
@@ -278,19 +282,25 @@ handler: async (ctx, args) => {
       sequence,
       timestamp: args.message.timestamp,
       context: args.message.context,
+      contentType: args.message.contentType,
       fileAttachments: args.message.fileAttachments,
       enrichment_metadata: args.message.enrichment_metadata,
       decisionId: args.message.decisionId,  // Model selection decision ID
       contextDecisionId: args.message.contextDecisionId,  // Context enrichment decision ID
+      context_summary: args.message.context_summary,
+      familyMetadata: args.message.familyMetadata,
+      artifactMetadata: args.message.artifactMetadata,
+      suggestions: args.message.suggestions,
       createdAt: now,
       updatedAt: now,
     });
 
-    // 2. Update conversation metadata (messageCount, lastMessageAt, updatedAt)
+    // 2. Update conversation metadata atomically (Pattern 13: Atomic Parent-Child Updates)
     await ctx.db.patch(args.conversationId as any, {
       messageCount: sequence + 1,
       lastMessageAt: args.message.timestamp,
       updatedAt: now,
+      messageIds: [...(conversation.messageIds || []), messageId],  // Append message ID
     });
 
     // ✅ TRACK INTELLIGENCE: Only track user messages for activity monitoring
@@ -360,11 +370,27 @@ export const updateConversationTitle = mutation({
       throw new Error("Unauthorized access to conversation");
     }
 
-    // Update the title
+    const now = Date.now();
+
+    // Update the conversation title
     await ctx.db.patch(conversation._id, {
       title: args.title,
-      updatedAt: Date.now()
+      updatedAt: now
     });
+
+    // Update the associated project name if projectId exists
+    if (conversation.projectId) {
+      const project = await ctx.db.get(conversation.projectId as any) as any;
+      if (project && project['userId']) {
+        // Verify project ownership matches conversation ownership
+        if (project['userId'] === args.userId) {
+          await ctx.db.patch(conversation.projectId as any, {
+            name: args.title,
+            updatedAt: now
+          });
+        }
+      }
+    }
 
     return { success: true };
   }

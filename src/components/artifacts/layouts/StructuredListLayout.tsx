@@ -13,6 +13,9 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { FieldEditor } from '../editors/FieldEditor'
 import { Pencil } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import remarkBreaks from 'remark-breaks'
 
 export function StructuredListLayout({ 
   artifact,
@@ -22,7 +25,14 @@ export function StructuredListLayout({
   // Defensive: ensure all required properties exist
   const data_model = artifact?.data_model || { layout: 'table' as const, fields: [] }
   const fields = Array.isArray(data_model?.fields) ? data_model.fields : []
-  const data = Array.isArray(artifact?.data) ? artifact.data : []
+  const rawData = artifact?.data
+  
+  // Handle markdown content fallback: if data is an object with 'content', render as markdown
+  const hasMarkdownContent = rawData && typeof rawData === 'object' && !Array.isArray(rawData) && 'content' in rawData && typeof (rawData as any).content === 'string'
+  const markdownContent = hasMarkdownContent ? (rawData as any).content : null
+  
+  // Normal structured list data (array of rows)
+  const data = Array.isArray(rawData) ? rawData : []
   const metadata = artifact?.metadata || {
     version: 1,
     lastUpdatedBy: 'unknown',
@@ -59,7 +69,22 @@ export function StructuredListLayout({
       </CardHeader>
       
       <CardContent>
-        {isCardLayout ? (
+        {/* Markdown content fallback: render if data is an object with content */}
+        {hasMarkdownContent && markdownContent ? (
+          <div className="prose prose-sm max-w-none text-muted-foreground">
+            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+              {markdownContent}
+            </ReactMarkdown>
+          </div>
+        ) : data.length === 0 ? (
+          // Empty state: no data and no markdown content
+          <div className="text-center py-8 text-sm text-muted-foreground">
+            <p>No structured data available</p>
+            {fields.length === 0 && (
+              <p className="text-xs mt-2">No fields defined for this structured list</p>
+            )}
+          </div>
+        ) : isCardLayout ? (
           // Card Grid View
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {data.map((row, idx) => (

@@ -11,7 +11,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { useQuery, useMutation, useAction } from 'convex/react'
+import { useQuery } from 'convex/react'
 import { api } from '../../../../../convex/_generated/api'
 import { Id } from '../../../../../convex/_generated/dataModel'
 import { Card } from '@/components/ui/card'
@@ -19,7 +19,6 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { toast } from 'sonner'
 
 interface WidgetPanelProps {
   projectId?: string
@@ -99,13 +98,6 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
   const [collaborationOpen, setCollaborationOpen] = useState(false)
   const [fingerprintOpen, setFingerprintOpen] = useState(false)
   const [cognitiveFieldOpen, setCognitiveFieldOpen] = useState(false)
-  
-  // Execution state
-  const [isExecuting, setIsExecuting] = useState(false)
-  
-  // Convex mutations and actions for widget execution
-  const createJob = useMutation(api.backgroundJobs.create)
-  const enqueueToRedis = useAction(api.backgroundJobs.enqueueToRedis)
 
   // Loading state - waiting for conversation or widgets
   const isLoadingConversation = !projectId && conversationId && conversation === undefined
@@ -176,72 +168,6 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
     }
     return <Badge className="bg-muted/20 text-muted-foreground border-0">⚪ Resting</Badge>
   }
-  
-  // Handle widget execution
-  const handleRunWidget = async () => {
-    if (!currentWidget || !effectiveProjectId) {
-      toast.error('Cannot execute widget - missing project context')
-      return
-    }
-    
-    setIsExecuting(true)
-    try {
-      const widgetId = currentWidget._id || currentWidget.widget_id
-      
-      if (!widgetId) {
-        toast.error('Cannot execute widget - missing widget ID')
-        return
-      }
-      
-      // Step 1: Create Convex job record
-      const jobResult = await createJob({
-        userId,
-        type: "widget_execution",
-        payload: {
-          widget_id: widgetId,
-          project_id: effectiveProjectId,
-          user_id: userId,
-          scheduled: false,
-          execution_prompt: "Manual trigger from WidgetPanel",
-          metadata: { trigger_source: "widget_panel_ui" }
-        },
-        priority: "normal"
-      })
-      
-      if (!jobResult || !jobResult.jobId) {
-        toast.error('Failed to create job record')
-        return
-      }
-      
-      // Step 2: Enqueue to Redis via Convex action
-      const enqueueResult = await enqueueToRedis({
-        jobId: jobResult.jobId,
-        jobType: "widget_execution",
-        userId,
-        payload: {
-          widget_id: widgetId,
-          project_id: effectiveProjectId,
-          user_id: userId,
-          scheduled: false,
-          execution_prompt: "Manual trigger from WidgetPanel",
-          metadata: { trigger_source: "widget_panel_ui" }
-        },
-        priority: "normal"
-      })
-      
-      if (enqueueResult.success) {
-        toast.success('Widget execution started! 🚀')
-      } else {
-        toast.warning('Job created but Redis enqueue failed - will retry automatically')
-      }
-      
-    } catch (error) {
-      console.error('Failed to execute widget:', error)
-      toast.error(`Failed to execute widget: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    } finally {
-      setIsExecuting(false)
-    }
-  }
 
   // Display widgets with progressive disclosure
   return (
@@ -260,22 +186,6 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
                 </div>
                 <div className="flex items-center gap-2">
                   {getStatusBadge(currentWidget)}
-                  <Button
-                    onClick={handleRunWidget}
-                    disabled={isExecuting || !effectiveProjectId}
-                    variant="default"
-                    size="sm"
-                    className="ml-2"
-                  >
-                    {isExecuting ? (
-                      <>
-                        <span className="animate-spin mr-2">⏳</span>
-                        Running...
-                      </>
-                    ) : (
-                      '▶️ Run Widget'
-                    )}
-                  </Button>
                 </div>
               </div>
               

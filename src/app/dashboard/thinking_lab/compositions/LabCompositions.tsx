@@ -303,6 +303,8 @@ function FullThinkingLabInternal({
             ) : rightPanelMode === 'artifacts' ? (
               <ArtifactPanel
                 projectId={projectId}
+                conversationId={conversationId}
+                userId={userId}
               />
             ) : userId ? (
               <WidgetPanel

@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { familyMetadataValidator, artifactMetadataValidator } from "./message";
 
 export const conversationTypeValidator = v.union(
   v.literal("general"),
@@ -30,15 +31,15 @@ export const conversationSchemaFields = {
     context_summary: v.optional(v.any()),
     // Family message fields (Task 2.2 - optional for backward compatibility)
     contentType: v.optional(v.string()),
-    familyMetadata: v.optional(v.object({
-      familyId: v.union(v.string(), v.id("widgets")),
-      familyName: v.string(),
-      context: v.optional(v.string())
-    })),
+    familyMetadata: v.optional(familyMetadataValidator),
+    artifactMetadata: v.optional(artifactMetadataValidator),
     // MAB Decision IDs (for feedback loop)
     decisionId: v.optional(v.string()),  // Model selection decision ID
     contextDecisionId: v.optional(v.string()),  // Context enrichment decision ID
   }))),
+  
+  // Message ID array - Efficient reference to all messages (Pattern 13: Atomic Parent-Child Updates)
+  messageIds: v.optional(v.array(v.id("messages"))),
   
   // Message statistics (denormalized for performance)
   messageCount: v.optional(v.number()),  // Optional during migration, will be required after

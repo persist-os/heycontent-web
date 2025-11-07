@@ -333,8 +333,10 @@ export const updateUserUsage = mutation({
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .first();
 
+    // Graceful handling: Skip subscription update if user doesn't exist or lacks subscription
     if (!user || !user.subscription) {
-      throw new Error("User or subscription not found");
+      console.warn(`[UpdateUserUsage] User ${args.userId} not found or no subscription - skipping update`);
+      return { success: true, skipped: true, reason: "user_not_found" };
     }
 
     const sub = user.subscription as any;

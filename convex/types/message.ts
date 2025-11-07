@@ -5,6 +5,21 @@ export const messageRoleValidator = v.union(
   v.literal("assistant")
 );
 
+// Family metadata validator - reusable across schema and input validators
+export const familyMetadataValidator = v.object({
+  familyId: v.union(v.string(), v.id("widgets")),
+  familyName: v.string(),
+  context: v.optional(v.string())  // Why asking
+});
+
+// Artifact metadata validator - reusable across schema and input validators
+export const artifactMetadataValidator = v.object({
+  artifactId: v.string(),
+  artifactType: v.string(),
+  familyId: v.union(v.string(), v.id("widgets")),
+  familyName: v.string()
+});
+
 export const messageSchemaFields = {
   // Foreign Keys & User Context
   conversationId: v.id("conversations"),
@@ -25,11 +40,10 @@ export const messageSchemaFields = {
   contentType: v.optional(v.string()),
   
   // Family-specific metadata (OPTIONAL for backward compatibility)
-  familyMetadata: v.optional(v.object({
-    familyId: v.union(v.string(), v.id("widgets")),
-    familyName: v.string(),
-    context: v.optional(v.string())  // Why asking
-  })),
+  familyMetadata: v.optional(familyMetadataValidator),
+  
+  // Artifact-specific metadata (OPTIONAL for artifact creation messages)
+  artifactMetadata: v.optional(artifactMetadataValidator),
   
   // File Attachments - Metadata only, actual files in GCS
   fileAttachments: v.optional(v.array(v.object({
@@ -76,11 +90,8 @@ export const messageInputValidator = v.object({
   timestamp: v.number(),
   context: v.optional(v.string()),
   contentType: v.optional(v.string()),
-  familyMetadata: v.optional(v.object({
-    familyId: v.union(v.string(), v.id("widgets")),
-    familyName: v.string(),
-    context: v.optional(v.string())
-  })),
+  familyMetadata: v.optional(familyMetadataValidator),
+  artifactMetadata: v.optional(artifactMetadataValidator),
   fileAttachments: v.optional(v.array(v.object({
     file_url: v.string(),
     original_filename: v.string(),
