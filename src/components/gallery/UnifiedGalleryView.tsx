@@ -13,16 +13,23 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '@/convex/_generated/api'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Textarea } from '@/components/ui/textarea'
 import { UnifiedGalleryViewProps } from '@/types/gallery'
 import { GallerySidebar } from './GallerySidebar'
 import { GalleryNavigation } from './GalleryNavigation'
 import { useGalleryNavigation } from '@/hooks/useGalleryNavigation'
 import { ArtifactRenderer } from '@/components/artifacts/ArtifactRenderer'
-import { WidgetDetailView } from './WidgetDetailView'
 import { cn } from '@/lib/utils'
+import { a2aService } from '@/lib/services/a2aService'
+import { Loader2 } from 'lucide-react'
 
 export function UnifiedGalleryView({
   projectId,
@@ -32,6 +39,7 @@ export function UnifiedGalleryView({
   userId
 }: UnifiedGalleryViewProps & { userId?: string }) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [a2aMessages, setA2aMessages] = useState<any[]>([])
   
   const {
     currentItem,
@@ -48,6 +56,55 @@ export function UnifiedGalleryView({
     projectId,
     onClose
   })
+  
+  // Widget-specific data queries
+  const isArtifact = currentItem?.itemType === 'artifact'
+  const widgetId = !isArtifact && currentItem ? currentItem._id : null
+  
+  // Background jobs (for widget activity)
+  const jobs = useQuery(
+    api.backgroundJobs.getUserJobs,
+    userId && widgetId ? { userId, jobType: 'widget_execution' as any, limit: 100 } : 'skip'
+  )
+  const widgetJob = useMemo(() => 
+    jobs?.find((j: any) => j.payload?.widget_id === widgetId),
+    [jobs, widgetId]
+  )
+  
+  // Widget questions
+  const questions = useQuery(
+    api.widgetQuestionsQueries.getWidgetQuestions,
+    widgetId ? { widgetId: widgetId as any } : 'skip'
+  )
+  const pendingQuestions = useMemo(() => 
+    questions?.filter((q: any) => q.status === 'pending') || [],
+    [questions]
+  )
+  
+  // Widget outputs
+  const outputs = useQuery(
+    api.widgetOutputsQueries.getWidgetOutputData,
+    userId && widgetId ? {
+      userId,
+      useIndex: 'by_widget' as any,
+      indexFields: { widgetId },
+      limit: 10,
+      orderBy: 'desc' as any
+    } : 'skip'
+  )
+  
+  // A2A messages (via HTTP)
+  useEffect(() => {
+    if (projectId && !isArtifact) {
+      a2aService.getLatest(projectId)
+        .then((res: any) => {
+          if (res.success) {
+            setA2aMessages(res.data || [])
+          }
+        })
+        .catch(console.error)
+    }
+  }, [projectId, isArtifact, currentItem])
   
   // Empty state
   if (items.length === 0) {
@@ -73,7 +130,6 @@ export function UnifiedGalleryView({
     return null
   }
   
-  const isArtifact = currentItem.itemType === 'artifact'
   const typeLabel = isArtifact ? 'Artifact' : 'Widget'
   
   // Gradient themes based on type
@@ -89,6 +145,39 @@ export function UnifiedGalleryView({
     ? 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-600 dark:text-blue-400'
     : 'bg-gradient-to-r from-purple-500/20 to-indigo-500/20 text-purple-600 dark:text-purple-400'
   
+  // Helper functions for widget display
+  const formatTime = (timestamp: number) => {
+    const seconds = Math.floor((Date.now() - timestamp) / 1000)
+    if (seconds < 60) return `${seconds} second${seconds !== 1 ? 's' : ''}`
+    const minutes = Math.floor(seconds / 60)
+    if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''}`
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''}`
+    const days = Math.floor(hours / 24)
+    return `${days} day${days !== 1 ? 's' : ''}`
+  }
+  
+  const getStatusBadge = (job: any) => {
+    if (!job) return "bg-muted/20 text-muted-foreground border-0"
+    if (job.status === 'running') return "bg-blue-500/20 text-blue-600 dark:text-blue-400 border-0"
+    if (job.status === 'completed') return "bg-green-500/20 text-green-600 dark:text-green-400 border-0"
+    return "bg-muted/20 text-muted-foreground border-0"
+  }
+  
+  const getStatusText = (job: any) => {
+    if (!job) return "⚪ Resting"
+    if (job.status === 'running') return "🔵 Active"
+    if (job.status === 'completed') return "✅ Done"
+    return "⚪ Idle"
+  }
+  
+  const getA2AIcon = (status: string) => {
+    if (status === 'completed') return '✅'
+    if (status === 'planning') return '📋'
+    if (status === 'working') return '🔵'
+    return '•'
+  }
+  
   // Render current item based on its type
   const renderCurrentItem = () => {
     if (isArtifact) {
@@ -100,114 +189,520 @@ export function UnifiedGalleryView({
           />
         </div>
       )
-    } else {
-      // Widget display with comprehensive detail view
-      return userId ? (
-        <WidgetDetailView 
-          widget={currentItem} 
-          userId={userId}
-          projectId={projectId}
-        />
-      ) : (
+    } else if (!userId) {
+      return (
         <div className="text-center py-8 text-muted-foreground">
           <p>User authentication required to view widget details</p>
         </div>
       )
+    } else {
+      // Widget display with progressive disclosure
+      return <ProgressiveWidgetView />
     }
   }
   
-  return (
-    <div className="fixed inset-0 bg-background flex flex-col">
-      {/* Header with gradient theme */}
-      <div className={cn(
-        "border-b backdrop-blur-xl",
-        headerGradient,
-        accentBorder
-      )}>
-        <div className="max-w-[1800px] mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            {/* Left: Title & Type Badge */}
-            <div className="flex items-center gap-4">
-              <h1 className="text-xl font-semibold text-foreground">
-                Project Gallery
-              </h1>
-              <Badge 
-                variant="outline" 
-                className={cn(
-                  "px-3 py-1 font-medium border-0",
-                  typeBadgeGradient
-                )}
-              >
-                {typeLabel}
+  // Progressive widget view component
+  const ProgressiveWidgetView = () => {
+    const [activityOpen, setActivityOpen] = useState(false)
+    const [helpersOpen, setHelpersOpen] = useState(false)
+    const [thinkingOpen, setThinkingOpen] = useState(false)
+    const [outputsOpen, setOutputsOpen] = useState(false)
+    
+    const getCurrentActivity = () => {
+      if (widgetJob?.status === 'running') {
+        const latestA2A = a2aMessages[0]
+        return (
+          <div className="bg-blue-500/10 border-l-4 border-blue-500 p-4 rounded">
+            <p className="font-semibold text-foreground">🔵 Working right now</p>
+            <p className="text-sm text-muted-foreground">
+              → {latestA2A?.report?.announcement || 'Processing...'}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Started {formatTime(widgetJob.startedAt)} ago
+            </p>
+          </div>
+        )
+      }
+      
+      return (
+        <div className="bg-muted/20 border-l-4 border-border p-4 rounded">
+          <p className="font-semibold text-foreground">⚪ Resting</p>
+          <p className="text-sm text-muted-foreground">
+            → Waiting for new work
+          </p>
+          {widgetJob?.completedAt && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Last active {formatTime(widgetJob.completedAt)} ago
+            </p>
+          )}
+        </div>
+      )
+    }
+    
+    return (
+      <div className="space-y-4">
+        {/* HEADER - Always visible */}
+        <Card className="bg-card/50 backdrop-blur-sm border border-border/40">
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">📊</span>
+                <h2 className="text-2xl font-bold text-foreground">
+                  {currentItem.title}
+                </h2>
+              </div>
+              <Badge className={getStatusBadge(widgetJob)}>
+                {getStatusText(widgetJob)}
               </Badge>
-              <span className="text-sm text-muted-foreground">
-                {currentIndex + 1} of {total}
-              </span>
             </div>
             
-            {/* Right: Actions */}
-            <div className="flex items-center gap-3">
-              {/* Toggle Sidebar */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                {sidebarOpen ? 'Hide List' : 'Show List'}
-              </Button>
-              
-              {/* Back to Constellation */}
-              <Button
-                onClick={onClose}
-                variant="outline"
-                className={cn(
-                  "backdrop-blur-sm border-0",
-                  isArtifact 
-                    ? "bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400" 
-                    : "bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400"
-                )}
-              >
-                Back to Constellation
-              </Button>
-            </div>
+            <p className="text-muted-foreground text-lg mb-4">
+              {currentItem.description || 'Helps you manage your project'}
+            </p>
+            
+            {/* Current Activity */}
+            {getCurrentActivity()}
           </div>
-        </div>
-      </div>
-      
-      {/* Body with Sidebar + Content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        {sidebarOpen && (
-          <GallerySidebar
-            items={items}
-            currentIndex={currentIndex}
-            onSelectItem={goToIndex}
-          />
+        </Card>
+        
+        {/* WHAT'S HAPPENING - Collapsible */}
+        <Collapsible open={activityOpen} onOpenChange={setActivityOpen}>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" className="w-full justify-start">
+              {activityOpen ? "▲ Hide details" : "▼ See what's happening"}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <Card className="bg-card/50 backdrop-blur-sm border border-border/40 mt-2">
+              <div className="p-6">
+                <h3 className="text-lg font-semibold text-foreground mb-4">
+                  What's Happening
+                </h3>
+                
+                {widgetJob?.status === 'running' ? (
+                  <>
+                    <div className="bg-blue-500/10 border-l-4 border-blue-500 p-4 rounded mb-4">
+                      <p className="font-semibold text-foreground">🔵 Right Now:</p>
+                      <p className="text-sm text-foreground">
+                        {a2aMessages[0]?.report?.announcement || 'Working...'}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Started {formatTime(widgetJob.startedAt)} ago
+                      </p>
+                    </div>
+                    
+                    {a2aMessages.length > 1 && (
+                      <div>
+                        <p className="text-sm font-medium text-foreground mb-2">Recent Activity:</p>
+                        {a2aMessages.slice(1, 4).map((msg: any, idx: number) => (
+                          <div key={idx} className="flex items-start gap-2 text-sm mb-2">
+                            <span>{getA2AIcon(msg.report?.status)}</span>
+                            <span className="text-foreground">{msg.report?.announcement}</span>
+                            <span className="text-xs text-muted-foreground ml-auto">
+                              {formatTime(msg.createdAt)} ago
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-6">
+                    <p className="text-lg text-foreground mb-3">
+                      ⚪ This widget is resting right now.
+                    </p>
+                    <div className="text-sm text-muted-foreground space-y-2">
+                      <p>It will automatically start working when:</p>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li>You add new content to your project</li>
+                        <li>It detects patterns that need analysis</li>
+                        <li>You ask it a question</li>
+                      </ul>
+                      <p className="mt-3">
+                        You don't need to do anything - it knows when to help.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
+        
+        {/* QUESTIONS - Conditional */}
+        {pendingQuestions && pendingQuestions.length > 0 && (
+          <QuestionsList questions={pendingQuestions} />
         )}
         
-        {/* Main Content Area */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-5xl mx-auto px-6 py-8">
-            {/* Render current item with fade transition */}
-            <div className="animate-in fade-in-0 duration-300">
-              {renderCurrentItem()}
-            </div>
+        {/* HOW IT WORKS - Collapsible */}
+        <Collapsible open={helpersOpen} onOpenChange={setHelpersOpen}>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" className="w-full justify-start">
+              {helpersOpen ? "▲ Hide details" : "▼ How it works"}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <Card className="bg-card/50 backdrop-blur-sm border border-border/40 mt-2">
+              <div className="p-6">
+                <h3 className="text-lg font-semibold text-foreground mb-4">
+                  How It Works
+                </h3>
+                
+                {currentItem.agentRoster && currentItem.agentRoster.length > 0 ? (
+                  <>
+                    <p className="text-foreground mb-4">
+                      This widget has {currentItem.agentRoster.length} helper{currentItem.agentRoster.length !== 1 ? 's' : ''}{' '}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="text-blue-500 cursor-help">ℹ️</span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>A helper is like a team member that handles one specific task.</p>
+                          <p>They work together to get things done.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      {' '}working together:
+                    </p>
+                    
+                    <div className="space-y-3">
+                      {currentItem.agentRoster.map((agent: any, idx: number) => (
+                        <div key={idx} className="bg-blue-500/5 border-l-4 border-blue-500 p-4 rounded">
+                          <p className="font-semibold text-foreground">
+                            {idx + 1}. {agent.roleName}
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            → {agent.responsibilities?.[0] || agent.personality}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            {agent.spawnCondition === 'Always active' 
+                              ? 'Always working' 
+                              : `Starts ${agent.spawnCondition?.toLowerCase() || 'when needed'}`}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-6">
+                    <p className="text-lg text-foreground mb-3">
+                      This widget is still being set up.
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Once it's ready, you'll see the different helpers that work together.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
+        
+        {/* WHAT IT'S THINKING - Collapsible */}
+        <Collapsible open={thinkingOpen} onOpenChange={setThinkingOpen}>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" className="w-full justify-start">
+              {thinkingOpen ? "▲ Hide details" : "▼ What it's thinking"}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <Card className="bg-card/50 backdrop-blur-sm border border-border/40 mt-2">
+              <div className="p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <h3 className="text-lg font-semibold text-foreground">
+                    What It's Thinking
+                  </h3>
+                  <Badge className="bg-purple-500/10 text-purple-600 dark:text-purple-400 border-0 text-xs">
+                    🔒 Auto-Generated
+                  </Badge>
+                </div>
+                
+                <p className="text-sm text-muted-foreground mb-4">
+                  These are the instructions guiding this widget. They were automatically created based on your project.
+                </p>
+                
+                {currentItem.familyIdentity?.mission ? (
+                  <>
+                    <div className="mb-4">
+                      <p className="text-sm font-medium text-foreground mb-2">Identity:</p>
+                      <div className="bg-muted/20 border border-border/30 rounded-lg p-4">
+                        <p className="text-sm text-foreground font-mono whitespace-pre-wrap">
+                          {currentItem.familyIdentity.mission}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {currentItem.familyIdentity?.collaborationStyle && (
+                      <div>
+                        <p className="text-sm font-medium text-foreground mb-2">Guidelines:</p>
+                        <div className="bg-muted/20 border border-border/30 rounded-lg p-4">
+                          <p className="text-sm text-foreground font-mono whitespace-pre-wrap">
+                            {currentItem.familyIdentity.collaborationStyle}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <p className="text-xs text-muted-foreground mt-4">
+                      Last updated: {formatTime(currentItem.updatedAt || currentItem._creationTime)} ago
+                    </p>
+                  </>
+                ) : (
+                  <div className="text-center py-6">
+                    <p className="text-lg text-foreground mb-3">
+                      This widget doesn't have its instructions yet.
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      The system will automatically generate them the first time it runs. You'll be able to see what guides its decisions here.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
+        
+        {/* WHAT IT'S MADE - Collapsible */}
+        <Collapsible open={outputsOpen} onOpenChange={setOutputsOpen}>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" className="w-full justify-start">
+              {outputsOpen ? "▲ Hide outputs" : `▼ What it's made (${outputs?.length || 0})`}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <Card className="bg-card/50 backdrop-blur-sm border border-border/40 mt-2">
+              <div className="p-6">
+                <h3 className="text-lg font-semibold text-foreground mb-4">
+                  What It's Made
+                </h3>
+                
+                {outputs && outputs.length > 0 ? (
+                  <>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      These are the things this widget has created for you.
+                    </p>
+                    
+                    <div className="space-y-4">
+                      {outputs.slice(0, 5).map((output: any) => (
+                        <div key={output._id} className="bg-cyan-500/5 border-l-4 border-cyan-500 p-4 rounded">
+                          <p className="font-semibold text-foreground">{output.artifactType || 'Output'}</p>
+                          <p className="text-xs text-muted-foreground mb-3">
+                            Created {formatTime(output.createdAt || output._creationTime)} ago
+                          </p>
+                          {output.content && (
+                            <div className="mt-2">
+                              <ArtifactRenderer artifact={output} editable={false} />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      
+                      {outputs.length > 5 && (
+                        <Button 
+                          variant="ghost" 
+                          className="w-full"
+                          onClick={() => {/* Could implement pagination */}}
+                        >
+                          Show {outputs.length - 5} more...
+                        </Button>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-6">
+                    <p className="text-lg text-foreground mb-3">
+                      This widget hasn't created anything yet.
+                    </p>
+                    <div className="text-sm text-muted-foreground space-y-2">
+                      <p>Once it finishes its work, you'll see:</p>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li>Reports and summaries</li>
+                        <li>Analysis and insights</li>
+                        <li>Generated content</li>
+                      </ul>
+                      <p className="mt-3">
+                        Everything it makes will appear here automatically.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
+    )
+  }
+  
+  // Questions component
+  const QuestionsList = ({ questions }: { questions: any[] }) => {
+    const [currentIdx, setCurrentIdx] = useState(0)
+    const [answer, setAnswer] = useState('')
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const answerQuestion = useMutation(api.widgetQuestionsMutations.answerQuestion)
+    
+    const current = questions[currentIdx]
+    
+    const handleSubmit = async () => {
+      if (!answer.trim() || isSubmitting) return
+      setIsSubmitting(true)
+      try {
+        await answerQuestion({ questionId: current._id, answer })
+        setAnswer('')
+        if (currentIdx < questions.length - 1) {
+          setCurrentIdx(currentIdx + 1)
+        }
+      } catch (err) {
+        console.error('Answer failed:', err)
+      } finally {
+        setIsSubmitting(false)
+      }
+    }
+    
+    return (
+      <Card className="bg-yellow-500/10 border-yellow-500/20 border">
+        <div className="p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4">
+            Questions for You
+          </h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            This widget needs your input to continue working.
+          </p>
+          
+          <div className="border-t border-border/40 pt-4">
+            <p className="text-xs text-muted-foreground mb-2">
+              Question {currentIdx + 1} of {questions.length}
+            </p>
             
-            {/* Navigation Controls */}
-            <div className="mt-6">
-              <GalleryNavigation
-                hasPrev={hasPrev}
-                hasNext={hasNext}
-                currentIndex={currentIndex}
-                total={total}
-                onPrev={goToPrev}
-                onNext={goToNext}
-              />
+            <p className="text-lg text-foreground mb-3">
+              "{current.question}"
+            </p>
+            
+            {current.context?.reason && (
+              <div className="bg-muted/20 p-3 rounded mb-4">
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium">Why it's asking:</span><br/>
+                  {current.context.reason}
+                </p>
+              </div>
+            )}
+            
+            <Textarea
+              value={answer}
+              onChange={(e) => setAnswer(e.target.value)}
+              placeholder="Type your answer here..."
+              className="mb-3"
+              rows={3}
+            />
+            
+            <div className="flex gap-2">
+              <Button onClick={handleSubmit} disabled={!answer.trim() || isSubmitting}>
+                {isSubmitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                Send Answer
+              </Button>
+              <Button variant="ghost" onClick={() => setAnswer('')} disabled={isSubmitting}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Card>
+    )
+  }
+  
+  return (
+    <TooltipProvider>
+      <div className="fixed inset-0 bg-background flex flex-col">
+        {/* Header with gradient theme */}
+        <div className={cn(
+          "border-b backdrop-blur-xl",
+          headerGradient,
+          accentBorder
+        )}>
+          <div className="max-w-[1800px] mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              {/* Left: Title & Type Badge */}
+              <div className="flex items-center gap-4">
+                <h1 className="text-xl font-semibold text-foreground">
+                  Project Gallery
+                </h1>
+                <Badge 
+                  variant="outline" 
+                  className={cn(
+                    "px-3 py-1 font-medium border-0",
+                    typeBadgeGradient
+                  )}
+                >
+                  {typeLabel}
+                </Badge>
+                <span className="text-sm text-muted-foreground">
+                  {currentIndex + 1} of {total}
+                </span>
+              </div>
+              
+              {/* Right: Actions */}
+              <div className="flex items-center gap-3">
+                {/* Toggle Sidebar */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  {sidebarOpen ? 'Hide List' : 'Show List'}
+                </Button>
+                
+                {/* Back to Constellation */}
+                <Button
+                  onClick={onClose}
+                  variant="outline"
+                  className={cn(
+                    "backdrop-blur-sm border-0",
+                    isArtifact 
+                      ? "bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400" 
+                      : "bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400"
+                  )}
+                >
+                  Back to Constellation
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Body with Sidebar + Content */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Sidebar */}
+          {sidebarOpen && (
+            <GallerySidebar
+              items={items}
+              currentIndex={currentIndex}
+              onSelectItem={goToIndex}
+            />
+          )}
+          
+          {/* Main Content Area */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="max-w-5xl mx-auto px-6 py-8">
+              {/* Render current item with fade transition */}
+              <div className="animate-in fade-in-0 duration-300">
+                {renderCurrentItem()}
+              </div>
+              
+              {/* Navigation Controls */}
+              <div className="mt-6">
+                <GalleryNavigation
+                  hasPrev={hasPrev}
+                  hasNext={hasNext}
+                  currentIndex={currentIndex}
+                  total={total}
+                  onPrev={goToPrev}
+                  onNext={goToNext}
+                />
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </TooltipProvider>
   )
 }
