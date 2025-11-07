@@ -9,7 +9,8 @@ export const messageRoleValidator = v.union(
 export const familyMetadataValidator = v.object({
   familyId: v.union(v.string(), v.id("widgets")),
   familyName: v.string(),
-  context: v.optional(v.string())  // Why asking
+  context: v.optional(v.string()),  // Why asking
+  agentName: v.optional(v.string()),  // Widget agent name (e.g., "Preflight Question Generator")
 });
 
 // Artifact metadata validator - reusable across schema and input validators
@@ -76,6 +77,9 @@ export const messageSchemaFields = {
   // Suggestions
   suggestions: v.optional(v.any()),
   
+  // A2A Metadata (for agent-to-agent announcements)
+  a2aMetadata: v.optional(v.any()),
+  
   // Future Extensions (for gradual rollout)
   editedAt: v.optional(v.number()),
   deletedAt: v.optional(v.number()),  // Soft delete
@@ -105,6 +109,7 @@ export const messageInputValidator = v.object({
   contextDecisionId: v.optional(v.string()),  // Context enrichment decision ID
   context_summary: v.optional(v.any()),
   suggestions: v.optional(v.any()),
+  a2aMetadata: v.optional(v.any()),  // A2A announcement metadata
 });
 
 // Message array validator for createConversation

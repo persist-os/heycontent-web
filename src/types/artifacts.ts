@@ -109,25 +109,27 @@ export interface TimelineArtifact {
 /**
  * TRACKER ARTIFACT
  * 
- * Widget execution history and cross-widget activity tracking
- * Compact format for activity logs
+ * Progress tracking for goals, tasks, metrics, and milestones
+ * Tracks progress over time with status updates
  */
 export interface TrackerArtifact {
   type: 'tracker'
   data_model: {
     layout: 'tracker'
-    eventTypes: EventTypeDefinition[]
+    trackers: Array<{
+      key: string
+      label: string
+      target?: number  // Optional target value
+      unit?: string    // Unit of measurement (e.g., "%", "items", "hours")
+      format?: 'number' | 'percentage' | 'currency' | 'text'
+    }>
   }
   data: {
-    events: Array<{
+    entries: Array<{
       id: string
       timestamp: number
-      type: string  // Matches Python: type: str (flexible event types)
-      widgetId: string
-      widgetName?: string
-      message: string
-      status?: 'idle' | 'running' | 'success' | 'failed'
-      details?: string
+      values: Record<string, number | string>  // Key-value pairs matching tracker keys
+      note?: string  // Optional note about this update
     }>
   }
   metadata: ArtifactMetadata

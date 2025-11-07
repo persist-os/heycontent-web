@@ -230,18 +230,27 @@ app.post("/api/users/:id/add_message_to_conversation", async (c) => {
   const userId = c.req.param("id");
   const { conversationId, message } = await c.req.json();
   
-  // Add timestamp to message if it doesn't have one
-  const messageWithTimestamp = {
-    ...message,
-    timestamp: message.timestamp || Date.now(),
-  };
-  
-  const result = await ctx.runMutation(api.chatMutations.addMessageToConversation, {
-    userId,
-    conversationId,
-    message: messageWithTimestamp,
-  });
-  return c.json(result);
+  try {
+    // Add timestamp to message if it doesn't have one
+    const messageWithTimestamp = {
+      ...message,
+      timestamp: message.timestamp || Date.now(),
+    };
+    
+    const result = await ctx.runMutation(api.chatMutations.addMessageToConversation, {
+      userId,
+      conversationId,
+      message: messageWithTimestamp,
+    });
+    
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    console.error('Add message to conversation error:', error);
+    return c.json({ 
+      success: false, 
+      error: `Failed to add message: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    }, 500);
+  }
 });
 
 // Update conversation title (async generation in background)

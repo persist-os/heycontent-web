@@ -78,6 +78,7 @@ import type * as messagesMutations from "../messagesMutations.js";
 import type * as messagesQueries from "../messagesQueries.js";
 import type * as migrations_fixFreeTierSubscriptions from "../migrations/fixFreeTierSubscriptions.js";
 import type * as migrations_migrateConversationMessages from "../migrations/migrateConversationMessages.js";
+import type * as migrations_migrateFingerprintsToAssignments from "../migrations/migrateFingerprintsToAssignments.js";
 import type * as migrations_migrateReservedShards from "../migrations/migrateReservedShards.js";
 import type * as migrations_migrateToConvexWidgetIds from "../migrations/migrateToConvexWidgetIds.js";
 import type * as migrations_migrateWidgetsToIndividualDocs from "../migrations/migrateWidgetsToIndividualDocs.js";
@@ -263,6 +264,7 @@ declare const fullApi: ApiFromModules<{
   messagesQueries: typeof messagesQueries;
   "migrations/fixFreeTierSubscriptions": typeof migrations_fixFreeTierSubscriptions;
   "migrations/migrateConversationMessages": typeof migrations_migrateConversationMessages;
+  "migrations/migrateFingerprintsToAssignments": typeof migrations_migrateFingerprintsToAssignments;
   "migrations/migrateReservedShards": typeof migrations_migrateReservedShards;
   "migrations/migrateToConvexWidgetIds": typeof migrations_migrateToConvexWidgetIds;
   "migrations/migrateWidgetsToIndividualDocs": typeof migrations_migrateWidgetsToIndividualDocs;

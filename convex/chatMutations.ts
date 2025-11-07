@@ -245,6 +245,152 @@ export const createConversationForProject = mutation({
     }
   },
 });
+
+/**
+ * Create project for an existing conversation (legacy conversation migration).
+ * 
+ * ⚠️ NOTE: Conversations SHOULD be created with projects atomically via initializeConversation.
+ * This mutation provides graceful migration for legacy conversations that don't have projects.
+ * 
+ * Creates:
+ * - Project linked to existing conversation
+ * - Assignment Fingerprint (required for orchestrator)
+ * - ONE Cognitive Field (required for orchestrator)
+ * - Links conversation to project (bidirectional)
+ * 
+ * Pattern: Reverse of createConversationForProject
+ */
+export const createProjectForConversation = mutation({
+  args: {
+    userId: v.string(),
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const currentTime = Date.now();
+      
+      // Verify conversation exists
+      const conversation = await ctx.db.get(args.conversationId);
+      if (!conversation) {
+        throw new Error(`Conversation ${args.conversationId} not found`);
+      }
+      
+      // Verify ownership
+      if (conversation.userId !== args.userId) {
+        throw new Error("Unauthorized access to conversation");
+      }
+      
+      // Check if conversation already has a project
+      if (conversation.projectId) {
+        console.log(`[createProjectForConversation] Conversation ${args.conversationId} already has project ${conversation.projectId}`);
+        // Verify project exists
+        const project = await ctx.db.get(conversation.projectId as any);
+        if (project && (project as any).userId === args.userId) {
+          // Query assignment fingerprint by projectId (pattern: same as cognitive field query)
+          const fingerprint = await ctx.runQuery(api.assignmentFingerprintQueries.getByProject, {
+            projectId: conversation.projectId,
+            userId: args.userId
+          });
+          const fingerprintId = fingerprint?._id || null;
+          
+          // Query cognitive field by conversationId
+          const cognitiveField = await ctx.runQuery(api.cognitiveQueries.getCognitiveFieldByConversation, {
+            conversationId: args.conversationId
+          });
+          const cognitiveFieldId = cognitiveField?.fieldId || null;
+          
+          return {
+            projectId: conversation.projectId,
+            fingerprintId: fingerprintId,
+            cognitiveFieldId: cognitiveFieldId,
+          };
+        }
+      }
+      
+      // Get conversation title for project name
+      const projectName = conversation.title || "Untitled Project";
+      
+      // 1. Create Project
+      const projectId = await ctx.db.insert("projects", {
+        userId: args.userId,
+        name: projectName,
+        description: "",
+        noteIds: [],
+        conversationIds: [],
+        crystalIds: [],
+        shardIds: [],
+        stardustIds: [],
+        fingerprintId: undefined, // Will be set below
+        dailyLlmBudget: 50,
+        llmCallsToday: 0,
+        budgetLastReset: currentTime,
+        isActive: true,
+        createdAt: currentTime,
+        updatedAt: currentTime,
+      });
+      
+      console.log(`[createProjectForConversation] ✅ Created project ${projectId}`);
+      
+      // 2. Create Assignment Fingerprint
+      const fingerprintId = await ctx.runMutation(api.assignmentFingerprintMutations.mutateAssignmentFingerprint, {
+        operation: "create",
+        projectId: projectId,
+        userId: args.userId,
+        createData: {
+          currentGoals: [],
+          currentConstraints: [],
+          widgetPreferences: undefined,
+          version: 1,
+          totalInsights: 0,
+        },
+      });
+      
+      console.log(`[createProjectForConversation] ✅ Created assignment fingerprint ${fingerprintId}`);
+      
+      // 3. Create ONE Cognitive Field (shared by project & conversation)
+      // Pattern copied from initializeConversation (lines 108-121)
+      const fieldId = `cf_unified_${projectId}_${args.conversationId}_${currentTime}`;
+      await ctx.runMutation(api.cognitiveMutations.createCognitiveField, {
+        userId: args.userId,
+        projectId: projectId,
+        conversationId: args.conversationId,  // Links to BOTH
+        fieldId: fieldId,
+        sourceShardIds: [],
+        sourceStardustIds: [],
+        coreField: {},
+        semanticMetadata: {},
+        transparencyLayer: {},
+      });
+      const cognitiveFieldId = fieldId;
+      
+      console.log(`[createProjectForConversation] ✅ Created cognitive field ${cognitiveFieldId}`);
+      
+      // 4. Link project to conversation (bidirectional)
+      await ctx.db.patch(args.conversationId, {
+        projectId: projectId,
+        updatedAt: currentTime,
+      });
+      
+      // 5. Update project with conversationId and fingerprintId
+      await ctx.db.patch(projectId, {
+        conversationId: args.conversationId,
+        fingerprintId: fingerprintId,
+        updatedAt: currentTime,
+      });
+      
+      console.log(`[createProjectForConversation] ✅ Linked project ${projectId} to conversation ${args.conversationId}`);
+      
+      return {
+        projectId,
+        fingerprintId,
+        cognitiveFieldId,
+      };
+    } catch (error) {
+      console.error('[createProjectForConversation] Failed:', error);
+      throw new Error(`Failed to create project for conversation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
   
 export const addMessageToConversation = mutation({
 args: {
@@ -293,6 +439,7 @@ handler: async (ctx, args) => {
       familyMetadata: args.message.familyMetadata,
       artifactMetadata: args.message.artifactMetadata,
       suggestions: args.message.suggestions,
+      a2aMetadata: args.message.a2aMetadata,  // A2A announcement metadata
       createdAt: now,
       updatedAt: now,
     });

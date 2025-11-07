@@ -124,6 +124,27 @@ export function DependencyGraphView({ executionPlan, coordinationResult }: Depen
                         </div>
                       )}
 
+                      {/* Artifact Assignment */}
+                      {step.artifact_type && (
+                        <div className="space-y-1">
+                          <span className="text-xs font-medium">Artifact:</span>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="text-xs">
+                              {step.artifact_type}
+                            </Badge>
+                            {step.assigned_artifact_id ? (
+                              <Badge variant="outline" className="text-xs">
+                                UPDATE: {step.assigned_artifact_id.slice(-8)}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs">
+                                CREATE NEW
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Responsibilities */}
                       {step.responsibilities && step.responsibilities.length > 0 && (
                         <div className="space-y-1">
