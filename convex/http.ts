@@ -193,6 +193,36 @@ app.post("/api/users/:id/create_conversation", async (c) => {
   }
 });
 
+// Create conversation for existing project (fallback for legacy/incomplete projects)
+app.post("/api/chat/createConversationForProject", async (c) => {
+  const ctx = c.env;
+  const { userId, projectId, title, messages } = await c.req.json();
+  
+  try {
+    if (!userId || !projectId || !title) {
+      return c.json({ 
+        success: false, 
+        error: "userId, projectId, and title are required" 
+      }, 400);
+    }
+    
+    const result = await ctx.runMutation(api.chatMutations.createConversationForProject, {
+      userId,
+      projectId,
+      title,
+      messages: messages || [],
+    });
+    
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    console.error('Create conversation for project error:', error);
+    return c.json({ 
+      success: false, 
+      error: `Failed to create conversation for project: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    }, 500);
+  }
+});
+
 // Add message to conversation (LEGACY - uses old messages array)
 // TODO: Remove after migration complete
 app.post("/api/users/:id/add_message_to_conversation", async (c) => {

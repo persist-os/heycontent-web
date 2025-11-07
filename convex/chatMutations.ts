@@ -91,7 +91,18 @@ export const initializeConversation = mutation({
       
       console.log(`[initializeConversation] ✅ Created conversation ${conversationId}`);
       
-      // 4. Create ONE Cognitive Field (shared by BOTH project AND conversation)
+      // 4. Link project to conversation IMMEDIATELY (critical - must happen before cognitive field)
+      // This ensures project always has conversationId even if cognitive field creation fails
+      await ctx.db.patch(projectId, {
+        fingerprintId: fingerprintId,
+        conversationId: conversationId,
+        updatedAt: currentTime,
+      });
+      
+      console.log(`[initializeConversation] ✅ Linked project ${projectId} to conversation ${conversationId}`);
+      
+      // 5. Create ONE Cognitive Field (shared by BOTH project AND conversation)
+      // This can fail without breaking the project-conversation link
       const fieldId = `cf_unified_${projectId}_${conversationId}_${currentTime}`;
       await ctx.runMutation(api.cognitiveMutations.createCognitiveField, {
         userId: args.userId,
@@ -106,13 +117,6 @@ export const initializeConversation = mutation({
       });
       
       console.log(`[initializeConversation] ✅ Created unified cognitive field ${fieldId}`);
-      
-      // 5. Link everything together
-      await ctx.db.patch(projectId, {
-        fingerprintId: fingerprintId,
-        conversationId: conversationId,
-        updatedAt: currentTime,
-      });
       
       console.log(`[initializeConversation] 🎉 COMPLETE: All 4 entities created and linked`);
       console.log(`[initializeConversation] 📊 Project: ${projectId}, Conversation: ${conversationId}, Fingerprint: ${fingerprintId}, Field: ${fieldId}`);
@@ -162,6 +166,79 @@ export const createConversation = mutation({
       return result.conversationId;
     },
   });
+
+/**
+ * Create conversation for an existing project (fallback for incomplete projects).
+ * 
+ * ⚠️ NOTE: Projects SHOULD be created with conversations atomically via initializeConversation.
+ * This mutation provides graceful fallback for legacy/incomplete projects that don't have conversations.
+ * 
+ * Creates:
+ * - Conversation linked to existing project
+ * - Links project to conversation (bidirectional)
+ */
+export const createConversationForProject = mutation({
+  args: {
+    userId: v.string(),
+    projectId: v.id("projects"),
+    title: v.string(),
+    messages: v.optional(messageArrayValidator),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const currentTime = Date.now();
+      
+      // Verify project exists
+      const project = await ctx.db.get(args.projectId);
+      if (!project) {
+        throw new Error(`Project ${args.projectId} not found`);
+      }
+      
+      // Check if project already has a conversation
+      if (project.conversationId) {
+        console.log(`[createConversationForProject] Project ${args.projectId} already has conversation ${project.conversationId}`);
+        return {
+          conversationId: project.conversationId,
+          projectId: args.projectId,
+        };
+      }
+      
+      // Create conversation linked to existing project
+      const conversationData: any = {
+        userId: args.userId,
+        title: args.title,
+        messages: args.messages || [],
+        messageCount: args.messages?.length || 0,
+        lastMessageAt: args.messages && args.messages.length > 0 ? args.messages[args.messages.length - 1].timestamp : undefined,
+        createdAt: currentTime,
+        updatedAt: currentTime,
+        starred: false,
+        projectId: args.projectId,
+        conversationType: "project_scoped",
+      };
+      
+      const conversationId = await ctx.db.insert("conversations", conversationData);
+      
+      console.log(`[createConversationForProject] ✅ Created conversation ${conversationId} for project ${args.projectId}`);
+      
+      // Link project to conversation (bidirectional)
+      await ctx.db.patch(args.projectId, {
+        conversationId: conversationId,
+        updatedAt: currentTime,
+      });
+      
+      console.log(`[createConversationForProject] ✅ Linked project ${args.projectId} to conversation ${conversationId}`);
+      
+      return {
+        conversationId,
+        projectId: args.projectId,
+      };
+    } catch (error) {
+      console.error('[createConversationForProject] Failed:', error);
+      throw new Error(`Failed to create conversation for project: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
   
 export const addMessageToConversation = mutation({
 args: {
