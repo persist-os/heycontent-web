@@ -71,15 +71,6 @@ export function UnifiedGalleryView({
     [jobs, widgetId]
   )
   
-  // Widget questions
-  const questions = useQuery(
-    api.widgetQuestionsQueries.getWidgetQuestions,
-    widgetId ? { widgetId: widgetId as any } : 'skip'
-  )
-  const pendingQuestions = useMemo(() => 
-    questions?.filter((q: any) => q.status === 'pending') || [],
-    [questions]
-  )
   
   // Widget outputs
   const outputs = useQuery(
@@ -329,10 +320,6 @@ export function UnifiedGalleryView({
           </CollapsibleContent>
         </Collapsible>
         
-        {/* QUESTIONS - Conditional */}
-        {pendingQuestions && pendingQuestions.length > 0 && (
-          <QuestionsList questions={pendingQuestions} />
-        )}
         
         {/* HOW IT WORKS - Collapsible */}
         <Collapsible open={helpersOpen} onOpenChange={setHelpersOpen}>
@@ -530,82 +517,6 @@ export function UnifiedGalleryView({
           </CollapsibleContent>
         </Collapsible>
       </div>
-    )
-  }
-  
-  // Questions component
-  const QuestionsList = ({ questions }: { questions: any[] }) => {
-    const [currentIdx, setCurrentIdx] = useState(0)
-    const [answer, setAnswer] = useState('')
-    const [isSubmitting, setIsSubmitting] = useState(false)
-    const answerQuestion = useMutation(api.widgetQuestionsMutations.answerQuestion)
-    
-    const current = questions[currentIdx]
-    
-    const handleSubmit = async () => {
-      if (!answer.trim() || isSubmitting) return
-      setIsSubmitting(true)
-      try {
-        await answerQuestion({ questionId: current._id, answer })
-        setAnswer('')
-        if (currentIdx < questions.length - 1) {
-          setCurrentIdx(currentIdx + 1)
-        }
-      } catch (err) {
-        console.error('Answer failed:', err)
-      } finally {
-        setIsSubmitting(false)
-      }
-    }
-    
-    return (
-      <Card className="bg-yellow-500/10 border-yellow-500/20 border">
-        <div className="p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4">
-            Questions for You
-          </h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            This widget needs your input to continue working.
-          </p>
-          
-          <div className="border-t border-border/40 pt-4">
-            <p className="text-xs text-muted-foreground mb-2">
-              Question {currentIdx + 1} of {questions.length}
-            </p>
-            
-            <p className="text-lg text-foreground mb-3">
-              "{current.question}"
-            </p>
-            
-            {current.context?.reason && (
-              <div className="bg-muted/20 p-3 rounded mb-4">
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-medium">Why it's asking:</span><br/>
-                  {current.context.reason}
-                </p>
-              </div>
-            )}
-            
-            <Textarea
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              placeholder="Type your answer here..."
-              className="mb-3"
-              rows={3}
-            />
-            
-            <div className="flex gap-2">
-              <Button onClick={handleSubmit} disabled={!answer.trim() || isSubmitting}>
-                {isSubmitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                Send Answer
-              </Button>
-              <Button variant="ghost" onClick={() => setAnswer('')} disabled={isSubmitting}>
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </div>
-      </Card>
     )
   }
   

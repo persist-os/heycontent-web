@@ -24,10 +24,7 @@ import { cognitiveFieldSchemaFields } from "./types/cognitiveField";
 
 // Projects
 import { projectSchemaFields } from "./types/project";
-import { projectFingerprintSchemaFields } from "./types/projectFingerprint";
 import { assignmentFingerprintSchemaFields } from "./types/assignmentFingerprint";
-import { fingerprintEvolutionHistorySchemaFields } from "./types/fingerprintEvolutionHistory";
-import { fingerprintEvolutionSignalSchemaFields } from "./types/fingerprintEvolutionSignal";
 
 // Prompts (Universal Prompt System)
 import { promptSchemaFields } from "./types/prompt";
@@ -281,30 +278,12 @@ export default defineSchema({
   .index("by_referrer", ["referrerId"])
   .index("by_total_referred", ["totalReferred"]),
 
-  // Project Fingerprints - Universal AI project intelligence
-  project_fingerprints: defineTable(projectFingerprintSchemaFields)
-  .index("by_project", ["projectId"])
-  .index("by_user", ["userId"])
-  .index("by_domain", ["domain"])
-  .index("by_status", ["status"])
-  .index("by_creation", ["created_at"])
-  .index("by_evolution", ["last_evolution"]),
-
-  // Assignment Fingerprints - Simplified schema for Living Projects paradigm
+  // Assignment Fingerprints - Living Projects paradigm
   // Tracks project understanding and AI usage intent from conversations
   assignment_fingerprints: defineTable(assignmentFingerprintSchemaFields)
   .index("by_project", ["projectId"])
   .index("by_user", ["userId"])
   .index("by_project_user", ["projectId", "userId"]),
-
-  // Fingerprint Evolution History - Separate table for AI access and querying
-  fingerprint_evolution_history: defineTable(fingerprintEvolutionHistorySchemaFields)
-  .index("by_fingerprint", ["fingerprintId"])
-  .index("by_user", ["userId"])
-  .index("by_project", ["projectId"])
-  .index("by_trigger", ["evolution_trigger"])
-  .index("by_timestamp", ["timestamp"])
-  .index("by_user_timestamp", ["userId", "timestamp"]),
 
   // Project Widgets - Personalized widgets for each project (aligned with backend models)
   // ============================================================================
@@ -567,14 +546,6 @@ export default defineSchema({
   .index("by_received_at", ["receivedAt"])
   .index("by_event_type_status", ["eventType", "status"]),
 
-  // ============================================================================
-  // FINGERPRINT EVOLUTION SIGNALS - Track project activity for MAB-driven evolution
-  // ============================================================================
-  fingerprint_evolution_signals: defineTable(fingerprintEvolutionSignalSchemaFields)
-  .index("by_fingerprint", ["fingerprintId"])
-  .index("by_project", ["projectId"])
-  .index("by_user", ["userId"])
-  .index("by_signal_score", ["evolution_signal_score"]),
 
   // ============================================================================
   // Briefing Room - Living Intelligence Briefing System

@@ -4,13 +4,14 @@ import { useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
+import { Id } from '@/convex/_generated/dataModel'
 import { Button } from '@/components/ui/button'
 import { Play, Eye, Zap, Activity, CheckCircle2, Moon } from 'lucide-react'
 import { toast } from 'sonner'
 
 
 interface ProjectControlPanelProps {
-  projectId: string
+  projectId: Id<"projects">
   userId: string
 }
 
@@ -39,19 +40,14 @@ export function ProjectControlPanel({
   
   // Direct Convex query for project data
   const project = useQuery(api.projectsQueries.getById, {
-    projectId: projectId as any,
+    projectId: projectId,
     userId
   })
   
   // Direct Convex query for widgets (families)
   const widgets = useQuery(api.widgetsQueries.getProjectWidgets, {
-    projectId: projectId as any,
+    projectId: projectId,
     userId
-  })
-  
-  // Direct Convex query for pending questions
-  const pendingQuestions = useQuery(api.widgetQuestionsQueries.getPendingQuestions, {
-    projectId: projectId as any
   })
   
   // Living Projects states: fresh, working, sleeping, stable, archived
@@ -62,9 +58,8 @@ export function ProjectControlPanel({
   
   const familyCount = widgets?.length || 0
   const pendingWidgets = widgets?.filter(w => w.status === 'pending' || w.status === 'ready').length || 0
-  const runningWidgets = widgets?.filter(w => w.status === 'executing').length || 0
+  const runningWidgets = widgets?.filter(w => w.status === 'working').length || 0
   const completedWidgets = widgets?.filter(w => w.status === 'completed').length || 0
-  const waitingFamilies = pendingQuestions?.length || 0
   
   const handleWakeProject = useCallback(async () => {
     try {
@@ -186,12 +181,6 @@ export function ProjectControlPanel({
           <span className="text-muted-foreground">Completed:</span>
           <span className="font-medium text-green-500">{completedWidgets}</span>
         </div>
-        {waitingFamilies > 0 && (
-          <div className="flex items-center justify-between text-yellow-400">
-            <span>Questions Waiting:</span>
-            <span className="font-medium">{waitingFamilies}</span>
-          </div>
-        )}
       </div>
 
       {/* Action Buttons */}

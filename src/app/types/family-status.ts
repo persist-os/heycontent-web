@@ -114,14 +114,8 @@ export function getStatusBadge(status: FamilyStatus): FamilyStatusBadge {
  */
 export function deriveFamilyStatus(
   widgetRunStatus: string | null | undefined,
-  backgroundJobStatus: string | null | undefined,
-  hasPendingQuestions: boolean
+  backgroundJobStatus: string | null | undefined
 ): FamilyStatus {
-  // Priority 1: Pending questions
-  if (hasPendingQuestions) {
-    return 'waiting_input'
-  }
-
   // Priority 2: Background job status (most accurate for in-flight execution)
   if (backgroundJobStatus) {
     switch (backgroundJobStatus) {

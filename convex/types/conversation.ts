@@ -33,7 +33,6 @@ export const conversationSchemaFields = {
     familyMetadata: v.optional(v.object({
       familyId: v.union(v.string(), v.id("widgets")),
       familyName: v.string(),
-      questionId: v.optional(v.id("widget_questions")),
       context: v.optional(v.string())
     })),
     // MAB Decision IDs (for feedback loop)

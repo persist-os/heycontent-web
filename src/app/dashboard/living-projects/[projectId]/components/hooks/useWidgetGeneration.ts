@@ -16,19 +16,19 @@ import { fetchWithApiKey } from '@/app/lib/api-helpers'
 
 interface UseWidgetGenerationOptions {
   projectId: string
-  currentFingerprint: any
+  assignmentFingerprint: any
   hasWidgets: boolean
 }
 
 export function useWidgetGeneration({
   projectId,
-  currentFingerprint,
+  assignmentFingerprint,
   hasWidgets
 }: UseWidgetGenerationOptions) {
   const [isGenerating, setIsGenerating] = useState(false)
 
   const regenerateWidgets = async () => {
-    if (!currentFingerprint) return
+    if (!assignmentFingerprint) return
     
     console.log('[MANUAL-REGENERATE] User triggered widget regeneration')
     setIsGenerating(true)
@@ -37,7 +37,7 @@ export function useWidgetGeneration({
       const response = await fetchWithApiKey(`/api/projects/${projectId}/generate-widgets`, {
         method: 'POST',
         body: JSON.stringify({
-          fingerprint_id: currentFingerprint._id,
+          fingerprint_id: assignmentFingerprint._id,
           project_id: projectId,
           user_preferences: {}
         })

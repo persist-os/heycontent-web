@@ -426,7 +426,7 @@ export const getJobStats = query({
  */
 export const getAssignmentStatus = query({
   args: {
-    projectId: v.string(),
+    projectId: v.id("projects"),
     userId: v.string(),
   },
   handler: async (ctx, { projectId, userId }) => {
@@ -446,13 +446,16 @@ export const getAssignmentStatus = query({
     }
     
     // Get all widget_execution jobs for this user's widgets
-    const jobs = await ctx.db
+    // Note: Must collect first, then filter in JavaScript (Convex can't filter nested payload fields)
+    const allJobs = await ctx.db
       .query("background_jobs")
       .withIndex("by_user_type_status", (q) =>
         q.eq("userId", userId).eq("type", "widget_execution")
       )
-      .filter((q) => q.eq(q.field("payload").projectId, projectId))
       .collect();
+    
+    // Filter jobs by projectId in JavaScript (payload.projectId is nested)
+    const jobs = allJobs.filter(job => job.payload?.projectId === projectId);
     
     // Map jobs to widget IDs
     const jobsByWidgetId = new Map();
@@ -492,26 +495,12 @@ export const getAssignmentStatus = query({
       overallStatus = "active";
     }
     
-    // Check for pending questions (for needs_attention status)
-    const pendingQuestions = await ctx.db
-      .query("widget_questions")
-      .withIndex("by_project", (q) => q.eq("projectId", projectId))
-      .filter((q) => q.eq(q.field("status"), "pending"))
-      .collect();
-    
-    if (pendingQuestions.length > 0) {
-      overallStatus = "needs_attention";
-    }
-    
+
     return {
       assignment_id: projectId,
       overall_status: overallStatus,
       widgets: widgetStatuses,
       artifacts: [], // Frontend queries artifacts separately
-      needs_user_input: pendingQuestions.length > 0 ? {
-        count: pendingQuestions.length,
-        message: "User input required"
-      } : undefined,
     };
   },
 });

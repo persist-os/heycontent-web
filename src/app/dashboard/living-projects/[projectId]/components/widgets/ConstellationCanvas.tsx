@@ -8,8 +8,9 @@
 'use client'
 
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react'
-import { useQuery } from 'convex/react'
+import { useQuery, useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
+import { Id } from '@/convex/_generated/dataModel'
 import { WidgetConfig } from '@/types/projectWidgets'
 import { usePanZoom } from '../../../hooks/usePanZoom'
 import { ConnectionLines } from '../../../components/ConnectionLines'
@@ -18,19 +19,19 @@ import { ConstellationMinimap } from '../../../components/ConstellationMinimap'
 import { useWidgetLayout } from '../hooks/useWidgetLayout'
 import { FloatingWidgetCard } from './FloatingWidgetCard'
 import { ArtifactCard } from './ArtifactCard'
-import { ProjectFingerprint } from './ProjectFingerprint'
 import { ProjectControlPanel } from '../ProjectControlPanel'
 import { SpawnWidgetDialog } from './SpawnWidgetDialog'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { T } from '@/components/translation/T'
 import { deriveFamilyStatus, type FamilyStatus } from '@/app/types/family-status'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, MessageCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 interface ConstellationCanvasProps {
   widgets: WidgetConfig[]
   artifacts?: any[] // Widget output artifacts
   userId: string | null
-  projectId: string
+  projectId: Id<"projects">
   onWidgetClick: (widget: WidgetConfig) => void
   onWidgetHover: (widgetId: string | null) => void
   highlightedWidget: string | null
@@ -56,18 +57,28 @@ export function ConstellationCanvas({
   onLayoutReset
 }: ConstellationCanvasProps) {
   const { trackWidgetOpen } = useAnalytics()
+  const router = useRouter()
+  
+  // Explicitly type projectId to ensure correct type inference
+  const typedProjectId: Id<"projects"> = projectId;
+  
+  // Query for project-scoped conversation
+  const projectConversation = useQuery(
+    api.chatQueries.getProjectScopedConversation,
+    userId && projectId ? { 
+      projectId: projectId, 
+      userId 
+    } : 'skip'
+  )
+  
+  // Mutation for creating conversation
+  const createConversation = useMutation(api.chatMutations.createConversation)
   
   // Direct Convex queries for family status (NO polling)
   // Query background jobs for execution status
   const backgroundJobs = useQuery(
     api.backgroundJobs.getUserJobs,
     userId ? { userId, jobType: 'widget_execution', limit: 100 } : 'skip'
-  )
-  
-  // Query widget questions for waiting_input status
-  const widgetQuestions = useQuery(
-    api.widgetQuestionsQueries.getPendingQuestions,
-    projectId ? { projectId: projectId as any } : 'skip'
   )
   
   // Derive family status for each widget
@@ -80,23 +91,17 @@ export function ConstellationCanvas({
         (job: any) => job.payload?.widget_id === widget._id || job.payload?.widgetId === widget._id
       )
       
-      // Check for pending questions
-      const hasPendingQuestions = widgetQuestions?.some(
-        (q: any) => q.widgetId === widget._id
-      ) || false
-      
       // Derive status from widget data, job status, and questions
       const status = deriveFamilyStatus(
         widget.lastRunStatus,
         widgetJob?.status,
-        hasPendingQuestions
       )
       
       statusMap.set(widget._id, status)
     })
     
     return statusMap
-  }, [widgets, backgroundJobs, widgetQuestions])
+  }, [widgets, backgroundJobs])
   
   const [viewportSize, setViewportSize] = useState({
     width: typeof window !== 'undefined' ? window.innerWidth : 1200,
@@ -115,6 +120,37 @@ export function ConstellationCanvas({
   const handleArtifactClick = useCallback((artifact: any) => {
     onArtifactClick?.(artifact)
   }, [onArtifactClick])
+  
+  // Handle conversation open
+  const handleOpenConversation = useCallback(async () => {
+    if (!userId || !projectId) return
+    
+    if (projectConversation?._id) {
+      // Conversation exists, navigate to it
+      router.push(`/dashboard/thinking_lab?chatId=${projectConversation._id}`)
+    } else {
+      // No conversation yet, create one
+      try {
+        const conversationId = await createConversation({
+          userId,
+          title: `Project Conversation`,
+          projectId: projectId as any,
+          conversationType: "project_scoped"
+        })
+        
+        if (conversationId) {
+          router.push(`/dashboard/thinking_lab?chatId=${conversationId}`)
+        } else {
+          // Fallback if creation failed
+          router.push(`/dashboard/thinking_lab?projectId=${projectId}`)
+        }
+      } catch (error) {
+        console.error('[ConstellationCanvas] Failed to create conversation:', error)
+        // Fallback to project context mode
+        router.push(`/dashboard/thinking_lab?projectId=${projectId}`)
+      }
+    }
+  }, [userId, projectId, projectConversation, createConversation, router])
   
   // Natural scattered positioning for mixed widgets and artifacts
   // Creates organic constellation layout across entire canvas
@@ -332,12 +368,6 @@ export function ConstellationCanvas({
         </div>
       </div>
 
-      {/* Project Fingerprint - Top Left with enhanced glassmorphism */}
-      <div className="absolute top-4 left-4 z-10 pointer-events-auto max-w-2xl">
-        <div className="bg-gradient-to-br from-card/85 via-card/80 to-primary/10 backdrop-blur-xl border border-border/50 rounded-xl shadow-xl shadow-primary/10 ring-1 ring-border/20">
-          <ProjectFingerprint projectId={projectId} />
-        </div>
-      </div>
 
       {/* Project Control Panel and Spawn Widget Button - Top Right */}
       <div className="absolute top-4 right-4 z-10 flex items-start gap-3">
@@ -353,8 +383,21 @@ export function ConstellationCanvas({
           </span>
         </button>
         
+        {/* Open Conversation Button */}
+        <button
+          onClick={handleOpenConversation}
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-secondary to-secondary/80 text-secondary-foreground backdrop-blur-lg border border-secondary/20 rounded-xl hover:shadow-lg hover:shadow-secondary/20 transition-all duration-200"
+          title="Open Project Conversation"
+          disabled={!userId || !projectId}
+        >
+          <MessageCircle className="w-4 h-4" />
+          <span className="text-sm font-medium">
+            <T context="constellation.button.open_conversation">Open Conversation</T>
+          </span>
+        </button>
+        
         <ProjectControlPanel
-          projectId={projectId}
+          projectId={typedProjectId}
           userId={userId || ''}
         />
       </div>

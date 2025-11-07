@@ -24,6 +24,7 @@ import { useOptimizedAuth } from '../components/notepad/hooks/useOptimizedAuth'
 import { NotepadProvider, useNotepadContext } from '../contexts/NotepadContext'
 import { ThreadSidebar } from '../components/ThreadSidebar'
 import { ArtifactPanel } from '../components/ArtifactPanel'
+import { WidgetPanel } from '../components/WidgetPanel'
 
 // =============================================================================
 // PANEL COMPONENTS
@@ -97,8 +98,8 @@ function FullThinkingLabInternal({
   // Sidebar state
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   
-  // Right panel mode (notepad or artifacts)
-  const [rightPanelMode, setRightPanelMode] = useState<'notepad' | 'artifacts'>('notepad')
+  // Right panel mode (notepad, artifacts, or widgets)
+  const [rightPanelMode, setRightPanelMode] = useState<'notepad' | 'artifacts' | 'widgets'>('notepad')
   
   // Use the notepad context
   const notepadContext = useNotepadContext()
@@ -279,6 +280,16 @@ function FullThinkingLabInternal({
               >
                 Artifacts
               </button>
+              <button
+                onClick={() => setRightPanelMode('widgets')}
+                className={`px-3 py-1 rounded text-sm transition-colors ${
+                  rightPanelMode === 'widgets'
+                    ? 'bg-primary text-primary-foreground font-semibold'
+                    : 'hover:bg-accent text-muted-foreground'
+                }`}
+              >
+                Widgets
+              </button>
             </div>
             
             {/* Conditional Panel Rendering */}
@@ -289,10 +300,22 @@ function FullThinkingLabInternal({
                 onClearQuoted={clearQuotedContent}
                 onClose={handleNotepadClose}
               />
-            ) : (
+            ) : rightPanelMode === 'artifacts' ? (
               <ArtifactPanel
                 projectId={projectId}
               />
+            ) : userId ? (
+              <WidgetPanel
+                projectId={projectId}
+                conversationId={conversationId}
+                userId={userId}
+              />
+            ) : (
+              <div className="h-full flex items-center justify-center p-6">
+                <div className="text-center text-muted-foreground">
+                  <p className="text-sm">Loading...</p>
+                </div>
+              </div>
             )}
           </div>
         </div>

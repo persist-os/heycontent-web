@@ -5,7 +5,6 @@ import { useQuery, useMutation } from 'convex/react'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { api } from '@/convex/_generated/api'
 import { Id } from '@/convex/_generated/dataModel'
-import { useProjectFingerprint } from '@/app/dashboard/living-projects/hooks/useProjectFingerprint'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { T } from '@/components/translation'
 import { 
@@ -101,14 +100,21 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
     } : 'skip'
   )
 
-  const clearConstellationLayout = useMutation(api.projectsMutations.clearConstellationLayout)
+  // Fetch assignment fingerprint
+  const assignmentFingerprint = useQuery(
+    api.assignmentFingerprintQueries.getByProject,
+    projectId && userId ? { 
+      projectId: projectId as any,
+      userId: userId
+    } : 'skip'
+  )
 
-  const { fingerprint: currentFingerprint } = useProjectFingerprint(projectId as any)
+  const clearConstellationLayout = useMutation(api.projectsMutations.clearConstellationLayout)
   
   // Business logic hooks
   const { isGenerating, regenerateWidgets } = useWidgetGeneration({
     projectId,
-    currentFingerprint,
+    assignmentFingerprint,
     hasWidgets: !!projectWidgets?.widgets?.length
   })
 
@@ -213,8 +219,8 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
     )
   }
 
-  const lastEvolution = currentFingerprint?.last_evolution 
-    ? formatDistanceToNow(new Date(currentFingerprint.last_evolution), { addSuffix: true })
+  const lastEvolution = assignmentFingerprint?.lastEvolution 
+    ? formatDistanceToNow(new Date(assignmentFingerprint.lastEvolution), { addSuffix: true })
     : 'Never'
 
   return (
@@ -372,12 +378,12 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
             <>
               {isGenerating ? (
                 <WidgetGenerationLoader />
-              ) : currentFingerprint ? (
+              ) : assignmentFingerprint ? (
                 <ConstellationCanvas
                   widgets={(projectWidgets?.widgets || []) as WidgetConfig[]}
                   artifacts={artifacts || []}
                   userId={userId}
-                  projectId={projectId}
+                  projectId={projectId as Id<"projects">}
                   onWidgetClick={handleWidgetClick}
                   onWidgetHover={handleWidgetHover}
                   highlightedWidget={highlightedWidget}

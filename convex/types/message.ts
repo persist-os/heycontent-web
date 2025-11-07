@@ -28,7 +28,6 @@ export const messageSchemaFields = {
   familyMetadata: v.optional(v.object({
     familyId: v.union(v.string(), v.id("widgets")),
     familyName: v.string(),
-    questionId: v.optional(v.id("widget_questions")),  // Link to question record
     context: v.optional(v.string())  // Why asking
   })),
   
@@ -80,7 +79,6 @@ export const messageInputValidator = v.object({
   familyMetadata: v.optional(v.object({
     familyId: v.union(v.string(), v.id("widgets")),
     familyName: v.string(),
-    questionId: v.optional(v.id("widget_questions")),
     context: v.optional(v.string())
   })),
   fileAttachments: v.optional(v.array(v.object({

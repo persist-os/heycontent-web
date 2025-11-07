@@ -11,10 +11,8 @@ import { v } from "convex/values";
 /**
  * Create a test family question for testing pending questions UI
  * 
- * This mimics the backend flow from widget_question.py:
- * 1. Creates widget_questions record
- * 2. Gets/creates project-scoped conversation
- * 3. Posts question as assistant message in that conversation
+ * DEPRECATED: Widget questions system removed. Questions are now posted as normal chat messages.
+ * This function is kept for backward compatibility but no longer creates widget_questions records.
  * 
  * Usage in Convex Dashboard:
  * 1. Go to convex.dev dashboard
@@ -59,24 +57,10 @@ export const createTestFamilyQuestion = mutation({
     // Pick a random question
     const sample = sampleQuestions[Math.floor(Math.random() * sampleQuestions.length)];
     
-    // 1. Create test question record
-    const questionId = await ctx.db.insert("widget_questions", {
-      widgetId,
-      projectId: args.projectId,
-      userId: args.userId,
-      question: sample.question,
-      context: {
-        familyName: sample.familyName,
-        reason: sample.context,
-        missing_info: ["user input needed"],
-        generated_at: Date.now()
-      },
-      suggestedAnswers: undefined,
-      status: "pending",
-      createdAt: Date.now()
-    });
+    // NOTE: Widget questions system removed - questions are now just chat messages
+    // No widget_questions record needed
     
-    // 2. Get or create project-scoped conversation
+    // Get or create project-scoped conversation
     let conversation = await ctx.db
       .query("conversations")
       .filter((q) =>
@@ -111,22 +95,21 @@ export const createTestFamilyQuestion = mutation({
       throw new Error("Failed to create conversation");
     }
     
-    // 3. Post question as assistant message in conversation
+    // Post question as assistant message in conversation
     // CRITICAL: DUAL-WRITE for backward compatibility
     // - New: messages table
     // - Legacy: conversation.messages array
     const now = Date.now();
     
-    // Construct the message object
+    // Construct the message object (no questionId - just normal message)
     const familyMessage = {
-      content: `Hey! ${sample.familyName} here. ${sample.question}`,
+      content: `💭 **${sample.familyName}** ${sample.question}`,
       role: "assistant" as const,
       timestamp: now,
       contentType: "family_question" as const,
       familyMetadata: {
         familyId: widgetId,
         familyName: sample.familyName,
-        questionId: questionId,
         context: sample.context
       }
     };
@@ -144,55 +127,42 @@ export const createTestFamilyQuestion = mutation({
     // Write 2: Append to conversation.messages array (LEGACY - required for useConversationState)
     const currentMessages = conversation.messages || [];
     await ctx.db.patch(conversation._id, {
-      messages: [...currentMessages, familyMessage], // ← THE MISSING LINE
+      messages: [...currentMessages, familyMessage],
       messageCount: (conversation.messageCount || 0) + 1,
       lastMessageAt: now,
       updatedAt: now
     });
     
-    console.log(`✅ Created test question: ${questionId}`);
-    console.log(`✅ Posted message: ${messageId} to conversation: ${conversation._id}`);
+    console.log(`✅ Posted test question message: ${messageId} to conversation: ${conversation._id}`);
     console.log(`Family: ${sample.familyName}`);
     console.log(`Question: ${sample.question}`);
     
     return {
       success: true,
-      questionId,
       messageId,
       conversationId: conversation._id,
       familyName: sample.familyName,
       question: sample.question,
-      message: "Test question created and posted to project conversation! Click the question on your homepage to see it."
+      message: "Test question posted to project conversation! Check your project conversation to see it."
     };
   }
 });
 
 /**
  * Clean up test questions (optional - for cleanup after testing)
+ * 
+ * DEPRECATED: Widget questions system removed. This function is kept for backward compatibility.
  */
 export const deleteTestQuestions = mutation({
   args: {
     userId: v.string(),
   },
   handler: async (ctx, args) => {
-    const questions = await ctx.db
-      .query("widget_questions")
-      .filter((q) => q.eq(q.field("userId"), args.userId))
-      .collect();
-    
-    let deleted = 0;
-    for (const question of questions) {
-      // Only delete test questions (with test widgetId or pending status)
-      if (typeof question.widgetId === "string" && question.widgetId.includes("test")) {
-        await ctx.db.delete(question._id);
-        deleted++;
-      }
-    }
-    
+    // Widget questions system removed - no cleanup needed
     return {
       success: true,
-      deleted,
-      message: `Deleted ${deleted} test questions`
+      deleted: 0,
+      message: "Widget questions system removed - no cleanup needed"
     };
   }
 });
