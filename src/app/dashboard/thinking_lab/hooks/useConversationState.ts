@@ -40,6 +40,7 @@ export function useConversationState(
   const [error, setError] = useState<string | undefined>()
   const [quotedContent, setQuotedContent] = useState("")
   const [inputValue, setInputValue] = useState("")
+  const [isOrchestratorRunning, setIsOrchestratorRunning] = useState(false)
 
   // Ref to prevent cleanup from running multiple times per message cycle
   const cleanupDoneRef = useRef(false)
@@ -60,6 +61,18 @@ export function useConversationState(
   const conversation = useQuery(
     api.chatQueries.getConversation,
     conversationId && userId ? { userId, conversationId: conversationId as Id<"conversations"> } : "skip"
+  )
+  
+  // Query A2A notes for this conversation/project
+  const a2aNotes = useQuery(
+    api.a2aQueries.getLatestA2ANotesPublic,
+    (conversationId || projectId) && userId 
+      ? { 
+          conversationId: conversationId as any, 
+          projectId: projectId as any,
+          limit: 50 
+        } 
+      : "skip"
   )
   
   // Track previous projectId to detect switches
@@ -110,8 +123,70 @@ export function useConversationState(
   // For now, we skip this query since artifacts don't support outputId lookup
   const openingMessage = null
   
-  // Extract messages and suggestions - memoized to prevent unnecessary re-renders
-  const messages = React.useMemo(() => conversation?.messages || [], [conversation?.messages])
+  // Extract messages and merge with A2A notes - memoized to prevent unnecessary re-renders
+  const messages = React.useMemo(() => {
+    const regularMessages = conversation?.messages || []
+    
+    // Convert A2A notes to message format, but skip ones already posted as messages
+    const a2aMessages = (a2aNotes || [])
+      .filter((note: any) => {
+        // Skip A2A notes that were already posted as messages
+        // Check if there's a message with matching a2aMetadata.agentId and similar timestamp
+        const noteTimestamp = note.createdAt
+        const alreadyPosted = regularMessages.some((msg: any) => {
+          if (msg.contentType !== "a2a_announcement") return false
+          const msgAgentId = msg.a2aMetadata?.agentId || msg.a2aMetadata?.report?.agent_id
+          const msgTimestamp = msg.timestamp || 0
+          // Match if same agent and timestamp within 5 seconds
+          return msgAgentId === note.agentId && Math.abs(msgTimestamp - noteTimestamp) < 5000
+        })
+        return !alreadyPosted
+      })
+      .map((note: any) => {
+        const report = note.report || {}
+        const agentId = note.agentId || report.agent_id || "orchestrator"
+        const announcement = report.announcement || (agentId === "orchestrator" 
+          ? "Orchestration complete" 
+          : "Chat agent communication")
+        
+        // Format announcement similar to factory method
+        const agentEmoji = agentId === "orchestrator" ? "🎯" : "💬"
+        const agentName = agentId === "orchestrator" ? "Orchestrator" : "Chat Agent"
+        
+        const contentParts = [`${agentEmoji} **${agentName}**: ${announcement}`]
+        
+        const promisedActions = report.promised_actions || report.chat_promised || []
+        if (promisedActions.length > 0) {
+          contentParts.push(`\n**Promised:** ${promisedActions.join(", ")}`)
+        }
+        
+        const conversationStage = report.conversation_stage
+        if (conversationStage) {
+          contentParts.push(`\n**Stage:** ${conversationStage}`)
+        }
+        
+        const suggestedTitle = report.suggested_title || report.metadata?.suggested_title
+        if (suggestedTitle) {
+          contentParts.push(`\n**Suggested Title:** ${suggestedTitle}`)
+        }
+        
+        return {
+          _id: note._id,
+          content: contentParts.join(""),
+          role: "assistant" as const,
+          timestamp: note.createdAt,
+          contentType: "a2a_announcement",
+          a2aMetadata: {
+            agentId: agentId,
+            report: report
+          }
+        }
+      })
+    
+    // Merge and sort by timestamp
+    const allMessages = [...regularMessages, ...a2aMessages]
+    return allMessages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0))
+  }, [conversation?.messages, a2aNotes])
   const suggestions = (() => {
     if (!messages.length) return []
     const assistantMessages = messages.filter((msg: any) => msg.role === 'assistant')
@@ -229,6 +304,16 @@ export function useConversationState(
         requestParams,
         (chunk: string) => {
           setStreamingContent(prev => prev + chunk)
+        },
+        {
+          onOrchestratorStart: () => {
+            setIsOrchestratorRunning(true)
+            setCurrentStatus('Analyzing conversation...')
+          },
+          onOrchestratorComplete: () => {
+            setIsOrchestratorRunning(false)
+            setCurrentStatus(undefined)
+          }
         }
       )
       
@@ -256,6 +341,21 @@ export function useConversationState(
       setError(error instanceof Error ? error.message : 'Failed to send message')
     }
   }, [userId, conversationId, projectId, widgetId, widgetOutputId, createConversation, getNotepadContext])
+
+  // Subscribe to orchestrator_complete messages from Convex
+  useEffect(() => {
+    if (!conversationId || !messages.length) return
+    
+    // Check for orchestrator_complete message
+    const orchestratorComplete = messages.find(
+      (m: any) => m.contentType === 'orchestrator_complete'
+    )
+    
+    if (orchestratorComplete && isOrchestratorRunning) {
+      setIsOrchestratorRunning(false)
+      setCurrentStatus(undefined)
+    }
+  }, [messages, conversationId, isOrchestratorRunning])
 
   // Track if we've auto-sent the opening message
   const hasAutoSentRef = useRef(false)
@@ -359,6 +459,7 @@ export function useConversationState(
     suggestions,
     quotedContent,
     inputValue,
+    isOrchestratorRunning,
     
     // Actions
     sendMessage,

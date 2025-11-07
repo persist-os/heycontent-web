@@ -1934,6 +1934,36 @@ app.post("/api/project-widgets/upsert", async (c) => {
 });
 
 /**
+ * POST /api/project-widgets/append
+ * Append widgets to existing project widgets without replacing
+ * Used by orchestrator when creating new widgets incrementally
+ */
+app.post("/api/project-widgets/append", async (c) => {
+  const ctx = c.env;
+  const widgetsData = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.projectWidgetsMutations.appendWidgets, widgetsData);
+    
+    return c.json({
+      success: true,
+      data: {
+        layoutId: result.layoutId,
+        widgetIds: result.widgetIds,
+        widgetCount: result.widgetIds.length,
+      }
+    });
+  } catch (error: any) {
+    console.error("Failed to append project widgets:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to append project widgets",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
  * Get project widgets by widgets ID
  * Used by: Direct widget access, updates
  */

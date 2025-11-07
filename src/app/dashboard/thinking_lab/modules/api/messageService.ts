@@ -200,7 +200,11 @@ class StreamBuffer {
  */
 export async function transmitMessageWithStreaming(
   params: MessageTransmissionRequest,
-  onChunk: (chunk: string) => void
+  onChunk: (chunk: string) => void,
+  orchestratorCallbacks?: {
+    onOrchestratorStart?: () => void
+    onOrchestratorComplete?: () => void
+  }
 ): Promise<LabResponseData> {
   const {
     content,
@@ -331,6 +335,12 @@ export async function transmitMessageWithStreaming(
               
               // Suggestions will be updated via Convex subscription
               onStatusUpdate?.('Messages updated via subscription');
+            } else if (data.type === 'orchestrator_start') {
+              // Orchestrator started - disable input
+              orchestratorCallbacks?.onOrchestratorStart?.()
+            } else if (data.type === 'orchestrator_complete') {
+              // Orchestrator completed - enable input
+              orchestratorCallbacks?.onOrchestratorComplete?.()
             } else if (data.type === 'error') {
               streamBuffer.flush();
               console.error('[MessageService:Streaming] Error:', data.data);

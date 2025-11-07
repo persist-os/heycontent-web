@@ -66,10 +66,6 @@ export const upsertProjectWidgets = mutation({
     // Metadata - ✅ ALL OPTIONAL
     version: v.optional(v.string()),
     confidence: v.optional(v.number()),
-    
-    // Optional AI-generated timestamps (ignored)
-    generated_at: v.optional(v.any()),
-    updated_at: v.optional(v.any())
   },
   returns: v.object({
     layoutId: v.id("project_widgets"),
@@ -231,7 +227,135 @@ export const upsertProjectWidgets = mutation({
       updatedAt: now,
     });
     
-    return { layoutId, widgetIds };
+    return {
+      layoutId,
+      widgetIds,
+    };
+  },
+});
+
+// ============================================================================
+// APPEND WIDGETS (NEW - For orchestrator to add widgets without replacing)
+// ============================================================================
+
+/**
+ * Append widgets to existing project widgets without deleting existing ones
+ * Used by orchestrator when creating new widgets incrementally
+ */
+export const appendWidgets = mutation({
+  args: {
+    projectId: v.id("projects"),
+    fingerprintId: v.any(),
+    userId: v.string(),
+    widgets: v.array(widgetBatchValidator),
+  },
+  returns: v.object({
+    layoutId: v.id("project_widgets"),
+    widgetIds: v.array(v.id("widgets")),
+  }),
+  handler: async (ctx, args) => {
+    // Validate project ownership
+    const project = await ctx.db.get(args.projectId) as any;
+    if (!project) {
+      throw new Error("Project not found");
+    }
+    
+    if (project.userId !== args.userId) {
+      throw new Error("Access denied: You don't own this project");
+    }
+    
+    const now = Date.now();
+    
+    // Get or create layout (don't delete existing)
+    const layout = await ctx.db
+      .query("project_widgets")
+      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+      .filter((q) => q.eq(q.field("status"), "active"))
+      .first();
+    
+    let layoutId: Id<"project_widgets">;
+    
+    if (!layout) {
+      // Create new layout with defaults
+      layoutId = await ctx.db.insert("project_widgets", {
+        projectId: args.projectId,
+        fingerprintId: args.fingerprintId,
+        userId: args.userId,
+        categories: [{ name: "General", display_order: 1 }],
+        layout_type: "grid",
+        columns: 3,
+        rows: 4,
+        global_theme: "modern",
+        color_scheme: "default",
+        font_style: "inter",
+        allow_customization: true,
+        allow_reordering: true,
+        allow_resizing: true,
+        required_integrations: [],
+        data_refresh_strategy: "on_demand",
+        version: "1.0",
+        confidence: 0.8,
+        status: "active",
+        createdAt: now,
+        updatedAt: now,
+      });
+    } else {
+      layoutId = layout._id;
+      // Update layout timestamp
+      await ctx.db.patch(layoutId, {
+        updatedAt: now,
+      });
+    }
+    
+    // Create new widgets (DO NOT delete existing)
+    const newWidgetIds: Id<"widgets">[] = [];
+    const existingWidgetIds = project.widgetIds || [];
+    
+    for (const widget of args.widgets) {
+      const widgetData = {
+        widget_id: widget.widgetId,
+        widget_type: widget.widgetType,
+        title: widget.title,
+        description: widget.description,
+        category: widget.category ?? "general",
+        priority: widget.priority ?? 5,
+        size: widget.size ?? "medium",
+        theme: widget.theme ?? "default",
+        position: widget.position ?? (existingWidgetIds.length + newWidgetIds.length),
+        config: widget.config ?? {},
+        data_sources: widget.dataSource ?? [],
+        update_frequency: widget.updateFrequency ?? "on_demand",
+        interactive: widget.interactive ?? true,
+        editable: widget.editable ?? true,
+        shareable: widget.shareable ?? false,
+        familyIdentity: widget.familyIdentity,
+        agentRoster: widget.agentRoster,
+        capabilities: widget.capabilities,
+        execution_history: widget.execution_history,
+        inputRequirements: widget.inputRequirements,
+        outputArtifacts: widget.outputArtifacts,
+        dependencyHints: widget.dependencyHints,
+        executionProfile: widget.executionProfile,
+        workflowStage: widget.workflowStage,
+        projectId: args.projectId,
+        fingerprintId: args.fingerprintId,
+        userId: args.userId,
+        status: "active" as const,
+        createdAt: now,
+        updatedAt: now,
+      };
+      
+      const widgetId = await ctx.db.insert("widgets", widgetData);
+      newWidgetIds.push(widgetId);
+    }
+    
+    // ✅ PATTERN 13: Atomic Parent-Child Updates - Append widget IDs to project array
+    await ctx.db.patch(args.projectId, {
+      widgetIds: [...existingWidgetIds, ...newWidgetIds],
+      updatedAt: now,
+    });
+    
+    return { layoutId, widgetIds: newWidgetIds };
   },
 });
 

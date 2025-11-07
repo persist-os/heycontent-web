@@ -117,6 +117,7 @@ function FullThinkingLabInternal({
     suggestions,
     quotedContent,
     inputValue,
+    isOrchestratorRunning,
     sendMessage,
     startNewConversation,
     clearStreamingContent,
@@ -174,6 +175,7 @@ function FullThinkingLabInternal({
       handleSendMessage={sendMessage}
       inputRef={inputRef}
       isLoading={isStreaming}
+      isOrchestratorRunning={isOrchestratorRunning}
       referencedMessage={null}
       handleClearReference={() => {}}
       includeAnalysisInQuery={true}
@@ -187,7 +189,7 @@ function FullThinkingLabInternal({
       includeNotepadInMessages={notepadContext.includeInMessages}
       onToggleNotepadInMessages={notepadContext.setIncludeInMessages}
     />
-  ), [sendMessage, isStreaming, inputValue, handleInputPopulate, quotedContent, clearQuotedContent, notepadContext.includeInMessages, notepadContext.setIncludeInMessages])
+  ), [sendMessage, isStreaming, isOrchestratorRunning, inputValue, handleInputPopulate, quotedContent, clearQuotedContent, notepadContext.includeInMessages, notepadContext.setIncludeInMessages])
 
   // Show loading state while auth is initializing
   if (authLoading) {

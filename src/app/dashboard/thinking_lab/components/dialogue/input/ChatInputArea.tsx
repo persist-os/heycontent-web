@@ -12,6 +12,7 @@ interface ChatInputAreaProps {
   handleSendMessage: (message: string, fileAttachments?: any[]) => void;
   inputRef: React.RefObject<HTMLTextAreaElement>;
   isLoading: boolean;
+  isOrchestratorRunning?: boolean;
   referencedMessage: Message | null;
   handleClearReference: () => void;
   includeAnalysisInQuery: boolean;
@@ -40,6 +41,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   handleSendMessage,
   inputRef,
   isLoading,
+  isOrchestratorRunning = false,
   referencedMessage,
   handleClearReference,
   includeAnalysisInQuery,
@@ -94,7 +96,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
             inputRef={inputRef}
             onSend={handleSendMessage}
             isLoading={isLoading || !isAuthenticated}
-            disabled={!isAuthenticated}
+            disabled={!isAuthenticated || isLoading || isOrchestratorRunning}
             referencedMessage={referencedMessage}
             onClearReference={handleClearReference}
             hasContext={!!currentContext}
