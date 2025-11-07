@@ -174,17 +174,33 @@ export const updateDecisionContext = mutation({
 
 /**
  * Update arm performance with reward (Bayesian update)
+ * 
+ * NOTE: All Bayesian computation is now done by the SDK. This mutation only persists
+ * pre-computed values received from the SDK, eliminating duplication across storage backends.
  */
 export const updateArmPerformance = mutation({
   args: {
     userId: v.string(),
     agentType: v.string(),
     decisionId: v.string(),
-    engagementScore: v.number(),
-    gradingScore: v.optional(v.number()),
-    finalReward: v.number(),
+    rating: v.optional(v.number()),  // 1-5 from user (optional - only if user rated)
+    finalReward: v.optional(v.number()),  // 0.0-1.0 computed from rating (optional - only if rating provided)
+    feedbackId: v.optional(v.id("feedback")),  // Feedback ID if feedback exists
+    feedbackText: v.optional(v.string()),  // User's text feedback
+    computedUpdate: v.optional(v.object({
+      alpha: v.number(),
+      beta: v.number(),
+      total_pulls: v.number(),
+      total_reward: v.number(),
+      avg_reward: v.number(),
+      mean_estimate: v.number(),
+      confidence_interval: v.object({
+        lower: v.number(),
+        upper: v.number(),
+      }),
+    })),
   },
-  handler: async (ctx, { userId, agentType, decisionId, engagementScore, gradingScore, finalReward }) => {
+  handler: async (ctx, { userId, agentType, decisionId, rating, finalReward, feedbackId, feedbackText, computedUpdate }) => {
     // Get decision - decisionId should be a valid Convex ID
     const decision = await ctx.db.get(decisionId as any) as any;
     
@@ -204,45 +220,64 @@ export const updateArmPerformance = mutation({
       throw new Error(`Arm not found: ${decision.armPulled}`);
     }
     
-    // Bayesian update (Beta distribution)
-    const successWeight = finalReward;
-    const failureWeight = 1 - finalReward;
+    // Use pre-computed values from SDK (eliminates duplication)
+    if (!computedUpdate) {
+      throw new Error("computedUpdate is required - SDK should compute this");
+    }
     
-    const newAlpha = arm.alpha + successWeight;
-    const newBeta = arm.beta + failureWeight;
-    const newTotalPulls = arm.total_pulls + 1;
-    const newTotalReward = arm.total_reward + finalReward;
-    const newAvgReward = newTotalReward / newTotalPulls;
-    const newMeanEstimate = newAlpha / (newAlpha + newBeta);
-    
-    // Update confidence interval (95% CI)
-    const variance = (newAlpha * newBeta) /
-      ((newAlpha + newBeta) ** 2 * (newAlpha + newBeta + 1));
-    const stdDev = Math.sqrt(variance);
-    
-    await ctx.db.patch(arm._id, {
-      alpha: newAlpha,
-      beta: newBeta,
-      total_pulls: newTotalPulls,
-      total_reward: newTotalReward,
-      avg_reward: newAvgReward,
-      mean_estimate: newMeanEstimate,
-      confidence_interval: {
-        lower: Math.max(0, newMeanEstimate - 1.96 * stdDev),
-        upper: Math.min(1, newMeanEstimate + 1.96 * stdDev),
-      },
+    // Persist pre-computed values from SDK
+    const updateData = {
+      alpha: computedUpdate.alpha,
+      beta: computedUpdate.beta,
+      total_pulls: computedUpdate.total_pulls,
+      total_reward: computedUpdate.total_reward,
+      avg_reward: computedUpdate.avg_reward,
+      mean_estimate: computedUpdate.mean_estimate,
+      confidence_interval: computedUpdate.confidence_interval,
       last_pulled: Date.now(),
       updatedAt: Date.now(),
-    });
+    };
     
-    // Update decision with reward
-    await ctx.db.patch(decision._id, {
-      engagement_score: engagementScore,
-      grading_score: gradingScore,
+    await ctx.db.patch(arm._id, updateData);
+    
+    // Update decision with reward (only if rating provided)
+    // Simplified: Only store rating and final_reward (no engagement_score, grading_score)
+    if (rating !== undefined && finalReward !== undefined) {
+      await ctx.db.patch(decision._id, {
+        rating: rating,  // Store user rating (1-5)
+        final_reward: finalReward,  // Store normalized reward (0.0-1.0)
+        rewardObservedAt: Date.now(),
+        feedbackId: feedbackId,  // Link to feedback record
+        feedbackText: feedbackText,  // Store text feedback
+      });
+    }
+    
+    return { success: true };
+  },
+});
+
+/**
+ * Update decision with feedback data (direct linking - no Bayesian updates)
+ * 
+ * This is a lightweight mutation that only links feedback to decisions.
+ * Bayesian updates are handled separately via updateArmPerformance.
+ */
+export const updateDecisionWithFeedback = mutation({
+  args: {
+    decisionId: v.string(),
+    feedbackId: v.id("feedback"),
+    rating: v.number(),  // 1-5
+    finalReward: v.number(),  // 0.0-1.0 (normalized)
+    feedbackText: v.optional(v.string()),
+  },
+  handler: async (ctx, { decisionId, feedbackId, rating, finalReward, feedbackText }) => {
+    await ctx.db.patch(decisionId as any, {
+      feedbackId: feedbackId,
+      rating: rating,
       final_reward: finalReward,
+      feedbackText: feedbackText,
       rewardObservedAt: Date.now(),
     });
-    
     return { success: true };
   },
 });

@@ -13,6 +13,7 @@ export const jobTypeValidator = v.union(
   v.literal("intelligence_analysis"),
   v.literal("chatgpt_import"),
   v.literal("context_enrichment_feedback"),
+  v.literal("chat_model_feedback"),
   v.literal("stardust_stream_detection"),
   v.literal("convergence_optimization"),
   v.literal("evolution_mab_reward"),
@@ -44,7 +45,7 @@ export const jobPriorityValidator = v.union(
 );
 
 // Type exports for TypeScript code
-export type JobType = "shard_extraction" | "intelligence_analysis" | "chatgpt_import" | "context_enrichment_feedback" | "stardust_stream_detection" | "convergence_optimization" | "evolution_mab_reward" | "formation_mab_reward" | "stardust_promotion" | "widget_execution" | "chat_post_message_tasks" | "conversation_title_generation" | "chaos_generation" | "cognitive_field_formation" | "crystal_formation" | "plan_execution";
+export type JobType = "shard_extraction" | "intelligence_analysis" | "chatgpt_import" | "context_enrichment_feedback" | "chat_model_feedback" | "stardust_stream_detection" | "convergence_optimization" | "evolution_mab_reward" | "formation_mab_reward" | "stardust_promotion" | "widget_execution" | "chat_post_message_tasks" | "conversation_title_generation" | "chaos_generation" | "cognitive_field_formation" | "crystal_formation" | "plan_execution";
 export type JobStatus = "queued" | "running" | "completed" | "failed";
 export type JobPriority = "low" | "normal" | "high" | "urgent";
 

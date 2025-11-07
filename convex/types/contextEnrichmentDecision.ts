@@ -35,9 +35,10 @@ export const contextEnrichmentDecisionSchemaFields = {
   })),
   
   // Outcome (populated after user responds)
-  engagement_score: v.optional(v.number()),
-  grading_score: v.optional(v.number()),  // If LLM grading was used (10% sample)
-  final_reward: v.optional(v.number()),
+  rating: v.optional(v.number()),  // User rating (1-5) - only if user rated
+  final_reward: v.optional(v.number()),  // Normalized reward (0.0-1.0) - only if rating provided
+  feedbackId: v.optional(v.id("feedback")),  // Optional - only if user provided feedback
+  feedbackText: v.optional(v.string()),  // User's text feedback (denormalized from feedback table)
   
   decisionAt: v.number(),
   rewardObservedAt: v.optional(v.number()),

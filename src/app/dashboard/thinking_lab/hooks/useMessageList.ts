@@ -39,12 +39,16 @@ export function useMessageList(props: UseMessageListProps): Message[] {
         id: msg._id,
         content: msg.content,
         role: msg.role,
-        timestamp: msg.timestamp || now,
+        timestamp: (msg.timestamp || now).toString(),
         chat_response: msg.content,
         status: 'delivered',
         suggestions: msg.suggestions || [],
-        metadata: msg.metadata || {}
-      })
+        metadata: msg.metadata || {},
+        decisionId: msg.decisionId,  // Model selection decision ID (for feedback loop)
+        contextDecisionId: msg.contextDecisionId,  // Context enrichment decision ID (for feedback loop)
+        sessionId: msg.conversationId,  // Use conversationId as sessionId fallback
+        sequence: msg.sequence,  // Message sequence (for message_index calculation)
+      } as any)  // Type assertion needed since Message type doesn't include sequence yet
     })
     
     // Helper: Check if user message already exists in Convex (exact match only)

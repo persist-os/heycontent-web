@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { contentFeedbackEntityTypeValidator } from "./types/feedback";
 import * as contextUsageMutations from "./contextUsageMutations";
+import { api } from "./_generated/api";
 
 // Create new feedback entry
 export const createFeedback = mutation({
@@ -285,7 +286,8 @@ export const createContentFeedback = mutation({
       messageContent: v.optional(v.string()),
       conversationId: v.optional(v.string()),
       messageRole: v.optional(v.string()),
-      messageSequence: v.optional(v.number()),
+      messageSequence: v.optional(v.number()),  // Keep for backward compatibility
+      messageIndex: v.optional(v.number()),  // NEW - matches decision.messageIndex
       
       // Note generation fields
       noteId: v.optional(v.string()),
@@ -302,6 +304,12 @@ export const createContentFeedback = mutation({
       outputContent: v.optional(v.string()),
       openingMessage: v.optional(v.string()),
       promptsCount: v.optional(v.number()),
+      
+      // MAB decision IDs for feedback loop
+      enrichment_metadata: v.optional(v.object({
+        decision_id: v.optional(v.string()),  // Context enrichment decision ID
+        model_selection_decision_id: v.optional(v.string()),  // Model selection decision ID
+      })),
     }),
     
     // Optional context
@@ -388,6 +396,11 @@ export const createContentFeedback = mutation({
       // Don't fail feedback creation if context usage update fails
       console.error("[createContentFeedback] Failed to update context usage:", error);
     }
+
+    // NOTE: Job enqueueing is now handled by backend endpoint (/api/v1/feedback/chat_message)
+    // Backend endpoint calls trigger_chat_model_feedback_with_rating() after storing feedback
+    // This ensures single source of truth and prevents duplicate job creation
+    // For chat messages, backend endpoint handles both feedback storage AND job triggering
 
     return feedbackId;
   },

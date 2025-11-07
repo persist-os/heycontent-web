@@ -188,6 +188,8 @@ handler: async (ctx, args) => {
       context: args.message.context,
       fileAttachments: args.message.fileAttachments,
       enrichment_metadata: args.message.enrichment_metadata,
+      decisionId: args.message.decisionId,  // Model selection decision ID
+      contextDecisionId: args.message.contextDecisionId,  // Context enrichment decision ID
       createdAt: now,
       updatedAt: now,
     });

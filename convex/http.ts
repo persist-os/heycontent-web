@@ -31,7 +31,6 @@ app.use('*', async (c, next) => {
   else if (path.includes('/stardust')) domain = 'stardust';
   else if (path.includes('/projectSeeds')) domain = 'project_seeds';
   else if (path.includes('/projects')) domain = 'projects';
-  else if (path.includes('/widgetQuestions')) domain = 'widget_questions';
   else if (path.includes('/widgets')) domain = 'widgets';
   else if (path.includes('/fingerprintSignals')) domain = 'fingerprint_signals';
   else if (path.includes('/project-fingerprint')) domain = 'fingerprint';
@@ -2905,13 +2904,15 @@ app.post("/api/intelligenceBandit/createDecision", async (c) => {
 
 app.post("/api/intelligenceBandit/updateArmPerformance", async (c) => {
   const ctx = c.env;
-  const { userId, decisionId, valueScore } = await c.req.json();
+  const { userId, decisionId, valueScore, version, computedUpdate } = await c.req.json();
   
   try {
     const result = await ctx.runMutation(api.intelligenceBandit.updateArmPerformance, {
       userId,
       decisionId,
-      valueScore
+      valueScore,
+      version,
+      computedUpdate  // Pass through pre-computed values from SDK
     });
     return c.json(result);
   } catch (error: any) {
@@ -3036,7 +3037,7 @@ app.post("/api/contextEnrichmentBandit/updateDecisionContext", async (c) => {
 
 app.post("/api/contextEnrichmentBandit/updateArmPerformance", async (c) => {
   const ctx = c.env;
-  const { userId, agentType, decisionId, engagementScore, gradingScore, finalReward } = await c.req.json();
+  const { userId, agentType, decisionId, engagementScore, gradingScore, finalReward, computedUpdate } = await c.req.json();
   
   try {
     const result = await ctx.runMutation(api.contextEnrichmentBandit.updateArmPerformance, {
@@ -3045,11 +3046,25 @@ app.post("/api/contextEnrichmentBandit/updateArmPerformance", async (c) => {
       decisionId,
       engagementScore,
       gradingScore,
-      finalReward
+      finalReward,
+      computedUpdate  // Pass through pre-computed values from SDK
     });
     return c.json(result);
   } catch (error: any) {
     console.error("[ContextMAB] Update arm performance error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/contextEnrichmentBandit/updateDecisionWithFeedback", async (c) => {
+  const ctx = c.env;
+  const args = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.contextEnrichmentBandit.updateDecisionWithFeedback, args);
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ContextMAB] Update decision with feedback error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -3079,6 +3094,106 @@ app.post("/api/contextEnrichmentBandit/getDecisionById", async (c) => {
     return c.json({ success: true, data: decision });
   } catch (error: any) {
     console.error("[ContextMAB] Get decision error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// === CHAT MODEL SELECTION MAB ENDPOINTS ===
+app.post("/api/chatModelSelection/getUserArms", async (c) => {
+  const ctx = c.env;
+  const { userId, agentType } = await c.req.json();
+  
+  try {
+    const result = await ctx.runQuery(api.chatModelSelectionBandit.getUserArms, { userId, agentType });
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ChatModelMAB] Get arms error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/chatModelSelection/initializeArms", async (c) => {
+  const ctx = c.env;
+  const { userId, agentType, arms } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.chatModelSelectionBandit.initializeArms, { userId, agentType, arms });
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ChatModelMAB] Initialize arms error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/chatModelSelection/createDecision", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.chatModelSelectionBandit.createDecision, requestBody);
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ChatModelMAB] Create decision error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/chatModelSelection/updateArmPerformance", async (c) => {
+  const ctx = c.env;
+  const { userId, agentType, decisionId, engagementScore, gradingScore, finalReward, computedUpdate } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.chatModelSelectionBandit.updateArmPerformance, {
+      userId,
+      agentType,
+      decisionId,
+      engagementScore,
+      gradingScore,
+      finalReward,
+      computedUpdate  // Pass through pre-computed values from SDK
+    });
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ChatModelMAB] Update arm performance error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/chatModelSelection/updateDecisionWithFeedback", async (c) => {
+  const ctx = c.env;
+  const args = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.chatModelSelectionBandit.updateDecisionWithFeedback, args);
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ChatModelMAB] Update decision with feedback error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/chatModelSelection/getDecision", async (c) => {
+  const ctx = c.env;
+  const { userId, decisionId } = await c.req.json();
+  
+  try {
+    const result = await ctx.runQuery(api.chatModelSelectionBandit.getDecision, { userId, decisionId });
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ChatModelMAB] Get decision error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/chatModelSelection/countFeedbacks", async (c) => {
+  const ctx = c.env;
+  const { userId, agentType } = await c.req.json();
+  
+  try {
+    const result = await ctx.runQuery(api.chatModelSelectionBandit.countFeedbacks, { userId, agentType });
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ChatModelMAB] Count feedbacks error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -3883,40 +3998,6 @@ app.post("/api/widgetOutputs/query", async (c) => {
 });
 
 /**
- * GET /api/widgetOutputs/findByProjectAndType
- * Find existing artifact by projectId and artifactType (for collaboration)
- */
-app.get("/api/widgetOutputs/findByProjectAndType", async (c) => {
-  try {
-    const projectId = c.req.query("projectId");
-    const artifactType = c.req.query("artifactType");
-    const userId = c.req.query("userId");
-    
-    // Validate required fields
-    if (!projectId || !artifactType || !userId) {
-      return c.json({
-        error: "projectId, artifactType, and userId are required",
-        success: false
-      }, 400);
-    }
-    
-    const artifact = await c.env.runQuery(api.widgetOutputsQueries.findArtifactByProjectAndType, {
-      projectId: projectId as any,
-      artifactType,
-      userId
-    });
-    
-    return c.json({ success: true, data: artifact });
-  } catch (error: any) {
-    console.error("Find artifact by project and type error:", error);
-    return c.json({ 
-      error: "Internal server error",
-      message: error.message || "Unknown error"
-    }, 500);
-  }
-});
-
-/**
  * POST /api/widgetOutputs/mutate
  * Batch mutation endpoint for widget outputs (create/update/delete)
  */
@@ -4055,118 +4136,6 @@ app.get("/api/artifacts/widget/:widgetId", async (c) => {
     return c.json({ 
       error: "Failed to get widget artifacts",
       message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// WIDGET QUESTIONS ROUTES - Proactive widget input requests
-
-/**
- * POST /api/widgetQuestions/create
- * Create a new widget question
- */
-app.post("/api/widgetQuestions/create", async (c) => {
-  try {
-    const requestBody = await c.req.json();
-    
-    // Validate required fields
-    if (!requestBody.widgetId || !requestBody.projectId || !requestBody.userId || !requestBody.question) {
-      return c.json({
-        error: "widgetId, projectId, userId, and question are required",
-        success: false
-      }, 400);
-    }
-    
-    const questionId = await c.env.runMutation(api.widgetQuestionsMutations.createQuestion, requestBody);
-    return c.json({ success: true, data: questionId });
-  } catch (error: any) {
-    console.error("Create widget question error:", error);
-    return c.json({ 
-      error: "Internal server error",
-      message: error.message || "Unknown error"
-    }, 500);
-  }
-});
-
-/**
- * POST /api/widgetQuestions/answer
- * Answer a widget question
- */
-app.post("/api/widgetQuestions/answer", async (c) => {
-  try {
-    const requestBody = await c.req.json();
-    
-    // Validate required fields
-    if (!requestBody.questionId || !requestBody.answer) {
-      return c.json({
-        error: "questionId and answer are required",
-        success: false
-      }, 400);
-    }
-    
-    const result = await c.env.runMutation(api.widgetQuestionsMutations.answerQuestion, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    console.error("Answer widget question error:", error);
-    return c.json({ 
-      error: "Internal server error",
-      message: error.message || "Unknown error"
-    }, 500);
-  }
-});
-
-/**
- * GET /api/widgetQuestions/pending/:projectId
- * Get pending questions for an assignment
- */
-app.get("/api/widgetQuestions/pending/:projectId", async (c) => {
-  try {
-    const projectId = c.req.param("projectId");
-    
-    if (!projectId) {
-      return c.json({
-        error: "projectId is required",
-        success: false
-      }, 400);
-    }
-    
-    const questions = await c.env.runQuery(api.widgetQuestionsQueries.getPendingQuestions, { 
-      projectId: projectId as any // Cast to Convex ID
-    });
-    return c.json({ success: true, data: { questions } });
-  } catch (error: any) {
-    console.error("Get pending questions error:", error);
-    return c.json({ 
-      error: "Internal server error",
-      message: error.message || "Unknown error"
-    }, 500);
-  }
-});
-
-/**
- * GET /api/widgetQuestions/widget/:widgetId
- * Get all questions for a specific widget
- */
-app.get("/api/widgetQuestions/widget/:widgetId", async (c) => {
-  try {
-    const widgetId = c.req.param("widgetId");
-    
-    if (!widgetId) {
-      return c.json({
-        error: "widgetId is required",
-        success: false
-      }, 400);
-    }
-    
-    const questions = await c.env.runQuery(api.widgetQuestionsQueries.getWidgetQuestions, { 
-      widgetId 
-    });
-    return c.json({ success: true, data: { questions } });
-  } catch (error: any) {
-    console.error("Get widget questions error:", error);
-    return c.json({ 
-      error: "Internal server error",
-      message: error.message || "Unknown error"
     }, 500);
   }
 });
@@ -5383,31 +5352,6 @@ app.post("/api/stardust/batchDelete", async (c) => {
   }
 });
 
-/**
- * Evolve stardust lifecycle stage
- */
-app.post("/api/stardust/evolveLifecycle", async (c) => {
-  try {
-    const ctx = c.env;
-    const body = await c.req.json();
-    
-    const stardustId = await ctx.runMutation(api.stardustMutations.evolveStardustLifecycle, {
-      stardustId: body.stardustId as Id<"stardust">,
-      newStage: body.newStage,
-      healthDelta: body.healthDelta,
-      energyDelta: body.energyDelta,
-    });
-    
-    return c.json({ success: true, data: { stardustId } });
-  } catch (error: any) {
-    console.error("[STARDUST_EVOLVE_LIFECYCLE] Error:", error);
-    return c.json({ 
-      success: false,
-      error: error.message || "Failed to evolve stardust lifecycle"
-    }, 500);
-  }
-});
-
 // Cognative Fields Routes
 app.post("/api/cognative/create", async (c) => {
   try {
@@ -5563,11 +5507,16 @@ app.post("/api/a2a/latest", async (c) => {
     const body = await c.req.json();
     const { conversationId, projectId, limit = 5 } = body;
     
-    const notes = await c.env.runQuery(internal.a2aQueries.getLatestA2ANotes, {
-      conversationId,
-      projectId,
+    // Build args object - only include fields if they're truthy (not null/undefined)
+    // Matches Pattern 2 (Backend-to-Convex Bridge) - omit optional fields instead of passing null
+    const args: any = {
       limit
-    });
+    };
+    
+    if (conversationId) args.conversationId = conversationId;
+    if (projectId) args.projectId = projectId;
+    
+    const notes = await c.env.runQuery(internal.a2aQueries.getLatestA2ANotes, args);
     
     return c.json({ success: true, data: notes });
   } catch (error: any) {

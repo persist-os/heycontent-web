@@ -62,19 +62,69 @@ export function MessageBubble({
   const [isSubmittingFeedback, setIsSubmittingFeedback] = React.useState(false)
   
   const handleRateFeedback = React.useCallback(async (rating: number, feedbackText?: string) => {
-    if (!userId || !message.id) return
+    if (!userId || !message.id || !message.decisionId) {
+      console.warn('Missing required fields for feedback', { userId, messageId: message.id, decisionId: message.decisionId })
+      return
+    }
     
     setIsSubmittingFeedback(true)
     try {
-      // TODO: Implement feedback submission
-      console.log('Rating submitted:', { rating, feedbackText, messageId: message.id })
+      const { fetchWithApiKey } = await import('@/app/lib/api-helpers')
+      
+      // Extract message_index from message sequence field
+      // sequence is the message's position in the conversation (0, 1, 2, ...)
+      // For assistant messages, this IS the message_index we need
+      let message_index: number | undefined = (message as any).sequence
+      
+      // If sequence not available, try to calculate from message index in conversation
+      // This is a fallback - ideally sequence should always be present
+      if (message_index === undefined) {
+        // Note: This requires access to all messages, which we don't have here
+        // Backend will handle this case
+        console.warn('Message sequence not available, backend will calculate from decision')
+      }
+      
+      // Build request body, omitting undefined fields
+      const requestBody: any = {
+        decision_id: message.decisionId,
+        rating,
+        message_id: message.id,
+        conversation_id: message.sessionId || message.id,  // Use sessionId as conversation_id fallback
+      }
+      
+      // Only include optional fields if they have values
+      if (message.contextDecisionId) {
+        requestBody.context_decision_id = message.contextDecisionId
+      }
+      if (feedbackText) {
+        requestBody.feedback_text = feedbackText
+      }
+      if (message_index !== undefined) {
+        requestBody.message_index = message_index
+      }
+      
+      const response = await fetchWithApiKey('/api/v1/feedback/chat_message', {
+        method: 'POST',
+        body: JSON.stringify(requestBody)
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Feedback submission failed: ${response.statusText}`)
+      }
+      
+      const result = await response.json()
       setMessageRating(rating)
+      
+      // Optional: Show success toast
+      console.log('Feedback submitted successfully:', result)
     } catch (error) {
       console.error('Failed to submit feedback:', error)
+      // Optional: Show error toast to user
     } finally {
       setIsSubmittingFeedback(false)
     }
-  }, [userId, message.id])
+  }, [userId, message.id, message.decisionId, message.contextDecisionId, message.sessionId])
 
   return (
     <div className={`w-full ${className}`}>

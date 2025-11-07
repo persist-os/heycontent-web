@@ -35,7 +35,6 @@ import { promptSchemaFields } from "./types/prompt";
 // Widgets
 import { widgetSchemaFields, projectWidgetsSchemaFields } from "./types/widgets";
 import { widgetOutputSchemaFields } from "./types/widgetOutput";
-import { widgetQuestionSchemaFields } from "./types/widgetQuestion";
 
 // Artifacts
 import { artifactSchemaFields } from "./types/artifact";
@@ -108,6 +107,8 @@ import { intelligenceBanditDecisionSchemaFields } from "./types/intelligenceBand
 // Context Enrichment MAB
 import { contextEnrichmentArmSchemaFields } from "./types/contextEnrichmentArm";
 import { contextEnrichmentDecisionSchemaFields } from "./types/contextEnrichmentDecision";
+import { chatModelSelectionArmSchemaFields } from "./types/chatModelSelectionArm";
+import { chatModelSelectionDecisionSchemaFields } from "./types/chatModelSelectionDecision";
 
 // Context Usage Tracking
 import { contextUsageSchemaFields } from "./types/contextUsage";
@@ -319,7 +320,7 @@ export default defineSchema({
   .index("by_widget_id", ["projectId", "widget_id"]) // For legacy lookups
   .index("by_created", ["createdAt"])
   .index("by_schedule", ["nextScheduledRun", "scheduleEnabled"])
-  .index("by_workflow_stage", ["projectId", "workflowStage"]), // For orchestration queries - camelCase
+  .index("by_workflow_stage", ["projectId", "workflowStage"]), // For orchestration queries
 
   // ============================================================================
   // PROJECT WIDGET LAYOUTS - Layout configuration and categories
@@ -339,13 +340,6 @@ export default defineSchema({
     .index("by_output_id", ["outputId"])
     .index("by_rating", ["widgetId", "userRating"])  // For analyzing widget quality
     .index("by_user", ["userId"]),
-
-  // Widget Questions (for proactive widget input requests)
-  widget_questions: defineTable(widgetQuestionSchemaFields)
-    .index("by_widget", ["widgetId"])
-    .index("by_project", ["projectId"])
-    .index("by_status", ["status"])
-    .index("by_project_status", ["projectId", "status"]),
 
   // Artifacts - Generated content from families (clean separation from execution tracking)
   artifacts: defineTable(artifactSchemaFields)
@@ -528,8 +522,24 @@ export default defineSchema({
   context_enrichment_decisions: defineTable(contextEnrichmentDecisionSchemaFields)
   .index("by_user", ["userId"])
   .index("by_user_agent", ["userId", "agentType"])
+  .index("by_conversation", ["conversationId"]),
+
+  // CHAT MODEL SELECTION MAB - Learn optimal model/config per user
+  // ========================================
+  
+  // Chat Model Selection Arms - MAB model configs per user per agent type
+  chat_model_selection_arms: defineTable(chatModelSelectionArmSchemaFields)
+  .index("by_user", ["userId"])
+  .index("by_user_agent", ["userId", "agentType"])
+  .index("by_user_agent_arm", ["userId", "agentType", "armId"])
+  .index("by_performance", ["userId", "agentType", "avg_reward"]),
+
+  // Chat Model Selection Decisions - Track every model selection decision
+  chat_model_selection_decisions: defineTable(chatModelSelectionDecisionSchemaFields)
+  .index("by_user", ["userId"])
+  .index("by_user_agent", ["userId", "agentType"])
   .index("by_conversation", ["conversationId"])
-  .index("by_decision_time", ["decisionAt"]),
+  .index("by_decision_time", ["createdAt"]),
 
   // Context Usage Logs - Track which context items powered which outputs
   context_usage_logs: defineTable(contextUsageSchemaFields)

@@ -41,7 +41,10 @@ export const conversationSchemaFields = {
       familyName: v.string(),
       questionId: v.optional(v.id("widget_questions")),
       context: v.optional(v.string())
-    }))
+    })),
+    // MAB Decision IDs (for feedback loop)
+    decisionId: v.optional(v.string()),  // Model selection decision ID
+    contextDecisionId: v.optional(v.string()),  // Context enrichment decision ID
   }))),
   
   // Message statistics (denormalized for performance)

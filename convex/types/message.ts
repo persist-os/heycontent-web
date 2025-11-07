@@ -51,6 +51,10 @@ export const messageSchemaFields = {
   // Context Enrichment MAB Metadata
   enrichment_metadata: v.optional(v.any()),
   
+  // MAB Decision IDs (for feedback loop)
+  decisionId: v.optional(v.string()),  // Model selection decision ID
+  contextDecisionId: v.optional(v.string()),  // Context enrichment decision ID
+  
   // Context Summary (backend adds this for assistant messages)
   context_summary: v.optional(v.any()),
   
@@ -100,6 +104,8 @@ export const messageInputValidator = v.object({
     uploaded_at: v.string(),
   }))),
   enrichment_metadata: v.optional(v.any()),
+  decisionId: v.optional(v.string()),  // Model selection decision ID
+  contextDecisionId: v.optional(v.string()),  // Context enrichment decision ID
   context_summary: v.optional(v.any()),
   suggestions: v.optional(v.any()),
 });
