@@ -225,6 +225,12 @@ export const upsertProjectWidgets = mutation({
       widgetIds.push(widgetId);
     }
     
+    // ✅ PATTERN 13: Atomic Parent-Child Updates - Update project.widgetIds array
+    await ctx.db.patch(args.projectId, {
+      widgetIds: widgetIds,
+      updatedAt: now,
+    });
+    
     return { layoutId, widgetIds };
   },
 });
@@ -312,6 +318,12 @@ export const deleteProjectWidgets = mutation({
     for (const widget of widgets) {
       await ctx.db.delete(widget._id);
     }
+    
+    // ✅ PATTERN 13: Atomic Parent-Child Updates - Clear project.widgetIds array
+    await ctx.db.patch(projectId, {
+      widgetIds: [],
+      updatedAt: Date.now(),
+    });
 
     // Delete layout document
     const layouts = await ctx.db
@@ -390,6 +402,16 @@ export const deleteWidget = mutation({
 
     // Delete the widget
     await ctx.db.delete(widgetId);
+    
+    // ✅ PATTERN 13: Atomic Parent-Child Updates - Remove widget ID from project array
+    const project = await ctx.db.get(projectId) as any;
+    if (project && project.widgetIds) {
+      const updatedWidgetIds = project.widgetIds.filter((id: Id<"widgets">) => id !== widgetId);
+      await ctx.db.patch(projectId, {
+        widgetIds: updatedWidgetIds,
+        updatedAt: Date.now(),
+      });
+    }
 
     return { success: true };
   },

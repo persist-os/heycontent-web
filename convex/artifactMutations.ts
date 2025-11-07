@@ -32,6 +32,7 @@ export const createArtifact = mutation({
     }),
     projectId: v.id("projects"),
     widgetId: v.optional(v.id("widgets")),  // Optional: project-level artifacts may not link to a widget
+    conversationId: v.optional(v.id("conversations")),  // Optional: conversation-level artifacts
     userId: v.string(),
   },
   handler: async (ctx, args) => {
@@ -49,10 +50,33 @@ export const createArtifact = mutation({
       },
       projectId: args.projectId,
       widgetId: args.widgetId,
+      conversationId: args.conversationId,
       userId: args.userId,
       createdAt: now,
       updatedAt: now,
     });
+    
+    // ✅ PATTERN 13: Atomic Parent-Child Updates - Update project.artifactIds array
+    const project = await ctx.db.get(args.projectId) as any;
+    if (project) {
+      const existingArtifactIds = project.artifactIds || [];
+      await ctx.db.patch(args.projectId, {
+        artifactIds: [...existingArtifactIds, artifactId],
+        updatedAt: now,
+      });
+    }
+    
+    // ✅ PATTERN 13: Atomic Parent-Child Updates - Update conversation.artifactIds array if conversationId provided
+    if (args.conversationId) {
+      const conversation = await ctx.db.get(args.conversationId) as any;
+      if (conversation) {
+        const existingArtifactIds = conversation.artifactIds || [];
+        await ctx.db.patch(args.conversationId, {
+          artifactIds: [...existingArtifactIds, artifactId],
+          updatedAt: now,
+        });
+      }
+    }
     
     return artifactId;
   },
@@ -108,7 +132,39 @@ export const deleteArtifact = mutation({
     artifactId: v.id("artifacts"),
   },
   handler: async (ctx, args) => {
+    // Get artifact before deleting to access parent references
+    const artifact = await ctx.db.get(args.artifactId);
+    if (!artifact) {
+      throw new Error("Artifact not found");
+    }
+    
+    const now = Date.now();
+    
+    // Delete the artifact
     await ctx.db.delete(args.artifactId);
+    
+    // ✅ PATTERN 13: Atomic Parent-Child Updates - Remove artifact ID from project array
+    const project = await ctx.db.get(artifact.projectId) as any;
+    if (project && project.artifactIds) {
+      const updatedArtifactIds = project.artifactIds.filter((id: any) => id !== args.artifactId);
+      await ctx.db.patch(artifact.projectId, {
+        artifactIds: updatedArtifactIds,
+        updatedAt: now,
+      });
+    }
+    
+    // ✅ PATTERN 13: Atomic Parent-Child Updates - Remove artifact ID from conversation array if exists
+    if (artifact.conversationId) {
+      const conversation = await ctx.db.get(artifact.conversationId) as any;
+      if (conversation && conversation.artifactIds) {
+        const updatedArtifactIds = conversation.artifactIds.filter((id: any) => id !== args.artifactId);
+        await ctx.db.patch(artifact.conversationId, {
+          artifactIds: updatedArtifactIds,
+          updatedAt: now,
+        });
+      }
+    }
+    
     return true;
   },
 });

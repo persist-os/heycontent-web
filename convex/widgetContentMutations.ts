@@ -53,7 +53,7 @@ export const removeNoteFromWidget = mutation({
 });
 
 /**
- * Add a conversation to a widget by updating the conversation's widgetId
+ * Add a conversation to a widget by updating the conversation's widgetIds array
  */
 export const addConversationToWidget = mutation({
   args: {
@@ -68,9 +68,15 @@ export const addConversationToWidget = mutation({
       throw new Error("Conversation not found or unauthorized");
     }
 
-    // Update conversation with widgetId
+    // ✅ PATTERN 13: Atomic Parent-Child Updates - Add widget ID to conversation.widgetIds array
+    const widgetIdAsArray = typeof widgetId === "string" ? widgetId as any : widgetId;
+    const existingWidgetIds = (conversation as any).widgetIds || [];
+    const updatedWidgetIds = existingWidgetIds.includes(widgetIdAsArray) 
+      ? existingWidgetIds 
+      : [...existingWidgetIds, widgetIdAsArray];
+
     await ctx.db.patch(conversationId, {
-      widgetId: widgetId,
+      widgetIds: updatedWidgetIds,
       conversationType: "widget_prompt",
       updatedAt: Date.now(),
     });
@@ -80,26 +86,41 @@ export const addConversationToWidget = mutation({
 });
 
 /**
- * Remove a conversation from a widget by clearing the widgetId
+ * Remove a conversation from a widget by removing widget ID from widgetIds array
  */
 export const removeConversationFromWidget = mutation({
   args: {
     conversationId: v.id("conversations"),
+    widgetId: v.optional(v.union(v.string(), v.id("widgets"))),  // Optional: remove specific widget or all
     userId: v.string(),
   },
-  handler: async (ctx, { conversationId, userId }) => {
+  handler: async (ctx, { conversationId, widgetId, userId }) => {
     // Verify user owns the conversation
     const conversation = await ctx.db.get(conversationId);
     if (!conversation || conversation.userId !== userId) {
       throw new Error("Conversation not found or unauthorized");
     }
 
-    // Clear widgetId
-    await ctx.db.patch(conversationId, {
-      widgetId: undefined,
-      conversationType: "general",
-      updatedAt: Date.now(),
-    });
+    // ✅ PATTERN 13: Atomic Parent-Child Updates - Remove widget ID from conversation.widgetIds array
+    const conversationAny = conversation as any;
+    if (widgetId) {
+      // Remove specific widget ID
+      const widgetIdAsArray = typeof widgetId === "string" ? widgetId as any : widgetId;
+      const existingWidgetIds = conversationAny.widgetIds || [];
+      const updatedWidgetIds = existingWidgetIds.filter((id: any) => id !== widgetIdAsArray);
+      await ctx.db.patch(conversationId, {
+        widgetIds: updatedWidgetIds.length > 0 ? updatedWidgetIds : undefined,
+        conversationType: updatedWidgetIds.length > 0 ? "widget_prompt" : "general",
+        updatedAt: Date.now(),
+      });
+    } else {
+      // Remove all widget IDs
+      await ctx.db.patch(conversationId, {
+        widgetIds: undefined,
+        conversationType: "general",
+        updatedAt: Date.now(),
+      });
+    }
 
     return { success: true };
   },

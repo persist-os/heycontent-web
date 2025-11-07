@@ -67,6 +67,16 @@ export const createWidget = mutation({
       updatedAt: now,
     });
 
+    // ✅ PATTERN 13: Atomic Parent-Child Updates - Add widget ID to project array
+    // Reuse existing project variable (already fetched above)
+    if (project) {
+      const existingWidgetIds = project.widgetIds || [];
+      await ctx.db.patch(args.projectId, {
+        widgetIds: [...existingWidgetIds, widgetId],
+        updatedAt: now,
+      });
+    }
+
     return widgetId;
   },
 });
@@ -130,6 +140,16 @@ export const batchCreateWidgets = mutation({
         updatedAt: now,
       });
       widgetIds.push(widgetId);
+    }
+
+    // ✅ PATTERN 13: Atomic Parent-Child Updates - Add widget IDs to project array
+    // Reuse existing project variable (already fetched above)
+    if (project) {
+      const existingWidgetIds = project.widgetIds || [];
+      await ctx.db.patch(projectId, {
+        widgetIds: [...existingWidgetIds, ...widgetIds],
+        updatedAt: now,
+      });
     }
 
     return { success: true, widgetIds };
@@ -212,6 +232,16 @@ export const deleteWidget = mutation({
         updatedAt: Date.now(),
       });
     }
+    
+    // ✅ PATTERN 13: Atomic Parent-Child Updates - Remove widget ID from project array
+    const project = await ctx.db.get(widget.projectId) as any;
+    if (project && project.widgetIds) {
+      const updatedWidgetIds = project.widgetIds.filter((id: Id<"widgets">) => id !== widgetId);
+      await ctx.db.patch(widget.projectId, {
+        widgetIds: updatedWidgetIds,
+        updatedAt: Date.now(),
+      });
+    }
 
     return { success: true };
   },
@@ -261,6 +291,12 @@ export const deleteProjectWidgets = mutation({
         });
       }
     }
+    
+    // ✅ PATTERN 13: Atomic Parent-Child Updates - Clear project.widgetIds array
+    await ctx.db.patch(projectId, {
+      widgetIds: [],
+      updatedAt: now,
+    });
 
     return { success: true, deletedCount: userWidgets.length };
   },

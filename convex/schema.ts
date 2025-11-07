@@ -133,7 +133,7 @@ export default defineSchema({
   .index("by_user", ["userId"])
   .index("by_creation", ["createdAt"])
   .index("by_user_project", ["userId", "projectId"])
-  .index("by_user_widget", ["userId", "widgetId"])
+  // NOTE: Removed by_user_widget index - conversations now use widgetIds array (can't index arrays)
   .index("by_project", ["projectId"])
   .index("by_type", ["conversationType"]),
 

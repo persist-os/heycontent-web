@@ -27,6 +27,8 @@ export const projectSchemaFields = {
   crystalIds: v.optional(v.array(v.string())),
   cognitiveFieldIds: v.optional(v.array(v.string())),
   shardIds: v.optional(v.array(v.string())),
+  widgetIds: v.optional(v.array(v.id("widgets"))),
+  artifactIds: v.optional(v.array(v.id("artifacts"))),
   
   // AI Intelligence Integration
   fingerprintId: v.optional(v.any()),
@@ -99,6 +101,8 @@ export const projectCreateValidator = v.object({
   cognitiveFieldIds: v.optional(v.array(v.string())),
   shardIds: v.optional(v.array(v.string())),
   stardustIds: v.optional(v.array(v.string())),
+  widgetIds: v.optional(v.array(v.id("widgets"))),
+  artifactIds: v.optional(v.array(v.id("artifacts"))),
   // NO createdAt, NO updatedAt, NO status, NO _id
   // Convex sets these automatically
 });
@@ -123,6 +127,9 @@ export const projectUpdateValidator = v.object({
   llmCallsToday: v.optional(v.number()),
   budgetLastReset: v.optional(v.number()),
   isActive: v.optional(v.boolean()),
+  // Content ID arrays (system-controlled, updated atomically)
+  widgetIds: v.optional(v.array(v.id("widgets"))),
+  artifactIds: v.optional(v.array(v.id("artifacts"))),
   // NO createdAt (never changes)
   // updatedAt set automatically by mutation
 });
@@ -196,6 +203,8 @@ export interface Project {
   crystalIds?: string[];
   cognitiveFieldIds?: string[];
   shardIds?: string[];
+  widgetIds?: string[];
+  artifactIds?: string[];
   fingerprintId?: any;
   analysisIds?: string[];
   // Budget tracking (placeholders - ON HOLD)

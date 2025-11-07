@@ -1,11 +1,12 @@
 'use client';
 
 import React from 'react';
-import { Search, Plus, Filter, FolderPlus, Folder, Users, Share2, FileText, Star, Clock } from 'lucide-react';
+import { Search, Plus, Filter, FolderPlus, Folder, Users, Share2, FileText, Star, Clock, CheckSquare, Square, Trash2, X } from 'lucide-react';
 import { FilterType } from './NotesTree.types';
 import { cn } from '@/lib/utils';
 import { T } from '@/components/translation';
 import { useTranslation } from '@/hooks/useTranslation';
+import { Button } from '@/components/ui/button';
 
 interface NotesTreeHeaderProps {
   searchTerm: string;
@@ -21,6 +22,14 @@ interface NotesTreeHeaderProps {
   foldersCount?: number;
   sharedNotesCount?: number;
   mySharedContentCount?: number;
+  isSelectionMode?: boolean;
+  selectedProjectsCount?: number;
+  selectedNotesCount?: number;
+  onToggleSelectionMode?: () => void;
+  onSelectAll?: () => void;
+  onDeselectAll?: () => void;
+  onBatchDelete?: () => void;
+  hasSelection?: boolean;
 }
 
 const filterOptions = [
@@ -46,8 +55,19 @@ export function NotesTreeHeader({
   isCreatingFolder,
   foldersCount,
   sharedNotesCount,
-  mySharedContentCount
+  mySharedContentCount,
+  isSelectionMode = false,
+  selectedProjectsCount = 0,
+  selectedNotesCount = 0,
+  onToggleSelectionMode,
+  onSelectAll,
+  onDeselectAll,
+  onBatchDelete,
+  hasSelection = false
 }: NotesTreeHeaderProps) {
+  // Total count includes both projects and notes for mixed deletion
+  const selectedCount = selectedProjectsCount + selectedNotesCount;
+  
   const { text: searchPlaceholder } = useTranslation('Search notes...', {
     sourceLang: 'en',
     context: 'notes.search.placeholder'
@@ -69,45 +89,102 @@ export function NotesTreeHeader({
         
           {/* Action buttons - side by side on all screens */}
           <div className="flex flex-row items-center justify-center gap-2 sm:gap-3 w-auto">
-            <button
-              onClick={onCreateFolder}
-              disabled={isCreatingFolder}
-              className="flex items-center justify-center gap-2 border border-accent/20 hover:bg-accent/5 hover:border-accent/30 text-foreground px-4 py-3 sm:py-2.5 rounded-lg transition-all disabled:opacity-50 text-sm font-medium min-h-[44px] sm:min-h-0"
-            >
-              {isCreatingFolder ? (
-                <div className="w-4 h-4 border-2 border-foreground/30 border-t-foreground rounded-full animate-spin" />
-              ) : (
-                <Folder className="w-4 h-4" />
-              )}
-              <span className="hidden sm:inline"><T context="button.new-folder">New Folder</T></span>
-              <span className="sm:hidden"><T context="button.folder">Folder</T></span>
-            </button>
-            <button
-              onClick={onCreateProject}
-              disabled={isCreatingProject}
-              className="flex items-center justify-center gap-2 border border-primary/20 hover:bg-primary/5 hover:border-primary/30 text-foreground px-4 py-3 sm:py-2.5 rounded-lg transition-all disabled:opacity-50 text-sm font-medium min-h-[44px] sm:min-h-0"
-            >
-              {isCreatingProject ? (
-                <div className="w-4 h-4 border-2 border-foreground/30 border-t-foreground rounded-full animate-spin" />
-              ) : (
-                <FolderPlus className="w-5 h-5" />
-              )}
-              <span className="hidden sm:inline"><T context="button.new-project">New Project</T></span>
-              <span className="sm:hidden"><T context="button.project">Project</T></span>
-            </button>
-            <button
-              onClick={onCreateNote}
-              disabled={isCreatingNote}
-              className="flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground px-4 py-3 sm:py-2.5 rounded-lg hover:from-primary/90 hover:to-primary/80 transition-all disabled:opacity-50 text-sm font-medium min-h-[44px] sm:min-h-0 shadow-md shadow-primary/20"
-            >
-              {isCreatingNote ? (
-                <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-              ) : (
-                <Plus className="w-4 h-4" />
-              )}
-              <span className="hidden sm:inline"><T context="button.new-note">New Note</T></span>
-              <span className="sm:hidden"><T context="button.note">Note</T></span>
-            </button>
+            {isSelectionMode ? (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onDeselectAll}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <Square className="w-4 h-4 mr-2" />
+                  <span className="hidden sm:inline">Deselect All</span>
+                  <span className="sm:hidden">Clear</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onSelectAll}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <CheckSquare className="w-4 h-4 mr-2" />
+                  <span className="hidden sm:inline">Select All</span>
+                  <span className="sm:hidden">All</span>
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={onBatchDelete}
+                  disabled={!hasSelection || selectedCount === 0}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  <span className="hidden sm:inline">
+                    {selectedCount > 0 ? `Delete ${selectedCount}` : 'Delete'}
+                  </span>
+                  <span className="sm:hidden">{selectedCount > 0 ? selectedCount : 'Delete'}</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onToggleSelectionMode}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Cancel
+                </Button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={onToggleSelectionMode}
+                  className="flex items-center justify-center gap-2 border border-border/50 hover:bg-muted/50 hover:border-border text-foreground px-4 py-3 sm:py-2.5 rounded-lg transition-all text-sm font-medium min-h-[44px] sm:min-h-0"
+                >
+                  <CheckSquare className="w-4 h-4" />
+                  <span className="hidden sm:inline">Select</span>
+                  <span className="sm:hidden">Select</span>
+                </button>
+                <button
+                  onClick={onCreateFolder}
+                  disabled={isCreatingFolder}
+                  className="flex items-center justify-center gap-2 border border-accent/20 hover:bg-accent/5 hover:border-accent/30 text-foreground px-4 py-3 sm:py-2.5 rounded-lg transition-all disabled:opacity-50 text-sm font-medium min-h-[44px] sm:min-h-0"
+                >
+                  {isCreatingFolder ? (
+                    <div className="w-4 h-4 border-2 border-foreground/30 border-t-foreground rounded-full animate-spin" />
+                  ) : (
+                    <Folder className="w-4 h-4" />
+                  )}
+                  <span className="hidden sm:inline"><T context="button.new-folder">New Folder</T></span>
+                  <span className="sm:hidden"><T context="button.folder">Folder</T></span>
+                </button>
+                <button
+                  onClick={onCreateProject}
+                  disabled={isCreatingProject}
+                  className="flex items-center justify-center gap-2 border border-primary/20 hover:bg-primary/5 hover:border-primary/30 text-foreground px-4 py-3 sm:py-2.5 rounded-lg transition-all disabled:opacity-50 text-sm font-medium min-h-[44px] sm:min-h-0"
+                >
+                  {isCreatingProject ? (
+                    <div className="w-4 h-4 border-2 border-foreground/30 border-t-foreground rounded-full animate-spin" />
+                  ) : (
+                    <FolderPlus className="w-5 h-5" />
+                  )}
+                  <span className="hidden sm:inline"><T context="button.new-project">New Project</T></span>
+                  <span className="sm:hidden"><T context="button.project">Project</T></span>
+                </button>
+                <button
+                  onClick={onCreateNote}
+                  disabled={isCreatingNote}
+                  className="flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground px-4 py-3 sm:py-2.5 rounded-lg hover:from-primary/90 hover:to-primary/80 transition-all disabled:opacity-50 text-sm font-medium min-h-[44px] sm:min-h-0 shadow-md shadow-primary/20"
+                >
+                  {isCreatingNote ? (
+                    <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                  ) : (
+                    <Plus className="w-4 h-4" />
+                  )}
+                  <span className="hidden sm:inline"><T context="button.new-note">New Note</T></span>
+                  <span className="sm:hidden"><T context="button.note">Note</T></span>
+                </button>
+              </>
+            )}
           </div>
         </div>
 

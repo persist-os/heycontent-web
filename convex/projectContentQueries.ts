@@ -140,7 +140,7 @@ export const getProjectContent = query({
                   lastMessageAt: conversation.lastMessageAt,
                   starred: conversation.starred,
                   conversationType: conversation.conversationType,
-                  widgetId: conversation.widgetId
+                  widgetIds: (conversation as any).widgetIds || []  // Updated to use widgetIds array
                 },
                 projectId: project._id
               });

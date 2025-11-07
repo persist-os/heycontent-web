@@ -176,3 +176,68 @@ export const deleteNote = mutation({
     return { success: true };
   },
 });
+
+export const batchDeleteNotes = mutation({
+  args: {
+    noteIds: v.array(v.id("notes")),
+    userId: v.string(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    results: v.array(v.object({
+      id: v.id("notes"),
+      success: v.boolean(),
+      error: v.optional(v.string()),
+    })),
+    totalOperations: v.number(),
+    successfulOperations: v.number(),
+    failedOperations: v.number(),
+  }),
+  handler: async (ctx, { noteIds, userId }) => {
+    const results: Array<{
+      id: Id<"notes">;
+      success: boolean;
+      error?: string;
+    }> = [];
+    
+    let successfulOperations = 0;
+    let failedOperations = 0;
+    
+    // Process deletions sequentially for consistency
+    for (const noteId of noteIds) {
+      try {
+        const note = await ctx.db.get(noteId);
+        if (!note) {
+          throw new Error("Note not found");
+        }
+        
+        if (note.userId !== userId) {
+          throw new Error("Access denied: You don't own this note");
+        }
+        
+        await ctx.db.delete(noteId);
+        
+        results.push({
+          id: noteId,
+          success: true,
+        });
+        successfulOperations++;
+      } catch (error) {
+        results.push({
+          id: noteId,
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
+        failedOperations++;
+      }
+    }
+    
+    return {
+      success: failedOperations === 0,
+      results,
+      totalOperations: noteIds.length,
+      successfulOperations,
+      failedOperations,
+    };
+  },
+});

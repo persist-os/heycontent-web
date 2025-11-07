@@ -84,7 +84,9 @@ export const initializeConversation = mutation({
       
       // Add optional widget context if provided
       if (args.widgetId) {
-        conversationData.widgetId = args.widgetId;
+        // ✅ PATTERN 13: Atomic Parent-Child Updates - Add widget ID to conversation.widgetIds array
+        const widgetIdAsArray = typeof args.widgetId === "string" ? args.widgetId as any : args.widgetId;
+        conversationData.widgetIds = [widgetIdAsArray];
       }
       // Note: widgetOutputId is not stored in conversation schema
       // It's only used for context during creation

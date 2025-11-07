@@ -96,6 +96,9 @@ export const getConversationsWithFiles = query({
  * Get all conversations connected to a specific widget
  * @param widgetId - The widget ID to filter conversations by
  * @param userId - The user ID for authorization
+ * 
+ * NOTE: Since widgetIds is an array, we query all user conversations and filter in memory
+ * This is acceptable for typical use cases where users have limited conversations
  */
 export const getConversationsByWidgetId = query({
   args: {
@@ -104,15 +107,22 @@ export const getConversationsByWidgetId = query({
   },
   handler: async (ctx, { widgetId, userId }) => {
     try {
+      // Query all conversations for user (can't index arrays directly)
       const conversations = await ctx.db
         .query("conversations")
-        .withIndex("by_user_widget", (q) =>
-          q.eq("userId", userId).eq("widgetId", widgetId)
-        )
+        .withIndex("by_user", (q) => q.eq("userId", userId))
         .order("desc")
         .collect();
 
-      return conversations;
+      // Filter to conversations that include this widgetId in their widgetIds array
+      const widgetIdAsArray = typeof widgetId === "string" ? widgetId as any : widgetId;
+      const filteredConversations = conversations.filter(conv => {
+        const convAny = conv as any;
+        const widgetIds = convAny.widgetIds || [];
+        return widgetIds.includes(widgetIdAsArray);
+      });
+
+      return filteredConversations;
     } catch (error) {
       console.error('Error fetching conversations by widgetId:', error);
       return [];

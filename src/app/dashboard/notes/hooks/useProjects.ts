@@ -21,7 +21,8 @@ export function useProjects(userId: string | undefined) {
   // Mutations - Using atomic initialization for project creation
   const initializeConversationMutation = useMutation(api.chatMutations.initializeConversation);
   const updateProjectMutation = useMutation(api.projectsMutations.updateProject);
-  const deleteProjectMutation = useMutation(api.projectsMutations.batchDeleteProjects);
+  const deleteProjectMutation = useMutation(api.projectsMutations.deleteProject);
+  const batchDeleteProjectsMutation = useMutation(api.projectsMutations.batchDeleteProjects);
   const addContentMutation = useMutation(api.projectsMutations.addContent);
   const removeContentMutation = useMutation(api.projectsMutations.removeContent);
   const addMultipleContentMutation = useMutation(api.projectsMutations.addMultipleContent);
@@ -111,6 +112,33 @@ export function useProjects(userId: string | undefined) {
       return false;
     }
   }, [deleteProjectMutation, userId]);
+
+  // Batch delete projects
+  const batchDeleteProjects = useCallback(async (projectIds: Id<"projects">[]) => {
+    if (!userId) {
+      toast.error('User not authenticated');
+      return false;
+    }
+
+    if (projectIds.length === 0) {
+      return false;
+    }
+
+    try {
+      const result = await batchDeleteProjectsMutation({ projectIds, userId });
+      if (result.success) {
+        toast.success(`Successfully deleted ${result.successfulOperations} project${result.successfulOperations !== 1 ? 's' : ''}`);
+        return true;
+      } else {
+        toast.error(`Failed to delete ${result.failedOperations} project${result.failedOperations !== 1 ? 's' : ''}`);
+        return false;
+      }
+    } catch (error) {
+      console.error('Failed to delete projects:', error);
+      toast.error('Failed to delete projects');
+      return false;
+    }
+  }, [batchDeleteProjectsMutation, userId]);
 
   // Add content to project (notes, conversations, crystals, shards, analysis)
   const addContentToProject = useCallback(async (
@@ -243,6 +271,7 @@ export function useProjects(userId: string | undefined) {
     createProject,
     updateProject,
     deleteProject,
+    batchDeleteProjects,
     addContentToProject,
     removeContentFromProject,
     addMultipleContentToProject,
