@@ -194,7 +194,12 @@ handler: async (ctx, args) => {
       updatedAt: now,
     });
 
-
+    // 2. Update conversation metadata (messageCount, lastMessageAt, updatedAt)
+    await ctx.db.patch(args.conversationId as any, {
+      messageCount: sequence + 1,
+      lastMessageAt: args.message.timestamp,
+      updatedAt: now,
+    });
 
     // ✅ TRACK INTELLIGENCE: Only track user messages for activity monitoring
     if (args.message.role === "user") {

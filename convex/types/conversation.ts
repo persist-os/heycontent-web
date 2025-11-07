@@ -29,13 +29,7 @@ export const conversationSchemaFields = {
     enrichment_metadata: v.optional(v.any()),
     context_summary: v.optional(v.any()),
     // Family message fields (Task 2.2 - optional for backward compatibility)
-    contentType: v.optional(v.union(
-      v.literal("text"),
-      v.literal("family_question"),
-      v.literal("family_update"),
-      v.literal("preflight_questions"),
-      v.literal("widget_coordination")  // Agent-to-agent coordination (A2A)
-    )),
+    contentType: v.optional(v.string()),
     familyMetadata: v.optional(v.object({
       familyId: v.union(v.string(), v.id("widgets")),
       familyName: v.string(),
