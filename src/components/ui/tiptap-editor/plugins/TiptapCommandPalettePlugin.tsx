@@ -48,6 +48,7 @@ export function TiptapCommandPalettePlugin({
   const [palettePosition, setPalettePosition] = useState<PalettePosition>({ top: 100, left: 100 })
   const [selectedText, setSelectedText] = useState<string>('')
   const [refinementMode, setRefinementMode] = useState<boolean>(false)
+  const [isEditorFocused, setIsEditorFocused] = useState<boolean>(false)
   
   // Refinement state
   const [refinedTextPreview, setRefinedTextPreview] = useState<string | null>(null)
@@ -251,18 +252,32 @@ export function TiptapCommandPalettePlugin({
     if (!editor) return
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Cmd/Ctrl + K to open command palette
+      // Cmd/Ctrl + K to open command palette - ONLY when editor is focused
       if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
-        event.preventDefault()
-        triggerCommandPalette()
+        // CRITICAL: Only trigger if editor is focused
+        // Check multiple sources of truth for focus state
+        const editorElement = editor.view.dom
+        const isFocused = isEditorFocused || 
+                         editor.isFocused || 
+                         document.activeElement === editorElement ||
+                         editorElement.contains(document.activeElement)
+        
+        if (isFocused) {
+          event.preventDefault()
+          event.stopPropagation() // Prevent bubbling to platform command palette
+          triggerCommandPalette()
+        }
+        // If editor is not focused, let the event bubble to platform command palette
       }
     }
 
     const handleFocus = () => {
+      setIsEditorFocused(true)
       setTiptapEditorActive(true)
     }
 
     const handleBlur = () => {
+      setIsEditorFocused(false)
       setTiptapEditorActive(false)
     }
 
@@ -271,14 +286,15 @@ export function TiptapCommandPalettePlugin({
     editorElement.addEventListener('focus', handleFocus)
     editorElement.addEventListener('blur', handleBlur)
     
-    document.addEventListener('keydown', handleKeyDown)
+    // Listen to document-level keydown but check focus before handling
+    document.addEventListener('keydown', handleKeyDown, true) // Use capture phase to check first
     
     return () => {
       editorElement.removeEventListener('focus', handleFocus)
       editorElement.removeEventListener('blur', handleBlur)
-      document.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('keydown', handleKeyDown, true)
     }
-  }, [editor, triggerCommandPalette, setTiptapEditorActive])
+  }, [editor, triggerCommandPalette, setTiptapEditorActive, isEditorFocused])
 
   // Expose trigger function to parent
   useEffect(() => {
