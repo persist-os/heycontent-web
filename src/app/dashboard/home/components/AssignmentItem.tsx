@@ -142,17 +142,17 @@ export function AssignmentItem({ project, userId }: AssignmentItemProps) {
       onClick={() => router.push(`/dashboard/living-projects/${project._id}`)}
     >
       <div className="p-6 space-y-5 flex-1 flex flex-col">
-        
-        {/* Header: Title + Timestamp */}
+      
+      {/* Header: Title + Timestamp */}
         <div className="flex items-start justify-between gap-3">
           <h3 className="text-lg font-semibold text-foreground leading-tight group-hover:text-primary transition-colors line-clamp-2 flex-1">
-            {project.name || 'Untitled Assignment'}
-          </h3>
+          {project.name || 'Untitled Assignment'}
+        </h3>
           <span className="text-xs text-muted-foreground flex-shrink-0 whitespace-nowrap">
-            {relativeTime}
-          </span>
-        </div>
-        
+          {relativeTime}
+        </span>
+      </div>
+      
         {/* Metadata Badges - Compact */}
         <div className="flex flex-wrap gap-1.5">
           {(project.noteCount > 0 || project.conversationCount > 0) && (
@@ -165,44 +165,44 @@ export function AssignmentItem({ project, userId }: AssignmentItemProps) {
               <Image className="w-3 h-3" aria-hidden="true" />
               {artifacts.length}
             </Badge>
-          )}
+        )}
           {widgets && widgets.length > 0 && (
             <Badge variant="outline" className="bg-purple-500/10 border-purple-500/20 text-purple-600 dark:text-purple-400 text-xs px-2 py-0.5 flex items-center gap-1">
               <Sparkles className="w-3 h-3" aria-hidden="true" />
               {widgets.length}
             </Badge>
           )}
-        </div>
-        
-        {/* Progress Section */}
+      </div>
+      
+      {/* Progress Section */}
         <div className="space-y-2 pt-2">
           <div className="flex items-center justify-between text-xs">
             <span className="text-muted-foreground">Progress</span>
             <span className="text-foreground font-semibold">{progress}%</span>
-          </div>
-          
-          {/* Progress Bar - More Subtle */}
-          <div className="w-full h-1 bg-muted/40 rounded-full overflow-hidden relative">
-            <div 
-              className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary/50 via-primary/60 to-primary-dark/60 transition-all duration-700 ease-out"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
         </div>
         
+          {/* Progress Bar - More Subtle */}
+          <div className="w-full h-1 bg-muted/40 rounded-full overflow-hidden relative">
+          <div 
+              className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary/50 via-primary/60 to-primary-dark/60 transition-all duration-700 ease-out"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+      
         {/* Action Buttons - Cleaner */}
         <div className="flex items-center gap-2 pt-4 mt-auto border-t border-border/30" onClick={(e) => e.stopPropagation()}>
-          <Button
+        <Button
             variant="default"
-            size="sm"
+          size="sm"
             onClick={(e) => {
               e.stopPropagation()
               router.push(`/dashboard/living-projects/${project._id}`)
             }}
             className="flex-1 h-8 text-xs font-medium"
-          >
+        >
             Open
-          </Button>
+        </Button>
           
           {firstItemId && (
             <Button
@@ -218,47 +218,47 @@ export function AssignmentItem({ project, userId }: AssignmentItemProps) {
               <Image className="w-4 h-4" aria-hidden="true" />
             </Button>
           )}
-          
-          <Button
+        
+        <Button
             variant="ghost"
-            size="sm"
+          size="sm"
             onClick={async (e) => {
               e.stopPropagation()
-              if (projectConversation?._id) {
+            if (projectConversation?._id) {
                 router.push(`/dashboard/thinking_lab?chatId=${projectConversation._id}`)
-              } else {
-                try {
-                  const conversationId = await createConversation({
-                    userId: project.userId,
-                    title: `${project.name} - Conversation`,
-                    projectId: project._id,
-                    conversationType: "project_scoped"
-                  })
-                  
-                  if (conversationId) {
+            } else {
+              try {
+                const conversationId = await createConversation({
+                  userId: project.userId,
+                  title: `${project.name} - Conversation`,
+                  projectId: project._id,
+                  conversationType: "project_scoped"
+                })
+                
+                if (conversationId) {
                     router.push(`/dashboard/thinking_lab?chatId=${conversationId}`)
-                  } else {
-                    router.push(`/dashboard/thinking_lab?projectId=${project._id}`)
-                  }
-                } catch (error) {
-                  console.error('Failed to create conversation:', error)
+                } else {
                   router.push(`/dashboard/thinking_lab?projectId=${project._id}`)
                 }
+              } catch (error) {
+                console.error('Failed to create conversation:', error)
+                router.push(`/dashboard/thinking_lab?projectId=${project._id}`)
               }
-            }}
+            }
+          }}
             className="h-8 w-8 p-0"
-            disabled={!project._id}
+          disabled={!project._id}
             title="Open Chat"
-          >
+        >
             <MessageSquare className="w-4 h-4" aria-hidden="true" />
-          </Button>
-          
+        </Button>
+        
           {/* Secondary Actions Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Button
+          <Button
                 variant="ghost"
-                size="sm"
+            size="sm"
                 className="h-8 w-8 p-0"
               >
                 <MoreVertical className="w-4 h-4" />
@@ -269,72 +269,72 @@ export function AssignmentItem({ project, userId }: AssignmentItemProps) {
                 <DropdownMenuItem
                   onClick={async (e) => {
                     e.stopPropagation()
-                    try {
-                      setIsPausing(true)
-                      const response = await fetch(`/api/projects/${project._id}/wake`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+              try {
+                setIsPausing(true)
+                const response = await fetch(`/api/projects/${project._id}/wake`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
                       })
-                      if (!response.ok) {
+                if (!response.ok) {
                         throw new Error('Failed to wake project')
-                      }
-                    } catch (error) {
+                }
+              } catch (error) {
                       console.error('Failed to wake project:', error)
-                    } finally {
-                      setIsPausing(false)
-                    }
-                  }}
-                  disabled={isPausing}
+              } finally {
+                setIsPausing(false)
+              }
+            }}
+            disabled={isPausing}
                 >
                   <Pause className="w-4 h-4 mr-2" />
                   Wake Project
                 </DropdownMenuItem>
-              ) : (
+        ) : (
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation()
                     handlePause()
                   }}
-                  disabled={isPausing}
-                >
+          disabled={isPausing}
+        >
                   <Pause className="w-4 h-4 mr-2" />
-                  {project.archived ? 'Resume' : 'Pause'}
+          {project.archived ? 'Resume' : 'Pause'}
                 </DropdownMenuItem>
-              )}
+        )}
               <DropdownMenuSeparator />
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
                   <DropdownMenuItem
                     onSelect={(e) => e.preventDefault()}
                     className="text-destructive focus:text-destructive"
-                  >
+            >
                     <Trash className="w-4 h-4 mr-2" />
-                    Delete
+              Delete
                   </DropdownMenuItem>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete "{project.name}"?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will permanently delete this project and all its content. This action cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction 
-                      onClick={handleDelete}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      Delete Project
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete "{project.name}"?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete this project and all its content. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete Project
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
-        
       </div>
+      
+    </div>
     </Card>
   )
 }

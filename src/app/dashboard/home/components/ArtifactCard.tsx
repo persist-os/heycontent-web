@@ -3,6 +3,8 @@
 import React from 'react'
 import { ArrowUpRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
 interface ArtifactCardProps {
@@ -10,13 +12,13 @@ interface ArtifactCardProps {
 }
 
 /**
- * ArtifactCard - Individual artifact card with gradient styling
+ * ArtifactCard - Individual artifact card with elegant styling
  * 
  * Displays artifacts from new artifacts table:
  * - Artifact type (formatted as title)
  * - Tags or version badge
  * - Type/date metadata
- * - Click to navigate to artifact
+ * - Click to navigate to artifact gallery
  */
 export function ArtifactCard({ artifact }: ArtifactCardProps) {
   const router = useRouter()
@@ -28,60 +30,66 @@ export function ArtifactCard({ artifact }: ArtifactCardProps) {
     }
   }
 
+  const artifactType = artifact.type?.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'Artifact'
+  const createdDate = new Date(artifact.createdAt || artifact._creationTime || Date.now())
+  const relativeTime = (() => {
+    const now = Date.now()
+    const diff = now - createdDate.getTime()
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const days = Math.floor(hours / 24)
+    
+    if (hours < 1) return 'Just now'
+    if (hours < 24) return `${hours}h ago`
+    if (days < 7) return `${days}d ago`
+    return createdDate.toLocaleDateString()
+  })()
+
   return (
-    <div
+    <Card
       onClick={handleClick}
       className={cn(
-        "group relative flex-shrink-0 w-80 h-44",
-        "rounded-2xl p-6",
-        "bg-gradient-to-br from-primary/25 via-primary-light/20 to-background",
-        "border border-primary/40",
+        "group relative flex-shrink-0 w-72 h-40",
+        "bg-gradient-to-br from-blue-500/10 via-cyan-500/8 to-blue-500/5",
+        "border border-blue-500/20",
         "cursor-pointer transition-all duration-300",
-        "hover:scale-[1.02] hover:shadow-2xl hover:shadow-primary/30",
-        "hover:border-primary/60",
-        "backdrop-blur-sm"
+        "hover:bg-blue-500/15 hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/10",
+        "backdrop-blur-sm overflow-hidden"
       )}
     >
-      
-      {/* Subtle inner glow on hover */}
-      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      <div className="p-5 h-full flex flex-col justify-between relative">
       
       {/* Arrow icon (top-right) */}
-      <div className="absolute top-6 right-6 z-10">
-        <ArrowUpRight className="w-5 h-5 text-primary group-hover:text-primary-dark transition-colors" />
+        <div className="absolute top-4 right-4 z-10">
+          <ArrowUpRight className="w-4 h-4 text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors" />
       </div>
-      
-      {/* Content */}
-      <div className="relative z-10 flex flex-col justify-between h-full">
         
         {/* Top: Artifact name */}
-        <div>
-          <h3 className="text-lg font-semibold text-foreground line-clamp-2 pr-8">
-            {/* Format type for display (e.g., "structured_list" → "Structured List") */}
-            {artifact.type?.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'Artifact'}
+        <div className="pr-8">
+          <h3 className="text-base font-semibold text-foreground line-clamp-2 leading-tight">
+            {artifactType}
           </h3>
         </div>
         
-        {/* Middle: Tags */}
-        <div>
+        {/* Bottom: Tags and metadata */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
           {artifact.tags && artifact.tags.length > 0 ? (
-            <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-primary/30 border border-primary/50 text-sm text-primary-darker font-semibold shadow-sm">
+              <Badge variant="outline" className="bg-blue-500/20 border-blue-500/30 text-blue-600 dark:text-blue-400 text-xs px-2 py-0.5">
               {artifact.tags[0]}
-            </span>
+              </Badge>
           ) : (
-            <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-primary/30 border border-primary/50 text-sm text-primary-darker font-semibold shadow-sm">
+              <Badge variant="outline" className="bg-muted/40 border-border/40 text-muted-foreground text-xs px-2 py-0.5">
               v{artifact.metadata?.version || 1}
-            </span>
+              </Badge>
           )}
         </div>
-        
-        {/* Bottom: Metadata */}
-        <div className="text-sm font-medium text-muted-foreground">
-          {artifact.type || 'artifact'} • {new Date(artifact.createdAt || Date.now()).toLocaleDateString()}
+          <span className="text-xs text-muted-foreground whitespace-nowrap">
+            {relativeTime}
+          </span>
         </div>
         
       </div>
-    </div>
+    </Card>
   )
 }
 

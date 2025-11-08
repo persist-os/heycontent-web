@@ -10,7 +10,7 @@ interface ArtifactsSectionProps {
 }
 
 /**
- * ArtifactsSection - "Delivered to You" section
+ * ArtifactsSection - Recent artifacts section
  * 
  * Displays recent artifacts from the new artifacts table
  * CRITICAL: Uses api.artifactQueries.getUserArtifacts (not widget_outputs)
@@ -19,10 +19,13 @@ export function ArtifactsSection({ artifacts }: ArtifactsSectionProps) {
   // Loading state
   if (artifacts === undefined) {
     return (
-      <div className="space-y-4">
-        <div className="flex gap-6 overflow-x-auto pb-2">
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
-            <div key={i} className="w-80 h-44 rounded-2xl bg-muted/30 animate-pulse" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium text-foreground">Recent Artifacts</h2>
+        </div>
+        <div className="flex gap-4 overflow-x-auto pb-2">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="w-72 h-40 rounded-xl bg-muted/30 animate-pulse flex-shrink-0" />
           ))}
         </div>
       </div>
@@ -32,18 +35,18 @@ export function ArtifactsSection({ artifacts }: ArtifactsSectionProps) {
   // Empty state
   if (!artifacts || artifacts.length === 0) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold text-foreground">Delivered to You</h2>
+          <h2 className="text-lg font-medium text-foreground">Recent Artifacts</h2>
           <Link 
             href="/dashboard/living-projects"
-            className="flex items-center gap-2 text-sm text-primary-dark hover:text-primary transition-colors font-medium"
+            className="flex items-center gap-2 text-sm text-primary hover:text-primary-dark transition-colors font-medium hover:underline"
           >
-            See all artifacts
+            See all
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
-        <div className="text-center py-12 border border-dashed border-border rounded-2xl">
+        <div className="text-center py-16 border border-dashed border-border rounded-2xl bg-muted/20">
           <p className="text-muted-foreground">No artifacts yet. Create a project and generate some widgets!</p>
         </div>
       </div>
@@ -51,21 +54,22 @@ export function ArtifactsSection({ artifacts }: ArtifactsSectionProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       
       {/* Section Header */}
       <div className="flex items-center justify-between">
+        <h2 className="text-lg font-medium text-foreground">Recent Artifacts</h2>
         <Link 
-          href="/dashboard/artifacts"
-          className="flex items-center gap-2 text-sm text-primary-dark hover:text-primary transition-colors font-medium"
+          href="/dashboard/living-projects"
+          className="flex items-center gap-2 text-sm text-primary hover:text-primary-dark transition-colors font-medium hover:underline"
         >
-          See all artifacts
+          See all
           <ArrowRight className="w-4 h-4" />
         </Link>
       </div>
       
-      {/* Artifact Cards Grid */}
-      <div className="flex gap-6 overflow-x-auto pb-2">
+      {/* Artifact Cards - Horizontal Scroll */}
+      <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1">
         {artifacts.map((artifact: any) => (
           <ArtifactCard key={artifact._id} artifact={artifact} />
         ))}

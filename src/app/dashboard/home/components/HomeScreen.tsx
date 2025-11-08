@@ -6,6 +6,7 @@ import { api } from '@/convex/_generated/api'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { GreetingHeader } from './GreetingHeader'
 import { HomepageChat } from './HomepageChat'
+import { ArtifactsSection } from './ArtifactsSection'
 import { AssignmentsSection } from './AssignmentsSection'
 
 /**
@@ -14,6 +15,7 @@ import { AssignmentsSection } from './AssignmentsSection'
  * Primary landing page displaying:
  * - Personalized greeting from Ambient Insights
  * - HomepageChat for starting conversations
+ * - Recent artifacts from artifacts table
  * - Active assignments (projects in progress)
  * 
  * NOTE: Assignments and conversations are now the same thing - projects serve both purposes
@@ -55,6 +57,11 @@ export function HomeScreen() {
     api.projectsQueries.getByUser,
     userId ? { userId, limit: 6 } : 'skip'
   )
+  
+  const artifacts = useQuery(
+    api.artifactQueries.getUserArtifacts,
+    userId ? { userId, limit: 9 } : 'skip'
+  )
 
   return (
     <div className="min-h-screen bg-background">
@@ -69,6 +76,9 @@ export function HomeScreen() {
           activeProjectId={activeProjectId}
           onBackToMainChat={handleBackToMainChat}
         />
+        
+        {/* Artifacts Section */}
+        <ArtifactsSection artifacts={artifacts} />
         
         {/* Assignments Section */}
         <AssignmentsSection projects={projects} userId={userId} />
