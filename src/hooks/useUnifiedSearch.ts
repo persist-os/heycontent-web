@@ -3,9 +3,11 @@
  * 
  * Provides unified search across all content types:
  * - Notes (keyword + vector)
- * - Crystals (keyword + vector)
- * - Shards (keyword)
+ * - Cognitive Fields (keyword + vector)
+ * - Shards (keyword + vector)
  * - Conversations (keyword + vector)
+ * - Messages (keyword + vector)
+ * - Stardust (vector only)
  * 
  * Implements two search modes:
  * - Keyword: Fast client-side filtering on keystroke
@@ -19,7 +21,7 @@ import { getCurrentUserId } from '@/app/lib/api-helpers';
 
 export interface SearchResult {
   id: string;
-  type: 'note' | 'crystal' | 'shard' | 'conversation';
+  type: 'note' | 'cognitive_field' | 'shard' | 'conversation' | 'message' | 'stardust';
   title: string;
   content: string;
   metadata?: any;
@@ -59,8 +61,8 @@ export function useUnifiedSearch({ enabled }: UseUnifiedSearchProps) {
     enabled && userId ? { userId, numItems: 100 } : 'skip'
   );
 
-  const crystals = useQuery(
-    api.crystalQueries.getCrystalsByUser,
+  const cognitiveFields = useQuery(
+    api.cognitiveQueries.getAllCognitiveFields,
     enabled && userId ? { userId, limit: 100 } : 'skip'
   );
 
@@ -72,6 +74,11 @@ export function useUnifiedSearch({ enabled }: UseUnifiedSearchProps) {
   const shards = useQuery(
     api.shardQueries.getShardsByUser,
     enabled && userId ? { userId, limit: 100 } : 'skip'
+  );
+
+  const messages = useQuery(
+    api.messagesQueries.getUserRecentMessages,
+    enabled && userId ? { userId, limit: 200 } : 'skip'
   );
 
   // Vector search action
@@ -103,21 +110,22 @@ export function useUnifiedSearch({ enabled }: UseUnifiedSearchProps) {
       });
     }
 
-    // Search crystals - direct array from getCrystalPersonaData
-    if (Array.isArray(crystals)) {
-      crystals.forEach((crystal: any) => {
+    // Search cognitive fields - direct array from getAllCognitiveFields
+    if (Array.isArray(cognitiveFields)) {
+      cognitiveFields.forEach((field: any) => {
         if (
-          crystal.name?.toLowerCase().includes(query) ||
-          crystal.core_insight?.toLowerCase().includes(query) ||
-          crystal.dimension?.toLowerCase().includes(query)
+          field.fieldName?.toLowerCase().includes(query) ||
+          field.coreInsight?.toLowerCase().includes(query) ||
+          field.dimension?.toLowerCase().includes(query) ||
+          field.description?.toLowerCase().includes(query)
         ) {
           results.push({
-            id: crystal._id,
-            type: 'crystal',
-            title: crystal.name || 'Unnamed Crystal',
-            content: crystal.core_insight || '',
-            metadata: crystal,
-            updatedAt: crystal.last_evolution
+            id: field._id,
+            type: 'cognitive_field',
+            title: field.fieldName || 'Unnamed Cognitive Field',
+            content: field.coreInsight || field.description || '',
+            metadata: field,
+            updatedAt: field.updatedAt || field._creationTime
           });
         }
       });
@@ -162,6 +170,24 @@ export function useUnifiedSearch({ enabled }: UseUnifiedSearchProps) {
       });
     }
 
+    // Search messages - direct array from getUserRecentMessages
+    if (Array.isArray(messages)) {
+      messages.forEach((message: any) => {
+        if (message.content?.toLowerCase().includes(query)) {
+          // Use role and truncated content as title
+          const roleLabel = message.role === 'user' ? 'You' : 'Assistant';
+          results.push({
+            id: message._id,
+            type: 'message',
+            title: `${roleLabel} message`,
+            content: message.content?.substring(0, 150) || '',
+            metadata: message,
+            updatedAt: message.timestamp || message.createdAt
+          });
+        }
+      });
+    }
+
     // Sort by relevance (best match first) and recency
     return results
       .sort((a, b) => {
@@ -178,7 +204,7 @@ export function useUnifiedSearch({ enabled }: UseUnifiedSearchProps) {
         return (b.updatedAt || 0) - (a.updatedAt || 0);
       })
       .slice(0, 20); // Limit to top 20 results
-  }, [searchQuery, searchMode, userId, notes, crystals, conversations, shards]);
+  }, [searchQuery, searchMode, userId, notes, cognitiveFields, conversations, shards, messages]);
 
   // Vector search (triggered on Enter)
   const performVectorSearch = useCallback(async () => {
@@ -190,14 +216,14 @@ export function useUnifiedSearch({ enabled }: UseUnifiedSearchProps) {
         userId,
         query: searchQuery,
         limit: 20,
-        contentTypes: ['note', 'cognitive_field', 'conversation', 'shard', 'stardust'],
+        contentTypes: ['note', 'cognitive_field', 'conversation', 'shard', 'stardust', 'message'],
         minSimilarity: 0.3
       });
 
       // Transform results to SearchResult format
       return results.map((result: any) => ({
         id: result.contentId,
-        type: result.contentType as 'note' | 'cognitive_field' | 'shard' | 'conversation',
+        type: result.contentType as 'note' | 'cognitive_field' | 'shard' | 'conversation' | 'message' | 'stardust',
         title: result.title || 'Untitled',
         content: result.content?.substring(0, 150) || '',
         score: result.score,

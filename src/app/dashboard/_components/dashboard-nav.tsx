@@ -3,7 +3,7 @@
 import React, { memo, useCallback, useMemo, useEffect, useState, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  FileText, Shield, Zap, Sparkles, Gem, Radio, Home
+  FileText, Shield, Zap, Sparkles, Radio, Home
 } from 'lucide-react'
 import { useSidebar } from '@/app/context/sidebar-context'
 import { getApiKey } from '@/app/lib/api-helpers'
@@ -66,15 +66,6 @@ const navItems = [
     icon: Sparkles,
     href: '/dashboard/thinking_lab',
     dataAttr: 'data-thinking-lab-link',
-    category: 'explore',
-  },
-  {
-    id: 'crystals',
-    label: 'Cosmic Intelligence',
-    description: 'Stars and crystals evolving from your world',
-    icon: Gem,
-    href: '/dashboard/crystals',
-    dataAttr: 'data-crystals-link',
     category: 'explore',
   },
 ]
@@ -348,9 +339,6 @@ export const DashboardNav = memo(function DashboardNav() {
       case 'thinking-lab':
         // This tab is active for thinking lab routes
         return pathname.startsWith('/dashboard/thinking_lab');
-      case 'crystals':
-        // This tab is active for crystals routes
-        return pathname.startsWith('/dashboard/crystals');
       case 'chat':
       case 'notes':
       case 'admin':

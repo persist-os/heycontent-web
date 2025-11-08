@@ -8,7 +8,7 @@
 'use client'
 
 import React from 'react'
-import { FileText, MessageCircle, Gem, Sparkles, Loader2 } from 'lucide-react'
+import { FileText, MessageCircle, Brain, Sparkles, Loader2, MessageSquare } from 'lucide-react'
 import { SearchResult } from '@/hooks/useUnifiedSearch'
 import { cn } from '@/lib/utils'
 
@@ -65,10 +65,10 @@ export function SearchResults({
           borderColor: 'border-primary/20',
           hoverBg: 'hover:bg-primary/15'
         };
-      case 'crystal':
+      case 'cognitive_field':
         return {
-          label: 'Crystals',
-          icon: Gem,
+          label: 'Cognitive Fields',
+          icon: Brain,
           iconColor: 'text-accent',
           bgColor: 'bg-accent/10',
           borderColor: 'border-accent/20',
@@ -92,6 +92,24 @@ export function SearchResults({
           borderColor: 'border-border',
           hoverBg: 'hover:bg-secondary/80'
         };
+      case 'message':
+        return {
+          label: 'Messages',
+          icon: MessageSquare,
+          iconColor: 'text-primary',
+          bgColor: 'bg-primary/10',
+          borderColor: 'border-primary/20',
+          hoverBg: 'hover:bg-primary/15'
+        };
+      case 'stardust':
+        return {
+          label: 'Stardust',
+          icon: Sparkles,
+          iconColor: 'text-primary',
+          bgColor: 'bg-primary/5',
+          borderColor: 'border-primary/10',
+          hoverBg: 'hover:bg-primary/10'
+        };
       default:
         return {
           label: 'Other',
@@ -104,16 +122,24 @@ export function SearchResults({
     }
   };
 
-  const getNavigationPath = (id: string, type: string) => {
+  const getNavigationPath = (id: string, type: string, metadata?: any) => {
     switch (type) {
       case 'note':
         return `/dashboard/thinking_lab?noteId=${id}`;
-      case 'crystal':
-        return `/dashboard/crystals?crystal=${id}`;
+      case 'cognitive_field':
+        // Cognitive fields are typically accessed via their associated conversation
+        return `/dashboard/thinking_lab?cognitiveFieldId=${id}`;
       case 'conversation':
         return `/dashboard/thinking_lab?chatId=${id}`;
+      case 'message':
+        // Messages link to their conversation
+        return metadata?.conversationId 
+          ? `/dashboard/thinking_lab?chatId=${metadata.conversationId}&messageId=${id}`
+          : `/dashboard/thinking_lab`;
       case 'shard':
         return `/dashboard/crystals?shard=${id}`;
+      case 'stardust':
+        return `/dashboard/crystals?stardust=${id}`;
       default:
         return '/dashboard';
     }
@@ -163,7 +189,7 @@ export function SearchResults({
               {typeResults.map((result) => (
                 <button
                   key={result.id}
-                  onClick={() => onNavigate(getNavigationPath(result.id, result.type))}
+                  onClick={() => onNavigate(getNavigationPath(result.id, result.type, result.metadata))}
                   className={cn(
                     'w-full text-left px-4 py-3.5 rounded-xl border transition-all duration-200',
                     'backdrop-blur-sm',
