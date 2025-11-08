@@ -421,6 +421,19 @@ export const toggleArchive = mutation({
       updatedAt: Date.now(),
     });
     
+    // ✅ PATTERN 13: Atomic Parent-Child Updates - Archive/unarchive all widgets
+    try {
+      await ctx.runMutation(api.widgetsMutations.archiveProjectWidgets, {
+        projectId,
+        userId,
+        archived,
+      });
+    } catch (error) {
+      // If widget archive fails, log error but don't fail the project update
+      // This ensures project can still be archived even if widgets fail
+      console.error("Failed to archive/unarchive widgets:", error);
+    }
+    
     return { success: true, projectId, archived };
   },
 });

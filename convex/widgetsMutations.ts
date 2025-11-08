@@ -8,6 +8,7 @@ import {
   updateWidgetArgsValidator,
   deleteWidgetArgsValidator,
   deleteProjectWidgetsArgsValidator,
+  archiveProjectWidgetsArgsValidator,
   updateWidgetExecutionArgsValidator,
 } from "./types/widgets";
 
@@ -346,6 +347,61 @@ export const updateWidgetExecution = mutation({
     }
 
     return { success: true };
+  },
+});
+
+// ============================================================================
+// ARCHIVE/UNARCHIVE PROJECT WIDGETS
+// ============================================================================
+
+/**
+ * Archive or unarchive all widgets for a project
+ * Used when pausing/resuming a project
+ * ✅ PATTERN 13: Atomic Parent-Child Updates - All widgets updated together
+ */
+export const archiveProjectWidgets = mutation({
+  args: archiveProjectWidgetsArgsValidator,
+  returns: v.object({
+    success: v.boolean(),
+    archivedCount: v.number(),
+  }),
+  handler: async (ctx, { projectId, userId, archived }) => {
+    // Validate project ownership
+    const project = await ctx.db.get(projectId) as any;  // ✅ Type assertion needed due to v.any() fingerprintId
+    if (!project) {
+      throw new Error("Project not found");
+    }
+    if (project.userId !== userId) {
+      throw new Error("Access denied: You don't own this project");
+    }
+
+    // Get all widgets for this project
+    const widgets = await ctx.db
+      .query("widgets")
+      .withIndex("by_project", (q) => q.eq("projectId", projectId))
+      .collect();
+
+    // Filter to only user's widgets
+    const userWidgets = widgets.filter((w) => w.userId === userId);
+
+    const now = Date.now();
+    let archivedCount = 0;
+    
+    // Update each widget status atomically
+    for (const widget of userWidgets) {
+      // When archiving: set status to "archived"
+      // When unarchiving: restore to "active" (default for simplicity)
+      const newStatus = archived ? "archived" : "active";
+      
+      await ctx.db.patch(widget._id, {
+        status: newStatus,
+        updatedAt: now,
+      });
+      
+      archivedCount++;
+    }
+
+    return { success: true, archivedCount };
   },
 });
 

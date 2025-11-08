@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 
 interface AssignmentsSectionProps {
   projects: any[] | undefined
+  userId?: string | null
 }
 
 /**
@@ -15,20 +16,20 @@ interface AssignmentsSectionProps {
  * 
  * Displays active projects with progress tracking
  */
-export function AssignmentsSection({ projects }: AssignmentsSectionProps) {
+export function AssignmentsSection({ projects, userId }: AssignmentsSectionProps) {
   const router = useRouter()
   const [sortBy, setSortBy] = useState<'recent' | 'oldest' | 'name'>('recent')
 
   // Loading state
   if (projects === undefined) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold text-foreground">Assignments</h2>
+          <h2 className="text-lg font-medium text-foreground">Assignments</h2>
         </div>
-        <div className="space-y-4">
-          {[1, 2].map((i) => (
-            <div key={i} className="w-full h-40 rounded-xl bg-muted/30 animate-pulse" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="w-full h-[280px] rounded-xl bg-muted/30 animate-pulse" />
           ))}
         </div>
       </div>
@@ -38,9 +39,9 @@ export function AssignmentsSection({ projects }: AssignmentsSectionProps) {
   // Empty state
   if (!projects || projects.length === 0) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold text-foreground">Assignments</h2>
+          <h2 className="text-lg font-medium text-foreground">Assignments</h2>
           
           <div className="flex items-center gap-3">
             {/* Sort dropdown */}
@@ -74,7 +75,7 @@ export function AssignmentsSection({ projects }: AssignmentsSectionProps) {
             </Button>
           </div>
         </div>
-        <div className="text-center py-12 border border-dashed border-border rounded-2xl">
+        <div className="text-center py-16 border border-dashed border-border rounded-2xl bg-muted/20">
           <p className="text-muted-foreground">No active projects. Create one to get started!</p>
         </div>
       </div>
@@ -90,11 +91,11 @@ export function AssignmentsSection({ projects }: AssignmentsSectionProps) {
   })
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       
       {/* Section Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold text-foreground">Assignments</h2>
+        <h2 className="text-lg font-medium text-foreground">Assignments</h2>
         
         <div className="flex items-center gap-3">
           {/* Sort dropdown */}
@@ -130,19 +131,19 @@ export function AssignmentsSection({ projects }: AssignmentsSectionProps) {
         </div>
       </div>
       
-      {/* Assignment Items */}
-      <div className="space-y-4">
-        {sortedProjects.slice(0, 4).map((project: any) => (
-          <AssignmentItem key={project._id} project={project} />
+      {/* Assignment Items Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {sortedProjects.slice(0, 6).map((project: any) => (
+          <AssignmentItem key={project._id} project={project} userId={userId} />
         ))}
       </div>
       
       {/* Browse all link */}
-      {projects.length > 4 && (
+      {projects.length > 6 && (
         <div className="flex justify-end">
           <button
             onClick={() => router.push('/dashboard/living-projects')}
-            className="text-sm text-primary-dark hover:text-primary flex items-center gap-2 transition-colors font-medium hover:underline"
+            className="text-sm text-primary hover:text-primary-dark flex items-center gap-2 transition-colors font-medium hover:underline"
           >
             Browse all assignments
             <ArrowRight className="w-4 h-4" />

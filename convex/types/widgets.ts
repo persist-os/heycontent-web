@@ -560,6 +560,13 @@ export const deleteProjectWidgetsArgsValidator = v.object({
   hardDelete: v.optional(v.boolean()),
 });
 
+// Archive/unarchive project widgets
+export const archiveProjectWidgetsArgsValidator = v.object({
+  projectId: v.id("projects"),
+  userId: v.string(),
+  archived: v.boolean(),
+});
+
 // Update widget execution
 export const updateWidgetExecutionArgsValidator = v.object({
   widgetId: v.id("widgets"),
