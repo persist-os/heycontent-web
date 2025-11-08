@@ -22,7 +22,6 @@ import { useMessageList } from '../hooks/useMessageList'
 import { useConversationState } from '../hooks/useConversationState'
 import { useOptimizedAuth } from '../components/notepad/hooks/useOptimizedAuth'
 import { NotepadProvider, useNotepadContext } from '../contexts/NotepadContext'
-import { ThreadSidebar } from '../components/ThreadSidebar'
 import { ArtifactPanel } from '../components/ArtifactPanel'
 import { WidgetPanel } from '../components/WidgetPanel'
 
@@ -94,9 +93,6 @@ function FullThinkingLabInternal({
   const { user, isLoading: authLoading } = useOptimizedAuth()
   const userId = user?.uid
   const router = useRouter()
-  
-  // Sidebar state
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   
   // Right panel mode (notepad, artifacts, or widgets)
   const [rightPanelMode, setRightPanelMode] = useState<'notepad' | 'artifacts' | 'widgets'>('notepad')
@@ -188,8 +184,11 @@ function FullThinkingLabInternal({
       onClearQuoted={clearQuotedContent}
       includeNotepadInMessages={notepadContext.includeInMessages}
       onToggleNotepadInMessages={notepadContext.setIncludeInMessages}
+      userId={userId}
+      activeThreadId={chatId}
+      onThreadSelect={handleThreadSelect}
     />
-  ), [sendMessage, isStreaming, isOrchestratorRunning, inputValue, handleInputPopulate, quotedContent, clearQuotedContent, notepadContext.includeInMessages, notepadContext.setIncludeInMessages])
+  ), [sendMessage, isStreaming, isOrchestratorRunning, inputValue, handleInputPopulate, quotedContent, clearQuotedContent, notepadContext.includeInMessages, notepadContext.setIncludeInMessages, userId, chatId, handleThreadSelect])
 
   // Show loading state while auth is initializing
   if (authLoading) {
@@ -217,20 +216,8 @@ function FullThinkingLabInternal({
         onRestoreNotepad={handleNotepadExpand}
       />
 
-      {/* Main Layout: Sidebar + Resizable Panes */}
+      {/* Main Layout: Resizable Panes */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Thread Sidebar */}
-        {userId && (
-          <ThreadSidebar
-            userId={userId}
-            activeThreadId={chatId}
-            onThreadSelect={handleThreadSelect}
-            onNewThread={handleNewThread}
-            isCollapsed={sidebarCollapsed}
-            onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-          />
-        )}
-
         {/* Resizable Split Panes - Chat + Notepad */}
         <div ref={resizable.containerRef} className="flex flex-1 overflow-hidden">
           {/* Chat Panel */}

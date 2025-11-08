@@ -6,7 +6,7 @@
  * Main page for the integrated thinking lab experience.
  * Provides dialogue, reflection, and insight capabilities in one interface.
  * 
- * NOTE: ThreadSidebar, ThreadItem, and NotepadPanel components created for future integration.
+ * NOTE: Thread selection is now available via @ button in ChatInput.
  * Currently using existing FullThinkingLab composition which has resizable panes.
  */
 

@@ -2,13 +2,22 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { useTheme } from 'next-themes';
-import { Send, Loader2, MessageSquare, FileText, Search, Paperclip, X, FileText as NotepadIcon } from 'lucide-react'
+import { Send, Loader2, MessageSquare, FileText, Search, Paperclip, X, FileText as NotepadIcon, AtSign, Home, FolderOpen } from 'lucide-react'
 import { getCurrentUserId, getCurrentUserIdSync, waitForAuthReady } from '@/app/lib/api-helpers'
 import type { Message } from '@/app/types/chat';
 import { uploadFile, formatFileSize, getFileTypeIcon, getFileDisplayUrl, type FileUploadResponse } from '@/lib/file-upload';
 import { track } from '@/lib/analytics';
 import { T } from '@/components/translation';
 import { useTranslation as useTextTranslation } from '@/hooks/useTranslation';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
 
 interface ChatInputProps {
   onSend: (message: string, fileAttachments?: FileUploadResponse[]) => void
@@ -33,6 +42,9 @@ interface ChatInputProps {
   activeTab?: 'chat' | 'notes'
   includeNotepadInMessages?: boolean
   onToggleNotepadInMessages?: (enabled: boolean) => void
+  userId?: string
+  activeThreadId?: string
+  onThreadSelect?: (threadId: string) => void
 }
 
 // Note: Placeholders are translated dynamically in the component
@@ -59,7 +71,10 @@ export function ChatInput({
   isMobile = false,
   activeTab = 'chat',
   includeNotepadInMessages = false,
-  onToggleNotepadInMessages
+  onToggleNotepadInMessages,
+  userId: propUserId,
+  activeThreadId,
+  onThreadSelect
 }: ChatInputProps) {
   // Minimal state - only what's absolutely necessary
   const [input, setInput] = useState('')
@@ -73,8 +88,17 @@ export function ChatInput({
   const { theme } = useTheme()
   
   // Auth/user state - simplified to avoid conditional hooks
-  const [userId, setUserId] = useState<string | null>(getCurrentUserIdSync())
+  const [internalUserId, setInternalUserId] = useState<string | null>(getCurrentUserIdSync())
   const [authStatus, setAuthStatus] = useState<'idle' | 'waiting' | 'ready' | 'unavailable'>('idle')
+  
+  // Use prop userId if provided, otherwise use internal state
+  const userId = propUserId || internalUserId
+  
+  // Get all user threads for thread menu
+  const allThreads = useQuery(
+    api.chatQueries.getAllUserThreads,
+    userId ? { userId } : 'skip'
+  )
 
   useEffect(() => {
     let mounted = true
@@ -84,18 +108,18 @@ export function ChatInput({
       if (!mounted) return
       if (!ready) {
         setAuthStatus('unavailable')
-        setUserId(null)
+        setInternalUserId(null)
         return
       }
       try {
         const uid = await getCurrentUserId()
         if (!mounted) return
-        setUserId(uid)
+        setInternalUserId(uid)
         setAuthStatus('ready')
       } catch (e) {
         if (!mounted) return
         setAuthStatus('ready')
-        setUserId(null)
+        setInternalUserId(null)
       }
     }
     
@@ -187,6 +211,21 @@ export function ChatInput({
       textareaRef.current.focus()
     }
   }, [autoFocus, isLoading, referencedMessage, textareaRef])
+
+  // Format relative time helper
+  const formatRelativeTime = (timestamp?: number): string => {
+    if (!timestamp) return ''
+    const now = Date.now()
+    const diff = now - timestamp
+    const minutes = Math.floor(diff / 60000)
+    const hours = Math.floor(diff / 3600000)
+    const days = Math.floor(diff / 86400000)
+    
+    if (minutes < 1) return 'now'
+    if (minutes < 60) return `${minutes}m`
+    if (hours < 24) return `${hours}h`
+    return `${days}d`
+  }
 
   // File upload handlers
   const handleFileSelect = useCallback(async (files: FileList | null) => {
@@ -607,6 +646,87 @@ export function ChatInput({
                       </div>
                     )}
                   </button>
+                )}
+                
+                {/* Thread menu button */}
+                {onThreadSelect && userId && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        disabled={isLoading || disabled}
+                        className="w-11 h-11 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Switch threads"
+                      >
+                        <AtSign className="w-5 h-5" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent 
+                      align="end" 
+                      side="top"
+                      className="w-80 max-h-[400px] overflow-y-auto"
+                    >
+                      {allThreads === undefined ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          Loading threads...
+                        </div>
+                      ) : allThreads && allThreads.length > 0 ? (
+                        allThreads.map(thread => {
+                          const isActive = thread._id === activeThreadId
+                          const isMain = thread.threadType === 'main'
+                          return (
+                            <DropdownMenuItem
+                              key={thread._id}
+                              onClick={() => onThreadSelect(thread._id)}
+                              className={cn(
+                                "p-3 cursor-pointer",
+                                isActive && "bg-muted"
+                              )}
+                            >
+                              <div className="flex items-start gap-2 w-full">
+                                {/* Icon */}
+                                <div className="mt-0.5 flex-shrink-0">
+                                  {isMain ? (
+                                    <Home className="w-4 h-4 text-muted-foreground" />
+                                  ) : (
+                                    <FolderOpen className="w-4 h-4 text-muted-foreground" />
+                                  )}
+                                </div>
+                                
+                                {/* Content */}
+                                <div className="flex-1 min-w-0 space-y-1">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className={cn(
+                                      "text-sm font-medium truncate",
+                                      isActive && "text-foreground",
+                                      !isActive && "text-muted-foreground"
+                                    )}>
+                                      {thread.title}
+                                    </span>
+                                  </div>
+                                  
+                                  {thread.lastMessagePreview && (
+                                    <p className="text-xs text-muted-foreground line-clamp-2">
+                                      {thread.lastMessagePreview}
+                                    </p>
+                                  )}
+                                  
+                                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                    <span>{thread.messageCount} msgs</span>
+                                    <span>{formatRelativeTime(thread.lastMessageAt)}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </DropdownMenuItem>
+                          )
+                        })
+                      ) : (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          No threads yet
+                        </div>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
                 
                 {/* Send button */}
