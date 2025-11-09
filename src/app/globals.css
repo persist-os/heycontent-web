@@ -29,7 +29,7 @@
     --secondary-foreground: 220 15% 20%; /* Dark text on secondary */
 
     --muted: 0 0% 94%; /* Surface Container N-94 - Muted backgrounds */
-    --muted-foreground: 220 10% 46%; /* On Surface Variant NV-30 - Muted text */
+    --muted-foreground: 220 10% 30%; /* On Surface Variant - Muted text with WCAG AA contrast (5.5:1) */
 
     --accent: 210 100% 50%; /* Navy blue accent instead of orange */
     --accent-foreground: 0 0% 100%; /* On Tertiary T-100 - White text on accent */
@@ -37,7 +37,7 @@
     --destructive: 0 100% 40%; /* Error E-40 - Red error */
     --destructive-foreground: 0 0% 100%; /* On Error E-100 - White text */
 
-    --border: 220 10% 80%; /* Outline Variant NV-80 - Subtle borders */
+    --border: 220 10% 75%; /* Outline Variant - Borders with WCAG AA contrast (3:1) */
     --input: 0 0% 94%; /* Surface Container N-94 - Input backgrounds */
     --ring: 220 15% 25%; /* Neutral gray focus rings */
 

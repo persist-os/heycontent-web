@@ -2,6 +2,7 @@ import React from 'react'
 import { Metadata } from 'next'
 import { HeroSection } from '../components/ui/hero-section'
 import { ValueCards } from '../components/ui/value-cards'
+import { WhoThisIsFor } from '../components/ui/who-this-is-for'
 import { WhyItWorks } from '../components/ui/why-it-works'
 import { CTABand } from '../components/ui/cta-band'
 import { FAQ } from '../components/ui/faq'
@@ -10,12 +11,12 @@ import { siteConfig } from './metadata'
 
 // Server-side metadata for SEO
 export const metadata: Metadata = {
-  title: 'HeyContext - Stop Repeating Yourself | AI Memory That Evolves',
-  description: 'Memory that grows with every conversation. Connections that form automatically. Stop explaining context over and over. AI-powered memory system that learns from every conversation, connects your thoughts automatically, and surfaces insights from your accumulated knowledge.',
+  title: 'HeyContext - One Message, Everything Happens | AI That Multiplies Your Work',
+  description: 'One message triggers coordinated agents that create complete projects—task lists, timelines, reports, and more. Watch your work multiply in real-time.',
   keywords: siteConfig.keywords,
   openGraph: {
-    title: 'HeyContext - Stop Repeating Yourself | AI Memory That Evolves',
-    description: 'Memory that grows. Connections that form automatically. Patterns that emerge from your scattered thinking. AI that finally works the way you think.',
+    title: 'HeyContext - Where One Message Does Everything',
+    description: 'Specialized agents coordinate automatically to create structured deliverables. From planning weddings to building businesses—one message multiplies your work.',
     type: 'website',
     url: siteConfig.url,
     images: [
@@ -23,14 +24,14 @@ export const metadata: Metadata = {
         url: `${siteConfig.url}/dashboard-preview.png`,
         width: 1920,
         height: 1080,
-        alt: 'HeyContext - AI Memory Platform Dashboard',
+        alt: 'HeyContext - AI Platform Dashboard',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'HeyContext - AI That Actually Learns You',
-    description: 'Memory that evolves. What you said last month connects to today. Your scattered notes reveal patterns. Stop explaining yourself over and over.',
+    title: 'HeyContext - One Message. Everything Happens.',
+    description: 'One message → Multiple coordinated results. Agents swarm, artifacts build, work multiplies. Watch magic happen in real-time.',
     images: [`${siteConfig.url}/dashboard-preview.png`],
     creator: '@heycontext',
   },
@@ -46,50 +47,50 @@ const faqJsonLd = {
   "mainEntity": [
     {
       "@type": "Question",
-      "name": "What's available right now in HeyContext?",
+      "name": "How does this save me time?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "HeyContext provides memory that accumulates and connects automatically. Every conversation you have, every note you write, feeds a system that spots patterns and surfaces insights. Chat that references what you said last month without prompting. Notes that link to related thinking across all your content. Active memory that processes and grows with you."
+        "text": "One message creates multiple coordinated results. Instead of asking ChatGPT five times for five things, you ask once and get everything."
       }
     },
     {
       "@type": "Question",
-      "name": "How is HeyContext different from ChatGPT or Claude?",
+      "name": "How is this different from ChatGPT?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "ChatGPT and Claude remember conversations but provide static memory. HeyContext extracts understanding. Every interaction feeds background analysis. Connections form between old conversations and new ones. Memory that actively processes instead of passively storing. HeyContext is designed specifically for accumulated, evolving context."
+        "text": "ChatGPT is a conversation. HeyContext is a team that delivers finished work. One message leads to complete projects."
       }
     },
     {
       "@type": "Question",
-      "name": "Who is HeyContext for?",
+      "name": "What's available now?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "HeyContext is for anyone drowning in scattered notes and disconnected thoughts. Anyone tired of re-explaining the same context to AI over and over. Anyone who wishes their tools remembered not just what they said, but why it mattered. If your work involves ideas that build over time, HeyContext was built for you."
+        "text": "Coordinated agents, multi-layer memory, structured deliverables, autonomous scheduling, and continuous learning. Everything works today."
       }
     },
     {
       "@type": "Question",
-      "name": "How does HeyContext handle privacy?",
+      "name": "Can businesses use this?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Your conversations and notes stay yours. Period. We use cloud AI only when you explicitly ask for help. Nothing trains external models. Nothing gets shared or sold. Your thinking belongs to you. HeyContext prioritizes your privacy with secure data handling."
+        "text": "Absolutely. From consulting strategies to research reports to client presentations—one system handles all knowledge work."
       }
     },
     {
       "@type": "Question",
-      "name": "Is HeyContext complicated to use?",
+      "name": "Is it complicated?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Talk about whatever you're working on. Write notes like you normally would. The system figures out what matters. No prompt engineering. No organizing. No setup rituals. Complicated under the hood. Dead simple in practice."
+        "text": "Dead simple. Send a message describing what you need. Watch your work happen. That's it."
       }
     },
     {
       "@type": "Question",
-      "name": "How do I start with HeyContext?",
+      "name": "How do I start?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Sign up for HeyContext. Start a conversation about your work. The memory begins building immediately. Every message adds context. Every note creates connections. Within days, you'll have an AI that knows your work better than any tool you've used."
+        "text": "Sign up, send one message, get structured results. Within minutes you'll have usable deliverables."
       }
     }
   ]
@@ -232,63 +233,44 @@ export default function LandingPage() {
       <div className="sr-only" aria-hidden="true">
         <h2>What is HeyContext?</h2>
         <p>
-          HeyContext is an AI-powered memory system that learns from every conversation you have. 
-          Unlike ChatGPT or Claude which offer static memory, HeyContext actively processes and 
-          evolves its understanding of you over time. It's designed for people who are tired of 
-          repeating themselves to AI assistants and want a system that truly remembers and understands 
-          their context, work, and thinking patterns.
+          HeyContext is an autonomous work platform where one message creates complete projects. Specialized agents coordinate 
+          automatically to create structured deliverables like task lists, timelines, and reports. Unlike ChatGPT which requires 
+          constant conversation, HeyContext delivers finished work from a single message. Watch your work multiply in real-time.
         </p>
         
         <h2>Who should use HeyContext?</h2>
         <p>
-          HeyContext is perfect for knowledge workers, researchers, writers, developers, designers, 
-          entrepreneurs, students, and anyone who works with ideas that build over time. If you're 
-          drowning in scattered notes, tired of re-explaining context, or wish your AI tools actually 
-          remembered your conversations, HeyContext was built for you.
+          HeyContext works for individuals planning life events and businesses managing knowledge work. Individuals can plan weddings, 
+          research topics, and organize projects. Businesses can create client strategies, automate due diligence, and generate reports. 
+          One system, infinite possibilities.
         </p>
         
         <h2>HeyContext vs ChatGPT: What's the difference?</h2>
         <p>
-          While ChatGPT remembers conversations, HeyContext extracts understanding. ChatGPT provides 
-          static memory where uploaded documents stay exactly as uploaded. HeyContext offers dynamic 
-          memory where every interaction feeds background analysis, connections form between old and 
-          new conversations, and memory actively processes instead of passively storing. HeyContext is 
-          specifically designed for accumulated, evolving context across all your work.
+          ChatGPT is a conversation. You ask, it answers, you ask again. HeyContext is a team that delivers finished work. 
+          Send one message describing what you need, and multiple coordinated agents create complete projects. Work happens 
+          autonomously while you watch or while you're away.
         </p>
         
         <h2>Key features of HeyContext</h2>
         <ul>
-          <li>Persistent AI memory that grows with every conversation</li>
-          <li>Automatic context enrichment across all interactions</li>
-          <li>Background processing that runs while you're away</li>
-          <li>Smart notes that connect to previous conversations</li>
-          <li>Living projects with AI-generated widgets</li>
-          <li>Crystal system for psychological insights</li>
-          <li>Privacy-focused architecture</li>
-          <li>Works across conversations, notes, and projects</li>
+          <li>Agents swarm—specialized teams work in parallel automatically</li>
+          <li>Memory never forgets—context layers track goals and patterns</li>
+          <li>Artifacts materialize—six deliverable types from lists to reports</li>
+          <li>Work never stops—schedule hourly, daily, or weekly execution</li>
+          <li>Intelligence evolves—learns preferences and adapts continuously</li>
         </ul>
         
         <h2>How much does HeyContext cost?</h2>
         <p>
-          HeyContext offers a free tier to get started. You can create an account and begin building 
-          your AI memory immediately without a credit card. Premium plans unlock advanced features 
-          like unlimited conversations, enhanced context processing, and priority access to new features.
+          HeyContext offers a free tier to get started. Create an account and begin using the platform immediately. 
+          Premium plans unlock advanced features like unlimited projects and enhanced capabilities.
         </p>
         
-        <h2>Is HeyContext better than ChatGPT Plus?</h2>
+        <h2>What's coming to HeyContext?</h2>
         <p>
-          HeyContext and ChatGPT Plus serve different purposes. If you need a general-purpose AI 
-          assistant for one-off tasks, ChatGPT Plus is excellent. If you need an AI that builds 
-          deep understanding of your work over time, remembers everything without prompting, and 
-          connects insights across months of conversations, HeyContext is purpose-built for that use case.
-        </p>
-        
-        <h2>Alternatives to HeyContext</h2>
-        <p>
-          Alternatives include ChatGPT with custom instructions, Claude with projects, Notion AI, 
-          Mem, Obsidian with AI plugins, and Roam Research. However, HeyContext uniquely combines 
-          persistent AI memory, automatic context enrichment, background processing, and privacy-first 
-          architecture in a single platform designed specifically for evolving AI understanding.
+          Tool integrations arriving soon: Discord, Google Drive, Calendar, Sheets, Browserbase, yfinance, and Resend. 
+          Connect once, agents use tools automatically. Intelligence compounds as the system learns which tools work best.
         </p>
       </div>
       
@@ -297,13 +279,16 @@ export default function LandingPage() {
           <HeroSection />
         </section>
         <section className="snap-start">
-          <ValueCards />
+          <WhoThisIsFor />
         </section>
         <section className="snap-start">
           <WhyItWorks />
         </section>
         <section className="snap-start">
           <CTABand />
+        </section>
+        <section className="snap-start">
+          <ValueCards />
         </section>
         <section className="snap-start">
           <FAQ />
