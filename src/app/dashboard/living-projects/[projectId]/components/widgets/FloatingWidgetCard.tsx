@@ -186,6 +186,7 @@ export function FloatingWidgetCard({
                     isScheduled={widget.scheduleEnabled}
                     nextScheduledRun={widget.nextScheduledRun}
                     frequency={widget.scheduleFrequency}
+                    suggestedFrequency={widget.execution_profile?.frequency_suggestion || null}
                     className="justify-center"
                   />
                 )}

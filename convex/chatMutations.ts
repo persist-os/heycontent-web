@@ -89,13 +89,22 @@ export const initializeConversation = mutation({
       
       const conversationId = await ctx.db.insert("conversations", conversationData);
       
-      // 4. Link project to conversation IMMEDIATELY (critical - must happen before cognitive field)
-      // This ensures project always has conversationId even if cognitive field creation fails
+      // 4. Link project to conversation IMMEDIATELY (CRITICAL - must happen first)
+      // Patch conversationId FIRST to ensure it's ALWAYS set, even if fingerprint fails
       await ctx.db.patch(projectId, {
-        fingerprintId: fingerprintId,
         conversationId: conversationId,
         updatedAt: currentTime,
       });
+      
+      // Then patch fingerprintId separately (can fail without breaking conversation link)
+      if (fingerprintId) {
+        await ctx.db.patch(projectId, {
+          fingerprintId: fingerprintId,
+          updatedAt: currentTime,
+        });
+      } else {
+        console.warn(`[initializeConversation] Fingerprint creation failed or returned undefined for project ${projectId}, but conversation ${conversationId} is linked`);
+      }
       
       // 5. Create ONE Cognitive Field (shared by BOTH project AND conversation)
       // This can fail without breaking the project-conversation link

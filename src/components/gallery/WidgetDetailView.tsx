@@ -16,7 +16,7 @@ import { api } from '@/convex/_generated/api'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
-import { ArtifactRenderer } from '@/components/artifacts/ArtifactRenderer'
+import { EditableArtifactRenderer } from '@/components/artifacts/EditableArtifactRenderer'
 import { cn } from '@/lib/utils'
 import { Play, Edit2, Check, X, FileText, Zap } from 'lucide-react'
 
@@ -328,9 +328,9 @@ export function WidgetDetailView({ widget, userId, projectId }: WidgetDetailView
                   </div>
                   {artifact.data && (
                     <div className="mt-3">
-                      <ArtifactRenderer 
+                      <EditableArtifactRenderer 
                         artifact={artifact} 
-                        editable={false}
+                        userId={userId}
                       />
                     </div>
                   )}

@@ -9,11 +9,14 @@
 
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { EventTypeDefinition, ArtifactMetadata } from '@/types/artifacts'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Flag, Check, Circle, Star, Pencil } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Flag, Check, Circle, Star, Pencil, X } from 'lucide-react'
+import { VersionSelector } from '../../VersionSelector'
 
 interface TimelineEvent {
   id: string
@@ -74,6 +77,10 @@ export function TimelineLayoutRenderer({
     lastUpdatedAt: Date.now()
   }
 
+  // Per-event editing state (fixes bug where all events edit at once)
+  const [editingEventId, setEditingEventId] = useState<string | null>(null)
+  const [editState, setEditState] = useState<Record<string, { title: string; description: string }>>({})
+
   // Sort events by timestamp (newest first)
   const sortedEvents = [...events].sort((a, b) => (b?.timestamp || 0) - (a?.timestamp || 0))
 
@@ -92,6 +99,73 @@ export function TimelineLayoutRenderer({
     })
   }
 
+  // Handle editing event (per-event state)
+  const handleEditEvent = (event: TimelineEvent, index: number) => {
+    const eventId = event.id || `timeline-event-${index}`
+    setEditingEventId(eventId)
+    setEditState((prevState) => ({
+      ...prevState,
+      [eventId]: {
+        title: event.title,
+        description: event.description || ''
+      }
+    }))
+  }
+
+  const handleSaveEvent = (eventId: string) => {
+    if (!onUpdate || !editingEventId) return
+
+    // Get edit data from state and update
+    setEditState((prevState) => {
+      const editData = prevState[eventId]
+      if (!editData) return prevState
+
+      // Update events array - match by eventId (either event.id or computed ID)
+      const newEvents = events.map((event, idx) => {
+        const currentEventId = event.id || `timeline-event-${sortedEvents.indexOf(event)}`
+        if (currentEventId === eventId) {
+          return {
+            ...event,
+            title: editData.title,
+            description: editData.description
+          }
+        }
+        return event
+      })
+
+      // Call onUpdate outside of state setter
+      setTimeout(() => {
+        onUpdate({ ...data, events: newEvents })
+      }, 0)
+      
+      // Clean up edit state for this event
+      const newState = { ...prevState }
+      delete newState[eventId]
+      return newState
+    })
+    
+    setEditingEventId(null)
+  }
+
+  const handleCancelEdit = (eventId: string) => {
+    setEditingEventId(null)
+    setEditState((prevState) => {
+      const newState = { ...prevState }
+      delete newState[eventId]
+      return newState
+    })
+  }
+
+  const updateEditField = (eventId: string, field: 'title' | 'description', value: string) => {
+    setEditState((prevState) => ({
+      ...prevState,
+      [eventId]: {
+        ...(prevState[eventId] || { title: '', description: '' }),
+        [field]: value
+      }
+    }))
+  }
+
   // Get artifact type display name
   const artifactTypeDisplay = artifactType || 'Timeline'
 
@@ -106,9 +180,7 @@ export function TimelineLayoutRenderer({
               <Pencil className="w-3 h-3 text-accent/60" />
             )}
           </div>
-          <Badge variant="outline" className="text-xs">
-            v{artifactMetadata.version}
-          </Badge>
+          <VersionSelector metadata={artifactMetadata} />
         </div>
       </CardHeader>
       
@@ -130,9 +202,11 @@ export function TimelineLayoutRenderer({
                 ? eventColors[typeConfig.color] || 'bg-primary'
                 : 'bg-primary'
               const isLast = index === sortedEvents.length - 1
+              const eventId = event.id || `timeline-event-${index}` // Ensure unique ID
+              const isEditing = editingEventId === eventId
 
               return (
-                <div key={event.id || `timeline-event-${index}`} className="relative">
+                <div key={eventId} className="relative">
                   {/* Event dot */}
                   <div 
                     className={`absolute -left-8 top-1 w-4 h-4 rounded-full ${dotColor} border-2 border-background flex items-center justify-center`}
@@ -143,37 +217,99 @@ export function TimelineLayoutRenderer({
                   {/* Event content */}
                   <div className={`pb-2 ${!isLast ? '' : ''}`}>
                     <div className="bg-muted/10 hover:bg-muted/20 rounded-lg p-4 border border-border/20 transition-all duration-200">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <h4 className="text-sm font-medium text-foreground mb-1">
-                            {event?.title || 'Untitled Event'}
-                          </h4>
-                          
-                          {event?.description && (
-                            <p className="text-sm text-muted-foreground">
-                              {event.description}
-                            </p>
-                          )}
+                      {isEditing ? (
+                        /* Editing mode */
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                              Title
+                            </label>
+                            <input
+                              type="text"
+                              value={editState[eventId]?.title || ''}
+                              onChange={(e) => updateEditField(eventId, 'title', e.target.value)}
+                              className="w-full px-3 py-2 text-sm bg-primary/5 border border-primary/40 rounded-md ring-2 ring-primary/50 focus:outline-none"
+                              autoFocus
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                              Description
+                            </label>
+                            <Textarea
+                              value={editState[eventId]?.description || ''}
+                              onChange={(e) => updateEditField(eventId, 'description', e.target.value)}
+                              className="w-full min-h-[80px] px-3 py-2 text-sm bg-primary/5 border border-primary/40 rounded-md ring-2 ring-primary/50 focus:outline-none resize-y"
+                              placeholder="Enter event description..."
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => handleSaveEvent(eventId)}
+                              className="h-7 px-3 text-xs"
+                            >
+                              Save
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleCancelEdit(eventId)}
+                              className="h-7 px-3 text-xs"
+                            >
+                              Cancel
+                            </Button>
+                          </div>
                         </div>
+                      ) : (
+                        /* Display mode */
+                        <>
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <h4 className="text-sm font-medium text-foreground mb-1">
+                                {event?.title || 'Untitled Event'}
+                              </h4>
+                              
+                              {event?.description && (
+                                <p className="text-sm text-muted-foreground">
+                                  {event.description}
+                                </p>
+                              )}
+                            </div>
 
-                        {typeConfig && (
-                          <Badge variant="outline" className="text-xs">
-                            {typeConfig?.label || typeConfig?.type || 'Event'}
-                          </Badge>
-                        )}
-                      </div>
+                            <div className="flex items-center gap-2">
+                              {typeConfig && (
+                                <Badge variant="outline" className="text-xs">
+                                  {typeConfig?.label || typeConfig?.type || 'Event'}
+                                </Badge>
+                              )}
+                              {editable && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditEvent(event, index)}
+                                  className="h-6 px-2 text-xs"
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
 
-                      <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
-                        <span>{formatDate(event?.timestamp || Date.now())}</span>
-                        {event?.metadata && Object.keys(event.metadata).length > 0 && (
-                          <>
-                            <span>•</span>
-                            <span className="text-muted-foreground/70">
-                              {Object.keys(event.metadata).length} metadata
-                            </span>
-                          </>
-                        )}
-                      </div>
+                          <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
+                            <span>{formatDate(event?.timestamp || Date.now())}</span>
+                            {event?.metadata && Object.keys(event.metadata).length > 0 && (
+                              <>
+                                <span>•</span>
+                                <span className="text-muted-foreground/70">
+                                  {Object.keys(event.metadata).length} metadata
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

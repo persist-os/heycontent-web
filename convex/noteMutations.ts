@@ -94,24 +94,6 @@ export const updateNote = mutation({
         updatedAt: Date.now(),
       });
       
-      // 🆕 INCREMENT FINGERPRINT SIGNALS FOR ALL PROJECTS WITH THIS NOTE
-      try {
-        const projects = await ctx.db.query("projects").collect();
-        const projectsWithNote = projects.filter(p => 
-          (p.noteIds || []).includes(noteId)
-        );
-        
-        for (const project of projectsWithNote) {
-          await ctx.runMutation(api.fingerprintSignalsMutations.increment, {
-            projectId: project._id,
-            signalType: "note_modified",
-            count: 1,
-          });
-        }
-      } catch (error) {
-        console.error("Failed to increment signals:", error);
-      }
-      
       return ctx.db.get(noteId);
     }
 
@@ -138,24 +120,6 @@ export const updateNote = mutation({
       ...updates,
       updatedAt: Date.now(),
     });
-    
-    // 🆕 INCREMENT FINGERPRINT SIGNALS FOR ALL PROJECTS WITH THIS NOTE
-    try {
-      const projects = await ctx.db.query("projects").collect();
-      const projectsWithNote = projects.filter(p => 
-        (p.noteIds || []).includes(noteId)
-      );
-      
-      for (const project of projectsWithNote) {
-        await ctx.runMutation(api.fingerprintSignalsMutations.increment, {
-          projectId: project._id,
-          signalType: "note_modified",
-          count: 1,
-        });
-      }
-    } catch (error) {
-      console.error("Failed to increment signals:", error);
-    }
     
     return ctx.db.get(noteId);
   },

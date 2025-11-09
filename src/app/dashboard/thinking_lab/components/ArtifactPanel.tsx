@@ -17,7 +17,7 @@ import { useQuery } from 'convex/react'
 import { useRouter } from 'next/navigation'
 import { api } from '../../../../../convex/_generated/api'
 import { Id } from '../../../../../convex/_generated/dataModel'
-import { ArtifactRenderer } from '@/components/artifacts/ArtifactRenderer'
+import { EditableArtifactRenderer } from '@/components/artifacts/EditableArtifactRenderer'
 import { Artifact } from '@/types/artifacts'
 import { Button } from '@/components/ui/button'
 import { ExternalLink } from 'lucide-react'
@@ -142,14 +142,10 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
           )}
         </div>
         {artifacts.map((artifact: Artifact) => (
-          <ArtifactRenderer 
+          <EditableArtifactRenderer 
             key={artifact._id}
             artifact={artifact}
-            editable={true}
-            onUpdate={async (updated: any) => {
-              // TODO: Wire up artifact updates through API
-              console.log('Artifact update:', updated)
-            }}
+            userId={userId}
           />
         ))}
       </div>

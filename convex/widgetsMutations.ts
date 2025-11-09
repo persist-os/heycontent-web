@@ -186,17 +186,6 @@ export const updateWidget = mutation({
       updatedAt: Date.now(),
     });
 
-    // 🆕 INCREMENT FINGERPRINT SIGNALS
-    try {
-      await ctx.runMutation(api.fingerprintSignalsMutations.increment, {
-        projectId: widget.projectId,
-        signalType: "widget_updated",
-        count: 1,
-      });
-    } catch (error) {
-      console.error("Failed to increment signal:", error);
-    }
-
     return { success: true };
   },
 });
@@ -332,19 +321,6 @@ export const updateWidgetExecution = mutation({
       lastRunAt: Date.now(),
       updatedAt: Date.now(),
     });
-
-    // 🆕 INCREMENT FINGERPRINT SIGNALS (only on success)
-    if (status === "success") {
-      try {
-        await ctx.runMutation(api.fingerprintSignalsMutations.increment, {
-          projectId: widget.projectId,
-          signalType: "widget_executed",
-          count: 1,
-        });
-      } catch (error) {
-        console.error("Failed to increment signal:", error);
-      }
-    }
 
     return { success: true };
   },

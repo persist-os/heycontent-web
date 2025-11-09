@@ -142,8 +142,8 @@ export const widgetSchemaFields = {
   // Scheduling configuration
   scheduleEnabled: v.optional(v.boolean()),
   scheduleFrequency: v.optional(widgetScheduleFrequencyValidator),
-  nextScheduledRun: v.optional(v.number()),
-  lastScheduledRun: v.optional(v.number()),
+  nextScheduledRun: v.optional(v.union(v.null(), v.number())),
+  lastScheduledRun: v.optional(v.union(v.null(), v.number())),
   scheduledRunCount: v.optional(v.number()),
   requiresApproval: v.optional(v.boolean()),
   
@@ -328,6 +328,13 @@ export const widgetBatchValidator = v.object({
     spawnCondition: v.string(),
     artifactType: v.optional(v.string()),  // ✅ Artifact type this agent generates
   }))),
+  // Scheduling fields (for recurring widget execution)
+  scheduleEnabled: v.optional(v.boolean()),
+  scheduleFrequency: v.optional(widgetScheduleFrequencyValidator),
+  nextScheduledRun: v.optional(v.union(v.null(), v.number())),
+  lastScheduledRun: v.optional(v.union(v.null(), v.number())),
+  scheduledRunCount: v.optional(v.number()),
+  requiresApproval: v.optional(v.boolean()),
 });
 
 // Widget create validator (for single widget creation - extends batch validator)
@@ -372,6 +379,13 @@ export const widgetCreateValidator = v.object({
       improvement_trend: v.optional(v.string()),
     })
   )),
+  // Scheduling fields (for recurring widget execution)
+  scheduleEnabled: v.optional(v.boolean()),
+  scheduleFrequency: v.optional(widgetScheduleFrequencyValidator),
+  nextScheduledRun: v.optional(v.union(v.null(), v.number())),
+  lastScheduledRun: v.optional(v.union(v.null(), v.number())),
+  scheduledRunCount: v.optional(v.number()),
+  requiresApproval: v.optional(v.boolean()),
 });
 
 // Widget update validator (all fields optional)
@@ -414,6 +428,15 @@ export const widgetUpdateValidator = v.object({
   lastRunAt: v.optional(v.number()),
   lastRunStatus: v.optional(widgetRunStatusValidator),
   status: v.optional(widgetStatusValidator),
+  // Scheduling fields (for recurring widget execution)
+  scheduleEnabled: v.optional(v.boolean()),
+  scheduleFrequency: v.optional(widgetScheduleFrequencyValidator),
+  nextScheduledRun: v.optional(v.union(v.null(), v.number())),
+  lastScheduledRun: v.optional(v.union(v.null(), v.number())),
+  scheduledRunCount: v.optional(v.number()),
+  requiresApproval: v.optional(v.boolean()),
+  // Metadata fields
+  updatedAt: v.optional(v.number()),
 });
 
 // Layout update validator (all fields optional)

@@ -9,11 +9,14 @@
 
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { ArtifactMetadata } from '@/types/artifacts'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { TrendingUp, TrendingDown, Minus, Pencil } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { TrendingUp, TrendingDown, Minus, Pencil, Check, X, Plus } from 'lucide-react'
+import { FieldEditor } from '../../editors/FieldEditor'
+import { VersionSelector } from '../../VersionSelector'
 
 interface TrackerDefinition {
   key?: string  // Legacy format
@@ -66,6 +69,9 @@ export function TrackerLayoutRenderer({
     lastUpdatedAt: Date.now()
   }
   
+  const [editingTrackerId, setEditingTrackerId] = useState<string | null>(null)
+  const [editValue, setEditValue] = useState<number | string>('')
+  
   // Sort entries by timestamp (newest first)
   const sortedEntries = [...entries].sort((a, b) => (b?.timestamp || 0) - (a?.timestamp || 0))
   
@@ -90,6 +96,38 @@ export function TrackerLayoutRenderer({
       return 'stable'
     }
     return null
+  }
+  
+  // Handle updating tracker value
+  const handleEditTracker = (trackerId: string, currentValue: number | string) => {
+    setEditingTrackerId(trackerId)
+    setEditValue(currentValue)
+  }
+
+  const handleSaveTracker = (trackerId: string) => {
+    if (!onUpdate) return
+    
+    // Create new entry with updated value
+    const newEntry: TrackerEntry = {
+      id: `entry-${Date.now()}`,
+      timestamp: Date.now(),
+      values: {
+        ...currentValues,
+        [trackerId]: editValue
+      }
+    }
+    
+    // Add new entry to entries array
+    const newEntries = [newEntry, ...entries]
+    onUpdate({ ...data, entries: newEntries })
+    
+    setEditingTrackerId(null)
+    setEditValue('')
+  }
+
+  const handleCancelEdit = () => {
+    setEditingTrackerId(null)
+    setEditValue('')
   }
   
   // Helper to get tracker identifier (supports both 'id' and 'key')
@@ -145,9 +183,7 @@ export function TrackerLayoutRenderer({
               <Pencil className="w-3 h-3 text-muted-foreground/60" />
             )}
           </div>
-          <Badge variant="outline" className="text-xs">
-            v{artifactMetadata.version}
-          </Badge>
+          <VersionSelector metadata={artifactMetadata} />
         </div>
       </CardHeader>
       
@@ -169,17 +205,63 @@ export function TrackerLayoutRenderer({
                     <span className="text-xs text-muted-foreground">
                       {getTrackerLabel(tracker)}
                     </span>
-                    {trend && (
-                      <div className="flex items-center gap-1">
-                        {trend === 'up' && <TrendingUp className="w-3 h-3 text-green-500" />}
-                        {trend === 'down' && <TrendingDown className="w-3 h-3 text-red-500" />}
-                        {trend === 'stable' && <Minus className="w-3 h-3 text-muted-foreground" />}
+                    <div className="flex items-center gap-2">
+                      {trend && (
+                        <div className="flex items-center gap-1">
+                          {trend === 'up' && <TrendingUp className="w-3 h-3 text-green-500" />}
+                          {trend === 'down' && <TrendingDown className="w-3 h-3 text-red-500" />}
+                          {trend === 'stable' && <Minus className="w-3 h-3 text-muted-foreground" />}
+                        </div>
+                      )}
+                      {editable && editingTrackerId !== trackerId && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditTracker(trackerId, value ?? 0)}
+                          className="h-5 px-1.5 text-xs"
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  {editingTrackerId === trackerId ? (
+                    <div className="space-y-2">
+                      <FieldEditor
+                        value={editValue}
+                        type={typeof value === 'number' ? 'number' : 'text'}
+                        editable={true}
+                        onSave={(newValue) => {
+                          setEditValue(newValue)
+                          handleSaveTracker(trackerId)
+                        }}
+                      />
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleSaveTracker(trackerId)}
+                          className="h-6 px-2 text-xs"
+                        >
+                          <Check className="w-3 h-3 mr-1" />
+                          Save
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleCancelEdit}
+                          className="h-6 px-2 text-xs"
+                        >
+                          <X className="w-3 h-3 mr-1" />
+                          Cancel
+                        </Button>
                       </div>
-                    )}
-                  </div>
-                  <div className={value !== undefined && value !== null ? "text-2xl font-semibold text-foreground" : "text-sm font-medium text-muted-foreground"}>
-                    {value !== undefined && value !== null ? formatValue(trackerId, value) : 'N/A'}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className={value !== undefined && value !== null ? "text-2xl font-semibold text-foreground" : "text-sm font-medium text-muted-foreground"}>
+                      {value !== undefined && value !== null ? formatValue(trackerId, value) : 'N/A'}
+                    </div>
+                  )}
                   {(tracker as any)?.status && (
                     <div className="text-xs text-muted-foreground mt-1">
                       Status: {(tracker as any).status}

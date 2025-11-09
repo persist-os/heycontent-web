@@ -21,6 +21,7 @@ import { Id } from '@/convex/_generated/dataModel'
 interface UseUnifiedArtifactEditorProps {
   artifactId: Id<'artifacts'>
   artifactData: any
+  artifactMetadata?: { version?: number }  // Optional metadata for initial version
   userId?: string
   widgetId?: string
   editSource?: 'widget' | 'user'  // Default: 'user' if userId provided, 'widget' if widgetId provided
@@ -45,6 +46,7 @@ interface UpdateResult {
 export function useUnifiedArtifactEditor({
   artifactId,
   artifactData,
+  artifactMetadata,
   userId,
   widgetId,
   editSource,
@@ -54,7 +56,8 @@ export function useUnifiedArtifactEditor({
   const [localData, setLocalData] = useState(artifactData)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [currentVersion, setCurrentVersion] = useState<number>(1)
+  // Initialize version from metadata if provided, otherwise default to 1
+  const [currentVersion, setCurrentVersion] = useState<number>(artifactMetadata?.version || 1)
   const [hasConflict, setHasConflict] = useState(false)
 
   // Determine edit source (user vs widget)
@@ -70,14 +73,19 @@ export function useUnifiedArtifactEditor({
     artifactId ? { artifactId } : 'skip'
   )
 
-  // Update local version when artifact changes
+  // Update local version when artifact changes (use query result as source of truth)
   useEffect(() => {
-    if (artifact?.metadata?.version) {
-      setCurrentVersion(artifact.metadata.version)
+    if (artifact) {
+      // Always sync with the latest version from the database
+      const latestVersion = artifact.metadata?.version || artifactMetadata?.version || 1
+      setCurrentVersion(latestVersion)
       setLocalData(artifact.data)
       setHasConflict(false)  // Reset conflict when artifact updates
+    } else if (artifactMetadata?.version) {
+      // Fallback to prop metadata if query hasn't loaded yet
+      setCurrentVersion(artifactMetadata.version)
     }
-  }, [artifact?.metadata?.version, artifact?.data])
+  }, [artifact?.metadata?.version, artifact?.data, artifactMetadata?.version])
 
   // Convex mutation for updating artifacts (with edit_source and version control)
   const updateArtifact = useMutation(api.artifactMutations.updateArtifact)
@@ -109,12 +117,15 @@ export function useUnifiedArtifactEditor({
       setError(null)
       
       try {
+        // Use currentVersion state (which is kept in sync with query via useEffect)
+        // Don't read from query here as it might be stale during rapid edits
+        // The useEffect will sync currentVersion whenever the query updates
         await updateArtifact({
           artifactId: artifactId,
           data: newData,
           updatedBy: updatedBy,
           editSource: effectiveEditSource,  // Track edit source
-          expectedVersion: currentVersion  // Optimistic concurrency control
+          expectedVersion: currentVersion  // Use state version (kept in sync by useEffect)
         })
         
         // Success - version will be incremented by backend
@@ -206,12 +217,13 @@ export function useUnifiedArtifactEditor({
         setError(null)
         
         try {
+          // Use currentVersion state (which is kept in sync with query via useEffect)
           await updateArtifact({
             artifactId: artifactId,
             data: newData,
             updatedBy: updatedBy,
             editSource: effectiveEditSource,
-            expectedVersion: currentVersion
+            expectedVersion: currentVersion  // Use state version (kept in sync by useEffect)
           })
           
           setCurrentVersion(previousVersion + 1)

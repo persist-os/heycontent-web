@@ -26,10 +26,11 @@ import { UnifiedGalleryViewProps } from '@/types/gallery'
 import { GallerySidebar } from './GallerySidebar'
 import { GalleryNavigation } from './GalleryNavigation'
 import { useGalleryNavigation } from '@/hooks/useGalleryNavigation'
-import { ArtifactRenderer } from '@/components/artifacts/ArtifactRenderer'
+import { EditableArtifactRenderer } from '@/components/artifacts/EditableArtifactRenderer'
 import { cn } from '@/lib/utils'
 import { Loader2 } from 'lucide-react'
 import { StarRating } from '@/components/ui/star-rating'
+import { WidgetScheduleControls } from '@/app/dashboard/living-projects/[projectId]/components/widgets/WidgetScheduleControls'
 
 export function UnifiedGalleryView({
   projectId,
@@ -265,9 +266,9 @@ export function UnifiedGalleryView({
             </div>
           )}
           
-          <ArtifactRenderer 
+          <EditableArtifactRenderer 
             artifact={currentItem as any} 
-            editable={false} 
+            userId={userId}
           />
         </div>
       )
@@ -372,6 +373,24 @@ export function UnifiedGalleryView({
                 allowFeedbackText={true}
               />
             </div>
+            
+            {/* Widget Schedule Controls */}
+            {widgetId && projectId && (
+              <div className="mb-4">
+                <WidgetScheduleControls
+                  widgetId={String(widgetId)}
+                  projectId={projectId}
+                  isScheduled={currentItem.scheduleEnabled || false}
+                  nextScheduledRun={currentItem.nextScheduledRun || null}
+                  frequency={currentItem.scheduleFrequency || 'daily'}
+                  suggestedFrequency={currentItem.executionProfile?.frequencySuggestion || null}
+                  onScheduleChange={() => {
+                    // Trigger a refetch of widget data if needed
+                    // The component will update via Convex reactivity
+                  }}
+                />
+              </div>
+            )}
             
             {/* Current Activity */}
             {getCurrentActivity()}
@@ -704,7 +723,7 @@ export function UnifiedGalleryView({
                             </p>
                             {artifact.data && (
                               <div className="mt-2">
-                                <ArtifactRenderer artifact={artifact} editable={false} />
+                                <EditableArtifactRenderer artifact={artifact} userId={userId} />
                               </div>
                             )}
                           </div>

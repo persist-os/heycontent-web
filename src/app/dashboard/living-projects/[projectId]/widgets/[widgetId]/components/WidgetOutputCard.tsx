@@ -13,8 +13,9 @@ import { useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import type { WidgetOutput } from '../types'
 import { T, TButton } from '@/components/translation'
-import { ArtifactRenderer } from '@/components/artifacts/ArtifactRenderer'
+import { EditableArtifactRenderer } from '@/components/artifacts/EditableArtifactRenderer'
 import type { Artifact } from '@/types/artifacts'
+import { getCurrentUserId } from '@/app/lib/api-helpers'
 
 interface WidgetOutputCardProps {
   output: WidgetOutput
@@ -29,6 +30,20 @@ export function WidgetOutputCard({
   onToggle, 
   onLaunchLab 
 }: WidgetOutputCardProps) {
+  const [userId, setUserId] = React.useState<string>("")
+
+  React.useEffect(() => {
+    const fetchUserId = async () => {
+      try {
+        const id = await getCurrentUserId()
+        setUserId(id)
+      } catch (error) {
+        console.error('Failed to get user ID:', error)
+      }
+    }
+    fetchUserId()
+  }, [])
+  
   const getRelativeTime = (timestamp: number) => {
     const now = Date.now()
     const diff = now - timestamp
@@ -130,20 +145,25 @@ export function WidgetOutputCard({
             {/* Artifact Renderer (Universal System) or Legacy Display */}
             {(output as any).artifactType && (output as any).artifactData ? (
               // NEW: Universal artifact rendering
-              <ArtifactRenderer
-                artifact={{
-                  type: (output as any).artifactType,
-                  schema: (output as any).artifactSchema,
-                  data: (output as any).artifactData,
-                  metadata: {
-                    version: 1,
-                    lastUpdatedBy: output.widgetId,
-                    lastUpdatedAt: output.createdAt
-                  }
-                } as Artifact}
-                editable={false}  // Phase 1: read-only
-                onUpdate={() => {}}
-              />
+              userId ? (
+                <EditableArtifactRenderer
+                  artifact={{
+                    type: (output as any).artifactType,
+                    schema: (output as any).artifactSchema,
+                    data: (output as any).artifactData,
+                    metadata: {
+                      version: 1,
+                      lastUpdatedBy: output.widgetId,
+                      lastUpdatedAt: output.createdAt
+                    }
+                  } as Artifact}
+                  userId={userId}
+                />
+              ) : (
+                <div className="text-center py-4 text-muted-foreground">
+                  Loading...
+                </div>
+              )
             ) : (
               // LEGACY: Original prompt/note display (backward compatibility)
               <>

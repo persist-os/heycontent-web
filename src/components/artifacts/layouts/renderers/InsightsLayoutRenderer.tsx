@@ -9,12 +9,15 @@
 
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { ArtifactMetadata } from '@/types/artifacts'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Pencil, Lightbulb, AlertCircle, Info, BarChart as BarChartIcon } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Pencil, Lightbulb, AlertCircle, Info, BarChart as BarChartIcon, X } from 'lucide-react'
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { VersionSelector } from '../../VersionSelector'
 
 interface Insight {
   id?: string
@@ -60,6 +63,10 @@ export function InsightsLayoutRenderer({
     lastUpdatedAt: Date.now()
   }
 
+  const [editingInsightId, setEditingInsightId] = useState<string | null>(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+
   // Get priority icon and color (supports both 'impact' and 'significance')
   const getPriorityIndicator = (insight: Insight) => {
     // Support both 'impact' (legacy) and 'significance' (new format)
@@ -94,6 +101,39 @@ export function InsightsLayoutRenderer({
     return acc
   }, {} as Record<string, typeof insights>)
 
+  // Handle editing insight
+  const handleEditInsight = (insight: Insight) => {
+    setEditingInsightId(insight.id || '')
+    setEditTitle(insight.title)
+    setEditDescription(insight.description)
+  }
+
+  const handleSaveInsight = () => {
+    if (!onUpdate || !editingInsightId) return
+
+    const newInsights = insights.map(insight => {
+      if (insight.id === editingInsightId) {
+        return {
+          ...insight,
+          title: editTitle,
+          description: editDescription
+        }
+      }
+      return insight
+    })
+
+    onUpdate({ ...data, insights: newInsights })
+    setEditingInsightId(null)
+    setEditTitle('')
+    setEditDescription('')
+  }
+
+  const handleCancelEdit = () => {
+    setEditingInsightId(null)
+    setEditTitle('')
+    setEditDescription('')
+  }
+
   // Get artifact type display name
   const artifactTypeDisplay = artifactType || 'Analysis'
 
@@ -108,9 +148,7 @@ export function InsightsLayoutRenderer({
               <Pencil className="w-3 h-3 text-primary/60" />
             )}
           </div>
-          <Badge variant="outline" className="text-xs">
-            v{artifactMetadata.version}
-          </Badge>
+          <VersionSelector metadata={artifactMetadata} />
         </div>
       </CardHeader>
 
@@ -129,39 +167,104 @@ export function InsightsLayoutRenderer({
                 {categoryInsights.map((insight, insightIdx) => {
                   const { icon: Icon, color, bgColor } = getPriorityIndicator(insight)
                   const priority = insight?.impact || (insight?.significance ? 'medium' : undefined)
+                  const insightId = insight.id || `insight-${category}-${insightIdx}`
+                  const isEditing = editingInsightId === insightId
+                  
                   return (
                     <div
-                      key={insight.id || `insight-${category}-${insightIdx}`}
+                      key={insightId}
                       className={`${bgColor} border border-border/20 rounded-lg p-4 transition-all duration-200 hover:bg-opacity-80`}
                     >
-                      <div className="flex items-start gap-3">
-                        <Icon className={`w-5 h-5 ${color} flex-shrink-0 mt-0.5`} />
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-center justify-between gap-2">
-                            <h4 className="text-sm font-semibold text-foreground">
-                              {insight.title}
-                            </h4>
-                            {priority && (
-                              <Badge variant="outline" className="text-xs capitalize">
-                                {priority}
-                              </Badge>
+                      {isEditing ? (
+                        /* Editing mode */
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                              Title
+                            </label>
+                            <input
+                              type="text"
+                              value={editTitle}
+                              onChange={(e) => setEditTitle(e.target.value)}
+                              className="w-full px-3 py-2 text-sm bg-primary/5 border border-primary/40 rounded-md ring-2 ring-primary/50 focus:outline-none"
+                              autoFocus
+                              aria-label="Edit insight title"
+                              placeholder="Enter insight title"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                              Description
+                            </label>
+                            <Textarea
+                              value={editDescription}
+                              onChange={(e) => setEditDescription(e.target.value)}
+                              className="w-full min-h-[80px] px-3 py-2 text-sm bg-primary/5 border border-primary/40 rounded-md ring-2 ring-primary/50 focus:outline-none resize-y"
+                              placeholder="Enter insight description..."
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={handleSaveInsight}
+                              className="h-7 px-3 text-xs"
+                            >
+                              Save
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleCancelEdit}
+                              className="h-7 px-3 text-xs"
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        /* Display mode */
+                        <div className="flex items-start gap-3">
+                          <Icon className={`w-5 h-5 ${color} flex-shrink-0 mt-0.5`} />
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <h4 className="text-sm font-semibold text-foreground">
+                                {insight.title}
+                              </h4>
+                              <div className="flex items-center gap-2">
+                                {priority && (
+                                  <Badge variant="outline" className="text-xs capitalize">
+                                    {priority}
+                                  </Badge>
+                                )}
+                                {editable && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEditInsight(insight)}
+                                    className="h-6 px-2 text-xs"
+                                  >
+                                    <Pencil className="w-3 h-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {insight.description}
+                            </p>
+                            {insight.significance && (
+                              <p className="text-xs text-muted-foreground/80 italic">
+                                {insight.significance}
+                              </p>
+                            )}
+                            {insight.metric && insight.value && (
+                              <div className="text-xs text-muted-foreground">
+                                <strong>{insight.metric}:</strong> {insight.value}
+                              </div>
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground">
-                            {insight.description}
-                          </p>
-                          {insight.significance && (
-                            <p className="text-xs text-muted-foreground/80 italic">
-                              {insight.significance}
-                            </p>
-                          )}
-                          {insight.metric && insight.value && (
-                            <div className="text-xs text-muted-foreground">
-                              <strong>{insight.metric}:</strong> {insight.value}
-                            </div>
-                          )}
                         </div>
-                      </div>
+                      )}
                     </div>
                   )
                 })}

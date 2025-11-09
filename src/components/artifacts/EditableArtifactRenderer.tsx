@@ -1,0 +1,201 @@
+/**
+ * EDITABLE ARTIFACT RENDERER
+ * 
+ * Gold Standard wrapper component that auto-wires artifact editing.
+ * Eliminates boilerplate - editing just works with zero configuration.
+ * 
+ * LAW VI: This is the centralization target for artifact editing.
+ * All components should use this instead of manually wiring useUnifiedArtifactEditor.
+ * 
+ * Pattern Compliance: Convex Frontend Data Display Pattern
+ * - Components call useMutation directly (via useUnifiedArtifactEditor hook)
+ * - No backend calls - direct Convex mutations
+ * - Hooks used in components ✅
+ * - Stores don't call Convex ✅
+ */
+
+'use client'
+
+import React, { useState } from 'react'
+import { useUnifiedArtifactEditor } from './editors/useUnifiedArtifactEditor'
+import { ArtifactRenderer } from './ArtifactRenderer'
+import { Artifact } from '@/types/artifacts'
+import { Id } from '@/convex/_generated/dataModel'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Edit, Save, X } from 'lucide-react'
+
+interface ConflictInfo {
+  artifactId: string
+  expectedVersion: number
+  currentVersion: number
+  mergeStrategy: 'overwrite' | 'merge' | 'user_precedence'
+  message: string
+}
+
+interface EditableArtifactRendererProps {
+  artifact: Artifact
+  userId?: string
+  widgetId?: string
+  editable?: boolean  // Optional override (default: true)
+  onConflict?: (info: ConflictInfo) => void
+}
+
+/**
+ * EditableArtifactRenderer - Auto-wires artifact editing
+ * 
+ * Automatically:
+ * - Determines edit source (user vs widget) from props
+ * - Enables editing by default (opt-out with editable={false})
+ * - Handles version tracking
+ * - Handles edit source tracking
+ * - Handles conflict resolution
+ * - Requires zero boilerplate
+ */
+export function EditableArtifactRenderer({
+  artifact,
+  userId,
+  widgetId,
+  editable = true,  // Default to true (editing enabled by default)
+  onConflict
+}: EditableArtifactRendererProps) {
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [editJson, setEditJson] = useState('')
+  const [jsonError, setJsonError] = useState<string | null>(null)
+  
+  // Auto-wire editing hook
+  const editor = useUnifiedArtifactEditor({
+    artifactId: artifact._id as Id<'artifacts'>,
+    artifactData: artifact.data,
+    artifactMetadata: artifact.metadata,  // Pass metadata for version initialization
+    userId,
+    widgetId: widgetId as Id<'widgets'> | undefined,
+    editSource: userId ? 'user' : (widgetId ? 'widget' : 'user'),
+    onUpdate: () => {
+      // Auto-save via Convex mutation (handled by hook)
+      // No action needed - hook handles mutation automatically
+    },
+    onConflict
+  })
+
+  // Handle opening edit modal
+  const handleOpenEditModal = () => {
+    try {
+      const jsonString = JSON.stringify(editor.localData, null, 2)
+      setEditJson(jsonString)
+      setJsonError(null)
+      setIsEditModalOpen(true)
+    } catch (err) {
+      setJsonError('Failed to serialize artifact data')
+      setIsEditModalOpen(true)
+    }
+  }
+
+  // Handle saving edited JSON
+  const handleSaveEdit = async () => {
+    try {
+      const parsedData = JSON.parse(editJson)
+      setJsonError(null)
+      
+      const result = await editor.updateData(parsedData)
+      if (result.success) {
+        setIsEditModalOpen(false)
+      } else {
+        setJsonError(result.error || 'Failed to save artifact')
+      }
+    } catch (err) {
+      setJsonError(err instanceof Error ? err.message : 'Invalid JSON format')
+    }
+  }
+
+  // Handle cancel
+  const handleCancelEdit = () => {
+    setIsEditModalOpen(false)
+    setEditJson('')
+    setJsonError(null)
+  }
+
+  // If editing disabled, use regular renderer
+  if (!editable) {
+    return <ArtifactRenderer artifact={artifact} editable={false} />
+  }
+
+  // Editing enabled - pass editor's localData to ArtifactRenderer
+  // This ensures optimistic updates are reflected immediately
+  return (
+    <>
+      <div className="relative">
+        {/* Edit Artifact Button - Always visible in top right */}
+        {editable && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleOpenEditModal}
+            className="absolute top-3 right-3 z-10 h-7 px-2 text-xs gap-1.5 bg-background/90 backdrop-blur-sm shadow-sm"
+            title="Edit entire artifact"
+          >
+            <Edit className="w-3 h-3" />
+            Edit Artifact
+          </Button>
+        )}
+        
+        <ArtifactRenderer
+          artifact={{
+            ...artifact,
+            data: editor.localData  // Use editor's local state (includes optimistic updates)
+          }}
+          editable={true}
+          onUpdate={editor.updateData}  // Auto-wired update handler
+        />
+      </div>
+
+      {/* Edit Artifact Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>Edit Artifact</DialogTitle>
+            <DialogDescription>
+              Edit the entire artifact data as JSON. Changes will be saved as a new version.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {jsonError && (
+              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-md text-sm text-red-600 dark:text-red-400">
+                {jsonError}
+              </div>
+            )}
+            
+            <Textarea
+              value={editJson}
+              onChange={(e) => {
+                setEditJson(e.target.value)
+                setJsonError(null)
+              }}
+              className="w-full min-h-[400px] font-mono text-sm"
+              placeholder="Enter JSON data..."
+            />
+            
+            <div className="text-xs text-muted-foreground">
+              <p>• Version: {artifact.metadata?.version || 1}</p>
+              <p>• Changes will create version {(artifact.metadata?.version || 1) + 1}</p>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCancelEdit}>
+              <X className="w-4 h-4 mr-2" />
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={editor.isSaving || !!jsonError}>
+              <Save className="w-4 h-4 mr-2" />
+              {editor.isSaving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
+

@@ -9,7 +9,7 @@
 
 import React from 'react'
 import { Artifact } from '@/types/artifacts'
-import { ArtifactRenderer } from '@/components/artifacts/ArtifactRenderer'
+import { EditableArtifactRenderer } from '@/components/artifacts/EditableArtifactRenderer'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { 
@@ -27,6 +27,7 @@ interface ArtifactDisplayCardProps {
   editable?: boolean
   onUpdate?: (data: any) => void
   widgetTitle?: string
+  userId: string  // Required: always available for editing
 }
 
 /**
@@ -88,18 +89,19 @@ export function ArtifactDisplayCard({
   artifact,
   editable = false,
   onUpdate,
-  widgetTitle
+  widgetTitle,
+  userId
 }: ArtifactDisplayCardProps) {
   const visuals = getArtifactVisuals(artifact.type)
   const Icon = visuals.icon
   
   // Extract title with fallback chain
-  let artifactTitle = artifact.title;
-  if (!artifactTitle && artifact.data?.title) {
-    artifactTitle = artifact.data.title;
+  let artifactTitle: string | undefined = (artifact as any).title;
+  if (!artifactTitle && (artifact.data as any)?.title) {
+    artifactTitle = (artifact.data as any).title;
   }
-  if (!artifactTitle && artifact.type === 'report' && artifact.data?.markdown) {
-    const match = artifact.data.markdown.match(/^#\s+(.+)$/m);
+  if (!artifactTitle && artifact.type === 'report' && (artifact.data as any)?.markdown) {
+    const match = (artifact.data as any).markdown.match(/^#\s+(.+)$/m);
     if (match) {
       artifactTitle = match[1].trim();
     }
@@ -135,10 +137,10 @@ export function ArtifactDisplayCard({
 
       {/* Content: Rendered artifact */}
       <CardContent className="p-6">
-        <ArtifactRenderer 
+        <EditableArtifactRenderer 
           artifact={artifact}
+          userId={userId}
           editable={editable}
-          onUpdate={onUpdate}
         />
       </CardContent>
 

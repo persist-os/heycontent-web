@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ExternalLink } from 'lucide-react'
+import { WidgetScheduleControls } from '@/app/dashboard/living-projects/[projectId]/components/widgets/WidgetScheduleControls'
 
 interface WidgetPanelProps {
   projectId?: string
@@ -208,6 +209,24 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
               <p className="text-muted-foreground text-lg mb-4">
                 {currentWidget.familyIdentity?.mission || currentWidget.description || 'Helps you manage your project'}
               </p>
+              
+              {/* Widget Schedule Controls */}
+              {effectiveProjectId && currentWidget._id && (
+                <div className="mb-4">
+                  <WidgetScheduleControls
+                    widgetId={String(currentWidget._id)}
+                    projectId={effectiveProjectId}
+                    isScheduled={currentWidget.scheduleEnabled || false}
+                    nextScheduledRun={currentWidget.nextScheduledRun || null}
+                    frequency={currentWidget.scheduleFrequency || 'daily'}
+                    suggestedFrequency={currentWidget.executionProfile?.frequencySuggestion || null}
+                    onScheduleChange={() => {
+                      // Trigger a refetch of widget data if needed
+                      // The component will update via Convex reactivity
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </Card>
           

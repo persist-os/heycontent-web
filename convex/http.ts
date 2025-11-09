@@ -32,7 +32,6 @@ app.use('*', async (c, next) => {
   else if (path.includes('/projectSeeds')) domain = 'project_seeds';
   else if (path.includes('/projects')) domain = 'projects';
   else if (path.includes('/widgets')) domain = 'widgets';
-  else if (path.includes('/fingerprintSignals')) domain = 'fingerprint_signals';
   else if (path.includes('/project-fingerprint')) domain = 'fingerprint';
   else if (path.includes('/crystal')) domain = 'crystal';
   else if (path.includes('/contextEnrichmentBandit')) domain = 'context_mab';

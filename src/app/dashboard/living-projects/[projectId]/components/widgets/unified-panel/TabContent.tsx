@@ -39,7 +39,8 @@ import { api } from '@/convex/_generated/api'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { T } from '@/components/translation/T'
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal'
-import { ArtifactRenderer } from '@/components/artifacts/ArtifactRenderer'
+import { WidgetScheduleControls } from '../WidgetScheduleControls'
+import { EditableArtifactRenderer } from '@/components/artifacts/EditableArtifactRenderer'
 
 /**
  * Overview Tab - Content preview and primary information
@@ -52,16 +53,35 @@ import { ArtifactRenderer } from '@/components/artifacts/ArtifactRenderer'
 export const OverviewTab = ({ item, itemType, config, projectId }: TabContentProps) => {
   const preview = getItemPreview(item, itemType)
   const router = useRouter()
+  const [userId, setUserId] = useState<string>("")
+
+  React.useEffect(() => {
+    const fetchUserId = async () => {
+      try {
+        const id = await getCurrentUserId()
+        setUserId(id)
+      } catch (error) {
+        console.error('Failed to get user ID:', error)
+      }
+    }
+    fetchUserId()
+  }, [])
 
   // Special rendering for artifacts
   if (itemType === 'artifact') {
     return (
       <div className="space-y-4">
         {/* Artifact Renderer - now handles database format internally */}
-        <ArtifactRenderer
-          artifact={item as any}
-          editable={false}
-        />
+        {userId ? (
+          <EditableArtifactRenderer
+            artifact={item as any}
+            userId={userId}
+          />
+        ) : (
+          <div className="text-center py-4 text-muted-foreground">
+            Loading...
+          </div>
+        )}
         
         {/* View Full Artifact Button */}
         <Button
@@ -127,6 +147,60 @@ export const OverviewTab = ({ item, itemType, config, projectId }: TabContentPro
                 This family executes automatically when you start the project. Check the constellation for real-time updates.
               </T>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Widget-specific: Schedule Info */}
+      {itemType === 'widget' && (
+        <div>
+          <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+            <Clock className="w-4 h-4" />
+            <T context="panel.overview.schedule">Schedule</T>
+          </h3>
+          <div className="space-y-3">
+            {item.scheduleEnabled ? (
+              <div className="bg-green-500/5 rounded-lg p-3 border border-green-500/10">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <div className="text-xs font-medium text-green-600 dark:text-green-400">
+                      Scheduled {item.scheduleFrequency || 'daily'}
+                    </div>
+                    {item.nextScheduledRun && (
+                      <div className="text-xs text-muted-foreground">
+                        Next run: {new Date(item.nextScheduledRun * 1000).toLocaleString()}
+                      </div>
+                    )}
+                    {item.lastScheduledRun && (
+                      <div className="text-xs text-muted-foreground">
+                        Last run: {new Date(item.lastScheduledRun * 1000).toLocaleString()}
+                      </div>
+                    )}
+                    {item.scheduledRunCount !== undefined && (
+                      <div className="text-xs text-muted-foreground">
+                        Total runs: {item.scheduledRunCount}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-muted/20 rounded-lg p-3 border border-border/20">
+                <div className="text-xs text-muted-foreground">
+                  Not scheduled. Use the schedule controls to enable automatic execution.
+                </div>
+              </div>
+            )}
+            {projectId && (
+              <WidgetScheduleControls
+                widgetId={item._id}
+                projectId={projectId}
+                isScheduled={item.scheduleEnabled}
+                nextScheduledRun={item.nextScheduledRun}
+                frequency={item.scheduleFrequency}
+                suggestedFrequency={item.execution_profile?.frequency_suggestion || null}
+              />
+            )}
           </div>
         </div>
       )}

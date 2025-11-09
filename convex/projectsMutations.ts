@@ -163,28 +163,6 @@ export const addContent = mutation({
       updatedAt: Date.now(),
     });
     
-    // 🆕 INCREMENT FINGERPRINT SIGNALS
-    const signalTypeMap: Record<string, string> = {
-      note: "note_added",
-      crystal: "crystal_added",
-      cognitiveField: "cognitive_field_added",
-      shard: "shard_added",
-    };
-    
-    const signalType = signalTypeMap[contentType];
-    if (signalType) {
-      try {
-        await ctx.runMutation(api.fingerprintSignalsMutations.increment, {
-          projectId,
-          signalType: signalType as any,
-          count: 1,
-        });
-      } catch (error) {
-        // Don't fail the operation if signal increment fails
-        console.error("Failed to increment signal:", error);
-      }
-    }
-    
     return { success: true, projectId, contentType, contentId };
   },
 });
