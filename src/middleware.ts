@@ -64,7 +64,7 @@ export function middleware(request: NextRequest) {
   const CSP = [
     "default-src 'self'",
     `connect-src ${connectSrc.join(' ')}`,
-    `script-src 'self' 'unsafe-inline'${local ? " 'unsafe-eval'" : ''} https://js.stripe.com https://va.vercel-scripts.com https://apis.google.com https://accounts.google.com`,
+    `script-src 'self' 'unsafe-inline'${local ? " 'unsafe-eval'" : ''} https://js.stripe.com https://va.vercel-scripts.com https://apis.google.com https://accounts.google.com https://www.googletagmanager.com`,
     "frame-src https://js.stripe.com https://accounts.google.com https://*.firebaseapp.com",
     "img-src 'self' data: https://*",
     "style-src 'self' 'unsafe-inline'",

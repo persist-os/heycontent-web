@@ -16,8 +16,13 @@ import { Badge } from '@/components/ui/badge'
 import { TrendingUp, TrendingDown, Minus, Pencil } from 'lucide-react'
 
 interface TrackerDefinition {
-  key: string
-  label: string
+  key?: string  // Legacy format
+  id?: string   // Actual Convex format
+  label?: string  // Legacy format
+  title?: string   // Actual Convex format
+  description?: string  // Actual Convex format
+  metrics?: string[]  // Actual Convex format
+  status?: string  // Actual Convex format
   target?: number
   unit?: string
   format?: 'number' | 'percentage' | 'currency' | 'text'
@@ -68,10 +73,10 @@ export function TrackerLayoutRenderer({
   const currentValues = sortedEntries.length > 0 ? sortedEntries[0].values : {}
   
   // Calculate trend for each tracker
-  const getTrend = (key: string) => {
+  const getTrend = (trackerId: string) => {
     if (sortedEntries.length < 2) return null
-    const current = sortedEntries[0].values[key]
-    const previous = sortedEntries[1].values[key]
+    const current = sortedEntries[0].values[trackerId]
+    const previous = sortedEntries[1].values[trackerId]
     
     if (typeof current === 'number' && typeof previous === 'number') {
       if (current > previous) return 'up'
@@ -81,9 +86,19 @@ export function TrackerLayoutRenderer({
     return null
   }
   
+  // Helper to get tracker identifier (supports both 'id' and 'key')
+  const getTrackerId = (tracker: TrackerDefinition) => {
+    return tracker?.id || tracker?.key || ''
+  }
+
+  // Helper to get tracker display label (supports both 'title' and 'label')
+  const getTrackerLabel = (tracker: TrackerDefinition) => {
+    return tracker?.title || tracker?.label || tracker?.id || tracker?.key || 'Tracker'
+  }
+
   // Format value based on tracker format
-  const formatValue = (key: string, value: number | string) => {
-    const tracker = trackers.find(t => t.key === key)
+  const formatValue = (trackerId: string, value: number | string) => {
+    const tracker = trackers.find(t => getTrackerId(t) === trackerId)
     if (!tracker) return value
     
     if (typeof value === 'number') {
@@ -135,17 +150,18 @@ export function TrackerLayoutRenderer({
         {trackers.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {trackers.map((tracker, trackerIdx) => {
-              const value = currentValues[tracker.key]
-              const trend = getTrend(tracker.key)
+              const trackerId = getTrackerId(tracker)
+              const value = currentValues[trackerId]
+              const trend = getTrend(trackerId)
               
               return (
                 <div
-                  key={tracker?.key || `tracker-${trackerIdx}`}
+                  key={trackerId || `tracker-${trackerIdx}`}
                   className="bg-muted/20 hover:bg-muted/30 rounded-lg p-4 border border-border/20 transition-all duration-200"
                 >
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs text-muted-foreground">
-                      {tracker?.label || tracker?.key || 'Tracker'}
+                      {getTrackerLabel(tracker)}
                     </span>
                     {trend && (
                       <div className="flex items-center gap-1">
@@ -155,12 +171,32 @@ export function TrackerLayoutRenderer({
                       </div>
                     )}
                   </div>
-                  <div className="text-2xl font-semibold text-foreground">
-                    {formatValue(tracker.key, value ?? 'N/A')}
+                  <div className={value !== undefined && value !== null ? "text-2xl font-semibold text-foreground" : "text-sm font-medium text-muted-foreground"}>
+                    {value !== undefined && value !== null ? formatValue(trackerId, value) : 'N/A'}
                   </div>
+                  {(tracker as any)?.status && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Status: {(tracker as any).status}
+                    </div>
+                  )}
                   {tracker.target && (
                     <div className="text-xs text-muted-foreground mt-1">
-                      Target: {formatValue(tracker.key, tracker.target)}
+                      Target: {formatValue(trackerId, tracker.target)}
+                    </div>
+                  )}
+                  {(tracker as any)?.description && (
+                    <div className="text-xs text-muted-foreground/70 mt-2 italic">
+                      {(tracker as any).description}
+                    </div>
+                  )}
+                  {(tracker as any)?.metrics && Array.isArray((tracker as any).metrics) && (tracker as any).metrics.length > 0 && (
+                    <div className="text-xs text-muted-foreground/70 mt-2">
+                      <div className="font-medium mb-1">Metrics:</div>
+                      <ul className="list-disc list-inside space-y-0.5">
+                        {((tracker as any).metrics as string[]).map((metric, idx) => (
+                          <li key={idx}>{metric}</li>
+                        ))}
+                      </ul>
                     </div>
                   )}
                 </div>
@@ -170,7 +206,7 @@ export function TrackerLayoutRenderer({
         )}
 
         {/* Timeline of entries */}
-        {sortedEntries.length > 0 && (
+        {sortedEntries.length > 0 ? (
           <div className="space-y-3">
             <h3 className="text-sm font-semibold text-foreground">Progress Timeline</h3>
             <div className="space-y-2">
@@ -185,16 +221,19 @@ export function TrackerLayoutRenderer({
                     </span>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                    {trackers.map((tracker) => (
-                      <div key={tracker.key} className="text-sm">
-                        <span className="text-muted-foreground text-xs">
-                          {tracker.label}:
-                        </span>{' '}
-                        <span className="text-foreground font-medium">
-                          {formatValue(tracker.key, entry.values[tracker.key] ?? 'N/A')}
-                        </span>
-                      </div>
-                    ))}
+                    {trackers.map((tracker) => {
+                      const trackerId = getTrackerId(tracker)
+                      return (
+                        <div key={trackerId} className="text-sm">
+                          <span className="text-muted-foreground text-xs">
+                            {getTrackerLabel(tracker)}:
+                          </span>{' '}
+                          <span className="text-foreground font-medium">
+                            {formatValue(trackerId, entry.values[trackerId] ?? 'N/A')}
+                          </span>
+                        </div>
+                      )
+                    })}
                   </div>
                   {entry.note && (
                     <div className="text-xs text-muted-foreground mt-2 italic">
@@ -204,6 +243,11 @@ export function TrackerLayoutRenderer({
                 </div>
               ))}
             </div>
+          </div>
+        ) : trackers.length > 0 && (
+          <div className="text-center py-6 text-sm text-muted-foreground border border-border/20 rounded-lg bg-muted/5">
+            <p>No tracking entries yet</p>
+            <p className="text-xs mt-1">Entries will appear here as progress is tracked</p>
           </div>
         )}
 

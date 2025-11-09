@@ -682,4 +682,28 @@ export default defineSchema({
     .index("by_type", ["type"])
     .index("by_scope_and_tags", ["scope", "tags"])
     .index("by_parent", ["parentId"]),
+
+  // ============================================================================
+  // PROMPT FEEDBACK - Feedback signals for prompt learning
+  // ============================================================================
+  // Stores feedback signals extracted from widget/artifact executions
+  // Linked to widget_id + operation for prompt improvement
+  prompt_feedback: defineTable({
+    widgetId: v.string(),
+    operation: v.string(),
+    userId: v.string(),
+    feedbackSignals: v.object({
+      sentiment: v.string(),
+      explicitRating: v.optional(v.number()),
+      implicitReward: v.number(),
+      learningSignals: v.any(),
+    }),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_widget_operation", ["widgetId", "operation"])
+    .index("by_widget", ["widgetId"])
+    .index("by_operation", ["operation"])
+    .index("by_user", ["userId"])
+    .index("by_created", ["createdAt"]),
 });

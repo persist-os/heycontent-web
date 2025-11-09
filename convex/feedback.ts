@@ -305,6 +305,10 @@ export const createContentFeedback = mutation({
       openingMessage: v.optional(v.string()),
       promptsCount: v.optional(v.number()),
       
+      // Artifact fields
+      artifactType: v.optional(v.string()),
+      action: v.optional(v.string()),  // "create" or "update"
+      
       // MAB decision IDs for feedback loop
       enrichment_metadata: v.optional(v.object({
         decision_id: v.optional(v.string()),  // Context enrichment decision ID
@@ -329,6 +333,7 @@ export const createContentFeedback = mutation({
       chat_message: "Chat message rating",
       note_generation: "Note generation rating",
       widget_output: "Widget output rating",
+      artifact: "Artifact rating",
     };
     
     const feedbackId = await ctx.db.insert("feedback", {
@@ -566,5 +571,106 @@ export const getLowRatedContent = query({
       createdAt: f.createdAt,
       userId: f.userId,
     }));
+  },
+});
+
+// ============================================================================
+// PROMPT FEEDBACK SYSTEM - For widget prompt learning
+// ============================================================================
+
+/**
+ * Store feedback signals for prompt learning
+ * Links feedback signals to widget_id + operation for prompt improvement
+ */
+export const storePromptFeedback = mutation({
+  args: {
+    widgetId: v.string(),
+    operation: v.string(),
+    userId: v.string(),
+    feedbackSignals: v.object({
+      sentiment: v.string(),
+      explicitRating: v.optional(v.number()),
+      implicitReward: v.number(),
+      learningSignals: v.any(),
+    }),
+  },
+  returns: v.id("prompt_feedback"),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    
+    const feedbackId = await ctx.db.insert("prompt_feedback", {
+      widgetId: args.widgetId,
+      operation: args.operation,
+      userId: args.userId,
+      feedbackSignals: args.feedbackSignals,
+      createdAt: now,
+      updatedAt: now,
+    });
+    
+    return feedbackId;
+  },
+});
+
+/**
+ * Get feedback signals for widget_id + operation combination
+ * Returns aggregated feedback patterns for prompt learning
+ */
+export const getPromptFeedback = mutation({
+  args: {
+    widgetId: v.string(),
+    operation: v.string(),
+  },
+  returns: v.union(
+    v.object({
+      positive_patterns: v.array(v.string()),
+      negative_patterns: v.array(v.string()),
+      user_preferences: v.array(v.string()),
+      feedback_count: v.number(),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    // Query all feedback signals for this widget + operation
+    const feedbackSignals = await ctx.db
+      .query("prompt_feedback")
+      .withIndex("by_widget_operation", (q) =>
+        q.eq("widgetId", args.widgetId).eq("operation", args.operation)
+      )
+      .collect();
+    
+    if (feedbackSignals.length === 0) {
+      return null;
+    }
+    
+    // Aggregate feedback signals into patterns
+    const positive_patterns: string[] = [];
+    const negative_patterns: string[] = [];
+    const user_preferences: string[] = [];
+    
+    feedbackSignals.forEach(signal => {
+      const sentiment = signal.feedbackSignals.sentiment;
+      const learningSignals = signal.feedbackSignals.learningSignals || {};
+      
+      if (sentiment === "positive") {
+        positive_patterns.push("Previous executions were well-received");
+      } else if (sentiment === "negative") {
+        negative_patterns.push("Previous executions had negative feedback");
+      }
+      
+      // Extract user preferences from learning signals
+      if (learningSignals.user_input_length && learningSignals.user_input_length > 100) {
+        user_preferences.push("User provides detailed input");
+      }
+      if (learningSignals.has_explicit_rating) {
+        user_preferences.push("User provides explicit ratings");
+      }
+    });
+    
+    return {
+      positive_patterns: [...new Set(positive_patterns)], // Deduplicate
+      negative_patterns: [...new Set(negative_patterns)], // Deduplicate
+      user_preferences: [...new Set(user_preferences)], // Deduplicate
+      feedback_count: feedbackSignals.length,
+    };
   },
 }); 

@@ -11,7 +11,8 @@ export const feedbackTypeValidator = v.union(
 export const contentFeedbackEntityTypeValidator = v.union(
   v.literal("chat_message"),
   v.literal("note_generation"),
-  v.literal("widget_output")
+  v.literal("widget_output"),
+  v.literal("artifact")
 );
 
 export const feedbackStatusValidator = v.union(

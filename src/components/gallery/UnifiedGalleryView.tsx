@@ -29,6 +29,7 @@ import { useGalleryNavigation } from '@/hooks/useGalleryNavigation'
 import { ArtifactRenderer } from '@/components/artifacts/ArtifactRenderer'
 import { cn } from '@/lib/utils'
 import { Loader2 } from 'lucide-react'
+import { StarRating } from '@/components/ui/star-rating'
 
 export function UnifiedGalleryView({
   projectId,
@@ -59,6 +60,77 @@ export function UnifiedGalleryView({
   // WHY: Only fetch widget data when viewing a widget (not an artifact)
   const isArtifact = currentItem?.itemType === 'artifact'
   const widgetId = !isArtifact && currentItem ? currentItem._id : null
+  const entityId = currentItem?._id || null
+  const entityType = isArtifact ? 'artifact' : 'widget_output'
+  
+  // Query existing feedback for current item
+  const existingFeedback = useQuery(
+    api.feedback.getFeedbackByEntity,
+    entityId && userId ? {
+      entityType: entityType as any,
+      entityId: entityId
+    } : 'skip'
+  )
+  
+  // Get current user's rating (most recent feedback from this user)
+  const currentRating = useMemo(() => {
+    if (!existingFeedback || !userId) return undefined
+    const userFeedback = existingFeedback.find((f: any) => f.userId === userId)
+    return userFeedback?.rating
+  }, [existingFeedback, userId])
+  
+  // Feedback submission state
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false)
+  
+  // Convex mutation for feedback submission
+  const submitFeedback = useMutation(api.feedback.createContentFeedback)
+  
+  // Handler for feedback submission (direct Convex call)
+  const handleFeedbackSubmit = async (rating: number, feedbackText?: string) => {
+    if (!userId || !entityId || !projectId) {
+      console.warn('Missing required fields for feedback', { userId, entityId, projectId })
+      return
+    }
+    
+    setIsSubmittingFeedback(true)
+    try {
+      // Build content snapshot based on entity type
+      const contentSnapshot: any = {}
+      if (isArtifact) {
+        contentSnapshot.artifactType = (currentItem as any).type || 'unknown'
+        if (widgetId) {
+          contentSnapshot.widgetId = widgetId
+        }
+      } else {
+        contentSnapshot.widgetType = 'unknown'
+        if (widgetId) {
+          contentSnapshot.widgetId = widgetId
+        }
+      }
+      
+      // Call Convex mutation directly (no backend needed)
+      const feedbackId = await submitFeedback({
+        entityType: entityType as any,
+        entityId,
+        rating,
+        userId,
+        contentSnapshot,
+        feedbackText: feedbackText || undefined,
+        projectId,
+        widgetId: widgetId || undefined,
+      })
+      
+      console.log('Feedback submitted successfully:', feedbackId)
+      
+      // Backend will process feedback signals via background job
+      // No need to wait for backend processing
+    } catch (error) {
+      console.error('Failed to submit feedback:', error)
+      throw error // Re-throw to let StarRating component handle it
+    } finally {
+      setIsSubmittingFeedback(false)
+    }
+  }
   
   // Background jobs (for widget activity)
   // WHY: Real-time visibility into widget execution status for "What's Happening" section
@@ -179,7 +251,20 @@ export function UnifiedGalleryView({
   const renderCurrentItem = () => {
     if (isArtifact) {
       return (
-        <div className="bg-card/50 backdrop-blur-sm border border-border/40 rounded-xl p-6">
+        <div className="bg-card/50 backdrop-blur-sm border border-border/40 rounded-xl p-6 space-y-4">
+          {/* Star Rating for Artifact */}
+          {userId && (
+            <div className="flex items-center justify-end">
+              <StarRating
+                size="sm"
+                value={currentRating}
+                onRate={handleFeedbackSubmit}
+                disabled={isSubmittingFeedback}
+                allowFeedbackText={true}
+              />
+            </div>
+          )}
+          
           <ArtifactRenderer 
             artifact={currentItem as any} 
             editable={false} 
@@ -276,6 +361,17 @@ export function UnifiedGalleryView({
             <p className="text-muted-foreground text-lg mb-4">
               {currentItem.description || 'Helps you manage your project'}
             </p>
+            
+            {/* Star Rating for Widget */}
+            <div className="flex items-center justify-end mb-4">
+              <StarRating
+                size="sm"
+                value={currentRating}
+                onRate={handleFeedbackSubmit}
+                disabled={isSubmittingFeedback}
+                allowFeedbackText={true}
+              />
+            </div>
             
             {/* Current Activity */}
             {getCurrentActivity()}
