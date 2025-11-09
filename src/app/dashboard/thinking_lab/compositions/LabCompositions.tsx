@@ -95,7 +95,23 @@ function FullThinkingLabInternal({
   const router = useRouter()
   
   // Right panel mode (notepad, artifacts, or widgets)
-  const [rightPanelMode, setRightPanelMode] = useState<'notepad' | 'artifacts' | 'widgets'>('notepad')
+  // Initialize from localStorage or default to 'notepad'
+  const [rightPanelMode, setRightPanelMode] = useState<'notepad' | 'artifacts' | 'widgets'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('thinking-lab-right-panel-mode')
+      if (saved === 'notepad' || saved === 'artifacts' || saved === 'widgets') {
+        return saved
+      }
+    }
+    return 'notepad'
+  })
+  
+  // Persist rightPanelMode to localStorage
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('thinking-lab-right-panel-mode', rightPanelMode)
+    }
+  }, [rightPanelMode])
   
   // Use the notepad context
   const notepadContext = useNotepadContext()

@@ -311,7 +311,7 @@ export function ConstellationView() {
       {/* Top Right - New Assignment Button */}
       <div className="absolute top-6 right-6 z-10">
         <Button
-          onClick={() => setShowCreateModal(true)}
+          onClick={() => router.push('/dashboard/thinking_lab')}
           className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-xl shadow-primary/20 ring-1 ring-primary/30"
         >
           <T context="constellation.button.new_project">New Assignment</T>
