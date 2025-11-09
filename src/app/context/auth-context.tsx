@@ -54,20 +54,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     let unsubscribe = () => {};
     try {
-      // Debug: log when auth instance is acquired
-      if (window.__FIREBASE_DEBUG) {
-        // eslint-disable-next-line no-console
-        console.log('[AUTH-CONTEXT] Using centralized auth state manager');
-      }
-      
       // Use the centralized auth state manager to prevent multiple listeners
       unsubscribe = authStateManager.subscribe(
         async (user) => {
           if (isRedirecting.current) return;
-          if (window.__FIREBASE_DEBUG) {
-            // eslint-disable-next-line no-console
-            console.log('[AUTH-CONTEXT] Auth state changed. User:', user);
-          }
           
           const previousUserId = lastUserId.current;
           const currentUserId = user?.uid || null;
@@ -75,11 +65,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setFirebaseUser(user);
           setAuthLoading(false);
           setError(null);
-          
-          // Track user login for logging (embeddings are now automatic)
-          if (user && currentUserId !== previousUserId) {
-            console.log('🔐 [AUTH-CONTEXT] User logged in:', currentUserId);
-          }
           
           lastUserId.current = currentUserId;
         },
@@ -93,10 +78,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       setError('Firebase auth not initialized');
       setAuthLoading(false);
-      if (window.__FIREBASE_DEBUG) {
-        // eslint-disable-next-line no-console
-        console.error('[AUTH-CONTEXT] Error initializing Firebase Auth:', e);
-      }
     }
     return () => {
       unsubscribe();

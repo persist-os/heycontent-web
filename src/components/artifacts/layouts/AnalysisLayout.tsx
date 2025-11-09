@@ -29,7 +29,7 @@ export function AnalysisLayout({
   }
 
   // Get priority icon and color
-  const getPriorityIndicator = (priority: 'high' | 'medium' | 'low') => {
+  const getPriorityIndicator = (priority: 'high' | 'medium' | 'low' | undefined | null) => {
     switch (priority) {
       case 'high':
         return { icon: AlertCircle, color: 'text-red-500', bgColor: 'bg-red-500/10' }
@@ -37,6 +37,8 @@ export function AnalysisLayout({
         return { icon: Info, color: 'text-yellow-500', bgColor: 'bg-yellow-500/10' }
       case 'low':
         return { icon: Lightbulb, color: 'text-blue-500', bgColor: 'bg-blue-500/10' }
+      default:
+        return { icon: Info, color: 'text-gray-500', bgColor: 'bg-gray-500/10' }
     }
   }
 
@@ -87,7 +89,7 @@ export function AnalysisLayout({
             
             <div className="space-y-3">
               {insights.map((insight, insightIdx) => {
-                const { icon: Icon, color, bgColor } = getPriorityIndicator(insight.impact)
+                const { icon: Icon, color, bgColor } = getPriorityIndicator(insight?.impact)
                 return (
                   <div
                     key={insight.id || `insight-${category}-${insightIdx}`}

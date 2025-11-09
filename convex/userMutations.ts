@@ -133,10 +133,8 @@ export const create_user = mutation(async ({ db }, { name, email, image, userId,
       createdAt: now,
       updatedAt: now,
     });
-    console.log(`[USER CREATION] Initialized intelligence config for user ${userId}`);
   } catch (error) {
-    // Non-critical - log but don't fail user creation
-    console.log(`[USER CREATION] Failed to initialize intelligence config: ${error}`);
+    // Non-critical - don't fail user creation
   }
   
   // Process referral if user was referred by someone

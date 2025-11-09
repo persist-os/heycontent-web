@@ -33,8 +33,6 @@ export function useGalleryItems(props: UseGalleryItemsProps | string) {
   const conversationId = typeof props === 'string' ? undefined : props.conversationId
   const userId = typeof props === 'string' ? getCurrentUserIdSync() : (props.userId || getCurrentUserIdSync())
   
-  console.log('[useGalleryItems] Hook called with:', { projectId, conversationId, userId })
-  
   // Step 1: If conversationId provided, fetch conversation to get projectId
   const conversation = useQuery(
     api.chatQueries.getConversation,
@@ -52,12 +50,6 @@ export function useGalleryItems(props: UseGalleryItemsProps | string) {
     effectiveProjectId ? { projectId: effectiveProjectId as Id<'projects'> } : 'skip'
   )
   
-  console.log('[useGalleryItems] Artifacts query result:', { 
-    artifacts, 
-    isLoading: artifacts === undefined,
-    count: artifacts?.length 
-  })
-  
   const widgets = useQuery(
     api.widgetsQueries.getProjectWidgets,
     userId && effectiveProjectId ? { 
@@ -67,19 +59,8 @@ export function useGalleryItems(props: UseGalleryItemsProps | string) {
     } : 'skip'
   )
   
-  console.log('[useGalleryItems] Widgets query result:', { 
-    widgets, 
-    isLoading: widgets === undefined,
-    count: widgets?.length,
-    querySkipped: !userId || !effectiveProjectId 
-  })
-  
   // Merge and normalize into unified list
   const allItems = useMemo(() => {
-    // Debug logging
-    console.log('[useGalleryItems] Artifacts:', artifacts?.length || 0, artifacts)
-    console.log('[useGalleryItems] Widgets:', widgets?.length || 0, widgets)
-    
     const artifactItems: GalleryItem[] = (artifacts || [])
       .filter((a: any) => a && a._id) // ✅ Ensure valid artifacts
       .map((a: any) => {
@@ -123,12 +104,8 @@ export function useGalleryItems(props: UseGalleryItemsProps | string) {
         updatedAt: w.updatedAt || w._creationTime
       }))
     
-    console.log('[useGalleryItems] Artifact items:', artifactItems.length)
-    console.log('[useGalleryItems] Widget items:', widgetItems.length)
-    
     // Merge and sort by most recent first
     const merged = [...artifactItems, ...widgetItems].sort((a, b) => b.updatedAt - a.updatedAt)
-    console.log('[useGalleryItems] Total merged items:', merged.length)
     
     return merged
   }, [artifacts, widgets])

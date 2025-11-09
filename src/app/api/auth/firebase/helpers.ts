@@ -4,18 +4,28 @@ import { fetchQuery, fetchMutation, fetchAction } from "convex/nextjs";
 
 export const logger = {
   info: (message: string, context: Record<string, any> = {}) => {
-    console.log(`[INFO] [${new Date().toISOString()}] ${message}`, context);
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[INFO] [${new Date().toISOString()}] ${message}`, context);
+    }
   },
   warn: (message: string, context: Record<string, any> = {}) => {
-    console.warn(`[WARN] [${new Date().toISOString()}] ${message}`, context);
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(`[WARN] [${new Date().toISOString()}] ${message}`, context);
+    }
   },
   error: (message: string, error: any, context: Record<string, any> = {}) => {
+    const sanitizedContext = { ...context };
+    delete sanitizedContext.userId;
+    delete sanitizedContext.email;
+    delete sanitizedContext.name;
+    delete sanitizedContext.idToken;
+    delete sanitizedContext.token;
     console.error(
       `[ERROR] [${new Date().toISOString()}] ${message}`,
       {
         error: error && typeof error.message === "string" ? error.message : "Unknown error",
         stack: error?.stack,
-        ...context,
+        ...sanitizedContext,
       }
     );
   },
@@ -28,12 +38,9 @@ export const logger = {
 
 export async function updateOrCreateConvexUser(userId: string, name: string, email: string, image: string, username?: string, referredBy?: string) {
   logger.debug('Saving user data to Convex', {
-    userId,
-    name,
-    email: email || 'not provided',
     hasImage: !!image,
-    username: username || 'not provided',
-    referredBy: referredBy || 'not provided',
+    hasUsername: !!username,
+    hasReferredBy: !!referredBy,
     referredByLength: referredBy?.length || 0,
     referredByType: typeof referredBy
   });
@@ -74,7 +81,7 @@ export async function updateOrCreateConvexUser(userId: string, name: string, ema
         logger.error('Error updating user updatedAt', err);
       }
     }
-    logger.debug('User already existed, updated safe fields only', { userId });
+    logger.debug('User already existed, updated safe fields only');
     return;
   }
 
@@ -89,7 +96,6 @@ export async function updateOrCreateConvexUser(userId: string, name: string, ema
       userId,
       // referralCode is generated in the mutation, don't need to pass it
     });
-    logger.debug('Result of create_user mutation', { result });
   } catch (err) {
     logger.error('Error creating user', err);
   }
