@@ -69,14 +69,20 @@ export function TrackerLayoutRenderer({
   // Sort entries by timestamp (newest first)
   const sortedEntries = [...entries].sort((a, b) => (b?.timestamp || 0) - (a?.timestamp || 0))
   
-  // Get current values (from most recent entry)
-  const currentValues = sortedEntries.length > 0 ? sortedEntries[0].values : {}
+  // Get current values (from most recent entry) - defensive check
+  const currentValues = sortedEntries.length > 0 && sortedEntries[0]?.values 
+    ? sortedEntries[0].values 
+    : {}
   
   // Calculate trend for each tracker
   const getTrend = (trackerId: string) => {
     if (sortedEntries.length < 2) return null
-    const current = sortedEntries[0].values[trackerId]
-    const previous = sortedEntries[1].values[trackerId]
+    const currentEntry = sortedEntries[0]
+    const previousEntry = sortedEntries[1]
+    if (!currentEntry?.values || !previousEntry?.values) return null
+    
+    const current = currentEntry.values[trackerId]
+    const previous = previousEntry.values[trackerId]
     
     if (typeof current === 'number' && typeof previous === 'number') {
       if (current > previous) return 'up'
@@ -151,7 +157,7 @@ export function TrackerLayoutRenderer({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {trackers.map((tracker, trackerIdx) => {
               const trackerId = getTrackerId(tracker)
-              const value = currentValues[trackerId]
+              const value = currentValues?.[trackerId]
               const trend = getTrend(trackerId)
               
               return (
@@ -223,13 +229,14 @@ export function TrackerLayoutRenderer({
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                     {trackers.map((tracker) => {
                       const trackerId = getTrackerId(tracker)
+                      const entryValue = entry?.values?.[trackerId]
                       return (
                         <div key={trackerId} className="text-sm">
                           <span className="text-muted-foreground text-xs">
                             {getTrackerLabel(tracker)}:
                           </span>{' '}
                           <span className="text-foreground font-medium">
-                            {formatValue(trackerId, entry.values[trackerId] ?? 'N/A')}
+                            {formatValue(trackerId, entryValue ?? 'N/A')}
                           </span>
                         </div>
                       )
