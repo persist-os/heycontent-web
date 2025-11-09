@@ -257,8 +257,8 @@ export const cognitiveFieldCreateValidator = v.object({
   fieldId: v.string(),
   conversationId: v.optional(v.string()),  // Optional: conversation-level fields have this, project-level don't
   projectId: v.id("projects"),  // REQUIRED: Project context
-  sourceShardIds: v.array(v.string()),
-  sourceStardustIds: v.array(v.string()),
+  sourceShardIds: v.optional(v.array(v.string())),
+  sourceStardustIds: v.optional(v.array(v.string())),
   coreField: v.any(),
   semanticMetadata: v.any(),
   transparencyLayer: v.any(),
@@ -435,7 +435,7 @@ export type CrossDomainLayer = {
 export interface CognitiveField {
   userId?: string;
   fieldId?: string;
-  conversationId: string;  // REQUIRED: 1:1 link to conversation
+  conversationId?: string;  // Optional: conversation-level fields have this, project-level don't
   projectId: string;  // REQUIRED: Project context (stored as Convex ID)
   status?: FieldStatus;
   createdAt?: number;
