@@ -26,9 +26,10 @@ interface SectionDefinition {
 }
 
 interface Section {
-  id: string
+  id?: string
   title: string
-  content: string
+  content?: string
+  markdown?: string  // Actual Convex data uses 'markdown' field
 }
 
 interface MarkdownLayoutRendererProps {
@@ -84,11 +85,16 @@ export function MarkdownLayoutRenderer({
   const handleSave = () => {
     if (!onUpdate || !editingSectionId) return
 
-    const newSections = sections.map(section =>
-      section?.id === editingSectionId
-        ? { ...section, content: editValue }
-        : section
-    )
+    const newSections = sections.map(section => {
+      if (section?.id === editingSectionId || (section as any)?.id === editingSectionId) {
+        // Preserve existing field structure - use markdown if it existed, otherwise content
+        const hasMarkdown = (section as any)?.markdown !== undefined
+        return hasMarkdown 
+          ? { ...section, markdown: editValue }
+          : { ...section, content: editValue }
+      }
+      return section
+    })
 
     onUpdate({ ...data, sections: newSections })
     setIsEditing(false)
@@ -134,11 +140,11 @@ export function MarkdownLayoutRenderer({
                 <h3 className="text-lg font-semibold text-foreground">
                   {section?.title || 'Untitled Section'}
                 </h3>
-                {editable && editingSectionId !== section?.id && !isEditing && (
+                {editable && editingSectionId !== (section?.id || `section-${sectionIdx}`) && !isEditing && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleEditSection(section?.id || '', section?.content || '')}
+                    onClick={() => handleEditSection(section?.id || `section-${sectionIdx}`, (section as any)?.markdown || section?.content || '')}
                     className="h-6 px-2 text-xs"
                   >
                     <Pencil className="w-3 h-3 mr-1" />
@@ -147,7 +153,7 @@ export function MarkdownLayoutRenderer({
                 )}
               </div>
               
-              {editingSectionId === section?.id && isEditing ? (
+              {editingSectionId === (section?.id || `section-${sectionIdx}`) && isEditing ? (
                 /* Editing mode */
                 <div className="space-y-2">
                   <textarea
@@ -191,7 +197,7 @@ export function MarkdownLayoutRenderer({
                 /* Display mode */
                 <div className="prose prose-sm max-w-none text-muted-foreground">
                   <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
-                    {section?.content || ''}
+                    {(section as any)?.markdown || section?.content || ''}
                   </ReactMarkdown>
                 </div>
               )}

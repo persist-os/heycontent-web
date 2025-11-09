@@ -20,7 +20,8 @@ interface Insight {
   id?: string
   title: string
   description: string
-  impact: 'high' | 'medium' | 'low'
+  impact?: 'high' | 'medium' | 'low'  // Legacy field
+  significance?: string  // Actual Convex data uses this field
   metric?: string
   value?: string
   category?: string
@@ -59,8 +60,11 @@ export function InsightsLayoutRenderer({
     lastUpdatedAt: Date.now()
   }
 
-  // Get priority icon and color
-  const getPriorityIndicator = (priority: 'high' | 'medium' | 'low' | undefined | null) => {
+  // Get priority icon and color (supports both 'impact' and 'significance')
+  const getPriorityIndicator = (insight: Insight) => {
+    // Support both 'impact' (legacy) and 'significance' (new format)
+    const priority = insight?.impact || (insight?.significance ? 'medium' : undefined)
+    
     switch (priority) {
       case 'high':
         return { icon: AlertCircle, color: 'text-red-500', bgColor: 'bg-red-500/10' }
@@ -123,7 +127,8 @@ export function InsightsLayoutRenderer({
               
               <div className="space-y-3">
                 {categoryInsights.map((insight, insightIdx) => {
-                  const { icon: Icon, color, bgColor } = getPriorityIndicator(insight?.impact)
+                  const { icon: Icon, color, bgColor } = getPriorityIndicator(insight)
+                  const priority = insight?.impact || (insight?.significance ? 'medium' : undefined)
                   return (
                     <div
                       key={insight.id || `insight-${category}-${insightIdx}`}
@@ -136,13 +141,20 @@ export function InsightsLayoutRenderer({
                             <h4 className="text-sm font-semibold text-foreground">
                               {insight.title}
                             </h4>
-                            <Badge variant="outline" className="text-xs capitalize">
-                              {insight.impact}
-                            </Badge>
+                            {priority && (
+                              <Badge variant="outline" className="text-xs capitalize">
+                                {priority}
+                              </Badge>
+                            )}
                           </div>
                           <p className="text-sm text-muted-foreground">
                             {insight.description}
                           </p>
+                          {insight.significance && (
+                            <p className="text-xs text-muted-foreground/80 italic">
+                              {insight.significance}
+                            </p>
+                          )}
                           {insight.metric && insight.value && (
                             <div className="text-xs text-muted-foreground">
                               <strong>{insight.metric}:</strong> {insight.value}

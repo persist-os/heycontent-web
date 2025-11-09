@@ -47,12 +47,35 @@ export function TableLayoutRenderer({
     lastUpdatedAt: Date.now()
   }
 
+  // Infer fields from first data row if fields array is empty
+  const effectiveFields = fields.length > 0 
+    ? fields 
+    : (tableData.length > 0 
+        ? Object.keys(tableData[0]).map(key => ({
+            key,
+            name: key,  // Support both key and name
+            type: 'text' as const,
+            label: key,
+            editable: false
+          }))
+        : [])
+
+  // Helper to get field identifier (supports both 'name' and 'key')
+  const getFieldId = (field: any) => {
+    return (field as any)?.name || field?.key || ''
+  }
+
+  // Helper to get field display label
+  const getFieldLabel = (field: any) => {
+    return (field as any)?.label || (field as any)?.name || field?.key || 'Field'
+  }
+
   // Handle field updates
-  const handleFieldUpdate = (rowIndex: number, fieldKey: string, value: any) => {
+  const handleFieldUpdate = (rowIndex: number, fieldId: string, value: any) => {
     if (!onUpdate) return
     
     const newData = [...tableData]
-    newData[rowIndex] = { ...newData[rowIndex], [fieldKey]: value }
+    newData[rowIndex] = { ...newData[rowIndex], [fieldId]: value }
     onUpdate(newData)
   }
 
@@ -81,7 +104,7 @@ export function TableLayoutRenderer({
           // Empty state
           <div className="text-center py-8 text-sm text-muted-foreground">
             <p>No structured data available</p>
-            {fields.length === 0 && (
+            {effectiveFields.length === 0 && (
               <p className="text-xs mt-2">No fields defined for this table</p>
             )}
           </div>
@@ -91,14 +114,17 @@ export function TableLayoutRenderer({
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border/20">
-                  {fields.map((field, fieldIdx) => (
-                    <th
-                      key={`header-${field?.key || fieldIdx}`}
-                      className="text-left text-sm font-medium text-muted-foreground px-4 py-3"
-                    >
-                      {field?.label || field?.key || 'Field'}
-                    </th>
-                  ))}
+                  {effectiveFields.map((field, fieldIdx) => {
+                    const fieldId = getFieldId(field)
+                    return (
+                      <th
+                        key={`header-${fieldId || fieldIdx}`}
+                        className="text-left text-sm font-medium text-muted-foreground px-4 py-3"
+                      >
+                        {getFieldLabel(field)}
+                      </th>
+                    )
+                  })}
                 </tr>
               </thead>
               <tbody>
@@ -107,17 +133,21 @@ export function TableLayoutRenderer({
                     key={`table-row-${idx}`}
                     className="border-b border-border/10 last:border-0 even:bg-muted/5 hover:bg-muted/10 transition-colors"
                   >
-                    {fields.map((field, fieldIdx) => (
-                      <td key={`cell-${idx}-${field?.key || fieldIdx}`} className="px-4 py-3 text-sm text-foreground">
-                        <FieldEditor
-                          value={row?.[field?.key || '']}
-                          type={field?.type || 'text'}
-                          options={field?.options}
-                          editable={editable && (field?.editable ?? false)}
-                          onSave={(value) => handleFieldUpdate(idx, field?.key || '', value)}
-                        />
-                      </td>
-                    ))}
+                    {effectiveFields.map((field, fieldIdx) => {
+                      const fieldId = getFieldId(field)
+                      const cellValue = row?.[fieldId] ?? null
+                      return (
+                        <td key={`cell-${idx}-${fieldId || fieldIdx}`} className="px-4 py-3 text-sm text-foreground">
+                          <FieldEditor
+                            value={cellValue}
+                            type={(field as any)?.type || field?.type || 'text'}
+                            options={(field as any)?.options || field?.options}
+                            editable={editable && ((field as any)?.editable ?? field?.editable ?? false)}
+                            onSave={(value) => handleFieldUpdate(idx, fieldId, value)}
+                          />
+                        </td>
+                      )
+                    })}
                   </tr>
                 ))}
               </tbody>
