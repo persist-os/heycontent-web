@@ -32,12 +32,15 @@ export const artifactSchemaFields = {
   
   // BACKEND-SET FIELDS
   metadata: v.object({
-    version: v.number(),                    // Backend sets (always 1 for new)
-    lastUpdatedBy: v.string(),              // Backend sets (widget ID)
+    version: v.number(),                    // Backend sets (always 1 for new), incremented on each update
+    lastUpdatedBy: v.string(),              // Backend sets (widget ID or user ID)
     lastUpdatedAt: v.number(),              // Convex sets (timestamp)
+    editSource: v.optional(v.union(v.literal("widget"), v.literal("user"))),  // NEW: Distinguish widget vs user edits
     editHistory: v.optional(v.array(v.object({
       timestamp: v.number(),
-      widgetId: v.string(),
+      widgetId: v.optional(v.string()),     // Optional: user edits don't have widgetId
+      userId: v.optional(v.string()),       // Optional: widget edits don't have userId
+      editSource: v.optional(v.union(v.literal("widget"), v.literal("user"))),  // NEW: Track edit source
       changes: v.string()                   // JSON string
     })))
   }),

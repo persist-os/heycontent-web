@@ -29,6 +29,7 @@ export const createArtifact = mutation({
     metadata: v.object({
       version: v.number(),
       lastUpdatedBy: v.string(),
+      editSource: v.optional(v.union(v.literal("widget"), v.literal("user"))),  // NEW: Track edit source
     }),
     projectId: v.id("projects"),
     widgetId: v.optional(v.id("widgets")),  // Optional: project-level artifacts may not link to a widget
@@ -47,6 +48,7 @@ export const createArtifact = mutation({
         version: args.metadata.version,
         lastUpdatedBy: args.metadata.lastUpdatedBy,
         lastUpdatedAt: now,
+        editSource: args.metadata.editSource || "widget",  // Default to "widget" for backward compatibility
       },
       projectId: args.projectId,
       widgetId: args.widgetId,
@@ -85,6 +87,8 @@ export const createArtifact = mutation({
 /**
  * Update artifact
  * Only data and tags can be updated (type and relationships are immutable)
+ * 
+ * NEW: Supports version-based optimistic concurrency control and edit source tracking
  */
 export const updateArtifact = mutation({
   args: {
@@ -92,9 +96,27 @@ export const updateArtifact = mutation({
     data: v.optional(v.any()),
     tags: v.optional(v.array(v.string())),
     updatedBy: v.string(), // widget_id or user_id
+    editSource: v.optional(v.union(v.literal("widget"), v.literal("user"))),  // NEW: Track edit source
+    expectedVersion: v.optional(v.number()),  // NEW: Optimistic concurrency control
   },
   handler: async (ctx, args) => {
     const now = Date.now();
+    
+    // Get existing artifact for version check and metadata update
+    const existing = await ctx.db.get(args.artifactId);
+    if (!existing) {
+      throw new Error("Artifact not found");
+    }
+    
+    // NEW: Optimistic concurrency control - check version if provided
+    if (args.expectedVersion !== undefined) {
+      const currentVersion = existing.metadata?.version || 1;
+      if (currentVersion !== args.expectedVersion) {
+        // Version mismatch - conflict detected
+        // Return error so backend can handle conflict resolution
+        throw new Error(`Version mismatch: expected ${args.expectedVersion}, got ${currentVersion}`);
+      }
+    }
     
     const updates: any = {
       updatedAt: now,
@@ -108,15 +130,27 @@ export const updateArtifact = mutation({
       updates.tags = args.tags;
     }
     
-    // Update metadata
-    const existing = await ctx.db.get(args.artifactId);
-    if (existing) {
-      updates.metadata = {
-        ...existing.metadata,
-        lastUpdatedBy: args.updatedBy,
-        lastUpdatedAt: now,
-      };
-    }
+    // Update metadata with version increment and edit source tracking
+    const currentVersion = existing.metadata?.version || 1;
+    const editSource = args.editSource || "widget";  // Default to "widget" for backward compatibility
+    
+    // Build edit history entry
+    const editHistory = existing.metadata?.editHistory || [];
+    const newEditEntry = {
+      timestamp: now,
+      ...(editSource === "widget" ? { widgetId: args.updatedBy } : { userId: args.updatedBy }),
+      editSource: editSource,
+      changes: JSON.stringify({ data: args.data !== undefined, tags: args.tags !== undefined })
+    };
+    
+    updates.metadata = {
+      ...existing.metadata,
+      version: currentVersion + 1,  // Increment version on each update
+      lastUpdatedBy: args.updatedBy,
+      lastUpdatedAt: now,
+      editSource: editSource,  // Track edit source
+      editHistory: [...editHistory, newEditEntry].slice(-50),  // Keep last 50 edits
+    };
     
     await ctx.db.patch(args.artifactId, updates);
     
