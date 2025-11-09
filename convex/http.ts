@@ -1513,6 +1513,67 @@ app.get("/api/feedback/low-rated", async (c) => {
   }
 });
 
+// ============================================================================
+// PROMPT FEEDBACK ROUTES - For widget prompt learning
+// ============================================================================
+
+/**
+ * POST /api/feedback/storePromptFeedback
+ * Store feedback signals for prompt learning
+ * Links feedback signals to widget_id + operation for prompt improvement
+ */
+app.post("/api/feedback/storePromptFeedback", async (c) => {
+  const ctx = c.env;
+  const feedbackData = await c.req.json();
+  
+  try {
+    const feedbackId = await ctx.runMutation(
+      api.feedback.storePromptFeedback,
+      feedbackData
+    );
+    return c.json({ success: true, feedbackId });
+  } catch (error: any) {
+    console.error("Failed to store prompt feedback:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to store prompt feedback",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/feedback/getPromptFeedback
+ * Get feedback signals for widget_id + operation combination
+ * Returns aggregated feedback patterns for prompt learning
+ */
+app.post("/api/feedback/getPromptFeedback", async (c) => {
+  const ctx = c.env;
+  const { widgetId, operation } = await c.req.json();
+  
+  if (!widgetId || !operation) {
+    return c.json({
+      success: false,
+      error: "Missing required fields: widgetId and operation"
+    }, 400);
+  }
+  
+  try {
+    const feedbackData = await ctx.runMutation(
+      api.feedback.getPromptFeedback,
+      { widgetId, operation }
+    );
+    return c.json({ success: true, data: feedbackData });
+  } catch (error: any) {
+    console.error("Failed to get prompt feedback:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get prompt feedback",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
 // Get project-scoped conversation (ONE conversation per project for widget communication)
 app.post("/api/conversations/getProjectScoped", async (c) => {
   try {

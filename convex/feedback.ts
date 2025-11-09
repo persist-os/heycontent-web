@@ -589,7 +589,7 @@ export const storePromptFeedback = mutation({
     userId: v.string(),
     feedbackSignals: v.object({
       sentiment: v.string(),
-      explicitRating: v.optional(v.number()),
+      explicitRating: v.optional(v.union(v.number(), v.null())), // Accept number, null, or omitted (undefined)
       implicitReward: v.number(),
       learningSignals: v.any(),
     }),
