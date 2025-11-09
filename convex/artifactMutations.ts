@@ -9,38 +9,22 @@
 
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
-import { artifactTypeValidator } from "./types/artifact";
+import { artifactCreateValidator, artifactUpdateValidator, artifactDeleteValidator } from "./types/artifact";
 
 /**
  * Create new artifact
  * 
- * Backend sends: type, data_model, data, tags, metadata, projectId, userId, widgetId (optional)
+ * Backend sends: type, title, data_model, data, tags, metadata, projectId, userId, widgetId (optional)
  * Convex adds: _id, createdAt, updatedAt
  */
 export const createArtifact = mutation({
-  args: {
-    // AI-generated
-    type: artifactTypeValidator,
-    dataModel: v.any(),
-    data: v.any(),
-    tags: v.optional(v.array(v.string())),
-    
-    // Backend-set
-    metadata: v.object({
-      version: v.number(),
-      lastUpdatedBy: v.string(),
-      editSource: v.optional(v.union(v.literal("widget"), v.literal("user"))),  // NEW: Track edit source
-    }),
-    projectId: v.id("projects"),
-    widgetId: v.optional(v.id("widgets")),  // Optional: project-level artifacts may not link to a widget
-    conversationId: v.optional(v.id("conversations")),  // Optional: conversation-level artifacts
-    userId: v.string(),
-  },
+  args: artifactCreateValidator,
   handler: async (ctx, args) => {
     const now = Date.now();
     
     const artifactId = await ctx.db.insert("artifacts", {
       type: args.type,
+      title: args.title,  // Include title field
       data_model: args.dataModel,
       data: args.data,
       tags: args.tags,
@@ -91,14 +75,7 @@ export const createArtifact = mutation({
  * NEW: Supports version-based optimistic concurrency control and edit source tracking
  */
 export const updateArtifact = mutation({
-  args: {
-    artifactId: v.id("artifacts"),
-    data: v.optional(v.any()),
-    tags: v.optional(v.array(v.string())),
-    updatedBy: v.string(), // widget_id or user_id
-    editSource: v.optional(v.union(v.literal("widget"), v.literal("user"))),  // NEW: Track edit source
-    expectedVersion: v.optional(v.number()),  // NEW: Optimistic concurrency control
-  },
+  args: artifactUpdateValidator,
   handler: async (ctx, args) => {
     const now = Date.now();
     
@@ -162,9 +139,7 @@ export const updateArtifact = mutation({
  * Delete artifact
  */
 export const deleteArtifact = mutation({
-  args: {
-    artifactId: v.id("artifacts"),
-  },
+  args: artifactDeleteValidator,
   handler: async (ctx, args) => {
     // Get artifact before deleting to access parent references
     const artifact = await ctx.db.get(args.artifactId);

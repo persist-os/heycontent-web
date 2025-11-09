@@ -584,19 +584,36 @@ export function UnifiedGalleryView({
                     </p>
                     
                     <div className="space-y-4">
-                      {outputs.slice(0, 5).map((artifact: any) => (
-                        <div key={artifact._id} className="bg-cyan-500/5 border-l-4 border-cyan-500 p-4 rounded">
-                          <p className="font-semibold text-foreground">{artifact.type || 'Artifact'}</p>
-                          <p className="text-xs text-muted-foreground mb-3">
-                            Created {formatTime(artifact.createdAt || artifact._creationTime)} ago
-                          </p>
-                          {artifact.data && (
-                            <div className="mt-2">
-                              <ArtifactRenderer artifact={artifact} editable={false} />
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                      {outputs.slice(0, 5).map((artifact: any) => {
+                        // Extract title with fallback chain
+                        let artifactTitle = artifact.title;
+                        if (!artifactTitle && artifact.data?.title) {
+                          artifactTitle = artifact.data.title;
+                        }
+                        if (!artifactTitle && artifact.type === 'report' && artifact.data?.markdown) {
+                          const match = artifact.data.markdown.match(/^#\s+(.+)$/m);
+                          if (match) {
+                            artifactTitle = match[1].trim();
+                          }
+                        }
+                        if (!artifactTitle) {
+                          artifactTitle = artifact.type?.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'Artifact';
+                        }
+                        
+                        return (
+                          <div key={artifact._id} className="bg-cyan-500/5 border-l-4 border-cyan-500 p-4 rounded">
+                            <p className="font-semibold text-foreground">{artifactTitle}</p>
+                            <p className="text-xs text-muted-foreground mb-3">
+                              Created {formatTime(artifact.createdAt || artifact._creationTime)} ago
+                            </p>
+                            {artifact.data && (
+                              <div className="mt-2">
+                                <ArtifactRenderer artifact={artifact} editable={false} />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                       
                       {outputs.length > 5 && (
                         <Button 

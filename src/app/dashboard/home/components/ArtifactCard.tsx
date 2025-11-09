@@ -15,7 +15,7 @@ interface ArtifactCardProps {
  * ArtifactCard - Individual artifact card with elegant styling
  * 
  * Displays artifacts from new artifacts table:
- * - Artifact type (formatted as title)
+ * - Artifact title (with fallback to type)
  * - Tags or version badge
  * - Type/date metadata
  * - Click to navigate to artifact gallery
@@ -30,7 +30,21 @@ export function ArtifactCard({ artifact }: ArtifactCardProps) {
     }
   }
 
-  const artifactType = artifact.type?.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'Artifact'
+  // Extract title with fallback chain
+  let artifactTitle = artifact.title;
+  if (!artifactTitle && artifact.data?.title) {
+    artifactTitle = artifact.data.title;
+  }
+  if (!artifactTitle && artifact.type === 'report' && artifact.data?.markdown) {
+    const match = artifact.data.markdown.match(/^#\s+(.+)$/m);
+    if (match) {
+      artifactTitle = match[1].trim();
+    }
+  }
+  if (!artifactTitle) {
+    artifactTitle = artifact.type?.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'Artifact'
+  }
+
   const createdDate = new Date(artifact.createdAt || artifact._creationTime || Date.now())
   const relativeTime = (() => {
     const now = Date.now()
@@ -58,31 +72,31 @@ export function ArtifactCard({ artifact }: ArtifactCardProps) {
     >
       <div className="p-5 h-full flex flex-col justify-between relative">
       
-      {/* Arrow icon (top-right) */}
+        {/* Arrow icon (top-right) */}
         <div className="absolute top-4 right-4 z-10">
           <ArrowUpRight className="w-4 h-4 text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors" />
-      </div>
+        </div>
         
         {/* Top: Artifact name */}
         <div className="pr-8">
           <h3 className="text-base font-semibold text-foreground line-clamp-2 leading-tight">
-            {artifactType}
+            {artifactTitle}
           </h3>
         </div>
         
         {/* Bottom: Tags and metadata */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
-          {artifact.tags && artifact.tags.length > 0 ? (
+            {artifact.tags && artifact.tags.length > 0 ? (
               <Badge variant="outline" className="bg-blue-500/20 border-blue-500/30 text-blue-600 dark:text-blue-400 text-xs px-2 py-0.5">
-              {artifact.tags[0]}
+                {artifact.tags[0]}
               </Badge>
-          ) : (
+            ) : (
               <Badge variant="outline" className="bg-muted/40 border-border/40 text-muted-foreground text-xs px-2 py-0.5">
-              v{artifact.metadata?.version || 1}
+                v{artifact.metadata?.version || 1}
               </Badge>
-          )}
-        </div>
+            )}
+          </div>
           <span className="text-xs text-muted-foreground whitespace-nowrap">
             {relativeTime}
           </span>
@@ -92,5 +106,3 @@ export function ArtifactCard({ artifact }: ArtifactCardProps) {
     </Card>
   )
 }
-
-

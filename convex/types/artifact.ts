@@ -57,3 +57,56 @@ export const artifactSchemaFields = {
   updatedAt: v.number()
 };
 
+// ============================================================================
+// ARTIFACT VALIDATORS FOR MUTATIONS
+// ============================================================================
+
+/**
+ * Artifact metadata validator - used in create and update operations
+ */
+export const artifactMetadataValidator = v.object({
+  version: v.number(),
+  lastUpdatedBy: v.string(),
+  editSource: v.optional(v.union(v.literal("widget"), v.literal("user"))),
+});
+
+/**
+ * Artifact create validator - all fields needed for creation
+ * Backend sends: type, title, dataModel, data, tags, metadata, projectId, userId, widgetId (optional), conversationId (optional)
+ */
+export const artifactCreateValidator = v.object({
+  // AI-generated
+  type: artifactTypeValidator,
+  title: v.optional(v.string()),  // Human-readable artifact title
+  dataModel: v.any(),
+  data: v.any(),
+  tags: v.optional(v.array(v.string())),
+  
+  // Backend-set
+  metadata: artifactMetadataValidator,
+  projectId: v.id("projects"),
+  widgetId: v.optional(v.id("widgets")),  // Optional: project-level artifacts may not link to a widget
+  conversationId: v.optional(v.id("conversations")),  // Optional: conversation-level artifacts
+  userId: v.string(),
+});
+
+/**
+ * Artifact update validator - only fields that can be updated
+ * Only data and tags can be updated (type and relationships are immutable)
+ */
+export const artifactUpdateValidator = v.object({
+  artifactId: v.id("artifacts"),
+  data: v.optional(v.any()),
+  tags: v.optional(v.array(v.string())),
+  updatedBy: v.string(), // widget_id or user_id
+  editSource: v.optional(v.union(v.literal("widget"), v.literal("user"))),  // Track edit source
+  expectedVersion: v.optional(v.number()),  // Optimistic concurrency control
+});
+
+/**
+ * Artifact delete validator - simple ID-based deletion
+ */
+export const artifactDeleteValidator = v.object({
+  artifactId: v.id("artifacts"),
+});
+

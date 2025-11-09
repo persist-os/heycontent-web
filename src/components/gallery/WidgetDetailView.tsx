@@ -297,34 +297,51 @@ export function WidgetDetailView({ widget, userId, projectId }: WidgetDetailView
         </h3>
         {outputs.length > 0 ? (
           <div className="space-y-4">
-            {outputs.map((artifact: any) => (
-              <div 
-                key={artifact._id}
-                className="p-4 rounded-lg bg-gradient-to-r from-blue-500/5 to-cyan-500/5 border border-blue-500/10"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h4 className="font-semibold text-foreground">
-                      {artifact.type?.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
-                    </h4>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(artifact.createdAt || artifact._creationTime).toLocaleString()}
-                    </p>
+            {outputs.map((artifact: any) => {
+              // Extract title with fallback chain
+              let artifactTitle = artifact.title;
+              if (!artifactTitle && artifact.data?.title) {
+                artifactTitle = artifact.data.title;
+              }
+              if (!artifactTitle && artifact.type === 'report' && artifact.data?.markdown) {
+                const match = artifact.data.markdown.match(/^#\s+(.+)$/m);
+                if (match) {
+                  artifactTitle = match[1].trim();
+                }
+              }
+              if (!artifactTitle) {
+                artifactTitle = artifact.type?.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'Artifact';
+              }
+              
+              return (
+                <div 
+                  key={artifact._id}
+                  className="p-4 rounded-lg bg-gradient-to-r from-blue-500/5 to-cyan-500/5 border border-blue-500/10"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h4 className="font-semibold text-foreground">
+                        {artifactTitle}
+                      </h4>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(artifact.createdAt || artifact._creationTime).toLocaleString()}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      v{artifact.metadata?.version || '1.0'}
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className="text-xs">
-                    v{artifact.metadata?.version || '1.0'}
-                  </Badge>
+                  {artifact.data && (
+                    <div className="mt-3">
+                      <ArtifactRenderer 
+                        artifact={artifact} 
+                        editable={false}
+                      />
+                    </div>
+                  )}
                 </div>
-                {artifact.data && (
-                  <div className="mt-3">
-                    <ArtifactRenderer 
-                      artifact={artifact} 
-                      editable={false}
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-8 text-muted-foreground">
@@ -342,17 +359,34 @@ export function WidgetDetailView({ widget, userId, projectId }: WidgetDetailView
             Other Project Artifacts ({otherProjectArtifacts.length})
           </h3>
           <div className="grid grid-cols-2 gap-3">
-            {otherProjectArtifacts.map((artifact: any) => (
-              <div 
-                key={artifact._id}
-                className="p-3 rounded-lg bg-gradient-to-r from-blue-500/5 to-cyan-500/5 border border-blue-500/10"
-              >
-                <p className="font-medium text-sm text-foreground">{artifact.type}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Updated {new Date(artifact.updatedAt || artifact.createdAt).toLocaleString()}
-                </p>
-              </div>
-            ))}
+            {otherProjectArtifacts.map((artifact: any) => {
+              // Extract title with fallback chain
+              let artifactTitle = artifact.title;
+              if (!artifactTitle && artifact.data?.title) {
+                artifactTitle = artifact.data.title;
+              }
+              if (!artifactTitle && artifact.type === 'report' && artifact.data?.markdown) {
+                const match = artifact.data.markdown.match(/^#\s+(.+)$/m);
+                if (match) {
+                  artifactTitle = match[1].trim();
+                }
+              }
+              if (!artifactTitle) {
+                artifactTitle = artifact.type?.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'Artifact';
+              }
+              
+              return (
+                <div 
+                  key={artifact._id}
+                  className="p-3 rounded-lg bg-gradient-to-r from-blue-500/5 to-cyan-500/5 border border-blue-500/10"
+                >
+                  <p className="font-medium text-sm text-foreground">{artifactTitle}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Updated {new Date(artifact.updatedAt || artifact.createdAt).toLocaleString()}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
