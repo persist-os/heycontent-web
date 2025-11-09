@@ -58,15 +58,6 @@ export function ConstellationView() {
   // Generate constellation layout
   const layout = useConstellationLayout(projects || [])
   
-  // Debug logging
-  console.log('ConstellationView Debug:', {
-    firebaseUser: !!firebaseUser,
-    projects: projects,
-    projectsLength: projects?.length,
-    layout: layout,
-    layoutPositionsLength: layout.positions.length
-  })
-  
   // Pan and zoom functionality
   const {
     transform,
@@ -111,14 +102,6 @@ export function ConstellationView() {
       position.y >= viewportTop && 
       position.y <= viewportBottom
     )
-    
-    console.log('Virtual rendering debug:', {
-      totalPositions: layout.positions.length,
-      visiblePositions: filtered.length,
-      viewport: { viewportLeft, viewportTop, viewportRight, viewportBottom },
-      transform,
-      viewportSize
-    })
     
     return filtered
     */

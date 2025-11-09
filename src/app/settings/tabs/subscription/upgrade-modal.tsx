@@ -128,7 +128,6 @@ export default function UpgradeModal({
   const handleSelectPlan = async (planId: string) => {
     // Free tier is auto-initialized at registration, not selectable in upgrade modal
     if (planId === 'free') {
-      console.warn('[UpgradeModal] Free plan not selectable from upgrade modal');
       onClose();
       return;
     }

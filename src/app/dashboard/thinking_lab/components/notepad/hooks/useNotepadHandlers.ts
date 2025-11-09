@@ -72,15 +72,11 @@ export function useNotepadHandlers({
     }
 
     isSavingRef.current = true
-    console.log('💾 [MarkdownNotepad] Auto-saving content...', { noteId: currentNoteId })
     
     try {
       const updatedNote = await updateNote(currentNoteId, { content: trimmedContent })
       if (updatedNote) {
         lastSavedContentRef.current = trimmedContent
-        console.log('✅ [MarkdownNotepad] Auto-save successful')
-      } else {
-        console.warn('⚠️ [MarkdownNotepad] Auto-save returned null - note may have been deleted')
       }
     } catch (error) {
       console.error('❌ [MarkdownNotepad] Auto-save error:', error)
@@ -113,7 +109,6 @@ export function useNotepadHandlers({
     if (isNewNote || !existingNote) {
       // For new notes, update local state instead of database
       // This allows title editing to work before the note is saved
-      console.log('📝 [MarkdownNotepad] Updating local note state for new note:', updates)
       
       // Update local state for new notes
       if (updates.title !== undefined) {
@@ -132,7 +127,6 @@ export function useNotepadHandlers({
     
     // For existing notes, use the notes context update mechanism
     // This will trigger the live query to update and reflect in the UI
-    console.log('📝 [MarkdownNotepad] Updating existing note via context:', noteId, updates)
     try {
       const updatedNote = await updateNote(noteId, updates)
       return updatedNote
@@ -144,15 +138,7 @@ export function useNotepadHandlers({
 
   // Create or save note function with auto-save coordination
   const handleSaveAsNote = useCallback(async (): Promise<string | null> => {
-    console.log('🔍 [handleSaveAsNote] Starting note creation:', {
-      content: content ? content.substring(0, 100) + '...' : 'empty',
-      contentLength: content.length,
-      isNewNote,
-      noteTitle: note.title
-    })
-    
     if (!content.trim()) {
-      console.log('⚠️ [handleSaveAsNote] No content to save, returning null')
       return null
     }
     
@@ -160,7 +146,6 @@ export function useNotepadHandlers({
     if (autoSaveTimeoutRef.current) {
       clearTimeout(autoSaveTimeoutRef.current)
       autoSaveTimeoutRef.current = null
-      console.log('📝 [MarkdownNotepad] Cancelled pending auto-save for manual save')
     }
     
     if (isNewNote) {
@@ -170,15 +155,7 @@ export function useNotepadHandlers({
       const widgetId = undefined;
       const widgetOutputId = undefined;
       
-      console.log('📝 [MarkdownNotepad] Creating note with context:', { 
-        projectId, 
-        widgetId, 
-        widgetOutputId,
-        hasContext: !!(projectId || widgetId)
-      });
-      
       // Create new note with conversation link and context
-      console.log('📝 [MarkdownNotepad] Creating note with title:', note.title, 'trimmed:', note.title?.trim())
       const newNoteId = await createNote(content.trim(), {
         redirect: false,
         customTitle: note.title && note.title.trim() && note.title.trim() !== 'Untitled Note' ? note.title.trim() : undefined,
@@ -195,17 +172,14 @@ export function useNotepadHandlers({
         setIsNewNote(false)
         setCurrentNoteId(newNoteId)
         lastSavedContentRef.current = content.trim() // Update last saved content
-        console.log('✅ [MarkdownNotepad] New note created:', newNoteId)
         return newNoteId
       }
     } else {
       // Update existing note - FIXED: Actually save the content
       if (currentNoteId) {
-        console.log('📝 [MarkdownNotepad] Manual save: Saving existing note content:', currentNoteId)
         const updatedNote = await handleNoteUpdate(currentNoteId, { content: content.trim() })
         if (updatedNote) {
           lastSavedContentRef.current = content.trim() // Update last saved content
-          console.log('✅ [MarkdownNotepad] Manual save: Note content saved successfully')
           return String(currentNoteId)
         } else {
           console.error('❌ [MarkdownNotepad] Manual save: Failed to save note content')
@@ -226,7 +200,6 @@ export function useNotepadHandlers({
       
       // If it's a new note, save it first to get a real note ID
       if (isNewNote) {
-        console.log('📝 [MarkdownNotepad] Saving new note before metadata generation')
         noteIdToUse = await handleSaveAsNote()
         if (!noteIdToUse) {
           console.error('❌ [MarkdownNotepad] Failed to save note before metadata generation')
@@ -234,7 +207,6 @@ export function useNotepadHandlers({
         }
       } else if (!noteIdToUse) {
         // If it's supposed to be an existing note but no ID, save it
-        console.log('📝 [MarkdownNotepad] No note ID found, saving note first')
         noteIdToUse = await handleSaveAsNote()
         if (!noteIdToUse) {
           console.error('❌ [MarkdownNotepad] Failed to save note before metadata generation')
@@ -245,7 +217,6 @@ export function useNotepadHandlers({
         if (existingNote) {
           // PROTECTION: Don't overwrite existing titles or regenerate if already done
           if (existingNote.titleGenerated && existingNote.typeGenerated) {
-            console.log('🚫 [MarkdownNotepad] Metadata already generated for this note, skipping')
             return
           }
           
@@ -254,13 +225,12 @@ export function useNotepadHandlers({
               existingNote.title.trim() !== '' && 
               existingNote.title !== 'Untitled Note' && 
               !existingNote.titleGenerated) {
-            console.log('🚫 [MarkdownNotepad] Note has custom title, skipping title generation')
+            // Note has custom title, skipping title generation
           }
         }
       }
       
       // Now generate metadata with the confirmed note ID
-      console.log('🤖 [MarkdownNotepad] Generating metadata for note:', noteIdToUse)
       const result = await generateMetadataManually(String(noteIdToUse), content.trim())
       
       if (result) {
@@ -270,12 +240,10 @@ export function useNotepadHandlers({
         if (isSuccess) {
           // Check if a new note was created (different noteId returned)
           if (typeof result === 'object' && result.noteId && result.noteId !== String(noteIdToUse)) {
-            console.log('✅ [MarkdownNotepad] New note created during metadata generation:', result.noteId)
             // Update to point to the new note
             setCurrentNoteId(result.noteId)
             setIsNewNote(false)
           }
-          console.log('✅ [MarkdownNotepad] Metadata generation completed successfully')
         } else {
           console.error('❌ [MarkdownNotepad] Metadata generation failed:', result)
         }
@@ -292,11 +260,8 @@ export function useNotepadHandlers({
 
   // Handle note switching with simplified logic
   const handleSwitchToNote = useCallback((noteId: string) => {
-    console.log('🔄 [handleSwitchToNote] Switching to note:', noteId, 'from:', currentNoteId)
-    
     // DEFENSIVE: Don't switch to same note
     if (String(noteId) === String(currentNoteId)) {
-      console.log('⚠️ [MarkdownNotepad] Blocked switch to same note:', noteId)
       return
     }
     
@@ -307,7 +272,6 @@ export function useNotepadHandlers({
     if (autoSaveTimeoutRef.current) {
       clearTimeout(autoSaveTimeoutRef.current)
       autoSaveTimeoutRef.current = null
-      console.log('📝 [MarkdownNotepad] Cancelled auto-save during note switch')
     }
     
     // Reset saving state
@@ -321,8 +285,6 @@ export function useNotepadHandlers({
     setTimeout(() => {
       isTransitioningRef.current = false
     }, 100)
-    
-    console.log('🔄 [MarkdownNotepad] Switched to note:', noteId)
   }, [setCurrentNoteId, setIsNewNote, currentNoteId])
 
   // Handle new note creation with proper cleanup
@@ -334,7 +296,6 @@ export function useNotepadHandlers({
     if (autoSaveTimeoutRef.current) {
       clearTimeout(autoSaveTimeoutRef.current)
       autoSaveTimeoutRef.current = null
-      console.log('📝 [MarkdownNotepad] Cancelled auto-save for new note creation')
     }
     
     // Reset saving state and refs
@@ -352,8 +313,6 @@ export function useNotepadHandlers({
     setTimeout(() => {
       isTransitioningRef.current = false
     }, 100)
-    
-    console.log('✨ [MarkdownNotepad] Created new note')
   }, [setCurrentNoteId, setIsNewNote, setContent, setters, lexicalEditorRef])
 
   // Content state changes with debounced auto-save

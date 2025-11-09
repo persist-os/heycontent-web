@@ -48,8 +48,6 @@ export const initializeConversation = mutation({
         updatedAt: currentTime,
       });
       
-      console.log(`[initializeConversation] ✅ Created project ${projectId}`);
-      
       // 2. Create Assignment Fingerprint
       const fingerprintId = await ctx.runMutation(api.assignmentFingerprintMutations.mutateAssignmentFingerprint, {
         operation: "create",
@@ -63,8 +61,6 @@ export const initializeConversation = mutation({
           totalInsights: 0,
         },
       });
-      
-      console.log(`[initializeConversation] ✅ Created assignment fingerprint ${fingerprintId}`);
       
       // 3. Create Conversation (assignment dialogue)
       const conversationData: any = {
@@ -93,8 +89,6 @@ export const initializeConversation = mutation({
       
       const conversationId = await ctx.db.insert("conversations", conversationData);
       
-      console.log(`[initializeConversation] ✅ Created conversation ${conversationId}`);
-      
       // 4. Link project to conversation IMMEDIATELY (critical - must happen before cognitive field)
       // This ensures project always has conversationId even if cognitive field creation fails
       await ctx.db.patch(projectId, {
@@ -102,8 +96,6 @@ export const initializeConversation = mutation({
         conversationId: conversationId,
         updatedAt: currentTime,
       });
-      
-      console.log(`[initializeConversation] ✅ Linked project ${projectId} to conversation ${conversationId}`);
       
       // 5. Create ONE Cognitive Field (shared by BOTH project AND conversation)
       // This can fail without breaking the project-conversation link
@@ -120,11 +112,6 @@ export const initializeConversation = mutation({
         transparencyLayer: {},
       });
       
-      console.log(`[initializeConversation] ✅ Created unified cognitive field ${fieldId}`);
-      
-      console.log(`[initializeConversation] 🎉 COMPLETE: All 4 entities created and linked`);
-      console.log(`[initializeConversation] 📊 Project: ${projectId}, Conversation: ${conversationId}, Fingerprint: ${fingerprintId}, Field: ${fieldId}`);
-
       return {
         conversationId,
         projectId,
@@ -200,7 +187,6 @@ export const createConversationForProject = mutation({
       
       // Check if project already has a conversation
       if (project.conversationId) {
-        console.log(`[createConversationForProject] Project ${args.projectId} already has conversation ${project.conversationId}`);
         return {
           conversationId: project.conversationId,
           projectId: args.projectId,
@@ -225,15 +211,11 @@ export const createConversationForProject = mutation({
       
       const conversationId = await ctx.db.insert("conversations", conversationData);
       
-      console.log(`[createConversationForProject] ✅ Created conversation ${conversationId} for project ${args.projectId}`);
-      
       // Link project to conversation (bidirectional)
       await ctx.db.patch(args.projectId, {
         conversationId: conversationId,
         updatedAt: currentTime,
       });
-      
-      console.log(`[createConversationForProject] ✅ Linked project ${args.projectId} to conversation ${conversationId}`);
       
       return {
         conversationId,
@@ -282,7 +264,6 @@ export const createProjectForConversation = mutation({
       
       // Check if conversation already has a project
       if (conversation.projectId) {
-        console.log(`[createProjectForConversation] Conversation ${args.conversationId} already has project ${conversation.projectId}`);
         // Verify project exists
         const project = await ctx.db.get(conversation.projectId as any);
         if (project && (project as any).userId === args.userId) {
@@ -329,8 +310,6 @@ export const createProjectForConversation = mutation({
         updatedAt: currentTime,
       });
       
-      console.log(`[createProjectForConversation] ✅ Created project ${projectId}`);
-      
       // 2. Create Assignment Fingerprint
       const fingerprintId = await ctx.runMutation(api.assignmentFingerprintMutations.mutateAssignmentFingerprint, {
         operation: "create",
@@ -344,8 +323,6 @@ export const createProjectForConversation = mutation({
           totalInsights: 0,
         },
       });
-      
-      console.log(`[createProjectForConversation] ✅ Created assignment fingerprint ${fingerprintId}`);
       
       // 3. Create ONE Cognitive Field (shared by project & conversation)
       // Pattern copied from initializeConversation (lines 108-121)
@@ -363,8 +340,6 @@ export const createProjectForConversation = mutation({
       });
       const cognitiveFieldId = fieldId;
       
-      console.log(`[createProjectForConversation] ✅ Created cognitive field ${cognitiveFieldId}`);
-      
       // 4. Link project to conversation (bidirectional)
       await ctx.db.patch(args.conversationId, {
         projectId: projectId,
@@ -377,8 +352,6 @@ export const createProjectForConversation = mutation({
         fingerprintId: fingerprintId,
         updatedAt: currentTime,
       });
-      
-      console.log(`[createProjectForConversation] ✅ Linked project ${projectId} to conversation ${args.conversationId}`);
       
       return {
         projectId,

@@ -71,7 +71,7 @@ export function DeleteAccountButton({ className = '' }: { className?: string }) 
         }
 
         if (data.errors) {
-          console.warn('Account deletion completed with warnings:', data.errors);
+          // Account deletion completed with warnings
         }
       } catch (error: any) {
         console.error('Error calling backend delete-account:', error);
@@ -82,8 +82,7 @@ export function DeleteAccountButton({ className = '' }: { className?: string }) 
 
       // Step 3: Delete Convex user data
       try {
-        const result = await deleteUserAndData({ userId: user.uid });
-        console.log('Convex deletion result:', result);
+        await deleteUserAndData({ userId: user.uid });
       } catch (error: any) {
         console.error('Error deleting user data from database:', error);
         const errorMessage = error?.message || error?.toString() || 'Unknown error';

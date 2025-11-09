@@ -12,7 +12,6 @@ export async function POST(request: Request) {
     const apiKey = authHeader?.replace('Bearer ', '').trim();
     
     if (!apiKey) {
-      console.warn(`[${requestId}] Authentication failed: No Authorization header or invalid format`);
       return NextResponse.json({ error: 'Unauthorized - Missing or invalid Authorization header' }, { status: 401 });
     }
 
@@ -26,7 +25,6 @@ export async function POST(request: Request) {
     } = body;
     
     if (!refinement_type || !selected_text) {
-      console.warn(`[${requestId}] Invalid request: Missing required fields`);
       return NextResponse.json({ 
         error: 'refinement_type and selected_text are required', 
         status: 400 
@@ -34,7 +32,6 @@ export async function POST(request: Request) {
     }
 
     if (!surrounding_context || !surrounding_context.selection_position) {
-      console.warn(`[${requestId}] Invalid request: Missing surrounding_context or selection_position`);
       return NextResponse.json({ 
         error: 'surrounding_context with selection_position is required', 
         status: 400 

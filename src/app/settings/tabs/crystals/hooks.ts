@@ -139,7 +139,6 @@ export const usePaginatedCrystals = (userId: string | undefined, pageSize: numbe
       // If paginated query should have returned data but didn't, switch to fallback
       const timer = setTimeout(() => {
         if (!paginatedResult) {
-          console.warn('Paginated crystals query failed, switching to fallback');
           setPaginationError('Pagination failed');
         }
       }, 3000); // Wait 3 seconds before falling back

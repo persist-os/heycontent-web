@@ -18,7 +18,6 @@ export async function POST(request: Request) {
       : '';
 
     if (!apiKey) {
-      console.warn(`[${requestId}] Widget generate: Authentication failed`);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -27,18 +26,11 @@ export async function POST(request: Request) {
 
     // Validate required fields
     if (!body.user_id || !body.project_id || !body.widget_description) {
-      console.warn(`[${requestId}] Widget generate: Missing required fields`);
       return NextResponse.json(
         { error: 'Bad Request', detail: 'user_id, project_id, and widget_description are required' },
         { status: 400 }
       );
     }
-
-    console.log(`[${requestId}] Forwarding widget generation to backend`, {
-      project_id: body.project_id,
-      description_length: body.widget_description?.length || 0,
-      timestamp: new Date().toISOString()
-    });
 
     // Forward to backend
     const response = await fetch(`${BACKEND_URL}/api/v1/project-widgets/generate`, {

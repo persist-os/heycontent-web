@@ -349,7 +349,7 @@ export async function transmitMessageWithStreaming(
           } catch (parseError) {
             // Don't log [DONE] marker as error - it's expected
             if (!line.includes('[DONE]')) {
-              console.warn('[MessageService] Failed to parse SSE chunk:', line);
+              // Failed to parse SSE chunk
             }
           }
         }

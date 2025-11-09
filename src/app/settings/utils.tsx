@@ -7,7 +7,6 @@ import { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.share
 import Cookies from 'js-cookie'
 
 export const handleSignOut = async (router: AppRouterInstance, reason?: string) => {
-  console.log('🚪 handleSignOut called with reason:', reason);
   try {
     Cookies.remove('apiKey')
     localStorage.removeItem('firebaseToken')
@@ -17,7 +16,6 @@ export const handleSignOut = async (router: AppRouterInstance, reason?: string) 
     sessionStorage.removeItem('userId')
     
     // Clear all localStorage and sessionStorage (this will clear Zustand persisted stores)
-    console.log('🧹 Clearing all storage including content context')
     localStorage.clear()
     sessionStorage.clear()
 
@@ -33,7 +31,7 @@ export const handleSignOut = async (router: AppRouterInstance, reason?: string) 
       const auth = getFirebaseAuth();
       await signOut(auth);
     } catch (firebaseError) {
-      console.warn('Firebase signOut error:', firebaseError)
+      // Firebase signOut error - non-critical
     }
 
     sessionStorage.setItem('logoutReason', reason || '');

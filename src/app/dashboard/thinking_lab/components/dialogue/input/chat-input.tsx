@@ -264,20 +264,9 @@ export function ChatInput({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    console.log('🔔 [CHAT INPUT] handleSubmit called:', {
-      hasContent: !!currentInput.trim(),
-      hasAttachments: fileAttachments.length > 0,
-      isLoading,
-      inputLength: currentInput.length,
-      maxLength
-    })
     
     if ((currentInput.trim() || fileAttachments.length > 0) && !isLoading && currentInput.length <= maxLength) {
       const message = currentInput.trim()
-      console.log('🔔 [CHAT INPUT] Sending message:', {
-        message,
-        fileAttachments: fileAttachments.length
-      })
       track('chat_message_sent', { message_length: message.length })
       onSend(message, fileAttachments.length > 0 ? fileAttachments : undefined)
       setCurrentInput('')

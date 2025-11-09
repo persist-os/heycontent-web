@@ -81,19 +81,6 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
         return;
       }
       
-      console.log('Toggle attachment debug:', {
-        contentId,
-        platform,
-        actualId,
-        itemType,
-        isAttached,
-        // Additional debugging for analysis items
-        isAnalysisItem: platform === 'insights',
-        fullContentId: contentId,
-        parsedPlatform: platform,
-        parsedActualId: actualId
-      });
-
       if (isAttached) {
         const success = await removeItemFromProject(projectId, itemType, actualId);
         if (success) {

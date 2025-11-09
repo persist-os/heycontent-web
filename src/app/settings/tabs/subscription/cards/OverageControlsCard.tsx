@@ -46,11 +46,6 @@ export const OverageControlsCard: React.FC<OverageControlsCardProps> = ({
   };
 
   const handleSave = async () => {
-    console.log('[OverageControlsCard] Saving values:', { 
-      editUbpEnabled, 
-      editMonthlyLimit 
-    });
-    
     try {
       // Call the save handler with the current edit values
       await handleSaveUbp(editUbpEnabled, editMonthlyLimit);
@@ -62,7 +57,6 @@ export const OverageControlsCard: React.FC<OverageControlsCardProps> = ({
       // Exit edit mode
       setIsEditing(false);
       
-      console.log('[OverageControlsCard] Save completed successfully!');
     } catch (error) {
       console.error('[OverageControlsCard] Save failed:', error);
       // Don't exit edit mode on error so user can try again

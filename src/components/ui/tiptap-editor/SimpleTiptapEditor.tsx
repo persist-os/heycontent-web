@@ -127,26 +127,16 @@ export const SimpleTiptapEditor = forwardRef<SimpleTiptapEditorRef, SimpleTiptap
 
     // Update content when prop changes - more robust synchronization
     React.useEffect(() => {
-      console.log('🔍 [SimpleTiptapEditor] Content update effect triggered:', {
-        content: content ? content.substring(0, 100) + '...' : 'empty',
-        editorReady: !!editor,
-        editorContent: editor ? editor.getHTML().substring(0, 100) + '...' : 'no editor'
-      })
-      
       if (editor && content !== editor.getHTML()) {
-        console.log('📝 [SimpleTiptapEditor] Updating editor content')
         // Use a small delay to ensure editor is fully ready
         const timeoutId = setTimeout(() => {
           if (editor && content !== editor.getHTML()) {
-            console.log('📝 [SimpleTiptapEditor] Setting editor content:', content.substring(0, 100) + '...')
             // Use TipTap's transaction system to prevent race conditions
             editor.commands.setContent(content, { emitUpdate: false }) // don't emit update event
           }
         }, 0)
         
         return () => clearTimeout(timeoutId)
-      } else {
-        console.log('📝 [SimpleTiptapEditor] No update needed - content matches or no editor')
       }
     }, [content, editor])
 

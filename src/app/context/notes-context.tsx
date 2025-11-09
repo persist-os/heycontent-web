@@ -60,7 +60,6 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Delete note: just call Convex, let reactivity update notes
   const deleteNote = useCallback(async (noteId: Id<'notes'> | string): Promise<boolean> => {
     if (!userId) {
-      console.warn('Cannot delete note: user not authenticated');
       return false;
     }
     try {
@@ -83,8 +82,6 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Smart navigation to a note
   const navigateToNote = useCallback((noteId: string, fromLink: boolean = false) => {
-    console.log('🧠 Smart navigation:', { noteId, fromLink, currentActive: activeNoteId });
-    
     // Don't navigate to the same note
     if (String(activeNoteId) === String(noteId)) {
       return;
@@ -93,7 +90,6 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Verify the note exists
     const targetNote = notes.find(n => String(n._id) === String(noteId));
     if (!targetNote) {
-      console.warn('Cannot navigate to note: note not found', noteId);
       return;
     }
 
@@ -126,8 +122,6 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Smart back navigation
   const navigateBack = useCallback((): string | null => {
-    console.log('🔙 Smart back navigation:', { stackLength: navigationStack.length });
-    
     if (navigationStack.length === 0) {
       // No stack, go back to grid
       setActiveNoteId(undefined);
@@ -143,7 +137,6 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Verify the note still exists
     const targetNote = notes.find(n => String(n._id) === lastEntry.noteId);
     if (!targetNote) {
-      console.warn('Note in navigation stack no longer exists, trying next:', lastEntry.noteId);
       // Recursively try the next entry in the stack
       return navigateBack();
     }

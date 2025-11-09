@@ -33,25 +33,16 @@ export async function POST(request: Request) {
     const { apiKey, user_id, parsedBody } = await normalizeAuthAndIdentity();
     
     if (!apiKey) {
-      console.warn(`[${requestId}] Authentication failed`);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Chat messages require a valid user_id
     if (!user_id) {
-      console.warn(`[${requestId}] Missing or invalid user_id`);
       return NextResponse.json({ error: 'Bad Request', detail: 'user_id is required and must be a non-empty string' }, { status: 400 });
     }
 
     const body = parsedBody ?? await request.json();
     
-    console.log(`[${requestId}] Forwarding chat message to backend`, {
-      has_user_id: true,
-      has_content: typeof body?.content === 'string' ? body.content.length > 0 : !!body?.content,
-      has_file_attachments: Array.isArray(body?.file_attachments) ? body.file_attachments.length : 0,
-      timestamp: new Date().toISOString()
-    });
-
     // Forward request to backend streaming endpoint
     const response = await fetch(`${BACKEND_URL}/api/v1/chat/stream`, {
       method: 'POST',

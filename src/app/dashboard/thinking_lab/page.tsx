@@ -40,18 +40,10 @@ export default function ThinkingLabPage() {
     
     // Only set context if at least one valid context param exists
     if (validProjectId || validWidgetId || validWidgetOutputId) {
-      console.log('[THINKING LAB] Initializing context container from URL:', {
-        projectId: validProjectId,
-        widgetId: validWidgetId,
-        widgetOutputId: validWidgetOutputId
-      });
       // Note: Project context now handled by conversation hooks
-      console.log('Project context:', { validProjectId, validWidgetId, validWidgetOutputId });
     } else if (projectId !== null || widgetId !== null || widgetOutputId !== null) {
       // Context params exist but are invalid/empty - clear context
-      console.log('[THINKING LAB] Invalid context params detected - clearing context');
       // Note: Project context clearing now handled by conversation hooks
-      console.log('Clearing project context');
     }
     // Note: If no context params at all, we don't clear (might be navigating within lab)
   }, [projectId, widgetId, widgetOutputId]);

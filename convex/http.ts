@@ -48,12 +48,7 @@ app.use('*', async (c, next) => {
   else if (path.includes('/agnoRunEvents')) domain = 'agno_run_events';
   else if (path.includes('/chat')) domain = 'chat';
   
-  console.log(`🔵 [${domain.toUpperCase()}] ${method} ${path} - START`);
-  
   await next();
-  
-  const duration = Date.now() - startTime;
-  console.log(`✅ [${domain.toUpperCase()}] ${method} ${path} - ${c.res.status} (${duration}ms)`);
 });
 
 // Add CORS middleware
@@ -952,7 +947,6 @@ app.get("/api/users/:id/stripe/customer", async (c) => {
 
   try {
     const user = await ctx.runQuery(api.userQueries.getUser, { userId });
-    console.log("Fetched user for customer lookup:", user);
     if (!user) {
       return c.json({ success: false, error: "User not found" }, 404);
     }
@@ -1221,7 +1215,6 @@ app.post("/api/users/:id/usage/log", async (c) => {
       });
     } catch (error) {
       // Log but don't fail - analytics logging succeeded
-      console.warn(`[UsageLog] Subscription update failed for ${userId}:`, error);
     }
   }
   
@@ -2599,8 +2592,6 @@ app.post("/api/vectorSearch/getEmbeddingsByContentIds", async (c) => {
       }, 400);
     }
     
-    console.log(`🔍 [VECTOR_SEARCH] Getting embeddings by IDs for user ${userId}, type ${contentType}, count ${contentIds.length}`);
-    
     const embeddings = await c.env.runQuery(internal.vectorSearch.getEmbeddingsByContentIds, {
       userId,
       contentType,
@@ -2634,8 +2625,6 @@ app.post("/api/vectorSearch/similaritySearch", async (c) => {
       }, 400);
     }
     
-    console.log(`🔍 [VECTOR_SEARCH] Similarity search for user ${userId}, query: ${query.substring(0, 100)}...`);
-    
     const results = await c.env.runAction(api.vectorSearch.hybridSearchContent, {
       userId,
       query,
@@ -2663,9 +2652,6 @@ app.post("/api/vectorSearch/mutate", async (c) => {
   try {
     const requestBody = await c.req.json();
     const { userId, operation, contentId, contentType, ...rest } = requestBody;
-    
-    console.log(`🔵 [VECTOR] POST /api/vectorSearch/mutate - START`);
-    console.log(`🔍 [VECTOR] Operation: ${operation}, User: ${userId}, ContentId: ${contentId}, ContentType: ${contentType}`);
     
     if (!userId || !operation) {
       console.error(`❌ [VECTOR] Missing required fields - userId: ${!!userId}, operation: ${!!operation}`);
@@ -2757,8 +2743,6 @@ app.post("/api/vectorSearch/searchByEmbedding", async (c) => {
       }, 400);
     }
     
-    console.log(`🔍 [SEARCH_BY_EMBEDDING] Searching with pre-computed embedding for user ${userId}`);
-    
     const result = await c.env.runAction(internal.vectorSearch.searchByEmbedding, {
       userId,
       embedding,
@@ -2789,7 +2773,6 @@ app.post("/api/vectorSearch/migrateCrystalContentTypes", async (c) => {
   const ctx = c.env;
 
   try {
-    console.log('🔄 [HTTP] Starting crystal content type migration');
     const result = await ctx.runAction(api.vectorSearch.migrateCrystalContentTypes, {});
     return c.json({ success: true, data: result });
   } catch (error: any) {
@@ -2802,8 +2785,6 @@ app.post("/api/vectorSearch/migrateCrystalContentTypes", async (c) => {
 app.get("/api/cache/stats/:userId", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("userId");
-  
-  console.log(`📊 [HTTP] Cache stats for user ${userId}`);
   
   try {
     const result = await ctx.runQuery(api.crystalCache.getCacheStats, { userId });

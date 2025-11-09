@@ -79,12 +79,10 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
         if (currentUser && mounted) {
           // User is already logged in, redirect to dashboard
           // The backend will handle subscription check and redirect to /settings if needed
-          console.log('[REGISTER] User already authenticated, redirecting to dashboard');
           window.location.href = '/dashboard';
         }
       } catch (err) {
         // Ignore errors checking auth state - allow registration to proceed
-        console.debug('[REGISTER] Could not check current auth state:', err);
       }
     })();
     
@@ -103,10 +101,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess }) => {
     
     // Auto-initialize free tier - DIRECT CONVEX CALL (no backend)
     try {
-      console.log('[Registration] Auto-initializing free tier via Convex...', { userId });
-      
       const result = await initializeFreeTier({ userId });
-      console.log('[Registration] Free tier initialized:', result);
     } catch (error) {
       console.error('[Registration] Error during free tier init:', error);
       // Non-blocking: user can still proceed, middleware will enforce limits

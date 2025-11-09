@@ -13,7 +13,6 @@ export async function POST(request: Request) {
     const { apiKey, userId } = extractAuthInfo(authHeader);
     
     if (!apiKey) {
-      console.warn(`[${requestId}] Authentication failed: No Authorization header or invalid format`);
       return NextResponse.json({ error: 'Unauthorized - Missing or invalid Authorization header' }, { status: 401 });
     }
 
@@ -37,14 +36,12 @@ export async function POST(request: Request) {
     } = body;
 
     if (!query) {
-      console.warn(`[${requestId}] Invalid request: Missing query`);
       return NextResponse.json({ error: 'Query is required' }, { status: 400 });
     }
 
     // Always extract user_id from API key, never from client
     const authenticated_user_id = userId;
     if (!authenticated_user_id) {
-      console.warn(`[${requestId}] Authentication failed: Could not determine user_id from API key`);
       return NextResponse.json({ error: 'Unauthorized - Invalid API key format or missing user_id' }, { status: 401 });
     }
 
@@ -82,13 +79,6 @@ export async function POST(request: Request) {
     if (conversation_type) {
       chatRequestBody.conversation_type = conversation_type;
     }
-
-    console.info(`[${requestId}] Streaming chat request`, {
-      user_id: authenticated_user_id,
-      query_length: query.length,
-      is_first_message,
-      has_file_attachments: Array.isArray(file_attachments) ? file_attachments.length : 0
-    });
 
     // Forward to streaming chat endpoint
     const response = await fetch(`${BACKEND_URL}/api/v1/chat/stream`, {

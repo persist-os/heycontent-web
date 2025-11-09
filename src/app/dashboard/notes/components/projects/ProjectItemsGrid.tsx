@@ -119,7 +119,6 @@ export function ProjectItemsGrid({ project }: ProjectItemsGridProps) {
   // Helper function to convert actual data to AttachableItem format for processing
   const createAttachableItem = (item: any, type: string): AttachableItem => {
     if (!item) {
-      console.warn('createAttachableItem called with null/undefined item');
       return {
         id: '',
         type: type as any,

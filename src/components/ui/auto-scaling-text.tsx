@@ -128,15 +128,7 @@ export const AutoScalingText: React.FC<AutoScalingTextProps> = ({
       
       // Debug logging in development
       if (process.env.NODE_ENV === 'development' && size === fontSizes.max) {
-        console.log('AutoScaling Debug:', {
-          fontSize: size,
-          textHeight,
-          containerHeight,
-          textWidth,
-          containerWidth,
-          fitsHeight,
-          fitsWidth
-        });
+        // AutoScaling Debug info available in dev mode
       }
       
       if (fitsHeight && fitsWidth) {

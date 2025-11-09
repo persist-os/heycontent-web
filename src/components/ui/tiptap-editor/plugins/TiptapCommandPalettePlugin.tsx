@@ -243,7 +243,6 @@ export function TiptapCommandPalettePlugin({
 
   const handleGenerateTableFromContent = useCallback(async () => {
     // This would need custom implementation for Tiptap
-    console.log('Generate table from content not implemented for Tiptap yet')
     setShowCommandPalette(false)
   }, [])
 

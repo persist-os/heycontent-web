@@ -204,7 +204,6 @@ export function NotesTree({
       } else {
         newSet.add(noteId);
       }
-      console.log('Note selection updated:', { noteId, newSetSize: newSet.size, allSelected: Array.from(newSet) });
       return newSet;
     });
   }, []);

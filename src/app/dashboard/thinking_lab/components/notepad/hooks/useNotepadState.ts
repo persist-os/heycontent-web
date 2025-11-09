@@ -37,11 +37,6 @@ export function useNotepadState({
   const [refinementPreview, setRefinementPreview] = useState<string | null>(null)
   const [isRefining, setIsRefining] = useState(false)
   
-  // Debug logging for note loading
-  if (process.env.NODE_ENV === 'development' && noteId) {
-    console.debug('[useNotepadState] Opening note:', noteId.substring(0, 15) + '...')
-  }
-
   // Internal state for note management (controlled by handlers, not props)
   const [isNewNote, setIsNewNote] = useState(!noteId)
   const [currentNoteId, setCurrentNoteId] = useState<string | Id<"notes"> | null>(noteId || null)

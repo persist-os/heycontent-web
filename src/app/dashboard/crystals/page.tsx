@@ -70,8 +70,6 @@ export default function CrystalsPage() {
 
     setIsFormingCrystals(true);
     try {
-      console.log('💎 [MANUAL FORMATION] Starting manual crystal formation for user:', userId);
-      
       const apiKey = await getApiKey();
       if (!apiKey) {
         throw new Error('Authentication required. Please log in again.');
@@ -88,16 +86,12 @@ export default function CrystalsPage() {
         }),
       });
 
-      console.log('💎 [MANUAL FORMATION] API response status:', response.status);
-
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
       const result = await response.json();
-      
-      console.log('💎 [MANUAL FORMATION] Formation result:', result);
       
       if (result.success && result.triggered) {
         toast.success(

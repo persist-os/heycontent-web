@@ -29,17 +29,8 @@ export function useNotepadAI({
 
   // AI handlers that append content automatically
   const handleAskAI = useCallback(async (prompt: string) => {
-    console.log('🤖 [MarkdownNotepad] handleAskAI called:', {
-      prompt: prompt.substring(0, 100) + '...',
-      currentContentLength: content.length
-    })
-    
     try {
       const response = await askAI(prompt)
-      console.log('✨ [MarkdownNotepad] AI response received:', {
-        responseLength: response.length,
-        responsePreview: response.substring(0, 100) + '...'
-      })
       
       // Automatically append the AI response to the current content
       const newContent = content.trim() ? `${content}\n\n${response}` : response
@@ -112,16 +103,6 @@ export function useNotepadAI({
       afterText = ''
     }
     
-    console.log('🔍 [MarkdownNotepad] Refinement context debug:', {
-      selectedTextLength: selectedText.length,
-      contentLength: content.length,
-      selectionStart,
-      beforeTextLength: beforeText.length,
-      afterTextLength: afterText.length,
-      beforeTextPreview: beforeText.substring(0, 50) + '...',
-      afterTextPreview: afterText.substring(0, 50) + '...'
-    })
-
     const response = await fetch('/api/smart_note_inline/refine-text', {
       method: 'POST',
       headers: {
@@ -166,11 +147,6 @@ export function useNotepadAI({
     try {
       const refinedText = await refineText(refinementType, selectedText)
       setRefinementPreview(refinedText)
-      console.log('✨ [MarkdownNotepad] Text refinement completed:', {
-        originalLength: selectedText.length,
-        refinedLength: refinedText.length,
-        refinementType
-      })
       
       // Notify that generation completed
       onGenerationComplete?.()
@@ -189,19 +165,16 @@ export function useNotepadAI({
     // The actual refinement preview would be passed from the parent component
     // For now, this is a placeholder implementation
     setRefinementPreview(null)
-    console.log('✅ [MarkdownNotepad] Refinement accepted and applied')
   }, [setRefinementPreview])
 
   const handleRejectRefinement = useCallback(async () => {
     setRefinementPreview(null)
-    console.log('❌ [MarkdownNotepad] Refinement rejected')
   }, [setRefinementPreview])
 
   const handleRetryRefinement = useCallback(async () => {
     // For retry, we'd need to store the original refinement parameters
     // This is a simplified implementation
     setRefinementPreview(null)
-    console.log('🔄 [MarkdownNotepad] Refinement retry requested')
   }, [setRefinementPreview])
 
   return {

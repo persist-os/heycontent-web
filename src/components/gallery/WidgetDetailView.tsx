@@ -58,11 +58,6 @@ export function WidgetDetailView({ widget, userId, projectId }: WidgetDetailView
   
   const handleExecuteWidget = () => {
     // TODO: Implement widget execution with custom prompts
-    console.log('[WidgetDetail] Execute widget with prompts:', {
-      widgetId: widget._id,
-      systemPrompt,
-      instructionsPrompt
-    })
   }
   
   return (
