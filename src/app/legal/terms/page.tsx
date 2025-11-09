@@ -76,7 +76,7 @@ export default function Terms() {
             The Services are intended for users who are at least 18 years old. Persons under the age of 18 are not permitted to use or register for the Services.
           </p>
           <p>
-            You can contact us by email at <a href="mailto:hello@persistos.com" className="text-blue-600 dark:text-blue-400 hover:underline">hello@persistos.com</a>.
+            You can contact us by email at <a href="mailto:hello@persistos.co" className="text-blue-600 dark:text-blue-400 hover:underline">hello@persistos.co</a>.
           </p>
         </section>
 
@@ -326,7 +326,7 @@ export default function Terms() {
         <section className="space-y-6 border-t border-border pt-12">
           <h2 className="text-3xl font-medium text-foreground border-b border-border pb-3">Contact Us</h2>
           <p>
-            If you have any questions or concerns about these Terms, please contact us at <a href="mailto:hello@persistos.com" className="text-blue-600 dark:text-blue-400 hover:underline">hello@persistos.com</a>.
+            If you have any questions or concerns about these Terms, please contact us at <a href="mailto:hello@persistos.co" className="text-blue-600 dark:text-blue-400 hover:underline">hello@persistos.co</a>.
           </p>
         </section>
       </article>

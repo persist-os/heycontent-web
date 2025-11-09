@@ -214,7 +214,7 @@ export default function Privacy() {
         {/* Contact Section */}
         <section className="space-y-6 border-t border-border pt-12">
           <h2 className="text-3xl font-medium text-foreground border-b border-border pb-3">Contact Us</h2>
-          <p>If you have any questions about this Privacy Policy, you can contact us at <a href="mailto:hello@persistos.com" className="text-blue-600 dark:text-blue-400 hover:underline">hello@persistos.com</a>.</p>
+          <p>If you have any questions about this Privacy Policy, you can contact us at <a href="mailto:hello@persistos.co" className="text-blue-600 dark:text-blue-400 hover:underline">hello@persistos.co</a>.</p>
         </section>
       </article>
     </div>

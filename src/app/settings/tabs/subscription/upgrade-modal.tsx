@@ -313,7 +313,7 @@ export default function UpgradeModal({
             <DialogFooter className="mt-4">
               <div className="text-sm text-gray-500 text-center w-full">
                 Need more requests or have questions?{" "}
-                <a href="mailto:hello@persistos.com" className="text-primary hover:underline">
+                <a href="mailto:hello@persistos.co" className="text-primary hover:underline">
                   Contact our sales team
                 </a>
               </div>

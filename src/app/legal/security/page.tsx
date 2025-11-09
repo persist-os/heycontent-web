@@ -190,10 +190,10 @@ export default function Security() {
             <p className="leading-7">
               For security-related inquiries, contact us at{' '}
               <a 
-                href="mailto:hello@persistos.com" 
+                href="mailto:hello@persistos.co" 
                 className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors underline"
               >
-                hello@persistos.com
+                hello@persistos.co
               </a>.
             </p>
           </div>
