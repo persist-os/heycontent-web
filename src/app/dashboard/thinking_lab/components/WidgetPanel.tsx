@@ -11,7 +11,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { useQuery } from 'convex/react'
+import { useQuery, useMutation } from 'convex/react'
 import { useRouter } from 'next/navigation'
 import { api } from '../../../../../convex/_generated/api'
 import { Id } from '../../../../../convex/_generated/dataModel'
@@ -20,8 +20,18 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { ExternalLink } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { ExternalLink, BarChart3, Info, Plus } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import remarkBreaks from 'remark-breaks'
 import { WidgetScheduleControls } from '@/app/dashboard/living-projects/[projectId]/components/widgets/WidgetScheduleControls'
+import { useAdminAuth } from '@/app/lib/admin-auth'
+import { formatTimeAgo } from '@/lib/widget-utils'
+import { StatusBadge } from '@/components/ui/status-badge'
+import type { InsightEntry } from '../../../../../convex/types/assignmentFingerprint'
 
 interface WidgetPanelProps {
   projectId?: string
@@ -47,6 +57,7 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
   className = '' 
 }) => {
   const router = useRouter()
+  const { isAdmin } = useAdminAuth()
   
   // Get conversation to extract projectId if not provided
   const conversation = useQuery(
@@ -117,6 +128,17 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
   const [fingerprintOpen, setFingerprintOpen] = useState(false)
   const [cognitiveFieldOpen, setCognitiveFieldOpen] = useState(false)
   const [promptsOpen, setPromptsOpen] = useState(false)
+  
+  // Insight form state
+  const [showAddInsightForm, setShowAddInsightForm] = useState(false)
+  const [newInsight, setNewInsight] = useState<{ insight: string; category: string; confidence: number }>({
+    insight: '',
+    category: 'goals',
+    confidence: 0.8
+  })
+  
+  // Mutation for adding insights
+  const addInsight = useMutation(api.assignmentFingerprintMutations.mutateAssignmentFingerprint)
 
   // Loading state - waiting for conversation or widgets
   const isLoadingConversation = !projectId && conversationId && conversation === undefined
@@ -172,19 +194,6 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
     }
   }
   
-  // Status badge helper
-  const getStatusBadge = (widget: any) => {
-    if (widget.lastRunStatus === 'running') {
-      return <Badge className="bg-blue-500/20 text-blue-600 dark:text-blue-400 border-0">🔵 Active</Badge>
-    }
-    if (widget.lastRunStatus === 'completed') {
-      return <Badge className="bg-green-500/20 text-green-600 dark:text-green-400 border-0">✅ Done</Badge>
-    }
-    if (widget.lastRunStatus === 'error') {
-      return <Badge className="bg-red-500/20 text-red-600 dark:text-red-400 border-0">❌ Error</Badge>
-    }
-    return <Badge className="bg-muted/20 text-muted-foreground border-0">⚪ Resting</Badge>
-  }
 
   // Display widgets with progressive disclosure
   return (
@@ -196,13 +205,19 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
             <div className="p-6">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">🤖</span>
+                  <BarChart3 className="w-6 h-6 text-primary" />
                   <h2 className="text-2xl font-bold text-foreground">
                     {currentWidget.familyIdentity?.familyName || currentWidget.title}
                   </h2>
                 </div>
                 <div className="flex items-center gap-2">
-                  {getStatusBadge(currentWidget)}
+                  <StatusBadge 
+                    status={currentWidget.lastRunStatus === 'running' ? 'active' 
+                          : currentWidget.lastRunStatus === 'completed' ? 'completed'
+                          : currentWidget.lastRunStatus === 'error' ? 'error'
+                          : 'idle'} 
+                    size="sm"
+                  />
                 </div>
               </div>
               
@@ -220,6 +235,7 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
                     nextScheduledRun={currentWidget.nextScheduledRun || null}
                     frequency={currentWidget.scheduleFrequency || 'daily'}
                     suggestedFrequency={currentWidget.executionProfile?.frequencySuggestion || null}
+                    isAdmin={isAdmin}
                     onScheduleChange={() => {
                       // Trigger a refetch of widget data if needed
                       // The component will update via Convex reactivity
@@ -235,7 +251,7 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
             <Collapsible open={agentTeamOpen} onOpenChange={setAgentTeamOpen}>
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" className="w-full justify-start">
-                  {agentTeamOpen ? "▲ Hide team" : `▼ Agent Team (${currentWidget.agentRoster.length} helpers)`}
+                  {agentTeamOpen ? "Hide Agent Team" : `Show Agent Team (${currentWidget.agentRoster.length})`}
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent>
@@ -246,7 +262,7 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
                       {' '}
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <span className="text-blue-500 cursor-help text-sm">ℹ️</span>
+                          <Info className="w-4 h-4 text-blue-500 inline cursor-help" />
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>A helper is like a team member that handles one specific task.</p>
@@ -283,7 +299,7 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
             <Collapsible open={collaborationOpen} onOpenChange={setCollaborationOpen}>
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" className="w-full justify-start">
-                  {collaborationOpen ? "▲ Hide details" : "▼ How They Work Together"}
+                  {collaborationOpen ? "Hide details" : "How They Work Together"}
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent>
@@ -319,46 +335,212 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
             <Collapsible open={fingerprintOpen} onOpenChange={setFingerprintOpen}>
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" className="w-full justify-start">
-                  {fingerprintOpen ? "▲ Hide fingerprint" : `▼ Assignment Fingerprint ${fingerprint._id ? `(${fingerprint._id.slice(0, 8)}...)` : ''}`}
+                  {fingerprintOpen ? "Hide fingerprint" : `Assignment Fingerprint ${fingerprint._id ? `(${fingerprint._id.slice(0, 8)}...)` : ''}`}
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <Card className="bg-card/50 backdrop-blur-sm border border-border/40 mt-2">
                   <div className="p-6">
-                    <h3 className="text-lg font-semibold text-foreground mb-4">
-                      Assignment Fingerprint
-                    </h3>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-foreground">
+                        Assignment Fingerprint
+                      </h3>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAddInsightForm(!showAddInsightForm)}
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Insight
+                      </Button>
+                    </div>
                     
-                    {fingerprint.currentGoals && fingerprint.currentGoals.length > 0 && (
+                    {/* Add Insight Form */}
+                    {showAddInsightForm && (
                       <div className="bg-muted/20 border border-border/30 rounded-lg p-4 mb-4">
-                        <p className="text-sm font-medium text-foreground mb-2">Current Goals:</p>
-                        <ul className="list-disc list-inside space-y-1">
-                          {fingerprint.currentGoals.map((goal: string, idx: number) => (
-                            <li key={idx} className="text-sm text-foreground">{goal}</li>
-                          ))}
-                        </ul>
+                        <h4 className="text-sm font-medium text-foreground mb-3">Add New Insight</h4>
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1 block">Category</label>
+                            <Select
+                              value={newInsight.category}
+                              onValueChange={(value) => setNewInsight({ ...newInsight, category: value })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="goals">Goals</SelectItem>
+                                <SelectItem value="constraints">Constraints</SelectItem>
+                                <SelectItem value="timeline">Timeline</SelectItem>
+                                <SelectItem value="people">People</SelectItem>
+                                <SelectItem value="requirements">Requirements</SelectItem>
+                                <SelectItem value="context">Context</SelectItem>
+                                <SelectItem value="artifacts_needed">Artifacts Needed</SelectItem>
+                                <SelectItem value="help_wanted">Help Wanted</SelectItem>
+                                <SelectItem value="working_style">Working Style</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1 block">Insight</label>
+                            <Textarea
+                              value={newInsight.insight}
+                              onChange={(e) => setNewInsight({ ...newInsight, insight: e.target.value })}
+                              placeholder="Enter your insight..."
+                              rows={3}
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={async () => {
+                                if (!newInsight.insight.trim() || !effectiveProjectId) return
+                                
+                                const insightEntry: InsightEntry = {
+                                  id: crypto.randomUUID(),
+                                  insight: newInsight.insight.trim(),
+                                  timestamp: Date.now(),
+                                  conversationId: conversationId || '',
+                                  messageCount: 0,
+                                  confidence: newInsight.confidence,
+                                  category: newInsight.category,
+                                }
+                                
+                                try {
+                                  await addInsight({
+                                    operation: 'addUserInsight',
+                                    projectId: effectiveProjectId as Id<'projects'>,
+                                    userId,
+                                    userInsight: insightEntry,
+                                  })
+                                  
+                                  // Reset form
+                                  setNewInsight({ insight: '', category: 'goals', confidence: 0.8 })
+                                  setShowAddInsightForm(false)
+                                } catch (error) {
+                                  console.error('Failed to add insight:', error)
+                                }
+                              }}
+                              disabled={!newInsight.insight.trim()}
+                            >
+                              Save
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setShowAddInsightForm(false)
+                                setNewInsight({ insight: '', category: 'goals', confidence: 0.8 })
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     )}
                     
-                    {fingerprint.currentConstraints && fingerprint.currentConstraints.length > 0 && (
-                      <div className="bg-muted/20 border border-border/30 rounded-lg p-4 mb-4">
-                        <p className="text-sm font-medium text-foreground mb-2">Current Constraints:</p>
-                        <ul className="list-disc list-inside space-y-1">
-                          {fingerprint.currentConstraints.map((constraint: string, idx: number) => (
-                            <li key={idx} className="text-sm text-foreground">{constraint}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    
-                    {fingerprint.totalInsights !== undefined && (
-                      <div className="bg-muted/20 border border-border/30 rounded-lg p-4">
-                        <p className="text-sm font-medium text-foreground mb-2">Intelligence:</p>
-                        <p className="text-sm text-foreground">
-                          {fingerprint.totalInsights} total insights
-                        </p>
-                      </div>
-                    )}
+                    {/* Group insights by category */}
+                    {(() => {
+                      const insights = fingerprint.insights || []
+                      const groupedInsights: Record<string, InsightEntry[]> = {}
+                      
+                      insights.forEach((insight: InsightEntry) => {
+                        const category = insight.category || 'other'
+                        if (!groupedInsights[category]) {
+                          groupedInsights[category] = []
+                        }
+                        groupedInsights[category].push(insight)
+                      })
+                      
+                      // Sort insights within each category by timestamp (newest first)
+                      Object.keys(groupedInsights).forEach(category => {
+                        groupedInsights[category].sort((a, b) => b.timestamp - a.timestamp)
+                      })
+                      
+                      const categoryLabels: Record<string, string> = {
+                        goals: 'Goals',
+                        constraints: 'Constraints',
+                        timeline: 'Timeline',
+                        people: 'People',
+                        requirements: 'Requirements',
+                        context: 'Context',
+                        artifacts_needed: 'Artifacts Needed',
+                        help_wanted: 'Help Wanted',
+                        working_style: 'Working Style',
+                      }
+                      
+                      return (
+                        <div className="space-y-4">
+                          {Object.keys(groupedInsights).length === 0 ? (
+                            <div className="bg-muted/20 border border-border/30 rounded-lg p-4 text-center">
+                              <p className="text-sm text-muted-foreground">No insights yet. Add one above!</p>
+                            </div>
+                          ) : (
+                            Object.keys(groupedInsights).map((category) => (
+                              <div key={category} className="bg-muted/20 border border-border/30 rounded-lg p-4">
+                                <h4 className="text-sm font-medium text-foreground mb-3">
+                                  {categoryLabels[category] || category}
+                                  <Badge variant="outline" className="ml-2 text-xs">
+                                    {groupedInsights[category].length}
+                                  </Badge>
+                                </h4>
+                                <div className="space-y-2">
+                                  {groupedInsights[category].map((insight: InsightEntry) => (
+                                    <div
+                                      key={insight.id}
+                                      className="bg-background/50 rounded p-3 border border-border/20"
+                                    >
+                                      <div className="prose prose-sm max-w-none break-words text-sm text-foreground mb-2">
+                                        <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                                          {insight.insight}
+                                        </ReactMarkdown>
+                                      </div>
+                                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                        <span>
+                                          {new Date(insight.timestamp).toLocaleDateString()} {new Date(insight.timestamp).toLocaleTimeString()}
+                                        </span>
+                                        {insight.confidence !== undefined && (
+                                          <Badge variant="outline" className="text-xs">
+                                            {(insight.confidence * 100).toFixed(0)}% confidence
+                                          </Badge>
+                                        )}
+                                        {insight.conversationId && (
+                                          <span className="text-xs opacity-60">
+                                            Conversation: {insight.conversationId.slice(0, 8)}...
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))
+                          )}
+                          
+                          {/* Summary Stats */}
+                          {fingerprint.totalInsights !== undefined && (
+                            <div className="bg-muted/20 border border-border/30 rounded-lg p-4">
+                              <p className="text-sm font-medium text-foreground mb-2">Summary</p>
+                              <p className="text-sm text-foreground">
+                                {fingerprint.totalInsights} total insights across {Object.keys(groupedInsights).length} categories
+                              </p>
+                              {fingerprint.currentGoals && fingerprint.currentGoals.length > 0 && (
+                                <p className="text-xs text-muted-foreground mt-2">
+                                  Current Goals: {fingerprint.currentGoals.length}
+                                </p>
+                              )}
+                              {fingerprint.currentConstraints && fingerprint.currentConstraints.length > 0 && (
+                                <p className="text-xs text-muted-foreground">
+                                  Current Constraints: {fingerprint.currentConstraints.length}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
                   </div>
                 </Card>
               </CollapsibleContent>
@@ -370,7 +552,7 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
             <Collapsible open={promptsOpen} onOpenChange={setPromptsOpen}>
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" className="w-full justify-start">
-                  {promptsOpen ? "▲ Hide prompts" : `▼ Execution Prompts (${widgetPrompts.length})`}
+                  {promptsOpen ? "Hide prompts" : `Execution Prompts (${widgetPrompts.length})`}
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent>
@@ -381,7 +563,7 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
                       {' '}
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <span className="text-blue-500 cursor-help text-sm">ℹ️</span>
+                          <Info className="w-4 h-4 text-blue-500 inline cursor-help" />
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>Custom prompts generated for this widget's agents.</p>
@@ -462,35 +644,14 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
             const crossDomain = field.crossDomainLayer;
             const coreField = field.coreField;
             
-            // Helper to format timestamp
-            const formatTimestamp = (ts?: number) => {
-              if (!ts) return 'Never';
-              return new Date(ts).toLocaleString();
-            };
-            
-            // Helper to get status badge
-            const getStatusBadge = (status?: string) => {
-              if (!status) return null;
-              const statusColors: Record<string, string> = {
-                active: 'bg-green-500/20 text-green-600 dark:text-green-400',
-                evolving: 'bg-blue-500/20 text-blue-600 dark:text-blue-400',
-                stable: 'bg-purple-500/20 text-purple-600 dark:text-purple-400',
-                archived: 'bg-gray-500/20 text-gray-600 dark:text-gray-400'
-              };
-              return (
-                <Badge className={`${statusColors[status] || 'bg-muted/20 text-muted-foreground'} border-0`}>
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
-                </Badge>
-              );
-            };
             
             return (
               <Collapsible open={cognitiveFieldOpen} onOpenChange={setCognitiveFieldOpen}>
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" className="w-full justify-start">
-                    {cognitiveFieldOpen ? "▲ Hide cognitive field" : `▼ Cognitive Field ${field?.fieldId ? `(${field.fieldId.slice(0, 8)}...)` : ''}`}
-                  </Button>
-                </CollapsibleTrigger>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" className="w-full justify-start">
+                  {cognitiveFieldOpen ? "Hide cognitive field" : `Cognitive Field ${field?.fieldId ? `(${field.fieldId.slice(0, 8)}...)` : ''}`}
+                </Button>
+              </CollapsibleTrigger>
                 <CollapsibleContent>
                   <Card className="bg-card/50 backdrop-blur-sm border border-border/40 mt-2">
                     <div className="p-6 space-y-4">
@@ -499,13 +660,20 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
                         <h3 className="text-lg font-semibold text-foreground">
                           Cognitive Field
                         </h3>
-                        {getStatusBadge(field.status)}
+                        {field.status && (
+                          <StatusBadge 
+                            status={field.status === 'active' ? 'active' 
+                                  : field.status === 'archived' ? 'idle' 
+                                  : 'completed'} 
+                            size="sm" 
+                          />
+                        )}
                       </div>
                       
                       {/* Human-Readable Summary (Transparency Layer) */}
                       {transparency?.interpretiveSummary && (
                         <div className="bg-blue-500/10 border-l-4 border-blue-500 rounded-lg p-4">
-                          <p className="text-sm font-medium text-foreground mb-2">💡 Understanding</p>
+                          <p className="text-sm font-medium text-foreground mb-2">Understanding</p>
                           <p className="text-sm text-foreground whitespace-pre-wrap">
                             {transparency.interpretiveSummary}
                           </p>
@@ -531,7 +699,7 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
                         {field.lastUsed && (
                           <div className="bg-muted/20 border border-border/30 rounded-lg p-3">
                             <p className="text-xs text-muted-foreground mb-1">Last Used</p>
-                            <p className="text-sm font-semibold text-foreground">{formatTimestamp(field.lastUsed)}</p>
+                            <p className="text-sm font-semibold text-foreground">{formatTimeAgo(field.lastUsed)} ago</p>
                           </div>
                         )}
                         {transparency?.stabilityScore !== undefined && (
@@ -545,7 +713,7 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
                         {field.createdAt && (
                           <div className="bg-muted/20 border border-border/30 rounded-lg p-3">
                             <p className="text-xs text-muted-foreground mb-1">Created</p>
-                            <p className="text-sm font-semibold text-foreground">{formatTimestamp(field.createdAt)}</p>
+                            <p className="text-sm font-semibold text-foreground">{formatTimeAgo(field.createdAt)} ago</p>
                           </div>
                         )}
                       </div>
@@ -553,7 +721,7 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
                       {/* Abstract Dimensions (Semantic Layer) */}
                       {semantic?.abstractDimensions && semantic.abstractDimensions.length > 0 && (
                         <div className="bg-muted/20 border border-border/30 rounded-lg p-4">
-                          <p className="text-sm font-medium text-foreground mb-3">📊 Abstract Dimensions</p>
+                          <p className="text-sm font-medium text-foreground mb-3">Abstract Dimensions</p>
                           <div className="space-y-2">
                             {semantic.abstractDimensions.map((dim: any, idx: number) => (
                               <div key={idx} className="flex items-center justify-between">
@@ -578,7 +746,7 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
                       {/* Meta Inference Summary */}
                       {semantic?.metaInferenceSummary && (
                         <div className="bg-purple-500/10 border-l-4 border-purple-500 rounded-lg p-4">
-                          <p className="text-sm font-medium text-foreground mb-2">🧠 Meta Inference</p>
+                          <p className="text-sm font-medium text-foreground mb-2">Meta Inference</p>
                           <p className="text-sm text-foreground whitespace-pre-wrap">
                             {semantic.metaInferenceSummary}
                           </p>
@@ -588,7 +756,7 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
                       {/* Cross-Domain Patterns */}
                       {crossDomain?.crossDomainPatterns && crossDomain.crossDomainPatterns.length > 0 && (
                         <div className="bg-muted/20 border border-border/30 rounded-lg p-4">
-                          <p className="text-sm font-medium text-foreground mb-3">🌐 Cross-Domain Patterns</p>
+                          <p className="text-sm font-medium text-foreground mb-3">Cross-Domain Patterns</p>
                           <div className="space-y-3">
                             {crossDomain.crossDomainPatterns.map((pattern: any, idx: number) => (
                               <div key={idx} className="bg-background/50 rounded p-3">
@@ -621,7 +789,7 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
                       {/* Emergent Themes */}
                       {crossDomain?.emergentThemes && crossDomain.emergentThemes.length > 0 && (
                         <div className="bg-muted/20 border border-border/30 rounded-lg p-4">
-                          <p className="text-sm font-medium text-foreground mb-3">✨ Emergent Themes</p>
+                          <p className="text-sm font-medium text-foreground mb-3">Emergent Themes</p>
                           <div className="flex flex-wrap gap-2">
                             {crossDomain.emergentThemes.map((theme: string, idx: number) => (
                               <Badge key={idx} className="bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-0">
@@ -635,7 +803,7 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
                       {/* Temporal Drift */}
                       {crossDomain?.temporalDrift && (
                         <div className="bg-orange-500/10 border-l-4 border-orange-500 rounded-lg p-4">
-                          <p className="text-sm font-medium text-foreground mb-2">⏰ Temporal Drift</p>
+                          <p className="text-sm font-medium text-foreground mb-2">Temporal Drift</p>
                           {crossDomain.temporalDrift.direction && (
                             <p className="text-sm text-foreground mb-2">
                               <span className="font-semibold">Direction:</span> {crossDomain.temporalDrift.direction}
@@ -663,7 +831,7 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
                       {((field.sourceShardIds && field.sourceShardIds.length > 0) || 
                        (field.sourceStardustIds && field.sourceStardustIds.length > 0)) && (
                         <div className="bg-muted/20 border border-border/30 rounded-lg p-4">
-                          <p className="text-sm font-medium text-foreground mb-2">🔗 Sources</p>
+                          <p className="text-sm font-medium text-foreground mb-2">Sources</p>
                           {field.sourceShardIds && field.sourceShardIds.length > 0 && (
                             <div className="mb-2">
                               <p className="text-xs text-muted-foreground mb-1">Shards ({field.sourceShardIds.length}):</p>
@@ -712,7 +880,7 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
                       {/* Core Field Stats (if available) */}
                       {coreField && (
                         <div className="bg-muted/20 border border-border/30 rounded-lg p-4">
-                          <p className="text-sm font-medium text-foreground mb-2">⚙️ Core Field Stats</p>
+                          <p className="text-sm font-medium text-foreground mb-2">Core Field Stats</p>
                           <div className="grid grid-cols-2 gap-2 text-xs">
                             {coreField.fieldNodes && (
                               <div>
@@ -729,7 +897,7 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
                             {coreField.lastProcessed && (
                               <div className="col-span-2">
                                 <span className="text-muted-foreground">Last Processed: </span>
-                                <span className="text-foreground">{formatTimestamp(coreField.lastProcessed)}</span>
+                                <span className="text-foreground">{formatTimeAgo(coreField.lastProcessed)} ago</span>
                               </div>
                             )}
                           </div>

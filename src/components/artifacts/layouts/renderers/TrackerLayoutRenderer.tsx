@@ -50,6 +50,7 @@ interface TrackerLayoutRendererProps {
   onUpdate?: (data: any) => void
   artifactType?: string
   metadata?: ArtifactMetadata
+  editButton?: React.ReactNode
 }
 
 export function TrackerLayoutRenderer({
@@ -58,7 +59,8 @@ export function TrackerLayoutRenderer({
   editable = false,
   onUpdate,
   artifactType,
-  metadata
+  metadata,
+  editButton
 }: TrackerLayoutRendererProps) {
   // Defensive: ensure all required properties exist
   const trackers = Array.isArray(data_model?.trackers) ? data_model.trackers : []
@@ -183,7 +185,10 @@ export function TrackerLayoutRenderer({
               <Pencil className="w-3 h-3 text-muted-foreground/60" />
             )}
           </div>
-          <VersionSelector metadata={artifactMetadata} />
+          <div className="flex items-center gap-2">
+            {editButton}
+            <VersionSelector metadata={artifactMetadata} />
+          </div>
         </div>
       </CardHeader>
       

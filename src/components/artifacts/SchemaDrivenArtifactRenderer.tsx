@@ -61,7 +61,8 @@ function UnsupportedLayout({ artifact }: { artifact: Artifact }) {
 export function SchemaDrivenArtifactRenderer({
   artifact,
   editable = false,
-  onUpdate
+  onUpdate,
+  editButton
 }: ArtifactRendererProps) {
   // Defensive: handle null/undefined artifact
   if (!artifact) {
@@ -118,6 +119,7 @@ export function SchemaDrivenArtifactRenderer({
           onUpdate={onUpdate}
           artifactType={artifactType}
           metadata={artifact.metadata}
+          editButton={editButton}
         />
       )
     
@@ -130,6 +132,7 @@ export function SchemaDrivenArtifactRenderer({
           onUpdate={onUpdate}
           artifactType={artifactType}
           metadata={artifact.metadata}
+          editButton={editButton}
         />
       )
     
@@ -142,6 +145,7 @@ export function SchemaDrivenArtifactRenderer({
           onUpdate={onUpdate}
           artifactType={artifactType}
           metadata={artifact.metadata}
+          editButton={editButton}
         />
       )
     
@@ -154,6 +158,7 @@ export function SchemaDrivenArtifactRenderer({
           onUpdate={onUpdate}
           artifactType={artifactType}
           metadata={artifact.metadata}
+          editButton={editButton}
         />
       )
     
@@ -166,6 +171,7 @@ export function SchemaDrivenArtifactRenderer({
           onUpdate={onUpdate}
           artifactType={artifactType}
           metadata={artifact.metadata}
+          editButton={editButton}
         />
       )
     
@@ -178,6 +184,7 @@ export function SchemaDrivenArtifactRenderer({
           onUpdate={onUpdate}
           artifactType={artifactType}
           metadata={artifact.metadata}
+          editButton={editButton}
         />
       )
     
@@ -190,6 +197,7 @@ export function SchemaDrivenArtifactRenderer({
           onUpdate={onUpdate}
           artifactType={artifactType}
           metadata={artifact.metadata}
+          editButton={editButton}
         />
       )
     

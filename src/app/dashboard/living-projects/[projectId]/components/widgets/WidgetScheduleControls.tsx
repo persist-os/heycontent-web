@@ -8,6 +8,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { toast } from 'sonner'
 import { scheduleWidget, unscheduleWidget, getSuggestedSchedule } from '@/lib/services/widgetSchedulingService'
@@ -21,6 +22,7 @@ interface WidgetScheduleControlsProps {
   suggestedFrequency?: string | null
   onScheduleChange?: () => void
   className?: string
+  isAdmin?: boolean
 }
 
 export function WidgetScheduleControls({
@@ -31,7 +33,8 @@ export function WidgetScheduleControls({
   frequency: initialFrequency = 'daily',
   suggestedFrequency: initialSuggestedFrequency = null,
   onScheduleChange,
-  className = ''
+  className = '',
+  isAdmin = false
 }: WidgetScheduleControlsProps) {
   const [isScheduled, setIsScheduled] = useState(initialIsScheduled)
   const [nextScheduledRun, setNextScheduledRun] = useState<number | null>(initialNextScheduledRun)
@@ -218,6 +221,19 @@ export function WidgetScheduleControls({
             <CalendarDays className="w-4 h-4 mr-2" />
             Monthly
           </DropdownMenuItem>
+          {isAdmin && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleSchedule('5min')}>
+                <Zap className="w-4 h-4 mr-2" />
+                5 Minutes (Admin)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSchedule('15min')}>
+                <Zap className="w-4 h-4 mr-2" />
+                15 Minutes (Admin)
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

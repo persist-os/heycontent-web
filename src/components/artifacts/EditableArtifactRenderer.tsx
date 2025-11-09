@@ -106,32 +106,32 @@ export function EditableArtifactRenderer({
 
   // Editing enabled - pass editor's localData to ArtifactRenderer
   // This ensures optimistic updates are reflected immediately
+  
+  // Create edit button element to pass to CardHeader
+  const editButton = editable ? (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={handleOpenEditModal}
+      className="h-7 px-2 text-xs gap-1.5"
+      title="Edit entire artifact"
+    >
+      <Edit className="w-3 h-3" />
+      Edit Artifact
+    </Button>
+  ) : null
+
   return (
     <>
-      <div className="relative">
-        {/* Edit Artifact Button - Always visible in top right */}
-        {editable && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleOpenEditModal}
-            className="absolute top-3 right-3 z-10 h-7 px-2 text-xs gap-1.5 bg-background/90 backdrop-blur-sm shadow-sm"
-            title="Edit entire artifact"
-          >
-            <Edit className="w-3 h-3" />
-            Edit Artifact
-          </Button>
-        )}
-        
-        <ArtifactRenderer
-          artifact={{
-            ...artifact,
-            data: editor.localData  // Use editor's local state (includes optimistic updates)
-          }}
-          editable={true}
-          onUpdate={editor.updateData}  // Auto-wired update handler
-        />
-      </div>
+      <ArtifactRenderer
+        artifact={{
+          ...artifact,
+          data: editor.localData  // Use editor's local state (includes optimistic updates)
+        }}
+        editable={true}
+        onUpdate={editor.updateData}  // Auto-wired update handler
+        editButton={editButton}
+      />
 
       {/* Edit Artifact Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>

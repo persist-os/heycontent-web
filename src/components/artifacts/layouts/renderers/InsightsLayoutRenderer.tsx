@@ -44,6 +44,7 @@ interface InsightsLayoutRendererProps {
   onUpdate?: (data: any) => void
   artifactType?: string
   metadata?: ArtifactMetadata
+  editButton?: React.ReactNode
 }
 
 export function InsightsLayoutRenderer({
@@ -52,7 +53,8 @@ export function InsightsLayoutRenderer({
   editable = false,
   onUpdate,
   artifactType,
-  metadata
+  metadata,
+  editButton
 }: InsightsLayoutRendererProps) {
   // Defensive: ensure all required properties exist
   const insights = Array.isArray(data?.insights) ? data.insights : []
@@ -148,7 +150,10 @@ export function InsightsLayoutRenderer({
               <Pencil className="w-3 h-3 text-primary/60" />
             )}
           </div>
-          <VersionSelector metadata={artifactMetadata} />
+          <div className="flex items-center gap-2">
+            {editButton}
+            <VersionSelector metadata={artifactMetadata} />
+          </div>
         </div>
       </CardHeader>
 

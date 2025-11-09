@@ -15,7 +15,8 @@ import { Pencil, BarChart3 } from 'lucide-react'
 
 export function SummaryLayout({ 
   artifact,
-  editable = false
+  editable = false,
+  editButton
 }: LayoutProps<SummaryArtifact>) {
   // Defensive: ensure all required properties exist
   const data_model = artifact?.data_model || { layout: 'card' as const, metrics: [] }
@@ -63,9 +64,12 @@ export function SummaryLayout({
               <Pencil className="w-3 h-3 text-accent/60" />
             )}
           </div>
-          <Badge variant="outline" className="text-xs">
-            v{metadata.version}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {editButton}
+            <Badge variant="outline" className="text-xs">
+              v{metadata.version}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
 
@@ -93,7 +97,7 @@ export function SummaryLayout({
         {/* Summary text if provided */}
         {data?.summaryText && (
           <div className="bg-accent/5 border border-accent/20 rounded-lg p-4 mt-4">
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">
               {data.summaryText}
             </p>
           </div>

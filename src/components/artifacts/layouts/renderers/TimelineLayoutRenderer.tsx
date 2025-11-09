@@ -40,6 +40,7 @@ interface TimelineLayoutRendererProps {
   onUpdate?: (data: any) => void
   artifactType?: string
   metadata?: ArtifactMetadata
+  editButton?: React.ReactNode
 }
 
 // Icon mapping for common event types
@@ -66,7 +67,8 @@ export function TimelineLayoutRenderer({
   editable = false,
   onUpdate,
   artifactType,
-  metadata
+  metadata,
+  editButton
 }: TimelineLayoutRendererProps) {
   // Defensive: ensure all required properties exist
   const eventTypes = Array.isArray(data_model?.eventTypes) ? data_model.eventTypes : []
@@ -180,7 +182,10 @@ export function TimelineLayoutRenderer({
               <Pencil className="w-3 h-3 text-accent/60" />
             )}
           </div>
-          <VersionSelector metadata={artifactMetadata} />
+          <div className="flex items-center gap-2">
+            {editButton}
+            <VersionSelector metadata={artifactMetadata} />
+          </div>
         </div>
       </CardHeader>
       

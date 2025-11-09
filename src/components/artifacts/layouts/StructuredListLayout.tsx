@@ -20,7 +20,8 @@ import remarkBreaks from 'remark-breaks'
 export function StructuredListLayout({ 
   artifact,
   editable = false,
-  onUpdate
+  onUpdate,
+  editButton
 }: LayoutProps<StructuredListArtifact>) {
   // Defensive: ensure all required properties exist
   const data_model = artifact?.data_model || { layout: 'table' as const, fields: [] }
@@ -62,16 +63,19 @@ export function StructuredListLayout({
               <Pencil className="w-3 h-3 text-primary/60" />
             )}
           </div>
-          <Badge variant="outline" className="text-xs">
-            v{metadata.version}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {editButton}
+            <Badge variant="outline" className="text-xs">
+              v{metadata.version}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
       
       <CardContent>
         {/* Markdown content fallback: render if data is an object with content */}
         {hasMarkdownContent && markdownContent ? (
-          <div className="prose prose-sm max-w-none text-muted-foreground">
+          <div className="prose prose-sm max-w-none break-words text-muted-foreground">
             <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
               {markdownContent}
             </ReactMarkdown>

@@ -65,7 +65,8 @@ function UnsupportedArtifact({ artifact }: { artifact: Artifact }) {
 export function ArtifactRenderer({
   artifact,
   editable = false,
-  onUpdate
+  onUpdate,
+  editButton
 }: ArtifactRendererProps) {
   // Defensive: handle null/undefined artifact
   if (!artifact) {
@@ -85,6 +86,7 @@ export function ArtifactRenderer({
         artifact={artifact}
         editable={editable}
         onUpdate={onUpdate}
+        editButton={editButton}
       />
     )
   }
@@ -98,6 +100,7 @@ export function ArtifactRenderer({
           artifact={artifact}
           editable={editable}
           onUpdate={onUpdate}
+          editButton={editButton}
         />
       )
     
@@ -107,6 +110,7 @@ export function ArtifactRenderer({
           artifact={artifact}
           editable={editable}
           onUpdate={onUpdate}
+          editButton={editButton}
         />
       )
     
@@ -116,6 +120,7 @@ export function ArtifactRenderer({
           artifact={artifact}
           editable={editable}
           onUpdate={onUpdate}
+          editButton={editButton}
         />
       )
     
@@ -125,6 +130,7 @@ export function ArtifactRenderer({
           artifact={artifact}
           editable={editable}
           onUpdate={onUpdate}
+          editButton={editButton}
         />
       )
     
@@ -134,6 +140,7 @@ export function ArtifactRenderer({
           artifact={artifact}
           editable={editable}
           onUpdate={onUpdate}
+          editButton={editButton}
         />
       )
     
@@ -143,6 +150,7 @@ export function ArtifactRenderer({
           artifact={artifact}
           editable={editable}
           onUpdate={onUpdate}
+          editButton={editButton}
         />
       )
     

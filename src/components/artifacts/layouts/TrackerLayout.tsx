@@ -17,7 +17,8 @@ import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 export function TrackerLayout({ 
   artifact,
   editable = false,
-  onUpdate
+  onUpdate,
+  editButton
 }: LayoutProps<TrackerArtifact>) {
   // Defensive: ensure all required properties exist
   const data = artifact?.data || { entries: [] }
@@ -89,9 +90,12 @@ export function TrackerLayout({
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium">Progress Tracker</CardTitle>
-          <Badge variant="outline" className="text-xs">
-            v{metadata.version}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {editButton}
+            <Badge variant="outline" className="text-xs">
+              v{metadata.version}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
       

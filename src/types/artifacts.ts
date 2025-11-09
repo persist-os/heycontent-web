@@ -9,6 +9,7 @@
 
 import { WidgetOutputArtifactType } from '@/convex/types/widgets'
 import { Id } from '@/convex/_generated/dataModel'
+import React from 'react'
 
 /**
  * Base artifact metadata
@@ -265,6 +266,7 @@ export interface ArtifactRendererProps {
   artifact: Artifact
   editable?: boolean
   onUpdate?: (data: any) => void
+  editButton?: React.ReactNode  // Edit button to render in CardHeader
 }
 
 /**
@@ -274,5 +276,6 @@ export interface LayoutProps<T extends Artifact = Artifact> {
   artifact: T
   editable?: boolean
   onUpdate?: (data: any) => void
+  editButton?: React.ReactNode  // Edit button to render in CardHeader
 }
 

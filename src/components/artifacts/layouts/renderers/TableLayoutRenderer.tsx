@@ -28,6 +28,7 @@ interface TableLayoutRendererProps {
   onUpdate?: (data: any) => void
   artifactType?: string
   metadata?: ArtifactMetadata
+  editButton?: React.ReactNode
 }
 
 export function TableLayoutRenderer({
@@ -36,7 +37,8 @@ export function TableLayoutRenderer({
   editable = false,
   onUpdate,
   artifactType,
-  metadata
+  metadata,
+  editButton
 }: TableLayoutRendererProps) {
   // Defensive: ensure all required properties exist
   const fields = Array.isArray(data_model?.fields) ? data_model.fields : []
@@ -93,9 +95,12 @@ export function TableLayoutRenderer({
               <Pencil className="w-3 h-3 text-primary/60" />
             )}
           </div>
-          <Badge variant="outline" className="text-xs">
-            v{artifactMetadata.version}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {editButton}
+            <Badge variant="outline" className="text-xs">
+              v{artifactMetadata.version}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
       

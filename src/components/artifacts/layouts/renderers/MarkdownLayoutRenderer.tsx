@@ -9,7 +9,7 @@
 
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { ArtifactMetadata } from '@/types/artifacts'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -45,6 +45,7 @@ interface MarkdownLayoutRendererProps {
   onUpdate?: (data: any) => void
   artifactType?: string
   metadata?: ArtifactMetadata
+  editButton?: React.ReactNode
 }
 
 export function MarkdownLayoutRenderer({
@@ -53,16 +54,66 @@ export function MarkdownLayoutRenderer({
   editable = false,
   onUpdate,
   artifactType,
-  metadata
+  metadata,
+  editButton
 }: MarkdownLayoutRendererProps) {
   // Defensive: ensure all required properties exist
-  const sections = Array.isArray(data?.sections) ? data.sections : []
+  const rawSections = Array.isArray(data?.sections) ? data.sections : []
   const markdown = data?.markdown || ''
   const artifactMetadata = metadata || {
     version: 1,
     lastUpdatedBy: 'unknown',
     lastUpdatedAt: Date.now()
   }
+
+  // Parse sections: handle both object array and string array formats
+  // If sections is array of strings, parse markdown to extract content for each
+  const sections = useMemo(() => {
+    if (rawSections.length === 0) return []
+    
+    // Check if sections is array of strings (titles only)
+    const isStringArray = rawSections.every((s: any) => typeof s === 'string')
+    
+    if (isStringArray && markdown) {
+      // Parse markdown into sections based on headings
+      const sectionTitles = rawSections as unknown as string[]
+      const parsedSections: Array<{id: string, title: string, content: string}> = []
+      
+      // Split markdown by headings (###, ##, #)
+      const headingRegex = /^(#{1,3})\s+(.+)$/gm
+      const matches = Array.from(markdown.matchAll(headingRegex))
+      
+      for (let i = 0; i < sectionTitles.length; i++) {
+        const title = sectionTitles[i]
+        // Find matching heading in markdown
+        const matchIndex = matches.findIndex(m => m[2].trim() === title.trim())
+        
+        if (matchIndex >= 0) {
+          const startPos = matches[matchIndex].index! + matches[matchIndex][0].length
+          const endPos = matches[matchIndex + 1]?.index || markdown.length
+          const content = markdown.slice(startPos, endPos).trim()
+          
+          parsedSections.push({
+            id: `section-${i}`,
+            title: title,
+            content: content
+          })
+        } else {
+          // Fallback: create section with empty content
+          parsedSections.push({
+            id: `section-${i}`,
+            title: title,
+            content: ''
+          })
+        }
+      }
+      
+      return parsedSections
+    }
+    
+    // Already array of objects, return as-is
+    return rawSections as Array<{id?: string, title?: string, content?: string, markdown?: string}>
+  }, [rawSections, markdown])
   const [isEditing, setIsEditing] = useState(false)
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
@@ -108,6 +159,38 @@ export function MarkdownLayoutRenderer({
     setEditValue('')
   }
 
+  // Extract title from markdown content if section title is missing
+  const extractTitleFromMarkdown = (markdown: string | undefined): string | null => {
+    if (!markdown) return null
+    // Match first heading (###, ##, or #) - handle multiline with /m flag
+    // Also handle headings that might have extra whitespace
+    const headingMatch = markdown.match(/^#{1,3}\s+(.+?)(?:\n|$)/m)
+    if (headingMatch) {
+      return headingMatch[1].trim()
+    }
+    return null
+  }
+
+  // Get section title with fallback to extracted markdown heading
+  const getSectionTitle = (section: any): string => {
+    // Priority 1: Use explicit title field
+    if (section?.title) return section.title
+    
+    // Priority 2: Extract from content field (check both content and markdown)
+    const content = section?.content || section?.markdown || ''
+    
+    // Debug logging (remove after testing)
+    if (!content && process.env.NODE_ENV === 'development') {
+      console.log('Section has no content:', section)
+    }
+    
+    const extractedTitle = extractTitleFromMarkdown(content)
+    if (extractedTitle) return extractedTitle
+    
+    // Priority 3: Fallback
+    return 'Untitled Section'
+  }
+
   // Get artifact type display name
   const artifactTypeDisplay = artifactType || 'Report'
 
@@ -125,9 +208,12 @@ export function MarkdownLayoutRenderer({
               <Eye className="w-3 h-3 text-primary" />
             )}
           </div>
-          <Badge variant="outline" className="text-xs">
-            v{artifactMetadata.version}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {editButton}
+            <Badge variant="outline" className="text-xs">
+              v{artifactMetadata.version}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
 
@@ -138,7 +224,7 @@ export function MarkdownLayoutRenderer({
             <div key={section?.id || `section-${sectionIdx}`} className="space-y-2">
               <div className="flex items-center justify-between border-b border-border/20 pb-2">
                 <h3 className="text-lg font-semibold text-foreground">
-                  {section?.title || 'Untitled Section'}
+                  {getSectionTitle(section)}
                 </h3>
                 {editable && editingSectionId !== (section?.id || `section-${sectionIdx}`) && !isEditing && (
                   <Button
@@ -186,7 +272,7 @@ export function MarkdownLayoutRenderer({
                   {/* Live preview */}
                   <div className="border-t border-border/20 pt-3">
                     <p className="text-xs text-muted-foreground mb-2">Preview:</p>
-                    <div className="prose prose-sm max-w-none text-muted-foreground bg-muted/10 p-3 rounded-md">
+                    <div className="prose prose-sm max-w-none break-words text-muted-foreground bg-muted/10 p-3 rounded-md">
                       <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
                         {editValue}
                       </ReactMarkdown>
@@ -195,7 +281,7 @@ export function MarkdownLayoutRenderer({
                 </div>
               ) : (
                 /* Display mode */
-                <div className="prose prose-sm max-w-none text-muted-foreground">
+                <div className="prose prose-sm max-w-none break-words text-muted-foreground">
                   <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
                     {(section as any)?.markdown || section?.content || ''}
                   </ReactMarkdown>
@@ -205,7 +291,7 @@ export function MarkdownLayoutRenderer({
           ))
         ) : markdown ? (
           /* Single markdown content */
-          <div className="prose prose-sm max-w-none text-muted-foreground">
+          <div className="prose prose-sm max-w-none break-words text-muted-foreground">
             <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
               {markdown}
             </ReactMarkdown>

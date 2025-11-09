@@ -56,7 +56,7 @@ export function ArtifactFormEditor({
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="mt-2 p-4 bg-muted/30 rounded-lg border border-border/20">
-          <pre className="text-xs font-mono overflow-x-auto max-h-[300px] overflow-y-auto">
+          <pre className="text-xs font-mono overflow-x-auto max-h-[300px] overflow-y-auto break-words whitespace-pre-wrap">
             {jsonString}
           </pre>
         </div>

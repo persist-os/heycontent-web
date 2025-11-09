@@ -34,7 +34,8 @@ const eventColors: Record<string, string> = {
 
 export function TimelineLayout({ 
   artifact,
-  editable = false 
+  editable = false,
+  editButton
 }: LayoutProps<TimelineArtifact>) {
   // Defensive: ensure all required properties exist
   const data_model = artifact?.data_model || { layout: 'timeline' as const, eventTypes: [] }
@@ -81,9 +82,12 @@ export function TimelineLayout({
               <Pencil className="w-3 h-3 text-accent/60" />
             )}
           </div>
-          <Badge variant="outline" className="text-xs">
-            v{metadata.version}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {editButton}
+            <Badge variant="outline" className="text-xs">
+              v{metadata.version}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
       

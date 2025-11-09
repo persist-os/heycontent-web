@@ -21,7 +21,8 @@ import remarkBreaks from 'remark-breaks'
 export function ReportLayout({ 
   artifact,
   editable = false,
-  onUpdate
+  onUpdate,
+  editButton
 }: LayoutProps<ReportArtifact>) {
   // Defensive: ensure all required properties exist
   const data_model = artifact?.data_model || { layout: 'markdown' as const }
@@ -72,6 +73,32 @@ export function ReportLayout({
     setEditValue('')
   }
 
+  // Extract title from markdown content if section title is missing
+  const extractTitleFromMarkdown = (markdown: string | undefined): string | null => {
+    if (!markdown) return null
+    // Match first heading (###, ##, or #) - handle multiline with /m flag
+    // Also handle headings that might have extra whitespace
+    const headingMatch = markdown.match(/^#{1,3}\s+(.+?)(?:\n|$)/m)
+    if (headingMatch) {
+      return headingMatch[1].trim()
+    }
+    return null
+  }
+
+  // Get section title with fallback to extracted markdown heading
+  const getSectionTitle = (section: any): string => {
+    // Priority 1: Use explicit title field
+    if (section?.title) return section.title
+    
+    // Priority 2: Extract from content field (check both content and markdown)
+    const content = section?.content || section?.markdown || ''
+    const extractedTitle = extractTitleFromMarkdown(content)
+    if (extractedTitle) return extractedTitle
+    
+    // Priority 3: Fallback
+    return 'Untitled Section'
+  }
+
   return (
     <Card className="bg-card/50 backdrop-blur-sm border border-border/40 hover:bg-card/80 transition-all duration-300">
       <CardHeader className="pb-4">
@@ -86,9 +113,12 @@ export function ReportLayout({
               <Eye className="w-3 h-3 text-primary" />
             )}
           </div>
-          <Badge variant="outline" className="text-xs">
-            v{metadata.version}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {editButton}
+            <Badge variant="outline" className="text-xs">
+              v{metadata.version}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
 
@@ -99,7 +129,7 @@ export function ReportLayout({
             <div key={section?.id || `section-${sectionIdx}`} className="space-y-2">
               <div className="flex items-center justify-between border-b border-border/20 pb-2">
                 <h3 className="text-lg font-semibold text-foreground">
-                  {section?.title || 'Untitled Section'}
+                  {getSectionTitle(section)}
                 </h3>
                 {editable && editingSectionId !== section?.id && !isEditing && (
                   <Button
@@ -147,7 +177,7 @@ export function ReportLayout({
                   {/* Live preview */}
                   <div className="border-t border-border/20 pt-3">
                     <p className="text-xs text-muted-foreground mb-2">Preview:</p>
-                    <div className="prose prose-sm max-w-none text-muted-foreground bg-muted/10 p-3 rounded-md">
+                    <div className="prose prose-sm max-w-none break-words text-muted-foreground bg-muted/10 p-3 rounded-md">
                       <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
                         {editValue}
                       </ReactMarkdown>
@@ -156,7 +186,7 @@ export function ReportLayout({
                 </div>
               ) : (
                 /* Display mode */
-                <div className="prose prose-sm max-w-none text-muted-foreground">
+                <div className="prose prose-sm max-w-none break-words text-muted-foreground">
                   <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
                     {section?.content || ''}
                   </ReactMarkdown>
@@ -166,7 +196,7 @@ export function ReportLayout({
           ))
         ) : (
           /* Single markdown content */
-          <div className="prose prose-sm max-w-none text-muted-foreground">
+          <div className="prose prose-sm max-w-none break-words text-muted-foreground">
             <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
               {data?.markdown || ''}
             </ReactMarkdown>
