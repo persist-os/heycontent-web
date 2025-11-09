@@ -136,6 +136,77 @@ export const updateArtifact = mutation({
 });
 
 /**
+ * Create multiple artifacts in batch
+ * 
+ * Backend sends: array of artifacts (each with type, title, dataModel, data, tags, metadata, projectId, userId, widgetId optional, conversationId optional)
+ * Convex adds: _id, createdAt, updatedAt for each artifact
+ * 
+ * CRITICAL: Follows CONVEX_SAVE_ABSOLUTE_LAW
+ * - Returns array of artifact IDs
+ * - Updates project.artifactIds array atomically (PATTERN 13)
+ * - Updates conversation.artifactIds array if conversationId provided (PATTERN 13)
+ * - All artifacts created atomically (if one fails, all fail)
+ */
+export const createArtifactsBatch = mutation({
+  args: {
+    artifacts: v.array(artifactCreateValidator),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const artifactIds: string[] = [];
+    
+    // Create all artifacts in batch
+    for (const artifact of args.artifacts) {
+      const artifactId = await ctx.db.insert("artifacts", {
+        type: artifact.type,
+        title: artifact.title,
+        data_model: artifact.dataModel,
+        data: artifact.data,
+        tags: artifact.tags,
+        metadata: {
+          version: artifact.metadata.version,
+          lastUpdatedBy: artifact.metadata.lastUpdatedBy,
+          lastUpdatedAt: now,
+          editSource: artifact.metadata.editSource || "widget",  // Default to "widget" for backward compatibility
+        },
+        projectId: artifact.projectId,
+        widgetId: artifact.widgetId,
+        conversationId: artifact.conversationId,
+        userId: artifact.userId,
+        createdAt: now,
+        updatedAt: now,
+      });
+      
+      artifactIds.push(artifactId);
+      
+      // ✅ PATTERN 13: Atomic Parent-Child Updates - Update project.artifactIds array
+      const project = await ctx.db.get(artifact.projectId) as any;
+      if (project) {
+        const existingArtifactIds = project.artifactIds || [];
+        await ctx.db.patch(artifact.projectId, {
+          artifactIds: [...existingArtifactIds, artifactId],
+          updatedAt: now,
+        });
+      }
+      
+      // ✅ PATTERN 13: Atomic Parent-Child Updates - Update conversation.artifactIds array if conversationId provided
+      if (artifact.conversationId) {
+        const conversation = await ctx.db.get(artifact.conversationId) as any;
+        if (conversation) {
+          const existingArtifactIds = conversation.artifactIds || [];
+          await ctx.db.patch(artifact.conversationId, {
+            artifactIds: [...existingArtifactIds, artifactId],
+            updatedAt: now,
+          });
+        }
+      }
+    }
+    
+    return artifactIds;
+  },
+});
+
+/**
  * Delete artifact
  */
 export const deleteArtifact = mutation({

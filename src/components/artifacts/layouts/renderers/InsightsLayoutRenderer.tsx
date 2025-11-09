@@ -56,13 +56,27 @@ export function InsightsLayoutRenderer({
   metadata,
   editButton
 }: InsightsLayoutRendererProps) {
-  // Defensive: ensure all required properties exist
-  const insights = Array.isArray(data?.insights) ? data.insights : []
-  const chartData = Array.isArray(data?.chartData) ? data.chartData : []
+  // 🔴 CRITICAL FIX (TASK 3.1): Defensive data extraction - check multiple possible field names
+  // Handle common mismatches: data.insights OR data.data.insights
+  const dataAny = data as any
+  const insights = Array.isArray(data?.insights) ? data.insights : 
+                  Array.isArray(dataAny?.data?.insights) ? dataAny.data.insights : []
+  const chartData = Array.isArray(data?.chartData) ? data.chartData : 
+                   Array.isArray(dataAny?.data?.chartData) ? dataAny.data.chartData : []
+  
   const artifactMetadata = metadata || {
     version: 1,
     lastUpdatedBy: 'unknown',
     lastUpdatedAt: Date.now()
+  }
+  
+  // Log rendering errors for debugging
+  if (!Array.isArray(data?.insights)) {
+    console.warn(
+      `[InsightsLayoutRenderer] insights field not found or not an array. ` +
+      `Data keys: ${Object.keys(data || {}).join(', ') || 'none'}. ` +
+      `Data structure: ${JSON.stringify(data).substring(0, 200)}`
+    )
   }
 
   const [editingInsightId, setEditingInsightId] = useState<string | null>(null)
@@ -169,7 +183,7 @@ export function InsightsLayoutRenderer({
               )}
               
               <div className="space-y-3">
-                {categoryInsights.map((insight, insightIdx) => {
+                {(categoryInsights as Insight[]).map((insight, insightIdx) => {
                   const { icon: Icon, color, bgColor } = getPriorityIndicator(insight)
                   const priority = insight?.impact || (insight?.significance ? 'medium' : undefined)
                   const insightId = insight.id || `insight-${category}-${insightIdx}`
@@ -284,7 +298,7 @@ export function InsightsLayoutRenderer({
         )}
 
         {/* Chart visualization */}
-        {data_model?.showCharts && chartData.length > 0 && (
+        {data_model?.showCharts && Array.isArray(chartData) && chartData.length > 0 && (
           <div className="bg-muted/10 border border-border/20 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-4">
               <BarChartIcon className="w-4 h-4 text-primary" />

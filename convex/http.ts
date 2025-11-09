@@ -3720,6 +3720,24 @@ app.post("/api/artifacts/create", async (c) => {
 });
 
 /**
+ * POST /api/artifacts/batch
+ * Create multiple artifacts in batch
+ */
+app.post("/api/artifacts/batch", async (c) => {
+  try {
+    const requestBody = await c.req.json();
+    const artifactIds = await c.env.runMutation(api.artifactMutations.createArtifactsBatch, requestBody);
+    return c.json({ success: true, data: artifactIds });
+  } catch (error: any) {
+    console.error("Batch create artifacts error:", error);
+    return c.json({ 
+      error: "Failed to create artifacts batch",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
  * PATCH /api/artifacts/:artifactId
  * Update artifact
  */
@@ -3759,6 +3777,34 @@ app.delete("/api/artifacts/:artifactId", async (c) => {
     console.error("Delete artifact error:", error);
     return c.json({ 
       error: "Failed to delete artifact",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * GET /api/artifacts/:artifactId
+ * Get single artifact by ID
+ */
+app.get("/api/artifacts/:artifactId", async (c) => {
+  try {
+    const artifactId = c.req.param("artifactId");
+    const artifact = await c.env.runQuery(api.artifactQueries.getArtifact, {
+      artifactId: artifactId as any
+    });
+    
+    if (!artifact) {
+      return c.json({ 
+        success: false,
+        error: "Artifact not found"
+      }, 404);
+    }
+    
+    return c.json({ success: true, data: artifact });
+  } catch (error: any) {
+    console.error("Get artifact error:", error);
+    return c.json({ 
+      error: "Failed to get artifact",
       message: error.message || "Internal Server Error"
     }, 500);
   }

@@ -441,6 +441,202 @@ export function ArtifactFormEditor({
     )
   }
 
+  if (layout === 'card') {
+    // Card layout editor (summary artifacts)
+    const dataModel = artifact.data_model as any
+    const metrics = dataModel?.metrics || []
+    const keyMetrics = formData.keyMetrics || {}
+    
+    return (
+      <div className="space-y-4">
+        {error && (
+          <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-md text-sm text-red-600 dark:text-red-400">
+            {error}
+          </div>
+        )}
+        
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+          {/* Metric values editor */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium">Metric Values</h3>
+            {metrics.map((metric: any) => {
+              const metricKey = metric.key || metric.id
+              const value = keyMetrics[metricKey] || ''
+              const format = metric.format || 'text'
+              
+              return (
+                <div key={metricKey} className="space-y-2">
+                  <Label className="text-xs">
+                    {metric.label || metricKey}
+                    {metric.unit && <span className="text-muted-foreground ml-1">({metric.unit})</span>}
+                  </Label>
+                  {format === 'number' || format === 'currency' || format === 'percentage' ? (
+                    <Input
+                      type="number"
+                      value={value}
+                      onChange={(e) => {
+                        const numValue = e.target.value === '' ? '' : parseFloat(e.target.value)
+                        updateField(['keyMetrics', metricKey], numValue === '' ? '' : isNaN(numValue) ? e.target.value : numValue)
+                      }}
+                      placeholder={`Enter ${format === 'currency' ? 'currency' : format === 'percentage' ? 'percentage' : 'number'} value`}
+                    />
+                  ) : (
+                    <Input
+                      value={value}
+                      onChange={(e) => updateField(['keyMetrics', metricKey], e.target.value)}
+                      placeholder={`Enter ${metric.label || metricKey} value`}
+                    />
+                  )}
+                </div>
+              )
+            })}
+          </div>
+          
+          {/* Summary text editor */}
+          <div className="space-y-2">
+            <Label className="text-xs">Summary Text (Optional)</Label>
+            <Textarea
+              value={formData.summaryText || ''}
+              onChange={(e) => updateField(['summaryText'], e.target.value)}
+              rows={4}
+              placeholder="Optional summary text describing the metrics"
+            />
+          </div>
+        </div>
+        
+        {renderJsonView()}
+      </div>
+    )
+  }
+
+  if (layout === 'tracker') {
+    // Tracker layout editor
+    const dataModel = artifact.data_model as any
+    const trackers = dataModel?.trackers || []
+    const entries = formData.entries || []
+    
+    return (
+      <div className="space-y-4">
+        {error && (
+          <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-md text-sm text-red-600 dark:text-red-400">
+            {error}
+          </div>
+        )}
+        
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+          {entries.map((entry: any, idx: number) => (
+            <div key={idx} className="p-4 border border-border/20 rounded-lg space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-medium">
+                  Entry {idx + 1}
+                  {entry.timestamp && (
+                    <span className="text-xs text-muted-foreground ml-2">
+                      ({new Date(entry.timestamp).toLocaleString()})
+                    </span>
+                  )}
+                </h4>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeArrayItem(['entries'], idx)}
+                  className="h-6 px-2 text-xs"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              </div>
+              
+              {/* Timestamp editor */}
+              <div className="space-y-2">
+                <Label className="text-xs">Timestamp</Label>
+                <Input
+                  type="datetime-local"
+                  value={entry.timestamp ? new Date(entry.timestamp).toISOString().slice(0, 16) : ''}
+                  onChange={(e) => {
+                    const timestamp = e.target.value ? new Date(e.target.value).getTime() : Date.now()
+                    updateField(['entries', idx.toString(), 'timestamp'], timestamp)
+                  }}
+                />
+              </div>
+              
+              {/* Tracker values editor */}
+              <div className="space-y-3">
+                <Label className="text-xs">Tracker Values</Label>
+                {trackers.map((tracker: any) => {
+                  const trackerKey = tracker.key || tracker.id
+                  const value = entry.values?.[trackerKey] || ''
+                  const format = tracker.format || 'text'
+                  
+                  return (
+                    <div key={trackerKey} className="space-y-1">
+                      <Label className="text-xs">
+                        {tracker.label || tracker.title || trackerKey}
+                        {tracker.unit && <span className="text-muted-foreground ml-1">({tracker.unit})</span>}
+                      </Label>
+                      {format === 'number' || format === 'currency' || format === 'percentage' ? (
+                        <Input
+                          type="number"
+                          value={value}
+                          onChange={(e) => {
+                            const numValue = e.target.value === '' ? '' : parseFloat(e.target.value)
+                            const newValue = numValue === '' ? '' : isNaN(numValue) ? e.target.value : numValue
+                            updateField(['entries', idx.toString(), 'values', trackerKey], newValue)
+                          }}
+                          placeholder={`Enter ${format === 'currency' ? 'currency' : format === 'percentage' ? 'percentage' : 'number'} value`}
+                        />
+                      ) : (
+                        <Input
+                          value={value}
+                          onChange={(e) => updateField(['entries', idx.toString(), 'values', trackerKey], e.target.value)}
+                          placeholder={`Enter ${tracker.label || trackerKey} value`}
+                        />
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+              
+              {/* Note editor */}
+              <div className="space-y-2">
+                <Label className="text-xs">Note (Optional)</Label>
+                <Textarea
+                  value={entry.note || ''}
+                  onChange={(e) => updateField(['entries', idx.toString(), 'note'], e.target.value)}
+                  rows={2}
+                  placeholder="Optional note about this entry"
+                />
+              </div>
+            </div>
+          ))}
+          
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              const newValues: Record<string, any> = {}
+              trackers.forEach((tracker: any) => {
+                const trackerKey = tracker.key || tracker.id
+                newValues[trackerKey] = ''
+              })
+              addArrayItem(['entries'], {
+                id: `entry-${Date.now()}`,
+                timestamp: Date.now(),
+                values: newValues,
+                note: ''
+              })
+            }}
+            className="w-full"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Entry
+          </Button>
+        </div>
+        
+        {renderJsonView()}
+      </div>
+    )
+  }
+
   // Fallback: show JSON editor for unsupported layouts
   return (
     <div className="space-y-4">

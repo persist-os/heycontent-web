@@ -62,13 +62,27 @@ export function TrackerLayoutRenderer({
   metadata,
   editButton
 }: TrackerLayoutRendererProps) {
+  // 🔴 CRITICAL FIX (TASK 3.1): Defensive data extraction - check multiple possible field names
+  // Handle common mismatches: data.entries OR data.trackingEntries OR data.data.entries
+  const entries = Array.isArray(data?.entries) ? data.entries : 
+                 Array.isArray(data?.trackingEntries) ? data.trackingEntries :
+                 Array.isArray(data?.data?.entries) ? data.data.entries : []
+  
   // Defensive: ensure all required properties exist
   const trackers = Array.isArray(data_model?.trackers) ? data_model.trackers : []
-  const entries = Array.isArray(data?.entries) ? data.entries : []
   const artifactMetadata = metadata || {
     version: 1,
     lastUpdatedBy: 'unknown',
     lastUpdatedAt: Date.now()
+  }
+  
+  // Log rendering errors for debugging
+  if (!Array.isArray(data?.entries) && !Array.isArray(data?.trackingEntries)) {
+    console.warn(
+      `[TrackerLayoutRenderer] entries field not found or not an array. ` +
+      `Data keys: ${Object.keys(data || {}).join(', ') || 'none'}. ` +
+      `Data structure: ${JSON.stringify(data).substring(0, 200)}`
+    )
   }
   
   const [editingTrackerId, setEditingTrackerId] = useState<string | null>(null)
@@ -264,7 +278,9 @@ export function TrackerLayoutRenderer({
                     </div>
                   ) : (
                     <div className={value !== undefined && value !== null ? "text-2xl font-semibold text-foreground" : "text-sm font-medium text-muted-foreground"}>
-                      {value !== undefined && value !== null ? formatValue(trackerId, value) : 'N/A'}
+                      {/* 🔴 CRITICAL FIX (TASK 3.1): Improved error messages */}
+                      {value !== undefined && value !== null ? formatValue(trackerId, value) : 
+                       <span className="text-muted-foreground italic">No data available</span>}
                     </div>
                   )}
                   {(tracker as any)?.status && (
@@ -323,7 +339,10 @@ export function TrackerLayoutRenderer({
                             {getTrackerLabel(tracker)}:
                           </span>{' '}
                           <span className="text-foreground font-medium">
-                            {formatValue(trackerId, entryValue ?? 'N/A')}
+                            {/* 🔴 CRITICAL FIX (TASK 3.1): Improved error messages */}
+                            {entryValue !== undefined && entryValue !== null ? 
+                             formatValue(trackerId, entryValue) : 
+                             <span className="text-muted-foreground italic">No data available</span>}
                           </span>
                         </div>
                       )

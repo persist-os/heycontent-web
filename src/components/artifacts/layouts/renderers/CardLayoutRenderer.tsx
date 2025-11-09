@@ -47,9 +47,13 @@ export function CardLayoutRenderer({
   metadata,
   editButton
 }: CardLayoutRendererProps) {
+  // 🔴 CRITICAL FIX (TASK 3.1): Defensive data extraction - check multiple possible field names
+  // Handle common mismatches: data.keyMetrics OR data.metrics OR data.data.keyMetrics
+  const keyMetrics = data?.keyMetrics || data?.metrics || data?.data?.keyMetrics || {}
+  const summaryText = data?.summaryText || data?.summary || data?.data?.summaryText
+  
   // Defensive: ensure all required properties exist
   const metrics = Array.isArray(data_model?.metrics) ? data_model.metrics : []
-  const keyMetrics = data?.keyMetrics || {}
   const artifactMetadata = metadata || {
     version: 1,
     lastUpdatedBy: 'unknown',
@@ -58,17 +62,20 @@ export function CardLayoutRenderer({
 
   // Format metric value based on format type
   const formatMetric = (value: any, format?: string, unit?: string) => {
-    if (value === null || value === undefined) return 'N/A'
+    // 🔴 CRITICAL FIX (TASK 3.1): Improved error messages
+    if (value === null || value === undefined) {
+      return 'No data available'
+    }
     
     switch (format) {
       case 'number':
-        return typeof value === 'number' ? value.toLocaleString() : value
+        return typeof value === 'number' ? value.toLocaleString() : String(value)
       case 'currency':
-        return typeof value === 'number' ? `$${value.toLocaleString()}` : value
+        return typeof value === 'number' ? `$${value.toLocaleString()}` : String(value)
       case 'percentage':
-        return typeof value === 'number' ? `${value}%` : value
+        return typeof value === 'number' ? `${value}%` : String(value)
       default:
-        return unit ? `${value} ${unit}` : value
+        return unit ? `${value} ${unit}` : String(value)
     }
   }
 
@@ -109,7 +116,20 @@ export function CardLayoutRenderer({
         {metrics.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {metrics.map((metric, metricIdx) => {
-              const value = keyMetrics[metric?.key || '']
+              const metricKey = metric?.key || metric?.id || ''
+              // 🔴 CRITICAL FIX (TASK 3.1): Check multiple possible field names
+              const value = keyMetrics[metricKey] !== undefined ? keyMetrics[metricKey] : 
+                           keyMetrics[metric?.label] !== undefined ? keyMetrics[metric?.label] : 
+                           undefined
+              
+              // Log rendering errors for debugging
+              if (value === undefined && metricKey) {
+                console.warn(
+                  `[CardLayoutRenderer] Metric value not found for key "${metricKey}". ` +
+                  `Available keys: ${Object.keys(keyMetrics).join(', ') || 'none'}`
+                )
+              }
+              
               return (
                 <div
                   key={metric?.key || `metric-${metricIdx}`}
@@ -119,7 +139,11 @@ export function CardLayoutRenderer({
                     {metric?.label || metric?.key || 'Metric'}
                   </div>
                   <div className="text-2xl font-semibold text-foreground">
-                    {formatMetric(value, metric?.format, metric?.unit)}
+                    {value !== undefined && value !== null ? (
+                      formatMetric(value, metric?.format, metric?.unit)
+                    ) : (
+                      <span className="text-muted-foreground italic">No data available</span>
+                    )}
                   </div>
                 </div>
               )
@@ -133,10 +157,10 @@ export function CardLayoutRenderer({
         )}
 
         {/* Summary text if provided */}
-        {data?.summaryText && (
+        {summaryText && (
           <div className="bg-accent/5 border border-accent/20 rounded-lg p-4 mt-4">
             <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">
-              {data.summaryText}
+              {summaryText}
             </p>
           </div>
         )}

@@ -70,13 +70,28 @@ export function TimelineLayoutRenderer({
   metadata,
   editButton
 }: TimelineLayoutRendererProps) {
+  // 🔴 CRITICAL FIX (TASK 3.1): Defensive data extraction - check multiple possible field names
+  // Handle common mismatches: data.events OR data.timelineEvents OR data.data.events
+  const dataAny = data as any
+  const events = Array.isArray(data?.events) ? data.events : 
+                Array.isArray(dataAny?.timelineEvents) ? dataAny.timelineEvents :
+                Array.isArray(dataAny?.data?.events) ? dataAny.data.events : []
+  
   // Defensive: ensure all required properties exist
   const eventTypes = Array.isArray(data_model?.eventTypes) ? data_model.eventTypes : []
-  const events = Array.isArray(data?.events) ? data.events : []
   const artifactMetadata = metadata || {
     version: 1,
     lastUpdatedBy: 'unknown',
     lastUpdatedAt: Date.now()
+  }
+  
+  // Log rendering errors for debugging
+  if (!Array.isArray(data?.events) && !Array.isArray(dataAny?.timelineEvents)) {
+    console.warn(
+      `[TimelineLayoutRenderer] events field not found or not an array. ` +
+      `Data keys: ${Object.keys(data || {}).join(', ') || 'none'}. ` +
+      `Data structure: ${JSON.stringify(data).substring(0, 200)}`
+    )
   }
 
   // Per-event editing state (fixes bug where all events edit at once)
