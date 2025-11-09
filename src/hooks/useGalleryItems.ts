@@ -82,14 +82,36 @@ export function useGalleryItems(props: UseGalleryItemsProps | string) {
     
     const artifactItems: GalleryItem[] = (artifacts || [])
       .filter((a: any) => a && a._id) // ✅ Ensure valid artifacts
-      .map((a: any) => ({
-        ...a,
-        itemType: 'artifact' as const,
-        // Format type for display (e.g., "structured_list" → "Structured List")
-        title: a.type?.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'Artifact',
-        description: a.tags?.join(' • ') || `v${a.metadata?.version || 1}`,
-        updatedAt: a.updatedAt || a._creationTime
-      }))
+      .map((a: any) => {
+        // Extract title with fallback chain (STRIKE 7: UI Title Display)
+        let title = a.title;
+        
+        // Fallback 1: Extract from data.title
+        if (!title && a.data?.title) {
+          title = a.data.title;
+        }
+        
+        // Fallback 2: Extract from markdown first heading (reports)
+        if (!title && a.type === 'report' && a.data?.markdown) {
+          const match = a.data.markdown.match(/^#\s+(.+)$/m);
+          if (match) {
+            title = match[1].trim();
+          }
+        }
+        
+        // Fallback 3: Format type name
+        if (!title) {
+          title = a.type?.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'Artifact';
+        }
+        
+        return {
+          ...a,
+          itemType: 'artifact' as const,
+          title,
+          description: a.tags?.join(' • ') || `v${a.metadata?.version || 1}`,
+          updatedAt: a.updatedAt || a._creationTime
+        };
+      })
     
     const widgetItems: GalleryItem[] = (widgets || [])
       .filter((w: any) => w && w._id && w.status !== 'deleted') // ✅ Ensure valid widgets, exclude deleted

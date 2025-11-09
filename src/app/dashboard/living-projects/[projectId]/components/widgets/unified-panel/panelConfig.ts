@@ -143,7 +143,7 @@ export function getItemTitle(item: any, itemType: DetailItemType): string {
     case 'shard':
       return item.dimension ? `${item.dimension} Shard` : 'Quantum Fragment'
     case 'artifact':
-      return item.artifactType || item.type || 'Artifact'
+      return item.title || item.artifactType || item.type || 'Artifact'
   }
 }
 

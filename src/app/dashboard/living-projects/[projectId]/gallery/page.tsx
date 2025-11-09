@@ -3,9 +3,9 @@
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { Suspense, useState, useEffect } from 'react';
 import { UnifiedGalleryView } from '@/components/gallery';
+import { GalleryLoadingSkeleton } from '@/components/gallery/GalleryLoadingSkeleton';
 import { useGalleryItems } from '@/hooks/useGalleryItems';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
-import { Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 function GalleryContent() {
@@ -50,16 +50,7 @@ function GalleryContent() {
   
   // Loading state
   if (isLoading) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background/95 backdrop-blur-md">
-        <Card className="bg-card/50 backdrop-blur-sm border border-border/40">
-          <CardContent className="py-8 px-12 text-center">
-            <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
-            <p className="text-muted-foreground">Loading gallery...</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <GalleryLoadingSkeleton />;
   }
   
   // Navigate back to project or conversation
@@ -102,16 +93,7 @@ function GalleryContent() {
 
 export default function GalleryPage() {
   return (
-    <Suspense fallback={
-      <div className="fixed inset-0 flex items-center justify-center bg-background/95 backdrop-blur-md">
-        <Card className="bg-card/50 backdrop-blur-sm border border-border/40">
-          <CardContent className="py-8 px-12 text-center">
-            <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
-            <p className="text-muted-foreground">Loading gallery...</p>
-          </CardContent>
-        </Card>
-      </div>
-    }>
+    <Suspense fallback={<GalleryLoadingSkeleton />}>
       <GalleryContent />
     </Suspense>
   );

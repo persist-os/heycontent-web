@@ -214,6 +214,12 @@ export function ArtifactCard({
   
   const { width, height } = getCardDimensions(size)
   const styling = getArtifactStyling(artifact.type)  // Fixed: use artifact.type instead of artifact.artifactType
+  
+  // Extract title with fallback chain (STRIKE 8: UI Component Title Display)
+  const artifactTitle = artifact.title || 
+    (artifact.type?.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())) || 
+    styling.name ||
+    'Artifact';
   const Icon = styling.icon
   const preview = getArtifactPreview(artifact)
   
@@ -277,7 +283,7 @@ export function ArtifactCard({
                   ${styling.iconColor.replace('text-', 'group-hover:text-')}
                   ${size === 'large' ? 'text-lg' : size === 'medium' ? 'text-base' : 'text-sm'}
                 `}>
-                  {styling.name}
+                  {artifactTitle}
                 </h3>
                 
                 {/* Version Badge */}

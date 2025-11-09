@@ -6,6 +6,7 @@
  */
 
 import { v } from "convex/values";
+import { Id } from "../_generated/dataModel";
 
 // Widget status validator
 // ✅ Updated to include execution statuses that decision engine checks for
@@ -127,6 +128,7 @@ export const widgetSchemaFields = {
     personality: v.string(),
     responsibilities: v.array(v.string()),
     spawnCondition: v.string(),
+    artifactType: v.optional(v.string()),  // ✅ Artifact type this agent generates
   }))),
   
   // ❌ NO artifact relationships here - widgets discover artifacts at runtime
@@ -164,6 +166,9 @@ export const widgetSchemaFields = {
     skipIfNoActivity: v.boolean(),
   })),
   workflowStage: v.optional(widgetWorkflowStageValidator),
+  
+  // ✅ PHASE 2: Default artifact type for widget family
+  defaultArtifactType: v.optional(widgetOutputArtifactTypeValidator),  // ✅ Default artifact type for agents without explicit type
   
   // Metadata
   status: widgetStatusValidator,
@@ -305,6 +310,8 @@ export const widgetBatchValidator = v.object({
     skipIfNoActivity: v.boolean(),
   })),
   workflowStage: v.optional(widgetWorkflowStageValidator),
+  // ✅ PHASE 2: Default artifact type for widget family
+  defaultArtifactType: v.optional(widgetOutputArtifactTypeValidator),  // ✅ Default artifact type for agents without explicit type
   // ✅ PHASE 2: Family Identity fields
   familyIdentity: v.optional(v.object({
     familyName: v.string(),
@@ -319,6 +326,7 @@ export const widgetBatchValidator = v.object({
     personality: v.string(),
     responsibilities: v.array(v.string()),
     spawnCondition: v.string(),
+    artifactType: v.optional(v.string()),  // ✅ Artifact type this agent generates
   }))),
 });
 
@@ -698,5 +706,98 @@ export interface ProjectWidgets {
   updatedAt: number;
   generated_at?: string | number;
   widgets?: any[];
+}
+
+// ============================================================================
+// HELPER FUNCTIONS: Transform Validator Data to DB Schema Format
+// ============================================================================
+
+/**
+ * Transform widgetBatchValidator data to widgetSchemaFields format
+ * 
+ * Validator uses camelCase (widgetId, dataSource, updateFrequency)
+ * DB schema uses snake_case for old fields (widget_id, data_sources, update_frequency)
+ * and camelCase for new fields (familyIdentity, agentRoster, etc.)
+ * 
+ * ✅ FOLLOWS CONVEX_SAVE_ABSOLUTE_LAW.md Pattern 16: Validator Centralization
+ */
+export function widgetValidatorToDbSchema(
+  widget: {
+    widgetId: string;
+    widgetType: string;
+    title: string;
+    description?: string;
+    category?: string;
+    priority?: number;
+    size?: string;
+    theme?: string;
+    position?: number;
+    config?: any;
+    dataSource?: string[];
+    updateFrequency?: string;
+    interactive?: boolean;
+    editable?: boolean;
+    shareable?: boolean;
+    familyIdentity?: any;
+    agentRoster?: any;
+    defaultArtifactType?: string;
+    capabilities?: any;
+    execution_history?: any;
+    inputRequirements?: string[];
+    outputArtifacts?: any;
+    dependencyHints?: any;
+    executionProfile?: any;
+    workflowStage?: string;
+  },
+  systemFields: {
+    projectId: Id<"projects">;
+    fingerprintId: any;
+    userId: string;
+    status: "active" | "pending" | "ready" | "needs_input" | "working" | "completed" | "failed" | "archived" | "deleted";
+    createdAt: number;
+    updatedAt: number;
+  },
+  options?: {
+    defaultPosition?: number;  // For append operations
+  }
+): any {
+  return {
+    // === OLD FIELDS (snake_case in DB) ===
+    widget_id: widget.widgetId,
+    widget_type: widget.widgetType,
+    title: widget.title,
+    description: widget.description,
+    category: widget.category ?? "general",
+    priority: widget.priority ?? 5,
+    size: widget.size ?? "medium",
+    theme: widget.theme ?? "default",
+    position: widget.position ?? options?.defaultPosition ?? 0,
+    config: widget.config ?? {},
+    data_sources: widget.dataSource ?? [],
+    update_frequency: widget.updateFrequency ?? "on_demand",
+    interactive: widget.interactive ?? true,
+    editable: widget.editable ?? true,
+    shareable: widget.shareable ?? false,
+    
+    // === NEW FIELDS (camelCase in DB) ===
+    familyIdentity: widget.familyIdentity,
+    agentRoster: widget.agentRoster,
+    defaultArtifactType: widget.defaultArtifactType,
+    capabilities: widget.capabilities,
+    execution_history: widget.execution_history,
+    inputRequirements: widget.inputRequirements,
+    outputArtifacts: widget.outputArtifacts,
+    dependencyHints: widget.dependencyHints,
+    executionProfile: widget.executionProfile,
+    workflowStage: widget.workflowStage,
+    
+    // === SYSTEM FIELDS ===
+    projectId: systemFields.projectId,
+    fingerprintId: systemFields.fingerprintId,
+    userId: systemFields.userId,
+    status: systemFields.status,
+    createdAt: systemFields.createdAt,
+    updatedAt: systemFields.updatedAt,
+  };
 }
 

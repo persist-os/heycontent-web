@@ -19,13 +19,14 @@ export const artifactTypeValidator = v.union(
  * Artifact schema fields - matches backend/app/models/artifacts.py EXACTLY
  * 
  * DATA FLOW:
- * 1. AI generates: type, data_model, data, tags
+ * 1. AI generates: type, title, data_model, data, tags
  * 2. Backend adds: metadata, projectId, widgetId, userId
  * 3. Convex auto-generates: _id, createdAt, updatedAt
  */
 export const artifactSchemaFields = {
   // AI-GENERATED FIELDS
   type: artifactTypeValidator,
+  title: v.optional(v.string()),  // Human-readable artifact title (AI generates, optional)
   data_model: v.any(),       // Structure/format (AI generates: {layout, fields, etc})
   data: v.any(),             // Actual content (AI generates: rows, text, events, etc)
   tags: v.optional(v.array(v.string())),  // Categorization (AI generates, optional)

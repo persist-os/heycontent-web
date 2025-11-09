@@ -8,6 +8,7 @@ import {
   deleteProjectWidgetsArgsValidator,
   updateProjectWidgetArgsValidator,
   deleteProjectWidgetArgsValidator,
+  widgetValidatorToDbSchema,
 } from "./types/widgets";
 
 /**
@@ -173,49 +174,15 @@ export const upsertProjectWidgets = mutation({
     const widgetIds: Id<"widgets">[] = [];
     
     for (const widget of args.widgets) {
-      // ✅ PHASE 2: Bridge validator (camelCase) to DB schema (mixed case)
-      // Validator receives camelCase from Python's model_dump(by_alias=True)
-      // DB schema uses snake_case for old fields, camelCase for new fields
-      const widgetData = {
-        // === OLD FIELDS (snake_case in DB) ===
-        widget_id: widget.widgetId,                          // validator: widgetId → DB: widget_id
-        widget_type: widget.widgetType,                      // validator: widgetType → DB: widget_type
-        title: widget.title,
-        description: widget.description,
-        category: widget.category ?? "general",
-        priority: widget.priority ?? 5,
-        size: widget.size ?? "medium",
-        theme: widget.theme ?? "default",
-        position: widget.position ?? 0,
-        config: widget.config ?? {},
-        data_sources: widget.dataSource ?? [],               // validator: dataSource → DB: data_sources
-        update_frequency: widget.updateFrequency ?? "on_demand",  // validator: updateFrequency → DB: update_frequency
-        interactive: widget.interactive ?? true,
-        editable: widget.editable ?? true,
-        shareable: widget.shareable ?? false,
-        
-        // === NEW FIELDS (camelCase in DB) ===
-        // Phase 2 family fields (validator and DB both use camelCase)
-        familyIdentity: widget.familyIdentity,
-        agentRoster: widget.agentRoster,
-        
-        // Orchestration fields (validator and DB both use camelCase)
-        capabilities: widget.capabilities,
-        execution_history: widget.execution_history,
-        inputRequirements: widget.inputRequirements,
-        outputArtifacts: widget.outputArtifacts,
-        dependencyHints: widget.dependencyHints,
-        executionProfile: widget.executionProfile,
-        workflowStage: widget.workflowStage,
-        
-        // === SYSTEM FIELDS ===
+      // ✅ Use validator transformation helper instead of manual mapping
+      const widgetData = widgetValidatorToDbSchema(widget, {
         projectId: args.projectId,
         fingerprintId: args.fingerprintId,
         userId: args.userId,
-        status: "active" as const,  // ✅ Widgets are active immediately (decision engine removed)
+        status: "active",
         createdAt: now,
         updatedAt: now,
-      };
+      });
       
       const widgetId = await ctx.db.insert("widgets", widgetData);
       widgetIds.push(widgetId);
@@ -312,38 +279,17 @@ export const appendWidgets = mutation({
     const existingWidgetIds = project.widgetIds || [];
     
     for (const widget of args.widgets) {
-      const widgetData = {
-        widget_id: widget.widgetId,
-        widget_type: widget.widgetType,
-        title: widget.title,
-        description: widget.description,
-        category: widget.category ?? "general",
-        priority: widget.priority ?? 5,
-        size: widget.size ?? "medium",
-        theme: widget.theme ?? "default",
-        position: widget.position ?? (existingWidgetIds.length + newWidgetIds.length),
-        config: widget.config ?? {},
-        data_sources: widget.dataSource ?? [],
-        update_frequency: widget.updateFrequency ?? "on_demand",
-        interactive: widget.interactive ?? true,
-        editable: widget.editable ?? true,
-        shareable: widget.shareable ?? false,
-        familyIdentity: widget.familyIdentity,
-        agentRoster: widget.agentRoster,
-        capabilities: widget.capabilities,
-        execution_history: widget.execution_history,
-        inputRequirements: widget.inputRequirements,
-        outputArtifacts: widget.outputArtifacts,
-        dependencyHints: widget.dependencyHints,
-        executionProfile: widget.executionProfile,
-        workflowStage: widget.workflowStage,
+      // ✅ Use validator transformation helper instead of manual mapping
+      const widgetData = widgetValidatorToDbSchema(widget, {
         projectId: args.projectId,
         fingerprintId: args.fingerprintId,
         userId: args.userId,
-        status: "active" as const,
+        status: "active",
         createdAt: now,
         updatedAt: now,
-      };
+      }, {
+        defaultPosition: existingWidgetIds.length + newWidgetIds.length,
+      });
       
       const widgetId = await ctx.db.insert("widgets", widgetData);
       newWidgetIds.push(widgetId);
