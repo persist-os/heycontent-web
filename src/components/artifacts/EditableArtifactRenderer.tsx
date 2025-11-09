@@ -23,8 +23,8 @@ import { Artifact } from '@/types/artifacts'
 import { Id } from '@/convex/_generated/dataModel'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
 import { Edit, Save, X } from 'lucide-react'
+import { ArtifactFormEditor } from './editors/ArtifactFormEditor'
 
 interface ConflictInfo {
   artifactId: string
@@ -61,8 +61,7 @@ export function EditableArtifactRenderer({
   onConflict
 }: EditableArtifactRendererProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-  const [editJson, setEditJson] = useState('')
-  const [jsonError, setJsonError] = useState<string | null>(null)
+  const [formData, setFormData] = useState<any>(artifact.data)
   
   // Auto-wire editing hook
   const editor = useUnifiedArtifactEditor({
@@ -81,39 +80,23 @@ export function EditableArtifactRenderer({
 
   // Handle opening edit modal
   const handleOpenEditModal = () => {
-    try {
-      const jsonString = JSON.stringify(editor.localData, null, 2)
-      setEditJson(jsonString)
-      setJsonError(null)
-      setIsEditModalOpen(true)
-    } catch (err) {
-      setJsonError('Failed to serialize artifact data')
-      setIsEditModalOpen(true)
-    }
+    setFormData(editor.localData)
+    setIsEditModalOpen(true)
   }
 
-  // Handle saving edited JSON
+  // Handle saving edited data
   const handleSaveEdit = async () => {
-    try {
-      const parsedData = JSON.parse(editJson)
-      setJsonError(null)
-      
-      const result = await editor.updateData(parsedData)
-      if (result.success) {
-        setIsEditModalOpen(false)
-      } else {
-        setJsonError(result.error || 'Failed to save artifact')
-      }
-    } catch (err) {
-      setJsonError(err instanceof Error ? err.message : 'Invalid JSON format')
+    const result = await editor.updateData(formData)
+    if (result.success) {
+      setIsEditModalOpen(false)
     }
+    return result
   }
 
   // Handle cancel
   const handleCancelEdit = () => {
+    setFormData(editor.localData) // Reset to original
     setIsEditModalOpen(false)
-    setEditJson('')
-    setJsonError(null)
   }
 
   // If editing disabled, use regular renderer
@@ -156,28 +139,21 @@ export function EditableArtifactRenderer({
           <DialogHeader>
             <DialogTitle>Edit Artifact</DialogTitle>
             <DialogDescription>
-              Edit the entire artifact data as JSON. Changes will be saved as a new version.
+              Edit the artifact data. Changes will be saved as a new version.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
-            {jsonError && (
-              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-md text-sm text-red-600 dark:text-red-400">
-                {jsonError}
-              </div>
-            )}
-            
-            <Textarea
-              value={editJson}
-              onChange={(e) => {
-                setEditJson(e.target.value)
-                setJsonError(null)
-              }}
-              className="w-full min-h-[400px] font-mono text-sm"
-              placeholder="Enter JSON data..."
+@            <ArtifactFormEditor
+              artifact={artifact}
+              onSave={handleSaveEdit}
+              onCancel={handleCancelEdit}
+              isSaving={editor.isSaving}
+              formData={formData}
+              setFormData={setFormData}
             />
             
-            <div className="text-xs text-muted-foreground">
+            <div className="text-xs text-muted-foreground border-t border-border/20 pt-3">
               <p>• Version: {artifact.metadata?.version || 1}</p>
               <p>• Changes will create version {(artifact.metadata?.version || 1) + 1}</p>
             </div>
@@ -188,7 +164,7 @@ export function EditableArtifactRenderer({
               <X className="w-4 h-4 mr-2" />
               Cancel
             </Button>
-            <Button onClick={handleSaveEdit} disabled={editor.isSaving || !!jsonError}>
+            <Button onClick={handleSaveEdit} disabled={editor.isSaving}>
               <Save className="w-4 h-4 mr-2" />
               {editor.isSaving ? 'Saving...' : 'Save Changes'}
             </Button>
