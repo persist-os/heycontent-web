@@ -192,7 +192,13 @@ export const userPreferencesValidator = v.object({
   interactionPreferences: v.optional(interactionPreferenceValidator),
   learningPreferences: v.optional(v.any()), // Flexible learning style preferences
   adaptationRate: v.optional(v.number()), // How quickly preferences should evolve
-  lastPreferenceUpdate: v.optional(v.number())
+  lastPreferenceUpdate: v.optional(v.number()),
+  // Preference learning fields (from backend: app/user_persona_toolkit/cognitive_field_service.py:247)
+  prefers_concise_input: v.optional(v.boolean()),
+  prefers_detailed_input: v.optional(v.boolean()),
+  provides_explicit_feedback: v.optional(v.boolean()),
+  high_quality_threshold: v.optional(v.boolean()),
+  low_quality_threshold: v.optional(v.boolean()),
 });
 
 // ============================================================================
@@ -379,6 +385,12 @@ export type UserPreferences = {
   learningPreferences?: any;
   adaptationRate?: number;
   lastPreferenceUpdate?: number;
+  // Preference learning fields (from backend: app/user_persona_toolkit/cognitive_field_service.py:247)
+  prefers_concise_input?: boolean;
+  prefers_detailed_input?: boolean;
+  provides_explicit_feedback?: boolean;
+  high_quality_threshold?: boolean;
+  low_quality_threshold?: boolean;
 };
 
 export type MABArm = {
