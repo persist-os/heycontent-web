@@ -109,12 +109,12 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
+     * Match all request paths except for:
      * - api (API routes)
      * - _next/static (static files)
      * - _next/image (image optimization files)
-     * - Static assets: .png, .svg, .ico, .jpg, .jpeg, .webp, .json, .txt, .xml, .webmanifest
+     * - Static assets are handled by early return in middleware function
      */
-    '/((?!api|_next/static|_next/image|.*\\.(png|svg|ico|jpg|jpeg|webp|json|txt|xml|webmanifest)$).*)',
+    '/((?!api|_next/static|_next/image).*)',
   ],
 };

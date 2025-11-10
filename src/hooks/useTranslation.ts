@@ -71,11 +71,11 @@ export function useTranslation(
           return prev; // No change needed
         }
         return {
-          text: sourceText,
-          isTranslating: false,
-          isFromCache: false,
-          error: null,
-          retryCount: 0,
+        text: sourceText,
+        isTranslating: false,
+        isFromCache: false,
+        error: null,
+        retryCount: 0,
         };
       });
       return;
@@ -98,7 +98,7 @@ export function useTranslation(
         error: batchTranslation.error,
         retryCount: 0,
       };
-    });
+      });
   }, [batchTranslation.text, batchTranslation.isTranslating, batchTranslation.isFromCache, batchTranslation.error, sourceText, shouldTranslate]);
 
   // Manual retry function for failed translations

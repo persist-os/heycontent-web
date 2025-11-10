@@ -158,7 +158,7 @@ export function ProjectContentSection({
         {!searchTerm.trim() && (
           <p className="text-sm text-muted-foreground mt-2">
             <T context="project.content.empty.description">
-              Content will appear here when you attach notes, conversations, or generate crystals for this project.
+            Content will appear here when you attach notes, conversations, or generate crystals for this project.
             </T>
           </p>
         )}
