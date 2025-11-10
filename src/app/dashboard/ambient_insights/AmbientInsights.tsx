@@ -6,9 +6,9 @@ import { getApiKey } from '@/app/lib/api-helpers';
 import { Button } from '@/components/ui/button';
 import { InsightCard } from '@/components/ui/insight-card';
 import { LoadingGrid } from '@/components/ui/loading-grid';
-import { CenterContainer, ContentWrapper } from '@/components/ui/layout';
-import { RefreshCw, Users, BarChart3, TrendingUp, Lightbulb, Target, Calendar, Zap } from 'lucide-react';
-import { T, TButton } from '@/components/translation';
+import { Users, BarChart3, TrendingUp, Lightbulb, Target, Calendar, Zap, RefreshCw } from 'lucide-react';
+import { T } from '@/components/translation';
+import { cn } from '@/lib/utils';
 
 // Type for the Convex response
 type ConvexInsight = {
@@ -22,6 +22,7 @@ type ConvexInsight = {
 type InsightWithOptionalIcon = Omit<AmbientInsight, 'icon'> & { 
   icon?: React.ReactNode;
   id: string;
+  recommendation?: string;
 };
 
 interface AmbientInsightsProps {
@@ -32,12 +33,15 @@ interface AmbientInsightsProps {
 }
 
 // Layout wrapper for consistent styling
-const InsightsContainer: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <CenterContainer variant="full">
-    <ContentWrapper maxWidth="xl" className="px-6">
+const InsightsContainer: React.FC<{ children: React.ReactNode; isMobile?: boolean }> = ({ children, isMobile }) => (
+  <div className="w-full py-4 sm:py-6">
+    <div className={cn(
+      "mx-auto",
+      isMobile ? "px-0" : "max-w-6xl px-3 sm:px-4 lg:px-6"
+    )}>
       {children}
-    </ContentWrapper>
-  </CenterContainer>
+    </div>
+  </div>
 );
 
 // Constants
@@ -72,7 +76,21 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
   const [isRequestingInsights, setIsRequestingInsights] = useState(false);
   const requestedInsightsRef = React.useRef<string | null>(null);
   
-  // Page state for cycling through insights
+  // Mobile detection
+  const [isMobile, setIsMobile] = useState(false);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Page state for cycling through insights (desktop only)
   const [currentPage, setCurrentPage] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [shownInsightIds, setShownInsightIds] = useState<Set<string>>(new Set());
@@ -111,6 +129,7 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
         title: item.title,
         description: item.content,
         action: item.recommendation || '',
+        recommendation: item.recommendation || '',
         icon: getIconForCategory(item.category || 'default'),
         id: `${convexInsights._id}-${index}` // Use stable ID based on convex data
       }));
@@ -118,31 +137,47 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
     return [];
   }, [convexInsights?._id, convexInsights?.data]);
 
-  // Get current page of insights with smart pagination logic
+  // Get current page of insights with smart pagination logic (desktop only)
+  // On mobile, show all insights in horizontal scroll
   const currentPageInsights = useMemo(() => {
     if (allInsights.length === 0) return [];
+    
+    // Mobile: show all insights
+    if (isMobile) {
+      return allInsights;
+    }
 
+    // Desktop: paginated view
     if (currentPage === 0) {
-      // First page: show first 4 insights (0-3)
       return allInsights.slice(0, CARDS_PER_PAGE);
     } else if (currentPage === 1) {
-      // Second page: show next 4 insights (4-7)
       return allInsights.slice(4, 8);
     } else if (currentPage === 2 && allInsights.length >= 8) {
-      // Third page: show last 2 insights (8-9) + 2 random from first 8
       const lastTwo = allInsights.slice(8, 10);
       const firstEight = allInsights.slice(0, 8);
-      
-      // Pick 2 random from first 8
       const shuffled = [...firstEight].sort(() => Math.random() - 0.5);
       const randomTwo = shuffled.slice(0, 2);
-      
       return [...lastTwo, ...randomTwo];
     }
     
-    // Fallback: return first 4
     return allInsights.slice(0, CARDS_PER_PAGE);
-  }, [allInsights, currentPage]);
+  }, [allInsights, currentPage, isMobile]);
+
+  // Track scroll position for mobile carousel indicators
+  useEffect(() => {
+    if (!isMobile || !scrollContainerRef.current) return;
+    
+    const container = scrollContainerRef.current;
+    const handleScroll = () => {
+      const scrollLeft = container.scrollLeft;
+      const cardWidth = container.clientWidth;
+      const newIndex = Math.round(scrollLeft / cardWidth);
+      setActiveIndex(newIndex);
+    };
+    
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [isMobile, currentPageInsights.length]);
 
   // Track shown insights in a separate effect
   useEffect(() => {
@@ -156,21 +191,64 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
     return currentPage >= 2 && allInsights.length > 0;
   }, [currentPage, allInsights.length]);
 
-  // Refresh function with smart pagination logic
+  // Refresh function - different behavior for mobile vs desktop
   const handleRefresh = async () => {
     if (!userId) return;
     
     setIsRefreshing(true);
     
     try {
-      // If we haven't exhausted local insights, just show next page
+      // Mobile: Always immediately refresh from backend
+      if (isMobile) {
+        const apiKey = await getApiKey();
+        if (!apiKey) {
+          console.error('No API key found for ambient_insights request');
+          setIsRefreshing(false);
+          return;
+        }
+        
+        // Remove existing insights to force regeneration
+        await fetch('/api/ambient_insights/remove', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({ userId }),
+        });
+        
+        // Generate new insights
+        const response = await fetch('/api/ambient_insights', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            context_type: 'manual_refresh',
+            content: JSON.stringify({ user_id: userId })
+          })
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error('Error requesting ambient insights:', errorData);
+        } else {
+          await response.json();
+          setActiveIndex(0); // Reset to first card
+        }
+        setIsRefreshing(false);
+        return;
+      }
+      
+      // Desktop: Pagination logic (show next page, then refresh when exhausted)
       if (!needsBackendCall) {
         setCurrentPage(prev => prev + 1);
         setIsRefreshing(false);
         return;
       }
       
-      // We need fresh insights from backend
+      // Desktop: We need fresh insights from backend
       const apiKey = await getApiKey();
       if (!apiKey) {
         console.error('No API key found for ambient_insights request');
@@ -178,7 +256,6 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
         return;
       }
       
-      // First, remove existing insights to force regeneration
       await fetch('/api/ambient_insights/remove', {
         method: 'POST',
         headers: {
@@ -188,7 +265,6 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
         body: JSON.stringify({ userId }),
       });
       
-      // Then generate new insights
       const response = await fetch('/api/ambient_insights', {
         method: 'POST',
         headers: {
@@ -206,7 +282,6 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
         console.error('Error requesting ambient insights:', errorData);
       } else {
         await response.json();
-        // Reset to first page after getting new data
         setCurrentPage(0);
         setShownInsightIds(new Set());
       }
@@ -304,39 +379,86 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
   }
 
   return (
-    <InsightsContainer>
-      {/* Header with dynamic greeting and Refresh button */}
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg sm:text-xl lg:text-2xl font-light text-foreground pr-6">
+    <InsightsContainer isMobile={isMobile}>
+      {/* Header with greeting and Refresh button - Show on all screen sizes */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-6 sm:mb-8">
+        <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-light text-foreground pr-0 sm:pr-6 flex-1 leading-tight">
           <T context="ambient_insights.greeting">{selectedGreeting}</T>
         </h2>
         <Button
           onClick={handleRefresh}
           disabled={isRefreshing}
           variant="outline"
-          size="sm"
-          className="flex items-center gap-2 text-xs sm:text-sm"
+          size="default"
+          className="flex items-center gap-2 text-base sm:text-lg shrink-0"
         >
-          <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-5 h-5 sm:w-6 sm:h-6 ${isRefreshing ? 'animate-spin' : ''}`} />
           <span className="hidden sm:inline">
             <T context="button.refresh">Refresh</T>
           </span>
-          <span className="sm:hidden">↻</span>
+          <span className="sm:hidden">Refresh</span>
         </Button>
       </div>
 
-      {/* Cards Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {currentPageInsights.map((insight) => (
-          <InsightCard
-            key={insight.id}
-            title={insight.title}
-            description={insight.description}
-            icon={insight.icon}
-            onClick={() => onInsightClick?.(insight.action, insight)}
-          />
-        ))}
-      </div>
+      {/* Mobile: Horizontal swipeable carousel */}
+      {isMobile ? (
+        <div className="relative">
+          <div 
+            ref={scrollContainerRef}
+            className="overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-smooth pb-2 -mx-3 px-3 touch-pan-x"
+          >
+            <div className="flex gap-4 w-max">
+              {currentPageInsights.map((insight, index) => (
+                <div
+                  key={insight.id}
+                  className="snap-start flex-shrink-0 w-[calc(100vw-2rem)]"
+                >
+                  <InsightCard
+                    title={insight.title}
+                    description={insight.description}
+                    recommendation={insight.recommendation}
+                    icon={insight.icon}
+                    onClick={() => onInsightClick?.(insight.action, insight)}
+                    maxFontSize={18}
+                    minFontSize={16}
+                    responsive={false}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Scroll indicator dots */}
+          {currentPageInsights.length > 1 && (
+            <div className="flex justify-center gap-2 mt-4">
+              {currentPageInsights.map((_, index) => (
+                <div
+                  key={index}
+                  className={cn(
+                    "h-1.5 rounded-full transition-all duration-300",
+                    index === activeIndex 
+                      ? "w-6 bg-primary" 
+                      : "w-1.5 bg-muted-foreground/30"
+                  )}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Desktop: Grid layout */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
+          {currentPageInsights.map((insight) => (
+            <InsightCard
+              key={insight.id}
+              title={insight.title}
+              description={insight.description}
+              recommendation={insight.recommendation}
+              icon={insight.icon}
+              onClick={() => onInsightClick?.(insight.action, insight)}
+            />
+          ))}
+        </div>
+      )}
     </InsightsContainer>
   );
 };

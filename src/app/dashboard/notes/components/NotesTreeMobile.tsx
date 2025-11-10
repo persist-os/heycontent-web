@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { FileText, Star, Trash2, CheckSquare, Square, X } from 'lucide-react';
-import { DndContext, DragOverlay } from '@dnd-kit/core';
+import { FileText } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCreateNote } from '../hooks/useCreateNote';
 import { useNotes } from '@/app/context/notes-context';
@@ -12,20 +11,16 @@ import { useAuth } from '@/app/context/auth-context';
 import { CreateFolderModal } from './folders/CreateFolderModal';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 import { NotesTreeProps, FilterType } from './NotesTree.types';
-import { NotesTreeHeader } from './NotesTreeHeader';
+import { CollapsibleHeader } from './CollapsibleHeader';
 import { TreeNodeRenderer } from './TreeNodeComponents';
 import { useNotesTreeStructure } from './useNotesTreeStructure';
-import { useNotesTreeDragDrop } from './useNotesTreeDragDrop';
 import { Note } from '../types';
 import { T } from '@/components/translation';
-import { Button } from '@/components/ui/button';
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import toast from 'react-hot-toast';
-import { useIsMobile } from '@/app/dashboard/thinking_lab/layouts/ResponsiveLayout';
-import { NotesTreeMobile } from './NotesTreeMobile';
 
-export function NotesTree({
+export function NotesTreeMobile({
   notes,
   projects: propProjects,
   onEditNote,
@@ -34,7 +29,6 @@ export function NotesTree({
   onUpdateNote,
   isLoading
 }: NotesTreeProps) {
-  const isMobile = useIsMobile();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['recent', 'projects', 'tags', 'important', 'shared', 'my-shared', 'user-folders']));
@@ -52,13 +46,12 @@ export function NotesTree({
   
   const router = useRouter();
   const { createNote } = useCreateNote();
-  const { updateNote, deleteNote } = useNotes();
+  const { updateNote } = useNotes();
   const { firebaseUser } = useAuth();
   const batchDeleteNotesMutation = useMutation(api.noteMutations.batchDeleteNotes);
   
   const { 
     projects: hookProjects, 
-    addContentToProject,
     deleteProject,
     batchDeleteProjects,
   } = useProjects(firebaseUser?.uid);
@@ -67,14 +60,13 @@ export function NotesTree({
     folders,
     isCreating: isCreatingFolder,
     createFolder,
-    moveNoteToFolder,
     getFoldersByParent
   } = useFolders(firebaseUser?.uid);
   
   // Use projects from props if provided, otherwise from hook
   const projects = propProjects || hookProjects;
 
-  // Use custom hooks for tree structure and drag & drop
+  // Use custom hooks for tree structure (no drag & drop on mobile)
   const { treeStructure, sharedNotes, mySharedContent } = useNotesTreeStructure({
     notes,
     projects,
@@ -82,24 +74,6 @@ export function NotesTree({
     selectedFilter,
     firebaseUserId: firebaseUser?.uid,
     getFoldersByParent
-  });
-
-  // Wrapper function to match expected signature
-  const updateNoteWrapper = useCallback(async (noteId: string, updates: Partial<Note>): Promise<void> => {
-    await updateNote(noteId, updates);
-  }, [updateNote]);
-
-  const {
-    sensors,
-    draggedNote,
-    dragOverFolder,
-    handleDragStart,
-    handleDragOver,
-    handleDragEnd,
-  } = useNotesTreeDragDrop({
-    updateNote: updateNoteWrapper,
-    addContentToProject,
-    moveNoteToFolder
   });
 
   const toggleNode = useCallback((nodeId: string) => {
@@ -116,8 +90,6 @@ export function NotesTree({
 
   const handleFilterChange = useCallback((filter: FilterType) => {
     setSelectedFilter(filter);
-    // Exit selection mode when switching filters (optional - could keep selection)
-    // For now, we'll keep selection mode but clear selections
     if (isSelectionMode) {
       setSelectedProjects(new Set());
       setSelectedNotes(new Set());
@@ -141,7 +113,6 @@ export function NotesTree({
   }, [createNote, router, selectedFilter]);
 
   const handleCreateProject = useCallback(() => {
-    // Navigate to thinking lab - a new conversation will create a new project automatically
     router.push('/dashboard/thinking_lab');
   }, [router]);
 
@@ -174,11 +145,9 @@ export function NotesTree({
     setProjectToDelete(null);
   }, []);
 
-  // Selection mode handlers
   const toggleSelectionMode = useCallback(() => {
     setIsSelectionMode(prev => {
       if (!prev) {
-        // Entering selection mode - clear any existing selections
         setSelectedProjects(new Set());
         setSelectedNotes(new Set());
       }
@@ -215,7 +184,6 @@ export function NotesTree({
       const allProjectIds = projects.map(p => p._id);
       setSelectedProjects(new Set(allProjectIds));
     } else {
-      // For notes, select all visible notes based on filter
       const getAllNotesFromTree = (node: any): Note[] => {
         const notes: Note[] = [];
         if (node.type === 'note' && node.note) {
@@ -236,26 +204,12 @@ export function NotesTree({
     }
   }, [selectedFilter, projects, treeStructure]);
 
-  const getAllNotesFromTree = useCallback((node: any): Note[] => {
-    const notes: Note[] = [];
-    if (node.type === 'note' && node.note) {
-      notes.push(node.note);
-    }
-    if (node.children) {
-      node.children.forEach((child: any) => {
-        notes.push(...getAllNotesFromTree(child));
-      });
-    }
-    return notes;
-  }, []);
-
   const deselectAll = useCallback(() => {
     setSelectedProjects(new Set());
     setSelectedNotes(new Set());
   }, []);
 
   const handleBatchDelete = useCallback(() => {
-    // Handle both projects and notes in a single batch
     const projectIds = selectedProjects.size > 0 ? Array.from(selectedProjects) : [];
     const noteIds = selectedNotes.size > 0 ? Array.from(selectedNotes) : [];
     
@@ -290,7 +244,6 @@ export function NotesTree({
       let failCount = 0;
       const messages: string[] = [];
       
-      // Process project deletion results
       if (projectIds.length > 0) {
         const projectResult = results[0];
         if (projectResult.status === 'fulfilled' && projectResult.value) {
@@ -301,7 +254,6 @@ export function NotesTree({
         }
       }
       
-      // Process note deletion results
       if (noteIds.length > 0) {
         const noteResult = results[1];
         if (noteResult.status === 'fulfilled' && noteResult.value && typeof noteResult.value === 'object' && 'successfulOperations' in noteResult.value) {
@@ -316,7 +268,6 @@ export function NotesTree({
         }
       }
       
-      // Show success/error messages
       if (successCount > 0) {
         toast.success(<T context="toast.dashboard.notes.delete.success">Successfully deleted {messages.join(' and ')}</T>);
       }
@@ -324,7 +275,6 @@ export function NotesTree({
         toast.error(<T context="toast.dashboard.notes.delete.error.count">Failed to delete {failCount} item{failCount !== 1 ? 's' : ''}</T>);
       }
       
-      // Clear selections and exit selection mode
       setProjectsToBatchDelete(null);
       setNotesToBatchDelete(null);
       setSelectedProjects(new Set());
@@ -344,7 +294,6 @@ export function NotesTree({
     setNotesToBatchDelete(null);
   }, []);
 
-  // Total count includes both projects and notes for mixed deletion
   const selectedCount = selectedProjects.size + selectedNotes.size;
   const hasSelection = selectedCount > 0;
 
@@ -361,8 +310,8 @@ export function NotesTree({
           onToggleNode={toggleNode}
           router={router}
           searchTerm={searchTerm}
-          dragOverFolder={dragOverFolder}
-          draggedNote={draggedNote}
+          dragOverFolder={null}
+          draggedNote={null}
           onDeleteProject={handleDeleteProject}
           isDeletingProject={(id) => isDeletingProject && projectToDelete === id}
           isSelectionMode={isSelectionMode}
@@ -381,22 +330,7 @@ export function NotesTree({
         )}
       </div>
     );
-  }, [expandedNodes, toggleNode, router, searchTerm, dragOverFolder, draggedNote, handleDeleteProject, isDeletingProject, projectToDelete, isSelectionMode, selectedProjects, selectedNotes, toggleProjectSelection, toggleNoteSelection]);
-
-  // Render mobile version if on mobile (after all hooks are called)
-  if (isMobile) {
-    return (
-      <NotesTreeMobile
-        notes={notes}
-        projects={propProjects}
-        onEditNote={onEditNote}
-        onDeleteNote={onDeleteNote}
-        onToggleImportant={onToggleImportant}
-        onUpdateNote={onUpdateNote}
-        isLoading={isLoading}
-      />
-    );
-  }
+  }, [expandedNodes, toggleNode, router, searchTerm, handleDeleteProject, isDeletingProject, projectToDelete, isSelectionMode, selectedProjects, selectedNotes, toggleProjectSelection, toggleNoteSelection]);
 
   if (isLoading) {
     return (
@@ -416,148 +350,125 @@ export function NotesTree({
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-        {/* Header - Full Width */}
-        <NotesTreeHeader
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          selectedFilter={selectedFilter}
-          onFilterChange={handleFilterChange}
-          onCreateNote={handleCreateNote}
-          onCreateProject={handleCreateProject}
-          onCreateFolder={() => setShowCreateFolderModal(true)}
-          isCreatingNote={isCreatingNote}
-          isCreatingProject={false}
-          isCreatingFolder={isCreatingFolder}
-          foldersCount={folders?.length}
-          sharedNotesCount={sharedNotes?.length}
-          mySharedContentCount={mySharedContent?.length}
-          isSelectionMode={isSelectionMode}
-          selectedProjectsCount={selectedProjects.size}
-          selectedNotesCount={selectedNotes.size}
-          onToggleSelectionMode={toggleSelectionMode}
-          onSelectAll={selectAllVisible}
-          onDeselectAll={deselectAll}
-          onBatchDelete={handleBatchDelete}
-          hasSelection={hasSelection}
-        />
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+      {/* Collapsible Header */}
+      <CollapsibleHeader
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        selectedFilter={selectedFilter}
+        onFilterChange={handleFilterChange}
+        onCreateNote={handleCreateNote}
+        onCreateProject={handleCreateProject}
+        onCreateFolder={() => setShowCreateFolderModal(true)}
+        isCreatingNote={isCreatingNote}
+        isCreatingProject={false}
+        isCreatingFolder={isCreatingFolder}
+        foldersCount={folders?.length}
+        sharedNotesCount={sharedNotes?.length}
+        mySharedContentCount={mySharedContent?.length}
+        isSelectionMode={isSelectionMode}
+        selectedProjectsCount={selectedProjects.size}
+        selectedNotesCount={selectedNotes.size}
+        onToggleSelectionMode={toggleSelectionMode}
+        onSelectAll={selectAllVisible}
+        onDeselectAll={deselectAll}
+        onBatchDelete={handleBatchDelete}
+        hasSelection={hasSelection}
+      />
 
-        {/* Tree content */}
-        <div className="max-w-6xl mx-auto">
-          <div className="p-4 sm:p-6 pb-safe">
-            {treeStructure.length === 0 ? (
-              <div className="text-center py-12 sm:py-20">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-primary/10 via-accent/5 to-primary/5 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary/5">
-                  <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-primary/60" />
-                </div>
-                <h3 className="text-base sm:text-lg font-medium text-foreground mb-2">
-                  {searchTerm || selectedFilter !== 'all' ? (
-                    <T context="notes.empty.no-results">No notes found</T>
-                  ) : (
-                    <T context="notes.empty.no-notes">No notes yet</T>
-                  )}
-                </h3>
-                <p className="text-sm sm:text-base text-muted-foreground max-w-sm mx-auto px-4">
-                  {selectedFilter === 'shared' ? (
-                    <T context="notes.empty.no-shared">No notes have been shared with you yet</T>
-                  ) : selectedFilter === 'my-shared' ? (
-                    <T context="notes.empty.no-my-shared">You haven't shared any notes with others yet</T>
-                  ) : searchTerm || selectedFilter !== 'all' ? (
-                    <T context="notes.empty.adjust-filter">Try adjusting your search or filter criteria</T>
-                  ) : (
-                    <T context="notes.empty.get-started">Create your first note to get started with organizing your thoughts</T>
-                  )}
-                </p>
+      {/* Tree content */}
+      <div className="max-w-6xl mx-auto">
+        <div className="p-4 pb-safe">
+          {treeStructure.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-12 h-12 bg-gradient-to-br from-primary/10 via-accent/5 to-primary/5 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary/5">
+                <FileText className="w-6 h-6 text-primary/60" />
               </div>
-            ) : (
-              <div className="space-y-1">
-                {treeStructure.map(node => renderTreeNode(node))}
-              </div>
-            )}
-          </div>
+              <h3 className="text-base font-medium text-foreground mb-2">
+                {searchTerm || selectedFilter !== 'all' ? (
+                  <T context="notes.empty.no-results">No notes found</T>
+                ) : (
+                  <T context="notes.empty.no-notes">No notes yet</T>
+                )}
+              </h3>
+              <p className="text-sm text-muted-foreground max-w-sm mx-auto px-4">
+                {selectedFilter === 'shared' ? (
+                  <T context="notes.empty.no-shared">No notes have been shared with you yet</T>
+                ) : selectedFilter === 'my-shared' ? (
+                  <T context="notes.empty.no-my-shared">You haven't shared any notes with others yet</T>
+                ) : searchTerm || selectedFilter !== 'all' ? (
+                  <T context="notes.empty.adjust-filter">Try adjusting your search or filter criteria</T>
+                ) : (
+                  <T context="notes.empty.get-started">Create your first note to get started with organizing your thoughts</T>
+                )}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {treeStructure.map(node => renderTreeNode(node))}
+            </div>
+          )}
         </div>
-
-        {/* Create Folder Modal */}
-        <CreateFolderModal
-          isOpen={showCreateFolderModal}
-          onClose={() => setShowCreateFolderModal(false)}
-          onCreateFolder={handleCreateFolder}
-          isCreating={isCreatingFolder}
-        />
-
-        {/* Delete Project Confirmation Modal */}
-        <ConfirmationModal
-          isOpen={projectToDelete !== null}
-          onClose={cancelDeleteProject}
-          onConfirm={confirmDeleteProject}
-          title="Delete Project"
-          titleContext="modal.delete_project_title"
-          description={`Are you sure you want to delete "${projects.find(p => p._id === projectToDelete)?.name || 'this project'}"? This action cannot be undone.`}
-          descriptionContext="modal.delete_project_description"
-          confirmText="Delete Project"
-          confirmContext="button.delete_project"
-          cancelText="Cancel"
-          cancelContext="button.cancel"
-          variant="destructive"
-          isLoading={isDeletingProject}
-        />
-
-        {/* Batch Delete Confirmation Modal - Handles both projects and notes */}
-        <ConfirmationModal
-          isOpen={(projectsToBatchDelete !== null && projectsToBatchDelete.length > 0) || (notesToBatchDelete !== null && notesToBatchDelete.length > 0)}
-          onClose={cancelBatchDelete}
-          onConfirm={confirmBatchDelete}
-          title="Delete Items"
-          titleContext="modal.delete_items_title"
-          description={(() => {
-            const projectCount = projectsToBatchDelete?.length || 0;
-            const noteCount = notesToBatchDelete?.length || 0;
-            const parts: string[] = [];
-            if (projectCount > 0) {
-              parts.push(`${projectCount} project${projectCount !== 1 ? 's' : ''}`);
-            }
-            if (noteCount > 0) {
-              parts.push(`${noteCount} note${noteCount !== 1 ? 's' : ''}`);
-            }
-            return `Are you sure you want to delete ${parts.join(' and ')}? This action cannot be undone.`;
-          })()}
-          descriptionContext="modal.delete_items_description"
-          confirmText={(() => {
-            const projectCount = projectsToBatchDelete?.length || 0;
-            const noteCount = notesToBatchDelete?.length || 0;
-            const total = projectCount + noteCount;
-            return `Delete ${total} Item${total !== 1 ? 's' : ''}`;
-          })()}
-          confirmContext="button.delete_items"
-          cancelText="Cancel"
-          cancelContext="button.cancel"
-          variant="destructive"
-          isLoading={isBatchDeleting || isBatchDeletingNotes}
-        />
       </div>
 
-      {/* Drag Overlay */}
-      <DragOverlay>
-        {draggedNote ? (
-            <div className="bg-card/95 backdrop-blur-xl border border-primary/30 rounded-lg p-3 shadow-2xl shadow-primary/20">
-            <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-primary/70" />
-              <span className="text-sm font-medium text-foreground">
-                {draggedNote.title || <T context="notes.untitled">Untitled</T>}
-              </span>
-              {draggedNote.important && (
-                <Star className="w-3 h-3 text-amber-500 fill-current" />
-              )}
-            </div>
-          </div>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+      {/* Create Folder Modal */}
+      <CreateFolderModal
+        isOpen={showCreateFolderModal}
+        onClose={() => setShowCreateFolderModal(false)}
+        onCreateFolder={handleCreateFolder}
+        isCreating={isCreatingFolder}
+      />
+
+      {/* Delete Project Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={projectToDelete !== null}
+        onClose={cancelDeleteProject}
+        onConfirm={confirmDeleteProject}
+        title="Delete Project"
+        titleContext="modal.delete_project_title"
+        description={`Are you sure you want to delete "${projects.find(p => p._id === projectToDelete)?.name || 'this project'}"? This action cannot be undone.`}
+        descriptionContext="modal.delete_project_description"
+        confirmText="Delete Project"
+        confirmContext="button.delete_project"
+        cancelText="Cancel"
+        cancelContext="button.cancel"
+        variant="destructive"
+        isLoading={isDeletingProject}
+      />
+
+      {/* Batch Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={(projectsToBatchDelete !== null && projectsToBatchDelete.length > 0) || (notesToBatchDelete !== null && notesToBatchDelete.length > 0)}
+        onClose={cancelBatchDelete}
+        onConfirm={confirmBatchDelete}
+        title="Delete Items"
+        titleContext="modal.delete_items_title"
+        description={(() => {
+          const projectCount = projectsToBatchDelete?.length || 0;
+          const noteCount = notesToBatchDelete?.length || 0;
+          const parts: string[] = [];
+          if (projectCount > 0) {
+            parts.push(`${projectCount} project${projectCount !== 1 ? 's' : ''}`);
+          }
+          if (noteCount > 0) {
+            parts.push(`${noteCount} note${noteCount !== 1 ? 's' : ''}`);
+          }
+          return `Are you sure you want to delete ${parts.join(' and ')}? This action cannot be undone.`;
+        })()}
+        descriptionContext="modal.delete_items_description"
+        confirmText={(() => {
+          const projectCount = projectsToBatchDelete?.length || 0;
+          const noteCount = notesToBatchDelete?.length || 0;
+          const total = projectCount + noteCount;
+          return `Delete ${total} Item${total !== 1 ? 's' : ''}`;
+        })()}
+        confirmContext="button.delete_items"
+        cancelText="Cancel"
+        cancelContext="button.cancel"
+        variant="destructive"
+        isLoading={isBatchDeleting || isBatchDeletingNotes}
+      />
+    </div>
   );
 }
+
