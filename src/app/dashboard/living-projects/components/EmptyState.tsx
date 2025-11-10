@@ -32,14 +32,14 @@ export function EmptyState({ onCreateProject }: EmptyStateProps) {
               <div className="space-y-4 text-muted-foreground/80 leading-relaxed">
                 <p>
                   <T context="empty.project.description.1">
-                    Each project becomes a thinking partner that learns your style, 
-                    understands your goals, and evolves alongside your work.
+                  Each project becomes a thinking partner that learns your style, 
+                  understands your goals, and evolves alongside your work.
                   </T>
                 </p>
                 <p>
                   <T context="empty.project.description.2">
-                    Start with just a name and description. Through conversation, 
-                    your project develops its own intelligence.
+                  Start with just a name and description. Through conversation, 
+                  your project develops its own intelligence.
                   </T>
                 </p>
               </div>
@@ -95,8 +95,8 @@ export function EmptyState({ onCreateProject }: EmptyStateProps) {
                   </h4>
                   <p className="text-sm text-muted-foreground/80 leading-relaxed">
                     <T context="empty.project.step.1.description">
-                      Start with a name and description. Through natural conversation, 
-                      your project learns your goals, style, and preferences.
+                    Start with a name and description. Through natural conversation, 
+                    your project learns your goals, style, and preferences.
                     </T>
                   </p>
                 </div>
@@ -110,8 +110,8 @@ export function EmptyState({ onCreateProject }: EmptyStateProps) {
                   </h4>
                   <p className="text-sm text-muted-foreground/80 leading-relaxed">
                     <T context="empty.project.step.2.description">
-                      Your project creates its unique fingerprint—a living understanding 
-                      of what you're trying to achieve and how you work.
+                    Your project creates its unique fingerprint—a living understanding 
+                    of what you're trying to achieve and how you work.
                     </T>
                   </p>
                 </div>
@@ -125,8 +125,8 @@ export function EmptyState({ onCreateProject }: EmptyStateProps) {
                   </h4>
                   <p className="text-sm text-muted-foreground/80 leading-relaxed">
                     <T context="empty.project.step.3.description">
-                      As you work, your project evolves its understanding, 
-                      adapting to new insights and changing directions.
+                    As you work, your project evolves its understanding, 
+                    adapting to new insights and changing directions.
                     </T>
                   </p>
                 </div>
