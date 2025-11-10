@@ -20,6 +20,91 @@ import { contentTypesArrayValidator } from "./types/embeddings";
  */
 
 const GOOGLE_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent";
+const MAX_PAYLOAD_BYTES = 35000; // Conservative limit (Google API limit is 36000, leave buffer for JSON overhead)
+
+/**
+ * Calculate the size of the request body in bytes
+ */
+function calculatePayloadSize(queryText: string): number {
+  const requestBody = {
+    model: "models/text-embedding-004",
+    content: {
+      parts: [{ text: queryText }],
+    },
+    taskType: "RETRIEVAL_QUERY",
+  };
+  return new TextEncoder().encode(JSON.stringify(requestBody)).length;
+}
+
+/**
+ * Truncate query text to fit within payload size limit using binary search
+ * Similar to backend embedding_service.py _preprocess_content pattern
+ * NEVER throws - always returns a valid query, even if minimal
+ */
+function truncateQueryToFit(queryText: string, maxBytes: number): string {
+  const baseRequestBody = {
+    model: "models/text-embedding-004",
+    content: {
+      parts: [{ text: "" }],
+    },
+    taskType: "RETRIEVAL_QUERY",
+  };
+  
+  // Calculate overhead (base JSON structure without text)
+  const overheadBytes = new TextEncoder().encode(JSON.stringify(baseRequestBody)).length;
+  const availableBytes = maxBytes - overheadBytes;
+  
+  // If overhead exceeds limit, return minimal query (should never happen, but be safe)
+  if (availableBytes <= 0) {
+    console.warn(`⚠️ [HYBRID SEARCH] Payload overhead (${overheadBytes} bytes) exceeds limit (${maxBytes} bytes), using minimal query`);
+    return queryText.substring(0, Math.min(100, queryText.length));
+  }
+  
+  // Binary search for optimal truncation point
+  let start = 0;
+  let end = queryText.length;
+  let bestLength = 0;
+  
+  while (start <= end) {
+    const mid = Math.floor((start + end) / 2);
+    const testText = queryText.substring(0, mid);
+    const testBody = { ...baseRequestBody, content: { parts: [{ text: testText }] } };
+    const testBytes = new TextEncoder().encode(JSON.stringify(testBody)).length;
+    
+    if (testBytes <= maxBytes) {
+      bestLength = mid;
+      start = mid + 1;
+    } else {
+      end = mid - 1;
+    }
+  }
+  
+  // If binary search found nothing, use conservative fallback (should never happen, but be safe)
+  if (bestLength === 0) {
+    console.warn(`⚠️ [HYBRID SEARCH] Binary search found no valid length, using conservative truncation`);
+    // Try progressively smaller sizes until we find one that fits
+    for (let len = Math.min(1000, queryText.length); len > 0; len -= 100) {
+      const testText = queryText.substring(0, len);
+      const testBody = { ...baseRequestBody, content: { parts: [{ text: testText }] } };
+      const testBytes = new TextEncoder().encode(JSON.stringify(testBody)).length;
+      if (testBytes <= maxBytes) {
+        bestLength = len;
+        break;
+      }
+    }
+    // Final fallback: at least return first 100 chars
+    if (bestLength === 0) {
+      bestLength = Math.min(100, queryText.length);
+    }
+  }
+  
+  const truncated = queryText.substring(0, bestLength);
+  if (truncated.length < queryText.length) {
+    console.warn(`⚠️ [HYBRID SEARCH] Query truncated from ${queryText.length} to ${truncated.length} chars to fit payload limit`);
+  }
+  
+  return truncated;
+}
 
 /**
  * Hybrid search that combines vector similarity with keyword matching (no quotas)
@@ -53,10 +138,27 @@ export const hybridSearchContent = action({
         throw new Error("GOOGLE_API_KEY environment variable is required");
       }
 
+      // Safeguard: Validate and truncate query if payload exceeds limit
+      let queryText = args.query.trim();
+      const payloadSize = calculatePayloadSize(queryText);
+      
+      if (payloadSize > MAX_PAYLOAD_BYTES) {
+        console.warn(`⚠️ [HYBRID SEARCH] Payload size ${payloadSize} bytes exceeds limit ${MAX_PAYLOAD_BYTES}, truncating query`);
+        queryText = truncateQueryToFit(queryText, MAX_PAYLOAD_BYTES);
+        
+        // Verify truncation worked (should always succeed, but log if it didn't)
+        const finalPayloadSize = calculatePayloadSize(queryText);
+        if (finalPayloadSize > MAX_PAYLOAD_BYTES) {
+          console.warn(`⚠️ [HYBRID SEARCH] Payload still ${finalPayloadSize} bytes after truncation, attempting additional truncation`);
+          // One more aggressive truncation attempt
+          queryText = truncateQueryToFit(queryText, MAX_PAYLOAD_BYTES - 1000); // Extra buffer
+        }
+      }
+
       const requestBody = {
         model: "models/text-embedding-004",
         content: {
-          parts: [{ text: args.query.trim() }],
+          parts: [{ text: queryText }],
         },
         taskType: "RETRIEVAL_QUERY",
       };
@@ -71,7 +173,119 @@ export const hybridSearchContent = action({
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Google API error: ${response.status} ${response.statusText}. ${errorText}`);
+        const errorMessage = `Google API error: ${response.status} ${response.statusText}. ${errorText}`;
+        
+        // Check for payload size errors - if this happens, truncate more aggressively and retry once
+        if (response.status === 400 && errorText.includes("payload size")) {
+          console.error(`❌ [HYBRID SEARCH] Payload size error detected. Original query length: ${args.query.length}, Truncated length: ${queryText.length}`);
+          console.error(`❌ [HYBRID SEARCH] Attempting more aggressive truncation and retry`);
+          
+          // More aggressive truncation with extra buffer
+          queryText = truncateQueryToFit(args.query.trim(), MAX_PAYLOAD_BYTES - 2000);
+          
+          // Retry once with truncated query
+          const retryRequestBody = {
+            model: "models/text-embedding-004",
+            content: {
+              parts: [{ text: queryText }],
+            },
+            taskType: "RETRIEVAL_QUERY",
+          };
+          
+          const retryResponse = await fetch(`${GOOGLE_API_URL}?key=${apiKey}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(retryRequestBody),
+          });
+          
+          if (retryResponse.ok) {
+            const retryData = await retryResponse.json();
+            if (retryData.embedding && retryData.embedding.values) {
+              console.log(`✅ [HYBRID SEARCH] Retry succeeded after aggressive truncation`);
+              // Continue with retry data
+              const queryEmbedding = retryData.embedding.values;
+              
+              // Get user embeddings
+              const userEmbeddings = await ctx.runQuery(internal.vectorSearch.getUserEmbeddings, {
+                userId: args.userId,
+                contentTypes: args.contentTypes
+              });
+              
+              // Calculate similarities (reuse existing logic)
+              const similarities = userEmbeddings.map((doc) => {
+                try {
+                  if (!doc.embedding || !Array.isArray(doc.embedding) || doc.embedding.length !== queryEmbedding.length) {
+                    return {
+                      contentId: doc.contentId,
+                      contentType: doc.contentType,
+                      title: doc.title,
+                      content: doc.content,
+                      embedding: doc.embedding,
+                      score: 0,
+                    };
+                  }
+                  
+                  // Cosine similarity calculation
+                  let dotProduct = 0;
+                  let normA = 0;
+                  let normB = 0;
+                  
+                  for (let i = 0; i < queryEmbedding.length; i++) {
+                    const queryVal = queryEmbedding[i];
+                    const docVal = doc.embedding[i];
+                    
+                    if (typeof queryVal !== 'number' || typeof docVal !== 'number' || isNaN(queryVal) || isNaN(docVal)) {
+                      continue;
+                    }
+                    
+                    dotProduct += queryVal * docVal;
+                    normA += queryVal * queryVal;
+                    normB += docVal * docVal;
+                  }
+                  
+                  const score = dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+                  const finalScore = isNaN(score) || !isFinite(score) ? 0 : score;
+                  
+                  return {
+                    contentId: doc.contentId,
+                    contentType: doc.contentType,
+                    title: doc.title,
+                    content: doc.content,
+                    embedding: doc.embedding,
+                    score: finalScore,
+                  };
+                } catch (error) {
+                  return {
+                    contentId: doc.contentId,
+                    contentType: doc.contentType,
+                    title: doc.title,
+                    content: doc.content,
+                    embedding: doc.embedding,
+                    score: 0,
+                  };
+                }
+              });
+
+              // Apply similarity threshold and sort by score
+              const minThreshold = args.minSimilarity || 0.35;
+              const filteredSimilarities = similarities
+                .filter(item => item.score >= minThreshold)
+                .sort((a, b) => b.score - a.score);
+              
+              // Return top results up to limit
+              const limit = args.limit || 50;
+              return filteredSimilarities.slice(0, limit);
+            }
+          }
+          
+          // If retry also failed, log but don't throw - return empty results
+          console.error(`❌ [HYBRID SEARCH] Retry also failed, returning empty results`);
+          return [];
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -153,7 +367,16 @@ export const hybridSearchContent = action({
       return filteredSimilarities.slice(0, limit);
       
     } catch (error) {
-      console.error("❌ [HYBRID SEARCH] Error:", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isPayloadError = errorMessage.includes("payload size") || errorMessage.includes("Payload size");
+      
+      if (isPayloadError) {
+        console.error("❌ [HYBRID SEARCH] Payload size error:", errorMessage);
+        console.error(`❌ [HYBRID SEARCH] Original query length: ${args.query?.length || 0} chars`);
+      } else {
+        console.error("❌ [HYBRID SEARCH] Error:", error);
+      }
+      
       return [];
     }
   },

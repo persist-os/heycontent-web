@@ -7,6 +7,7 @@ import { T } from '@/components/translation';
 interface InsightCardProps {
   title: string;
   description: string;
+  recommendation?: string;
   icon?: React.ReactNode;
   onClick?: () => void;
   className?: string;
@@ -29,6 +30,7 @@ interface InsightCardProps {
 export const InsightCard: React.FC<InsightCardProps> = ({
   title,
   description,
+  recommendation,
   icon,
   onClick,
   className,
@@ -38,7 +40,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
   responsive = true
 }) => {
   const isClickable = !!onClick;
-  const height = variant === 'compact' ? 'h-48' : 'h-64';
+  const height = variant === 'compact' ? 'h-48' : 'h-64 sm:h-72 lg:h-80';
 
   return (
     <Card
@@ -63,11 +65,11 @@ export const InsightCard: React.FC<InsightCardProps> = ({
         }
       } : undefined}
     >
-      <div className="p-4 flex flex-col h-full">
+      <div className="p-4 sm:p-6 flex flex-col h-full">
         {/* Title */}
         <h3 className={cn(
           'font-medium text-foreground group-hover:text-primary leading-tight transition-colors duration-300 line-clamp-2 flex-shrink-0',
-          variant === 'compact' ? 'text-sm mb-2' : 'text-sm sm:text-base mb-2'
+          variant === 'compact' ? 'text-lg mb-3' : 'text-lg sm:text-xl lg:text-2xl mb-4'
         )}>
           <T context="insight.title">{title}</T>
         </h3>
@@ -76,13 +78,22 @@ export const InsightCard: React.FC<InsightCardProps> = ({
         <div className="flex-1 min-h-0 mb-2 overflow-hidden">
           <AutoScalingText 
             text={description}
-            maxFontSize={maxFontSize}
-            minFontSize={minFontSize}
+            maxFontSize={maxFontSize || (variant === 'compact' ? 22 : 24)}
+            minFontSize={minFontSize || (variant === 'compact' ? 18 : 20)}
             responsive={responsive}
             enableTranslation={true}
             context="insight.description"
           />
         </div>
+
+        {/* Recommendation */}
+        {recommendation && (
+          <div className="flex-shrink-0 mb-2">
+            <p className="text-sm sm:text-base font-medium text-primary/90">
+              <T context="insight.recommendation">{recommendation}</T>
+            </p>
+          </div>
+        )}
 
         {/* Icon */}
         {icon && (

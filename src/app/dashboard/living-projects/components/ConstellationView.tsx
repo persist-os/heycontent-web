@@ -15,6 +15,8 @@ import { LoadingState } from './LoadingState'
 import { useConstellationLayout } from '../hooks/useConstellationLayout'
 import { usePanZoom } from '../hooks/usePanZoom'
 import { T } from '@/components/translation/T'
+import { useIsMobile } from '@/app/dashboard/thinking_lab/layouts/ResponsiveLayout'
+import { Plus } from 'lucide-react'
 
 interface Project {
   _id: string
@@ -56,6 +58,9 @@ export function ConstellationView() {
   // Generate constellation layout
   const layout = useConstellationLayout(projects || [])
   
+  // Mobile detection
+  const isMobile = useIsMobile()
+  
   // Pan and zoom functionality
   const {
     transform,
@@ -83,12 +88,7 @@ export function ConstellationView() {
 
   // Virtual rendering - only render projects visible in viewport + buffer
   const visibleProjects = useMemo(() => {
-    // Temporarily disable virtual rendering to debug
-    // TODO: Re-enable virtual rendering once issue is resolved
-    return layout.positions
-    
-    /* Original virtual rendering logic:
-    const buffer = 400 // Buffer zone around viewport
+    const buffer = isMobile ? 200 : 400 // Smaller buffer on mobile
     const viewportLeft = -transform.x / transform.scale - buffer
     const viewportTop = -transform.y / transform.scale - buffer
     const viewportRight = viewportLeft + (viewportSize.width / transform.scale) + (buffer * 2)
@@ -102,8 +102,7 @@ export function ConstellationView() {
     )
     
     return filtered
-    */
-  }, [layout.positions, transform, viewportSize])
+  }, [layout.positions, transform, viewportSize, isMobile])
 
 
   // Handle clicking on a project - Navigate to project page
@@ -149,18 +148,18 @@ export function ConstellationView() {
   if (!projects || projects.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-primary/5 flex items-center justify-center">
-        <div className="text-center space-y-8 max-w-md mx-auto px-6">
-          <div className="space-y-5 bg-gradient-to-br from-card/80 via-card/70 to-primary/10 backdrop-blur-xl border border-border/60 rounded-2xl p-8 shadow-2xl shadow-primary/10">
-            <div className="w-20 h-20 mx-auto bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center border border-primary/30">
-              <div className="w-12 h-12 text-primary/60 animate-pulse">
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                </svg>
-              </div>
+      <div className="text-center space-y-8 max-w-md mx-auto px-4 md:px-6">
+        <div className="space-y-5 bg-gradient-to-br from-card/80 via-card/70 to-primary/10 backdrop-blur-xl border border-border/60 rounded-2xl p-6 md:p-8 shadow-2xl shadow-primary/10">
+          <div className="w-16 h-16 md:w-20 md:h-20 mx-auto bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center border border-primary/30">
+            <div className="w-10 h-10 md:w-12 md:h-12 text-primary/60 animate-pulse">
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              </svg>
             </div>
-            <h2 className="text-3xl font-light text-foreground">
-              <T context="constellation.empty.heading">Your constellation awaits</T>
-            </h2>
+          </div>
+          <h2 className="text-2xl md:text-3xl font-light text-foreground">
+            <T context="constellation.empty.heading">Your constellation awaits</T>
+          </h2>
             <p className="text-muted-foreground leading-relaxed">
               <T context="constellation.empty.description">
                 Start your first project to begin building your personal universe of ideas and work.
@@ -253,35 +252,41 @@ export function ConstellationView() {
       </div>
 
       {/* Header - Centered with glassmorphism */}
-      <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-10">
-        <div className="bg-gradient-to-br from-card/90 via-card/85 to-primary/10 backdrop-blur-xl border border-border/60 rounded-xl px-8 py-5 shadow-2xl shadow-primary/10 ring-1 ring-border/20">
-          <div className="flex items-baseline gap-4 justify-center">
-            <h1 className="text-2xl font-light text-foreground">
+      <div className="absolute top-4 md:top-6 left-1/2 transform -translate-x-1/2 z-10">
+        <div className="bg-gradient-to-br from-card/90 via-card/85 to-primary/10 backdrop-blur-xl border border-border/60 rounded-xl px-4 py-3 md:px-8 md:py-5 shadow-2xl shadow-primary/10 ring-1 ring-border/20">
+          <div className="flex items-baseline gap-2 md:gap-4 justify-center">
+            <h1 className="text-xl md:text-2xl font-light text-foreground">
               <T context="constellation.header.title">Constellation</T>
             </h1>
-            <div className="text-sm text-muted-foreground font-mono bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
+            <div className="text-xs md:text-sm text-muted-foreground font-mono bg-primary/10 px-2 py-0.5 md:px-3 md:py-1 rounded-full border border-primary/20">
               {projects.length} <T context="constellation.header.project">{projects.length !== 1 ? 'projects' : 'project'}</T>
             </div>
           </div>
-          <p className="text-sm text-muted-foreground mt-1 text-center">
+          <p className="text-xs md:text-sm text-muted-foreground mt-1 text-center hidden md:block">
             <T context="constellation.header.subtitle">Your universe of projects, connected and evolving</T>
           </p>
         </div>
       </div>
 
-      {/* Top Right - New Assignment Button */}
-      <div className="absolute top-6 right-6 z-10">
+      {/* New Assignment Button - Mobile: bottom-right FAB, Desktop: top-right */}
+      <div className="fixed bottom-20 right-4 md:absolute md:top-6 md:right-6 md:bottom-auto z-20">
         <Button
           onClick={() => router.push('/dashboard/thinking_lab')}
           className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-xl shadow-primary/20 ring-1 ring-primary/30"
+          size={isMobile ? "icon" : "default"}
+          aria-label={isMobile ? "New Assignment" : undefined}
         >
-          <T context="constellation.button.new_project">New Assignment</T>
+          {isMobile ? (
+            <Plus className="h-5 w-5" />
+          ) : (
+            <T context="constellation.button.new_project">New Assignment</T>
+          )}
         </Button>
       </div>
 
       {/* Bottom Right - Minimap */}
-      <div className="absolute bottom-6 right-6 z-10">
-        <div className="bg-background/80 backdrop-blur-sm border border-border/40 rounded-lg shadow-xl overflow-hidden">
+      <div className="fixed bottom-4 right-4 md:absolute md:bottom-6 md:right-6 z-10">
+        <div className="w-24 h-24 md:w-auto md:h-auto bg-background/80 backdrop-blur-sm border border-border/40 rounded-lg shadow-xl overflow-hidden">
           <ConstellationMinimap
             positions={layout.positions}
             canvasWidth={layout.canvasWidth}
@@ -300,14 +305,14 @@ export function ConstellationView() {
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
         onReset={resetView}
-        className="absolute bottom-6 left-6 z-10"
+        className="fixed bottom-4 left-4 md:absolute md:bottom-6 md:left-6 z-10"
       />
 
 
       {/* Stats Overlay - Bottom Center with color variety */}
-      <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 z-10 pointer-events-none">
-        <div className="bg-gradient-to-r from-card/80 via-card/70 to-card/80 backdrop-blur-lg border border-border/40 rounded-xl px-5 py-2.5 shadow-lg shadow-primary/5">
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+      <div className="absolute bottom-16 md:bottom-12 left-1/2 transform -translate-x-1/2 z-10 pointer-events-none">
+        <div className="bg-gradient-to-r from-card/80 via-card/70 to-card/80 backdrop-blur-lg border border-border/40 rounded-xl px-3 py-1.5 md:px-5 md:py-2.5 shadow-lg shadow-primary/5">
+          <div className="flex items-center gap-2 md:gap-4 text-[10px] md:text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
               <T context="constellation.stats.active">Active</T>: <span className="text-foreground font-medium">{projects.filter(p => p.fingerprintId && Date.now() - p.updatedAt < 7 * 24 * 60 * 60 * 1000).length}</span>
@@ -326,9 +331,9 @@ export function ConstellationView() {
       </div>
 
 
-      {/* Keyboard shortcuts hint with accent */}
+      {/* Keyboard shortcuts hint with accent - Hidden on mobile */}
       {transform.scale < 0.6 && (
-        <div className="absolute bottom-32 left-1/2 z-10 pointer-events-none" style={{ transform: 'translateX(-50%)' }}>
+        <div className="absolute bottom-32 left-1/2 z-10 pointer-events-none hidden md:block" style={{ transform: 'translateX(-50%)' }}>
           <div className="bg-gradient-to-r from-accent/10 via-primary/10 to-accent/10 backdrop-blur-md border border-accent/30 rounded-xl px-5 py-3 shadow-xl shadow-accent/10">
             <div className="text-xs text-foreground text-center font-medium">
               <T context="constellation.hint.controls">Drag to explore • Scroll to zoom • Click to open project</T>

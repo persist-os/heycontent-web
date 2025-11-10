@@ -24,6 +24,10 @@ import { useOptimizedAuth } from '../components/notepad/hooks/useOptimizedAuth'
 import { NotepadProvider, useNotepadContext } from '../contexts/NotepadContext'
 import { ArtifactPanel } from '../components/ArtifactPanel'
 import { WidgetPanel } from '../components/WidgetPanel'
+import { useIsMobile } from '../layouts/ResponsiveLayout'
+import { MobileBottomNav } from '@/components/ui/MobileBottomNav'
+import { ChatMobileView } from '../components/mobile/ChatMobileView'
+import { PanelMobileView } from '../components/mobile/PanelMobileView'
 
 // =============================================================================
 // PANEL COMPONENTS
@@ -93,6 +97,12 @@ function FullThinkingLabInternal({
   const { user, isLoading: authLoading } = useOptimizedAuth()
   const userId = user?.uid
   const router = useRouter()
+  
+  // Mobile detection
+  const isMobile = useIsMobile()
+  
+  // Mobile tab state
+  const [mobileTab, setMobileTab] = useState<'chat' | 'panel'>('chat')
   
   // Right panel mode (notepad, artifacts, or widgets)
   // Initialize from localStorage or default to 'notepad'
@@ -203,8 +213,10 @@ function FullThinkingLabInternal({
       userId={userId}
       activeThreadId={chatId}
       onThreadSelect={handleThreadSelect}
+      isMobile={isMobile}
+      activeTab="chat"
     />
-  ), [sendMessage, isStreaming, isOrchestratorRunning, inputValue, handleInputPopulate, quotedContent, clearQuotedContent, notepadContext.includeInMessages, notepadContext.setIncludeInMessages, userId, chatId, handleThreadSelect])
+  ), [sendMessage, isStreaming, isOrchestratorRunning, inputValue, handleInputPopulate, quotedContent, clearQuotedContent, notepadContext.includeInMessages, notepadContext.setIncludeInMessages, userId, chatId, handleThreadSelect, isMobile])
 
   // Show loading state while auth is initializing
   if (authLoading) {
@@ -220,17 +232,62 @@ function FullThinkingLabInternal({
     )
   }
 
+  // Render mobile layout
+  if (isMobile) {
+    return (
+      <div className={`h-screen flex flex-col bg-background overflow-hidden ${className || ''}`}>
+        {/* Context Indicator */}
+        <ContextIndicator />
+
+        {/* Content Area - Simple conditional rendering */}
+        <div className="flex-1 overflow-hidden">
+          {mobileTab === 'chat' ? (
+            <ChatMobileView
+              messageList={messageList}
+              onInputPopulate={handleInputPopulate}
+              onQuoteToNotepad={handleQuoteToNotepad}
+              widgetOutputId={widgetOutputId}
+              suggestions={suggestions}
+              sendMessage={sendMessage}
+              startNewConversation={startNewConversation}
+              isLoading={isStreaming}
+              error={error}
+              inputComponent={inputComponent}
+            />
+          ) : (
+            <PanelMobileView
+              rightPanelMode={rightPanelMode}
+              setRightPanelMode={setRightPanelMode}
+              noteId={noteId}
+              quotedContent={quotedContent}
+              onClearQuoted={clearQuotedContent}
+              projectId={projectId}
+              conversationId={conversationId}
+              userId={userId}
+            />
+          )}
+        </div>
+
+        {/* Bottom Navigation - Fixed at bottom */}
+        <MobileBottomNav activeTab={mobileTab} onTabChange={setMobileTab} />
+      </div>
+    )
+  }
+
+  // Desktop layout (existing resizable panes)
   return (
     <div className={`h-screen flex flex-col bg-background overflow-hidden ${className || ''}`}>
       {/* Context Indicator */}
       <ContextIndicator />
 
-      {/* Floating Action Buttons */}
-      <FloatingActionButtons
-        isChatFullScreen={isChatFullScreen}
-        isNotepadFullScreen={isNotepadFullScreen}
-        onRestoreNotepad={handleNotepadExpand}
-      />
+      {/* Floating Action Buttons - Desktop only */}
+      {!isMobile && (
+        <FloatingActionButtons
+          isChatFullScreen={isChatFullScreen}
+          isNotepadFullScreen={isNotepadFullScreen}
+          onRestoreNotepad={handleNotepadExpand}
+        />
+      )}
 
       {/* Main Layout: Resizable Panes */}
       <div className="flex flex-1 overflow-hidden">

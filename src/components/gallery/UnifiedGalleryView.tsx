@@ -34,6 +34,7 @@ import { WidgetScheduleControls } from '@/app/dashboard/living-projects/[project
 import { useAdminAuth } from '@/app/lib/admin-auth'
 import { ProgressiveWidgetView } from './ProgressiveWidgetView'
 import { T } from '@/components/translation/T'
+import { useIsMobile } from '@/app/dashboard/thinking_lab/layouts/ResponsiveLayout'
 
 export function UnifiedGalleryView({
   projectId,
@@ -44,6 +45,14 @@ export function UnifiedGalleryView({
 }: UnifiedGalleryViewProps & { userId?: string }) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const { isAdmin } = useAdminAuth()
+  const isMobile = useIsMobile()
+  
+  // On mobile, sidebar should be closed by default
+  useEffect(() => {
+    if (isMobile) {
+      setSidebarOpen(false)
+    }
+  }, [isMobile])
   
   const {
     currentItem,
@@ -184,15 +193,22 @@ export function UnifiedGalleryView({
   if (items.length === 0) {
     return (
       <div className="fixed inset-0 bg-background">
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center space-y-4 max-w-md">
-            <h2 className="text-2xl font-semibold text-foreground">
+        <div className="flex items-center justify-center h-full px-4">
+          <div className="text-center space-y-4 max-w-md w-full">
+            <h2 className={cn(
+              "font-semibold text-foreground",
+              isMobile ? "text-xl" : "text-2xl"
+            )}>
               <T context="gallery.empty.title">No Items Yet</T>
             </h2>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground text-sm sm:text-base">
               <T context="gallery.empty.description">This project doesn't have any artifacts or widgets yet</T>
             </p>
-            <Button onClick={onClose} variant="outline">
+            <Button 
+              onClick={onClose} 
+              variant="outline"
+              className={isMobile ? "min-h-[44px] w-full sm:w-auto" : ""}
+            >
               <T context="button.back.to.project">Back to Project</T>
             </Button>
           </div>
@@ -229,7 +245,10 @@ export function UnifiedGalleryView({
   const renderCurrentItem = () => {
     if (isArtifact) {
       return (
-        <div className="bg-card/50 backdrop-blur-sm border border-border/40 rounded-xl p-6 space-y-4">
+        <div className={cn(
+          "bg-card/50 backdrop-blur-sm border border-border/40 rounded-xl space-y-4",
+          isMobile ? "p-4" : "p-6"
+        )}>
           {/* Star Rating for Artifact */}
           {userId && (
             <div className="flex items-center justify-end">
@@ -286,35 +305,56 @@ export function UnifiedGalleryView({
           headerGradient,
           accentBorder
         )}>
-          <div className="max-w-[1800px] mx-auto px-6 py-4">
-            <div className="flex items-center justify-between">
+          <div className={cn(
+            "mx-auto px-4 py-3 sm:px-6 sm:py-4",
+            isMobile ? "w-full" : "max-w-[1800px]"
+          )}>
+            <div className={cn(
+              "flex items-center justify-between",
+              isMobile ? "flex-col gap-3" : "flex-row"
+            )}>
               {/* Left: Title & Type Badge */}
-              <div className="flex items-center gap-4">
-                <h1 className="text-xl font-semibold text-foreground">
+              <div className={cn(
+                "flex items-center gap-2 sm:gap-4",
+                isMobile ? "w-full justify-between" : ""
+              )}>
+                <h1 className={cn(
+                  "font-semibold text-foreground",
+                  isMobile ? "text-lg" : "text-xl"
+                )}>
                   <T context="gallery.title">Project Gallery</T>
                 </h1>
                 <Badge 
                   variant="outline" 
                   className={cn(
-                    "px-3 py-1 font-medium border-0",
+                    "px-2 py-1 sm:px-3 sm:py-1 font-medium border-0 text-xs sm:text-sm",
                     typeBadgeGradient
                   )}
                 >
                   {typeLabel}
                 </Badge>
-                <span className="text-sm text-muted-foreground">
+                <span className={cn(
+                  "text-muted-foreground",
+                  isMobile ? "text-xs" : "text-sm"
+                )}>
                   {currentIndex + 1} <T context="gallery.pagination.of">of</T> {total}
                 </span>
               </div>
               
               {/* Right: Actions */}
-              <div className="flex items-center gap-3">
+              <div className={cn(
+                "flex items-center gap-2 sm:gap-3",
+                isMobile ? "w-full justify-between" : ""
+              )}>
                 {/* Toggle Sidebar */}
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size={isMobile ? "sm" : "sm"}
                   onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className="text-muted-foreground hover:text-foreground"
+                  className={cn(
+                    "text-muted-foreground hover:text-foreground",
+                    isMobile ? "min-h-[44px] px-4" : ""
+                  )}
                 >
                   {sidebarOpen ? (
                     <T context="button.gallery.hide.list">Hide List</T>
@@ -329,6 +369,7 @@ export function UnifiedGalleryView({
                   variant="outline"
                   className={cn(
                     "backdrop-blur-sm border-0",
+                    isMobile ? "min-h-[44px] px-4" : "",
                     isArtifact 
                       ? "bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400" 
                       : "bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400"
@@ -342,26 +383,51 @@ export function UnifiedGalleryView({
         </div>
         
         {/* Body with Sidebar + Content */}
-        <div className="flex flex-1 overflow-hidden">
-          {/* Sidebar */}
+        <div className="flex flex-1 overflow-hidden relative">
+          {/* Sidebar - Mobile: Overlay, Desktop: Side */}
           {sidebarOpen && (
-            <GallerySidebar
-              items={items}
-              currentIndex={currentIndex}
-              onSelectItem={goToIndex}
-            />
+            <>
+              {/* Mobile: Backdrop overlay */}
+              {isMobile && (
+                <div
+                  className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
+                  onClick={() => setSidebarOpen(false)}
+                />
+              )}
+              
+              {/* Sidebar */}
+              <div className={cn(
+                isMobile 
+                  ? "fixed left-0 top-0 bottom-0 z-50 w-80 max-w-[85vw] shadow-xl"
+                  : "relative"
+              )}>
+                <GallerySidebar
+                  items={items}
+                  currentIndex={currentIndex}
+                  onSelectItem={(index) => {
+                    goToIndex(index)
+                    if (isMobile) {
+                      setSidebarOpen(false)
+                    }
+                  }}
+                />
+              </div>
+            </>
           )}
           
           {/* Main Content Area */}
           <div className="flex-1 overflow-y-auto">
-            <div className="max-w-5xl mx-auto px-6 py-8">
+            <div className={cn(
+              "mx-auto py-4 sm:py-8",
+              isMobile ? "px-4 max-w-full" : "px-6 max-w-5xl"
+            )}>
               {/* Render current item with fade transition */}
               <div className="animate-in fade-in-0 duration-300">
                 {renderCurrentItem()}
               </div>
               
               {/* Navigation Controls */}
-              <div className="mt-6">
+              <div className={cn("mt-4 sm:mt-6")}>
                 <GalleryNavigation
                   hasPrev={hasPrev}
                   hasNext={hasNext}

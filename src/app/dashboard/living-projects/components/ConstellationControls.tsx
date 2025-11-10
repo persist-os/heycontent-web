@@ -11,6 +11,7 @@ interface ConstellationControlsProps {
   onZoomOut: () => void
   onReset: () => void
   className?: string
+  isMobile?: boolean
 }
 
 export function ConstellationControls({
@@ -18,7 +19,8 @@ export function ConstellationControls({
   onZoomIn,
   onZoomOut,
   onReset,
-  className = ''
+  className = '',
+  isMobile = false
 }: ConstellationControlsProps) {
   const formatScale = (value: number) => {
     return `${Math.round(value * 100)}%`
@@ -31,7 +33,7 @@ export function ConstellationControls({
   return (
     <div className={`${className}`}>
       {/* Compact Zoom Controls */}
-      <div className="bg-background/80 backdrop-blur-sm border border-border/50 rounded-lg p-1 shadow-lg">
+      <div className="bg-background/80 backdrop-blur-sm border border-border/50 rounded-lg p-2 md:p-1 shadow-lg">
         <div className="flex items-center gap-1">
           {/* Zoom Out */}
           <Button
@@ -39,7 +41,7 @@ export function ConstellationControls({
             size="sm"
             onClick={onZoomOut}
             disabled={scale <= 0.2}
-            className="h-6 w-6 p-0 text-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            className={`${isMobile ? 'min-h-[44px] min-w-[44px]' : 'h-6 w-6'} md:h-6 md:w-6 p-0 text-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors touch-manipulation`}
             title={zoomOutText}
           >
             <span className="text-xs font-light leading-none">−</span>
@@ -50,7 +52,7 @@ export function ConstellationControls({
             variant="ghost"
             size="sm"
             onClick={onReset}
-            className="h-6 px-2 text-xs font-medium text-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            className={`${isMobile ? 'min-h-[44px] px-3' : 'h-6 px-2'} md:h-6 md:px-2 text-xs font-medium text-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors touch-manipulation`}
             title={resetText}
           >
             <T context="constellation.controls.reset_button">Reset</T>
@@ -62,7 +64,7 @@ export function ConstellationControls({
             size="sm"
             onClick={onZoomIn}
             disabled={scale >= 3.0}
-            className="h-6 w-6 p-0 text-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            className={`${isMobile ? 'min-h-[44px] min-w-[44px]' : 'h-6 w-6'} md:h-6 md:w-6 p-0 text-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors touch-manipulation`}
             title={zoomInText}
           >
             <span className="text-xs font-light leading-none">+</span>
