@@ -23,10 +23,6 @@ export function useContentAttachment({
   // Widget mutations
   const addNoteToWidgetMutation = useMutation(api.widgetContentMutations.addNoteToWidget);
   const removeNoteFromWidgetMutation = useMutation(api.widgetContentMutations.removeNoteFromWidget);
-  const addConversationToWidgetMutation = useMutation(api.widgetContentMutations.addConversationToWidget);
-  const removeConversationFromWidgetMutation = useMutation(api.widgetContentMutations.removeConversationFromWidget);
-  const addCrystalToWidgetMutation = useMutation(api.widgetContentMutations.addCrystalToWidget);
-  const removeCrystalFromWidgetMutation = useMutation(api.widgetContentMutations.removeCrystalFromWidget);
   const addShardToWidgetMutation = useMutation(api.widgetContentMutations.addShardToWidget);
   const removeShardFromWidgetMutation = useMutation(api.widgetContentMutations.removeShardFromWidget);
 
@@ -53,22 +49,6 @@ export function useContentAttachment({
             await addNoteToWidgetMutation({ noteId: item.id as Id<"notes">, widgetId, userId });
             toast.success('Note added to widget');
           }
-        } else if (item.type === 'conversation') {
-          if (isAttached) {
-            await removeConversationFromWidgetMutation({ conversationId: item.id as Id<"conversations">, userId });
-            toast.success('Conversation removed from widget');
-          } else {
-            await addConversationToWidgetMutation({ conversationId: item.id as Id<"conversations">, widgetId, userId });
-            toast.success('Conversation added to widget');
-          }
-        } else if (item.type === 'crystal') {
-          if (isAttached) {
-            await removeCrystalFromWidgetMutation({ crystalId: item.id as Id<"crystals">, userId });
-            toast.success('Crystal removed from widget');
-          } else {
-            await addCrystalToWidgetMutation({ crystalId: item.id as Id<"crystals">, widgetId, userId });
-            toast.success('Crystal added to widget');
-          }
         } else if (item.type === 'shard') {
           if (isAttached) {
             await removeShardFromWidgetMutation({ shardId: item.id as Id<"crystal_shards">, userId });
@@ -77,6 +57,10 @@ export function useContentAttachment({
             await addShardToWidgetMutation({ shardId: item.id as Id<"crystal_shards">, widgetId, userId });
             toast.success('Shard added to widget');
           }
+        } else {
+          // Artifact/stardust - not supported for widgets yet, show message
+          toast.error(`${item.type} attachment to widgets not yet supported`);
+          return false;
         }
       } else if (mode === 'project' && projectId) {
         // Project mode - use unified addContent/removeContent
@@ -112,10 +96,6 @@ export function useContentAttachment({
     projectId,
     addNoteToWidgetMutation,
     removeNoteFromWidgetMutation,
-    addConversationToWidgetMutation,
-    removeConversationFromWidgetMutation,
-    addCrystalToWidgetMutation,
-    removeCrystalFromWidgetMutation,
     addShardToWidgetMutation,
     removeShardFromWidgetMutation,
     addContentToProjectMutation,

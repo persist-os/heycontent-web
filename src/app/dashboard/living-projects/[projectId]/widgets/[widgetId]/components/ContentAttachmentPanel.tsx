@@ -31,11 +31,11 @@ interface ContentAttachmentPanelProps {
   isOpen: boolean;
   onClose: () => void;
   attachedNoteIds: string[];
-  attachedConversationIds: string[];
-  attachedCrystalIds?: string[];
+  attachedArtifactIds?: string[];
+  attachedStardustIds?: string[];
   attachedShardIds?: string[];
   // Selection mode callback - if provided, panel won't persist changes, just call this
-  onAttachmentsChange?: (noteIds: string[], conversationIds: string[], crystalIds: string[], shardIds: string[]) => void;
+  onAttachmentsChange?: (noteIds: string[], artifactIds: string[], stardustIds: string[], shardIds: string[]) => void;
 }
 
 // Legacy export for backward compatibility
@@ -48,8 +48,8 @@ export function ContentAttachmentPanel({
   isOpen,
   onClose,
   attachedNoteIds,
-  attachedConversationIds,
-  attachedCrystalIds = [],
+  attachedArtifactIds = [],
+  attachedStardustIds = [],
   attachedShardIds = [],
   onAttachmentsChange
 }: ContentAttachmentPanelProps) {
@@ -68,8 +68,8 @@ export function ContentAttachmentPanel({
   
   // Local state for selection mode
   const [localNoteIds, setLocalNoteIds] = useState<string[]>(attachedNoteIds);
-  const [localConvIds, setLocalConvIds] = useState<string[]>(attachedConversationIds);
-  const [localCrystalIds, setLocalCrystalIds] = useState<string[]>(attachedCrystalIds);
+  const [localArtifactIds, setLocalArtifactIds] = useState<string[]>(attachedArtifactIds);
+  const [localStardustIds, setLocalStardustIds] = useState<string[]>(attachedStardustIds);
   const [localShardIds, setLocalShardIds] = useState<string[]>(attachedShardIds);
 
   // Use unified attachment hook only for non-selection mode
@@ -89,13 +89,13 @@ export function ContentAttachmentPanel({
           prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId]
         );
         break;
-      case 'conversation':
-        setLocalConvIds(prev => 
+      case 'artifact':
+        setLocalArtifactIds(prev => 
           prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId]
         );
         break;
-      case 'crystal':
-        setLocalCrystalIds(prev => 
+      case 'stardust':
+        setLocalStardustIds(prev => 
           prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId]
         );
         break;
@@ -112,35 +112,42 @@ export function ContentAttachmentPanel({
   // Handle close - call callback in selection mode
   const handleClose = () => {
     if (isSelectionMode && onAttachmentsChange) {
-      onAttachmentsChange(localNoteIds, localConvIds, localCrystalIds, localShardIds);
+      onAttachmentsChange(localNoteIds, localArtifactIds, localStardustIds, localShardIds);
     }
     onClose();
   };
 
   // Fetch data
-  const conversations = useQuery(api.chatQueries.getHistory, userId ? { userId } : "skip");
-  const crystals = useQuery(api.crystalQueries.getCrystalPersonaData, userId ? { userId, limit: 100 } : "skip");
+  const artifacts = useQuery(
+    api.artifactQueries.queryArtifacts,
+    userId ? { 
+      userId,
+      filters: projectId ? { projectId: projectId as any } : undefined,
+      limit: 100
+    } : "skip"
+  );
+  const stardust = useQuery(api.stardustQueries.listStardust, userId ? { userId, limit: 100 } : "skip");
   const shards = useQuery(api.shardQueries.getShardPersonaData, userId ? { userId, limit: 100 } : "skip");
 
   // Transform all items using utility function
   // In selection mode, use local state; otherwise use props
   const currentNoteIds = isSelectionMode ? localNoteIds : attachedNoteIds;
-  const currentConvIds = isSelectionMode ? localConvIds : attachedConversationIds;
-  const currentCrystalIds = isSelectionMode ? localCrystalIds : attachedCrystalIds;
+  const currentArtifactIds = isSelectionMode ? localArtifactIds : attachedArtifactIds;
+  const currentStardustIds = isSelectionMode ? localStardustIds : attachedStardustIds;
   const currentShardIds = isSelectionMode ? localShardIds : attachedShardIds;
   
   const allItems = useMemo(() => 
     transformAllItems(
       notes,
-      conversations,
-      crystals,
+      artifacts,
+      stardust,
       shards,
       currentNoteIds,
-      currentConvIds,
-      currentCrystalIds,
+      currentArtifactIds,
+      currentStardustIds,
       currentShardIds
     ),
-    [notes, conversations, crystals, shards, currentNoteIds, currentConvIds, currentCrystalIds, currentShardIds]
+    [notes, artifacts, stardust, shards, currentNoteIds, currentArtifactIds, currentStardustIds, currentShardIds]
   );
 
   // Filter items

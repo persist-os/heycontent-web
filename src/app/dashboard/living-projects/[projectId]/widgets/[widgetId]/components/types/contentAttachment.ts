@@ -1,6 +1,6 @@
 import { Id } from '@/convex/_generated/dataModel';
 
-export type ContentType = 'note' | 'conversation' | 'crystal' | 'shard';
+export type ContentType = 'note' | 'artifact' | 'stardust' | 'shard';
 
 export type AttachmentMode = 'widget' | 'project';
 

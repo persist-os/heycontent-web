@@ -2,10 +2,10 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Tag, Type, MessageSquare, Sparkles, Zap, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar, Tag, Type, Package, Star, Sparkles, Gem, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ContentItem, CrystalMetadata, NoteMetadata, ConversationMetadata, ShardMetadata } from './types/contentAttachment';
+import { ContentItem, NoteMetadata, ShardMetadata } from './types/contentAttachment';
 import { getItemIcon, getRelativeTime } from './utils/contentItemHelpers';
 
 interface EnhancedItemCardProps {
@@ -42,7 +42,7 @@ export function EnhancedItemCard({
               <h4 className={`font-medium text-foreground group-hover:text-foreground transition-colors ${item.type === 'shard' ? 'line-clamp-2' : 'truncate'}`}>
                 {item.title}
               </h4>
-              <p className={`text-sm text-muted-foreground/70 line-clamp-2 mt-1 font-light ${item.type === 'crystal' && (item.metadata as CrystalMetadata).hasQuotes ? 'italic' : ''}`}>
+              <p className={`text-sm text-muted-foreground/70 line-clamp-2 mt-1 font-light`}>
                 {item.preview}
               </p>
               
@@ -60,10 +60,17 @@ export function EnhancedItemCard({
                   </div>
                 )}
                 
-                {item.type === 'conversation' && (item.metadata as ConversationMetadata).messageCount && (
+                {item.type === 'artifact' && (item.metadata as any).type && (
                   <div className="flex items-center gap-1">
-                    <MessageSquare className="w-3 h-3" />
-                    {(item.metadata as ConversationMetadata).messageCount} messages
+                    <Package className="w-3 h-3" />
+                    {(item.metadata as any).type}
+                  </div>
+                )}
+                
+                {item.type === 'stardust' && (item.metadata as any).dimension && (
+                  <div className="flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    {(item.metadata as any).dimension}
                   </div>
                 )}
                 
@@ -74,31 +81,17 @@ export function EnhancedItemCard({
                   </div>
                 )}
 
-                {item.type === 'crystal' && (item.metadata as CrystalMetadata).dimension && (
-                  <div className="flex items-center gap-1">
-                    <Type className="w-3 h-3" />
-                    {(item.metadata as CrystalMetadata).dimension}
-                  </div>
-                )}
-
-                {item.type === 'crystal' && (item.metadata as CrystalMetadata).crystalType && (
-                  <div className="flex items-center gap-1">
-                    <Sparkles className="w-3 h-3" />
-                    {(item.metadata as CrystalMetadata).crystalType.replace('_', ' ')}
-                  </div>
-                )}
-
-                {item.type === 'crystal' && (item.metadata as CrystalMetadata).shardCount !== undefined && (item.metadata as CrystalMetadata).shardCount > 0 && (
-                  <div className="flex items-center gap-1">
-                    <Zap className="w-3 h-3" />
-                    {(item.metadata as CrystalMetadata).shardCount} shards
-                  </div>
-                )}
-
                 {item.type === 'shard' && (item.metadata as ShardMetadata).confidenceLevel && (
                   <div className="flex items-center gap-1">
                     <Type className="w-3 h-3" />
                     {(item.metadata as ShardMetadata).confidenceLevel} confidence
+                  </div>
+                )}
+                
+                {item.type === 'stardust' && (item.metadata as any).confidence !== undefined && (
+                  <div className="flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    {(item.metadata as any).confidence} confidence
                   </div>
                 )}
               </div>
@@ -128,22 +121,8 @@ export function EnhancedItemCard({
                   className="mt-4 pt-4 border-t border-border/20"
                 >
                   <div className="space-y-4">
-                    {item.type === 'crystal' && (item.metadata as CrystalMetadata).supportingQuotes?.length > 1 && (
-                      <div className="space-y-3">
-                        <div className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wide">All Supporting Quotes</div>
-                        {(item.metadata as CrystalMetadata).supportingQuotes.map((quote: string, idx: number) => (
-                          <div key={idx} className="text-sm text-muted-foreground/80 font-light leading-relaxed italic border-l-2 border-primary/30 pl-3">
-                            "{quote}"
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
                     {item.fullContent && (
                       <div>
-                        {item.type === 'crystal' && (item.metadata as CrystalMetadata).supportingQuotes?.length > 0 && (
-                          <div className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wide mb-2">Pattern Analysis</div>
-                        )}
                         <div className="text-sm text-muted-foreground/80 font-light leading-relaxed">
                           {item.fullContent}
                         </div>
@@ -173,14 +152,14 @@ export function EnhancedItemCard({
                         <Badge variant="outline" className="text-xs">Widget Output</Badge>
                       </div>
                     )}
-                    {item.type === 'crystal' && (item.metadata as CrystalMetadata).confidenceScore && (
+                    {item.type === 'artifact' && (item.metadata as any).type && (
                       <div>
-                        <span className="font-medium">Confidence:</span> {(item.metadata as CrystalMetadata).confidenceScore}
+                        <span className="font-medium">Type:</span> {(item.metadata as any).type}
                       </div>
                     )}
-                    {item.type === 'crystal' && (item.metadata as CrystalMetadata).usageCount !== undefined && (
+                    {item.type === 'stardust' && (item.metadata as any).lifecycleStage && (
                       <div>
-                        <span className="font-medium">Usage:</span> {(item.metadata as CrystalMetadata).usageCount} times
+                        <span className="font-medium">Stage:</span> {(item.metadata as any).lifecycleStage}
                       </div>
                     )}
                     {item.type === 'shard' && (item.metadata as ShardMetadata).sourceType && (

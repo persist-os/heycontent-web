@@ -1,7 +1,7 @@
 /**
  * Centralized Content Card Component
  * 
- * Material Design 3 card for all content types (notes, conversations, crystals, shards, widgets).
+ * Material Design 3 card for all content types (notes, artifacts, stardust, shards, widgets).
  * Features glassmorphism, semantic colors, and sophisticated visual hierarchy.
  * Reusable across search results, grid views, and content sections.
  */
@@ -10,13 +10,13 @@
 
 import React from 'react'
 import { useRouter } from 'next/navigation'
-import { FileText, MessageCircle, Gem, Sparkles, PlayCircle, Clock, Star, Tag, TrendingUp } from 'lucide-react'
+import { FileText, Package, Sparkles, Gem, PlayCircle, Clock, Star, Tag, TrendingUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { motion } from 'framer-motion'
 
 export interface ContentCardData {
   id: string
-  type: 'note' | 'conversation' | 'crystal' | 'shard' | 'widget'
+  type: 'note' | 'artifact' | 'stardust' | 'shard' | 'widget'
   title: string
   content?: string
   description?: string
@@ -78,23 +78,36 @@ export function ContentCard({
           accentColor: 'bg-[hsl(var(--note-primary))]/20',
           glowColor: 'hover:shadow-[hsl(var(--note-glow))]/20'
         }
-      case 'crystal':
+      case 'artifact':
         return {
-          label: 'Crystal',
-          icon: Gem,
-          // Violet consciousness - crystallized intelligence
-          iconColor: 'text-[hsl(var(--crystal-primary))]',
-          bgGradient: 'bg-gradient-to-br from-[hsl(var(--crystal-bg))] to-[hsl(var(--crystal-bg))]/60',
-          bgColor: 'bg-[hsl(var(--crystal-bg))]',
-          borderColor: 'border-[hsl(var(--crystal-border))]',
-          textColor: 'text-[hsl(var(--crystal-text))]',
-          accentColor: 'bg-[hsl(var(--crystal-primary))]/20',
-          glowColor: 'hover:shadow-[hsl(var(--crystal-glow))]/20'
+          label: 'Artifact',
+          icon: Package,
+          // Indigo - structured outputs and reports
+          iconColor: 'text-indigo-500',
+          bgGradient: 'bg-gradient-to-br from-indigo-500/10 to-indigo-500/5',
+          bgColor: 'bg-indigo-500/10',
+          borderColor: 'border-indigo-500/30',
+          textColor: 'text-foreground',
+          accentColor: 'bg-indigo-500/20',
+          glowColor: 'hover:shadow-indigo-500/20'
+        }
+      case 'stardust':
+        return {
+          label: 'Stardust',
+          icon: Sparkles,
+          // Gold - potential opportunities
+          iconColor: 'text-amber-500',
+          bgGradient: 'bg-gradient-to-br from-amber-500/10 to-amber-500/5',
+          bgColor: 'bg-amber-500/10',
+          borderColor: 'border-amber-500/30',
+          textColor: 'text-foreground',
+          accentColor: 'bg-amber-500/20',
+          glowColor: 'hover:shadow-amber-500/20'
         }
       case 'shard':
         return {
           label: 'Shard',
-          icon: Sparkles,
+          icon: Gem,
           // Amber energy - quantum fragments
           iconColor: 'text-[hsl(var(--shard-primary))]',
           bgGradient: 'bg-gradient-to-br from-[hsl(var(--shard-bg))] to-[hsl(var(--shard-bg))]/60',
@@ -103,19 +116,6 @@ export function ContentCard({
           textColor: 'text-[hsl(var(--shard-text))]',
           accentColor: 'bg-[hsl(var(--shard-primary))]/20',
           glowColor: 'hover:shadow-[hsl(var(--shard-glow))]/20'
-        }
-      case 'conversation':
-        return {
-          label: 'Chat',
-          icon: MessageCircle,
-          // Emerald consciousness - temporal dialogue
-          iconColor: 'text-[hsl(var(--conversation-primary))]',
-          bgGradient: 'bg-gradient-to-br from-[hsl(var(--conversation-bg))] to-[hsl(var(--conversation-bg))]/60',
-          bgColor: 'bg-[hsl(var(--conversation-bg))]',
-          borderColor: 'border-[hsl(var(--conversation-border))]',
-          textColor: 'text-[hsl(var(--conversation-text))]',
-          accentColor: 'bg-[hsl(var(--conversation-primary))]/20',
-          glowColor: 'hover:shadow-[hsl(var(--conversation-glow))]/20'
         }
       case 'widget':
         return {
@@ -159,11 +159,11 @@ export function ContentCard({
         case 'note':
           router.push(`/dashboard/thinking_lab?noteId=${content.id}`)
           break
-        case 'conversation':
-          router.push(`/dashboard/thinking_lab?conversationId=${content.id}`)
+        case 'artifact':
+          router.push(`/dashboard/living-projects/${content.metadata?.projectId || ''}/gallery?id=${content.id}&type=artifact`)
           break
-        case 'crystal':
-          router.push(`/dashboard/crystals?crystalId=${content.id}`)
+        case 'stardust':
+          // Stardust navigation - could go to stardust detail page if exists
           break
         case 'shard':
           router.push(`/dashboard/crystals?shardId=${content.id}`)

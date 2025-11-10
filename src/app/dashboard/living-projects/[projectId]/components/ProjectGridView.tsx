@@ -38,7 +38,7 @@ interface ProjectGridViewProps {
   onContentOpen: (id: string, type: string) => void
 }
 
-type ItemType = 'all' | 'widgets' | 'notes' | 'conversations' | 'crystals' | 'shards'
+type ItemType = 'all' | 'widgets' | 'notes' | 'artifacts' | 'stardust' | 'shards'
 type SortBy = 'recent' | 'importance' | 'name' | 'type'
 type ViewMode = 'grid' | 'list'
 
@@ -85,16 +85,14 @@ export function ProjectGridView({
           title = (item as any).title || 'Untitled Note'
           description = (item as any).content ? (item as any).content.substring(0, 100) + '...' : 'No content'
           break
-        case 'conversation':
-          title = (item as any).title || 'Conversation'
-          description = (item as any).messages?.[0]?.content ? (item as any).messages[0].content.substring(0, 80) + '...' : 'No messages'
+        case 'artifact':
+          title = (item as any).title || (item as any).type || 'Artifact'
+          const artifactData = (item as any).data || (item as any).artifactData
+          description = artifactData ? JSON.stringify(artifactData).substring(0, 100) + '...' : 'No data'
           break
-        case 'crystal':
-          title = (item as any).name || 'Crystal'
-          const coreInsight = (item as any).core_insight
-          const supportingQuote = (item as any).supporting_quotes
-          description = coreInsight ? coreInsight.substring(0, 90) + '...' : 
-                       supportingQuote ? supportingQuote.substring(0, 90) + '...' : 'No insight'
+        case 'stardust':
+          title = (item as any).name || 'Stardust'
+          description = (item as any).description ? (item as any).description.substring(0, 90) + '...' : 'No description'
           break
         case 'shard':
           title = `${(item as any).dimension || 'Dimension'} Shard`
@@ -114,7 +112,7 @@ export function ProjectGridView({
         size: 'medium' as const,
         theme: 'default' as const,
         createdAt: (item as any).createdAt || Date.now(),
-        importance: 0.3 + (contentType === 'note' ? 0.3 : contentType === 'conversation' ? 0.25 : 0.2),
+        importance: 0.3 + (contentType === 'note' ? 0.3 : contentType === 'artifact' ? 0.25 : contentType === 'stardust' ? 0.25 : 0.2),
         data: item
       }
     })
@@ -132,10 +130,10 @@ export function ProjectGridView({
         filtered = filtered.filter(item => item.type === 'widget')
       } else if (filter === 'notes') {
         filtered = filtered.filter(item => item.type === 'note')
-      } else if (filter === 'conversations') {
-        filtered = filtered.filter(item => item.type === 'conversation')
-      } else if (filter === 'crystals') {
-        filtered = filtered.filter(item => item.type === 'crystal')
+      } else if (filter === 'artifacts') {
+        filtered = filtered.filter(item => item.type === 'artifact')
+      } else if (filter === 'stardust') {
+        filtered = filtered.filter(item => item.type === 'stardust')
       } else if (filter === 'shards') {
         filtered = filtered.filter(item => item.type === 'shard')
       } else {
@@ -207,8 +205,8 @@ export function ProjectGridView({
     if (type === 'all') return allItems.length
     if (type === 'widgets') return allItems.filter(item => item.type === 'widget').length
     if (type === 'notes') return allItems.filter(item => item.type === 'note').length
-    if (type === 'conversations') return allItems.filter(item => item.type === 'conversation').length
-    if (type === 'crystals') return allItems.filter(item => item.type === 'crystal').length
+    if (type === 'artifacts') return allItems.filter(item => item.type === 'artifact').length
+    if (type === 'stardust') return allItems.filter(item => item.type === 'stardust').length
     if (type === 'shards') return allItems.filter(item => item.type === 'shard').length
     return allItems.filter(item => item.type === type).length
   }
@@ -237,8 +235,8 @@ export function ProjectGridView({
               { type: 'all', label: 'All', context: 'filter.all' },
               { type: 'widgets', label: 'Widgets', context: 'filter.widgets' },
               { type: 'notes', label: 'Notes', context: 'filter.notes' },
-              { type: 'conversations', label: 'Chats', context: 'filter.chats' },
-              { type: 'crystals', label: 'Crystals', context: 'filter.crystals' },
+              { type: 'artifacts', label: 'Artifacts', context: 'filter.artifacts' },
+              { type: 'stardust', label: 'Stardust', context: 'filter.stardust' },
               { type: 'shards', label: 'Shards', context: 'filter.shards' }
             ].map(({ type, label, context }) => (
               <button
