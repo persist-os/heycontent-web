@@ -11,6 +11,18 @@ export function middleware(request: NextRequest) {
   const apiKey = request.cookies.get('apiKey')?.value;
   const { pathname } = request.nextUrl;
 
+  // Skip middleware for static assets (images, icons, manifests, etc.)
+  // This prevents 401 errors on static file requests
+  const staticAssetExtensions = ['.png', '.svg', '.ico', '.jpg', '.jpeg', '.webp', '.json', '.txt', '.xml', '.webmanifest', '.woff', '.woff2', '.ttf', '.eot'];
+  const isStaticAsset = staticAssetExtensions.some(ext => pathname.endsWith(ext));
+  
+  if (isStaticAsset) {
+    const response = NextResponse.next();
+    // Set appropriate cache headers for static assets
+    response.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+    return response;
+  }
+
   // Gmail-style behavior: if logged in and on homepage, redirect to dashboard
   if (pathname === '/' && (token || apiKey)) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
@@ -101,8 +113,8 @@ export const config = {
      * - api (API routes)
      * - _next/static (static files)
      * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
+     * - Static assets: .png, .svg, .ico, .jpg, .jpeg, .webp, .json, .txt, .xml, .webmanifest
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api|_next/static|_next/image|.*\\.(png|svg|ico|jpg|jpeg|webp|json|txt|xml|webmanifest)$).*)',
   ],
 };

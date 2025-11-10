@@ -28,14 +28,7 @@
     }
   ],
   "categories": ["productivity", "business", "utilities"],
-  "screenshots": [
-    {
-      "src": "/dashboard-preview.png",
-      "sizes": "1920x1080",
-      "type": "image/png",
-      "label": "HeyContext Dashboard - Your AI Memory Hub"
-    }
-  ],
+  "screenshots": [],
   "shortcuts": [
     {
       "name": "Start Chat",

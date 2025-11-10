@@ -73,25 +73,20 @@ export const metadata: Metadata = {
     title: 'HeyContext - AI Memory That Evolves With You',
     description: 'Stop repeating yourself. Memory that grows with every conversation. Connections that form automatically. AI that finally works the way you think.',
     images: [
-      {
-        url: `${siteUrl}/dashboard-preview.png`,
-        width: 1920,
-        height: 1080,
-        alt: 'HeyContext Dashboard - Your AI Memory Hub',
-      },
-      {
-        url: `${siteUrl}/dashboard-preview-2.jpg`,
-        width: 1200,
-        height: 630,
-        alt: 'HeyContext - AI Memory Platform',
-      }
+      // Note: dashboard-preview.png not yet created - will be added when available
+      // {
+      //   url: `${siteUrl}/dashboard-preview.png`,
+      //   width: 1920,
+      //   height: 1080,
+      //   alt: 'HeyContext Dashboard - Your AI Memory Hub',
+      // },
     ],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'HeyContext - AI Memory That Evolves With You',
     description: 'Stop repeating yourself. AI-powered memory that learns from every conversation and connects your thoughts automatically.',
-    images: [`${siteUrl}/dashboard-preview.png`],
+    // images: [`${siteUrl}/dashboard-preview.png`], // Commented out until image is created
     creator: '@heycontext',
     site: '@heycontext',
   },
@@ -215,6 +210,8 @@ export default async function RootLayout({
         <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />
         <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png?v=2" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2" />
+        {/* Legacy iOS Safari - some browsers auto-request this */}
+        <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/apple-touch-icon.png?v=2" />
         
         {/* Additional SEO Meta Tags */}
         <meta name="theme-color" content="#3b82f6" />
