@@ -71,24 +71,41 @@ export const getConversationsWithFiles = query({
       .order("desc")
       .collect();
 
-    // Filter to only conversations that have messages with file attachments
-    const conversationsWithFiles = conversations.filter(conv =>
-      conv.messages.some((msg: any) =>
-        msg.fileAttachments && msg.fileAttachments.length > 0
-      )
+    // Query messages table for each conversation to check for file attachments
+    const conversationsWithFiles = await Promise.all(
+      conversations.map(async (conv) => {
+        // Get messages from messages table (not legacy array)
+        const messages = await ctx.db
+          .query("messages")
+          .withIndex("by_conversation", (q) => q.eq("conversationId", conv._id))
+          .collect();
+        
+        // Filter out soft-deleted messages
+        const activeMessages = messages.filter(msg => !msg.deletedAt);
+        
+        // Check if conversation has messages with file attachments
+        const hasFiles = activeMessages.some((msg: any) =>
+          msg.fileAttachments && msg.fileAttachments.length > 0
+        );
+        
+        if (!hasFiles) {
+          return null;
+        }
+        
+        // Calculate total file count
+        const fileCount = activeMessages.reduce((total: number, msg: any) => {
+          return total + (msg.fileAttachments?.length || 0);
+        }, 0);
+
+        return {
+          ...conv,
+          fileCount
+        };
+      })
     );
 
-    // Calculate total file count for each conversation
-    return conversationsWithFiles.map(conv => {
-      const fileCount = conv.messages.reduce((total: number, msg: any) => {
-        return total + (msg.fileAttachments?.length || 0);
-      }, 0);
-
-      return {
-        ...conv,
-        fileCount
-      };
-    });
+    // Filter out null values (conversations without files)
+    return conversationsWithFiles.filter((conv): conv is NonNullable<typeof conv> => conv !== null);
   },
 });
 
@@ -242,22 +259,26 @@ export const getRecentThreads = query({
       .order("desc")
       .take(limit);
     
-    // Format for ThreadCard component
-    return conversations.map(conv => {
-      const messages = conv.messages || [];
-      const lastMessage = messages[messages.length - 1];
+    // Format for ThreadCard component - query messages table for last message
+    return await Promise.all(conversations.map(async (conv) => {
+      // Get last message from messages table (not legacy array)
+      const lastMessage = await ctx.db
+        .query("messages")
+        .withIndex("by_conversation", (q) => q.eq("conversationId", conv._id))
+        .order("desc")
+        .first();
       
       return {
         _id: conv._id,
         title: conv.title || 'Main Chat',
         threadType: conv.projectId ? 'project' as const : 'main' as const,
         lastMessagePreview: lastMessage?.content?.slice(0, 150),
-        messageCount: messages.length,
+        messageCount: conv.messageCount || 0, // Use messageCount field, not legacy array
         lastMessageAt: conv.updatedAt || conv._creationTime,
         hasUnread: false, // TODO: Implement unread tracking
         projectId: conv.projectId
       };
-    });
+    }));
   }
 });
 
@@ -278,21 +299,25 @@ export const getAllUserThreads = query({
       .order("desc")
       .collect();
     
-    // Format for ThreadItem component
-    return conversations.map(conv => {
-      const messages = conv.messages || [];
-      const lastMessage = messages[messages.length - 1];
+    // Format for ThreadItem component - query messages table for last message
+    return await Promise.all(conversations.map(async (conv) => {
+      // Get last message from messages table (not legacy array)
+      const lastMessage = await ctx.db
+        .query("messages")
+        .withIndex("by_conversation", (q) => q.eq("conversationId", conv._id))
+        .order("desc")
+        .first();
       
       return {
         _id: conv._id,
         title: conv.title || 'Main Chat',
         threadType: conv.projectId ? 'project' as const : 'main' as const,
         lastMessagePreview: lastMessage?.content?.slice(0, 100),
-        messageCount: messages.length,
+        messageCount: conv.messageCount || 0, // Use messageCount field, not legacy array
         lastMessageAt: conv.updatedAt || conv._creationTime,
         hasUnread: false, // TODO: Implement
       };
-    });
+    }));
   }
 });
 
