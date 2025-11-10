@@ -9,7 +9,7 @@ const Footer = () => (
         <div className="sm:col-span-2 lg:col-span-2">
           <h3 className="text-xl sm:text-2xl font-light text-background mb-3 sm:mb-4">HeyContext</h3>
           <p className="text-sm sm:text-base text-background/90 font-light leading-relaxed max-w-md">
-            <T context="footer.tagline">A private space for thinking and working. Your thoughts, connected across time, never lost, always yours.</T>
+            <T context="footer.tagline">AI that works for you, not with you.</T>
           </p>
         </div>
         
