@@ -133,7 +133,7 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
         x: window.innerWidth / 2 - 200,
         y: window.innerHeight / 2 - 150
       }
-      openPanel(contentItem, type as 'note' | 'conversation' | 'crystal' | 'shard', position)
+      openPanel(contentItem, type as 'note' | 'artifact' | 'stardust' | 'shard', position)
     }
   };
 
@@ -488,8 +488,8 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
           isOpen={showProjectContentPanel}
           onClose={() => setShowProjectContentPanel(false)}
           attachedNoteIds={project.noteIds || []}
-          attachedConversationIds={project.conversationIds || []}
-          attachedCrystalIds={project.crystalIds || []}
+          attachedArtifactIds={project.artifactIds || []}
+          attachedStardustIds={project.stardustIds || []}
           attachedShardIds={project.shardIds || []}
         />
       )}

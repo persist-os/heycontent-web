@@ -40,6 +40,8 @@ async function getProjectByIdHandler(
     // Analytics
     stardustIds: project.stardustIds || [],
     stardustCount: (project.stardustIds || []).length,
+    artifactIds: project.artifactIds || [],
+    artifactCount: (project.artifactIds || []).length,
     
     // Intelligence
     fingerprintId: project.fingerprintId,
@@ -84,7 +86,7 @@ export const getById = query({
     let totalFetched = 0;
     const maxItems = 60;
 
-    // Priority order: widgets → notes → conversations → crystals → shards
+    // Priority order: widgets → notes → artifacts → stardust → shards
     // (Widgets are handled separately, so start with notes)
 
     // Fetch notes (up to 20)
@@ -110,49 +112,48 @@ export const getById = query({
       }
     }
 
-    // Fetch conversations (up to 20)
-    const conversationLimit = Math.min(20, maxItems - totalFetched);
-    if (conversationLimit > 0 && projectData.conversationIds.length > 0) {
-      const conversationIds = projectData.conversationIds.slice(0, conversationLimit);
-      console.log('Fetching conversations with IDs:', conversationIds);
-      for (const conversationId of conversationIds) {
+    // Fetch artifacts (up to 15)
+    const artifactLimit = Math.min(15, maxItems - totalFetched);
+    if (artifactLimit > 0 && projectData.artifactIds?.length > 0) {
+      const artifactIds = projectData.artifactIds.slice(0, artifactLimit);
+      console.log('Fetching artifacts with IDs:', artifactIds);
+      for (const artifactId of artifactIds) {
         try {
-          const conversation = await ctx.db.get(conversationId as any);
-          console.log(`Conversation ${conversationId} found:`, !!conversation);
-          if (conversation) {
+          const artifact = await ctx.db.get(artifactId as Id<"artifacts">);
+          console.log(`Artifact ${artifactId} found:`, !!artifact);
+          if (artifact) {
             contentItems.push({
-              ...conversation,
-              _contentType: 'conversation' as const,
-              _contentId: conversationId
+              ...artifact,
+              _contentType: 'artifact' as const,
+              _contentId: artifactId
             });
             totalFetched++;
           }
         } catch (error) {
-          console.warn(`Failed to fetch conversation ${conversationId}:`, error);
+          console.warn(`Failed to fetch artifact ${artifactId}:`, error);
         }
       }
     }
 
-    // Fetch crystals (up to 15)
-    const crystalLimit = Math.min(15, maxItems - totalFetched);
-    if (crystalLimit > 0 && projectData.crystalIds.length > 0) {
-      const crystalIds = projectData.crystalIds.slice(0, crystalLimit);
-      console.log('Fetching crystals with IDs:', crystalIds);
-      for (const crystalId of crystalIds) {
+    // Fetch stardust (up to 15)
+    const stardustLimit = Math.min(15, maxItems - totalFetched);
+    if (stardustLimit > 0 && projectData.stardustIds?.length > 0) {
+      const stardustIds = projectData.stardustIds.slice(0, stardustLimit);
+      console.log('Fetching stardust with IDs:', stardustIds);
+      for (const stardustId of stardustIds) {
         try {
-          // Crystals use Convex document IDs, same as other content types
-          const crystal = await ctx.db.get(crystalId as any);
-          console.log(`Crystal ${crystalId} found:`, !!crystal);
-          if (crystal) {
+          const stardust = await ctx.db.get(stardustId as Id<"stardust">);
+          console.log(`Stardust ${stardustId} found:`, !!stardust);
+          if (stardust) {
             contentItems.push({
-              ...crystal,
-              _contentType: 'crystal' as const,
-              _contentId: crystalId
+              ...stardust,
+              _contentType: 'stardust' as const,
+              _contentId: stardustId
             });
             totalFetched++;
           }
         } catch (error) {
-          console.warn(`Failed to fetch crystal ${crystalId}:`, error);
+          console.warn(`Failed to fetch stardust ${stardustId}:`, error);
         }
       }
     }

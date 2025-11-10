@@ -1,4 +1,4 @@
-import { ContentItem, NoteMetadata, ConversationMetadata, CrystalMetadata, ShardMetadata } from '../types/contentAttachment';
+import { ContentItem, NoteMetadata, ShardMetadata } from '../types/contentAttachment';
 import { truncatePreview } from './contentItemHelpers';
 
 export function transformNoteToItem(note: any, attachedNoteIds: string[]): ContentItem {
@@ -23,61 +23,47 @@ export function transformNoteToItem(note: any, attachedNoteIds: string[]): Conte
   };
 }
 
-export function transformConversationToItem(
-  conversation: any,
-  attachedConversationIds: string[]
+export function transformArtifactToItem(
+  artifact: any,
+  attachedArtifactIds: string[]
 ): ContentItem {
-  const lastMessage = conversation.messages[conversation.messages.length - 1];
-  
+  const artifactData = artifact.data || artifact.artifactData || {};
   return {
-    id: conversation._id,
-    type: 'conversation',
-    title: conversation.title || 'Untitled Conversation',
-    preview: truncatePreview(lastMessage?.content),
-    fullContent: lastMessage?.content || '',
-    timestamp: conversation.updatedAt,
-    createdAt: conversation.createdAt,
-    isAttached: attachedConversationIds.includes(conversation._id),
+    id: artifact._id,
+    type: 'artifact',
+    title: artifact.title || artifact.type || 'Untitled Artifact',
+    preview: JSON.stringify(artifactData).substring(0, 100),
+    fullContent: JSON.stringify(artifactData),
+    timestamp: artifact.updatedAt || artifact.createdAt,
+    createdAt: artifact.createdAt,
+    isAttached: attachedArtifactIds.includes(artifact._id),
     metadata: {
-      messageCount: conversation.messages?.length || 0,
-      conversationType: conversation.conversationType || 'general',
-      starred: conversation.starred || false,
-      projectId: conversation.projectId,
-      widgetId: conversation.widgetId,
-    } as ConversationMetadata,
+      type: artifact.type,
+      projectId: artifact.projectId,
+      widgetId: artifact.widgetId,
+    } as any,
   };
 }
 
-export function transformCrystalToItem(
-  crystal: any,
-  attachedCrystalIds: string[]
+export function transformStardustToItem(
+  stardust: any,
+  attachedStardustIds: string[]
 ): ContentItem {
-  const quotePreview = crystal.supporting_quotes && crystal.supporting_quotes.length > 0
-    ? `"${crystal.supporting_quotes[0]}"${
-        crystal.supporting_quotes.length > 1 ? ` +${crystal.supporting_quotes.length - 1} more` : ''
-      }`
-    : truncatePreview(crystal.description || crystal.core_insight);
-
   return {
-    id: crystal._id,
-    type: 'crystal',
-    title: crystal.name || 'Untitled Crystal',
-    preview: quotePreview,
-    fullContent: crystal.description || crystal.core_insight || '',
-    timestamp: crystal.updatedAt,
-    createdAt: crystal.createdAt,
-    isAttached: attachedCrystalIds.includes(crystal._id),
+    id: stardust._id,
+    type: 'stardust',
+    title: stardust.name || 'Untitled Stardust',
+    preview: truncatePreview(stardust.description),
+    fullContent: stardust.description || '',
+    timestamp: stardust.updatedAt || stardust.createdAt,
+    createdAt: stardust.createdAt,
+    isAttached: attachedStardustIds.includes(stardust._id),
     metadata: {
-      dimension: crystal.dimension || 'unknown',
-      crystalType: crystal.crystal_type || 'stable_trait',
-      confidenceScore: crystal.confidence_score || 'unknown',
-      shardCount: crystal.shardIds?.length || 0,
-      usageCount: crystal.usage_count || 0,
-      projectId: crystal.projectId,
-      widgetId: crystal.widgetId,
-      supportingQuotes: crystal.supporting_quotes || [],
-      hasQuotes: crystal.supporting_quotes && crystal.supporting_quotes.length > 0,
-    } as CrystalMetadata,
+      dimension: stardust.dimension || 'unknown',
+      confidence: stardust.confidence || 0,
+      lifecycleStage: stardust.lifecycleStage || 'unknown',
+      projectId: stardust.projectId,
+    } as any,
   };
 }
 
@@ -109,12 +95,12 @@ export function transformShardToItem(
 
 export function transformAllItems(
   notes: any[],
-  conversations: any[] | undefined,
-  crystals: any[] | undefined,
+  artifacts: any[] | undefined,
+  stardust: any[] | undefined,
   shards: any[] | undefined,
   attachedNoteIds: string[],
-  attachedConversationIds: string[],
-  attachedCrystalIds: string[],
+  attachedArtifactIds: string[],
+  attachedStardustIds: string[],
   attachedShardIds: string[]
 ): ContentItem[] {
   const items: ContentItem[] = [];
@@ -124,15 +110,17 @@ export function transformAllItems(
     items.push(transformNoteToItem(note, attachedNoteIds));
   });
 
-  // Transform conversations
-  conversations?.forEach(conv => {
-    items.push(transformConversationToItem(conv, attachedConversationIds));
+  // Transform artifacts
+  if (Array.isArray(artifacts)) {
+    artifacts.forEach(artifact => {
+      items.push(transformArtifactToItem(artifact, attachedArtifactIds));
   });
+  }
 
-  // Transform crystals
-  if (Array.isArray(crystals)) {
-    crystals.forEach(crystal => {
-      items.push(transformCrystalToItem(crystal, attachedCrystalIds));
+  // Transform stardust
+  if (Array.isArray(stardust)) {
+    stardust.forEach(sd => {
+      items.push(transformStardustToItem(sd, attachedStardustIds));
     });
   }
 

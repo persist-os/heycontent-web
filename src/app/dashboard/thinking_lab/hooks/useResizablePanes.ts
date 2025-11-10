@@ -165,16 +165,16 @@ export function useResizablePanes(initialRatio = 0.5): UseResizablePanesResult {
 
   // Calculate panel styles
   const leftPanelStyle = {
-    width: `${splitRatio * 100}%`,
+    width: splitRatio === 1 ? 'calc(100% - 200px)' : `${splitRatio * 100}%`, // Account for right panel minWidth when full screen
     minWidth: splitRatio === 0 ? '0' : '200px',
     display: splitRatio === 0 ? 'none' : 'flex',
     transition: isSnapping ? 'width 300ms cubic-bezier(0.4, 0, 0.2, 1)' : 'none'
   }
 
   const rightPanelStyle = {
-    width: `${(1 - splitRatio) * 100}%`,
-    minWidth: splitRatio === 1 ? '0' : '200px',
-    display: splitRatio === 1 ? 'none' : 'block',
+    width: splitRatio === 1 ? '200px' : `${(1 - splitRatio) * 100}%`, // Fixed 200px when chat is full screen
+    minWidth: '200px', // Always minimum 200px to show tabs
+    display: 'flex', // Always visible, never hidden
     transition: isSnapping ? 'width 300ms cubic-bezier(0.4, 0, 0.2, 1)' : 'none'
   }
 

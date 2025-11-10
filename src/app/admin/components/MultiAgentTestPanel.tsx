@@ -9,6 +9,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { fetchWithApiKey, getCurrentUserId } from '@/app/lib/api-helpers';
 import { ArtifactRenderer } from '@/components/artifacts/ArtifactRenderer';
+import { 
+  Users, 
+  Play, 
+  CheckCircle2, 
+  XCircle, 
+  AlertCircle, 
+  Clock 
+} from 'lucide-react';
 
 type AgentExecutionInfo = {
   agent_id: string;

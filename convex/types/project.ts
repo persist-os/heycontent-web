@@ -143,7 +143,8 @@ export const contentTypeValidator = v.union(
   v.literal("crystal"),
   v.literal("cognitiveField"),
   v.literal("shard"),
-  v.literal("stardust")
+  v.literal("stardust"),
+  v.literal("artifact")
 );
 
 /**

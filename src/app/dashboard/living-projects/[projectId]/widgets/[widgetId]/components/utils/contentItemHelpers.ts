@@ -1,4 +1,4 @@
-import { FileText, MessageSquare, Sparkles, Zap, LucideIcon } from 'lucide-react';
+import { FileText, Package, Sparkles, Gem, LucideIcon } from 'lucide-react';
 import { ContentType } from '../types/contentAttachment';
 
 export function getRelativeTime(timestamp: number): string {
@@ -19,12 +19,12 @@ export function getItemIcon(type: ContentType): LucideIcon {
   switch (type) {
     case 'note':
       return FileText;
-    case 'conversation':
-      return MessageSquare;
-    case 'crystal':
+    case 'artifact':
+      return Package;
+    case 'stardust':
       return Sparkles;
     case 'shard':
-      return Zap;
+      return Gem;
     default:
       return FileText;
   }

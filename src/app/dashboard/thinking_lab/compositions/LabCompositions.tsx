@@ -263,8 +263,8 @@ function FullThinkingLabInternal({
 
           {/* Right Panel (Notepad or Artifacts) */}
           <div style={resizable.styles.rightPanelStyle} className="flex flex-col h-full overflow-hidden">
-            {/* Panel Mode Toggle */}
-            <div className="border-b border-border/20 p-2 flex gap-2 bg-card/50 backdrop-blur-sm">
+            {/* Panel Mode Toggle - Always Visible */}
+            <div className="border-b border-border/20 p-2 flex gap-2 bg-card/50 backdrop-blur-sm flex-shrink-0 min-w-[200px]">
               <button
                 onClick={() => setRightPanelMode('notepad')}
                 className={`px-3 py-1 rounded text-sm transition-colors ${
@@ -297,33 +297,35 @@ function FullThinkingLabInternal({
               </button>
             </div>
             
-            {/* Conditional Panel Rendering */}
-            {rightPanelMode === 'notepad' ? (
-              <NotepadPanel
-                noteId={noteId}
-                quotedContent={quotedContent}
-                onClearQuoted={clearQuotedContent}
-                onClose={handleNotepadClose}
-              />
-            ) : rightPanelMode === 'artifacts' ? (
-              <ArtifactPanel
-                projectId={projectId}
-                conversationId={conversationId}
-                userId={userId}
-              />
-            ) : userId ? (
-              <WidgetPanel
-                projectId={projectId}
-                conversationId={conversationId}
-                userId={userId}
-              />
-            ) : (
-              <div className="h-full flex items-center justify-center p-6">
-                <div className="text-center text-muted-foreground">
-                  <p className="text-sm">Loading...</p>
+            {/* Conditional Panel Rendering - Hide content when panel is collapsed */}
+            <div className={`flex-1 overflow-hidden ${resizable.state.splitRatio === 1 ? 'hidden' : ''}`}>
+              {rightPanelMode === 'notepad' ? (
+                <NotepadPanel
+                  noteId={noteId}
+                  quotedContent={quotedContent}
+                  onClearQuoted={clearQuotedContent}
+                  onClose={handleNotepadClose}
+                />
+              ) : rightPanelMode === 'artifacts' ? (
+                <ArtifactPanel
+                  projectId={projectId}
+                  conversationId={conversationId}
+                  userId={userId}
+                />
+              ) : userId ? (
+                <WidgetPanel
+                  projectId={projectId}
+                  conversationId={conversationId}
+                  userId={userId}
+                />
+              ) : (
+                <div className="h-full flex items-center justify-center p-6">
+                  <div className="text-center text-muted-foreground">
+                    <p className="text-sm">Loading...</p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>

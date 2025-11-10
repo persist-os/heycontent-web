@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Search, Sparkles, Zap } from 'lucide-react';
+import { Search, Package, Sparkles, Gem } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ContentType } from './types/contentAttachment';
@@ -48,21 +48,22 @@ export function SearchAndFilterBar({
           Notes
         </Button>
         <Button
-          variant={selectedType === 'conversation' ? 'default' : 'outline'}
+          variant={selectedType === 'artifact' ? 'default' : 'outline'}
           size="sm"
-          onClick={() => onTypeChange('conversation')}
+          onClick={() => onTypeChange('artifact')}
           className="rounded-xl"
         >
-          Conversations
+          <Package className="w-3 h-3 mr-1" />
+          Artifacts
         </Button>
         <Button
-          variant={selectedType === 'crystal' ? 'default' : 'outline'}
+          variant={selectedType === 'stardust' ? 'default' : 'outline'}
           size="sm"
-          onClick={() => onTypeChange('crystal')}
+          onClick={() => onTypeChange('stardust')}
           className="rounded-xl"
         >
           <Sparkles className="w-3 h-3 mr-1" />
-          Crystals
+          Stardust
         </Button>
         <Button
           variant={selectedType === 'shard' ? 'default' : 'outline'}
@@ -70,7 +71,7 @@ export function SearchAndFilterBar({
           onClick={() => onTypeChange('shard')}
           className="rounded-xl"
         >
-          <Zap className="w-3 h-3 mr-1" />
+          <Gem className="w-3 h-3 mr-1" />
           Shards
         </Button>
       </div>

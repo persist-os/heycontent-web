@@ -14,7 +14,7 @@ import { Id } from "./_generated/dataModel";
  */
 export interface ProjectContentItem {
   id: string;
-  type: "note" | "conversation" | "crystal" | "shard" | "stardust";
+  type: "note" | "conversation" | "crystal" | "shard" | "stardust" | "artifact";
   title: string;
   content?: string;
   preview?: string;
@@ -30,7 +30,7 @@ export interface ProjectContentItem {
 /**
  * Content type filter for tabbed interface
  */
-export type ContentTypeFilter = "all" | "notes" | "conversations" | "crystals" | "shards" | "stardusts";
+export type ContentTypeFilter = "all" | "notes" | "conversations" | "crystals" | "shards" | "stardusts" | "artifacts";
 
 /**
  * Batch fetch all content attached to a project with user isolation
@@ -55,7 +55,8 @@ export const getProjectContent = query({
       v.literal("conversations"),
       v.literal("crystals"),
       v.literal("shards"),
-      v.literal("stardusts")
+      v.literal("stardusts"),
+      v.literal("artifacts")
     )),
     limit: v.optional(v.number()),
     offset: v.optional(v.number())
@@ -269,6 +270,40 @@ export const getProjectContent = query({
         }
       }
 
+      if (contentType === "all" || contentType === "artifacts") {
+        const artifactIds = project.artifactIds || [];
+        const artifactLimit = contentType === "artifacts" ? maxLimit : Math.floor(maxLimit / 5);
+        
+        for (const artifactId of artifactIds.slice(0, artifactLimit)) {
+          try {
+            const artifact = await ctx.db.get(artifactId as Id<"artifacts">);
+            if (artifact && artifact.userId === userId) {
+              const artifactData = artifact.data || artifact.artifactData || {};
+              contentItems.push({
+                id: artifact._id,
+                type: "artifact",
+                title: artifact.title || artifact.type || "Artifact",
+                content: JSON.stringify(artifactData),
+                preview: JSON.stringify(artifactData).substring(0, 150) + 
+                        (JSON.stringify(artifactData).length > 150 ? "..." : ""),
+                metadata: {
+                  createdAt: artifact.createdAt,
+                  updatedAt: artifact.updatedAt,
+                  userId: artifact.userId,
+                  type: artifact.type,
+                  projectId: artifact.projectId,
+                  widgetId: artifact.widgetId
+                },
+                projectId: project._id
+              });
+            }
+          } catch (error) {
+            console.warn(`[PROJECT CONTENT] Error fetching artifact ${artifactId}:`, error);
+            continue;
+          }
+        }
+      }
+
       // Sort by creation date (most recent first)
       contentItems.sort((a, b) => b.metadata.createdAt - a.metadata.createdAt);
 
@@ -319,7 +354,8 @@ export const getProjectContentCounts = query({
     conversations: v.number(),
     crystals: v.number(),
     shards: v.number(),
-    stardusts: v.number()
+    stardusts: v.number(),
+    artifacts: v.number()
   }),
   handler: async (ctx, { projectId, userId }) => {
     // Validate project ownership
@@ -331,7 +367,8 @@ export const getProjectContentCounts = query({
         conversations: 0,
         crystals: 0,
         shards: 0,
-        stardusts: 0
+        stardusts: 0,
+        artifacts: 0
       };
     }
 
@@ -341,7 +378,8 @@ export const getProjectContentCounts = query({
     const crystalCount = (project.crystalIds || []).length;
     const shardCount = (project.shardIds || []).length;
     const stardustCount = (project.stardustIds || []).length;
-    const allCount = noteCount + conversationCount + crystalCount + shardCount + stardustCount;
+    const artifactCount = (project.artifactIds || []).length;
+    const allCount = noteCount + conversationCount + crystalCount + shardCount + stardustCount + artifactCount;
 
     return {
       all: allCount,
@@ -349,7 +387,8 @@ export const getProjectContentCounts = query({
       conversations: conversationCount,
       crystals: crystalCount,
       shards: shardCount,
-      stardusts: stardustCount
+      stardusts: stardustCount,
+      artifacts: artifactCount
     };
   }
 });
@@ -374,7 +413,8 @@ export const getProjectContentMetadata = internalQuery({
       v.literal("conversations"),
       v.literal("crystals"),
       v.literal("shards"),
-      v.literal("stardusts")
+      v.literal("stardusts"),
+      v.literal("artifacts")
     )
   },
   returns: v.array(v.any()),
@@ -502,6 +542,27 @@ export const getProjectContentMetadata = internalQuery({
             }
           }
           break;
+
+        case "artifacts":
+          const artifactIds = project.artifactIds || [];
+          for (const artifactId of artifactIds) {
+            try {
+              const artifact = await ctx.db.get(artifactId as Id<"artifacts">);
+              if (artifact && artifact.userId === userId) {
+                metadata.push({
+                  id: artifact._id,
+                  type: "artifact",
+                  title: artifact.title || artifact.type || "Artifact",
+                  createdAt: artifact.createdAt,
+                  updatedAt: artifact.updatedAt,
+                  artifactType: artifact.type
+                });
+              }
+            } catch (error) {
+              continue;
+            }
+          }
+          break;
       }
       
       return metadata;
@@ -536,7 +597,8 @@ export const searchProjectContent = query({
       v.literal("conversations"),
       v.literal("crystals"),
       v.literal("shards"),
-      v.literal("stardusts")
+      v.literal("stardusts"),
+      v.literal("artifacts")
     )),
     limit: v.optional(v.number())
   },
@@ -642,6 +704,24 @@ export const searchProjectContent = query({
       }
     }
 
+    // Fetch and search artifacts
+    if ((contentType === 'all' || contentType === 'artifacts') && project.artifactIds?.length > 0) {
+      for (const artifactId of project.artifactIds.slice(0, 15)) {
+        try {
+          const artifact = await ctx.db.get(artifactId as Id<"artifacts">);
+          if (artifact && (
+            ((artifact as any).title || '').toLowerCase().includes(searchLower) ||
+            ((artifact as any).type || '').toLowerCase().includes(searchLower) ||
+            JSON.stringify(artifact.data || artifact.artifactData || {}).toLowerCase().includes(searchLower)
+          )) {
+            contentItems.push({ ...artifact, _contentType: 'artifact', _contentId: artifactId });
+          }
+        } catch (error) {
+          console.warn(`Failed to search artifact ${artifactId}:`, error);
+        }
+      }
+    }
+
     return contentItems.slice(0, limit);
   }
 });
@@ -669,7 +749,8 @@ export const getProjectContentVirtual = query({
       v.literal("conversations"),
       v.literal("crystals"),
       v.literal("shards"),
-      v.literal("stardusts")
+      v.literal("stardusts"),
+      v.literal("artifacts")
     )),
     startIndex: v.number(),
     endIndex: v.number()
@@ -705,6 +786,9 @@ export const getProjectContentVirtual = query({
     }
     if (contentType === "all" || contentType === "stardusts") {
       allIds = allIds.concat(project.stardustIds || []);
+    }
+    if (contentType === "all" || contentType === "artifacts") {
+      allIds = allIds.concat(project.artifactIds || []);
     }
 
     const totalCount = allIds.length;
@@ -775,6 +859,17 @@ export const getProjectContentVirtual = query({
               id: item._id,
               type: "stardust",
               title: item.name || item.description?.substring(0, 50) || "Stardust",
+              createdAt: item.createdAt,
+              updatedAt: item.updatedAt
+            });
+          }
+        } else if ((project.artifactIds || []).includes(id)) {
+          item = await ctx.db.get(id as Id<"artifacts">);
+          if (item && item.userId === userId) {
+            items.push({
+              id: item._id,
+              type: "artifact",
+              title: item.title || item.type || "Artifact",
               createdAt: item.createdAt,
               updatedAt: item.updatedAt
             });

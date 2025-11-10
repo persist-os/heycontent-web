@@ -145,6 +145,7 @@ export const addContent = mutation({
       cognitiveField: "cognitiveFieldIds",
       shard: "shardIds",
       stardust: "stardustIds",
+      artifact: "artifactIds",
     };
     
     const field = fieldMap[contentType];
@@ -198,6 +199,7 @@ export const removeContent = mutation({
       cognitiveField: "cognitiveFieldIds",
       shard: "shardIds",
       stardust: "stardustIds",
+      artifact: "artifactIds",
     };
     
     const field = fieldMap[contentType];
@@ -248,6 +250,7 @@ export const addMultipleContent = mutation({
       crystal: "crystalIds",
       shard: "shardIds",
       stardust: "stardustIds",
+      artifact: "artifactIds",
     };
     
     for (const item of content) {
