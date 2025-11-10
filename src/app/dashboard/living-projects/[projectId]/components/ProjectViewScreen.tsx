@@ -1,11 +1,10 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import { useQuery } from 'convex/react'
-import { useRouter } from 'next/navigation'
+import { useQuery, useMutation } from 'convex/react'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { api } from '@/convex/_generated/api'
-import { useProjectFingerprint } from '@/app/dashboard/living-projects/hooks/useProjectFingerprint'
+import { Id } from '@/convex/_generated/dataModel'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { T } from '@/components/translation'
 import { 
@@ -28,9 +27,7 @@ import { UnifiedDetailsPanel, usePanelInstances } from './widgets/unified-panel/
 import { WidgetGenerationLoader } from './widgets/WidgetGenerationLoader'
 import { ConstellationCanvas } from './widgets/ConstellationCanvas'
 import { formatDistanceToNow } from './utils/dateFormatting'
-import { useWidgetRunner } from '@/app/dashboard/living-projects/hooks/useWidgetRunner'
 import { ContentAttachmentPanel } from '@/app/dashboard/living-projects/components/ContentAttachmentPanel'
-import { ProjectContentSection } from './ProjectContentSection'
 import { ProjectGridView } from './ProjectGridView'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
@@ -53,6 +50,9 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("constellation")
   const menuRef = useRef<HTMLDivElement>(null)
   
+  // Validate projectId - must be a valid Convex ID (not "project-discovery" or other invalid values)
+  const isValidProjectId = projectId && projectId !== 'project-discovery' && projectId.length > 0
+  
   // Unified panel management (replaces separate widget/content panel state)
   const {
     instances: panelInstances,
@@ -63,8 +63,8 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
 
   // Track project open
   useEffect(() => {
-    if (projectId) trackProjectOpen(projectId)
-  }, [projectId, trackProjectOpen])
+    if (isValidProjectId) trackProjectOpen(projectId)
+  }, [projectId, isValidProjectId, trackProjectOpen])
 
   // Get user ID on component mount
   useEffect(() => {
@@ -79,10 +79,10 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
     getUserId()
   }, [])
 
-  // Data fetching
+  // Data fetching - skip if projectId is invalid
   const project = useQuery(
     api.projectsQueries.getById,
-    projectId && userId ? { 
+    isValidProjectId && userId ? { 
       projectId: projectId as any,
       userId: userId,
       includeContent: true // Include content items for constellation view
@@ -91,15 +91,32 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
 
   const projectWidgets = useQuery(
     api.projectWidgetsQueries.getProjectWidgetsByProject,
-    projectId ? { projectId: projectId as any } : 'skip'
+    isValidProjectId ? { projectId: projectId as any } : 'skip'
   )
 
-  const { fingerprint: currentFingerprint } = useProjectFingerprint(projectId as any)
+  // Fetch artifacts for constellation display
+  const artifacts = useQuery(
+    api.artifactQueries.getProjectArtifacts,
+    isValidProjectId ? { 
+      projectId: projectId as any
+    } : 'skip'
+  )
+
+  // Fetch assignment fingerprint
+  const assignmentFingerprint = useQuery(
+    api.assignmentFingerprintQueries.getByProject,
+    isValidProjectId && userId ? { 
+      projectId: projectId as any,
+      userId: userId
+    } : 'skip'
+  )
+
+  const clearConstellationLayout = useMutation(api.projectsMutations.clearConstellationLayout)
   
   // Business logic hooks
   const { isGenerating, regenerateWidgets } = useWidgetGeneration({
     projectId,
-    currentFingerprint,
+    assignmentFingerprint,
     hasWidgets: !!projectWidgets?.widgets?.length
   })
 
@@ -120,32 +137,28 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
     }
   };
 
+  // Handle artifact opening
+  const handleArtifactClick = (artifact: any) => {
+    const position = {
+      x: window.innerWidth / 2 - 200,
+      y: window.innerHeight / 2 - 150
+    }
+    openPanel(artifact, 'artifact', position)
+  };
+
   // Handle layout reset
   const handleLayoutReset = async () => {
     if (!userId) return;
     
     try {
-      // Clear the stored layout
-      await fetch('/api/convex', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'runMutation',
-          name: 'projectsMutations:clearConstellationLayout',
-          args: { projectId, userId }
-        })
-      });
-      
-      console.log('Layout reset successfully');
+      await clearConstellationLayout({
+        projectId: projectId as Id<'projects'>,
+        userId,
+      })
     } catch (error) {
       console.error('Failed to reset layout:', error);
     }
   };
-
-  // Widget runner hook
-  const router = useRouter()
-  const { executeWidget, isRunning: isWidgetRunning, lastResult } = useWidgetRunner()
-  const [runningWidgetId, setRunningWidgetId] = useState<string | null>(null)
 
   // Event handlers - unified panel opens at widget/content position
   const handleWidgetClick = (widget: WidgetConfig) => {
@@ -159,43 +172,6 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
 
   const handleWidgetHover = (widgetId: string | null) => {
     setHighlightedWidget(widgetId)
-  }
-
-  const handleWidgetRun = async (widgetId: string) => {
-    try {
-      setRunningWidgetId(widgetId)
-      
-      // Find widget by Convex ID
-      const widget = projectWidgets?.widgets.find(
-        (w: any) => w._id === widgetId
-      ) as WidgetConfig | undefined
-      
-      if (!widget) {
-        console.error('Widget not found:', widgetId)
-        return
-      }
-
-      const result = await executeWidget({
-        widgetId,
-        projectId
-      })
-
-      if (result) {
-        // Success! Open the panel to show the output
-        console.log('Widget executed successfully:', result)
-        
-        // Open panel at center of viewport
-        const position = {
-          x: window.innerWidth / 2 - 200,
-          y: window.innerHeight / 2 - 150
-        }
-        openPanel(widget, 'widget', position)
-      }
-    } catch (error) {
-      console.error('Failed to run widget:', error)
-    } finally {
-      setRunningWidgetId(null)
-    }
   }
 
   const handleDeleteProject = async () => {
@@ -245,8 +221,8 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
     )
   }
 
-  const lastEvolution = currentFingerprint?.last_evolution 
-    ? formatDistanceToNow(new Date(currentFingerprint.last_evolution), { addSuffix: true })
+  const lastEvolution = assignmentFingerprint?.lastEvolution 
+    ? formatDistanceToNow(new Date(assignmentFingerprint.lastEvolution), { addSuffix: true })
     : 'Never'
 
   return (
@@ -404,19 +380,19 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
             <>
               {isGenerating ? (
                 <WidgetGenerationLoader />
-              ) : currentFingerprint ? (
+              ) : assignmentFingerprint ? (
                 <ConstellationCanvas
                   widgets={(projectWidgets?.widgets || []) as WidgetConfig[]}
+                  artifacts={artifacts || []}
                   userId={userId}
-                  projectId={projectId}
+                  projectId={projectId as Id<"projects">}
                   onWidgetClick={handleWidgetClick}
                   onWidgetHover={handleWidgetHover}
                   highlightedWidget={highlightedWidget}
-                  onWidgetRun={handleWidgetRun}
-                  runningWidgetId={runningWidgetId}
                   contentItems={(project as any)?.contentItems || []}
                   storedLayout={(project as any)?.constellationLayout}
                   onContentOpen={handleContentOpen}
+                  onArtifactClick={handleArtifactClick}
                   onLayoutReset={handleLayoutReset}
                 />
               ) : (
@@ -469,8 +445,6 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
                         widgets={(projectWidgets?.widgets || []) as WidgetConfig[]}
                         contentItems={(project as any)?.contentItems || []}
                         onWidgetClick={handleWidgetClick}
-                        onWidgetRun={handleWidgetRun}
-                        runningWidgetId={runningWidgetId}
                         onContentOpen={handleContentOpen}
                       />
                     )}

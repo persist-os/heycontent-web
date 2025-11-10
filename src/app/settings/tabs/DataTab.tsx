@@ -162,7 +162,7 @@ const DataTab = () => {
         }
 
         if (data.errors) {
-          console.warn('Account deletion completed with warnings:', data.errors);
+          // Account deletion completed with warnings
         }
       } catch (error: any) {
         console.error('Error calling backend delete-account:', error);
@@ -174,7 +174,6 @@ const DataTab = () => {
       // Step 3: Delete Convex user data
       try {
         const result = await deleteUserAndData({ userId: user.uid });
-        console.log('Convex deletion result:', result);
       } catch (error: any) {
         console.error('Convex deleteUserAndData error:', error);
         const errorMessage = error?.message || error?.toString() || 'Unknown error';

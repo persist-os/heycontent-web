@@ -59,21 +59,21 @@ interface FeedbackDetailModalProps {
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case 'new': return 'bg-blue-100 text-blue-800';
-    case 'in_progress': return 'bg-yellow-100 text-yellow-800';
-    case 'resolved': return 'bg-green-100 text-green-800';
-    case 'closed': return 'bg-gray-100 text-gray-800';
-    default: return 'bg-gray-100 text-gray-800';
+    case 'new': return 'bg-chart-1/10 text-chart-1 border border-chart-1/20';
+    case 'in_progress': return 'bg-primary/10 text-primary border border-primary/20';
+    case 'resolved': return 'bg-accent/10 text-accent border border-accent/20';
+    case 'closed': return 'bg-muted text-muted-foreground';
+    default: return 'bg-muted text-muted-foreground';
   }
 };
 
 const getPriorityColor = (priority: string) => {
   switch (priority) {
-    case 'urgent': return 'bg-red-100 text-red-800';
-    case 'high': return 'bg-orange-100 text-orange-800';
-    case 'medium': return 'bg-yellow-100 text-yellow-800';
-    case 'low': return 'bg-green-100 text-green-800';
-    default: return 'bg-gray-100 text-gray-800';
+    case 'urgent': return 'bg-destructive/10 text-destructive border border-destructive/20';
+    case 'high': return 'bg-destructive/10 text-destructive border border-destructive/20';
+    case 'medium': return 'bg-primary/10 text-primary border border-primary/20';
+    case 'low': return 'bg-accent/10 text-accent border border-accent/20';
+    default: return 'bg-muted text-muted-foreground';
   }
 };
 
@@ -253,7 +253,7 @@ export function FeedbackDetailModal({
                                 size="sm"
                                 variant="secondary"
                                 onClick={() => handleDownloadImage(screenshot)}
-                                className="bg-white/90 hover:bg-white"
+                                className="bg-card/90 hover:bg-card"
                               >
                                 <Download className="h-3 w-3" />
                               </Button>
@@ -261,7 +261,7 @@ export function FeedbackDetailModal({
                                 size="sm"
                                 variant="secondary"
                                 onClick={() => window.open(screenshot.url, '_blank')}
-                                className="bg-white/90 hover:bg-white"
+                                className="bg-card/90 hover:bg-card"
                               >
                                 <ExternalLink className="h-3 w-3" />
                               </Button>
@@ -269,8 +269,8 @@ export function FeedbackDetailModal({
                           </div>
                         </div>
                       ) : (
-                        <div className="w-full h-32 bg-gray-100 rounded-lg border flex items-center justify-center text-center p-2">
-                          <div className="text-xs text-gray-500">
+                        <div className="w-full h-32 bg-muted rounded-lg border flex items-center justify-center text-center p-2">
+                          <div className="text-xs text-muted-foreground">
                             <div className="font-medium truncate">{screenshot.name}</div>
                             <div>No URL</div>
                             <div className="text-xs">{formatFileSize(screenshot.size)}</div>

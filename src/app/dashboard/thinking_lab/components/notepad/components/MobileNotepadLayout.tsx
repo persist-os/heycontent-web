@@ -28,6 +28,8 @@ interface MobileNotepadLayoutProps {
   onEditingTitleChange: (editing: boolean) => void
   onLinkNote?: (noteId: string) => void
   onShare?: () => void
+  showRatingButton?: boolean
+  onRateLastGeneration?: () => void
   isReadOnly?: boolean
   notePermission?: "owner" | "read" | "edit" | null
   panelState?: PanelState
@@ -50,6 +52,8 @@ export function MobileNotepadLayout({
   onEditingTitleChange,
   onLinkNote,
   onShare,
+  showRatingButton = false,
+  onRateLastGeneration,
   isReadOnly = false,
   notePermission = null,
   panelState
@@ -75,6 +79,8 @@ export function MobileNotepadLayout({
         onGenerateMetadata={noteHandlers.handleGenerateMetadata}
         onSaveNote={noteHandlers.handleSaveAsNote}
         onShare={onShare}
+        showRatingButton={showRatingButton}
+        onRateLastGeneration={onRateLastGeneration}
         isReadOnly={isReadOnly}
         notePermission={notePermission}
         panelState={panelState}
@@ -82,29 +88,27 @@ export function MobileNotepadLayout({
 
       {/* Editor Area */}
       <div className="flex-1 overflow-auto relative scrollbar-hide">
-        {/* Calculate padding to match header - mobile uses px-4 */}
-        <div className="px-4 h-full">
-          <LexicalNotepadEditor
-            content={content}
-            onContentChange={noteHandlers.handleContentChange}
-            placeholder={isReadOnly ? "This note is read-only" : "Start writing your note..."}
-            onAskAI={aiHandlers.handleAskAI}
-            onRequestAnalysis={aiHandlers.handleRequestAnalysis}
-            onRequestIdeas={aiHandlers.handleRequestIdeas}
-            userId={firebaseUserId}
-            noteType={note.type || "idea_bank"}
-            availableNotes={availableNotes}
-            onLinkNote={onLinkNote}
-            className="h-full border-0"
-            containerRef={sidebarRef}
-            ref={lexicalEditorRef}
-            onRefineText={aiHandlers.handleRefineText}
-            onAcceptRefinement={aiHandlers.handleAcceptRefinement}
-            onRejectRefinement={aiHandlers.handleRejectRefinement}
-            onRetryRefinement={aiHandlers.handleRetryRefinement}
-            disabled={isReadOnly}
-          />
-        </div>
+        <LexicalNotepadEditor
+          content={content}
+          onContentChange={noteHandlers.handleContentChange}
+          placeholder={isReadOnly ? "This note is read-only" : "Start writing your note..."}
+          onAskAI={aiHandlers.handleAskAI}
+          onRequestAnalysis={aiHandlers.handleRequestAnalysis}
+          onRequestIdeas={aiHandlers.handleRequestIdeas}
+          userId={firebaseUserId}
+          noteType={note.type || "idea_bank"}
+          availableNotes={availableNotes}
+          onLinkNote={onLinkNote}
+          className="h-full border-0"
+          containerRef={sidebarRef}
+          ref={lexicalEditorRef}
+          onRefineText={aiHandlers.handleRefineText}
+          onAcceptRefinement={aiHandlers.handleAcceptRefinement}
+          onRejectRefinement={aiHandlers.handleRejectRefinement}
+          onRetryRefinement={aiHandlers.handleRetryRefinement}
+          disabled={isReadOnly}
+          isMobile={true}
+        />
       </div>
     </div>
   )

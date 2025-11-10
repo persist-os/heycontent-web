@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Sparkles, Wand2, Loader2, Save, Share2 } from 'lucide-react'
+import { Sparkles, Wand2, Loader2, Save, Share2, Star } from 'lucide-react'
 import { useTranslation } from '@/hooks/useTranslation'
 
 interface ActionButtonsProps {
@@ -9,7 +9,9 @@ interface ActionButtonsProps {
   onGenerateMetadata: () => void
   onSaveNote: () => void
   onShare?: () => void
+  onRateLastGeneration?: () => void
   shouldShowSmartButton: boolean
+  showRatingButton?: boolean
   isGeneratingMetadata: boolean
   isCreating: boolean
   isMobile?: boolean
@@ -22,7 +24,9 @@ export function ActionButtons({
   onGenerateMetadata,
   onSaveNote,
   onShare,
+  onRateLastGeneration,
   shouldShowSmartButton,
+  showRatingButton = false,
   isGeneratingMetadata,
   isCreating,
   isMobile = false,
@@ -46,6 +50,9 @@ export function ActionButtons({
   })
   const { text: shareNoteTitle } = useTranslation('Share note', {
     context: 'notepad.actions.share'
+  })
+  const { text: rateGenerationTitle } = useTranslation('Rate AI generation', {
+    context: 'notepad.actions.rate_generation'
   })
   const { text: readOnlyTitle } = useTranslation('Read-only note', {
     context: 'notepad.status.read_only'
@@ -101,6 +108,17 @@ export function ActionButtons({
           title={shareNoteTitle}
         >
           <Share2 className={iconSize} />
+        </button>
+      )}
+
+      {/* Rate AI Generation Button - Shows after inline AI generation */}
+      {showRatingButton && onRateLastGeneration && (
+        <button
+          onClick={onRateLastGeneration}
+          className={`${buttonSize} text-yellow-500 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-950/20 rounded-md transition-all duration-200 animate-in fade-in zoom-in-95`}
+          title={rateGenerationTitle}
+        >
+          <Star className={`${iconSize} fill-current`} />
         </button>
       )}
     </div>

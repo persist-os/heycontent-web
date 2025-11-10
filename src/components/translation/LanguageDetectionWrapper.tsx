@@ -35,25 +35,21 @@ export function LanguageDetectionWrapper({ children }: { children: React.ReactNo
   useEffect(() => {
     // Only show toast if language was auto-detected and user hasn't dismissed
     if (isAutoDetected && shouldShowLanguageToast()) {
-      console.log('[LanguageDetectionWrapper] Showing toast for auto-detected language:', language);
       setShowToast(true);
     }
   }, [isAutoDetected, language]);
 
   const handleConfirm = () => {
-    console.log('[LanguageDetectionWrapper] User confirmed language:', language);
     setShowToast(false);
     // Language is already set, just dismiss toast
   };
 
   const handleSwitchToEnglish = async () => {
-    console.log('[LanguageDetectionWrapper] User switching to English');
     setShowToast(false);
     await setLanguage('en');
   };
 
   const handleDismiss = () => {
-    console.log('[LanguageDetectionWrapper] User dismissed toast');
     setShowToast(false);
   };
 

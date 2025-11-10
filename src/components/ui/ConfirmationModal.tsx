@@ -1,90 +1,119 @@
-'use client'
-
-import React from 'react'
-import { BaseModal } from './base-modal'
+import * as React from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './alert-dialog';
+import { Button } from './button';
+import { useLanguagePreference, useTranslation } from '@/hooks/useTranslation';
 
 export interface ConfirmationModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onConfirm: () => void
-  title: string
-  titleContext?: string
-  description?: string
-  descriptionContext?: string
-  confirmText?: string
-  confirmContext?: string
-  cancelText?: string
-  cancelContext?: string
-  isLoading?: boolean
-  loadingText?: string
-  loadingContext?: string
-  variant?: 'default' | 'destructive'
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  description: string;
+  confirmText?: string;
+  cancelText?: string;
+  variant?: 'default' | 'destructive';
+  isLoading?: boolean;
+  className?: string;
+  // Translation context props
+  titleContext?: string;
+  descriptionContext?: string;
+  confirmContext?: string;
+  cancelContext?: string;
 }
 
-/**
- * ConfirmationModal - Reusable confirmation dialog component
- * 
- * Built on BaseModal with sensible defaults for confirmation flows.
- * Automatically handles translation contexts and loading states.
- * 
- * @example
- * ```tsx
- * const [showConfirm, setShowConfirm] = useState(false)
- * 
- * <ConfirmationModal
- *   isOpen={showConfirm}
- *   onClose={() => setShowConfirm(false)}
- *   onConfirm={handleDelete}
- *   title="Delete Item"
- *   titleContext="modal.delete.title"
- *   description="Are you sure? This action cannot be undone."
- *   descriptionContext="modal.delete.description"
- *   variant="destructive"
- *   isLoading={isDeleting}
- * />
- * ```
- */
 export function ConfirmationModal({
   isOpen,
   onClose,
   onConfirm,
   title,
-  titleContext,
   description,
-  descriptionContext,
   confirmText = 'Confirm',
-  confirmContext = 'button.confirm',
   cancelText = 'Cancel',
-  cancelContext = 'button.cancel',
-  isLoading = false,
-  loadingText = 'Processing...',
-  loadingContext = 'status.processing',
   variant = 'default',
+  isLoading = false,
+  className,
+  titleContext,
+  descriptionContext,
+  confirmContext,
+  cancelContext,
 }: ConfirmationModalProps) {
-  return (
-    <BaseModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={title}
-      titleContext={titleContext}
-      description={description}
-      descriptionContext={descriptionContext}
-      onConfirm={onConfirm}
-      onCancel={onClose}
-      confirmText={confirmText}
-      confirmContext={confirmContext}
-      cancelText={cancelText}
-      cancelContext={cancelContext}
-      isLoading={isLoading}
-      loadingText={loadingText}
-      loadingContext={loadingContext}
-      variant={variant}
-      maxWidth="sm"
-      showGradient={false}
-    >
-      {/* Empty children - description is in header */}
-      <></>
-    </BaseModal>
-  )
-}
+  const { language } = useLanguagePreference();
+  
+  // Use translation if context is provided, otherwise use the provided text
+  const { text: translatedTitle } = useTranslation(title, {
+    context: titleContext,
+    targetLang: language,
+    enabled: !!titleContext,
+  });
+  
+  const { text: translatedDescription } = useTranslation(description, {
+    context: descriptionContext,
+    targetLang: language,
+    enabled: !!descriptionContext,
+  });
+  
+  const { text: translatedConfirmText } = useTranslation(confirmText, {
+    context: confirmContext,
+    targetLang: language,
+    enabled: !!confirmContext,
+  });
+  
+  const { text: translatedCancelText } = useTranslation(cancelText, {
+    context: cancelContext,
+    targetLang: language,
+    enabled: !!cancelContext,
+  });
+  
+  const { text: confirmingText } = useTranslation('Confirming...', {
+    context: 'status.confirming',
+    targetLang: language,
+    enabled: true,
+  });
 
+  const handleConfirm = (e: React.MouseEvent) => {
+    e.preventDefault();
+    onConfirm();
+  };
+
+  const finalTitle = titleContext ? translatedTitle : title;
+  const finalDescription = descriptionContext ? translatedDescription : description;
+  const finalConfirmText = confirmContext ? translatedConfirmText : confirmText;
+  const finalCancelText = cancelContext ? translatedCancelText : cancelText;
+
+  return (
+    <AlertDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <AlertDialogContent className={className}>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{finalTitle}</AlertDialogTitle>
+          <AlertDialogDescription>{finalDescription}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel asChild>
+            <Button variant="outline" disabled={isLoading}>
+              {finalCancelText}
+            </Button>
+          </AlertDialogCancel>
+          <AlertDialogAction asChild>
+            <Button
+              variant={variant === 'destructive' ? 'destructive' : 'default'}
+              onClick={handleConfirm}
+              disabled={isLoading}
+              className={variant === 'destructive' ? 'bg-destructive text-white hover:bg-destructive/90 dark:text-white' : ''}
+            >
+              {isLoading ? confirmingText : finalConfirmText}
+            </Button>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}

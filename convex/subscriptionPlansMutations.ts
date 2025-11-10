@@ -28,7 +28,7 @@ export const syncPlans = mutation({
       interval: v.union(v.literal("month"), v.literal("year")),
       priceId: v.string(),
       productId: v.string(),
-      meteredPriceId: v.optional(v.string()),
+      meteredPriceId: v.union(v.string(), v.null()),  // Allow null for free tier
       amount: v.number(),
       currency: v.string(),
       includedRequests: v.number(),

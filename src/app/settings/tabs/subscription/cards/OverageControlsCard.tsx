@@ -3,6 +3,7 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Edit3, X, Check } from 'lucide-react';
 import React, { useState } from 'react';
+import { T } from '@/components/translation/T';
 
 interface OverageControlsCardProps {
   ubpEnabled: boolean;
@@ -46,11 +47,6 @@ export const OverageControlsCard: React.FC<OverageControlsCardProps> = ({
   };
 
   const handleSave = async () => {
-    console.log('[OverageControlsCard] Saving values:', { 
-      editUbpEnabled, 
-      editMonthlyLimit 
-    });
-    
     try {
       // Call the save handler with the current edit values
       await handleSaveUbp(editUbpEnabled, editMonthlyLimit);
@@ -62,10 +58,10 @@ export const OverageControlsCard: React.FC<OverageControlsCardProps> = ({
       // Exit edit mode
       setIsEditing(false);
       
-      console.log('[OverageControlsCard] Save completed successfully!');
     } catch (error) {
       console.error('[OverageControlsCard] Save failed:', error);
       // Don't exit edit mode on error so user can try again
+      // Note: alert() doesn't support ReactNode, so we keep it as-is for now
       alert('Failed to save settings. Please try again.');
     }
   };
@@ -74,7 +70,7 @@ export const OverageControlsCard: React.FC<OverageControlsCardProps> = ({
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base">Extra requests</CardTitle>
+          <CardTitle className="text-base"><T context="settings.subscription.overage.title">Extra requests</T></CardTitle>
           {!isEditing && (
             <Button
               variant="ghost"
@@ -98,11 +94,11 @@ export const OverageControlsCard: React.FC<OverageControlsCardProps> = ({
                 onCheckedChange={setEditUbpEnabled}
                 disabled={saving}
               />
-              <span className="text-sm">Allow extra requests after you reach your plan limit</span>
+              <span className="text-sm"><T context="settings.subscription.overage.allow.description">Allow extra requests after you reach your plan limit</T></span>
             </div>
             
             <div className="space-y-2">
-              <label className="text-sm font-medium">Monthly spend cap for extra requests</label>
+              <label className="text-sm font-medium"><T context="settings.subscription.overage.cap.label">Monthly spend cap for extra requests</T></label>
               <div className="flex items-center gap-2">
                 <span className="text-sm">$</span>
                 <input
@@ -119,7 +115,7 @@ export const OverageControlsCard: React.FC<OverageControlsCardProps> = ({
             </div>
 
             <div className="text-xs text-muted-foreground">
-              We'll stop charging for extra requests once you hit this cap. Your base plan stays the same.
+              <T context="settings.subscription.overage.cap.description">We'll stop charging for extra requests once you hit this cap. Your base plan stays the same.</T>
             </div>
 
             <div className="flex gap-2 pt-2">
@@ -130,7 +126,7 @@ export const OverageControlsCard: React.FC<OverageControlsCardProps> = ({
                 className="flex items-center gap-1"
               >
                 <Check className="h-3 w-3" />
-                {saving ? "Saving..." : "Save"}
+                {saving ? <T context="button.saving">Saving...</T> : <T context="button.save">Save</T>}
               </Button>
               <Button 
                 variant="outline" 
@@ -140,7 +136,7 @@ export const OverageControlsCard: React.FC<OverageControlsCardProps> = ({
                 className="flex items-center gap-1"
               >
                 <X className="h-3 w-3" />
-                Cancel
+                <T context="button.cancel">Cancel</T>
               </Button>
             </div>
           </>
@@ -154,19 +150,19 @@ export const OverageControlsCard: React.FC<OverageControlsCardProps> = ({
                 {ubpEnabled && <div className="w-2 h-2 bg-white rounded-full" />}
               </div>
               <span className="text-sm">
-                {ubpEnabled ? 'Extra requests are enabled' : 'Extra requests are disabled'}
+                {ubpEnabled ? <T context="settings.subscription.overage.status.enabled">Extra requests are enabled</T> : <T context="settings.subscription.overage.status.disabled">Extra requests are disabled</T>}
               </span>
             </div>
             
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Monthly spend cap:</span>
+              <span className="text-sm text-muted-foreground"><T context="settings.subscription.overage.cap.label.short">Monthly spend cap:</T></span>
               <span className="text-sm font-medium">${monthlyLimit}</span>
             </div>
 
             <div className="text-xs text-muted-foreground">
               {ubpEnabled 
-                ? `We'll stop charging for extra requests once you hit $${monthlyLimit}. Your base plan stays the same.`
-                : 'Extra requests will be blocked once you reach your plan limit.'
+                ? <T context="settings.subscription.overage.cap.description.with_amount">We'll stop charging for extra requests once you hit ${monthlyLimit}. Your base plan stays the same.</T>
+                : <T context="settings.subscription.overage.blocked.description">Extra requests will be blocked once you reach your plan limit.</T>
               }
             </div>
           </>

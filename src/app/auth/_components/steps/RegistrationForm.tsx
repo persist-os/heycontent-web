@@ -12,7 +12,7 @@ import Cookies from 'js-cookie';
 import { T } from '@/components/translation';
 
 interface RegistrationFormProps {
-  onSuccess: (name: string) => void;
+  onSuccess: (name: string, apiKey: string, userId: string, email: string) => void;
 }
 
 type RegistrationStep = 'referral' | 'basic' | 'password';
@@ -154,7 +154,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
           }
         };
         await confirmCookie();
-        onSuccess(name);
+        onSuccess(name, apiKeyData.apiKey, user.uid, email); // Pass all required fields
       } else {
         setError(apiKeyData.error || 'Failed to get API key');
         setIsLoading(false);

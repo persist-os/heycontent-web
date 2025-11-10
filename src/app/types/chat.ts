@@ -38,6 +38,9 @@ export interface Message {
   searchStatus?: string;
   statusHistory?: string[]; // Array of all status updates for progressive thinking
   fileAttachments?: FileAttachment[]; // File attachments for this message
+  contentType?: 'text' | 'family_question' | 'family_update' | 'preflight_questions' | 'widget_coordination'; // Message content type
+  decisionId?: string;  // Model selection decision ID (for feedback loop)
+  contextDecisionId?: string;  // Context enrichment decision ID (for feedback loop)
   metadata?: {
     suggestions?: any[];
     [key: string]: any;

@@ -19,13 +19,16 @@ import {
   Clock,
   Hash,
   FolderOpen,
-  NotebookPen
+  NotebookPen,
+  Trash2
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { TreeNode, DroppableComponentProps, DraggableComponentProps } from './NotesTree.types';
 import { Note } from '../types';
 import { T } from '@/components/translation';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 
 // Droppable folder component
 export function DroppableFolder({ node, children, dragOverFolder, draggedNote }: DroppableComponentProps) {
@@ -54,8 +57,15 @@ export function DroppableFolder({ node, children, dragOverFolder, draggedNote }:
 }
 
 // Draggable note component
-export function DraggableNote({ node, router, searchTerm }: DraggableComponentProps) {
-  const canDrag = node.note && (!node.note.isSharedWithMe || node.note.permission === 'edit');
+export function DraggableNote({ 
+  node, 
+  router, 
+  searchTerm,
+  isSelectionMode = false,
+  selectedNotes,
+  onToggleNoteSelection
+}: DraggableComponentProps) {
+  const canDrag = node.note && (!node.note.isSharedWithMe || node.note.permission === 'edit') && !isSelectionMode;
   
   const {
     attributes,
@@ -73,6 +83,7 @@ export function DraggableNote({ node, router, searchTerm }: DraggableComponentPr
   });
 
   const transformStyle = transform ? CSS.Translate.toString(transform) : undefined;
+  const isSelected = selectedNotes?.has(node.note!._id) || false;
 
   return (
     <div
@@ -84,7 +95,8 @@ export function DraggableNote({ node, router, searchTerm }: DraggableComponentPr
         node.level === 1 && "ml-6",
         node.level === 2 && "ml-12",
         isDragging && "opacity-50",
-        !canDrag && "cursor-default"
+        !canDrag && "cursor-default",
+        isSelectionMode && isSelected && "bg-primary/10 border border-primary/20 rounded-lg"
       )}
       {...(transformStyle && { style: { transform: transformStyle } })}
     >
@@ -97,15 +109,32 @@ export function DraggableNote({ node, router, searchTerm }: DraggableComponentPr
         )}
       />
       
-      <div className="flex items-center gap-3 py-3 sm:py-2 px-3 rounded-lg hover:bg-gradient-to-r hover:from-primary/5 hover:via-transparent hover:to-transparent active:bg-primary/10 transition-all duration-200 cursor-pointer relative min-h-[48px] sm:min-h-0 group"
-           onClick={() => {
-             const conversationParam = node.note!.sourceConversationId 
-               ? `&conversationId=${node.note!.sourceConversationId}` 
-               : '';
-             
-             router.push(`/dashboard/thinking_lab?noteId=${node.note!._id}${conversationParam}`);
-           }}>
+      <div 
+        className={cn(
+          "flex items-center gap-3 py-3 sm:py-2 px-3 rounded-lg hover:bg-gradient-to-r hover:from-primary/5 hover:via-transparent hover:to-transparent active:bg-primary/10 transition-all duration-200 cursor-pointer relative min-h-[48px] sm:min-h-0 group",
+          isSelectionMode && isSelected && "bg-primary/10"
+        )}
+        onClick={() => {
+          if (isSelectionMode && node.note) {
+            onToggleNoteSelection?.(node.note._id);
+          } else {
+            const conversationParam = node.note!.sourceConversationId 
+              ? `&conversationId=${node.note!.sourceConversationId}` 
+              : '';
+            
+            router.push(`/dashboard/thinking_lab?noteId=${node.note!._id}${conversationParam}`);
+          }
+        }}
+      >
         <div className="flex items-center gap-2 flex-1 min-w-0">
+          {isSelectionMode && (
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={() => onToggleNoteSelection?.(node.note!._id)}
+              onClick={(e) => e.stopPropagation()}
+              className="flex-shrink-0"
+            />
+          )}
           <div className="relative flex-shrink-0">
             <FileText className="w-4 h-4 text-primary/50 group-hover:text-primary/70 transition-colors" />
             {/* Sharing indicator overlay */}
@@ -186,6 +215,13 @@ interface TreeNodeRendererProps {
   searchTerm: string;
   dragOverFolder?: string | null;
   draggedNote?: Note | null;
+  onDeleteProject?: (projectId: string) => void;
+  isDeletingProject?: (projectId: string) => boolean;
+  isSelectionMode?: boolean;
+  selectedProjects?: Set<string>;
+  selectedNotes?: Set<string>;
+  onToggleProjectSelection?: (projectId: string) => void;
+  onToggleNoteSelection?: (noteId: string) => void;
 }
 
 export function TreeNodeRenderer({
@@ -196,7 +232,14 @@ export function TreeNodeRenderer({
   router,
   searchTerm,
   dragOverFolder,
-  draggedNote
+  draggedNote,
+  onDeleteProject,
+  isDeletingProject,
+  isSelectionMode = false,
+  selectedProjects,
+  selectedNotes,
+  onToggleProjectSelection,
+  onToggleNoteSelection
 }: TreeNodeRendererProps) {
   if (node.type === 'project' && node.project) {
     return (
@@ -209,15 +252,26 @@ export function TreeNodeRenderer({
           <div 
             className={cn(
               "flex items-center gap-3 py-3 sm:py-2 px-3 rounded-lg hover:bg-gradient-to-r hover:from-blue-500/5 hover:via-transparent hover:to-transparent active:bg-blue-500/10 transition-all cursor-pointer min-h-[48px] sm:min-h-0 group",
-              dragOverFolder === node.id && draggedNote && "bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/30 border-dashed shadow-sm shadow-primary/10"
+              dragOverFolder === node.id && draggedNote && "bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/30 border-dashed shadow-sm shadow-primary/10",
+              isSelectionMode && selectedProjects?.has(node.project!._id) && "bg-blue-500/10 border border-blue-500/20"
             )}
             onClick={() => {
-              if (node.project) {
+              if (isSelectionMode && node.project) {
+                onToggleProjectSelection?.(node.project._id);
+              } else if (node.project) {
                 router.push(`/dashboard/living-projects/${node.project._id}`);
               }
             }}
           >
             <div className="flex items-center gap-2 flex-1 min-w-0">
+              {isSelectionMode && node.type === 'project' && (
+                <Checkbox
+                  checked={selectedProjects?.has(node.project!._id) || false}
+                  onCheckedChange={() => onToggleProjectSelection?.(node.project!._id)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex-shrink-0"
+                />
+              )}
               <Folder className="w-5 h-5 text-blue-500/70 group-hover:text-blue-500 transition-colors flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
@@ -237,6 +291,21 @@ export function TreeNodeRenderer({
                 </div>
               </div>
             </div>
+            {!isSelectionMode && onDeleteProject && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-muted-foreground hover:text-destructive hover:bg-destructive/10 p-1.5 rounded-md ml-auto"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteProject(node.project!._id);
+                }}
+                disabled={isDeletingProject?.(node.project!._id)}
+                aria-label="Delete project"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
             {dragOverFolder === node.id && draggedNote && (
               <span className="text-xs text-primary font-medium ml-auto">
                 <T context="notes.drag.add-to-project">Add to project</T>
@@ -315,7 +384,14 @@ export function TreeNodeRenderer({
 
   if (node.type === 'note' && node.note) {
     return (
-      <DraggableNote node={node} router={router} searchTerm={searchTerm} />
+      <DraggableNote 
+        node={node} 
+        router={router} 
+        searchTerm={searchTerm}
+        isSelectionMode={isSelectionMode}
+        selectedNotes={selectedNotes}
+        onToggleNoteSelection={onToggleNoteSelection}
+      />
     );
   }
 

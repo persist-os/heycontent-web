@@ -36,11 +36,6 @@ export const checkMigrationStatus = internalQuery({
       needsMigration: v.number(),
       alreadyMigrated: v.number(),
     }),
-    widgetOutputs: v.object({
-      total: v.number(),
-      needsMigration: v.number(),
-      alreadyMigrated: v.number(),
-    }),
   }),
   handler: async (ctx) => {
     // Check notes
@@ -50,9 +45,6 @@ export const checkMigrationStatus = internalQuery({
     // Check conversations
     const allConversations = await ctx.db.query("conversations").collect();
     const conversationsWithWidgetId = allConversations.filter(c => c.widgetId !== undefined);
-    
-    // Check widget_outputs
-    const allWidgetOutputs = await ctx.db.query("widget_outputs").collect();
     
     return {
       notes: {
@@ -64,11 +56,6 @@ export const checkMigrationStatus = internalQuery({
         total: allConversations.length,
         needsMigration: 0,
         alreadyMigrated: conversationsWithWidgetId.length,
-      },
-      widgetOutputs: {
-        total: allWidgetOutputs.length,
-        needsMigration: 0,
-        alreadyMigrated: allWidgetOutputs.length,
       },
     };
   },
@@ -257,87 +244,6 @@ export const migrateConversations = internalMutation({
 });
 
 /**
- * Migrate all widget outputs to use Convex widget IDs
- */
-export const migrateWidgetOutputs = internalMutation({
-  args: {
-    dryRun: v.optional(v.boolean()),
-    batchSize: v.optional(v.number()),
-  },
-  returns: v.object({
-    success: v.boolean(),
-    processed: v.number(),
-    migrated: v.number(),
-    notFound: v.number(),
-    errors: v.array(v.string()),
-  }),
-  handler: async (ctx, { dryRun = false, batchSize = 100 }) => {
-    console.log(`[MIGRATE_WIDGET_OUTPUTS] Starting (dryRun=${dryRun})`);
-    
-    const widgetOutputs = await ctx.db
-      .query("widget_outputs")
-      .take(batchSize);
-    
-    let processed = 0;
-    let migrated = 0;
-    let notFound = 0;
-    const errors: string[] = [];
-    
-    for (const output of widgetOutputs) {
-      if (!output.widgetId) {
-        continue;
-      }
-      
-      processed++;
-      
-      try {
-        const legacyWidgetId = output.widgetId as string;
-        
-        console.log(`[MIGRATE_WIDGET_OUTPUTS] Processing output ${output._id} with legacy widgetId: ${legacyWidgetId}`);
-        
-        // Look up widget by legacy widget_id
-        const widget = await ctx.db
-          .query("widgets")
-          .withIndex("by_widget_id", q =>
-            q.eq("projectId", output.projectId).eq("widget_id", legacyWidgetId)
-          )
-          .first();
-        
-        if (widget) {
-          if (!dryRun) {
-            await ctx.db.patch(output._id, {
-              widgetId: widget._id,
-            });
-            console.log(`[MIGRATE_WIDGET_OUTPUTS] ✅ Migrated output ${output._id}: ${legacyWidgetId} -> ${widget._id}`);
-          } else {
-            console.log(`[MIGRATE_WIDGET_OUTPUTS] [DRY RUN] Would migrate output ${output._id}: ${legacyWidgetId} -> ${widget._id}`);
-          }
-          migrated++;
-        } else {
-          console.warn(`[MIGRATE_WIDGET_OUTPUTS] ⚠️ Widget not found for legacy ID: ${legacyWidgetId}`);
-          notFound++;
-          errors.push(`Widget not found for output ${output._id}: ${legacyWidgetId}`);
-        }
-      } catch (error: any) {
-        const errorMsg = `Failed to migrate widget output ${output._id}: ${error.message}`;
-        console.error(`[MIGRATE_WIDGET_OUTPUTS] ❌ ${errorMsg}`);
-        errors.push(errorMsg);
-      }
-    }
-    
-    console.log(`[MIGRATE_WIDGET_OUTPUTS] Complete - Processed: ${processed}, Migrated: ${migrated}, Not Found: ${notFound}`);
-    
-    return {
-      success: errors.length === 0,
-      processed,
-      migrated,
-      notFound,
-      errors,
-    };
-  },
-});
-
-/**
  * Run all migrations in sequence
  */
 export const runAllMigrations = internalMutation({
@@ -348,7 +254,6 @@ export const runAllMigrations = internalMutation({
     success: v.boolean(),
     notes: v.any(),
     conversations: v.any(),
-    widgetOutputs: v.any(),
   }),
   handler: async (ctx, { dryRun = false }) => {
     console.log(`\n========================================`);
@@ -358,23 +263,20 @@ export const runAllMigrations = internalMutation({
     // Run all migrations
     const notesResult = await ctx.runMutation(internal.migrations.migrateToConvexWidgetIds.migrateNotes, { dryRun });
     const conversationsResult = await ctx.runMutation(internal.migrations.migrateToConvexWidgetIds.migrateConversations, { dryRun });
-    const widgetOutputsResult = await ctx.runMutation(internal.migrations.migrateToConvexWidgetIds.migrateWidgetOutputs, { dryRun });
     
-    const success = notesResult.success && conversationsResult.success && widgetOutputsResult.success;
+    const success = notesResult.success && conversationsResult.success;
     
     console.log(`\n========================================`);
     console.log(`MIGRATION COMPLETE`);
     console.log(`Success: ${success}`);
     console.log(`Notes: ${notesResult.migrated} migrated, ${notesResult.notFound} not found`);
     console.log(`Conversations: ${conversationsResult.migrated} migrated, ${conversationsResult.notFound} not found`);
-    console.log(`Widget Outputs: ${widgetOutputsResult.migrated} migrated, ${widgetOutputsResult.notFound} not found`);
     console.log(`========================================\n`);
     
     return {
       success,
       notes: notesResult,
       conversations: conversationsResult,
-      widgetOutputs: widgetOutputsResult,
     };
   },
 });
@@ -403,11 +305,6 @@ export const verifyMigration = internalQuery({
       convexIds: v.number(),
       legacyIds: v.number(),
     }),
-    widgetOutputs: v.object({
-      total: v.number(),
-      convexIds: v.number(),
-      legacyIds: v.number(),
-    }),
   }),
   handler: async (ctx) => {
     // Check notes
@@ -417,10 +314,6 @@ export const verifyMigration = internalQuery({
     // Check conversations
     const allConversations = await ctx.db.query("conversations").collect();
     const conversationsWithWidgetId = allConversations.filter(c => c.widgetId);
-    
-    // Check widget outputs
-    const allWidgetOutputs = await ctx.db.query("widget_outputs").collect();
-    const outputsWithWidgetId = allWidgetOutputs.filter(o => o.widgetId);
     
     const summary = `✅ Migration check complete. All widget IDs are accepted as valid.`;
     
@@ -437,11 +330,6 @@ export const verifyMigration = internalQuery({
         total: allConversations.length,
         withWidgetId: conversationsWithWidgetId.length,
         convexIds: conversationsWithWidgetId.length,
-        legacyIds: 0,
-      },
-      widgetOutputs: {
-        total: allWidgetOutputs.length,
-        convexIds: outputsWithWidgetId.length,
         legacyIds: 0,
       },
     };

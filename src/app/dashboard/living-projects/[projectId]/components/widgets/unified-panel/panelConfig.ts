@@ -10,7 +10,8 @@ import {
   MessageCircle,
   Gem,
   Sparkles,
-  Zap
+  Zap,
+  Box
 } from 'lucide-react'
 import {
   TypeConfig,
@@ -93,6 +94,18 @@ export const TYPE_CONFIGS: Record<DetailItemType, TypeConfig> = {
     tabs: ['overview', 'metadata', 'activity'],
     actions: ['openFull', 'view'],
     label: 'Shard'
+  },
+  artifact: {
+    icon: Box,
+    bgGradient: 'from-indigo-500/10 via-blue-400/5 to-purple-500/10',
+    borderColor: 'border-indigo-500/20',
+    accentColor: 'bg-indigo-500/20',
+    textColor: 'text-indigo-900 dark:text-indigo-100',
+    iconColor: 'text-indigo-600 dark:text-indigo-400',
+    pulseColor: 'bg-indigo-400',
+    tabs: ['overview', 'metadata', 'activity'],
+    actions: ['openFull', 'view'],
+    label: 'Artifact'
   }
 }
 
@@ -129,6 +142,8 @@ export function getItemTitle(item: any, itemType: DetailItemType): string {
       return item.name || 'Unnamed Pattern'
     case 'shard':
       return item.dimension ? `${item.dimension} Shard` : 'Quantum Fragment'
+    case 'artifact':
+      return item.title || item.artifactType || item.type || 'Artifact'
   }
 }
 
@@ -147,6 +162,8 @@ export function getItemSubtitle(item: any, itemType: DetailItemType): string {
       return item.crystal_type || 'pattern'
     case 'shard':
       return item.dimension || 'fragment'
+    case 'artifact':
+      return item.artifactType || item.type || 'structured data'
   }
 }
 
@@ -165,6 +182,9 @@ export function getItemPreview(item: any, itemType: DetailItemType): string {
       return item.core_insight || item.detailed_analysis?.substring(0, 200) || 'Forming...'
     case 'shard':
       return item.exact_quote || item.what_it_reveals || 'No content'
+    case 'artifact':
+      const dataPreview = JSON.stringify(item.artifactData || item.data)?.substring(0, 200)
+      return dataPreview || 'Structured data artifact'
   }
 }
 

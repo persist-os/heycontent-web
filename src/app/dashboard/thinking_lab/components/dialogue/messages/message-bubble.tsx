@@ -5,10 +5,15 @@ import { Quote } from 'lucide-react'
 import { MarkdownRenderer } from './MarkdownRenderer'
 import { HorizontalProgressiveThinking } from '../components/HorizontalProgressiveThinking'
 import { CopyButton } from '@/components/ui/copy-button'
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import { ContentRenderer } from './ContentRenderer'
 import { FileAttachmentRenderer } from '@/components/ui/FileAttachmentRenderer'
 import { useTranslation } from '@/hooks/useTranslation'
+import { StarRating } from '@/components/ui/star-rating'
+// Removed dialogueStore import - using conversation hooks instead
+import { getCurrentUserId } from '@/app/lib/api-helpers'
+import { useMutation } from 'convex/react'
+import { api } from '@/convex/_generated/api'
 
 interface MessageBubbleProps {
   message: Message
@@ -46,87 +51,118 @@ export function MessageBubble({
   onContentClick
 }: MessageBubbleProps) {
   const isUser = message.role === 'user'
-  const [selectedText, setSelectedText] = useState('')
-  const [showQuoteButton, setShowQuoteButton] = useState(false)
+  const isCoordination = message.contentType === 'widget_coordination'
   
-  // Translations for tooltips
-  const { text: quoteTooltip } = useTranslation(`Quote "${selectedText.slice(0, 30)}..."`, {
-    context: 'message.quote_selection'
-  })
   const { text: sendToNotepadTooltip } = useTranslation('Send full message to notepad', {
     context: 'message.quote_to_notepad'
   })
 
-  // Minimal selection detection - don't interfere with native behavior
-  useEffect(() => {
-    const handleSelectionChange = () => {
-      const selection = window.getSelection()
-      const text = selection?.toString().trim() || ''
+  // Star rating functionality
+  const [messageRating, setMessageRating] = React.useState(0)
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = React.useState(false)
+  
+  const handleRateFeedback = React.useCallback(async (rating: number, feedbackText?: string) => {
+    if (!userId || !message.id || !message.decisionId) {
+      console.warn('Missing required fields for feedback', { userId, messageId: message.id, decisionId: message.decisionId })
+      return
+    }
+    
+    setIsSubmittingFeedback(true)
+    try {
+      const { fetchWithApiKey } = await import('@/app/lib/api-helpers')
       
-      if (text) {
-        setSelectedText(text)
-        setShowQuoteButton(true)
-      } else {
-        setSelectedText('')
-        setShowQuoteButton(false)
+      // Extract message_index from message sequence field
+      // sequence is the message's position in the conversation (0, 1, 2, ...)
+      // For assistant messages, this IS the message_index we need
+      let message_index: number | undefined = (message as any).sequence
+      
+      // If sequence not available, try to calculate from message index in conversation
+      // This is a fallback - ideally sequence should always be present
+      if (message_index === undefined) {
+        // Note: This requires access to all messages, which we don't have here
+        // Backend will handle this case
+        console.warn('Message sequence not available, backend will calculate from decision')
       }
+      
+      // Build request body, omitting undefined fields
+      const requestBody: any = {
+        decision_id: message.decisionId,
+        rating,
+        message_id: message.id,
+        conversation_id: message.sessionId || message.id,  // Use sessionId as conversation_id fallback
+      }
+      
+      // Only include optional fields if they have values
+      if (message.contextDecisionId) {
+        requestBody.context_decision_id = message.contextDecisionId
+      }
+      if (feedbackText) {
+        requestBody.feedback_text = feedbackText
+      }
+      if (message_index !== undefined) {
+        requestBody.message_index = message_index
+      }
+      
+      const response = await fetchWithApiKey('/api/v1/feedback/chat_message', {
+        method: 'POST',
+        body: JSON.stringify(requestBody)
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Feedback submission failed: ${response.statusText}`)
+      }
+      
+      const result = await response.json()
+      setMessageRating(rating)
+      
+      // Optional: Show success toast
+      console.log('Feedback submitted successfully:', result)
+    } catch (error) {
+      console.error('Failed to submit feedback:', error)
+      // Optional: Show error toast to user
+    } finally {
+      setIsSubmittingFeedback(false)
     }
-
-    document.addEventListener('selectionchange', handleSelectionChange)
-    return () => document.removeEventListener('selectionchange', handleSelectionChange)
-  }, [])
-
-  // Handle quote - don't clear native selection
-  const handleQuoteText = () => {
-    if (selectedText && onQuoteToNotepad) {
-      onQuoteToNotepad(selectedText)
-      setSelectedText('')
-      setShowQuoteButton(false)
-      // Don't clear selection - let user copy normally
-    }
-  }
+  }, [userId, message.id, message.decisionId, message.contextDecisionId, message.sessionId])
 
   return (
     <div className={`w-full ${className}`}>
-      {/* Quote button - simple and centered */}
-      {showQuoteButton && selectedText && notepadOpen && onQuoteToNotepad && (
-        <div 
-          className="fixed z-50 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-primary text-primary-foreground p-2 rounded-lg shadow-lg"
-        >
-          <button
-            onClick={handleQuoteText}
-            className="hover:bg-primary/90 transition-all duration-200 transform hover:scale-105"
-            title={quoteTooltip}
-          >
-            <Quote className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
-      {/* Message container - keeping original styling */}
+      {/* Message container */}
       <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-1 group`}>
         <div className={`max-w-full sm:max-w-[95%] w-full`}>
           <div
             id={`message-${message.id}`}
             className={`
-              ${isUser 
-                ? 'rounded-2xl px-5 sm:px-7 py-2 sm:py-3 bg-primary text-primary-foreground dark:text-black [&_*]:!text-primary-foreground dark:[&_*]:!text-black mr-1 sm:mr-2' 
+              ${isCoordination
+                ? 'rounded-2xl px-5 sm:px-7 py-2 sm:py-3 bg-blue-50 dark:bg-blue-950 text-blue-900 dark:text-blue-100 border border-blue-200 dark:border-blue-800'
+                : isUser 
+                ? 'rounded-2xl px-5 sm:px-7 py-2 sm:py-3 bg-primary text-primary-darker [&_*]:!text-primary-darker mr-1 sm:mr-2' 
                 : 'px-0 py-1 text-foreground'
               }
               relative w-full min-w-0
             `}
-            style={{ userSelect: 'text' }}
           >
             {/* Thinking indicator for typing messages */}
-            {message.status === 'typing' ? (
-              <HorizontalProgressiveThinking 
-                searchStatus={message.searchStatus}
-                statusHistory={message.statusHistory}
-              />
+            {message.status === 'typing' && !message.content ? (
+              // Show thinking indicator while loading (only if no content)
+              <div className="relative min-h-[60px]">
+                <div className="flex items-center">
+                  <HorizontalProgressiveThinking />
+                </div>
+              </div>
             ) : (
               <>
-                {/* Message content */}
-                <div className={`${isUser ? 'text-primary-foreground dark:text-black' : 'text-foreground'}`} style={{ userSelect: 'text' }}>
+                {/* Coordination badge for A2A messages */}
+                {isCoordination && (
+                  <div className="flex items-center gap-2 mb-2 text-sm font-medium text-blue-700 dark:text-blue-300">
+                    <span className="text-lg">🤝</span>
+                    <span>Widget Coordination</span>
+                  </div>
+                )}
+                
+                {/* Message content - show streaming content in real-time */}
+                <div className={`${isCoordination ? 'text-blue-900 dark:text-blue-100' : isUser ? 'text-primary-darker' : 'text-foreground'}`}>
                   <MarkdownRenderer content={message.content} />
                 </div>
 
@@ -151,8 +187,8 @@ export function MessageBubble({
         </div>
       </div>
       
-      {/* Action buttons below message - ChatGPT style */}
-      <div className={`flex items-center gap-1 mt-2 opacity-100 transition-opacity ${isUser ? 'justify-end' : 'justify-start'}`} style={{ userSelect: 'none' }}>
+      {/* Action buttons below message */}
+      <div className={`flex items-center gap-1 mt-2 opacity-100 transition-opacity ${isUser ? 'justify-end' : 'justify-start'}`}>
         <CopyButton 
           text={message.content}
           className="!w-8 !h-8 !p-2 hover:bg-background/80 rounded flex items-center justify-center"
@@ -168,6 +204,19 @@ export function MessageBubble({
           >
             <Quote className="w-5 h-5" />
           </button>
+        )}
+        
+        {/* Star rating for assistant messages only */}
+        {!isUser && message.status !== 'typing' && (
+          <div className="ml-2">
+            <StarRating
+              size="sm"
+              value={messageRating}
+              onRate={handleRateFeedback}
+              disabled={isSubmittingFeedback}
+              allowFeedbackText={true}
+            />
+          </div>
         )}
       </div>
     </div>

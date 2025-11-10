@@ -65,6 +65,26 @@ export function PricingTable() {
       ctaLink: '/auth/register',
       popular: true,
     },
+    {
+      name: 'Enterprise',
+      price: 'Custom',
+      priceSubtext: '',
+      annualPrice: undefined,
+      description: 'Custom solutions for teams',
+      features: [
+        'Custom API call limits',
+        'Dedicated support',
+        'Team collaboration',
+        'Advanced security',
+        'Custom integrations',
+        'SLA guarantees',
+        'Volume discounts',
+        'Custom billing',
+      ],
+      ctaText: 'Contact Sales',
+      ctaLink: 'mailto:hello@persistos.co',
+      popular: false,
+    },
   ];
 
   return (
@@ -89,7 +109,7 @@ export function PricingTable() {
       </div>
 
       {/* Pricing Cards */}
-      <div className={`grid gap-8 max-w-7xl mx-auto ${showAnnual ? 'md:grid-cols-1 max-w-md' : 'md:grid-cols-3'}`}>
+      <div className={`grid gap-8 max-w-7xl mx-auto ${showAnnual ? 'md:grid-cols-1 max-w-md' : 'md:grid-cols-2 lg:grid-cols-4'}`}>
         {pricingTiers
           .filter((tier) => !showAnnual || tier.annualPrice !== undefined)
           .map((tier) => (

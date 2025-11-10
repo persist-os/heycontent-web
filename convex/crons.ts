@@ -97,13 +97,10 @@ export const triggerFormationCycle = internalAction({
         throw new Error("BACKEND_URL not configured");
       }
       
-      const systemApiKey = process.env.BACKEND_API_KEY;
-      
       const response = await fetch(`${backendUrl}/api/v1/background-tasks/crystal-formation-cycle`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${systemApiKey}`,
         },
       });
       
@@ -158,7 +155,6 @@ export const processIntelligenceJobs = internalAction({
         throw new Error("BACKEND_URL not configured");
       }
       
-      const systemApiKey = process.env.BACKEND_API_KEY;
       let processed = 0;
       let failed = 0;
       
@@ -172,17 +168,21 @@ export const processIntelligenceJobs = internalAction({
           });
           
           // Trigger backend analysis
-          const response = await fetch(`${backendUrl}/api/v1/background_jobs/trigger_intelligence`, {
+          const response = await fetch(`${backendUrl}/api/v1/crystal_intelligence/analyze`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${systemApiKey}`,
             },
             body: JSON.stringify({
               userId: job.userId,
-              analysis_depth: job.scope.analysis_depth,
-              trigger_source: "scheduled",
-              convex_job_id: job._id
+              jobId: job._id,
+              jobType: "scheduled_analysis",
+              scope: {
+                analysis_depth: job.scope.analysis_depth,
+                trigger_source: "scheduled",
+                convex_job_id: job._id
+              },
+              analysisDepth: job.scope.analysis_depth
             }),
           });
           

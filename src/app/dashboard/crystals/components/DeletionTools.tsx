@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, AlertTriangle } from 'lucide-react';
+import { Trash2, AlertTriangle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
@@ -25,16 +25,23 @@ type DeletionType = 'all' | 'shards' | 'crystals' | 'stardust' | 'stars' | null;
 export const DeletionTools: React.FC<DeletionToolsProps> = ({ userId }) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deletionType, setDeletionType] = useState<DeletionType>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deletionProgress, setDeletionProgress] = useState<{
+    current: number;
+    total: number;
+    type: string;
+  } | null>(null);
   
+  // Batch mutation functions for production-ready deletion
   const batchMutateCrystalData = useMutation(api.crystalMutations.batchMutateCrystalData);
-  const deleteStardust = useMutation(api.stardustMutations.deleteStardust);
-  const deleteProject = useMutation(api.projectsMutations.deleteProject);
+  const batchDeleteStardust = useMutation(api.stardustMutations.batchDeleteStardust);
+  const batchDeleteProjects = useMutation(api.projectsMutations.batchDeleteProjects);
   
   // Query all crystals, shards, stardust, and projects for deletion operations
-  const allCrystals = useQuery(api.crystalQueries.getCrystalData, userId ? { userId, table: 'crystals' } : 'skip');
-  const allShards = useQuery(api.crystalQueries.getCrystalData, userId ? { userId, table: 'crystal_shards' } : 'skip');
+  const allCrystals = useQuery(api.crystalQueries.getAllCrystalsByUser, userId ? { userId } : 'skip');
+  const allShards = useQuery(api.shardQueries.getAllShardsByUser, userId ? { userId } : 'skip');
   const allStardust = useQuery(api.stardustQueries.listStardust, userId ? { userId } : 'skip');
-  const allProjects = useQuery(api.projectsQueries.getByUser, userId ? { userId, limit: 1000 } : 'skip');
+  const allProjects = useQuery(api.projectsQueries.getAllByUser, userId ? { userId } : 'skip');
 
   const openDeleteDialog = (type: DeletionType) => {
     setDeletionType(type);
@@ -42,7 +49,10 @@ export const DeletionTools: React.FC<DeletionToolsProps> = ({ userId }) => {
   };
 
   const handleConfirmDelete = async () => {
-    if (!deletionType) return;
+    if (!deletionType || isDeleting) return;
+
+    setIsDeleting(true);
+    setDeletionProgress(null);
 
     try {
       switch (deletionType) {
@@ -66,6 +76,10 @@ export const DeletionTools: React.FC<DeletionToolsProps> = ({ userId }) => {
       setDeletionType(null);
     } catch (error) {
       console.error('Delete error:', error);
+      toast.error('Deletion failed. Please try again.');
+    } finally {
+      setIsDeleting(false);
+      setDeletionProgress(null);
     }
   };
 
@@ -77,37 +91,121 @@ export const DeletionTools: React.FC<DeletionToolsProps> = ({ userId }) => {
     const stardustIds = allStardust.map((s: any) => s._id);
     const projectIds = allProjects.map((p: any) => p._id);
 
-    // Delete all crystals
+    const totalItems = crystalIds.length + shardIds.length + stardustIds.length + projectIds.length;
+    let processedItems = 0;
+
+    // Delete all crystals in batches
     if (crystalIds.length > 0) {
-      await batchMutateCrystalData({
-        table: 'crystals',
-        operations: crystalIds.map((id: string) => ({ type: 'delete', id }))
-      });
+      setDeletionProgress({ current: processedItems, total: totalItems, type: 'crystals' });
+      
+      // Process crystals in batches of 1000
+      const BATCH_SIZE = 1000;
+      let crystalProcessedCount = 0;
+      let crystalTotalSuccessful = 0;
+      let crystalTotalFailed = 0;
+      
+      for (let i = 0; i < crystalIds.length; i += BATCH_SIZE) {
+        const batch = crystalIds.slice(i, i + BATCH_SIZE);
+        
+        // Update progress
+        setDeletionProgress({ 
+          current: processedItems + crystalProcessedCount, 
+          total: totalItems, 
+          type: `crystals (batch ${Math.floor(i / BATCH_SIZE) + 1})` 
+        });
+        
+        const result = await batchMutateCrystalData({
+          table: 'crystals',
+          operations: batch.map((id: string) => ({ type: 'delete', id }))
+        });
+        
+        crystalTotalSuccessful += result.successfulOperations;
+        crystalTotalFailed += result.failedOperations;
+        crystalProcessedCount += batch.length;
+        
+        // Small delay between batches
+        if (i + BATCH_SIZE < crystalIds.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+      
+      processedItems += crystalIds.length;
+      
+      if (crystalTotalFailed > 0) {
+        throw new Error(`Failed to delete ${crystalTotalFailed} crystals out of ${crystalIds.length}`);
+      }
     }
 
-    // Delete all shards
+    // Delete all shards in batches
     if (shardIds.length > 0) {
-      await batchMutateCrystalData({
-        table: 'crystal_shards',
-        operations: shardIds.map((id: string) => ({ type: 'delete', id }))
-      });
+      setDeletionProgress({ current: processedItems, total: totalItems, type: 'shards' });
+      
+      // Process shards in batches of 1000
+      const BATCH_SIZE = 1000;
+      let shardProcessedCount = 0;
+      let shardTotalSuccessful = 0;
+      let shardTotalFailed = 0;
+      
+      for (let i = 0; i < shardIds.length; i += BATCH_SIZE) {
+        const batch = shardIds.slice(i, i + BATCH_SIZE);
+        
+        // Update progress
+        setDeletionProgress({ 
+          current: processedItems + shardProcessedCount, 
+          total: totalItems, 
+          type: `shards (batch ${Math.floor(i / BATCH_SIZE) + 1})` 
+        });
+        
+        const result = await batchMutateCrystalData({
+          table: 'crystal_shards',
+          operations: batch.map((id: string) => ({ type: 'delete', id }))
+        });
+        
+        shardTotalSuccessful += result.successfulOperations;
+        shardTotalFailed += result.failedOperations;
+        shardProcessedCount += batch.length;
+        
+        // Small delay between batches
+        if (i + BATCH_SIZE < shardIds.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+      
+      processedItems += shardIds.length;
+      
+      if (shardTotalFailed > 0) {
+        throw new Error(`Failed to delete ${shardTotalFailed} shards out of ${shardIds.length}`);
+      }
     }
 
-    // Delete all stardust
+    // Delete all stardust using batch operation
     if (stardustIds.length > 0) {
-      await Promise.all(
-        stardustIds.map((id: string) => deleteStardust({ stardustId: id as Id<"stardust"> }))
-      );
+      setDeletionProgress({ current: processedItems, total: totalItems, type: 'stardust' });
+      const result = await batchDeleteStardust({
+        stardustIds: stardustIds as Id<"stardust">[]
+      });
+      processedItems += stardustIds.length;
+      
+      if (!result.success) {
+        throw new Error(`Failed to delete stardust: ${result.failedOperations} failed`);
+      }
     }
 
-    // Delete all projects
+    // Delete all projects using batch operation
     if (projectIds.length > 0) {
-      await Promise.all(
-        projectIds.map((id: string) => deleteProject({ projectId: id as any, userId }))
-      );
+      setDeletionProgress({ current: processedItems, total: totalItems, type: 'stars' });
+      const result = await batchDeleteProjects({
+        projectIds: projectIds as Id<"projects">[],
+        userId
+      });
+      processedItems += projectIds.length;
+      
+      if (!result.success) {
+        throw new Error(`Failed to delete projects: ${result.failedOperations} failed`);
+      }
     }
 
-    toast.success(`Deleted ${crystalIds.length} crystals, ${shardIds.length} shards, ${stardustIds.length} stardust, and ${projectIds.length} stars`);
+    toast.success(`Successfully deleted ${crystalIds.length} crystals, ${shardIds.length} shards, ${stardustIds.length} stardust, and ${projectIds.length} stars`);
     setTimeout(() => window.location.reload(), 1000);
   };
 
@@ -117,11 +215,44 @@ export const DeletionTools: React.FC<DeletionToolsProps> = ({ userId }) => {
     const shardIds = allShards.map((s: any) => s._id);
 
     if (shardIds.length > 0) {
-      await batchMutateCrystalData({
-        table: 'crystal_shards',
-        operations: shardIds.map((id: string) => ({ type: 'delete', id }))
-      });
-      toast.success(`Deleted ${shardIds.length} shards`);
+      setDeletionProgress({ current: 0, total: shardIds.length, type: 'shards' });
+      
+      // Process in batches of 1000 to avoid overwhelming Convex
+      const BATCH_SIZE = 1000;
+      let processedCount = 0;
+      let totalSuccessful = 0;
+      let totalFailed = 0;
+      
+      for (let i = 0; i < shardIds.length; i += BATCH_SIZE) {
+        const batch = shardIds.slice(i, i + BATCH_SIZE);
+        
+        // Update progress
+        setDeletionProgress({ 
+          current: processedCount, 
+          total: shardIds.length, 
+          type: `shards (batch ${Math.floor(i / BATCH_SIZE) + 1})` 
+        });
+        
+        const result = await batchMutateCrystalData({
+          table: 'crystal_shards',
+          operations: batch.map((id: string) => ({ type: 'delete', id }))
+        });
+        
+        totalSuccessful += result.successfulOperations;
+        totalFailed += result.failedOperations;
+        processedCount += batch.length;
+        
+        // Small delay between batches to prevent overwhelming Convex
+        if (i + BATCH_SIZE < shardIds.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+      
+      if (totalFailed > 0) {
+        throw new Error(`Failed to delete ${totalFailed} shards out of ${shardIds.length}`);
+      }
+      
+      toast.success(`Successfully deleted ${totalSuccessful} shards`);
       setTimeout(() => window.location.reload(), 1000);
     } else {
       toast('No shards to delete');
@@ -134,11 +265,44 @@ export const DeletionTools: React.FC<DeletionToolsProps> = ({ userId }) => {
     const crystalIds = allCrystals.map((c: any) => c._id);
 
     if (crystalIds.length > 0) {
-      await batchMutateCrystalData({
-        table: 'crystals',
-        operations: crystalIds.map((id: string) => ({ type: 'delete', id }))
-      });
-      toast.success(`Deleted ${crystalIds.length} crystals`);
+      setDeletionProgress({ current: 0, total: crystalIds.length, type: 'crystals' });
+      
+      // Process in batches of 1000 to avoid overwhelming Convex
+      const BATCH_SIZE = 1000;
+      let processedCount = 0;
+      let totalSuccessful = 0;
+      let totalFailed = 0;
+      
+      for (let i = 0; i < crystalIds.length; i += BATCH_SIZE) {
+        const batch = crystalIds.slice(i, i + BATCH_SIZE);
+        
+        // Update progress
+        setDeletionProgress({ 
+          current: processedCount, 
+          total: crystalIds.length, 
+          type: `crystals (batch ${Math.floor(i / BATCH_SIZE) + 1})` 
+        });
+        
+        const result = await batchMutateCrystalData({
+          table: 'crystals',
+          operations: batch.map((id: string) => ({ type: 'delete', id }))
+        });
+        
+        totalSuccessful += result.successfulOperations;
+        totalFailed += result.failedOperations;
+        processedCount += batch.length;
+        
+        // Small delay between batches to prevent overwhelming Convex
+        if (i + BATCH_SIZE < crystalIds.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+      
+      if (totalFailed > 0) {
+        throw new Error(`Failed to delete ${totalFailed} crystals out of ${crystalIds.length}`);
+      }
+      
+      toast.success(`Successfully deleted ${totalSuccessful} crystals`);
       setTimeout(() => window.location.reload(), 1000);
     } else {
       toast('No crystals to delete');
@@ -151,10 +315,16 @@ export const DeletionTools: React.FC<DeletionToolsProps> = ({ userId }) => {
     const stardustIds = allStardust.map((s: any) => s._id);
 
     if (stardustIds.length > 0) {
-      await Promise.all(
-        stardustIds.map((id: string) => deleteStardust({ stardustId: id as Id<"stardust"> }))
-      );
-      toast.success(`Deleted ${stardustIds.length} stardust`);
+      setDeletionProgress({ current: 0, total: stardustIds.length, type: 'stardust' });
+      const result = await batchDeleteStardust({
+        stardustIds: stardustIds as Id<"stardust">[]
+      });
+      
+      if (!result.success) {
+        throw new Error(`Failed to delete stardust: ${result.failedOperations} failed`);
+      }
+      
+      toast.success(`Successfully deleted ${result.successfulOperations} stardust`);
       setTimeout(() => window.location.reload(), 1000);
     } else {
       toast('No stardust to delete');
@@ -167,10 +337,17 @@ export const DeletionTools: React.FC<DeletionToolsProps> = ({ userId }) => {
     const projectIds = allProjects.map((p: any) => p._id);
 
     if (projectIds.length > 0) {
-      await Promise.all(
-        projectIds.map((id: string) => deleteProject({ projectId: id as any, userId }))
-      );
-      toast.success(`Deleted ${projectIds.length} stars`);
+      setDeletionProgress({ current: 0, total: projectIds.length, type: 'stars' });
+      const result = await batchDeleteProjects({
+        projectIds: projectIds as Id<"projects">[],
+        userId
+      });
+      
+      if (!result.success) {
+        throw new Error(`Failed to delete projects: ${result.failedOperations} failed`);
+      }
+      
+      toast.success(`Successfully deleted ${result.successfulOperations} stars`);
       setTimeout(() => window.location.reload(), 1000);
     } else {
       toast('No stars to delete');
@@ -312,6 +489,24 @@ export const DeletionTools: React.FC<DeletionToolsProps> = ({ userId }) => {
             </AlertDialogDescription>
           </AlertDialogHeader>
 
+          {/* Progress indicator */}
+          {deletionProgress && (
+            <div className="my-4 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+              <div className="flex items-center gap-2 mb-2">
+                <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                  Deleting {deletionProgress.type}... ({deletionProgress.current}/{deletionProgress.total})
+                </p>
+              </div>
+              <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${Math.min(100, (deletionProgress.current / deletionProgress.total) * 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
+
           {/* Summary of items to be deleted */}
           <div className="my-4 p-4 bg-muted/50 rounded-lg border border-border/50">
             <p className="text-sm font-medium text-foreground mb-2">Items to be deleted:</p>
@@ -364,14 +559,25 @@ export const DeletionTools: React.FC<DeletionToolsProps> = ({ userId }) => {
           </div>
 
           <AlertDialogFooter>
-            <AlertDialogCancel className="font-normal">
+            <AlertDialogCancel 
+              className="font-normal"
+              disabled={isDeleting}
+            >
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-normal"
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-normal disabled:opacity-50"
             >
-              Delete Permanently
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete Permanently'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

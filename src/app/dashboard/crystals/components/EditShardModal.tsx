@@ -19,6 +19,8 @@ import {
 } from '@/components/ui/select';
 import { ShardData } from './types';
 import { useShardMutations } from './hooks';
+import { T } from '@/components/translation/T';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface EditShardModalProps {
   shard: ShardData;
@@ -42,6 +44,20 @@ export const EditShardModal: React.FC<EditShardModalProps> = ({
     confidence_level: shard.confidence_level || 'low',
     source_type: shard.source_type || 'conversation',
   });
+
+  // Translated placeholders
+  const { text: quotePlaceholder } = useTranslation('The exact quote or observation', {
+    context: 'input.shard.quote.placeholder'
+  })
+  const { text: dimensionPlaceholder } = useTranslation('e.g., work_style, communication, creativity', {
+    context: 'input.shard.dimension.placeholder'
+  })
+  const { text: revealsPlaceholder } = useTranslation('What this shard reveals about the person', {
+    context: 'input.shard.reveals.placeholder'
+  })
+  const { text: significantPlaceholder } = useTranslation('Why this observation is significant', {
+    context: 'input.shard.significant.placeholder'
+  })
 
   const handleSave = async () => {
     const success = await updateShard(shard._id, formData);
@@ -72,7 +88,7 @@ export const EditShardModal: React.FC<EditShardModalProps> = ({
               id="exact_quote"
               value={formData.exact_quote}
               onChange={(e) => handleChange('exact_quote', e.target.value)}
-              placeholder="The exact quote or observation"
+              placeholder={quotePlaceholder}
               rows={2}
             />
           </div>
@@ -83,7 +99,7 @@ export const EditShardModal: React.FC<EditShardModalProps> = ({
               id="dimension"
               value={formData.dimension}
               onChange={(e) => handleChange('dimension', e.target.value)}
-              placeholder="e.g., work_style, communication, creativity"
+              placeholder={dimensionPlaceholder}
             />
           </div>
 
@@ -128,7 +144,7 @@ export const EditShardModal: React.FC<EditShardModalProps> = ({
               id="what_it_reveals"
               value={formData.what_it_reveals}
               onChange={(e) => handleChange('what_it_reveals', e.target.value)}
-              placeholder="What this shard reveals about the person"
+              placeholder={revealsPlaceholder}
               rows={2}
             />
           </div>
@@ -139,7 +155,7 @@ export const EditShardModal: React.FC<EditShardModalProps> = ({
               id="why_significant"
               value={formData.why_significant}
               onChange={(e) => handleChange('why_significant', e.target.value)}
-              placeholder="Why this observation is significant"
+              placeholder={significantPlaceholder}
               rows={2}
             />
           </div>
@@ -147,10 +163,10 @@ export const EditShardModal: React.FC<EditShardModalProps> = ({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={isLoading}>
-            Cancel
+            <T context="button.cancel">Cancel</T>
           </Button>
           <Button onClick={handleSave} disabled={isLoading}>
-            {isLoading ? 'Saving...' : 'Save Changes'}
+            {isLoading ? <T context="button.saving">Saving...</T> : <T context="button.save_changes">Save Changes</T>}
           </Button>
         </DialogFooter>
       </DialogContent>

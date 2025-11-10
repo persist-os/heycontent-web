@@ -3,7 +3,7 @@
  * Constants and configurations for Project Fingerprint component
  */
 
-export type TabType = 'vision' | 'dna' | 'timeline' | 'preferences'
+export type TabType = 'vision' | 'dna' | 'timeline' | 'preferences' | 'evolution'
 
 export interface StatusConfig {
   color: string
@@ -29,5 +29,6 @@ export const TABS = [
   { id: 'vision' as TabType, label: 'Vision', subtitle: 'What & Why' },
   { id: 'dna' as TabType, label: 'DNA', subtitle: 'How You Work' },
   { id: 'timeline' as TabType, label: 'Timeline', subtitle: 'When & Flow' },
-  { id: 'preferences' as TabType, label: 'Preferences', subtitle: 'Interface' }
+  { id: 'preferences' as TabType, label: 'Preferences', subtitle: 'Interface' },
+  { id: 'evolution' as TabType, label: 'Evolution', subtitle: 'Growth & Change' }
 ] as const

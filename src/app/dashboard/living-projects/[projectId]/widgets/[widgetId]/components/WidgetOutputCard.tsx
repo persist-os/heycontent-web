@@ -9,8 +9,13 @@
 import React from 'react'
 import { Button } from '@/components/ui/button'
 import { FileText, MessageSquare, Calendar, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react'
+import { useMutation } from 'convex/react'
+import { api } from '@/convex/_generated/api'
 import type { WidgetOutput } from '../types'
 import { T, TButton } from '@/components/translation'
+import { EditableArtifactRenderer } from '@/components/artifacts/EditableArtifactRenderer'
+import type { Artifact } from '@/types/artifacts'
+import { getCurrentUserId } from '@/app/lib/api-helpers'
 
 interface WidgetOutputCardProps {
   output: WidgetOutput
@@ -25,6 +30,20 @@ export function WidgetOutputCard({
   onToggle, 
   onLaunchLab 
 }: WidgetOutputCardProps) {
+  const [userId, setUserId] = React.useState<string>("")
+
+  React.useEffect(() => {
+    const fetchUserId = async () => {
+      try {
+        const id = await getCurrentUserId()
+        setUserId(id)
+      } catch (error) {
+        console.error('Failed to get user ID:', error)
+      }
+    }
+    fetchUserId()
+  }, [])
+  
   const getRelativeTime = (timestamp: number) => {
     const now = Date.now()
     const diff = now - timestamp
@@ -123,65 +142,92 @@ export function WidgetOutputCard({
               </div>
             </div>
 
-            {/* Note Preview */}
-            {hasNote && (
-              <div className="
-                p-4
-                bg-accent/5 backdrop-blur-sm
-                border border-accent/20
-                rounded-xl
-                hover:bg-accent/10 hover:border-accent/30
-                transition-all duration-300
-              ">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-accent" />
-                  <h4 className="text-sm font-medium text-foreground">
-                    <T context="widget.note_title">{output.noteTitle || "Generated Note"}</T>
-                  </h4>
+            {/* Artifact Renderer (Universal System) or Legacy Display */}
+            {(output as any).artifactType && (output as any).artifactData ? (
+              // NEW: Universal artifact rendering
+              userId ? (
+                <EditableArtifactRenderer
+                  artifact={{
+                    type: (output as any).artifactType,
+                    schema: (output as any).artifactSchema,
+                    data: (output as any).artifactData,
+                    metadata: {
+                      version: 1,
+                      lastUpdatedBy: output.widgetId,
+                      lastUpdatedAt: output.createdAt
+                    }
+                  } as Artifact}
+                  userId={userId}
+                />
+              ) : (
+                <div className="text-center py-4 text-muted-foreground">
+                  Loading...
                 </div>
-              </div>
-            )}
+              )
+            ) : (
+              // LEGACY: Original prompt/note display (backward compatibility)
+              <>
+                {/* Note Preview */}
+                {hasNote && (
+                  <div className="
+                    p-4
+                    bg-accent/5 backdrop-blur-sm
+                    border border-accent/20
+                    rounded-xl
+                    hover:bg-accent/10 hover:border-accent/30
+                    transition-all duration-300
+                  ">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-accent" />
+                      <h4 className="text-sm font-medium text-foreground">
+                        <T context="widget.note_title">{output.noteTitle || "Generated Note"}</T>
+                      </h4>
+                    </div>
+                  </div>
+                )}
 
-            {/* Prompts Preview */}
-            {promptCount > 0 && (
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-foreground/80">
-                  <T context="widget.conversation_starters_title">Conversation Starters</T>
-                </h4>
-                <div className="space-y-2">
-                  {output.prompts.slice(0, isExpanded ? output.prompts.length : 2).map((prompt, idx) => (
-                    <div
-                      key={idx}
-                      className="
-                        p-3
-                        bg-muted/20 backdrop-blur-sm
-                        border border-border/20
-                        rounded-lg
-                        hover:bg-muted/30 hover:border-border/40
-                        transition-all duration-200
-                      "
-                    >
-                      <div className="flex items-start gap-2">
-                        <span className="
-                          text-xs font-medium text-muted-foreground
-                          bg-primary/10 border border-primary/20
-                          px-2 py-1 rounded-full
-                        ">
-                          {prompt.priority}
-                        </span>
-                        <p className="text-sm text-foreground font-light leading-relaxed">
-                          {prompt.text}
-                        </p>
-                      </div>
+                {/* Prompts Preview */}
+                {promptCount > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium text-foreground/80">
+                      <T context="widget.conversation_starters_title">Conversation Starters</T>
+                    </h4>
+                    <div className="space-y-2">
+                      {output.prompts.slice(0, isExpanded ? output.prompts.length : 2).map((prompt, idx) => (
+                        <div
+                          key={idx}
+                          className="
+                            p-3
+                            bg-muted/20 backdrop-blur-sm
+                            border border-border/20
+                            rounded-lg
+                            hover:bg-muted/30 hover:border-border/40
+                            transition-all duration-200
+                          "
+                        >
+                          <div className="flex items-start gap-2">
+                            <span className="
+                              text-xs font-medium text-muted-foreground
+                              bg-primary/10 border border-primary/20
+                              px-2 py-1 rounded-full
+                            ">
+                              {prompt.priority}
+                            </span>
+                            <p className="text-sm text-foreground font-light leading-relaxed">
+                              {prompt.text}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                      {!isExpanded && promptCount > 2 && (
+                        <div className="text-xs text-muted-foreground/60 text-center py-2">
+                          <T context="widget.more_starters">+{promptCount - 2} more starters</T>
+                        </div>
+                      )}
                     </div>
-                  ))}
-                  {!isExpanded && promptCount > 2 && (
-                    <div className="text-xs text-muted-foreground/60 text-center py-2">
-                      <T context="widget.more_starters">+{promptCount - 2} more starters</T>
-                    </div>
-                  )}
-                </div>
-              </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

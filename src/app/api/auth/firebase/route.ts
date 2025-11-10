@@ -13,9 +13,6 @@ export async function POST(request: Request) {
     logger.info('Processing authentication request', { 
       requestId, 
       action: body.action, 
-      email: body.email,
-      hasPassword: !!body.password,
-      hasIdToken: !!body.idToken,
       userAgent: request.headers.get('user-agent'),
       clientIp: request.headers.get('x-forwarded-for') || 'unknown'
     });
@@ -34,8 +31,6 @@ export async function POST(request: Request) {
       const decodedToken = await adminAuth.verifyIdToken(idToken);
       logger.info('Token successfully verified', {
         requestId,
-        uid: decodedToken.uid,
-        email: decodedToken.email,
         emailVerified: decodedToken.email_verified,
         authTime: new Date(decodedToken.auth_time * 1000).toISOString(),
         issuedAt: new Date(decodedToken.iat * 1000).toISOString(),
@@ -43,7 +38,7 @@ export async function POST(request: Request) {
         expiresAt: new Date(decodedToken.exp * 1000).toISOString(),
         provider: decodedToken.firebase?.sign_in_provider
       });
-      logger.info('Firebase token verified successfully', { requestId, userId: decodedToken.uid, provider: decodedToken.firebase?.sign_in_provider });
+      logger.info('Firebase token verified successfully', { requestId, provider: decodedToken.firebase?.sign_in_provider });
       
       await updateOrCreateConvexUser(
   decodedToken.uid,
@@ -80,7 +75,6 @@ export async function POST(request: Request) {
           subscriptionData.plan !== null;
         logger.info('Subscription status check via Convex', { 
           requestId, 
-          userId: decodedToken.uid,
           hasSubscription, 
           status: subscriptionData?.status,
           plan: subscriptionData?.plan,

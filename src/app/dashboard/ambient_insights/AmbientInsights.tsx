@@ -81,38 +81,15 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
   const [selectedGreeting, setSelectedGreeting] = useState<string>("What can I help you with?");
 
   // Always call useQuery, passing skip if userId is not available
-  if (process.env.NODE_ENV === 'development' && userId) {
-    console.debug('[AmbientInsights] Query initialized for userId:', userId.substring(0, 8) + '...')
-  }
-  
   const convexInsights = useQuery(
     api.ambientInsights.getMostRecentByUserId,
     userId ? { userId } : "skip"
   );
 
-  // Only log when we have actual data, not during loading
-  if (process.env.NODE_ENV === 'development' && userId && convexInsights !== undefined) {
-    const hasData = !!convexInsights && Array.isArray(convexInsights?.data) && convexInsights.data.length > 0
-    console.debug('[AmbientInsights] Data loaded:', {
-      hasInsights: hasData,
-      count: Array.isArray(convexInsights?.data) ? convexInsights.data.length : 0
-    })
-  }
-
   // Update greeting and reset state when insights change
   useEffect(() => {
     const insightsId = convexInsights?._id;
     if (insightsId && insightsId !== lastLoggedInsights && userId) {
-      // Development logging
-      if (process.env.NODE_ENV === 'development') {
-        console.log('AmbientInsights: New insights loaded:', {
-          id: insightsId,
-          dataCount: convexInsights?.data?.length || 0,
-          greetingsCount: convexInsights?.greetings?.length || 0,
-          userId
-        });
-      }
-      
       setLastLoggedInsights(insightsId);
       // Reset tracking when new insights are loaded
       setCurrentPage(0);
@@ -228,8 +205,7 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
         const errorData = await response.json();
         console.error('Error requesting ambient insights:', errorData);
       } else {
-        const data = await response.json();
-        console.log('Ambient insights requested successfully:', data);
+        await response.json();
         // Reset to first page after getting new data
         setCurrentPage(0);
         setShownInsightIds(new Set());
@@ -267,9 +243,6 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
         try {
           setIsRequestingInsights(true);
           requestedInsightsRef.current = userId;
-          if (process.env.NODE_ENV === 'development') {
-            console.log('Requesting new ambient insights');
-          }
           const apiKey = await getApiKey();
           if (!apiKey) {
             if (process.env.NODE_ENV === 'development') {
@@ -295,10 +268,7 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
               console.error('Error requesting ambient insights:', errorData);
             }
           } else {
-            const data = await response.json();
-            if (process.env.NODE_ENV === 'development') {
-              console.log('Ambient insights requested successfully:', data);
-            }
+            await response.json();
           }
         } catch (error) {
           if (process.env.NODE_ENV === 'development') {

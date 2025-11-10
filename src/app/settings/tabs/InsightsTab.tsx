@@ -26,8 +26,6 @@ export const InsightsTab = () => {
 
     setIsFormingCrystals(true);
     try {
-      console.log('💎 [MANUAL FORMATION] Starting manual crystal formation for user:', userId);
-      
       // Get API key for authentication
       const apiKey = await getApiKey();
       if (!apiKey) {
@@ -47,16 +45,12 @@ export const InsightsTab = () => {
         }),
       });
 
-      console.log('💎 [MANUAL FORMATION] API response status:', response.status);
-
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
       const result = await response.json();
-      
-      console.log('💎 [MANUAL FORMATION] Formation result:', result);
       
       if (result.success && result.triggered) {
         toast.success(

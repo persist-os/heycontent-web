@@ -16,7 +16,7 @@ export const CrystalSystemExplanation = () => {
               <T context="crystals.explanation.title">Dual-Species Evolution</T>
             </h3>
             <p className="text-sm text-muted-foreground font-light">
-              <T context="crystals.explanation.subtitle">Two species of artificial life: stars from your projects, crystals from your consciousness</T>
+              <T context="crystals.explanation.subtitle">Two species of artificial life: stars from your projects, cognitive fields from your consciousness</T>
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -37,7 +37,7 @@ export const CrystalSystemExplanation = () => {
         <div className="space-y-3 text-sm text-muted-foreground font-light leading-relaxed">
           <p>
             <T context="crystals.explanation.description">
-              Two parallel species evolve from your world. <span className="font-medium text-foreground">Stardust</span> forms <span className="font-medium text-foreground">stars</span> (your projects, goals, skills). <span className="font-medium text-foreground">Shards</span> become <span className="font-medium text-foreground">crystals</span> (your consciousness, patterns, identity).
+              Two parallel species evolve from your world. <span className="font-medium text-foreground">Stardust</span> forms <span className="font-medium text-foreground">stars</span> (your projects, goals, skills). <span className="font-medium text-foreground">Shards</span> become <span className="font-medium text-foreground">cognitive fields</span> (your consciousness, patterns, identity).
             </T>
           </p>
           
@@ -54,10 +54,10 @@ export const CrystalSystemExplanation = () => {
               
               <div className="bg-muted/20 rounded-xl p-4 space-y-2">
                 <div className="text-sm font-medium text-foreground">
-                  <T context="crystals.explanation.shards_crystals">💎 Shards → Crystals</T>
+                  <T context="crystals.explanation.shards_fields">💎 Shards → Cognitive Fields</T>
                 </div>
                 <div className="text-xs text-muted-foreground font-light leading-relaxed">
-                  <T context="crystals.explanation.shards_desc">Consciousness organisms: emotional patterns, behavioral traits, self-understanding</T>
+                  <T context="crystals.explanation.shards_desc">Living intelligence substrates: evolving patterns, behavioral traits, self-understanding</T>
                 </div>
               </div>
             </div>

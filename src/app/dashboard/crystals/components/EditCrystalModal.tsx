@@ -19,6 +19,8 @@ import {
 } from '@/components/ui/select';
 import { CrystalData } from './types';
 import { useCrystalMutations } from './hooks';
+import { T } from '@/components/translation/T';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface EditCrystalModalProps {
   crystal: CrystalData;
@@ -41,6 +43,20 @@ export const EditCrystalModal: React.FC<EditCrystalModalProps> = ({
     confidence_score: crystal.confidence_score || 'developing',
     core_insight: crystal.core_insight || '',
   });
+
+  // Translated placeholders
+  const { text: namePlaceholder } = useTranslation('Crystal name', {
+    context: 'input.crystal.name.placeholder'
+  })
+  const { text: dimensionPlaceholder } = useTranslation('e.g., work_style, communication, creativity', {
+    context: 'input.crystal.dimension.placeholder'
+  })
+  const { text: descriptionPlaceholder } = useTranslation('Describe what this crystal represents', {
+    context: 'input.crystal.description.placeholder'
+  })
+  const { text: insightPlaceholder } = useTranslation('The key insight this crystal provides', {
+    context: 'input.crystal.insight.placeholder'
+  })
 
   const handleSave = async () => {
     const success = await updateCrystal(crystal._id, formData);
@@ -71,7 +87,7 @@ export const EditCrystalModal: React.FC<EditCrystalModalProps> = ({
               id="name"
               value={formData.name}
               onChange={(e) => handleChange('name', e.target.value)}
-              placeholder="Crystal name"
+              placeholder={namePlaceholder}
             />
           </div>
 
@@ -81,7 +97,7 @@ export const EditCrystalModal: React.FC<EditCrystalModalProps> = ({
               id="dimension"
               value={formData.dimension}
               onChange={(e) => handleChange('dimension', e.target.value)}
-              placeholder="e.g., work_style, communication, creativity"
+              placeholder={dimensionPlaceholder}
             />
           </div>
 
@@ -109,7 +125,7 @@ export const EditCrystalModal: React.FC<EditCrystalModalProps> = ({
               id="description"
               value={formData.description}
               onChange={(e) => handleChange('description', e.target.value)}
-              placeholder="Describe what this crystal represents"
+              placeholder={descriptionPlaceholder}
               rows={3}
             />
           </div>
@@ -120,7 +136,7 @@ export const EditCrystalModal: React.FC<EditCrystalModalProps> = ({
               id="core_insight"
               value={formData.core_insight}
               onChange={(e) => handleChange('core_insight', e.target.value)}
-              placeholder="The key insight this crystal provides"
+              placeholder={insightPlaceholder}
               rows={3}
             />
           </div>
@@ -128,10 +144,10 @@ export const EditCrystalModal: React.FC<EditCrystalModalProps> = ({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={isLoading}>
-            Cancel
+            <T context="button.cancel">Cancel</T>
           </Button>
           <Button onClick={handleSave} disabled={isLoading}>
-            {isLoading ? 'Saving...' : 'Save Changes'}
+            {isLoading ? <T context="button.saving">Saving...</T> : <T context="button.save_changes">Save Changes</T>}
           </Button>
         </DialogFooter>
       </DialogContent>

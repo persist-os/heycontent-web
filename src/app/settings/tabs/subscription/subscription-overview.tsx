@@ -23,6 +23,7 @@ import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/../convex/_generated/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { T } from '@/components/translation/T';
 
 // Utils
 import { DeleteAccountButton } from '../../utils/DeleteAccountButton';
@@ -477,7 +478,7 @@ export default function SubscriptionOverview() {
             ) : (
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Extra requests</CardTitle>
+                  <CardTitle className="text-base"><T context="settings.subscription.overage.title">Extra requests</T></CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center space-x-2">

@@ -216,6 +216,13 @@ export const mutateFormation = mutation({
         if (!run) {
           throw new Error(`Formation run ${runId} not found. The run may have been deleted.`);
         }
+        
+        // STRUCTURAL FIX: Make completion idempotent - if already completed, return success
+        if (run.status === "completed") {
+          console.log(`Formation ${runId} already completed - returning success`);
+          return { success: true, duration_ms: run.duration_ms || 0, runId: runId, already_completed: true };
+        }
+        
         if (run.status !== "running") {
           throw new Error(`Cannot complete formation run ${runId}: current status is '${run.status}', expected 'running'`);
         }

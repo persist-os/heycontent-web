@@ -123,9 +123,8 @@ export const createDecision = mutation({
 /**
  * Update arm performance with reward after analysis completes.
  * 
- * Implements Bayesian update for Beta distribution:
- * - alpha += reward (success weight)
- * - beta += (1 - reward) (failure weight)
+ * NOTE: All Bayesian computation is now done by the SDK. This mutation only persists
+ * pre-computed values received from the SDK, eliminating duplication across storage backends.
  * 
  * Value score (reward) is 0-1 where:
  * - 1.0 = highly valuable analysis (many insights)
@@ -137,8 +136,20 @@ export const updateArmPerformance = mutation({
     decisionId: v.id("intelligence_bandit_decisions"),
     valueScore: v.number(),
     version: v.optional(v.number()), // For optimistic locking
+    computedUpdate: v.optional(v.object({
+      alpha: v.number(),
+      beta: v.number(),
+      total_pulls: v.number(),
+      total_reward: v.number(),
+      avg_reward: v.number(),
+      mean_estimate: v.number(),
+      confidence_interval: v.object({
+        lower: v.number(),
+        upper: v.number(),
+      }),
+    })),
   },
-  handler: async (ctx, { userId, decisionId, valueScore, version }) => {
+  handler: async (ctx, { userId, decisionId, valueScore, version, computedUpdate }) => {
     // Get decision
     const decision = await ctx.db.get(decisionId);
 
@@ -174,37 +185,22 @@ export const updateArmPerformance = mutation({
       throw new Error(`Arm version mismatch: concurrent update detected`);
     }
 
-    // Bayesian update (Beta distribution)
-    const successWeight = valueScore;
-    const failureWeight = 1 - valueScore;
-
-    const newAlpha = arm.alpha + successWeight;
-    const newBeta = arm.beta + failureWeight;
-    const newTotalPulls = arm.total_pulls + 1;
-    const newTotalReward = arm.total_reward + valueScore;
-    const newAvgReward = newTotalReward / newTotalPulls;
-    const newMeanEstimate = newAlpha / (newAlpha + newBeta);
-
-    // Calculate 95% confidence interval
-    // For Beta(alpha, beta), variance = (alpha * beta) / ((alpha+beta)^2 * (alpha+beta+1))
-    const variance = (newAlpha * newBeta) /
-      (Math.pow(newAlpha + newBeta, 2) * (newAlpha + newBeta + 1));
-    const stdDev = Math.sqrt(variance);
+    // Use pre-computed values from SDK (eliminates duplication)
+    if (!computedUpdate) {
+      throw new Error("computedUpdate is required - SDK should compute this");
+    }
 
     const newUpdatedAt = Date.now();
 
-    // Update arm atomically using patch
+    // Persist pre-computed values from SDK
     await ctx.db.patch(arm._id, {
-      alpha: newAlpha,
-      beta: newBeta,
-      total_pulls: newTotalPulls,
-      total_reward: newTotalReward,
-      avg_reward: newAvgReward,
-      mean_estimate: newMeanEstimate,
-      confidence_interval: {
-        lower: Math.max(0, newMeanEstimate - 1.96 * stdDev),
-        upper: Math.min(1, newMeanEstimate + 1.96 * stdDev),
-      },
+      alpha: computedUpdate.alpha,
+      beta: computedUpdate.beta,
+      total_pulls: computedUpdate.total_pulls,
+      total_reward: computedUpdate.total_reward,
+      avg_reward: computedUpdate.avg_reward,
+      mean_estimate: computedUpdate.mean_estimate,
+      confidence_interval: computedUpdate.confidence_interval,
       last_pulled: newUpdatedAt,
       updatedAt: newUpdatedAt,
     });
@@ -219,10 +215,10 @@ export const updateArmPerformance = mutation({
       success: true,
       data: {
         armId: arm.armId,
-        newAlpha,
-        newBeta,
-        newMeanEstimate,
-        newAvgReward,
+        newAlpha: computedUpdate.alpha,
+        newBeta: computedUpdate.beta,
+        newMeanEstimate: computedUpdate.mean_estimate,
+        newAvgReward: computedUpdate.avg_reward,
         version: newUpdatedAt // Return new version for next update
       }
     };

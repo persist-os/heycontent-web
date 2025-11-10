@@ -414,6 +414,30 @@ export async function fetchWithApiKey(url: string, options: RequestInit = {}): P
     headers,
   });
   
+  // Detect 402 Payment Required (free tier limit reached)
+  if (response.status === 402) {
+    // Emit custom event that components can listen for
+    if (typeof window !== 'undefined') {
+      try {
+        const responseData = await response.clone().json();
+        const event = new CustomEvent('upgrade-required', {
+          detail: {
+            reason: 'limit_reached',
+            response: responseData,
+          },
+        });
+        window.dispatchEvent(event);
+        console.warn('[API] 402 Payment Required - free tier limit reached');
+      } catch (err) {
+        // If response parsing fails, still emit event
+        const event = new CustomEvent('upgrade-required', {
+          detail: { reason: 'limit_reached' },
+        });
+        window.dispatchEvent(event);
+      }
+    }
+  }
+  
   if (response.status === 401 || response.status === 403) {
     throw new AuthenticationError('Token expired or invalid');
   }

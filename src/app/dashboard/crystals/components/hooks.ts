@@ -2,24 +2,10 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
-import { authStateManager } from '@/app/lib/auth-state-manager';
+import { useAuth } from '@/app/context/auth-context';
 import { CrystalStats, FormationStatus, FormationEligibility } from './types';
 import { toast } from 'sonner';
-
-export const useAuth = () => {
-  const [userId, setUserId] = useState<string | undefined>();
-
-  useEffect(() => {
-    // Use centralized auth state manager to prevent multiple listeners
-    const unsubscribe = authStateManager.subscribe((firebaseUser) => {
-      setUserId(firebaseUser?.uid);
-    });
-    
-    return () => unsubscribe();
-  }, []);
-
-  return userId;
-};
+import { T } from '@/components/translation/T';
 
 export const useCrystalData = (userId: string | undefined) => {
   const crystalStats = useQuery(
@@ -28,13 +14,13 @@ export const useCrystalData = (userId: string | undefined) => {
   ) as CrystalStats | undefined;
 
   const recentCrystals = useQuery(
-    api.crystalQueries.getPersonaData,
-    userId ? { userId, operation: "crystals", limit: 5 } : "skip"
+    api.crystalQueries.getCrystalPersonaData,
+    userId ? { userId, limit: 5 } : "skip"
   ) as any[] | undefined;
 
   const recentShards = useQuery(
-    api.crystalQueries.getPersonaData,
-    userId ? { userId, operation: "shards", limit: 8 } : "skip"
+    api.shardQueries.getShardPersonaData,
+    userId ? { userId, limit: 8 } : "skip"
   ) as any[] | undefined;
 
   return {
@@ -105,10 +91,9 @@ export const usePaginatedCrystals = (userId: string | undefined, pageSize: numbe
 
   // Fallback to original query if pagination fails
   const fallbackResult = useQuery(
-    api.crystalQueries.getPersonaData,
+    api.crystalQueries.getCrystalPersonaData,
     userId && paginationError ? { 
       userId, 
-      operation: "crystals", 
       limit: pageSize 
     } : "skip"
   ) as any[] | undefined;
@@ -140,7 +125,6 @@ export const usePaginatedCrystals = (userId: string | undefined, pageSize: numbe
       // If paginated query should have returned data but didn't, switch to fallback
       const timer = setTimeout(() => {
         if (!paginatedResult) {
-          console.warn('Paginated crystals query failed, switching to fallback');
           setPaginationError('Pagination failed');
         }
       }, 3000); // Wait 3 seconds before falling back
@@ -269,15 +253,15 @@ export const useCrystalMutations = () => {
       });
 
       if (result.success) {
-        toast.success('Crystal updated successfully');
+        toast.success(<T context="toast.dashboard.crystals.update.success">Crystal updated successfully</T>);
         return true;
       } else {
-        toast.error('Failed to update crystal');
+        toast.error(<T context="toast.dashboard.crystals.update.error">Failed to update crystal</T>);
         return false;
       }
     } catch (error) {
       console.error('Error updating crystal:', error);
-      toast.error('Failed to update crystal');
+      toast.error(<T context="toast.dashboard.crystals.update.error">Failed to update crystal</T>);
       return false;
     } finally {
       setIsWorking(false);
@@ -298,15 +282,15 @@ export const useCrystalMutations = () => {
       });
 
       if (result.success) {
-        toast.success('Crystal deleted successfully');
+        toast.success(<T context="toast.dashboard.crystals.delete.success">Crystal deleted successfully</T>);
         return true;
       } else {
-        toast.error('Failed to delete crystal');
+        toast.error(<T context="toast.dashboard.crystals.delete.error">Failed to delete crystal</T>);
         return false;
       }
     } catch (error) {
       console.error('Error deleting crystal:', error);
-      toast.error('Failed to delete crystal');
+      toast.error(<T context="toast.dashboard.crystals.delete.error">Failed to delete crystal</T>);
       return false;
     } finally {
       setIsWorking(false);
@@ -346,15 +330,15 @@ export const useShardMutations = () => {
       });
 
       if (result.success) {
-        toast.success('Shard updated successfully');
+        toast.success(<T context="toast.dashboard.crystals.shard.update.success">Shard updated successfully</T>);
         return true;
       } else {
-        toast.error('Failed to update shard');
+        toast.error(<T context="toast.dashboard.crystals.shard.update.error">Failed to update shard</T>);
         return false;
       }
     } catch (error) {
       console.error('Error updating shard:', error);
-      toast.error('Failed to update shard');
+      toast.error(<T context="toast.dashboard.crystals.shard.update.error">Failed to update shard</T>);
       return false;
     } finally {
       setIsWorking(false);
@@ -375,15 +359,15 @@ export const useShardMutations = () => {
       });
 
       if (result.success) {
-        toast.success('Shard deleted successfully');
+        toast.success(<T context="toast.dashboard.crystals.shard.delete.success">Shard deleted successfully</T>);
         return true;
       } else {
-        toast.error('Failed to delete shard');
+        toast.error(<T context="toast.dashboard.crystals.shard.delete.error">Failed to delete shard</T>);
         return false;
       }
     } catch (error) {
       console.error('Error deleting shard:', error);
-      toast.error('Failed to delete shard');
+      toast.error(<T context="toast.dashboard.crystals.shard.delete.error">Failed to delete shard</T>);
       return false;
     } finally {
       setIsWorking(false);
@@ -403,7 +387,7 @@ export const useShardMutations = () => {
  */
 export const useShardsByIds = (userId: string | undefined, shardIds: string[] | undefined) => {
   const shards = useQuery(
-    api.crystalQueries.getShardsByIds,
+    api.shardQueries.getShardsByIds,
     userId && shardIds && shardIds.length > 0 ? {
       userId,
       shardIds

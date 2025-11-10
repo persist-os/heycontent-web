@@ -105,7 +105,7 @@ export default function Security() {
         <section className="space-y-6 border-t border-border pt-12">
           <h2 className="text-3xl font-medium text-foreground border-b border-border pb-3">Cookie Policy</h2>
           <p>
-            This Cookie Policy explains how Divertissement AI, Inc. ("Company," "we," "us," and "our") uses cookies and similar technologies to recognize you when you visit our website at <a href="https://www.heycontext.co" className="text-blue-600 dark:text-blue-400 hover:underline">https://www.heycontext.co</a> ("Website"). It explains what these technologies are and why we use them, as well as your rights to control our use of them.
+            This Cookie Policy explains how PersistOS ("Company," "we," "us," and "our") uses cookies and similar technologies to recognize you when you visit our website at <a href="https://www.heycontext.co" className="text-blue-600 dark:text-blue-400 hover:underline">https://www.heycontext.co</a> ("Website"). It explains what these technologies are and why we use them, as well as your rights to control our use of them.
           </p>
           <p>
             In some cases we may use cookies to collect personal information, or that becomes personal information if we combine it with other information.
@@ -190,10 +190,10 @@ export default function Security() {
             <p className="leading-7">
               For security-related inquiries, contact us at{' '}
               <a 
-                href="mailto:hello@divertissement.ai" 
+                href="mailto:hello@persistos.co" 
                 className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors underline"
               >
-                hello@divertissement.ai
+                hello@persistos.co
               </a>.
             </p>
           </div>

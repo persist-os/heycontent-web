@@ -17,12 +17,10 @@ interface MyFriendsSectionProps {
 const MyFriendsSection: React.FC<MyFriendsSectionProps> = ({ friends = [] }) => {
   const handleShareContent = (friendId: string) => {
     // Non-functional for now
-    console.log('Share content with friend:', friendId)
   }
 
   const handleRemoveFriend = (friendId: string) => {
     // Non-functional for now
-    console.log('Remove friend:', friendId)
   }
 
   return (

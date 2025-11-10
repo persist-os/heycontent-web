@@ -11,6 +11,7 @@ interface UseNotepadAIProps {
   setContent: (content: string) => void
   setRefinementPreview: (preview: string | null) => void
   setIsRefining: (refining: boolean) => void
+  onGenerationComplete?: () => void
 }
 
 export function useNotepadAI({
@@ -18,7 +19,8 @@ export function useNotepadAI({
   userId,
   setContent,
   setRefinementPreview,
-  setIsRefining
+  setIsRefining,
+  onGenerationComplete
 }: UseNotepadAIProps): AIHandlers {
   const { askAI, requestAnalysis, requestIdeas } = useInlineAI({
     noteContent: content,
@@ -27,28 +29,21 @@ export function useNotepadAI({
 
   // AI handlers that append content automatically
   const handleAskAI = useCallback(async (prompt: string) => {
-    console.log('🤖 [MarkdownNotepad] handleAskAI called:', {
-      prompt: prompt.substring(0, 100) + '...',
-      currentContentLength: content.length
-    })
-    
     try {
       const response = await askAI(prompt)
-      console.log('✨ [MarkdownNotepad] AI response received:', {
-        responseLength: response.length,
-        responsePreview: response.substring(0, 100) + '...'
-      })
       
       // Automatically append the AI response to the current content
       const newContent = content.trim() ? `${content}\n\n${response}` : response
       setContent(newContent)
-      console.log('✅ [MarkdownNotepad] AI content appended to editor')
+      
+      // Notify that generation completed
+      onGenerationComplete?.()
       
     } catch (error) {
       console.error('❌ [MarkdownNotepad] Failed to get AI response:', error)
       throw error
     }
-  }, [askAI, content, setContent])
+  }, [askAI, content, setContent, onGenerationComplete])
 
   const handleRequestAnalysis = useCallback(async (noteType: string) => {
     try {
@@ -57,13 +52,15 @@ export function useNotepadAI({
       // Automatically append the analysis to the current content
       const newContent = content.trim() ? `${content}\n\n${analysis}` : analysis
       setContent(newContent)
-      console.log('✅ [MarkdownNotepad] Analysis content appended to editor')
+      
+      // Notify that generation completed
+      onGenerationComplete?.()
       
     } catch (error) {
       console.error('❌ [MarkdownNotepad] Failed to get analysis:', error)
       throw error
     }
-  }, [requestAnalysis, content, setContent])
+  }, [requestAnalysis, content, setContent, onGenerationComplete])
 
   const handleRequestIdeas = useCallback(async () => {
     try {
@@ -73,13 +70,15 @@ export function useNotepadAI({
       // Automatically append the ideas to the current content
       const newContent = content.trim() ? `${content}\n\n${ideasText}` : ideasText
       setContent(newContent)
-      console.log('✅ [MarkdownNotepad] Ideas content appended to editor')
+      
+      // Notify that generation completed
+      onGenerationComplete?.()
       
     } catch (error) {
       console.error('❌ [MarkdownNotepad] Failed to get ideas:', error)
       throw error
     }
-  }, [requestIdeas, content, setContent])
+  }, [requestIdeas, content, setContent, onGenerationComplete])
 
   // Refinement API function
   const refineText = useCallback(async (refinementType: string, selectedText: string): Promise<string> => {
@@ -104,16 +103,6 @@ export function useNotepadAI({
       afterText = ''
     }
     
-    console.log('🔍 [MarkdownNotepad] Refinement context debug:', {
-      selectedTextLength: selectedText.length,
-      contentLength: content.length,
-      selectionStart,
-      beforeTextLength: beforeText.length,
-      afterTextLength: afterText.length,
-      beforeTextPreview: beforeText.substring(0, 50) + '...',
-      afterTextPreview: afterText.substring(0, 50) + '...'
-    })
-
     const response = await fetch('/api/smart_note_inline/refine-text', {
       method: 'POST',
       headers: {
@@ -158,11 +147,10 @@ export function useNotepadAI({
     try {
       const refinedText = await refineText(refinementType, selectedText)
       setRefinementPreview(refinedText)
-      console.log('✨ [MarkdownNotepad] Text refinement completed:', {
-        originalLength: selectedText.length,
-        refinedLength: refinedText.length,
-        refinementType
-      })
+      
+      // Notify that generation completed
+      onGenerationComplete?.()
+      
       return refinedText
     } catch (error) {
       console.error('❌ [MarkdownNotepad] Failed to refine text:', error)
@@ -170,26 +158,23 @@ export function useNotepadAI({
     } finally {
       setIsRefining(false)
     }
-  }, [refineText, setIsRefining, setRefinementPreview])
+  }, [refineText, setIsRefining, setRefinementPreview, onGenerationComplete])
 
   const handleAcceptRefinement = useCallback(async () => {
     // This would be called when a refinement preview exists and user accepts it
     // The actual refinement preview would be passed from the parent component
     // For now, this is a placeholder implementation
     setRefinementPreview(null)
-    console.log('✅ [MarkdownNotepad] Refinement accepted and applied')
   }, [setRefinementPreview])
 
   const handleRejectRefinement = useCallback(async () => {
     setRefinementPreview(null)
-    console.log('❌ [MarkdownNotepad] Refinement rejected')
   }, [setRefinementPreview])
 
   const handleRetryRefinement = useCallback(async () => {
     // For retry, we'd need to store the original refinement parameters
     // This is a simplified implementation
     setRefinementPreview(null)
-    console.log('🔄 [MarkdownNotepad] Refinement retry requested')
   }, [setRefinementPreview])
 
   return {

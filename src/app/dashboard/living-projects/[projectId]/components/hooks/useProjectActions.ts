@@ -23,7 +23,8 @@ export function useProjectActions(projectId: string) {
   }
 
   const editFingerprint = () => {
-    router.push(`/dashboard/living-projects/project-discovery?projectId=${projectId}`)
+    // Navigate to thinking lab for project editing
+    router.push(`/dashboard/thinking_lab?projectId=${projectId}`)
   }
 
   const goBack = () => {

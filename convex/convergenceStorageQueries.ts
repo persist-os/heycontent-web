@@ -2,12 +2,10 @@
  * Convergence Storage Queries - Read-only access to Convergence storage system
  * 
  * Provides queries for:
- * - RL training data retrieval and filtering
  * - Experiment analysis and comparison
  * - Run tracking and evolution progress
  * 
  * Used by The Convergence framework to:
- * - Load RL episodes for policy training
  * - Analyze experiment results
  * - Track optimization progress
  * - Generate dashboards and reports
@@ -16,187 +14,9 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
 import {
-  rlRecordTypeValidator,
-  rlTrainingDataReturnValidator,
   optimizationExperimentReturnValidator,
   optimizationRunReturnValidator,
 } from "./types/convergenceStorage";
-
-// ============================================================================
-// RL TRAINING DATA QUERIES
-// ============================================================================
-
-// Internal handler functions
-async function getRLDataByKeyHandler(ctx: any, args: { rl_key: string }) {
-  const record = await ctx.db
-    .query("convergence_rl_training_data")
-    .withIndex("by_rl_key", q => q.eq("rl_key", args.rl_key))
-    .first();
-  
-  return record || null;
-}
-
-/**
- * Get RL data by key
- * 
- * Direct lookup for specific RL records.
- * Uses by_rl_key index for O(log n) performance.
- */
-export const getRLDataByKey = query({
-  args: {
-    rl_key: v.string(),
-  },
-  returns: v.union(rlTrainingDataReturnValidator, v.null()),
-  handler: getRLDataByKeyHandler,
-});
-
-async function queryRLEpisodesForTrainingHandler(ctx: any, args: {
-  agent_id: string;
-  record_type?: string;
-  station?: string;
-  min_reward_score?: number;
-  limit?: number;
-}) {
-  const limit = args.limit || 100;
-  
-  // Start with agent index (use only the first field of the index)
-  let query = ctx.db
-    .query("convergence_rl_training_data")
-    .withIndex("by_agent", q => q.eq("agent_id", args.agent_id));
-  
-  // Apply filters for optional fields
-  if (args.record_type) {
-    query = query.filter(q => q.eq(q.field("rl_record_type"), args.record_type));
-  }
-  if (args.station) {
-    query = query.filter(q => q.eq(q.field("station"), args.station));
-  }
-  if (args.min_reward_score !== undefined) {
-    query = query.filter(q => q.gte(q.field("reward_score"), args.min_reward_score));
-  }
-  
-  const results = await query.take(limit);
-  return results.sort((a, b) => b.episode_timestamp - a.episode_timestamp);
-}
-
-/**
- * Query RL episodes for training
- * 
- * Retrieves RL episodes for a specific agent, optionally filtered by:
- * - Record type (episode, trajectory, legacy, training_run)
- * - Station (web_playground, research_library, etc.)
- * - Minimum reward score (for high-performing episodes)
- * 
- * Results are sorted by timestamp (most recent first).
- */
-export const queryRLEpisodesForTraining = query({
-  args: {
-    agent_id: v.string(),
-    record_type: v.optional(rlRecordTypeValidator),
-    station: v.optional(v.string()),
-    min_reward_score: v.optional(v.number()),
-    limit: v.optional(v.number()),
-  },
-  returns: v.array(rlTrainingDataReturnValidator),
-  handler: queryRLEpisodesForTrainingHandler,
-});
-
-async function getTopRLPerformersHandler(ctx: any, args: { agent_id: string; limit?: number }) {
-  const limit = args.limit || 10;
-  
-  const results = await ctx.db
-    .query("convergence_rl_training_data")
-    .withIndex("by_agent_reward", q => q.eq("agent_id", args.agent_id))
-    .order("desc")
-    .take(limit);
-  
-  return results;
-}
-
-/**
- * Get top RL performers for an agent
- * 
- * Returns the highest-scoring RL episodes for an agent.
- * Uses by_agent_reward index for efficient sorting.
- * Useful for identifying successful patterns.
- */
-export const getTopRLPerformers = query({
-  args: {
-    agent_id: v.string(),
-    limit: v.optional(v.number()),
-  },
-  returns: v.array(rlTrainingDataReturnValidator),
-  handler: getTopRLPerformersHandler,
-});
-
-async function getRLDataByStationHandler(ctx: any, args: { agent_id: string; station: string; limit?: number }) {
-  const limit = args.limit || 50;
-  
-  const results = await ctx.db
-    .query("convergence_rl_training_data")
-    .withIndex("by_agent_station", q => 
-      q.eq("agent_id", args.agent_id).eq("station", args.station)
-    )
-    .take(limit);
-  
-  return results.sort((a, b) => b.episode_timestamp - a.episode_timestamp);
-}
-
-/**
- * Get RL data by station
- * 
- * Retrieves all RL data for a specific agent at a specific station.
- * Uses by_agent_station index for efficient filtering.
- */
-export const getRLDataByStation = query({
-  args: {
-    agent_id: v.string(),
-    station: v.string(),
-    limit: v.optional(v.number()),
-  },
-  returns: v.array(rlTrainingDataReturnValidator),
-  handler: getRLDataByStationHandler,
-});
-
-async function getRLTimeSeriesHandler(ctx: any, args: {
-  start_timestamp: number;
-  end_timestamp: number;
-  agent_id?: string;
-  limit?: number;
-}) {
-  const limit = args.limit || 500;
-  
-  let query = ctx.db
-    .query("convergence_rl_training_data")
-    .withIndex("by_timestamp", q => 
-      q.gte("episode_timestamp", args.start_timestamp)
-       .lte("episode_timestamp", args.end_timestamp)
-    );
-  
-  if (args.agent_id) {
-    query = query.filter(q => q.eq(q.field("agent_id"), args.agent_id));
-  }
-  
-  const results = await query.take(limit);
-  return results.sort((a, b) => a.episode_timestamp - b.episode_timestamp);
-}
-
-/**
- * Get RL time series data
- * 
- * Retrieves RL episodes within a time range for trend analysis.
- * Uses by_timestamp index for efficient range queries.
- */
-export const getRLTimeSeries = query({
-  args: {
-    start_timestamp: v.number(),
-    end_timestamp: v.number(),
-    agent_id: v.optional(v.string()),
-    limit: v.optional(v.number()),
-  },
-  returns: v.array(rlTrainingDataReturnValidator),
-  handler: getRLTimeSeriesHandler,
-});
 
 // ============================================================================
 // OPTIMIZATION EXPERIMENT QUERIES
@@ -546,34 +366,30 @@ export const getSystemOptimizationStats = query({
  * 
  * @example
  * ```typescript
- * // Get RL data
- * const data = await queryStorage({
- *   operation: "get_rl_by_key",
- *   rl_key: "episode:agent_1:001"
- * });
- * 
- * // Get experiments
+ * // Get experiments for a run
  * const experiments = await queryStorage({
  *   operation: "get_experiments_for_run",
- *   run_id: "run_abc123"
+ *   optimization_run_id: "run_abc123",
+ *   limit: 100
+ * });
+ * 
+ * // Get runs for a system
+ * const runs = await queryStorage({
+ *   operation: "get_runs_for_system",
+ *   system_name: "context_enrichment",
+ *   limit: 10
  * });
  * ```
  */
 export const queryStorage = query({
   args: {
     operation: v.union(
-      v.literal("get_rl_by_key"),
-      v.literal("query_rl_episodes"),
-      v.literal("get_top_rl_performers"),
       v.literal("get_experiments_for_run"),
       v.literal("get_experiments_by_system"),
       v.literal("get_optimization_run"),
       v.literal("get_runs_for_system"),
       v.literal("get_system_stats")
     ),
-    rl_key: v.optional(v.string()),
-    agent_id: v.optional(v.string()),
-    record_type: v.optional(rlRecordTypeValidator),
     optimization_run_id: v.optional(v.string()),
     system_name: v.optional(v.string()),
     run_id: v.optional(v.string()),
@@ -584,25 +400,6 @@ export const queryStorage = query({
     const { operation } = args;
     
     switch (operation) {
-      case "get_rl_by_key":
-        if (!args.rl_key) throw new Error("rl_key required");
-        return await getRLDataByKeyHandler(ctx, { rl_key: args.rl_key });
-      
-      case "query_rl_episodes":
-        if (!args.agent_id) throw new Error("agent_id required");
-        return await queryRLEpisodesForTrainingHandler(ctx, {
-          agent_id: args.agent_id,
-          record_type: args.record_type,
-          limit: args.limit,
-        });
-      
-      case "get_top_rl_performers":
-        if (!args.agent_id) throw new Error("agent_id required");
-        return await getTopRLPerformersHandler(ctx, {
-          agent_id: args.agent_id,
-          limit: args.limit,
-        });
-      
       case "get_experiments_for_run":
         if (!args.optimization_run_id) throw new Error("optimization_run_id required");
         return await getExperimentsForRunHandler(ctx, {

@@ -5,6 +5,7 @@ import { Id } from '@/convex/_generated/dataModel';
 import { authStateManager } from '@/app/lib/auth-state-manager';
 import { CrystalStats, FormationStatus, FormationEligibility } from './types';
 import { toast } from 'sonner';
+import { T } from '@/components/translation/T';
 
 export const useAuth = () => {
   const [userId, setUserId] = useState<string | undefined>();
@@ -28,13 +29,13 @@ export const useCrystalData = (userId: string | undefined) => {
   ) as CrystalStats | undefined;
 
   const recentCrystals = useQuery(
-    api.crystalQueries.getPersonaData,
-    userId ? { userId, operation: "crystals", limit: 5 } : "skip"
+    api.crystalQueries.getCrystalPersonaData,
+    userId ? { userId, limit: 5 } : "skip"
   ) as any[] | undefined;
 
   const recentShards = useQuery(
-    api.crystalQueries.getPersonaData,
-    userId ? { userId, operation: "shards", limit: 8 } : "skip"
+    api.shardQueries.getShardPersonaData,
+    userId ? { userId, limit: 8 } : "skip"
   ) as any[] | undefined;
 
   return {
@@ -105,10 +106,9 @@ export const usePaginatedCrystals = (userId: string | undefined, pageSize: numbe
 
   // Fallback to original query if pagination fails
   const fallbackResult = useQuery(
-    api.crystalQueries.getPersonaData,
+    api.crystalQueries.getCrystalPersonaData,
     userId && paginationError ? { 
       userId, 
-      operation: "crystals", 
       limit: pageSize 
     } : "skip"
   ) as any[] | undefined;
@@ -140,7 +140,6 @@ export const usePaginatedCrystals = (userId: string | undefined, pageSize: numbe
       // If paginated query should have returned data but didn't, switch to fallback
       const timer = setTimeout(() => {
         if (!paginatedResult) {
-          console.warn('Paginated crystals query failed, switching to fallback');
           setPaginationError('Pagination failed');
         }
       }, 3000); // Wait 3 seconds before falling back
@@ -269,10 +268,10 @@ export const useCrystalMutations = () => {
       });
 
       if (result.success) {
-        toast.success('Crystal updated successfully');
+        toast.success(<T context="toast.settings.crystals.update.success">Crystal updated successfully</T>);
         return true;
       } else {
-        toast.error('Failed to update crystal');
+        toast.error(<T context="toast.settings.crystals.update.error">Failed to update crystal</T>);
         return false;
       }
     } catch (error) {
@@ -403,7 +402,7 @@ export const useShardMutations = () => {
  */
 export const useShardsByIds = (userId: string | undefined, shardIds: string[] | undefined) => {
   const shards = useQuery(
-    api.crystalQueries.getShardsByIds,
+    api.shardQueries.getShardsByIds,
     userId && shardIds && shardIds.length > 0 ? {
       userId,
       shardIds

@@ -1,12 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Project } from '../../types/project';
 import { Folder, Calendar, Trash2, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useDroppable } from '@dnd-kit/core';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 
 interface ProjectCardProps {
   project: Project;
@@ -18,6 +19,7 @@ interface ProjectCardProps {
 
 export function ProjectCard({ project, onEdit, onDelete, onShare, dragOverProject }: ProjectCardProps) {
   const router = useRouter();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Set up droppable functionality
   const { isOver, setNodeRef } = useDroppable({
@@ -30,9 +32,7 @@ export function ProjectCard({ project, onEdit, onDelete, onShare, dragOverProjec
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (window.confirm(`Are you sure you want to delete "${project.name}"? This action cannot be undone.`)) {
-      onDelete();
-    }
+    setShowDeleteConfirm(true);
   };
 
   const handleShare = (e: React.MouseEvent) => {
@@ -156,6 +156,24 @@ export function ProjectCard({ project, onEdit, onDelete, onShare, dragOverProjec
           </div>
         )}
       </div>
+
+      <ConfirmationModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={(e) => {
+          onDelete();
+          setShowDeleteConfirm(false);
+        }}
+        title="Delete Project"
+        titleContext="project.delete_confirm.title"
+        description={`Are you sure you want to delete "${project.name}"? This action cannot be undone.`}
+        descriptionContext="project.delete_confirm.description"
+        confirmText="Delete"
+        confirmContext="button.delete"
+        cancelText="Cancel"
+        cancelContext="button.cancel"
+        variant="destructive"
+      />
     </div>
   );
 } 

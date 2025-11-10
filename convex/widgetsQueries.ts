@@ -1,6 +1,17 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import {
+  getWidgetArgsValidator,
+  getWidgetByStringIdArgsValidator,
+  getProjectWidgetsArgsValidator,
+  getWidgetsByCategoryArgsValidator,
+  getUserWidgetsArgsValidator,
+  getWidgetsByExecutionStatusArgsValidator,
+  getWidgetCountArgsValidator,
+  searchWidgetsArgsValidator,
+  getRecentlyUpdatedWidgetsArgsValidator,
+} from "./types/widgets";
 
 /**
  * Individual Widget Queries
@@ -17,10 +28,7 @@ import { Id } from "./_generated/dataModel";
  * Most efficient query - direct document lookup
  */
 export const getWidget = query({
-  args: {
-    widgetId: v.id("widgets"),
-    userId: v.optional(v.string()),
-  },
+  args: getWidgetArgsValidator,
   returns: v.union(v.null(), v.any()),
   handler: async (ctx, { widgetId, userId }) => {
     const widget = await ctx.db.get(widgetId);
@@ -52,11 +60,7 @@ export const getWidget = query({
  * For backward compatibility with existing code
  */
 export const getWidgetByStringId = query({
-  args: {
-    projectId: v.id("projects"),
-    widget_id: v.string(),
-    userId: v.optional(v.string()),
-  },
+  args: getWidgetByStringIdArgsValidator,
   returns: v.union(v.null(), v.any()),
   handler: async (ctx, { projectId, widget_id, userId }) => {
     // Use compound index for efficient lookup
@@ -90,11 +94,7 @@ export const getWidgetByStringId = query({
  * Primary access pattern for project dashboard
  */
 export const getProjectWidgets = query({
-  args: {
-    projectId: v.id("projects"),
-    userId: v.optional(v.string()),
-    includeArchived: v.optional(v.boolean()),
-  },
+  args: getProjectWidgetsArgsValidator,
   returns: v.array(v.any()),
   handler: async (ctx, { projectId, userId, includeArchived }) => {
     // Validate project access if userId provided
@@ -136,11 +136,7 @@ export const getProjectWidgets = query({
  * Uses compound index for efficient filtering
  */
 export const getWidgetsByCategory = query({
-  args: {
-    projectId: v.id("projects"),
-    category: v.string(),
-    userId: v.optional(v.string()),
-  },
+  args: getWidgetsByCategoryArgsValidator,
   returns: v.array(v.any()),
   handler: async (ctx, { projectId, category, userId }) => {
     // Validate project access if userId provided
@@ -178,13 +174,10 @@ export const getWidgetsByCategory = query({
  * Useful for user dashboard
  */
 export const getUserWidgets = query({
-  args: {
-    userId: v.string(),
-    limit: v.optional(v.number()),
-  },
+  args: getUserWidgetsArgsValidator,
   returns: v.array(v.any()),
   handler: async (ctx, { userId, limit }) => {
-    let query = ctx.db
+    const query = ctx.db
       .query("widgets")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .filter((q) => q.eq(q.field("status"), "active"));
@@ -212,16 +205,7 @@ export const getUserWidgets = query({
  * Useful for monitoring running widgets
  */
 export const getWidgetsByExecutionStatus = query({
-  args: {
-    projectId: v.id("projects"),
-    userId: v.string(),
-    status: v.union(
-      v.literal("idle"),
-      v.literal("running"),
-      v.literal("success"),
-      v.literal("failed")
-    ),
-  },
+  args: getWidgetsByExecutionStatusArgsValidator,
   returns: v.array(v.any()),
   handler: async (ctx, { projectId, userId, status }) => {
     // Validate project access
@@ -255,11 +239,7 @@ export const getWidgetsByExecutionStatus = query({
  * Efficient for displaying stats
  */
 export const getWidgetCount = query({
-  args: {
-    projectId: v.id("projects"),
-    userId: v.optional(v.string()),
-    includeArchived: v.optional(v.boolean()),
-  },
+  args: getWidgetCountArgsValidator,
   returns: v.number(),
   handler: async (ctx, { projectId, userId, includeArchived }) => {
     // Validate project access if userId provided
@@ -300,12 +280,7 @@ export const getWidgetCount = query({
  * For widget search functionality
  */
 export const searchWidgets = query({
-  args: {
-    projectId: v.id("projects"),
-    userId: v.string(),
-    searchTerm: v.string(),
-    limit: v.optional(v.number()),
-  },
+  args: searchWidgetsArgsValidator,
   returns: v.array(v.any()),
   handler: async (ctx, { projectId, userId, searchTerm, limit }) => {
     // Validate project access
@@ -360,10 +335,7 @@ export const searchWidgets = query({
  * For activity tracking
  */
 export const getRecentlyUpdatedWidgets = query({
-  args: {
-    userId: v.string(),
-    limit: v.optional(v.number()),
-  },
+  args: getRecentlyUpdatedWidgetsArgsValidator,
   returns: v.array(v.any()),
   handler: async (ctx, { userId, limit }) => {
     const widgets = await ctx.db

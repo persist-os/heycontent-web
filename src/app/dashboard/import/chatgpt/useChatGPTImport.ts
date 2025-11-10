@@ -16,7 +16,7 @@ export function useChatGPTImport() {
   }, []);
 
   // **REACTIVE CONVEX QUERY - NO POLLING NEEDED!**
-  // This automatically updates when the backend writes to migration_tracking
+  // This automatically updates when the backend writes to data_imports
   const importData = useQuery(
     api.chatgptImport.getImportStatus,
     userId ? { userId } : 'skip'

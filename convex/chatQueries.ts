@@ -42,7 +42,21 @@ export const getConversation = query({
       return null;
     }
 
-    return conversation;
+    // Fetch messages from NEW messages table (not legacy array)
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_conversation", (q) => q.eq("conversationId", args.conversationId))
+      .order("asc")
+      .collect();
+
+    // Filter out soft-deleted messages
+    const activeMessages = messages.filter(msg => !msg.deletedAt);
+
+    // Return conversation with messages from new table
+    return {
+      ...conversation,
+      messages: activeMessages
+    };
   },
 });
 
@@ -82,6 +96,9 @@ export const getConversationsWithFiles = query({
  * Get all conversations connected to a specific widget
  * @param widgetId - The widget ID to filter conversations by
  * @param userId - The user ID for authorization
+ * 
+ * NOTE: Since widgetIds is an array, we query all user conversations and filter in memory
+ * This is acceptable for typical use cases where users have limited conversations
  */
 export const getConversationsByWidgetId = query({
   args: {
@@ -90,15 +107,22 @@ export const getConversationsByWidgetId = query({
   },
   handler: async (ctx, { widgetId, userId }) => {
     try {
+      // Query all conversations for user (can't index arrays directly)
       const conversations = await ctx.db
         .query("conversations")
-        .withIndex("by_user_widget", (q) =>
-          q.eq("userId", userId).eq("widgetId", widgetId)
-        )
+        .withIndex("by_user", (q) => q.eq("userId", userId))
         .order("desc")
         .collect();
 
-      return conversations;
+      // Filter to conversations that include this widgetId in their widgetIds array
+      const widgetIdAsArray = typeof widgetId === "string" ? widgetId as any : widgetId;
+      const filteredConversations = conversations.filter(conv => {
+        const convAny = conv as any;
+        const widgetIds = convAny.widgetIds || [];
+        return widgetIds.includes(widgetIdAsArray);
+      });
+
+      return filteredConversations;
     } catch (error) {
       console.error('Error fetching conversations by widgetId:', error);
       return [];
@@ -130,6 +154,33 @@ export const getConversationsByProjectId = query({
     } catch (error) {
       console.error('Error fetching conversations by projectId:', error);
       return [];
+    }
+  },
+});
+
+/**
+ * Get the project-scoped conversation for a project (ONE conversation per project)
+ * Used for widget communication and family questions
+ */
+export const getProjectScopedConversation = query({
+  args: {
+    projectId: v.id("projects"),
+    userId: v.string(),
+  },
+  handler: async (ctx, { projectId, userId }) => {
+    try {
+      const conversations = await ctx.db
+        .query("conversations")
+        .withIndex("by_user_project", (q) =>
+          q.eq("userId", userId).eq("projectId", projectId)
+        )
+        .filter((q) => q.eq(q.field("conversationType"), "project_scoped"))
+        .first();
+
+      return conversations;
+    } catch (error) {
+      console.error('Error fetching project-scoped conversation:', error);
+      return null;
     }
   },
 });
@@ -170,5 +221,98 @@ export const getMultiple = query({
       return [];
     }
   },
+});
+
+/**
+ * Get recent threads for homepage thread cards
+ * Returns formatted thread data with message previews
+ * @param userId - The user ID
+ * @param limit - Number of threads to return (default: 4)
+ */
+export const getRecentThreads = query({
+  args: {
+    userId: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { userId, limit = 4 }) => {
+    // Get user's conversations (threads)
+    const conversations = await ctx.db
+      .query("conversations")
+      .withIndex("by_user", q => q.eq("userId", userId))
+      .order("desc")
+      .take(limit);
+    
+    // Format for ThreadCard component
+    return conversations.map(conv => {
+      const messages = conv.messages || [];
+      const lastMessage = messages[messages.length - 1];
+      
+      return {
+        _id: conv._id,
+        title: conv.title || 'Main Chat',
+        threadType: conv.projectId ? 'project' as const : 'main' as const,
+        lastMessagePreview: lastMessage?.content?.slice(0, 150),
+        messageCount: messages.length,
+        lastMessageAt: conv.updatedAt || conv._creationTime,
+        hasUnread: false, // TODO: Implement unread tracking
+        projectId: conv.projectId
+      };
+    });
+  }
+});
+
+/**
+ * Get all user threads for thread sidebar
+ * Similar to getRecentThreads but returns all threads
+ * @param userId - The user ID
+ */
+export const getAllUserThreads = query({
+  args: {
+    userId: v.string(),
+  },
+  handler: async (ctx, { userId }) => {
+    // Get ALL user conversations
+    const conversations = await ctx.db
+      .query("conversations")
+      .withIndex("by_user", q => q.eq("userId", userId))
+      .order("desc")
+      .collect();
+    
+    // Format for ThreadItem component
+    return conversations.map(conv => {
+      const messages = conv.messages || [];
+      const lastMessage = messages[messages.length - 1];
+      
+      return {
+        _id: conv._id,
+        title: conv.title || 'Main Chat',
+        threadType: conv.projectId ? 'project' as const : 'main' as const,
+        lastMessagePreview: lastMessage?.content?.slice(0, 100),
+        messageCount: messages.length,
+        lastMessageAt: conv.updatedAt || conv._creationTime,
+        hasUnread: false, // TODO: Implement
+      };
+    });
+  }
+});
+
+/**
+ * Get recent messages from conversation (for embedding PostAction)
+ */
+export const getRecentMessages = query({
+  args: { 
+    conversationId: v.id("conversations"),
+    limit: v.number()
+  },
+  handler: async (ctx, { conversationId, limit }) => {
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_conversation", (q) => q.eq("conversationId", conversationId))
+      .order("desc")  // Most recent first
+      .take(limit);
+    
+    // Return in chronological order (oldest first)
+    return messages.reverse();
+        }
 });
 

@@ -8,6 +8,9 @@
 'use client'
 
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '@/convex/_generated/api'
+import { Id } from '@/convex/_generated/dataModel'
 import { WidgetConfig } from '@/types/projectWidgets'
 import { usePanZoom } from '../../../hooks/usePanZoom'
 import { ConnectionLines } from '../../../components/ConnectionLines'
@@ -15,54 +18,229 @@ import { ConstellationControls } from '../../../components/ConstellationControls
 import { ConstellationMinimap } from '../../../components/ConstellationMinimap'
 import { useWidgetLayout } from '../hooks/useWidgetLayout'
 import { FloatingWidgetCard } from './FloatingWidgetCard'
-import { FloatingContentCard } from './FloatingContentCard'
-import { ContentAttachmentPanel } from '@/app/dashboard/living-projects/components/ContentAttachmentPanel'
-import { ProjectFingerprint } from './ProjectFingerprint'
+import { ArtifactCard } from './ArtifactCard'
+import { ProjectControlPanel } from '../ProjectControlPanel'
+import { SpawnWidgetDialog } from './SpawnWidgetDialog'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { T } from '@/components/translation/T'
+import { deriveFamilyStatus, type FamilyStatus } from '@/app/types/family-status'
+import { Sparkles, MessageCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 interface ConstellationCanvasProps {
   widgets: WidgetConfig[]
+  artifacts?: any[] // Widget output artifacts
   userId: string | null
-  projectId: string
+  projectId: Id<"projects">
   onWidgetClick: (widget: WidgetConfig) => void
   onWidgetHover: (widgetId: string | null) => void
   highlightedWidget: string | null
-  onWidgetRun?: (widgetId: string) => void
-  runningWidgetId?: string | null
-  contentItems?: any[]
+  contentItems?: any[] // Deprecated - kept for backward compatibility
   storedLayout?: any
   onContentOpen?: (id: string, type: string) => void
+  onArtifactClick?: (artifact: any) => void
   onLayoutReset?: () => void
 }
 
 export function ConstellationCanvas({
   widgets,
+  artifacts = [],
   userId,
   projectId,
   onWidgetClick,
   onWidgetHover,
   highlightedWidget,
-  onWidgetRun,
-  runningWidgetId,
   contentItems,
   storedLayout,
   onContentOpen,
+  onArtifactClick,
   onLayoutReset
 }: ConstellationCanvasProps) {
   const { trackWidgetOpen } = useAnalytics()
+  const router = useRouter()
+  
+  // Explicitly type projectId to ensure correct type inference
+  const typedProjectId: Id<"projects"> = projectId;
+  
+  // Query for project-scoped conversation
+  const projectConversation = useQuery(
+    api.chatQueries.getProjectScopedConversation,
+    userId && projectId ? { 
+      projectId: projectId, 
+      userId 
+    } : 'skip'
+  )
+  
+  // Mutation for creating conversation
+  const createConversation = useMutation(api.chatMutations.createConversation)
+  
+  // Direct Convex queries for family status (NO polling)
+  // Query background jobs for execution status
+  const backgroundJobs = useQuery(
+    api.backgroundJobs.getUserJobs,
+    userId ? { userId, jobType: 'widget_execution', limit: 100 } : 'skip'
+  )
+  
+  // Derive family status for each widget
+  const familyStatusMap = useMemo(() => {
+    const statusMap = new Map<string, FamilyStatus>()
+    
+    widgets.forEach(widget => {
+      // Find background job for this widget
+      const widgetJob = backgroundJobs?.find(
+        (job: any) => job.payload?.widget_id === widget._id || job.payload?.widgetId === widget._id
+      )
+      
+      // Derive status from widget data, job status, and questions
+      const status = deriveFamilyStatus(
+        widget.lastRunStatus,
+        widgetJob?.status,
+      )
+      
+      statusMap.set(widget._id, status)
+    })
+    
+    return statusMap
+  }, [widgets, backgroundJobs])
+  
   const [viewportSize, setViewportSize] = useState({
     width: typeof window !== 'undefined' ? window.innerWidth : 1200,
     height: typeof window !== 'undefined' ? window.innerHeight : 800
   })
   
-  // Handle content card click - delegate to parent
+  // Spawn widget dialog state
+  const [isSpawnDialogOpen, setIsSpawnDialogOpen] = useState(false)
+  
+  // Handle content card click - delegate to parent (deprecated)
   const handleContentOpen = useCallback((id: string, type: string) => {
     onContentOpen?.(id, type)
   }, [onContentOpen])
   
-  // Generate constellation layout
-  const layout = useWidgetLayout(widgets, contentItems, storedLayout)
+  // Handle artifact click
+  const handleArtifactClick = useCallback((artifact: any) => {
+    onArtifactClick?.(artifact)
+  }, [onArtifactClick])
+  
+  // Handle conversation open
+  const handleOpenConversation = useCallback(async () => {
+    if (!userId || !projectId) return
+    
+    if (projectConversation?._id) {
+      // Conversation exists, navigate to it
+      router.push(`/dashboard/thinking_lab?chatId=${projectConversation._id}`)
+    } else {
+      // No conversation yet, create one
+      try {
+        const conversationId = await createConversation({
+          userId,
+          title: `Project Conversation`,
+          projectId: projectId as any,
+          conversationType: "project_scoped"
+        })
+        
+        if (conversationId) {
+          router.push(`/dashboard/thinking_lab?chatId=${conversationId}`)
+        } else {
+          // Fallback if creation failed
+          router.push(`/dashboard/thinking_lab?projectId=${projectId}`)
+        }
+      } catch (error) {
+        console.error('[ConstellationCanvas] Failed to create conversation:', error)
+        // Fallback to project context mode
+        router.push(`/dashboard/thinking_lab?projectId=${projectId}`)
+      }
+    }
+  }, [userId, projectId, projectConversation, createConversation, router])
+  
+  // Natural scattered positioning for mixed widgets and artifacts
+  // Creates organic constellation layout across entire canvas
+  const allPositions = useMemo(() => {
+    const CARD_WIDTH = 360
+    const CARD_HEIGHT = 260
+    const MIN_DISTANCE = 120
+    const CANVAS_PADDING = 200
+    const CANVAS_WIDTH = 2400
+    const CANVAS_HEIGHT = 1600
+    
+    // Mix widgets and artifacts together
+    const allItems = [
+      ...widgets.map(w => ({ item: w, type: 'widget' as const })),
+      ...artifacts.map(a => ({ item: a, type: 'artifact' as const }))
+    ]
+    
+    const positions: Array<{ 
+      item: any
+      type: 'widget' | 'artifact'
+      x: number
+      y: number
+      size: 'small' | 'medium' | 'large' 
+    }> = []
+    
+    allItems.forEach(({ item, type }, index) => {
+      const id = item._id || item.id || String(index)
+      const seed = id.charCodeAt(0) + id.charCodeAt(1) + id.charCodeAt(Math.min(2, id.length - 1))
+      
+      // Natural scatter across entire canvas with more randomness
+      let finalX = CANVAS_PADDING + ((seed * 1327) % (CANVAS_WIDTH - CANVAS_PADDING * 2 - CARD_WIDTH))
+      let finalY = CANVAS_PADDING + ((seed * 977) % (CANVAS_HEIGHT - CANVAS_PADDING * 2 - CARD_HEIGHT))
+      
+      // Check for collisions and adjust
+      let attempts = 0
+      while (attempts < 100) {
+        let hasCollision = false
+        
+        for (const pos of positions) {
+          const dx = Math.abs(finalX - pos.x)
+          const dy = Math.abs(finalY - pos.y)
+          
+          if (dx < (CARD_WIDTH + MIN_DISTANCE) && dy < (CARD_HEIGHT + MIN_DISTANCE)) {
+            hasCollision = true
+            break
+          }
+        }
+        
+        if (!hasCollision) break
+        
+        // Try new position with spiral outward pattern
+        const angle = (attempts * 137.5) * (Math.PI / 180) // Golden angle for natural distribution
+        const radius = 150 + (attempts * 50)
+        finalX = Math.max(CANVAS_PADDING, Math.min(
+          CANVAS_WIDTH - CANVAS_PADDING - CARD_WIDTH,
+          finalX + Math.cos(angle) * radius
+        ))
+        finalY = Math.max(CANVAS_PADDING, Math.min(
+          CANVAS_HEIGHT - CANVAS_PADDING - CARD_HEIGHT,
+          finalY + Math.sin(angle) * radius
+        ))
+        attempts++
+      }
+      
+      positions.push({
+        item,
+        type,
+        x: finalX,
+        y: finalY,
+        size: 'medium' as const
+      })
+    })
+    
+    return positions
+  }, [widgets.length, artifacts.length])
+  
+  // Separate for rendering
+  const widgetPositions = useMemo(() => 
+    allPositions.filter(p => p.type === 'widget'),
+    [allPositions]
+  )
+  
+  const artifactPositions = useMemo(() => 
+    allPositions.filter(p => p.type === 'artifact'),
+    [allPositions]
+  )
+
+  // Fixed canvas size for stable constellation
+  const canvasWidth = 2400
+  const canvasHeight = 1600
 
   // Pan and zoom functionality
   const {
@@ -74,7 +252,7 @@ export function ConstellationCanvas({
     zoomOut,
     resetView,
     focusOnPoint
-  } = usePanZoom(layout.canvasWidth, layout.canvasHeight, viewportSize.width, viewportSize.height)
+  } = usePanZoom(canvasWidth, canvasHeight, viewportSize.width, viewportSize.height)
 
   // Update viewport size on window resize
   useEffect(() => {
@@ -107,20 +285,13 @@ export function ConstellationCanvas({
     const viewportRight = viewportLeft + (viewportSize.width / transform.scale) + (buffer * 2)
     const viewportBottom = viewportTop + (viewportSize.height / transform.scale) + (buffer * 2)
 
-    return layout.positions.filter(position =>
+    return widgetPositions.filter(position =>
       position.x >= viewportLeft &&
       position.x <= viewportRight &&
       position.y >= viewportTop &&
       position.y <= viewportBottom
     )
-  }, [layout.positions, transform, viewportSize])
-
-  // Create widget lookup for performance using Convex IDs
-  const widgetMap = useMemo(() => {
-    const map = new Map<string, WidgetConfig>()
-    widgets.forEach(widget => map.set(widget._id, widget))
-    return map
-  }, [widgets])
+  }, [widgetPositions, transform, viewportSize])
 
   // Handle minimap viewport click
   const handleMinimapClick = useCallback((x: number, y: number) => {
@@ -147,107 +318,100 @@ export function ConstellationCanvas({
           style={{
             transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale(${transform.scale})`,
             transformOrigin: '0 0',
-            width: layout.canvasWidth,
-            height: layout.canvasHeight,
+            width: canvasWidth,
+            height: canvasHeight,
             willChange: 'transform'
           }}
         >
-          {/* Connection Lines */}
-          <ConnectionLines
-            connections={layout.connections}
-            positions={layout.positions}
-            canvasWidth={layout.canvasWidth}
-            canvasHeight={layout.canvasHeight}
-            scale={transform.scale}
-            translateX={transform.x}
-            translateY={transform.y}
-            highlightedProject={highlightedWidget}
-            viewportWidth={viewportSize.width}
-            viewportHeight={viewportSize.height}
-          />
+          {/* Floating Widget Cards - Fixed Positions */}
+          {visibleWidgets.map(({ item: widget, x, y, size }) => (
+            <FloatingWidgetCard
+              key={widget._id}
+              widget={widget}
+              x={x}
+              y={y}
+              size={size}
+              importance={1}
+              isHighlighted={highlightedWidget === widget._id}
+              scale={transform.scale}
+              onClick={() => {
+                trackWidgetOpen(widget.widget_type)
+                onWidgetClick(widget)
+              }}
+              onHover={onWidgetHover}
+              status={familyStatusMap.get(widget._id) || 'idle'}
+            />
+          ))}
 
-          {/* Floating Widget Cards - Virtual Rendering */}
-          {visibleWidgets.map(position => {
-            const widget = widgetMap.get(position.id)
-            if (!widget) return null
-
-            return (
-              <FloatingWidgetCard
-                key={position.id}
-                widget={widget}
-                x={position.x}
-                y={position.y}
-                size={position.size}
-                importance={position.importance}
-                isHighlighted={highlightedWidget === position.id}
-                scale={transform.scale}
-                onClick={() => {
-                  trackWidgetOpen(widget.widget_type)
-                  onWidgetClick(widget)
-                }}
-                onHover={onWidgetHover}
-                onRun={onWidgetRun}
-                isRunning={runningWidgetId === position.id}
-              />
-            )
-          })}
-
-          {/* Floating Content Cards - Virtual Rendering */}
-          {layout.positions
-            .filter(position => position.type && position.type !== 'widget')
-            .map(position => {
-              const contentItem = contentItems?.find(item => 
-                (item._contentId || item._id) === position.id
-              )
-              if (!contentItem) return null
-
-              return (
-                <FloatingContentCard
-                  key={position.id}
-                  item={contentItem}
-                  itemType={position.type as 'note' | 'conversation' | 'crystal' | 'shard'}
-                  x={position.x}
-                  y={position.y}
-                  size={position.size}
-                  importance={position.importance}
-                  isHighlighted={highlightedWidget === position.id}
-                  scale={transform.scale}
-                  onOpen={handleContentOpen}
-                />
-              )
-            })}
+          {/* Artifact Cards - Fixed Positions */}
+          {artifactPositions.map(({ item: artifact, x, y, size }) => (
+            <ArtifactCard
+              key={artifact._id}
+              artifact={artifact}
+              x={x}
+              y={y}
+              size={size}
+              scale={transform.scale}
+              isHighlighted={highlightedWidget === artifact._id}
+              onClick={() => handleArtifactClick(artifact)}
+            />
+          ))}
 
           {/* Canvas bounds indicator with accent */}
           <div
             className="absolute inset-0 border border-primary/10 rounded-lg pointer-events-none"
             style={{
-              width: layout.canvasWidth,
-              height: layout.canvasHeight
+              width: canvasWidth,
+              height: canvasHeight
             }}
           />
         </div>
       </div>
 
-      {/* Project Fingerprint - Top Left with enhanced glassmorphism */}
-      <div className="absolute top-4 left-4 z-10 pointer-events-auto max-w-2xl">
-        <div className="bg-gradient-to-br from-card/85 via-card/80 to-primary/10 backdrop-blur-xl border border-border/50 rounded-xl shadow-xl shadow-primary/10 ring-1 ring-border/20">
-          <ProjectFingerprint projectId={projectId} />
-        </div>
-      </div>
 
-      {/* Stats Overlay - Top Right with color variety */}
-      <div className="absolute top-4 right-4 z-10 pointer-events-none">
-        <div className="bg-gradient-to-br from-card/80 via-card/70 to-accent/10 backdrop-blur-lg border border-border/40 rounded-xl px-5 py-2.5 shadow-lg shadow-accent/10">
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-              <T context="constellation.canvas.stats.active">Active</T>: <span className="text-foreground font-medium">{widgets.filter(w => w.priority > 7).length}</span>
-            </span>
-            <span className="text-border">•</span>
-            <span className="text-foreground font-mono">{Math.round(transform.scale * 100)}% <T context="constellation.canvas.stats.zoom">zoom</T></span>
-          </div>
-        </div>
+      {/* Project Control Panel and Spawn Widget Button - Top Right */}
+      <div className="absolute top-4 right-4 z-10 flex items-start gap-3">
+        {/* Spawn Widget Button */}
+        <button
+          onClick={() => setIsSpawnDialogOpen(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground backdrop-blur-lg border border-primary/20 rounded-xl hover:shadow-lg hover:shadow-primary/20 transition-all duration-200"
+          title="Spawn Widget Family"
+        >
+          <Sparkles className="w-4 h-4" />
+          <span className="text-sm font-medium">
+            <T context="constellation.button.spawn_widget">Spawn Widget</T>
+          </span>
+        </button>
+        
+        {/* Open Conversation Button */}
+        <button
+          onClick={handleOpenConversation}
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-secondary to-secondary/80 text-secondary-foreground backdrop-blur-lg border border-secondary/20 rounded-xl hover:shadow-lg hover:shadow-secondary/20 transition-all duration-200"
+          title="Open Project Conversation"
+          disabled={!userId || !projectId}
+        >
+          <MessageCircle className="w-4 h-4" />
+          <span className="text-sm font-medium">
+            <T context="constellation.button.open_conversation">Open Conversation</T>
+          </span>
+        </button>
+        
+        <ProjectControlPanel
+          projectId={typedProjectId}
+          userId={userId || ''}
+        />
       </div>
+      
+      {/* Spawn Widget Dialog */}
+      <SpawnWidgetDialog
+        projectId={projectId}
+        isOpen={isSpawnDialogOpen}
+        onClose={() => setIsSpawnDialogOpen(false)}
+        onSuccess={(widgetsId) => {
+          console.log('[ConstellationCanvas] Widget generated:', widgetsId)
+          // Widgets will auto-refresh via Convex reactivity
+        }}
+      />
 
       {/* Navigation Controls - Bottom Left */}
       <ConstellationControls
@@ -271,12 +435,15 @@ export function ConstellationCanvas({
         </div>
       )}
 
-      {/* Minimap - Top Right with responsive positioning to prevent cutoff */}
-      <div className="absolute top-20 right-4 z-10 max-sm:top-16 max-sm:right-2">
+      {/* Minimap - Bottom Right (moved from top to avoid overlap with ProjectControlPanel) */}
+      <div className="absolute bottom-8 right-4 z-10">
         <ConstellationMinimap
-          positions={layout.positions}
-          canvasWidth={layout.canvasWidth}
-          canvasHeight={layout.canvasHeight}
+          positions={[
+            ...widgetPositions.map(p => ({ id: p.item._id, x: p.x, y: p.y, size: p.size, importance: 1, type: 'widget' as const })),
+            ...artifactPositions.map(p => ({ id: p.item._id, x: p.x, y: p.y, size: p.size, importance: 1, type: 'artifact' as const }))
+          ]}
+          canvasWidth={canvasWidth}
+          canvasHeight={canvasHeight}
           viewportWidth={viewportSize.width}
           viewportHeight={viewportSize.height}
           currentTransform={transform}

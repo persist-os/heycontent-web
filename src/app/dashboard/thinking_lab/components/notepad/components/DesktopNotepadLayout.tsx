@@ -31,6 +31,8 @@ interface DesktopNotepadLayoutProps {
   onLinkNote?: (noteId: string) => void
   onShare?: () => void
   onClose?: () => void
+  showRatingButton?: boolean
+  onRateLastGeneration?: () => void
   isReadOnly?: boolean
   notePermission?: "owner" | "read" | "edit" | null
   panelState?: PanelState
@@ -56,6 +58,8 @@ export function DesktopNotepadLayout({
   onLinkNote,
   onShare,
   onClose,
+  showRatingButton = false,
+  onRateLastGeneration,
   isReadOnly = false,
   notePermission = null,
   panelState
@@ -86,6 +90,8 @@ export function DesktopNotepadLayout({
         onSaveNote={noteHandlers.handleSaveAsNote}
         onShare={onShare}
         onClose={onClose}
+        showRatingButton={showRatingButton}
+        onRateLastGeneration={onRateLastGeneration}
         isReadOnly={isReadOnly}
         notePermission={notePermission}
         panelState={panelState}
@@ -93,8 +99,6 @@ export function DesktopNotepadLayout({
 
       {/* Editor Area */}
       <div className="flex-1 overflow-auto relative scrollbar-hide">
-        {/* Calculate padding to match header - desktop uses px-6 base, pl-20 pr-6 for full-screen */}
-        <div className={`h-full ${panelState === 'notepad-full' ? 'pl-20 pr-6' : 'px-6'}`}>
           <LexicalNotepadEditor
             content={content}
             onContentChange={noteHandlers.handleContentChange}
@@ -114,8 +118,8 @@ export function DesktopNotepadLayout({
             onRejectRefinement={aiHandlers.handleRejectRefinement}
             onRetryRefinement={aiHandlers.handleRetryRefinement}
             disabled={isReadOnly}
+            isMobile={false}
           />
-        </div>
       </div>
     </div>
   )

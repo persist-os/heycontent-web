@@ -21,10 +21,6 @@ export async function initializePlatform(
   nextCursor: string | null;
 }> {
   try {
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`🚀 [PLATFORM FETCHER] Initializing platform: ${platform} for user: ${userId}`);
-    }
-
     let newItems: UnifiedContent[] = [];
     let hasMore = true;
     let nextCursor: string | null = null;
@@ -32,30 +28,13 @@ export async function initializePlatform(
     // Fetch initial batch based on platform
     switch (platform) {
       case 'notes':
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`📝 [PLATFORM FETCHER] Fetching notes for user: ${userId}`);
-        }
         const notesResult = await convex.query(api.noteQueries.getUserNotes, { userId, numItems: 1000 });
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`📝 [PLATFORM FETCHER] Notes raw result:`, { count: notesResult?.page?.length, sample: notesResult?.page?.slice(0, 2) });
-        }
         newItems = processNotesData({ status: 'fulfilled', value: notesResult.page });
         hasMore = !notesResult.isDone; // Check if there are more pages
         break;
       
       case 'conversations':
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`💬 [PLATFORM FETCHER] Fetching conversations for user: ${userId}`);
-        }
-        
         const conversationsResult = await convex.query(api.chatQueries.getHistory, { userId, limit: 100 });
-        
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`💬 [PLATFORM FETCHER] Conversations raw result:`, { 
-            count: conversationsResult?.length || 0, 
-            sample: conversationsResult?.slice(0, 2) 
-          });
-        }
         
         // Process conversations data
         newItems = (conversationsResult || []).map(conv => ({
@@ -83,15 +62,6 @@ export async function initializePlatform(
         throw new Error(`Unknown platform: ${platform}`);
     }
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`✅ [PLATFORM FETCHER] Platform ${platform} initialized successfully:`, {
-        itemsCount: newItems.length,
-        hasMore,
-        nextCursor: !!nextCursor,
-        sampleItems: newItems.slice(0, 3).map(item => ({ id: item.id, title: item.title, platform: item.platform }))
-      });
-    }
-
     return { items: newItems, hasMore, nextCursor };
 
   } catch (error) {
@@ -99,9 +69,7 @@ export async function initializePlatform(
     if (process.env.NODE_ENV === 'development') {
       console.error(`❌ [PLATFORM FETCHER] Failed to initialize ${platform}:`, {
         error: errorMessage,
-        userId,
         stack: error instanceof Error ? error.stack : undefined,
-        fullError: error
       });
     } else {
       console.error(`Failed to initialize ${platform}:`, errorMessage);

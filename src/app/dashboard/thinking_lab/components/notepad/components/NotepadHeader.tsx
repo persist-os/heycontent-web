@@ -31,6 +31,8 @@ interface NotepadHeaderProps {
   onSaveNote: () => void
   onShare?: () => void
   onClose?: () => void
+  showRatingButton?: boolean
+  onRateLastGeneration?: () => void
   isReadOnly?: boolean
   notePermission?: "owner" | "read" | "edit" | null
   panelState?: PanelState
@@ -54,6 +56,8 @@ export function NotepadHeader({
   onSaveNote,
   onShare,
   onClose,
+  showRatingButton = false,
+  onRateLastGeneration,
   isReadOnly = false,
   notePermission = null,
   panelState
@@ -114,7 +118,9 @@ export function NotepadHeader({
               onGenerateMetadata={onGenerateMetadata}
               onSaveNote={onSaveNote}
               onShare={onShare}
+              onRateLastGeneration={onRateLastGeneration}
               shouldShowSmartButton={shouldShowSmartButton}
+              showRatingButton={showRatingButton}
               isGeneratingMetadata={isGeneratingMetadata}
               isCreating={isCreating}
               isMobile={isMobile}

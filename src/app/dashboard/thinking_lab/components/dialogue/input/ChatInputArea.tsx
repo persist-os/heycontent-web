@@ -12,6 +12,7 @@ interface ChatInputAreaProps {
   handleSendMessage: (message: string, fileAttachments?: any[]) => void;
   inputRef: React.RefObject<HTMLTextAreaElement>;
   isLoading: boolean;
+  isOrchestratorRunning?: boolean;
   referencedMessage: Message | null;
   handleClearReference: () => void;
   includeAnalysisInQuery: boolean;
@@ -31,6 +32,10 @@ interface ChatInputAreaProps {
   embeddingInfo?: { hasEmbeddings: boolean; count: number };
   includeNotepadInMessages?: boolean;
   onToggleNotepadInMessages?: (enabled: boolean) => void;
+  // Thread selection props
+  userId?: string;
+  activeThreadId?: string;
+  onThreadSelect?: (threadId: string) => void;
 }
 
 const ChatInputArea: React.FC<ChatInputAreaProps> = ({
@@ -40,6 +45,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   handleSendMessage,
   inputRef,
   isLoading,
+  isOrchestratorRunning = false,
   referencedMessage,
   handleClearReference,
   includeAnalysisInQuery,
@@ -56,7 +62,10 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   isMobile = false,
   activeTab = 'chat',
   includeNotepadInMessages,
-  onToggleNotepadInMessages
+  onToggleNotepadInMessages,
+  userId,
+  activeThreadId,
+  onThreadSelect
 }) => {
   // Only show ambient content when there are no messages
   const showAmbientContent = showAmbient && !currentContext;
@@ -94,7 +103,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
             inputRef={inputRef}
             onSend={handleSendMessage}
             isLoading={isLoading || !isAuthenticated}
-            disabled={!isAuthenticated}
+            disabled={!isAuthenticated || isLoading || isOrchestratorRunning}
             referencedMessage={referencedMessage}
             onClearReference={handleClearReference}
             hasContext={!!currentContext}
@@ -120,6 +129,9 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
             activeTab={activeTab}
             includeNotepadInMessages={includeNotepadInMessages}
             onToggleNotepadInMessages={onToggleNotepadInMessages}
+            userId={userId || getCurrentUserIdSync()}
+            activeThreadId={activeThreadId}
+            onThreadSelect={onThreadSelect}
           />
         </div>
       </div>

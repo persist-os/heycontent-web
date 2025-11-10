@@ -70,7 +70,7 @@ export async function POST(request: Request) {
       user_id: authenticated_user_id,
       query,
       is_first_message: is_first_message === true,
-      session_id: is_first_message === true ? null : (session_identifier || null),
+      session_id: session_identifier || null,  // Always pass session_id (frontend creates conversation)
       notepad_context,
       vector_search_metadata
     };
@@ -97,61 +97,44 @@ export async function POST(request: Request) {
       chatRequestBody.conversation_type = conversation_type;
     }
 
-    console.log(`[${requestId}] Forwarding to chat API:`, {
-      url: `${BACKEND_URL}/api/v1/chat/message`,
+    console.log(`[${requestId}] Forwarding to streaming chat API:`, {
+      url: `${BACKEND_URL}/api/v1/chat/stream`,
       user_id: authenticated_user_id,
       query_length: query.length,
       has_notepad_context: !!chatRequestBody.notepad_context,
       has_content_context: !!chatRequestBody.content_context
     });
 
-    // Forward to chat message endpoint
-    const response = await fetch(`${BACKEND_URL}/api/v1/chat/message`, {
+    // Forward to streaming chat endpoint
+    const response = await fetch(`${BACKEND_URL}/api/v1/chat/stream`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        'Accept': 'text/event-stream',
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify(chatRequestBody)
     });
 
     if (!response.ok) {
-      console.error(`[${requestId}] Chat API error: ${response.status}`);
+      console.error(`[${requestId}] Streaming chat API error: ${response.status}`);
       const errorText = await response.text();
       return NextResponse.json({
-        error: 'Chat API Error',
+        error: 'Streaming Chat API Error',
         message: `Backend responded with status: ${response.status}`,
         details: errorText
       }, { status: response.status });
     }
 
-    const data = await response.json();
-    
-    // Backend wraps response in { success: true, data: {...} }
-    const backendData = data.success ? data.data : data;
-    
-    // Transform chat API response to thinking lab format
-    const labResponse = {
-      response_content: backendData.response || backendData.chat_response || 'No response received',
-      session_identifier: backendData.session_id || session_identifier,
-      user_input: backendData.user_message || query,
-      suggestions: backendData.suggestions || [],
-      metadata: {
-        ...backendData.metadata,
-        request_id: requestId,
-        processing_time_ms: Date.now() - startTime
+    // Return streaming response
+    return new Response(response.body, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no'
       }
-    };
-
-    console.log(`[${requestId}] Lab message request completed`, {
-      duration_ms: Date.now() - startTime,
-      response_length: labResponse.response_content?.length || 0,
-      suggestions_count: labResponse.suggestions?.length || 0,
-      has_notepad_context: !!chatRequestBody.notepad_context
     });
-
-    return NextResponse.json(labResponse);
 
   } catch (error) {
     const totalDuration = Date.now() - startTime;

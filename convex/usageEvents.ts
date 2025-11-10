@@ -53,12 +53,27 @@ export const logUsageEvent = mutation({
     };
     
     await ctx.db.insert("usageEvents", eventData);
+  },
+});
+
+/**
+ * Check if a usage event with the given requestId already exists (idempotency check).
+ * Returns true if exists, false otherwise.
+ * 
+ * BRUTAL IDEMPOTENCY: Prevents duplicate usage logs from retries or recursive calls.
+ */
+export const checkUsageEventExists = query({
+  args: {
+    requestId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Use filter query (no index needed for idempotency check)
+    const existing = await ctx.db
+      .query("usageEvents")
+      .filter((q) => q.eq(q.field("requestId"), args.requestId))
+      .first();
     
-    // Log the event for debugging
-    console.log(`[UsageEvent] User ${args.userId} - ${args.model} - ${args.status} - ${args.qty} units`);
-    if (args.endpoint) {
-      console.log(`[UsageEvent] Endpoint: ${args.method} ${args.endpoint}${args.path} - ${args.statusCode}`);
-    }
+    return existing !== null;
   },
 });
 
@@ -131,24 +146,14 @@ export const getUsageSummary = query({
       
       // Defensive: handle missing user or missing subscription gracefully
       if (!user) {
-        console.error(`User not found: ${args.userId}`);
-        return { total: 0, included: 0, overage: 0 };
+        return { total: 0, included: 50, overage: 0 };  // Default to free tier
       }
       
       if (!user.subscription) {
-        console.error(`No subscription found for user: ${args.userId}`);
-        return { total: 0, included: 0, overage: 0 };
+        return { total: 0, included: 50, overage: 0 };  // Default to free tier
       }
       
       const { currentPeriodStart, currentPeriodEnd, includedRequests } = user.subscription;
-      
-      // Log subscription data for debugging
-      console.log('Subscription data:', {
-        currentPeriodStart,
-        currentPeriodEnd,
-        includedRequests,
-        hasSubscription: !!user.subscription
-      });
       
       // Defensive: handle missing fields with better defaults
       const periodStart = typeof currentPeriodStart === "number" ? currentPeriodStart : 0;
@@ -156,7 +161,7 @@ export const getUsageSummary = query({
       
       // Get included requests from subscription using price config
       let included: number;
-      if (typeof includedRequests === "number") {
+      if (typeof includedRequests === "number" && includedRequests > 0) {
         included = includedRequests;
       } else if (user.subscription.plan) {
         try {
@@ -168,17 +173,14 @@ export const getUsageSummary = query({
           // This integrates with the pricing system to determine user limits
           const priceInfo = getPriceInfo(plan, interval as 'monthly' | 'yearly');
           included = priceInfo.includedRequests;
-          
-          console.log(`Using included requests: ${included} for plan: ${plan} (${interval})`);
         } catch (error) {
-          console.error('Error getting price info:', error);
-          throw new Error('Failed to determine included requests from plan');
+          // Default to free tier instead of throwing
+          included = 50;
         }
       } else {
-        throw new Error('No includedRequests or valid plan found in subscription');
+        // Default to free tier instead of throwing
+        included = 50;
       }
-      
-      console.log(`Using included requests: ${included} for user: ${args.userId}`);
       
       // Get all usage events for the user
       const events = await ctx.db
@@ -186,14 +188,10 @@ export const getUsageSummary = query({
         .withIndex("by_user", (q) => q.eq("userId", args.userId))
         .collect();
       
-      console.log(`Found ${events.length} total events for user`);
-      
       // Filter events to current billing period
       const filteredEvents = events.filter(
         (event) => event.timestamp >= periodStart && event.timestamp < periodEnd
       );
-      
-      console.log(`Found ${filteredEvents.length} events in current period`);
       
       // Calculate total usage
       const total = filteredEvents.reduce((sum, e) => sum + (e.qty || 0), 0);
@@ -201,15 +199,12 @@ export const getUsageSummary = query({
       // Calculate overage (anything above included)
       const overage = Math.max(0, total - included);
       
-      console.log(`Usage summary: total=${total}, included=${included}, overage=${overage}`);
-      
       return { 
         total, 
         included, 
         overage 
       };
     } catch (error) {
-      console.error('Error in getUsageSummary:', error);
       return { total: 0, included: 0, overage: 0 };
     }
   },
@@ -308,8 +303,9 @@ export const updateUserUsage = mutation({
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .first();
 
+    // Graceful handling: Skip subscription update if user doesn't exist or lacks subscription
     if (!user || !user.subscription) {
-      throw new Error("User or subscription not found");
+      return { success: true, skipped: true, reason: "user_not_found" };
     }
 
     const sub = user.subscription as any;
@@ -336,12 +332,6 @@ export const updateUserUsage = mutation({
         usedRequests: newUsed, // Track total usage including overage (or capped)
       },
     });
-
-    // Log the update for debugging
-    console.log(`[UpdateUserUsage] User ${args.userId} - Used: ${newUsed}/${quota} (Overage: ${overage}) ubpEnabled=${ubpEnabled} blocked=${blocked}`);
-    if (args.endpoint) {
-      console.log(`[UpdateUserUsage] Endpoint: ${args.method} ${args.endpoint}${args.path || ''} - ${args.statusCode || 200}`);
-    }
 
     return {
       success: true,

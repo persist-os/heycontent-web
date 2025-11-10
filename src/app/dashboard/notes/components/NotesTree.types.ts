@@ -1,3 +1,4 @@
+import React from 'react';
 import { Note } from '../types';
 import { Project } from '../types/project';
 import { Folder as FolderType } from '../hooks/useFolders';
@@ -42,4 +43,7 @@ export interface DraggableComponentProps {
   node: TreeNode;
   router: any;
   searchTerm: string;
+  isSelectionMode?: boolean;
+  selectedNotes?: Set<string>;
+  onToggleNoteSelection?: (noteId: string) => void;
 }

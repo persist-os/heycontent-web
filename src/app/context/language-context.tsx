@@ -47,13 +47,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       // Use stored preference
       setGuestLanguage(stored.lang);
       setSource(stored.source === 'manual' ? 'manual' : 'auto');
-      console.log('[LanguageContext] Loaded stored language:', stored);
     } else {
       // Auto-detect browser language
       const detected = detectBrowserLanguage();
       setGuestLanguage(detected);
       setSource(detected === 'en' ? 'default' : 'auto');
-      console.log('[LanguageContext] Auto-detected browser language:', detected);
       
       // Save auto-detected language (only if not English)
       if (detected !== 'en') {
@@ -65,7 +63,6 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   // Sync auth user language from Convex to local state
   useEffect(() => {
     if (firebaseUser && userPreferences?.language) {
-      console.log('[LanguageContext] Syncing auth user language from Convex:', userPreferences.language);
       setGuestLanguage(userPreferences.language);
       setSource('auth');
     }
@@ -78,8 +75,6 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   // Unified setLanguage function
   const setLanguage = useCallback(
     async (newLanguage: string) => {
-      console.log('[LanguageContext] Setting language to:', newLanguage, 'Auth:', !!firebaseUser);
-      
       if (firebaseUser && userId) {
         // Authenticated user - save to Convex + localStorage
         await updatePreferences({

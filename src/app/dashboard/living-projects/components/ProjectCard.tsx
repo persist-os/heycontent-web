@@ -27,7 +27,7 @@ export function ProjectCard({ project, onClick, onDelete }: ProjectCardProps) {
   const [showMenu, setShowMenu] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const deleteProject = useMutation(api.projectsMutations.deleteProject)
+  const deleteProject = useMutation(api.projectsMutations.batchDeleteProjects)
   const menuRef = useRef<HTMLDivElement>(null)
   
   const hasFingerprint = !!project.fingerprintId

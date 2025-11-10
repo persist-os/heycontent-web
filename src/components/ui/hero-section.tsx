@@ -75,20 +75,20 @@ export function HeroSection() {
       <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 ${isMobile ? 'w-40 h-40' : 'w-64 h-64'} bg-gradient-to-br from-primary/[0.10] to-accent/[0.08] dark:from-primary/[0.05] dark:to-accent/[0.04] rounded-full blur-3xl animate-pulse-slow`} style={{animationDelay: '2s'}} />
       
       {/* Header */}
-      <nav className="relative z-10 p-4 sm:p-8 lg:p-12 animate-fade-in-down">
+      <nav className="relative z-10 p-3 sm:p-6 lg:p-12 animate-fade-in-down">
         <div className="flex justify-between items-center max-w-7xl mx-auto">
           <div className="transform active:scale-95 hover:scale-105 transition-transform duration-200">
-            <Logo className="h-6 sm:h-8 text-foreground/80" />
+            <Logo className="h-5 sm:h-7 lg:h-8 text-foreground" />
           </div>
           
-          <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3 lg:gap-4">
             <button 
               onClick={() => router.push('/pricing')}
-              className="text-sm sm:text-base text-muted-foreground hover:text-foreground transition-colors font-light"
+              className="text-xs sm:text-sm lg:text-base text-muted-foreground hover:text-foreground transition-colors font-light"
             >
               <T context="nav.pricing">Pricing</T>
             </button>
-            <div className="flex items-center gap-2 relative z-20">
+            <div className="flex items-center gap-1.5 sm:gap-2 relative z-20">
               <LanguageToggleSimple />
               <ThemeToggle />
             </div>
@@ -96,7 +96,7 @@ export function HeroSection() {
               onClick={() => router.push('/auth/login')}
               onTouchStart={() => setIsButtonPressed(true)}
               onTouchEnd={() => setIsButtonPressed(false)}
-              className={`group px-4 sm:px-6 lg:px-8 py-2 sm:py-3 bg-gradient-to-r from-foreground to-foreground/90 text-background rounded-full text-xs sm:text-sm font-medium hover:from-foreground/90 hover:to-foreground/80 transition-all duration-300 hover:scale-105 active:scale-95 hover:shadow-xl hover:shadow-foreground/20 ${isButtonPressed ? 'scale-95' : ''} ${isMobile ? 'min-h-[44px] touch-manipulation' : ''}`}
+              className={`group px-3 sm:px-5 lg:px-8 py-1.5 sm:py-2 lg:py-3 bg-gradient-to-r from-foreground to-foreground/90 text-background rounded-full text-xs sm:text-sm font-medium hover:from-foreground/90 hover:to-foreground/80 transition-all duration-300 hover:scale-105 active:scale-95 hover:shadow-xl hover:shadow-foreground/20 ${isButtonPressed ? 'scale-95' : ''} ${isMobile ? 'min-h-[44px] touch-manipulation' : ''}`}
             >
               <span className="group-hover:tracking-wide transition-all duration-300">
                 <T context="nav.signin">Sign in</T>
@@ -107,25 +107,21 @@ export function HeroSection() {
       </nav>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-8 lg:px-12 relative z-10 -mt-8 sm:-mt-16">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-12 relative z-10 -mt-4 sm:-mt-8 lg:-mt-16">
         <div className="max-w-5xl mx-auto text-center">
-          <div className="space-y-8 sm:space-y-10">
-            <div className="space-y-6 sm:space-y-8">
-              <div className="text-muted-foreground text-sm sm:text-lg font-light tracking-wider uppercase animate-fade-in-up hover:text-foreground/70 hover:tracking-widest transition-all duration-300 cursor-default">
-                <T context="hero.tagline">Stop explaining. Stop repeating. Stop starting over.</T>
-              </div>
-              
-              <h1 className="text-3xl sm:text-5xl lg:text-7xl font-light text-foreground leading-tight animate-fade-in-up hover:text-foreground/80 transition-colors duration-300 cursor-default" style={{animationDelay: '0.1s'}}>
-                <span className="inline-block"><T context="hero.headline1">AI that works </T></span>
-                <span className="block text-4xl sm:text-6xl lg:text-8xl font-extralight text-primary mt-1 sm:mt-2 hover:text-primary/80 transition-colors duration-300"><T context="hero.headline2">with you</T></span>
+          <div className="space-y-6 sm:space-y-8 lg:space-y-10">
+            <div className="space-y-4 sm:space-y-6 lg:space-y-8">
+              <h1 className="text-2xl sm:text-4xl lg:text-7xl font-light text-foreground leading-tight animate-fade-in-up hover:text-foreground/90 transition-colors duration-300 cursor-default" style={{animationDelay: '0.1s'}}>
+                <span className="inline-block"><T context="hero.headline1">One message. </T></span>
+                <span className="block text-3xl sm:text-5xl lg:text-8xl font-light text-foreground mt-1 sm:mt-2 hover:text-foreground/90 transition-colors duration-300"><T context="hero.headline2">Everything happens.</T></span>
               </h1>
               
-              <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 animate-fade-in-up" style={{animationDelay: '0.2s'}}>
-                <p className="text-lg sm:text-xl lg:text-2xl text-muted-foreground font-light leading-relaxed hover:text-foreground/70 transition-colors duration-300 cursor-default">
-                  <T context="hero.description1">Intelligence that understands your goals</T>
+              <div className="max-w-4xl mx-auto space-y-3 sm:space-y-4 lg:space-y-6 animate-fade-in-up" style={{animationDelay: '0.2s'}}>
+                <p className="text-base sm:text-lg lg:text-2xl text-muted-foreground font-light leading-relaxed hover:text-foreground transition-colors duration-300 cursor-default">
+                  <T context="hero.description1">AI that works for you, not with you.</T>
                 </p>
-                <p className="text-base sm:text-lg lg:text-xl text-muted-foreground/80 font-light leading-relaxed hover:text-muted-foreground transition-colors duration-300 cursor-default">
-                  <T context="hero.description2">Go further in fewer prompts, and never repeat a thing.</T>
+                <p className="text-sm sm:text-base lg:text-xl text-muted-foreground font-light leading-relaxed hover:text-foreground transition-colors duration-300 cursor-default">
+                  <T context="hero.description2">It's not a chatbot, it's a team that delivers finished work.</T>
                 </p>
               </div>
             </div>
@@ -136,7 +132,7 @@ export function HeroSection() {
                 onClick={() => router.push('/auth/login')}
                 onTouchStart={() => setIsButtonPressed(true)}
                 onTouchEnd={() => setIsButtonPressed(false)}
-                className={`group px-8 sm:px-10 py-3 sm:py-4 bg-foreground text-background text-base sm:text-lg font-medium hover:bg-foreground/90 transition-all duration-300 active:scale-95 hover:scale-105 hover:shadow-xl min-w-[200px] sm:min-w-[240px] ${isButtonPressed ? 'scale-95' : ''} ${isMobile ? 'min-h-[48px] touch-manipulation' : ''}`}
+                className={`group px-6 sm:px-8 lg:px-10 py-2.5 sm:py-3 lg:py-4 bg-foreground text-background text-sm sm:text-base lg:text-lg font-medium hover:bg-foreground/90 transition-all duration-300 active:scale-95 hover:scale-105 hover:shadow-xl min-w-[180px] sm:min-w-[200px] lg:min-w-[240px] ${isButtonPressed ? 'scale-95' : ''} ${isMobile ? 'min-h-[48px] touch-manipulation' : ''}`}
               >
                 <span className="transition-all duration-300 group-active:tracking-wide">
                   <T context="hero.cta">Try Now</T>

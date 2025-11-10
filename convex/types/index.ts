@@ -11,8 +11,10 @@ export * from './translation';
 export * from './user';
 
 // Convergence types
-export * from './convergence';
 export * from './convergenceStorage';
+export * from './convergenceBestConfig';
+export * from './convergenceCurrentConfig';
+export * from './convergencePresetConfig';
 
 // Intelligence Bandit types
 export * from './intelligenceBandit';
