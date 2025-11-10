@@ -167,6 +167,12 @@ const nextConfig = {
         source: '/_data/:path*',
         destination: 'https://us.i.posthog.com/:path*',
       },
+      // Legacy iOS Safari requests apple-touch-icon-precomposed.png
+      // Rewrite to serve apple-touch-icon.png instead
+      {
+        source: '/apple-touch-icon-precomposed.png',
+        destination: '/apple-touch-icon.png',
+      },
     ];
   },
 

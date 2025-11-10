@@ -19,20 +19,20 @@ export const metadata: Metadata = {
     description: 'Specialized agents coordinate automatically to create structured deliverables. From planning weddings to building businesses—one message multiplies your work.',
     type: 'website',
     url: siteConfig.url,
-    images: [
-      {
-        url: `${siteConfig.url}/dashboard-preview.png`,
-        width: 1920,
-        height: 1080,
-        alt: 'HeyContext - AI Platform Dashboard',
-      },
-    ],
+    // images: [
+    //   {
+    //     url: `${siteConfig.url}/dashboard-preview.png`,
+    //     width: 1920,
+    //     height: 1080,
+    //     alt: 'HeyContext - AI Platform Dashboard',
+    //   },
+    // ],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'HeyContext - One Message. Everything Happens.',
     description: 'One message → Multiple coordinated results. Agents swarm, artifacts build, work multiplies. Watch magic happen in real-time.',
-    images: [`${siteConfig.url}/dashboard-preview.png`],
+    // images: [`${siteConfig.url}/dashboard-preview.png`], // Commented out until image is created
     creator: '@heycontext',
   },
   alternates: {
@@ -116,7 +116,7 @@ const howToJsonLd = {
   "@type": "HowTo",
   "name": "How to Use HeyContext - AI Memory System",
   "description": "Complete guide to setting up and using HeyContext's AI-powered memory system that learns from every conversation",
-  "image": `${siteConfig.url}/dashboard-preview.png`,
+  // "image": `${siteConfig.url}/dashboard-preview.png`, // Commented out until image is created
   "totalTime": "PT5M",
   "estimatedCost": {
     "@type": "MonetaryAmount",
@@ -158,7 +158,7 @@ const videoJsonLd = {
   "@type": "VideoObject",
   "name": "HeyContext - AI Memory Platform Demo",
   "description": "See how HeyContext creates persistent AI memory that evolves with every conversation",
-  "thumbnailUrl": `${siteConfig.url}/dashboard-preview.png`,
+  // "thumbnailUrl": `${siteConfig.url}/dashboard-preview.png`, // Commented out until image is created
   "uploadDate": new Date().toISOString(),
   "duration": "PT2M30S",
   "contentUrl": `${siteConfig.url}`,
