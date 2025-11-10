@@ -316,10 +316,10 @@ export function NotesTree({
       
       // Show success/error messages
       if (successCount > 0) {
-        toast.success(`Successfully deleted ${messages.join(' and ')}`);
+        toast.success(<T context="toast.dashboard.notes.delete.success">Successfully deleted {messages.join(' and ')}</T>);
       }
       if (failCount > 0) {
-        toast.error(`Failed to delete ${failCount} item${failCount !== 1 ? 's' : ''}`);
+        toast.error(<T context="toast.dashboard.notes.delete.error.count">Failed to delete {failCount} item{failCount !== 1 ? 's' : ''}</T>);
       }
       
       // Clear selections and exit selection mode
@@ -330,7 +330,7 @@ export function NotesTree({
       setIsSelectionMode(false);
     } catch (error) {
       console.error('Failed to batch delete:', error);
-      toast.error('Failed to delete items');
+      toast.error(<T context="toast.dashboard.notes.delete.error">Failed to delete items</T>);
     } finally {
       setIsBatchDeleting(false);
       setIsBatchDeletingNotes(false);

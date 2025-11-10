@@ -5,6 +5,8 @@ import { Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Textarea } from './textarea';
 import { Button } from './button';
+import { T } from '@/components/translation/T';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface StarRatingProps {
   /** Current rating: 1-5, undefined = not rated */
@@ -37,6 +39,20 @@ export function StarRating({
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackText, setFeedbackText] = useState(initialFeedbackText || '');
   const [tempRating, setTempRating] = useState<number | null>(null);
+
+  // Translated strings
+  const { text: feedbackLabel } = useTranslation('Additional feedback (optional)', {
+    context: 'rating.feedback.label'
+  })
+  const { text: feedbackPlaceholder } = useTranslation('Tell us more about your experience...', {
+    context: 'rating.feedback.placeholder'
+  })
+  const { text: submittingText } = useTranslation('Submitting...', {
+    context: 'rating.submitting'
+  })
+  const { text: submitRatingText } = useTranslation('Submit Rating', {
+    context: 'rating.submit'
+  })
 
   const sizeClasses = {
     sm: 'w-4 h-4',
@@ -126,12 +142,12 @@ export function StarRating({
       {showFeedback && (
         <div className="flex flex-col gap-2 p-3 border rounded-md bg-muted/30 animate-in slide-in-from-top-2">
           <label className="text-sm font-medium">
-            Additional feedback (optional)
+            {feedbackLabel}
           </label>
           <Textarea
             value={feedbackText}
             onChange={(e) => setFeedbackText(e.target.value)}
-            placeholder="Tell us more about your experience..."
+            placeholder={feedbackPlaceholder}
             className="min-h-[80px] resize-none"
             disabled={isRating}
             autoFocus
@@ -144,7 +160,7 @@ export function StarRating({
               onClick={handleFeedbackCancel}
               disabled={isRating}
             >
-              Cancel
+              <T context="button.cancel">Cancel</T>
             </Button>
             <Button
               type="button"
@@ -152,7 +168,7 @@ export function StarRating({
               onClick={handleFeedbackSubmit}
               disabled={isRating}
             >
-              {isRating ? 'Submitting...' : 'Submit Rating'}
+              {isRating ? submittingText : submitRatingText}
             </Button>
           </div>
         </div>

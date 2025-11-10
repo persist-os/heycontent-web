@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { T } from '@/components/translation/T'
+import { useTranslation } from '@/hooks/useTranslation'
 
 interface GreetingHeaderProps {
   insights: any
@@ -14,6 +16,11 @@ interface GreetingHeaderProps {
  */
 export function GreetingHeader({ insights, userName }: GreetingHeaderProps) {
   const [selectedGreeting, setSelectedGreeting] = useState<string>("What can I help you with?")
+  
+  // Translate the fallback greeting
+  const { text: fallbackGreeting } = useTranslation("What can I help you with?", {
+    context: 'dashboard.home.greeting.fallback'
+  })
 
   // Update greeting when insights change
   useEffect(() => {
@@ -26,18 +33,21 @@ export function GreetingHeader({ insights, userName }: GreetingHeaderProps) {
       const hour = new Date().getHours()
       const name = userName || 'there'
       if (hour >= 5 && hour < 12) {
-        setSelectedGreeting(`May thou have a stupendous morning, ${name}`)
+        setSelectedGreeting(`May thou have a stupendous morning, ${name}`) // Translation handled by T component wrapper
       } else if (hour >= 12 && hour < 18) {
-        setSelectedGreeting(`May thou have a delightful afternoon, ${name}`)
+        setSelectedGreeting(`May thou have a delightful afternoon, ${name}`) // Translation handled by T component wrapper
       } else {
-        setSelectedGreeting(`May thou have a stupendous evening, ${name}`)
+        setSelectedGreeting(`May thou have a stupendous evening, ${name}`) // Translation handled by T component wrapper
       }
+    } else {
+      // Use translated fallback
+      setSelectedGreeting(fallbackGreeting)
     }
-  }, [insights?._id, insights?.greetings, userName])
+  }, [insights?._id, insights?.greetings, userName, fallbackGreeting])
 
   return (
     <h1 className="text-4xl font-light text-foreground text-center">
-      {selectedGreeting}
+      <T context="dashboard.home.greeting">{selectedGreeting}</T>
     </h1>
   )
 }

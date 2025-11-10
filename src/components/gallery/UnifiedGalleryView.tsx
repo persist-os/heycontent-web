@@ -33,6 +33,7 @@ import { StarRating } from '@/components/ui/star-rating'
 import { WidgetScheduleControls } from '@/app/dashboard/living-projects/[projectId]/components/widgets/WidgetScheduleControls'
 import { useAdminAuth } from '@/app/lib/admin-auth'
 import { ProgressiveWidgetView } from './ProgressiveWidgetView'
+import { T } from '@/components/translation/T'
 
 export function UnifiedGalleryView({
   projectId,
@@ -185,12 +186,14 @@ export function UnifiedGalleryView({
       <div className="fixed inset-0 bg-background">
         <div className="flex items-center justify-center h-full">
           <div className="text-center space-y-4 max-w-md">
-            <h2 className="text-2xl font-semibold text-foreground">No Items Yet</h2>
+            <h2 className="text-2xl font-semibold text-foreground">
+              <T context="gallery.empty.title">No Items Yet</T>
+            </h2>
             <p className="text-muted-foreground">
-              This project doesn't have any artifacts or widgets yet
+              <T context="gallery.empty.description">This project doesn't have any artifacts or widgets yet</T>
             </p>
             <Button onClick={onClose} variant="outline">
-              Back to Project
+              <T context="button.back.to.project">Back to Project</T>
             </Button>
           </div>
         </div>
@@ -203,7 +206,11 @@ export function UnifiedGalleryView({
     return null
   }
   
-  const typeLabel = isArtifact ? 'Artifact' : 'Widget'
+  const typeLabel = isArtifact ? (
+    <T context="gallery.type.artifact">Artifact</T>
+  ) : (
+    <T context="gallery.type.widget">Widget</T>
+  )
   
   // Gradient themes based on type
   const headerGradient = isArtifact
@@ -245,7 +252,9 @@ export function UnifiedGalleryView({
     } else if (!userId) {
       return (
         <div className="text-center py-8 text-muted-foreground">
-          <p>User authentication required to view widget details</p>
+          <p>
+            <T context="gallery.auth.required">User authentication required to view widget details</T>
+          </p>
         </div>
       )
     } else {
@@ -282,7 +291,7 @@ export function UnifiedGalleryView({
               {/* Left: Title & Type Badge */}
               <div className="flex items-center gap-4">
                 <h1 className="text-xl font-semibold text-foreground">
-                  Project Gallery
+                  <T context="gallery.title">Project Gallery</T>
                 </h1>
                 <Badge 
                   variant="outline" 
@@ -294,7 +303,7 @@ export function UnifiedGalleryView({
                   {typeLabel}
                 </Badge>
                 <span className="text-sm text-muted-foreground">
-                  {currentIndex + 1} of {total}
+                  {currentIndex + 1} <T context="gallery.pagination.of">of</T> {total}
                 </span>
               </div>
               
@@ -307,7 +316,11 @@ export function UnifiedGalleryView({
                   onClick={() => setSidebarOpen(!sidebarOpen)}
                   className="text-muted-foreground hover:text-foreground"
                 >
-                  {sidebarOpen ? 'Hide List' : 'Show List'}
+                  {sidebarOpen ? (
+                    <T context="button.gallery.hide.list">Hide List</T>
+                  ) : (
+                    <T context="button.gallery.show.list">Show List</T>
+                  )}
                 </Button>
                 
                 {/* Back to Constellation */}
@@ -321,7 +334,7 @@ export function UnifiedGalleryView({
                       : "bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400"
                   )}
                 >
-                  Back to Constellation
+                  <T context="button.gallery.back.to.constellation">Back to Constellation</T>
                 </Button>
               </div>
             </div>

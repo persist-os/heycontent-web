@@ -33,6 +33,8 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
+import { T } from '@/components/translation/T'
+import { useTranslation } from '@/hooks/useTranslation'
 
 interface WidgetSettingsDialogProps {
   widget: any
@@ -61,6 +63,14 @@ export function WidgetSettingsDialog({
   // Mutation
   const updateWidget = useMutation(api.projectWidgetsMutations.updateWidget)
   const [isSaving, setIsSaving] = useState(false)
+
+  // Translated placeholders
+  const { text: titlePlaceholder } = useTranslation('Enter widget title', {
+    context: 'input.widget.title.placeholder'
+  })
+  const { text: descriptionPlaceholder } = useTranslation('Enter widget description', {
+    context: 'input.widget.description.placeholder'
+  })
 
   // Handle save
   const handleSave = async () => {
@@ -142,7 +152,7 @@ export function WidgetSettingsDialog({
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Enter widget title"
+              placeholder={titlePlaceholder}
               className="w-full"
             />
           </div>
@@ -154,7 +164,7 @@ export function WidgetSettingsDialog({
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Enter widget description"
+              placeholder={descriptionPlaceholder}
               rows={3}
               className="w-full resize-none"
             />
@@ -245,16 +255,16 @@ export function WidgetSettingsDialog({
 
         <DialogFooter>
           <Button variant="ghost" onClick={handleCancel} disabled={isSaving}>
-            Cancel
+            <T context="button.cancel">Cancel</T>
           </Button>
           <Button onClick={handleSave} disabled={isSaving || !title.trim()}>
             {isSaving ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Saving...
+                <T context="button.saving">Saving...</T>
               </>
             ) : (
-              'Save Changes'
+              <T context="button.save_changes">Save Changes</T>
             )}
           </Button>
         </DialogFooter>

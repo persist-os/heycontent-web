@@ -27,6 +27,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { T } from '@/components/translation/T'
+import { useTranslation } from '@/hooks/useTranslation'
 
 interface AssignmentItemProps {
   project: any
@@ -46,6 +48,16 @@ export function AssignmentItem({ project, userId }: AssignmentItemProps) {
   const router = useRouter()
   const [isPausing, setIsPausing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  
+  // Translation for title attributes
+  const { text: viewGalleryTitle } = useTranslation('View Gallery', {
+    sourceLang: 'en',
+    context: 'dashboard.home.assignments.item.gallery.title'
+  })
+  const { text: openChatTitle } = useTranslation('Open Chat', {
+    sourceLang: 'en',
+    context: 'dashboard.home.assignments.item.chat.title'
+  })
   
   // Mutations
   const toggleArchive = useMutation(api.projectsMutations.toggleArchive)
@@ -80,9 +92,9 @@ export function AssignmentItem({ project, userId }: AssignmentItemProps) {
     const hours = Math.floor(diff / (1000 * 60 * 60))
     const days = Math.floor(hours / 24)
     
-    if (hours < 1) return 'Just now'
-    if (hours < 24) return `${hours} hours ago`
-    if (days < 7) return `${days} days ago`
+    if (hours < 1) return <T context="time.relative.just_now">Just now</T>
+    if (hours < 24) return <T context="time.relative.hours">{hours} hours ago</T>
+    if (days < 7) return <T context="time.relative.days">{days} days ago</T>
     return new Date(project.updatedAt || project.createdAt).toLocaleDateString()
   }, [project])
 
@@ -146,7 +158,7 @@ export function AssignmentItem({ project, userId }: AssignmentItemProps) {
       {/* Header: Title + Timestamp */}
         <div className="flex items-start justify-between gap-3">
           <h3 className="text-lg font-semibold text-foreground leading-tight group-hover:text-primary transition-colors line-clamp-2 flex-1">
-          {project.name || 'Untitled Assignment'}
+          {project.name || <T context="dashboard.home.assignments.item.untitled">Untitled Assignment</T>}
         </h3>
           <span className="text-xs text-muted-foreground flex-shrink-0 whitespace-nowrap">
           {relativeTime}
@@ -157,7 +169,7 @@ export function AssignmentItem({ project, userId }: AssignmentItemProps) {
         <div className="flex flex-wrap gap-1.5">
           {(project.noteCount > 0 || project.conversationCount > 0) && (
             <Badge variant="outline" className="bg-primary/10 border-primary/20 text-primary text-xs px-2 py-0.5">
-              {project.noteCount || 0} notes • {project.conversationCount || 0} chats
+              <T context="dashboard.home.assignments.item.metadata">{project.noteCount || 0} notes • {project.conversationCount || 0} chats</T>
             </Badge>
           )}
           {artifacts && artifacts.length > 0 && (
@@ -177,7 +189,7 @@ export function AssignmentItem({ project, userId }: AssignmentItemProps) {
       {/* Progress Section */}
         <div className="space-y-2 pt-2">
           <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Progress</span>
+            <span className="text-muted-foreground"><T context="dashboard.home.assignments.item.progress.label">Progress</T></span>
             <span className="text-foreground font-semibold">{progress}%</span>
         </div>
         
@@ -201,7 +213,7 @@ export function AssignmentItem({ project, userId }: AssignmentItemProps) {
             }}
             className="flex-1 h-8 text-xs font-medium"
         >
-            Open
+            <T context="button.open">Open</T>
         </Button>
           
           {firstItemId && (
@@ -213,7 +225,7 @@ export function AssignmentItem({ project, userId }: AssignmentItemProps) {
                 router.push(`/dashboard/living-projects/${project._id}/gallery?id=${firstItemId}`)
               }}
               className="h-8 w-8 p-0"
-              title="View Gallery"
+              title={viewGalleryTitle}
             >
               <Image className="w-4 h-4" aria-hidden="true" />
             </Button>
@@ -248,7 +260,7 @@ export function AssignmentItem({ project, userId }: AssignmentItemProps) {
           }}
             className="h-8 w-8 p-0"
           disabled={!project._id}
-            title="Open Chat"
+            title={openChatTitle}
         >
             <MessageSquare className="w-4 h-4" aria-hidden="true" />
         </Button>

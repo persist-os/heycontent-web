@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { uploadFile, formatFileSize, getFileTypeIcon, type FileUploadResponse } from '@/lib/file-upload'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
+import { T } from '@/components/translation/T'
+import { useTranslation } from '@/hooks/useTranslation'
 
 interface ChatInputBoxProps {
   value: string
@@ -31,6 +33,32 @@ export function ChatInputBox({ value, onChange, onSend, isLoading = false, conve
   const [fileAttachments, setFileAttachments] = useState<FileUploadResponse[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // Translations for aria-labels and titles
+  const { text: placeholderText } = useTranslation('What can I help you with?', {
+    sourceLang: 'en',
+    context: 'dashboard.home.chat.input.placeholder'
+  })
+  const { text: removeFileLabel } = useTranslation('Remove file', {
+    sourceLang: 'en',
+    context: 'dashboard.home.chat.input.remove_file'
+  })
+  const { text: fileInputLabel } = useTranslation('File input', {
+    sourceLang: 'en',
+    context: 'dashboard.home.chat.input.file_input'
+  })
+  const { text: attachFileLabel } = useTranslation('Attach file', {
+    sourceLang: 'en',
+    context: 'dashboard.home.chat.input.attach_file'
+  })
+  const { text: openInLabLabel } = useTranslation('Open in Thinking Lab', {
+    sourceLang: 'en',
+    context: 'dashboard.home.chat.input.open_lab'
+  })
+  const { text: sendMessageLabel } = useTranslation('Send message', {
+    sourceLang: 'en',
+    context: 'dashboard.home.chat.input.send'
+  })
 
   // Get user ID on mount
   useEffect(() => {
@@ -119,7 +147,7 @@ export function ChatInputBox({ value, onChange, onSend, isLoading = false, conve
                 <button
                   onClick={() => removeFileAttachment(index)}
                   className="ml-1 p-1 hover:bg-destructive/20 rounded transition-colors"
-                  aria-label="Remove file"
+                  aria-label={removeFileLabel}
                 >
                   <X className="w-3 h-3 text-muted-foreground hover:text-destructive" />
                 </button>
@@ -139,7 +167,7 @@ export function ChatInputBox({ value, onChange, onSend, isLoading = false, conve
           accept="*/*"
           onChange={handleFileInputChange}
           className="hidden"
-          aria-label="File input"
+          aria-label={fileInputLabel}
         />
         
         {/* Input field */}
@@ -148,7 +176,7 @@ export function ChatInputBox({ value, onChange, onSend, isLoading = false, conve
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="What can I help you with?"
+          placeholder={placeholderText}
           disabled={isLoading}
           className={cn(
             "flex-1 bg-transparent border-none outline-none",
@@ -175,7 +203,7 @@ export function ChatInputBox({ value, onChange, onSend, isLoading = false, conve
               "p-2 rounded-lg hover:bg-foreground/5 transition-colors",
               isUploading && "opacity-50 cursor-not-allowed"
             )}
-            aria-label="Attach file"
+            aria-label={attachFileLabel}
           >
             {isUploading ? (
               <div className="w-5 h-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
@@ -193,8 +221,8 @@ export function ChatInputBox({ value, onChange, onSend, isLoading = false, conve
                 "p-2 rounded-lg hover:bg-foreground/5 transition-colors group",
                 "relative"
               )}
-              aria-label="Open in Thinking Lab"
-              title="Open in Thinking Lab"
+              aria-label={openInLabLabel}
+              title={openInLabLabel}
             >
               <FlaskConical className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
             </button>
@@ -211,7 +239,7 @@ export function ChatInputBox({ value, onChange, onSend, isLoading = false, conve
                 ? "bg-gradient-to-r from-primary to-primary-dark text-primary-darker hover:shadow-lg hover:shadow-primary/30"
                 : "bg-muted/20 text-muted-foreground cursor-not-allowed"
             )}
-            aria-label="Send message"
+            aria-label={sendMessageLabel}
           >
             <Send className="w-5 h-5" />
           </button>

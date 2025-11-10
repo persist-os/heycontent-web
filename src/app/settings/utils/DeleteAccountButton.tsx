@@ -7,6 +7,7 @@ import { getFirebaseAuth } from '@/app/lib/firebase';
 import { toast } from 'react-hot-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
+import { T } from '@/components/translation/T';
 
 export function DeleteAccountButton({ className = '' }: { className?: string }) {
   const router = useRouter();
@@ -18,7 +19,7 @@ export function DeleteAccountButton({ className = '' }: { className?: string }) 
 
   const handleDeleteAccount = async () => {
     if (!email) {
-      toast.error('Please enter your email to confirm account deletion.');
+      toast.error(<T context="toast.settings.account.deleted.email.required">Please enter your email to confirm account deletion.</T>);
       return;
     }
 
@@ -27,14 +28,14 @@ export function DeleteAccountButton({ className = '' }: { className?: string }) 
     const user = auth.currentUser;
 
     if (!user || !user.email) {
-      toast.error('No authenticated user found.');
+      toast.error(<T context="toast.settings.account.deleted.auth.missing">No authenticated user found.</T>);
       setIsSubmitting(false);
       return;
     }
 
     // Verify email matches current user's email
     if (email.toLowerCase() !== user.email.toLowerCase()) {
-      toast.error('Email does not match your account email.');
+      toast.error(<T context="toast.settings.account.deleted.email.mismatch">Email does not match your account email.</T>);
       setIsSubmitting(false);
       return;
     }
@@ -46,7 +47,7 @@ export function DeleteAccountButton({ className = '' }: { className?: string }) 
         token = await user.getIdToken(true); // Force refresh
       } catch (error: any) {
         console.error('Error getting Firebase token:', error);
-        toast.error('Authentication error. Please try again.');
+        toast.error(<T context="toast.settings.account.deleted.auth.error">Authentication error. Please try again.</T>);
         setIsSubmitting(false);
         return;
       }
@@ -65,7 +66,7 @@ export function DeleteAccountButton({ className = '' }: { className?: string }) 
 
         if (!response.ok || !data.success) {
           console.error('Backend account deletion failed:', data);
-          toast.error('Failed to cancel subscription. Please contact support.');
+          toast.error(<T context="toast.settings.account.deleted.subscription.failed">Failed to cancel subscription. Please contact support.</T>);
           setIsSubmitting(false);
           return;
         }
@@ -75,7 +76,7 @@ export function DeleteAccountButton({ className = '' }: { className?: string }) 
         }
       } catch (error: any) {
         console.error('Error calling backend delete-account:', error);
-        toast.error('Failed to cancel subscription. Please contact support.');
+        toast.error(<T context="toast.settings.account.deleted.subscription.error">Failed to cancel subscription. Please contact support.</T>);
         setIsSubmitting(false);
         return;
       }
@@ -86,7 +87,7 @@ export function DeleteAccountButton({ className = '' }: { className?: string }) 
       } catch (error: any) {
         console.error('Error deleting user data from database:', error);
         const errorMessage = error?.message || error?.toString() || 'Unknown error';
-        toast.error(`Failed to delete user data: ${errorMessage}`);
+        toast.error(<T context="toast.settings.account.deleted.data.error">Failed to delete user data: {errorMessage}</T>);
         setIsSubmitting(false);
         return;
       }
@@ -99,7 +100,7 @@ export function DeleteAccountButton({ className = '' }: { className?: string }) 
         // If we get a "requires recent login" error, the data is already deleted
         // so we can proceed to sign out
         if (error.code === 'auth/requires-recent-login') {
-          toast.error('Please sign in again to complete account deletion.');
+          toast.error(<T context="toast.settings.account.deleted.auth.recent_login">Please sign in again to complete account deletion.</T>);
           await auth.signOut();
           router.push('/auth/login');
           return;
@@ -109,10 +110,10 @@ export function DeleteAccountButton({ className = '' }: { className?: string }) 
       
       // Redirect to home page after successful deletion
       router.push('/');
-      toast.success('Your account has been successfully deleted.');
+      toast.success(<T context="toast.settings.account.deleted.success">Your account has been successfully deleted.</T>);
     } catch (error: any) {
       console.error('Error deleting account:', error);
-      toast.error(error.message || 'Failed to delete account. Please try again.');
+      toast.error(<T context="toast.settings.account.deleted.generic.error">{error.message || 'Failed to delete account. Please try again.'}</T>);
     } finally {
       setIsSubmitting(false);
       setEmail('');

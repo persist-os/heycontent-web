@@ -95,17 +95,17 @@ export default function CrystalsPage() {
       
       if (result.success && result.triggered) {
         toast.success(
-          result.message || 'Cognitive field formation completed successfully!',
+          result.message || <T context="toast.dashboard.crystals.formation.success">Cognitive field formation completed successfully!</T>,
           { duration: 5000 }
         );
       } else if (result.success && !result.triggered) {
         toast.info(
-          result.message || 'Cognitive field formation not triggered - check eligibility requirements',
+          result.message || <T context="toast.dashboard.crystals.formation.not_triggered">Cognitive field formation not triggered - check eligibility requirements</T>,
           { duration: 4000 }
         );
       } else {
         toast.error(
-          result.message || result.error || 'Cognitive field formation failed',
+          result.message || result.error || <T context="toast.dashboard.crystals.formation.error">Cognitive field formation failed</T>,
           { duration: 5000 }
         );
       }
@@ -113,7 +113,7 @@ export default function CrystalsPage() {
     } catch (error) {
       console.error('💎 [MANUAL FORMATION] Error:', error);
       toast.error(
-        `Cognitive field formation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        <T context="toast.dashboard.crystals.formation.error.detailed">Cognitive field formation failed: {error instanceof Error ? error.message : 'Unknown error'}</T>,
         { duration: 5000 }
       );
     } finally {

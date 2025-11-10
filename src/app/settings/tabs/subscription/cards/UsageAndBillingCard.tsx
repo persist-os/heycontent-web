@@ -2,6 +2,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import React from 'react';
+import { T } from '@/components/translation/T';
 
 interface UsageAndBillingCardProps {
   usage: {
@@ -24,12 +25,12 @@ export const UsageAndBillingCard: React.FC<UsageAndBillingCardProps> = ({ usage 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Usage & Billing</CardTitle>
+        <CardTitle><T context="settings.subscription.usage.title">Usage & Billing</T></CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="font-medium">Requests</span>
+            <span className="font-medium"><T context="settings.subscription.usage.requests.label">Requests</T></span>
             <span className="font-mono">
               {total.toLocaleString()} / {included.toLocaleString()}
               {isOverLimit && ` (+${overage.toLocaleString()})`}
@@ -53,25 +54,25 @@ export const UsageAndBillingCard: React.FC<UsageAndBillingCardProps> = ({ usage 
             <span>
               {isOverLimit ? (
                 <span className="text-red-600 font-medium">
-                  {overage.toLocaleString()} over limit (${(overage * 0.02).toFixed(2)})
+                  <T context="settings.subscription.usage.overage">{overage.toLocaleString()} over limit (${(overage * 0.02).toFixed(2)})</T>
                 </span>
               ) : isCloseToLimit ? (
                 <span className="text-yellow-600">
-                  {included - total} requests remaining
+                  <T context="settings.subscription.usage.remaining">{included - total} requests remaining</T>
                 </span>
               ) : (
-                <span>{included > 0 ? `${included - total} requests remaining` : 'Unlimited'}</span>
+                <span>{included > 0 ? <T context="settings.subscription.usage.remaining">{included - total} requests remaining</T> : <T context="settings.subscription.usage.unlimited">Unlimited</T>}</span>
               )}
             </span>
             <span>
-              {included > 0 ? `${Math.round(usagePercentage)}% used` : 'No limit'}
+              {included > 0 ? <T context="settings.subscription.usage.percentage">{Math.round(usagePercentage)}% used</T> : <T context="settings.subscription.usage.no_limit">No limit</T>}
             </span>
           </div>
           
           {isOverLimit && (
             <div className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded">
-              <p className="font-medium">You've exceeded your included requests.</p>
-              <p>Additional requests are billed at $0.02 per request.</p>
+              <p className="font-medium"><T context="settings.subscription.usage.exceeded">You've exceeded your included requests.</T></p>
+              <p><T context="settings.subscription.usage.overage_rate">Additional requests are billed at $0.02 per request.</T></p>
             </div>
           )}
         </div>

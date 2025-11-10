@@ -21,6 +21,7 @@ import { EditableArtifactRenderer } from '@/components/artifacts/EditableArtifac
 import { Artifact } from '@/types/artifacts'
 import { Button } from '@/components/ui/button'
 import { ExternalLink } from 'lucide-react'
+import { T } from '@/components/translation/T'
 
 interface ArtifactPanelProps {
   projectId?: string
@@ -72,7 +73,9 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       <div className={`h-full flex items-center justify-center p-6 ${className}`}>
         <div className="text-center text-muted-foreground">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
-          <p className="text-sm">Loading artifacts...</p>
+          <p className="text-sm">
+            <T context="artifact.panel.loading">Loading artifacts...</T>
+          </p>
         </div>
       </div>
     )
@@ -84,7 +87,9 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       <div className={`h-full flex items-center justify-center p-6 ${className}`}>
         <div className="text-center text-muted-foreground">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
-          <p className="text-sm">Loading artifacts...</p>
+          <p className="text-sm">
+            <T context="artifact.panel.loading">Loading artifacts...</T>
+          </p>
         </div>
       </div>
     )
@@ -95,8 +100,12 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     return (
       <div className={`h-full flex items-center justify-center p-6 ${className}`}>
         <div className="text-center text-muted-foreground">
-          <p className="text-lg">No project context</p>
-          <p className="text-sm mt-2">Select a conversation or project to view artifacts</p>
+          <p className="text-lg">
+            <T context="artifact.panel.empty.no.context.title">No project context</T>
+          </p>
+          <p className="text-sm mt-2">
+            <T context="artifact.panel.empty.no.context.description">Select a conversation or project to view artifacts</T>
+          </p>
         </div>
       </div>
     )
@@ -107,8 +116,12 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     return (
       <div className={`h-full flex items-center justify-center p-6 ${className}`}>
         <div className="text-center text-muted-foreground">
-          <p className="text-lg">No artifacts yet</p>
-          <p className="text-sm mt-2">Artifacts will appear here as widgets work in the background</p>
+          <p className="text-lg">
+            <T context="artifact.panel.empty.no.artifacts.title">No artifacts yet</T>
+          </p>
+          <p className="text-sm mt-2">
+            <T context="artifact.panel.empty.no.artifacts.description">Artifacts will appear here as widgets work in the background</T>
+          </p>
         </div>
       </div>
     )
@@ -120,7 +133,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       <div className="space-y-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-foreground">
-            Project Artifacts ({artifacts.length})
+            <T context="artifact.panel.title">Project Artifacts</T> ({artifacts.length})
           </h3>
           {effectiveProjectId && artifacts.length > 0 && (
             <Button
@@ -137,7 +150,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
               }}
             >
               <ExternalLink className="w-4 h-4 mr-2" />
-              Open in Unified View
+              <T context="button.artifact.panel.open.gallery">Open in Unified View</T>
             </Button>
           )}
         </div>

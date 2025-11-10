@@ -15,6 +15,7 @@
 
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { T } from '@/components/translation/T'
 
 interface GalleryNavigationProps {
   hasPrev: boolean
@@ -50,7 +51,7 @@ export function GalleryNavigation({
         )}
         variant="ghost"
       >
-        Previous
+        <T context="button.gallery.previous">Previous</T>
       </Button>
       
       {/* Counter with gradient background */}
@@ -83,7 +84,7 @@ export function GalleryNavigation({
         )}
         variant="ghost"
       >
-        Next
+        <T context="button.gallery.next">Next</T>
       </Button>
     </div>
   )

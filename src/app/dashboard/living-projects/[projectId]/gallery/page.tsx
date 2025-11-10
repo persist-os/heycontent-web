@@ -7,6 +7,7 @@ import { GalleryLoadingSkeleton } from '@/components/gallery/GalleryLoadingSkele
 import { useGalleryItems } from '@/hooks/useGalleryItems';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { Card, CardContent } from '@/components/ui/card';
+import { T } from '@/components/translation/T';
 
 function GalleryContent() {
   const params = useParams();
@@ -41,7 +42,9 @@ function GalleryContent() {
       <div className="container mx-auto py-8">
         <Card className="bg-card/50 backdrop-blur-sm border border-border/40">
           <CardContent className="py-8 text-center">
-            <p className="text-muted-foreground">Invalid gallery parameters. Please provide an item ID and either a project ID or conversation ID.</p>
+            <p className="text-muted-foreground">
+              <T context="gallery.error.invalid.parameters">Invalid gallery parameters. Please provide an item ID and either a project ID or conversation ID.</T>
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -73,7 +76,9 @@ function GalleryContent() {
       <div className="container mx-auto py-8">
         <Card className="bg-card/50 backdrop-blur-sm border border-border/40">
           <CardContent className="py-8 text-center">
-            <p className="text-muted-foreground">Unable to determine project context. Please try again.</p>
+            <p className="text-muted-foreground">
+              <T context="gallery.error.no.context">Unable to determine project context. Please try again.</T>
+            </p>
           </CardContent>
         </Card>
       </div>

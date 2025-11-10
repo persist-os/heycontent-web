@@ -117,10 +117,18 @@ export function SpawnWidgetDialog({
               <T context="spawn_widget.examples_title">Examples:</T>
             </p>
             <ul className="text-xs text-muted-foreground space-y-1">
-              <li>• Timeline tracker to organize events chronologically</li>
-              <li>• Task tracker to monitor progress and milestones</li>
-              <li>• Research coordinator to gather and organize information</li>
-              <li>• Analysis agent to provide insights and recommendations</li>
+              <li>
+                • <T context="spawn_widget.example.timeline">Timeline tracker to organize events chronologically</T>
+              </li>
+              <li>
+                • <T context="spawn_widget.example.task">Task tracker to monitor progress and milestones</T>
+              </li>
+              <li>
+                • <T context="spawn_widget.example.research">Research coordinator to gather and organize information</T>
+              </li>
+              <li>
+                • <T context="spawn_widget.example.analysis">Analysis agent to provide insights and recommendations</T>
+              </li>
             </ul>
           </div>
         </div>

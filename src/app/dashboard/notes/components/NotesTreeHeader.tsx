@@ -98,8 +98,8 @@ export function NotesTreeHeader({
                   className="text-muted-foreground hover:text-foreground"
                 >
                   <Square className="w-4 h-4 mr-2" />
-                  <span className="hidden sm:inline">Deselect All</span>
-                  <span className="sm:hidden">Clear</span>
+                  <span className="hidden sm:inline"><T context="button.deselect.all">Deselect All</T></span>
+                  <span className="sm:hidden"><T context="button.clear">Clear</T></span>
                 </Button>
                 <Button
                   variant="outline"
@@ -108,8 +108,8 @@ export function NotesTreeHeader({
                   className="text-muted-foreground hover:text-foreground"
                 >
                   <CheckSquare className="w-4 h-4 mr-2" />
-                  <span className="hidden sm:inline">Select All</span>
-                  <span className="sm:hidden">All</span>
+                  <span className="hidden sm:inline"><T context="button.select.all">Select All</T></span>
+                  <span className="sm:hidden"><T context="button.all">All</T></span>
                 </Button>
                 <Button
                   variant="destructive"
@@ -120,9 +120,9 @@ export function NotesTreeHeader({
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
                   <span className="hidden sm:inline">
-                    {selectedCount > 0 ? `Delete ${selectedCount}` : 'Delete'}
+                    {selectedCount > 0 ? <T context="button.delete.count">Delete {selectedCount}</T> : <T context="button.delete">Delete</T>}
                   </span>
-                  <span className="sm:hidden">{selectedCount > 0 ? selectedCount : 'Delete'}</span>
+                  <span className="sm:hidden">{selectedCount > 0 ? selectedCount : <T context="button.delete">Delete</T>}</span>
                 </Button>
                 <Button
                   variant="ghost"
@@ -131,7 +131,7 @@ export function NotesTreeHeader({
                   className="text-muted-foreground hover:text-foreground"
                 >
                   <X className="w-4 h-4 mr-2" />
-                  Cancel
+                  <T context="button.cancel">Cancel</T>
                 </Button>
               </>
             ) : (

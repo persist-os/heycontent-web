@@ -6,6 +6,7 @@ import { api } from '@/convex/_generated/api';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { toast } from 'sonner';
 import { T } from '@/components/translation';
+import { useTranslation } from '@/hooks/useTranslation';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 
 interface StardustViewProps {
@@ -20,6 +21,24 @@ interface StardustCardProps {
 const StardustCard: React.FC<StardustCardProps> = ({ stardust, userId }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  
+  // Translations for button titles
+  const { text: saveChangesTitle } = useTranslation('Save changes', {
+    sourceLang: 'en',
+    context: 'button.stardust.save.title'
+  });
+  const { text: cancelEditingTitle } = useTranslation('Cancel editing', {
+    sourceLang: 'en',
+    context: 'button.stardust.cancel.title'
+  });
+  const { text: editStardustTitle } = useTranslation('Edit stardust', {
+    sourceLang: 'en',
+    context: 'button.stardust.edit.title'
+  });
+  const { text: deleteStardustTitle } = useTranslation('Delete stardust', {
+    sourceLang: 'en',
+    context: 'button.stardust.delete.title'
+  });
   const [editedStardust, setEditedStardust] = useState({
     suggestedProjectName: stardust.suggestedProjectName || '',
     suggestedProjectDescription: stardust.suggestedProjectDescription || '',
@@ -233,14 +252,14 @@ const StardustCard: React.FC<StardustCardProps> = ({ stardust, userId }) => {
                       <button
                         onClick={handleSave}
                         className="p-1.5 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-md transition-colors"
-                        title="Save changes"
+                        title={saveChangesTitle}
                       >
                         <Save className="h-3.5 w-3.5" />
                       </button>
                       <button
                         onClick={handleCancel}
                         className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
-                        title="Cancel editing"
+                        title={cancelEditingTitle}
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -250,14 +269,14 @@ const StardustCard: React.FC<StardustCardProps> = ({ stardust, userId }) => {
                       <button
                         onClick={() => setIsEditing(true)}
                         className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
-                        title="Edit stardust"
+                        title={editStardustTitle}
                       >
                         <Edit3 className="h-3.5 w-3.5" />
                       </button>
                       <button
                         onClick={() => setShowDeleteConfirm(true)}
                         className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                        title="Delete stardust"
+                        title={deleteStardustTitle}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>

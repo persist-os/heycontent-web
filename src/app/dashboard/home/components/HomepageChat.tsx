@@ -10,6 +10,8 @@ import { ChatInputBox } from './ChatInputBox'
 import ChatMessagesList from '@/app/dashboard/thinking_lab/components/dialogue/components/ChatMessagesList'
 import { ArrowRight, Home, RotateCcw } from 'lucide-react'
 import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDialog'
+import { T } from '@/components/translation/T'
+import { useTranslation } from '@/hooks/useTranslation'
 
 interface HomepageChatProps {
   userId: string | null
@@ -40,6 +42,16 @@ export function HomepageChat({
   const [showResetDialog, setShowResetDialog] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
   const router = useRouter()
+  
+  // Translations for titles and labels
+  const { text: backToMainChatTitle } = useTranslation('Back to main chat', {
+    sourceLang: 'en',
+    context: 'dashboard.home.chat.back_to_main'
+  })
+  const { text: resetConversationTitle } = useTranslation('Reset conversation', {
+    sourceLang: 'en',
+    context: 'dashboard.home.chat.reset.title'
+  })
   
   // Mutation for deleting conversation
   const deleteConversation = useMutation(api.chatMutations.deleteConversation)
@@ -149,16 +161,16 @@ export function HomepageChat({
                   <button
                     onClick={onBackToMainChat}
                     className="p-2 hover:bg-muted/50 rounded-lg transition-colors"
-                    title="Back to main chat"
+                    title={backToMainChatTitle}
                   >
                     <Home className="w-4 h-4 text-muted-foreground" />
                   </button>
                   <div>
                     <h3 className="text-sm font-medium text-foreground">
-                      {project?.name || 'Project Chat'}
+                      {project?.name || <T context="dashboard.home.chat.project.title">Project Chat</T>}
                     </h3>
                     <p className="text-xs text-muted-foreground">
-                      Project conversation with your families
+                      <T context="dashboard.home.chat.project.description">Project conversation with your families</T>
                     </p>
                   </div>
                 </div>
@@ -168,10 +180,10 @@ export function HomepageChat({
                     onClick={() => setShowResetDialog(true)}
                     disabled={isResetting}
                     className="flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Reset conversation"
+                    title={resetConversationTitle}
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
-                    Reset
+                    <T context="dashboard.home.chat.reset.button">Reset</T>
                   </button>
                 )}
               </div>
@@ -184,14 +196,14 @@ export function HomepageChat({
               {/* Header with "Open in Lab" button */}
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-foreground">
-                  {activeProjectId ? 'Family Messages' : 'Conversation'}
+                  {activeProjectId ? <T context="dashboard.home.chat.messages.family">Family Messages</T> : <T context="dashboard.home.chat.messages.conversation">Conversation</T>}
                 </h3>
                 {conversationId && !activeProjectId && (
                   <button
                     onClick={openInThinkingLab}
                     className="text-sm text-primary-dark hover:text-primary flex items-center gap-2 transition-colors font-medium hover:underline"
                   >
-                    Open in Thinking Lab
+                    <T context="dashboard.home.chat.open_lab">Open in Thinking Lab</T>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 )}
@@ -230,10 +242,10 @@ export function HomepageChat({
         isOpen={showResetDialog}
         onClose={() => setShowResetDialog(false)}
         onConfirm={handleResetConversation}
-        title="Reset Conversation"
-        description="Are you sure you want to reset this conversation? This will delete all messages and start fresh. This action cannot be undone."
-        confirmText="Reset"
-        cancelText="Cancel"
+        title={<T context="dialog.reset.conversation.title">Reset Conversation</T>}
+        description={<T context="dialog.reset.conversation.description">Are you sure you want to reset this conversation? This will delete all messages and start fresh. This action cannot be undone.</T>}
+        confirmText={<T context="button.reset">Reset</T>}
+        cancelText={<T context="button.cancel">Cancel</T>}
         isLoading={isResetting}
       />
     </div>

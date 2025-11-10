@@ -6,6 +6,7 @@ import { StarRating } from '@/components/ui/star-rating'
 import { useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
+import { T } from '@/components/translation/T'
 
 interface FeedbackDialogProps {
   isOpen: boolean
@@ -57,9 +58,11 @@ export function FeedbackDialog({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Rate AI Generation</DialogTitle>
+          <DialogTitle>
+            <T context="feedback.dialog.title">Rate AI Generation</T>
+          </DialogTitle>
           <DialogDescription>
-            How would you rate the quality of the AI-generated content?
+            <T context="feedback.dialog.description">How would you rate the quality of the AI-generated content?</T>
           </DialogDescription>
         </DialogHeader>
         

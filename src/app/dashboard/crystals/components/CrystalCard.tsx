@@ -22,6 +22,7 @@ import { CrystalData } from './types';
 import { EditCrystalModal } from './EditCrystalModal';
 import { useCrystalMutations, useShardsByIds } from './hooks';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
+import { T } from '@/components/translation/T';
 
 interface CrystalCardProps {
   crystal: CrystalData;
@@ -306,9 +307,11 @@ export const CrystalCard: React.FC<CrystalCardProps> = ({
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Crystal</AlertDialogTitle>
+            <AlertDialogTitle>
+              <T context="dialog.delete.crystal.title">Delete Crystal</T>
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{crystal.name}"? This action cannot be undone.
+              <T context="dialog.delete.crystal.description">Are you sure you want to delete "{crystal.name}"? This action cannot be undone.</T>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

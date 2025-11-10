@@ -20,6 +20,7 @@ import {
 import { ShardData } from './types';
 import { EditShardModal } from './EditShardModal';
 import { useShardMutations } from './hooks';
+import { T } from '@/components/translation/T';
 
 interface ShardCardProps {
   shard: ShardData;
@@ -123,9 +124,11 @@ export const ShardCard: React.FC<ShardCardProps> = ({ shard, showActions = true 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Shard</AlertDialogTitle>
+            <AlertDialogTitle>
+              <T context="dialog.delete.shard.title">Delete Shard</T>
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this shard? This action cannot be undone.
+              <T context="dialog.delete.shard.description">Are you sure you want to delete this shard? This action cannot be undone.</T>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

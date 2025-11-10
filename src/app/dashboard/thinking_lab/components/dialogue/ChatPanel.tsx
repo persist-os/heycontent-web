@@ -13,6 +13,7 @@ import ChatMessagesList from './components/ChatMessagesList'
 import { AmbientInsights } from '@/app/dashboard/ambient_insights/AmbientInsights'
 import { WidgetPrompts } from '../../components/WidgetPrompts'
 import type { Message } from '@/app/types/chat'
+import { T } from '@/components/translation/T'
 
 interface ChatPanelProps {
   messages: Message[]
@@ -133,7 +134,9 @@ export const ChatPanel = React.memo<ChatPanelProps>(({
         <div className="h-full flex items-center justify-center bg-background">
           <div className="text-center space-y-4 p-8 rounded-2xl bg-card/60 backdrop-blur-lg border border-border/50 shadow-xl">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="text-sm text-muted-foreground">Loading conversation...</p>
+            <p className="text-sm text-muted-foreground">
+              <T context="chat.loading.conversation">Loading conversation...</T>
+            </p>
           </div>
         </div>
       ) : error ? (
@@ -142,13 +145,15 @@ export const ChatPanel = React.memo<ChatPanelProps>(({
           <div className="text-center space-y-4 max-w-md px-6 p-8 rounded-2xl bg-card/60 backdrop-blur-lg border border-destructive/30 shadow-xl">
             <div className="text-destructive text-4xl">⚠️</div>
             <div>
-              <h3 className="text-lg font-medium text-foreground mb-2">Failed to load conversation</h3>
+              <h3 className="text-lg font-medium text-foreground mb-2">
+                <T context="chat.error.load.failed">Failed to load conversation</T>
+              </h3>
               <p className="text-sm text-muted-foreground mb-4">{error}</p>
               <button
                 onClick={() => window.location.reload()}
                 className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 hover:shadow-lg transition-all duration-200"
               >
-                Try Again
+                <T context="button.try.again">Try Again</T>
               </button>
             </div>
           </div>

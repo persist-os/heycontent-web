@@ -5,6 +5,7 @@ import { fetchWithAuth } from '@/app/lib/api-helpers'
 import { toast } from 'react-hot-toast'
 import { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime'
 import Cookies from 'js-cookie'
+import { T } from '@/components/translation/T'
 
 export const handleSignOut = async (router: AppRouterInstance, reason?: string) => {
   try {
@@ -38,7 +39,7 @@ export const handleSignOut = async (router: AppRouterInstance, reason?: string) 
     router.push(`/auth/login${reason ? `?reason=${reason}` : ''}`);
   } catch (error) {
     console.error('Sign out error:', error)
-    toast.error('Failed to sign out. Please try again.')
+    toast.error(<T context="toast.settings.auth.signout.error">Failed to sign out. Please try again.</T>)
   }
 }
 
@@ -62,10 +63,10 @@ export const handleResendVerification = async (setIsResending: (val: boolean) =>
       const data = await response.json()
       throw new Error(data.error || 'Failed to resend verification email')
     }
-    toast.success('Verification email sent. Please check your inbox.')
+    toast.success(<T context="toast.settings.auth.verification.sent">Verification email sent. Please check your inbox.</T>)
   } catch (error) {
     console.error('Resend verification error:', error)
-    toast.error(error instanceof Error ? error.message : 'Failed to send verification email')
+    toast.error(<T context="toast.settings.auth.verification.error">{error instanceof Error ? error.message : 'Failed to send verification email'}</T>)
   } finally {
     setIsResending(false)
   }

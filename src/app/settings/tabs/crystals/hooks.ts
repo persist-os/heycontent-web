@@ -5,6 +5,7 @@ import { Id } from '@/convex/_generated/dataModel';
 import { authStateManager } from '@/app/lib/auth-state-manager';
 import { CrystalStats, FormationStatus, FormationEligibility } from './types';
 import { toast } from 'sonner';
+import { T } from '@/components/translation/T';
 
 export const useAuth = () => {
   const [userId, setUserId] = useState<string | undefined>();
@@ -267,10 +268,10 @@ export const useCrystalMutations = () => {
       });
 
       if (result.success) {
-        toast.success('Crystal updated successfully');
+        toast.success(<T context="toast.settings.crystals.update.success">Crystal updated successfully</T>);
         return true;
       } else {
-        toast.error('Failed to update crystal');
+        toast.error(<T context="toast.settings.crystals.update.error">Failed to update crystal</T>);
         return false;
       }
     } catch (error) {

@@ -25,6 +25,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button'
 import { Edit, Save, X } from 'lucide-react'
 import { ArtifactFormEditor } from './editors/ArtifactFormEditor'
+import { T } from '@/components/translation/T'
 
 interface ConflictInfo {
   artifactId: string
@@ -117,7 +118,7 @@ export function EditableArtifactRenderer({
       title="Edit entire artifact"
     >
       <Edit className="w-3 h-3" />
-      Edit Artifact
+      <T context="button.artifact.edit">Edit Artifact</T>
     </Button>
   ) : null
 
@@ -137,9 +138,11 @@ export function EditableArtifactRenderer({
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh]">
           <DialogHeader>
-            <DialogTitle>Edit Artifact</DialogTitle>
+            <DialogTitle>
+              <T context="dialog.artifact.edit.title">Edit Artifact</T>
+            </DialogTitle>
             <DialogDescription>
-              Edit the artifact data. Changes will be saved as a new version.
+              <T context="dialog.artifact.edit.description">Edit the artifact data. Changes will be saved as a new version.</T>
             </DialogDescription>
           </DialogHeader>
           

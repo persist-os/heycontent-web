@@ -21,6 +21,7 @@ import { WidgetScheduleControls } from '@/app/dashboard/living-projects/[project
 import { EditableArtifactRenderer } from '@/components/artifacts/EditableArtifactRenderer'
 import { formatTimeAgo, getWidgetJobStatus, getA2AActivityIcon } from '@/lib/widget-utils'
 import { BarChart3, Info, CheckCircle2, FileText, Circle, Lock } from 'lucide-react'
+import { T } from '@/components/translation/T'
 
 interface ProgressiveWidgetViewProps {
   currentItem: any // Widget item from gallery
@@ -69,12 +70,14 @@ export function ProgressiveWidgetView({
       const latestA2A = a2aMessages[0]
       return (
         <div className="bg-blue-500/10 border-l-4 border-blue-500 p-4 rounded">
-          <p className="font-semibold text-foreground">Working right now</p>
+          <p className="font-semibold text-foreground">
+            <T context="gallery.widget.status.working">Working right now</T>
+          </p>
           <p className="text-sm text-muted-foreground">
-            → {latestA2A?.report?.announcement || 'Processing...'}
+            → {latestA2A?.report?.announcement || <T context="gallery.widget.status.processing">Processing...</T>}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            Started {formatTimeAgo(widgetJob.startedAt)} ago
+            <T context="gallery.widget.status.started">Started</T> {formatTimeAgo(widgetJob.startedAt)} <T context="gallery.widget.status.ago">ago</T>
           </p>
         </div>
       )
@@ -82,13 +85,15 @@ export function ProgressiveWidgetView({
     
     return (
       <div className="bg-muted/20 border-l-4 border-border p-4 rounded">
-        <p className="font-semibold text-foreground">Resting</p>
+        <p className="font-semibold text-foreground">
+          <T context="gallery.widget.status.resting">Resting</T>
+        </p>
         <p className="text-sm text-muted-foreground">
-          → Waiting for new work
+          → <T context="gallery.widget.status.waiting">Waiting for new work</T>
         </p>
         {widgetJob?.completedAt && (
           <p className="text-xs text-muted-foreground mt-1">
-            Last active {formatTimeAgo(widgetJob.completedAt)} ago
+            <T context="gallery.widget.status.last.active">Last active</T> {formatTimeAgo(widgetJob.completedAt)} <T context="gallery.widget.status.ago">ago</T>
           </p>
         )}
       </div>
@@ -126,7 +131,7 @@ export function ProgressiveWidgetView({
             </div>
             
             <p className="text-muted-foreground text-lg mb-4">
-              {currentItem.description || 'Helps you manage your project'}
+              {currentItem.description || <T context="gallery.widget.description.default">Helps you manage your project</T>}
             </p>
             
             {/* Star Rating for Widget */}
@@ -167,31 +172,39 @@ export function ProgressiveWidgetView({
         <Collapsible open={activityOpen} onOpenChange={setActivityOpen}>
           <CollapsibleTrigger asChild>
             <Button variant="ghost" className="w-full justify-start">
-              {activityOpen ? "Hide details" : "See what's happening"}
+              {activityOpen ? (
+                <T context="button.gallery.hide.details">Hide details</T>
+              ) : (
+                <T context="button.gallery.see.whats.happening">See what's happening</T>
+              )}
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent>
             <Card className="bg-card/50 backdrop-blur-sm border border-border/40 mt-2">
               <div className="p-6">
                 <h3 className="text-lg font-semibold text-foreground mb-4">
-                  What's Happening
+                  <T context="gallery.widget.section.whats.happening">What's Happening</T>
                 </h3>
                 
                 {widgetJob?.status === 'running' ? (
                   <>
                     <div className="bg-blue-500/10 border-l-4 border-blue-500 p-4 rounded mb-4">
-                      <p className="font-semibold text-foreground">Right Now:</p>
+                      <p className="font-semibold text-foreground">
+                        <T context="gallery.widget.status.right.now">Right Now:</T>
+                      </p>
                       <p className="text-sm text-foreground">
-                        {a2aMessages[0]?.report?.announcement || 'Working...'}
+                        {a2aMessages[0]?.report?.announcement || <T context="gallery.widget.status.working.short">Working...</T>}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Started {formatTimeAgo(widgetJob.startedAt)} ago
+                        <T context="gallery.widget.status.started">Started</T> {formatTimeAgo(widgetJob.startedAt)} <T context="gallery.widget.status.ago">ago</T>
                       </p>
                     </div>
                     
                     {a2aMessages.length > 1 && (
                       <div>
-                        <p className="text-sm font-medium text-foreground mb-2">Recent Activity:</p>
+                        <p className="text-sm font-medium text-foreground mb-2">
+                          <T context="gallery.widget.activity.recent">Recent Activity:</T>
+                        </p>
                         {a2aMessages.slice(1, 4).map((msg: any, idx: number) => (
                           <div key={idx} className="flex items-start gap-2 text-sm mb-2">
                             {getA2AIconComponent(msg.report?.status)}
@@ -207,17 +220,25 @@ export function ProgressiveWidgetView({
                 ) : (
                   <div className="text-center py-6">
                     <p className="text-lg text-foreground mb-3">
-                      This widget is resting right now.
+                      <T context="gallery.widget.resting.message">This widget is resting right now.</T>
                     </p>
                     <div className="text-sm text-muted-foreground space-y-2">
-                      <p>It will automatically start working when:</p>
+                      <p>
+                        <T context="gallery.widget.resting.will.start">It will automatically start working when:</T>
+                      </p>
                       <ul className="list-disc list-inside space-y-1">
-                        <li>You add new content to your project</li>
-                        <li>It detects patterns that need analysis</li>
-                        <li>You ask it a question</li>
+                        <li>
+                          <T context="gallery.widget.resting.trigger.new.content">You add new content to your project</T>
+                        </li>
+                        <li>
+                          <T context="gallery.widget.resting.trigger.patterns">It detects patterns that need analysis</T>
+                        </li>
+                        <li>
+                          <T context="gallery.widget.resting.trigger.question">You ask it a question</T>
+                        </li>
                       </ul>
                       <p className="mt-3">
-                        You don't need to do anything - it knows when to help.
+                        <T context="gallery.widget.resting.no.action">You don't need to do anything - it knows when to help.</T>
                       </p>
                     </div>
                   </div>
@@ -231,30 +252,43 @@ export function ProgressiveWidgetView({
         <Collapsible open={helpersOpen} onOpenChange={setHelpersOpen}>
           <CollapsibleTrigger asChild>
             <Button variant="ghost" className="w-full justify-start">
-              {helpersOpen ? "Hide details" : "How it works"}
+              {helpersOpen ? (
+                <T context="button.gallery.hide.details">Hide details</T>
+              ) : (
+                <T context="button.gallery.how.it.works">How it works</T>
+              )}
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent>
             <Card className="bg-card/50 backdrop-blur-sm border border-border/40 mt-2">
               <div className="p-6">
                 <h3 className="text-lg font-semibold text-foreground mb-4">
-                  How It Works
+                  <T context="gallery.widget.section.how.it.works">How It Works</T>
                 </h3>
                 
                 {currentItem.agentRoster && currentItem.agentRoster.length > 0 ? (
                   <>
                     <p className="text-foreground mb-4">
-                      This widget has {currentItem.agentRoster.length} helper{currentItem.agentRoster.length !== 1 ? 's' : ''}{' '}
+                      <T context="gallery.widget.helpers.count">This widget has</T> {currentItem.agentRoster.length} {currentItem.agentRoster.length !== 1 ? (
+                        <T context="gallery.widget.helpers.plural">helpers</T>
+                      ) : (
+                        <T context="gallery.widget.helpers.singular">helper</T>
+                      )}{' '}
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Info className="w-4 h-4 text-blue-500 inline cursor-help" />
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>A helper is like a team member that handles one specific task.</p>
-                          <p>They work together to get things done.</p>
+                          <p>
+                            <T context="gallery.widget.helper.tooltip.1">A helper is like a team member that handles one specific task.</T>
+                          </p>
+                          <p>
+                            <T context="gallery.widget.helper.tooltip.2">They work together to get things done.</T>
+                          </p>
                         </TooltipContent>
                       </Tooltip>
-                      {' '}working together:
+                      {' '}
+                      <T context="gallery.widget.helpers.working.together">working together:</T>
                     </p>
                     
                     <div className="space-y-3">
@@ -267,9 +301,13 @@ export function ProgressiveWidgetView({
                             → {agent.responsibilities?.[0] || agent.personality}
                           </p>
                           <p className="text-xs text-muted-foreground mt-2">
-                            {agent.spawnCondition === 'Always active' 
-                              ? 'Always working' 
-                              : `Starts ${agent.spawnCondition?.toLowerCase() || 'when needed'}`}
+                            {agent.spawnCondition === 'Always active' ? (
+                              <T context="gallery.widget.helper.always.working">Always working</T>
+                            ) : (
+                              <T context="gallery.widget.helper.starts">
+                                Starts {agent.spawnCondition?.toLowerCase() || <T context="gallery.widget.helper.when.needed">when needed</T>}
+                              </T>
+                            )}
                           </p>
                         </div>
                       ))}
@@ -278,10 +316,10 @@ export function ProgressiveWidgetView({
                 ) : (
                   <div className="text-center py-6">
                     <p className="text-lg text-foreground mb-3">
-                      This widget is still being set up.
+                      <T context="gallery.widget.setup.in.progress">This widget is still being set up.</T>
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Once it's ready, you'll see the different helpers that work together.
+                      <T context="gallery.widget.setup.message">Once it's ready, you'll see the different helpers that work together.</T>
                     </p>
                   </div>
                 )}
@@ -294,7 +332,11 @@ export function ProgressiveWidgetView({
         <Collapsible open={thinkingOpen} onOpenChange={setThinkingOpen}>
           <CollapsibleTrigger asChild>
             <Button variant="ghost" className="w-full justify-start">
-              {thinkingOpen ? "Hide details" : "What it's thinking"}
+              {thinkingOpen ? (
+                <T context="button.gallery.hide.details">Hide details</T>
+              ) : (
+                <T context="button.gallery.what.its.thinking">What it's thinking</T>
+              )}
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent>
@@ -302,22 +344,24 @@ export function ProgressiveWidgetView({
               <div className="p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <h3 className="text-lg font-semibold text-foreground">
-                    What It's Thinking
+                    <T context="gallery.widget.section.what.its.thinking">What It's Thinking</T>
                   </h3>
                   <Badge className="bg-purple-500/10 text-purple-600 dark:text-purple-400 border-0 text-xs">
                     <Lock className="w-3 h-3 mr-1" />
-                    Auto-Generated
+                    <T context="gallery.widget.badge.auto.generated">Auto-Generated</T>
                   </Badge>
                 </div>
                 
                 <p className="text-sm text-muted-foreground mb-4">
-                  These are the instructions guiding this widget. They were automatically created based on your project.
+                  <T context="gallery.widget.thinking.description">These are the instructions guiding this widget. They were automatically created based on your project.</T>
                 </p>
                 
                 {currentItem.familyIdentity?.mission ? (
                   <>
                     <div className="mb-4">
-                      <p className="text-sm font-medium text-foreground mb-2">Identity:</p>
+                      <p className="text-sm font-medium text-foreground mb-2">
+                        <T context="gallery.widget.thinking.identity">Identity:</T>
+                      </p>
                       <div className="bg-muted/20 border border-border/30 rounded-lg p-4">
                         <p className="text-sm text-foreground font-mono whitespace-pre-wrap">
                           {currentItem.familyIdentity.mission}
@@ -327,7 +371,9 @@ export function ProgressiveWidgetView({
                     
                     {currentItem.familyIdentity?.collaborationStyle && (
                       <div>
-                        <p className="text-sm font-medium text-foreground mb-2">Guidelines:</p>
+                        <p className="text-sm font-medium text-foreground mb-2">
+                          <T context="gallery.widget.thinking.guidelines">Guidelines:</T>
+                        </p>
                         <div className="bg-muted/20 border border-border/30 rounded-lg p-4">
                           <p className="text-sm text-foreground font-mono whitespace-pre-wrap">
                             {currentItem.familyIdentity.collaborationStyle}
@@ -337,16 +383,16 @@ export function ProgressiveWidgetView({
                     )}
                     
                     <p className="text-xs text-muted-foreground mt-4">
-                      Last updated: {formatTimeAgo(currentItem.updatedAt || currentItem._creationTime)} ago
+                      <T context="gallery.widget.thinking.last.updated">Last updated:</T> {formatTimeAgo(currentItem.updatedAt || currentItem._creationTime)} <T context="gallery.widget.status.ago">ago</T>
                     </p>
                   </>
                 ) : (
                   <div className="text-center py-6">
                     <p className="text-lg text-foreground mb-3">
-                      This widget doesn't have its instructions yet.
+                      <T context="gallery.widget.thinking.no.instructions">This widget doesn't have its instructions yet.</T>
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      The system will automatically generate them the first time it runs. You'll be able to see what guides its decisions here.
+                      <T context="gallery.widget.thinking.no.instructions.description">The system will automatically generate them the first time it runs. You'll be able to see what guides its decisions here.</T>
                     </p>
                   </div>
                 )}
@@ -360,22 +406,32 @@ export function ProgressiveWidgetView({
           <Collapsible open={promptsOpen} onOpenChange={setPromptsOpen}>
             <CollapsibleTrigger asChild>
               <Button variant="ghost" className="w-full justify-start">
-                {promptsOpen ? "Hide prompts" : `Execution Prompts (${widgetPrompts.length})`}
+                {promptsOpen ? (
+                  <T context="button.gallery.hide.prompts">Hide prompts</T>
+                ) : (
+                  <>
+                    <T context="button.gallery.execution.prompts">Execution Prompts</T> ({widgetPrompts.length})
+                  </>
+                )}
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent>
               <Card className="bg-card/50 backdrop-blur-sm border border-border/40 mt-2">
                 <div className="p-6">
                   <h3 className="text-lg font-semibold text-foreground mb-4">
-                    Execution Prompts
+                    <T context="gallery.widget.section.execution.prompts">Execution Prompts</T>
                     {' '}
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Info className="w-4 h-4 text-blue-500 inline cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Custom prompts generated for this widget's agents.</p>
-                        <p>These prompts are used when the widget runs operations.</p>
+                        <p>
+                          <T context="gallery.widget.prompts.tooltip.1">Custom prompts generated for this widget's agents.</T>
+                        </p>
+                        <p>
+                          <T context="gallery.widget.prompts.tooltip.2">These prompts are used when the widget runs operations.</T>
+                        </p>
                       </TooltipContent>
                     </Tooltip>
                   </h3>
@@ -406,12 +462,12 @@ export function ProgressiveWidgetView({
                                         : 'bg-muted/20'
                                     }`}
                                   >
-                                    {(prompt.effectiveness * 100).toFixed(0)}% effective
+                                    {(prompt.effectiveness * 100).toFixed(0)}% <T context="gallery.widget.prompt.effective">effective</T>
                                   </Badge>
                                 )}
                                 {prompt.usageCount !== undefined && prompt.usageCount > 0 && (
                                   <Badge variant="outline" className="text-xs">
-                                    Used {prompt.usageCount}x
+                                    <T context="gallery.widget.prompt.used">Used</T> {prompt.usageCount}x
                                   </Badge>
                                 )}
                               </div>
@@ -431,7 +487,7 @@ export function ProgressiveWidgetView({
                           
                           {prompt.version && (
                             <p className="text-xs text-muted-foreground mt-2">
-                              Version {prompt.version}
+                              <T context="gallery.widget.prompt.version">Version</T> {prompt.version}
                             </p>
                           )}
                         </div>
@@ -448,20 +504,26 @@ export function ProgressiveWidgetView({
         <Collapsible open={outputsOpen} onOpenChange={setOutputsOpen}>
           <CollapsibleTrigger asChild>
             <Button variant="ghost" className="w-full justify-start">
-              {outputsOpen ? "Hide outputs" : `What it's made (${outputs?.length || 0})`}
+              {outputsOpen ? (
+                <T context="button.gallery.hide.outputs">Hide outputs</T>
+              ) : (
+                <>
+                  <T context="button.gallery.what.its.made">What it's made</T> ({outputs?.length || 0})
+                </>
+              )}
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent>
             <Card className="bg-card/50 backdrop-blur-sm border border-border/40 mt-2">
               <div className="p-6">
                 <h3 className="text-lg font-semibold text-foreground mb-4">
-                  What It's Made
+                  <T context="gallery.widget.section.what.its.made">What It's Made</T>
                 </h3>
                 
                 {outputs && outputs.length > 0 ? (
                   <>
                     <p className="text-sm text-muted-foreground mb-4">
-                      These are the things this widget has created for you.
+                      <T context="gallery.widget.outputs.description">These are the things this widget has created for you.</T>
                     </p>
                     
                     <div className="space-y-4">
@@ -485,7 +547,7 @@ export function ProgressiveWidgetView({
                           <div key={artifact._id} className="bg-cyan-500/5 border-l-4 border-cyan-500 p-4 rounded">
                             <p className="font-semibold text-foreground">{artifactTitle}</p>
                             <p className="text-xs text-muted-foreground mb-3">
-                              Created {formatTimeAgo(artifact.createdAt || artifact._creationTime)} ago
+                              <T context="gallery.widget.output.created">Created</T> {formatTimeAgo(artifact.createdAt || artifact._creationTime)} <T context="gallery.widget.status.ago">ago</T>
                             </p>
                             {artifact.data && (
                               <div className="mt-2">
@@ -502,7 +564,7 @@ export function ProgressiveWidgetView({
                           className="w-full"
                           onClick={() => {/* Could implement pagination */}}
                         >
-                          Show {outputs.length - 5} more...
+                          <T context="button.gallery.show.more">Show</T> {outputs.length - 5} <T context="button.gallery.show.more.suffix">more...</T>
                         </Button>
                       )}
                     </div>
@@ -510,17 +572,25 @@ export function ProgressiveWidgetView({
                 ) : (
                   <div className="text-center py-6">
                     <p className="text-lg text-foreground mb-3">
-                      This widget hasn't created anything yet.
+                      <T context="gallery.widget.outputs.empty">This widget hasn't created anything yet.</T>
                     </p>
                     <div className="text-sm text-muted-foreground space-y-2">
-                      <p>Once it finishes its work, you'll see:</p>
+                      <p>
+                        <T context="gallery.widget.outputs.empty.will.see">Once it finishes its work, you'll see:</T>
+                      </p>
                       <ul className="list-disc list-inside space-y-1">
-                        <li>Reports and summaries</li>
-                        <li>Analysis and insights</li>
-                        <li>Generated content</li>
+                        <li>
+                          <T context="gallery.widget.outputs.type.reports">Reports and summaries</T>
+                        </li>
+                        <li>
+                          <T context="gallery.widget.outputs.type.analysis">Analysis and insights</T>
+                        </li>
+                        <li>
+                          <T context="gallery.widget.outputs.type.content">Generated content</T>
+                        </li>
                       </ul>
                       <p className="mt-3">
-                        Everything it makes will appear here automatically.
+                        <T context="gallery.widget.outputs.empty.automatic">Everything it makes will appear here automatically.</T>
                       </p>
                     </div>
                   </div>

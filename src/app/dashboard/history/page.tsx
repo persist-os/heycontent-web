@@ -15,6 +15,7 @@ import { ChatHistory } from '@/app/types/chat'
 import { getApiKey } from '@/app/lib/api-helpers'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDialog'
+import { T } from '@/components/translation/T'
 import { Button } from '@/components/ui/button'
 
 // Helper function to format relative time
@@ -322,8 +323,8 @@ export default function HistoryPage() {
         isOpen={deleteDialogOpen}
         onClose={cancelDelete}
         onConfirm={confirmDelete}
-        title="Delete Conversation"
-        description="Are you sure you want to delete this conversation? This action cannot be undone."
+        title={<T context="dialog.delete.conversation.title">Delete Conversation</T>}
+        description={<T context="dialog.delete.conversation.description">Are you sure you want to delete this conversation? This action cannot be undone.</T>}
         isLoading={isDeleting}
       />
 
@@ -332,8 +333,8 @@ export default function HistoryPage() {
         isOpen={deleteAllDialogOpen}
         onClose={cancelDeleteAll}
         onConfirm={confirmDeleteAll}
-        title="Delete All Conversations"
-        description={`Are you sure you want to delete all ${totalChats} conversations? This action cannot be undone and will permanently remove all your chat history.`}
+        title={<T context="dialog.delete.conversations.all.title">Delete All Conversations</T>}
+        description={<T context="dialog.delete.conversations.all.description">Are you sure you want to delete all {totalChats} conversations? This action cannot be undone and will permanently remove all your chat history.</T>}
         confirmText="Delete All"
         isLoading={isDeletingAll}
       />

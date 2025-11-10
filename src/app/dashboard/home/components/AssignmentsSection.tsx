@@ -5,6 +5,7 @@ import { AssignmentItem } from './AssignmentItem'
 import { ChevronDown, Plus, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
+import { T } from '@/components/translation/T'
 
 interface AssignmentsSectionProps {
   projects: any[] | undefined
@@ -25,7 +26,7 @@ export function AssignmentsSection({ projects, userId }: AssignmentsSectionProps
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-medium text-foreground">Assignments</h2>
+          <h2 className="text-lg font-medium text-foreground"><T context="dashboard.home.assignments.title">Assignments</T></h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
@@ -41,12 +42,12 @@ export function AssignmentsSection({ projects, userId }: AssignmentsSectionProps
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-medium text-foreground">Assignments</h2>
+          <h2 className="text-lg font-medium text-foreground"><T context="dashboard.home.assignments.title">Assignments</T></h2>
           
           <div className="flex items-center gap-3">
             {/* Sort dropdown */}
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Sort by</span>
+              <span className="text-muted-foreground"><T context="dashboard.home.assignments.sort.label">Sort by</T></span>
               <button
                 onClick={() => {
                   setSortBy(prev => {
@@ -57,9 +58,9 @@ export function AssignmentsSection({ projects, userId }: AssignmentsSectionProps
                 }}
                 className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/50 text-foreground transition-colors"
               >
-                {sortBy === 'recent' && 'Recent'}
-                {sortBy === 'oldest' && 'Oldest'}
-                {sortBy === 'name' && 'Name'}
+                {sortBy === 'recent' && <T context="dashboard.home.assignments.sort.recent">Recent</T>}
+                {sortBy === 'oldest' && <T context="dashboard.home.assignments.sort.oldest">Oldest</T>}
+                {sortBy === 'name' && <T context="dashboard.home.assignments.sort.name">Name</T>}
                 <ChevronDown className="w-4 h-4" />
               </button>
             </div>
@@ -76,7 +77,7 @@ export function AssignmentsSection({ projects, userId }: AssignmentsSectionProps
           </div>
         </div>
         <div className="text-center py-16 border border-dashed border-border rounded-2xl bg-muted/20">
-          <p className="text-muted-foreground">No active projects. Create one to get started!</p>
+          <p className="text-muted-foreground"><T context="dashboard.home.assignments.empty">No active projects. Create one to get started!</T></p>
         </div>
       </div>
     )
@@ -95,12 +96,12 @@ export function AssignmentsSection({ projects, userId }: AssignmentsSectionProps
       
       {/* Section Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium text-foreground">Assignments</h2>
+        <h2 className="text-lg font-medium text-foreground"><T context="dashboard.home.assignments.title">Assignments</T></h2>
         
         <div className="flex items-center gap-3">
           {/* Sort dropdown */}
           <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Sort by</span>
+            <span className="text-muted-foreground"><T context="dashboard.home.assignments.sort.label">Sort by</T></span>
             <button
               onClick={() => {
                 // Cycle through sort options
@@ -112,9 +113,9 @@ export function AssignmentsSection({ projects, userId }: AssignmentsSectionProps
               }}
               className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/50 text-foreground transition-colors"
             >
-              {sortBy === 'recent' && 'Recent'}
-              {sortBy === 'oldest' && 'Oldest'}
-              {sortBy === 'name' && 'Name'}
+              {sortBy === 'recent' && <T context="dashboard.home.assignments.sort.recent">Recent</T>}
+              {sortBy === 'oldest' && <T context="dashboard.home.assignments.sort.oldest">Oldest</T>}
+              {sortBy === 'name' && <T context="dashboard.home.assignments.sort.name">Name</T>}
               <ChevronDown className="w-4 h-4" />
             </button>
           </div>
@@ -145,7 +146,7 @@ export function AssignmentsSection({ projects, userId }: AssignmentsSectionProps
             onClick={() => router.push('/dashboard/living-projects')}
             className="text-sm text-primary hover:text-primary-dark flex items-center gap-2 transition-colors font-medium hover:underline"
           >
-            Browse all assignments
+            <T context="dashboard.home.assignments.browse_all">Browse all assignments</T>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>

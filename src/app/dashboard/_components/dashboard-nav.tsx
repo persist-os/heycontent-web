@@ -11,6 +11,7 @@ import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDial
 import { useAdminAuth } from '@/app/lib/admin-auth'
 import { cn } from '@/lib/utils'
 import { useLanguagePreference, useTranslation } from '@/hooks/useTranslation'
+import { T } from '@/components/translation/T'
 import { useUnifiedSearch } from '@/hooks/useUnifiedSearch'
 import { useTiptapEditor } from '@/app/context/tiptap-editor-context'
 import {
@@ -438,8 +439,8 @@ export const DashboardNav = memo(function DashboardNav() {
         isOpen={deleteDialogOpen}
         onClose={cancelDelete}
         onConfirm={confirmDelete}
-        title="Delete Conversation"
-        description="Are you sure you want to delete this conversation? This action cannot be undone."
+        title={<T context="dialog.delete.conversation.title">Delete Conversation</T>}
+        description={<T context="dialog.delete.conversation.description">Are you sure you want to delete this conversation? This action cannot be undone.</T>}
         isLoading={isDeleting}
       />
     </>

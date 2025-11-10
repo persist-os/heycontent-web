@@ -6,6 +6,8 @@ import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { toast } from 'sonner';
+import { T } from '@/components/translation/T';
+import { useTranslation } from '@/hooks/useTranslation';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 
 interface CrystalsViewProps {
@@ -18,6 +20,24 @@ interface EnhancedCognitiveFieldCardProps {
 
 const EnhancedCognitiveFieldCard: React.FC<EnhancedCognitiveFieldCardProps> = ({ field }) => {
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  
+  // Translations for button titles
+  const { text: saveChangesTitle } = useTranslation('Save changes', {
+    sourceLang: 'en',
+    context: 'button.cognitive_field.save.title'
+  });
+  const { text: cancelEditingTitle } = useTranslation('Cancel editing', {
+    sourceLang: 'en',
+    context: 'button.cognitive_field.cancel.title'
+  });
+  const { text: editFieldTitle } = useTranslation('Edit cognitive field', {
+    sourceLang: 'en',
+    context: 'button.cognitive_field.edit.title'
+  });
+  const { text: deleteFieldTitle } = useTranslation('Delete cognitive field', {
+    sourceLang: 'en',
+    context: 'button.cognitive_field.delete.title'
+  });
   const [showAllShards, setShowAllShards] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -174,14 +194,14 @@ const EnhancedCognitiveFieldCard: React.FC<EnhancedCognitiveFieldCardProps> = ({
                     <button
                       onClick={handleSave}
                       className="p-1.5 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-md transition-colors"
-                      title="Save changes"
+                      title={saveChangesTitle}
                     >
                       <Save className="h-3.5 w-3.5" />
                     </button>
                     <button
                       onClick={handleCancel}
                       className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
-                      title="Cancel editing"
+                      title={cancelEditingTitle}
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -191,14 +211,14 @@ const EnhancedCognitiveFieldCard: React.FC<EnhancedCognitiveFieldCardProps> = ({
                     <button
                       onClick={() => setIsEditing(true)}
                       className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
-                      title="Edit cognitive field"
+                      title={editFieldTitle}
                     >
                       <Edit3 className="h-3.5 w-3.5" />
                     </button>
                     <button
                       onClick={() => setShowDeleteConfirm(true)}
                       className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                      title="Delete cognitive field"
+                      title={deleteFieldTitle}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>

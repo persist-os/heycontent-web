@@ -5,6 +5,7 @@ import { Id } from '@/convex/_generated/dataModel';
 import { useAuth } from '@/app/context/auth-context';
 import { CrystalStats, FormationStatus, FormationEligibility } from './types';
 import { toast } from 'sonner';
+import { T } from '@/components/translation/T';
 
 export const useCrystalData = (userId: string | undefined) => {
   const crystalStats = useQuery(
@@ -252,15 +253,15 @@ export const useCrystalMutations = () => {
       });
 
       if (result.success) {
-        toast.success('Crystal updated successfully');
+        toast.success(<T context="toast.dashboard.crystals.update.success">Crystal updated successfully</T>);
         return true;
       } else {
-        toast.error('Failed to update crystal');
+        toast.error(<T context="toast.dashboard.crystals.update.error">Failed to update crystal</T>);
         return false;
       }
     } catch (error) {
       console.error('Error updating crystal:', error);
-      toast.error('Failed to update crystal');
+      toast.error(<T context="toast.dashboard.crystals.update.error">Failed to update crystal</T>);
       return false;
     } finally {
       setIsWorking(false);
@@ -281,15 +282,15 @@ export const useCrystalMutations = () => {
       });
 
       if (result.success) {
-        toast.success('Crystal deleted successfully');
+        toast.success(<T context="toast.dashboard.crystals.delete.success">Crystal deleted successfully</T>);
         return true;
       } else {
-        toast.error('Failed to delete crystal');
+        toast.error(<T context="toast.dashboard.crystals.delete.error">Failed to delete crystal</T>);
         return false;
       }
     } catch (error) {
       console.error('Error deleting crystal:', error);
-      toast.error('Failed to delete crystal');
+      toast.error(<T context="toast.dashboard.crystals.delete.error">Failed to delete crystal</T>);
       return false;
     } finally {
       setIsWorking(false);
@@ -329,15 +330,15 @@ export const useShardMutations = () => {
       });
 
       if (result.success) {
-        toast.success('Shard updated successfully');
+        toast.success(<T context="toast.dashboard.crystals.shard.update.success">Shard updated successfully</T>);
         return true;
       } else {
-        toast.error('Failed to update shard');
+        toast.error(<T context="toast.dashboard.crystals.shard.update.error">Failed to update shard</T>);
         return false;
       }
     } catch (error) {
       console.error('Error updating shard:', error);
-      toast.error('Failed to update shard');
+      toast.error(<T context="toast.dashboard.crystals.shard.update.error">Failed to update shard</T>);
       return false;
     } finally {
       setIsWorking(false);
@@ -358,15 +359,15 @@ export const useShardMutations = () => {
       });
 
       if (result.success) {
-        toast.success('Shard deleted successfully');
+        toast.success(<T context="toast.dashboard.crystals.shard.delete.success">Shard deleted successfully</T>);
         return true;
       } else {
-        toast.error('Failed to delete shard');
+        toast.error(<T context="toast.dashboard.crystals.shard.delete.error">Failed to delete shard</T>);
         return false;
       }
     } catch (error) {
       console.error('Error deleting shard:', error);
-      toast.error('Failed to delete shard');
+      toast.error(<T context="toast.dashboard.crystals.shard.delete.error">Failed to delete shard</T>);
       return false;
     } finally {
       setIsWorking(false);
