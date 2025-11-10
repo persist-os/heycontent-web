@@ -97,6 +97,7 @@ export const artifactCreateValidator = v.object({
 export const artifactUpdateValidator = v.object({
   artifactId: v.id("artifacts"),
   data: v.optional(v.any()),
+  dataModel: v.optional(v.any()),  // ✅ NEW: Allow dataModel updates
   tags: v.optional(v.array(v.string())),
   updatedBy: v.string(), // widget_id or user_id
   editSource: v.optional(v.union(v.literal("widget"), v.literal("user"))),  // Track edit source

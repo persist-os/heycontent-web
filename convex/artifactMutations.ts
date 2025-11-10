@@ -64,6 +64,23 @@ export const createArtifact = mutation({
       }
     }
     
+    // ✅ NEW: Create version 1 snapshot
+    await ctx.db.insert("artifact_versions", {
+      artifactId: artifactId,
+      versionNumber: 1,
+      isLatest: true,
+      data: args.data,
+      dataModel: args.dataModel,
+      tags: args.tags,
+      createdAt: now,
+      createdBy: args.metadata.lastUpdatedBy,
+      editSource: args.metadata.editSource || "widget",
+      parentVersionId: undefined,  // No parent for version 1
+      storageType: "snapshot",
+      widgetExecutionId: undefined,
+      taskRunId: undefined,
+    });
+    
     return artifactId;
   },
 });
@@ -103,13 +120,58 @@ export const updateArtifact = mutation({
       updates.data = args.data;
     }
     
+    if (args.dataModel !== undefined) {  // ✅ NEW: Accept dataModel updates
+      updates.data_model = args.dataModel;
+    }
+    
     if (args.tags !== undefined) {
       updates.tags = args.tags;
     }
     
-    // Update metadata with version increment and edit source tracking
+    // ✅ NEW: Create version snapshot BEFORE update
     const currentVersion = existing.metadata?.version || 1;
     const editSource = args.editSource || "widget";  // Default to "widget" for backward compatibility
+    
+    // Find existing latest version record (if exists)
+    const currentLatest = await ctx.db
+      .query("artifact_versions")
+      .withIndex("by_latest", (q) =>
+        q.eq("artifactId", args.artifactId).eq("isLatest", true)
+      )
+      .first();
+    
+    // If latest version exists and matches current version, mark it as historical
+    // Otherwise, create snapshot of current version
+    let versionSnapshotId;
+    if (currentLatest && currentLatest.versionNumber === currentVersion) {
+      // Update existing version record to mark as historical
+      await ctx.db.patch(currentLatest._id, { isLatest: false });
+      versionSnapshotId = currentLatest._id;
+    } else {
+      // Create snapshot of current version (shouldn't happen normally, but handle edge case)
+      const previousVersion = await ctx.db
+        .query("artifact_versions")
+        .withIndex("by_artifact_version", (q) =>
+          q.eq("artifactId", args.artifactId).eq("versionNumber", currentVersion)
+        )
+        .first();
+      
+      versionSnapshotId = await ctx.db.insert("artifact_versions", {
+        artifactId: args.artifactId,
+        versionNumber: currentVersion,
+        isLatest: false,  // Mark as historical
+        data: existing.data,
+        dataModel: existing.data_model,
+        tags: existing.tags,
+        createdAt: existing.updatedAt,  // Use artifact's last update time
+        createdBy: existing.metadata?.lastUpdatedBy || "system",
+        editSource: existing.metadata?.editSource || "widget",
+        parentVersionId: previousVersion?._id,
+        storageType: "snapshot",
+        widgetExecutionId: undefined,
+        taskRunId: undefined,
+      });
+    }
     
     // Build edit history entry
     const editHistory = existing.metadata?.editHistory || [];
@@ -117,7 +179,7 @@ export const updateArtifact = mutation({
       timestamp: now,
       ...(editSource === "widget" ? { widgetId: args.updatedBy } : { userId: args.updatedBy }),
       editSource: editSource,
-      changes: JSON.stringify({ data: args.data !== undefined, tags: args.tags !== undefined })
+      changes: JSON.stringify({ data: args.data !== undefined, dataModel: args.dataModel !== undefined, tags: args.tags !== undefined })
     };
     
     updates.metadata = {
@@ -130,6 +192,23 @@ export const updateArtifact = mutation({
     };
     
     await ctx.db.patch(args.artifactId, updates);
+    
+    // ✅ NEW: Create new version record (version N+1)
+    await ctx.db.insert("artifact_versions", {
+      artifactId: args.artifactId,
+      versionNumber: currentVersion + 1,
+      isLatest: true,  // This is the new latest
+      data: updates.data !== undefined ? updates.data : existing.data,
+      dataModel: updates.data_model !== undefined ? updates.data_model : existing.data_model,  // ✅ FIXED: Use updated dataModel if provided
+      tags: updates.tags !== undefined ? updates.tags : existing.tags,
+      createdAt: now,
+      createdBy: args.updatedBy,
+      editSource: editSource,
+      parentVersionId: versionSnapshotId,  // Link to previous version
+      storageType: "snapshot",
+      widgetExecutionId: undefined,
+      taskRunId: undefined,
+    });
     
     return true;
   },

@@ -184,7 +184,7 @@ export function ArtifactRenderer({
   artifact,
   editable = false,
   onUpdate,
-  editButton
+  editButton,
 }: ArtifactRendererProps) {
   // Defensive: handle null/undefined artifact
   if (!artifact) {
@@ -201,8 +201,9 @@ export function ArtifactRenderer({
   const validation = validateArtifactStructure(artifact)
   if (!validation.valid) {
     // Log validation failures for debugging
+    const artifactId = (artifact as any)._id || (artifact as any).id;
     console.error(
-      `[ArtifactRenderer] Validation failed for artifact ${(artifact as any).id || (artifact as any)._id || 'unknown'}:`,
+      `[ArtifactRenderer] Validation failed for artifact ${artifactId || 'unknown'}:`,
       validation.errors
     )
     return <InvalidArtifactStructure artifact={artifact} errors={validation.errors} />
@@ -284,7 +285,9 @@ export function ArtifactRenderer({
       )
     
     default:
-      return <UnsupportedArtifact artifact={artifact} />
+      return (
+        <UnsupportedArtifact artifact={artifact} />
+      )
   }
 }
 

@@ -16,7 +16,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Flag, Check, Circle, Star, Pencil, X } from 'lucide-react'
-import { VersionSelector } from '../../VersionSelector'
+import { ArtifactVersionSelector } from '../../ArtifactVersionSelector'
+import { Id } from '@/convex/_generated/dataModel'
 
 interface TimelineEvent {
   id: string
@@ -41,6 +42,9 @@ interface TimelineLayoutRendererProps {
   artifactType?: string
   metadata?: ArtifactMetadata
   editButton?: React.ReactNode
+  artifactId?: Id<'artifacts'>
+  selectedVersion?: number
+  onVersionChange?: (version: number) => void
 }
 
 // Icon mapping for common event types
@@ -68,7 +72,10 @@ export function TimelineLayoutRenderer({
   onUpdate,
   artifactType,
   metadata,
-  editButton
+  editButton,
+  artifactId,
+  selectedVersion,
+  onVersionChange
 }: TimelineLayoutRendererProps) {
   // 🔴 CRITICAL FIX (TASK 3.1): Defensive data extraction - check multiple possible field names
   // Handle common mismatches: data.events OR data.timelineEvents OR data.data.events
@@ -199,7 +206,17 @@ export function TimelineLayoutRenderer({
           </div>
           <div className="flex items-center gap-2">
             {editButton}
-            <VersionSelector metadata={artifactMetadata} />
+            {artifactId && selectedVersion !== undefined && onVersionChange ? (
+              <ArtifactVersionSelector
+                artifactId={artifactId}
+                currentVersion={selectedVersion}
+                onVersionChange={onVersionChange}
+              />
+            ) : (
+              <Badge variant="outline" className="text-xs">
+                v{artifactMetadata.version}
+              </Badge>
+            )}
           </div>
         </div>
       </CardHeader>

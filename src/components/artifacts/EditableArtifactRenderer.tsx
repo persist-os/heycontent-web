@@ -59,7 +59,7 @@ export function EditableArtifactRenderer({
   userId,
   widgetId,
   editable = true,  // Default to true (editing enabled by default)
-  onConflict
+  onConflict,
 }: EditableArtifactRendererProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [formData, setFormData] = useState<any>(artifact.data)

@@ -34,6 +34,7 @@ import { widgetSchemaFields, projectWidgetsSchemaFields } from "./types/widgets"
 
 // Artifacts
 import { artifactSchemaFields } from "./types/artifact";
+import { artifactVersionSchemaFields } from "./types/artifactVersion";
 
 // Briefing System
 import { briefingEventSchemaFields } from "./types/briefingEvent";
@@ -314,6 +315,13 @@ export default defineSchema({
     .index("by_project", ["projectId"])
     .index("by_widget", ["widgetId"])
     .index("by_user", ["userId"]),
+
+  // Artifact Versions - Version history for artifacts (preserves all historical versions)
+  artifact_versions: defineTable(artifactVersionSchemaFields)
+    .index("by_artifact", ["artifactId"])
+    .index("by_artifact_version", ["artifactId", "versionNumber"])
+    .index("by_latest", ["artifactId", "isLatest"])
+    .index("by_created", ["createdAt"]),
 
   // Conversation Summaries - Real-time conversation analysis
   conversation_summaries: defineTable(conversationSummarySchemaFields)

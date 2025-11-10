@@ -14,10 +14,12 @@ import { ArtifactMetadata } from '@/types/artifacts'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Pencil, FileText, Check, X, Eye } from 'lucide-react'
+import { FileText, Pencil, Eye, Check, X } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
+import { ArtifactVersionSelector } from '../../ArtifactVersionSelector'
+import { Id } from '@/convex/_generated/dataModel'
 
 interface SectionDefinition {
   id: string
@@ -46,6 +48,9 @@ interface MarkdownLayoutRendererProps {
   artifactType?: string
   metadata?: ArtifactMetadata
   editButton?: React.ReactNode
+  artifactId?: Id<'artifacts'>
+  selectedVersion?: number
+  onVersionChange?: (version: number) => void
 }
 
 export function MarkdownLayoutRenderer({
@@ -55,7 +60,10 @@ export function MarkdownLayoutRenderer({
   onUpdate,
   artifactType,
   metadata,
-  editButton
+  editButton,
+  artifactId,
+  selectedVersion,
+  onVersionChange
 }: MarkdownLayoutRendererProps) {
   // Defensive: ensure all required properties exist
   const rawSections = Array.isArray(data?.sections) ? data.sections : []
@@ -210,9 +218,17 @@ export function MarkdownLayoutRenderer({
           </div>
           <div className="flex items-center gap-2">
             {editButton}
-            <Badge variant="outline" className="text-xs">
-              v{artifactMetadata.version}
-            </Badge>
+            {artifactId && selectedVersion !== undefined && onVersionChange ? (
+              <ArtifactVersionSelector
+                artifactId={artifactId}
+                currentVersion={selectedVersion}
+                onVersionChange={onVersionChange}
+              />
+            ) : (
+              <Badge variant="outline" className="text-xs">
+                v{artifactMetadata.version}
+              </Badge>
+            )}
           </div>
         </div>
       </CardHeader>

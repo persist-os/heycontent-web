@@ -13,8 +13,10 @@ import React from 'react'
 import { FieldDefinition, ArtifactMetadata } from '@/types/artifacts'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { FieldEditor } from '../../editors/FieldEditor'
 import { Pencil } from 'lucide-react'
+import { FieldEditor } from '../../editors/FieldEditor'
+import { ArtifactVersionSelector } from '../../ArtifactVersionSelector'
+import { Id } from '@/convex/_generated/dataModel'
 
 interface TableLayoutRendererProps {
   data_model: {
@@ -29,6 +31,9 @@ interface TableLayoutRendererProps {
   artifactType?: string
   metadata?: ArtifactMetadata
   editButton?: React.ReactNode
+  artifactId?: Id<'artifacts'>
+  selectedVersion?: number
+  onVersionChange?: (version: number) => void
 }
 
 export function TableLayoutRenderer({
@@ -38,7 +43,10 @@ export function TableLayoutRenderer({
   onUpdate,
   artifactType,
   metadata,
-  editButton
+  editButton,
+  artifactId,
+  selectedVersion,
+  onVersionChange
 }: TableLayoutRendererProps) {
   // Defensive: ensure all required properties exist
   const fields = Array.isArray(data_model?.fields) ? data_model.fields : []
@@ -97,9 +105,17 @@ export function TableLayoutRenderer({
           </div>
           <div className="flex items-center gap-2">
             {editButton}
-            <Badge variant="outline" className="text-xs">
-              v{artifactMetadata.version}
-            </Badge>
+            {artifactId && selectedVersion !== undefined && onVersionChange ? (
+              <ArtifactVersionSelector
+                artifactId={artifactId}
+                currentVersion={selectedVersion}
+                onVersionChange={onVersionChange}
+              />
+            ) : (
+              <Badge variant="outline" className="text-xs">
+                v{artifactMetadata.version}
+              </Badge>
+            )}
           </div>
         </div>
       </CardHeader>

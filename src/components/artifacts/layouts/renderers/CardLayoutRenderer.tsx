@@ -14,6 +14,8 @@ import { ArtifactMetadata } from '@/types/artifacts'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Pencil, BarChart3 } from 'lucide-react'
+import { ArtifactVersionSelector } from '../../ArtifactVersionSelector'
+import { Id } from '@/convex/_generated/dataModel'
 
 interface MetricDefinition {
   key: string
@@ -36,6 +38,9 @@ interface CardLayoutRendererProps {
   artifactType?: string
   metadata?: ArtifactMetadata
   editButton?: React.ReactNode
+  artifactId?: Id<'artifacts'>
+  selectedVersion?: number
+  onVersionChange?: (version: number) => void
 }
 
 export function CardLayoutRenderer({
@@ -45,12 +50,18 @@ export function CardLayoutRenderer({
   onUpdate,
   artifactType,
   metadata,
-  editButton
+  editButton,
+  artifactId,
+  selectedVersion,
+  onVersionChange
 }: CardLayoutRendererProps) {
   // 🔴 CRITICAL FIX (TASK 3.1): Defensive data extraction - check multiple possible field names
   // Handle common mismatches: data.keyMetrics OR data.metrics OR data.data.keyMetrics
-  const keyMetrics = data?.keyMetrics || data?.metrics || data?.data?.keyMetrics || {}
-  const summaryText = data?.summaryText || data?.summary || data?.data?.summaryText
+  // Also check if data itself is the keyMetrics object
+  const dataAny = data as any  // Type assertion for defensive property access
+  const keyMetrics = data?.keyMetrics || dataAny?.metrics || dataAny?.data?.keyMetrics || 
+                     (data && typeof data === 'object' && !Array.isArray(data) && !data.summaryText ? data : {})
+  const summaryText = data?.summaryText || dataAny?.summary || dataAny?.data?.summaryText || dataAny?.text
   
   // Defensive: ensure all required properties exist
   const metrics = Array.isArray(data_model?.metrics) ? data_model.metrics : []
@@ -58,6 +69,18 @@ export function CardLayoutRenderer({
     version: 1,
     lastUpdatedBy: 'unknown',
     lastUpdatedAt: Date.now()
+  }
+  
+  // Debug logging to help identify data structure issues
+  if (process.env.NODE_ENV === 'development' && metrics.length > 0 && Object.keys(keyMetrics).length === 0) {
+    console.warn('[CardLayoutRenderer] No keyMetrics found. Data structure:', {
+      hasKeyMetrics: !!data?.keyMetrics,
+      hasMetrics: !!dataAny?.metrics,
+      hasDataKeyMetrics: !!dataAny?.data?.keyMetrics,
+      dataKeys: data ? Object.keys(data) : [],
+      metricsCount: metrics.length,
+      metricKeys: metrics.map(m => m?.key || m?.label)
+    })
   }
 
   // Format metric value based on format type
@@ -104,9 +127,17 @@ export function CardLayoutRenderer({
           </div>
           <div className="flex items-center gap-2">
             {editButton}
-            <Badge variant="outline" className="text-xs">
-              v{artifactMetadata.version}
-            </Badge>
+            {artifactId && selectedVersion !== undefined && onVersionChange ? (
+              <ArtifactVersionSelector
+                artifactId={artifactId}
+                currentVersion={selectedVersion}
+                onVersionChange={onVersionChange}
+              />
+            ) : (
+              <Badge variant="outline" className="text-xs">
+                v{artifactMetadata.version}
+              </Badge>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -116,16 +147,64 @@ export function CardLayoutRenderer({
         {metrics.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {metrics.map((metric, metricIdx) => {
-              const metricKey = metric?.key || metric?.id || ''
-              // 🔴 CRITICAL FIX (TASK 3.1): Check multiple possible field names
-              const value = keyMetrics[metricKey] !== undefined ? keyMetrics[metricKey] : 
-                           keyMetrics[metric?.label] !== undefined ? keyMetrics[metric?.label] : 
-                           undefined
+              const metricKey = metric?.key || ''  // Remove metric?.id since MetricDefinition doesn't have it
+              const metricLabel = metric?.label || ''
               
-              // Log rendering errors for debugging
-              if (value === undefined && metricKey) {
+              // ✅ ADD: Normalize key for comparison (handles camelCase, snake_case, etc.)
+              const normalizeKey = (key: string): string => {
+                if (!key) return ''
+                // Remove all non-alphanumeric chars, convert to lowercase
+                return key
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]/g, '')
+              }
+              
+              // ✅ IMPROVE: findValue function with normalized matching
+              const findValue = (obj: Record<string, any>, searchKey: string, searchLabel: string) => {
+                if (!obj || typeof obj !== 'object') return undefined
+                
+                // Try exact matches first
+                if (searchKey && obj[searchKey] !== undefined) return obj[searchKey]
+                if (searchLabel && obj[searchLabel] !== undefined) return obj[searchLabel]
+                
+                // Try case-insensitive matches
+                const lowerSearchKey = searchKey.toLowerCase()
+                const lowerSearchLabel = searchLabel.toLowerCase()
+                for (const [key, val] of Object.entries(obj)) {
+                  if (key.toLowerCase() === lowerSearchKey || key.toLowerCase() === lowerSearchLabel) {
+                    return val
+                  }
+                }
+                
+                // Try partial matches (e.g., "emotionalState" matches "Emotional State")
+                const normalizedSearch = searchLabel.replace(/\s+/g, '').toLowerCase()
+                for (const [key, val] of Object.entries(obj)) {
+                  const normalizedKey = key.replace(/\s+/g, '').toLowerCase()
+                  if (normalizedKey === normalizedSearch || normalizedKey.includes(normalizedSearch) || normalizedSearch.includes(normalizedKey)) {
+                    return val
+                  }
+                }
+                
+                // ✅ NEW: Try normalized matching (handles camelCase vs snake_case)
+                const fullyNormalizedSearch = normalizeKey(searchLabel || searchKey)
+                if (fullyNormalizedSearch) {
+                  for (const [key, val] of Object.entries(obj)) {
+                    const normalizedKey = normalizeKey(key)
+                    if (normalizedKey === fullyNormalizedSearch) {
+                      return val
+                    }
+                  }
+                }
+                
+                return undefined
+              }
+              
+              const value = findValue(keyMetrics, metricKey, metricLabel)
+              
+              // Log rendering errors for debugging (only in development)
+              if (value === undefined && metricKey && process.env.NODE_ENV === 'development') {
                 console.warn(
-                  `[CardLayoutRenderer] Metric value not found for key "${metricKey}". ` +
+                  `[CardLayoutRenderer] Metric value not found for key "${metricKey}" (label: "${metricLabel}"). ` +
                   `Available keys: ${Object.keys(keyMetrics).join(', ') || 'none'}`
                 )
               }
@@ -138,11 +217,13 @@ export function CardLayoutRenderer({
                   <div className="text-xs text-muted-foreground mb-1">
                     {metric?.label || metric?.key || 'Metric'}
                   </div>
-                  <div className="text-2xl font-semibold text-foreground">
+                  <div className="text-2xl font-semibold text-foreground whitespace-pre-wrap break-words">
                     {value !== undefined && value !== null ? (
                       formatMetric(value, metric?.format, metric?.unit)
                     ) : (
-                      <span className="text-muted-foreground italic">No data available</span>
+                      <span className="text-muted-foreground italic text-sm">
+                        No data for {metric?.label || metric?.key}
+                      </span>
                     )}
                   </div>
                 </div>

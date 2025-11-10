@@ -16,7 +16,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { TrendingUp, TrendingDown, Minus, Pencil, Check, X, Plus } from 'lucide-react'
 import { FieldEditor } from '../../editors/FieldEditor'
-import { VersionSelector } from '../../VersionSelector'
+import { ArtifactVersionSelector } from '../../ArtifactVersionSelector'
+import { Id } from '@/convex/_generated/dataModel'
 
 interface TrackerDefinition {
   key?: string  // Legacy format
@@ -51,6 +52,9 @@ interface TrackerLayoutRendererProps {
   artifactType?: string
   metadata?: ArtifactMetadata
   editButton?: React.ReactNode
+  artifactId?: Id<'artifacts'>
+  selectedVersion?: number
+  onVersionChange?: (version: number) => void
 }
 
 export function TrackerLayoutRenderer({
@@ -60,7 +64,10 @@ export function TrackerLayoutRenderer({
   onUpdate,
   artifactType,
   metadata,
-  editButton
+  editButton,
+  artifactId,
+  selectedVersion,
+  onVersionChange
 }: TrackerLayoutRendererProps) {
   // 🔴 CRITICAL FIX (TASK 3.1): Defensive data extraction - check multiple possible field names
   // Handle common mismatches: data.entries OR data.trackingEntries OR data.data.entries
@@ -201,7 +208,17 @@ export function TrackerLayoutRenderer({
           </div>
           <div className="flex items-center gap-2">
             {editButton}
-            <VersionSelector metadata={artifactMetadata} />
+            {artifactId && selectedVersion !== undefined && onVersionChange ? (
+              <ArtifactVersionSelector
+                artifactId={artifactId}
+                currentVersion={selectedVersion}
+                onVersionChange={onVersionChange}
+              />
+            ) : (
+              <Badge variant="outline" className="text-xs">
+                v{artifactMetadata.version}
+              </Badge>
+            )}
           </div>
         </div>
       </CardHeader>

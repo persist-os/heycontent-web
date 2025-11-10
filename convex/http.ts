@@ -3895,6 +3895,63 @@ app.post("/api/artifacts/query", async (c) => {
   }
 });
 
+/**
+ * GET /api/artifacts/:artifactId/versions
+ * Get all versions for an artifact
+ */
+app.get("/api/artifacts/:artifactId/versions", async (c) => {
+  try {
+    const artifactId = c.req.param("artifactId") as any;
+    const limit = parseInt(c.req.query("limit") || "100");
+    
+    const versions = await c.env.runQuery(
+      api.artifactVersionQueries.getArtifactVersions,
+      { artifactId, limit }
+    );
+    
+    return c.json({ success: true, data: versions });
+  } catch (error: any) {
+    console.error("Get artifact versions error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to get artifact versions",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * GET /api/artifacts/:artifactId/versions/:versionNumber
+ * Get specific version by number
+ */
+app.get("/api/artifacts/:artifactId/versions/:versionNumber", async (c) => {
+  try {
+    const artifactId = c.req.param("artifactId") as any;
+    const versionNumber = parseInt(c.req.param("versionNumber"));
+    
+    const version = await c.env.runQuery(
+      api.artifactVersionQueries.getVersionByNumber,
+      { artifactId, versionNumber }
+    );
+    
+    if (!version) {
+      return c.json({ 
+        success: false,
+        error: "Version not found"
+      }, 404);
+    }
+    
+    return c.json({ success: true, data: version });
+  } catch (error: any) {
+    console.error("Get artifact version error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to get artifact version",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
 // CHATGPT IMPORT ROUTES - One-time import tracking
 
 /**
