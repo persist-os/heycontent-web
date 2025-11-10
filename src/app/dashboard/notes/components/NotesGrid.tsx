@@ -3,19 +3,15 @@ import { Note, NoteType } from '../types';
 import { NoteCard } from './cards/NoteCard';
 import { EmailCard } from './cards/EmailCard';
 import { ProjectCard } from './projects/ProjectCard';
-import { CreateProjectModal } from '../../living-projects/components/CreateProjectModal';
 import { ShareContentModal } from '@/components/sharing/ShareContentModal';
-import { Plus, Search, Folder, X, Users } from 'lucide-react';
+import { Plus, Search, Folder, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCreateNote } from '../hooks/useCreateNote';
 import { useProjects } from '../hooks/useProjects';
 import { useNotes } from '@/app/context/notes-context';
 import { useAuth } from '@/app/context/auth-context';
 import { getPopularTags } from '../utils/tag-utils';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { T } from '@/components/translation';
-import { useTranslation } from '@/hooks/useTranslation';
 import {
   DndContext,
   DragEndEvent,
@@ -27,7 +23,6 @@ import {
   DragOverEvent,
   useDroppable,
 } from '@dnd-kit/core';
-import { CentralizedHeader } from '@/components/ui/centralized-header';
 
 interface NotesGridProps {
   notes: Note[];
@@ -88,10 +83,8 @@ export function NotesGrid({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<'all' | 'projects' | NoteType>('all');
   const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(null);
-  const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
   const [draggedNote, setDraggedNote] = useState<Note | null>(null);
   const [dragOverProject, setDragOverProject] = useState<string | null>(null);
-  const [pendingProjectNote, setPendingProjectNote] = useState<{ note: Note; projectName?: string } | null>(null);
   const [isCreateProjectZoneDraggedOver, setIsCreateProjectZoneDraggedOver] = useState(false);
   
   // Share modal state
@@ -105,14 +98,11 @@ export function NotesGrid({
   const { createNote, isCreating: isCreatingNote } = useCreateNote();
   const { setActiveNoteId } = useNotes();
   const { firebaseUser } = useAuth();
-  const pathname = usePathname();
   
   // Projects functionality
   const { 
     projects, 
     isLoading: isLoadingProjects, 
-    isCreating: isCreatingProject,
-    createProject,
     deleteProject,
     addContentToProject
   } = useProjects(firebaseUser?.uid);
@@ -138,7 +128,8 @@ export function NotesGrid({
 
   const handleCreateNote = async () => {
     if (selectedTypeFilter === 'projects') {
-      setShowCreateProjectModal(true);
+      // Navigate to thinking lab to create project via chat
+      window.location.href = '/dashboard/thinking_lab';
       return;
     }
     
@@ -152,33 +143,6 @@ export function NotesGrid({
     }
   };
 
-  const handleCreateProject = async (
-    name: string, 
-    description?: string,
-    noteIds?: string[],
-    conversationIds?: string[],
-    crystalIds?: string[],
-    shardIds?: string[]
-  ): Promise<string> => {
-    // Include pending note if exists
-    const allNoteIds = [...(noteIds || [])];
-    if (pendingProjectNote) {
-      allNoteIds.push(String(pendingProjectNote.note._id));
-      setPendingProjectNote(null);
-    }
-    
-    // Pass all content arrays directly to createProject mutation
-    const projectId = await createProject(
-      name, 
-      description, 
-      allNoteIds.length > 0 ? allNoteIds : undefined,
-      conversationIds,
-      crystalIds,
-      shardIds
-    );
-    
-    return projectId as string;
-  };
 
   const handleEditProject = (project: any) => {
     // Navigate to the project detail page for editing
@@ -271,9 +235,8 @@ export function NotesGrid({
 
     // Handle dropping note on "create project" zone
     if (noteData?.type === 'note' && over.id === 'create-project-zone') {
-      const note = noteData.note as Note;
-      setPendingProjectNote({ note, projectName: note.title || 'New Project' });
-      setShowCreateProjectModal(true);
+      // Navigate to thinking lab to create project via chat
+      window.location.href = '/dashboard/thinking_lab';
     }
   };
 
@@ -667,18 +630,6 @@ export function NotesGrid({
           )}
         </button>
 
-        {/* Create Project Modal */}
-        <CreateProjectModal
-          isOpen={showCreateProjectModal}
-          onClose={() => {
-            setShowCreateProjectModal(false);
-            setPendingProjectNote(null);
-          }}
-          onCreateProject={handleCreateProject}
-          userId={firebaseUser?.uid || ''}
-          isCreating={isCreatingProject}
-          defaultName={pendingProjectNote?.projectName}
-        />
       </div>
 
       {/* Create Project Drop Zone */}

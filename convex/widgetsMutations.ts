@@ -195,12 +195,15 @@ export const updateWidget = mutation({
 // ============================================================================
 
 /**
- * Delete a single widget (soft delete by setting status)
+ * Delete a single widget with cascade deletion
+ * Ensures 1:1 relationships: Each widget has ONE conversation, ONE cognitive field, ONE assignment fingerprint
+ * When deleting a widget, all associated entities are deleted atomically
  */
 export const deleteWidget = mutation({
   args: deleteWidgetArgsValidator,
   returns: v.object({
     success: v.boolean(),
+    summary: v.optional(v.any()),
   }),
   handler: async (ctx, { widgetId, userId, hardDelete }) => {
     const widget = await ctx.db.get(widgetId);
@@ -213,14 +216,119 @@ export const deleteWidget = mutation({
       throw new Error("Access denied: You don't own this widget");
     }
 
+    const summary: Record<string, any> = { errors: [] };
+    const BATCH_SIZE = 50;
+
+    // Helper for batch deletion with resilient error handling (Gold Standard pattern)
+    async function batchDelete(table: string, getQuery: () => Promise<any[]>) {
+      let deleted = 0;
+      const errors: any[] = [];
+      try {
+        let hasMore = true;
+        while (hasMore) {
+          const items = await getQuery();
+          if (!items || items.length === 0) break;
+          for (const item of items) {
+            try {
+              await ctx.db.delete(item._id);
+              deleted++;
+            } catch (err) {
+              errors.push({ id: item._id, error: String(err) });
+            }
+          }
+          hasMore = items.length === BATCH_SIZE;
+        }
+        summary[table] = { deleted, errors };
+        if (errors.length > 0) summary.errors.push({ table, errors });
+      } catch (err) {
+        // Table or index might not exist - log but continue
+        summary[table] = { deleted, errors: [{ table, error: String(err) }] };
+        summary.errors.push({ table, error: String(err) });
+      }
+    }
+
+    // CRITICAL: Cascade deletion for widget's 1:1 relationships
+    // Each widget has ONE conversation, ONE cognitive field, ONE assignment fingerprint
+    const conversationId = (widget as any).conversationId;
+    
+    if (conversationId) {
+      // 1. Delete messages for this widget's conversation
+      await batchDelete("messages", () =>
+        ctx.db.query("messages")
+          .withIndex("by_conversation", (q) => q.eq("conversationId", conversationId))
+          .take(BATCH_SIZE)
+      );
+
+      // 2. Delete cognitive field for this widget's conversation (1:1 relationship)
+      const cognitiveField = await ctx.db
+        .query("cognitive_fields")
+        .withIndex("by_conversation", (q) => q.eq("conversationId", conversationId))
+        .first();
+      
+      if (cognitiveField) {
+        try {
+          await ctx.db.delete(cognitiveField._id);
+          summary["cognitive_fields"] = { deleted: 1, errors: [] };
+        } catch (err) {
+          summary["cognitive_fields"] = { deleted: 0, errors: [{ id: cognitiveField._id, error: String(err) }] };
+          summary.errors.push({ table: "cognitive_fields", errors: [{ id: cognitiveField._id, error: String(err) }] });
+        }
+      }
+
+      // 3. Delete assignment fingerprint for this widget's conversation (1:1 relationship)
+      // Query by projectId and filter by conversationId since conversationId is optional in fingerprint
+      const fingerprint = await ctx.db
+        .query("assignment_fingerprints")
+        .withIndex("by_project_user", (q) => 
+          q.eq("projectId", widget.projectId).eq("userId", userId)
+        )
+        .first();
+      
+      if (fingerprint && (fingerprint as any).conversationId === conversationId) {
+        try {
+          await ctx.db.delete(fingerprint._id);
+          summary["assignment_fingerprints"] = { deleted: 1, errors: [] };
+        } catch (err) {
+          summary["assignment_fingerprints"] = { deleted: 0, errors: [{ id: fingerprint._id, error: String(err) }] };
+          summary.errors.push({ table: "assignment_fingerprints", errors: [{ id: fingerprint._id, error: String(err) }] });
+        }
+      }
+
+      // 4. Delete artifacts for this widget
+      await batchDelete("artifacts", () =>
+        ctx.db.query("artifacts")
+          .withIndex("by_widget", (q) => q.eq("widgetId", widgetId))
+          .take(BATCH_SIZE)
+      );
+
+      // 5. Delete the conversation (1:1 with widget)
+      try {
+        await ctx.db.delete(conversationId);
+        summary["conversations"] = { deleted: 1, errors: [] };
+      } catch (err) {
+        summary["conversations"] = { deleted: 0, errors: [{ id: conversationId, error: String(err) }] };
+        summary.errors.push({ table: "conversations", errors: [{ id: conversationId, error: String(err) }] });
+      }
+    } else {
+      // Widget has no conversation - still delete artifacts
+      await batchDelete("artifacts", () =>
+        ctx.db.query("artifacts")
+          .withIndex("by_widget", (q) => q.eq("widgetId", widgetId))
+          .take(BATCH_SIZE)
+      );
+    }
+
+    // 6. Delete the widget itself
     if (hardDelete) {
       await ctx.db.delete(widgetId);
+      summary["widgets"] = { deleted: 1, errors: [] };
     } else {
       // Soft delete
       await ctx.db.patch(widgetId, {
         status: "deleted",
         updatedAt: Date.now(),
       });
+      summary["widgets"] = { updated: 1, errors: [] };
     }
     
     // ✅ PATTERN 13: Atomic Parent-Child Updates - Remove widget ID from project array
@@ -233,7 +341,7 @@ export const deleteWidget = mutation({
       });
     }
 
-    return { success: true };
+    return { success: summary.errors.length === 0, summary };
   },
 });
 

@@ -22,7 +22,7 @@
     --notepad-icon-hover: 220 10% 25%; /* Darker gray on hover */
     --notepad-border: 220 10% 90%; /* Subtle neutral border */
 
-    --primary: 220 15% 25%; /* Neutral dark gray primary - less iMessage blue */
+    --primary: 210 100% 40%; /* Deep navy blue primary - darker, more professional */
     --primary-foreground: 0 0% 100%; /* On Primary P-100 - White text on primary */
 
     --secondary: 220 15% 90%; /* Light neutral secondary */
@@ -39,7 +39,7 @@
 
     --border: 220 10% 75%; /* Outline Variant - Borders with WCAG AA contrast (3:1) */
     --input: 0 0% 94%; /* Surface Container N-94 - Input backgrounds */
-    --ring: 220 15% 25%; /* Neutral gray focus rings */
+    --ring: 210 100% 40%; /* Deep navy blue focus rings - matches primary */
 
     --radius: 0.75rem;
 
@@ -116,8 +116,8 @@
     --notepad-icon-hover: 220 10% 70%; /* Lighter gray on hover */
     --notepad-border: 220 10% 20%; /* Subtle dark border */
 
-    --primary: 220 15% 80%; /* Neutral light gray primary - less iMessage blue */
-    --primary-foreground: 220 15% 20%; /* On Primary P-20 - Dark text on primary */
+    --primary: 210 100% 65%; /* Bright blue primary - visible on dark backgrounds */
+    --primary-foreground: 210 100% 20%; /* On Primary P-20 - Dark blue text on primary */
 
     --secondary: 220 15% 20%; /* Dark neutral secondary */
     --secondary-foreground: 220 15% 90%; /* Light text on secondary */
@@ -133,7 +133,7 @@
 
     --border: 220 10% 30%; /* Outline Variant NV-30 - Subtle borders */
     --input: 0 0% 12%; /* Surface Container N-12 - Input backgrounds */
-    --ring: 220 15% 80%; /* Neutral gray focus rings */
+    --ring: 210 100% 65%; /* Bright blue focus rings - matches primary */
 
     --chart-1: 210 100% 60%; /* Navy blue for dark mode */
     --chart-2: 210 100% 70%; /* Medium blue for dark mode */

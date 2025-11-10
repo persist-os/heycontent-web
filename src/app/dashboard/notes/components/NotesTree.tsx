@@ -36,7 +36,6 @@ export function NotesTree({
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['recent', 'projects', 'tags', 'important', 'shared', 'my-shared', 'user-folders']));
   const [isCreatingNote, setIsCreatingNote] = useState(false);
-  const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
   const [isDeletingProject, setIsDeletingProject] = useState(false);

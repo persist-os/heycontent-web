@@ -340,8 +340,14 @@ export const unlinkFingerprint = mutation({
 // ============================================================================
 
 /**
- * Delete project and cleanup
+ * Delete project and cleanup - Production-ready cascade deletion
  * Used by: Project deletion
+ * 
+ * Implements atomic cascade deletion following Gold Standard pattern from deleteUserAndData.
+ * Deletes all related entities in proper dependency order:
+ * Phase 1: Messages, Conversation Summaries, Artifacts, Widgets, Project Widgets
+ * Phase 2: Cognitive Fields, Assignment Fingerprints, Conversations
+ * Phase 3: Project (deleted LAST)
  */
 export const deleteProject = mutation({
   args: {
@@ -359,14 +365,149 @@ export const deleteProject = mutation({
       throw new Error("Access denied: You don't own this project");
     }
     
-    // TODO: In a full implementation, we might want to:
-    // 1. Remove project references from notes, conversations, etc.
-    // 2. Optionally delete the linked fingerprint
-    // 3. Clean up any project-specific data
+    const summary: Record<string, any> = { errors: [] };
+    const BATCH_SIZE = 50;
     
-    await ctx.db.delete(projectId);
+    // Helper for batch deletion with resilient error handling (Gold Standard pattern)
+    async function batchDelete(table: string, getQuery: () => Promise<any[]>) {
+      let deleted = 0;
+      const errors: any[] = [];
+      try {
+        let hasMore = true;
+        while (hasMore) {
+          const items = await getQuery();
+          if (!items || items.length === 0) break;
+          for (const item of items) {
+            try {
+              await ctx.db.delete(item._id);
+              deleted++;
+            } catch (err) {
+              errors.push({ id: item._id, error: String(err) });
+            }
+          }
+          hasMore = items.length === BATCH_SIZE;
+        }
+        summary[table] = { deleted, errors };
+        if (errors.length > 0) summary.errors.push({ table, errors });
+      } catch (err) {
+        // Table or index might not exist - log but continue
+        summary[table] = { deleted, errors: [{ table, error: String(err) }] };
+        summary.errors.push({ table, error: String(err) });
+      }
+    }
     
-    return { success: true, projectId };
+    // Phase 1: Leaf Nodes (No Dependencies)
+    // 1. Delete widgets FIRST (each widget has its own conversation, cognitive field, fingerprint)
+    // This ensures widget-specific entities are deleted before project-level entities
+    const projectWidgets = await ctx.db
+      .query("widgets")
+      .withIndex("by_project", (q) => q.eq("projectId", projectId))
+      .collect();
+    
+    const widgetConversationIds = new Set<string>();
+    for (const widget of projectWidgets) {
+      // Delete widget with cascade (will delete its conversation, cognitive field, fingerprint)
+      const widgetDeleteResult = await ctx.runMutation(api.widgetsMutations.deleteWidget, {
+        widgetId: widget._id,
+        userId: userId,
+        hardDelete: true,
+      });
+      
+      // Track widget conversations to avoid double-deletion
+      const conversationId = (widget as any).conversationId;
+      if (conversationId) {
+        widgetConversationIds.add(conversationId);
+      }
+    }
+    
+    // 2. Delete messages via remaining conversations (excluding widget conversations already deleted)
+    const projectConversations = await ctx.db
+      .query("conversations")
+      .withIndex("by_project", (q) => q.eq("projectId", projectId))
+      .collect();
+    
+    for (const conversation of projectConversations) {
+      // Skip conversations already deleted by widget cascade
+      if (widgetConversationIds.has(conversation._id)) continue;
+      
+      await batchDelete("messages", () =>
+        ctx.db.query("messages")
+          .withIndex("by_conversation", (q) => q.eq("conversationId", conversation._id))
+          .take(BATCH_SIZE)
+      );
+    }
+    
+    // 3. Delete conversation summaries (by projectId)
+    await batchDelete("conversation_summaries", () =>
+      ctx.db.query("conversation_summaries")
+        .withIndex("by_project", (q) => q.eq("projectId", projectId))
+        .take(BATCH_SIZE)
+    );
+    
+    // 4. Delete artifacts (by projectId) - widget artifacts already deleted by widget cascade
+    await batchDelete("artifacts", () =>
+      ctx.db.query("artifacts")
+        .withIndex("by_project", (q) => q.eq("projectId", projectId))
+        .take(BATCH_SIZE)
+    );
+    
+    // 5. Delete project widgets (by projectId)
+    await batchDelete("project_widgets", () =>
+      ctx.db.query("project_widgets")
+        .withIndex("by_project", (q) => q.eq("projectId", projectId))
+        .take(BATCH_SIZE)
+    );
+    
+    // Phase 2: Parent Nodes (Depend on Phase 1)
+    // 6. Delete cognitive fields (by projectId) - widget cognitive fields already deleted by widget cascade
+    // Filter out widget conversations to avoid double-deletion
+    await batchDelete("cognitive_fields", async () => {
+      const allFields = await ctx.db
+        .query("cognitive_fields")
+        .withIndex("by_project", (q) => q.eq("projectId", projectId))
+        .take(BATCH_SIZE);
+      // Filter out cognitive fields linked to widget conversations (already deleted)
+      return allFields.filter((field: any) => 
+        !field.conversationId || !widgetConversationIds.has(field.conversationId)
+      );
+    });
+    
+    // 7. Delete assignment fingerprints (by projectId) - widget fingerprints already deleted by widget cascade
+    // Only delete project-level fingerprints (not widget-specific ones)
+    await batchDelete("assignment_fingerprints", async () => {
+      const allFingerprints = await ctx.db
+        .query("assignment_fingerprints")
+        .withIndex("by_project", (q) => q.eq("projectId", projectId))
+        .take(BATCH_SIZE);
+      // Filter out fingerprints linked to widget conversations (already deleted)
+      return allFingerprints.filter((fp: any) => 
+        !fp.conversationId || !widgetConversationIds.has(fp.conversationId)
+      );
+    });
+    
+    // 8. Delete remaining conversations (by projectId) - widget conversations already deleted by widget cascade
+    await batchDelete("conversations", async () => {
+      const allConversations = await ctx.db
+        .query("conversations")
+        .withIndex("by_project", (q) => q.eq("projectId", projectId))
+        .take(BATCH_SIZE);
+      // Filter out widget conversations (already deleted)
+      return allConversations.filter((conv: any) => 
+        !widgetConversationIds.has(conv._id)
+      );
+    });
+    
+    // Phase 3: Root Node
+    // 9. Delete the project record LAST
+    try {
+      await ctx.db.delete(projectId);
+      summary["projects"] = { deleted: 1, errors: [] };
+    } catch (err) {
+      summary["projects"] = { deleted: 0, errors: [{ id: projectId, error: String(err) }] };
+      summary.errors.push({ table: "projects", errors: [{ id: projectId, error: String(err) }] });
+    }
+    
+    return { success: summary.errors.length === 0, summary };
   },
 });
 

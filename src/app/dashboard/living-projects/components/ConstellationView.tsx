@@ -7,7 +7,6 @@ import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { Button } from '@/components/ui/button'
-import { CreateProjectModal } from './CreateProjectModal'
 import { ProjectStar } from './ProjectStar'
 import { ConnectionLines } from './ConnectionLines'
 import { ConstellationControls } from './ConstellationControls'
@@ -30,7 +29,6 @@ interface Project {
 export function ConstellationView() {
   const router = useRouter()
   const { firebaseUser } = useAuth()
-  const [showCreateModal, setShowCreateModal] = useState(false)
   const [highlightedProject, setHighlightedProject] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [viewportSize, setViewportSize] = useState({
@@ -107,19 +105,6 @@ export function ConstellationView() {
     */
   }, [layout.positions, transform, viewportSize])
 
-  // Handle creating a new project
-  const handleCreateProject = useCallback(async (
-    name: string, 
-    description?: string,
-    noteIds?: string[],
-    conversationIds?: string[],
-    crystalIds?: string[],
-    shardIds?: string[]
-  ): Promise<string> => {
-    // Navigate to thinking lab to create project via chat
-    router.push(`/dashboard/thinking_lab`)
-    return 'temp-id' // Return temp ID since we're navigating away
-  }, [router])
 
   // Handle clicking on a project - Navigate to project page
   const handleProjectClick = useCallback((project: Project) => {
@@ -183,20 +168,13 @@ export function ConstellationView() {
             </p>
           </div>
           <Button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => router.push('/dashboard/thinking_lab')}
             className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-xl shadow-primary/20 ring-1 ring-primary/30"
             size="lg"
           >
             <T context="constellation.button.create_first">Create your first star</T>
           </Button>
         </div>
-        
-        <CreateProjectModal
-          isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onCreateProject={handleCreateProject}
-          userId={userId || ''}
-        />
       </div>
     )
   }
@@ -347,13 +325,6 @@ export function ConstellationView() {
         </div>
       </div>
 
-      {/* Create Project Modal */}
-      <CreateProjectModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onCreateProject={handleCreateProject}
-        userId={userId || ''}
-      />
 
       {/* Keyboard shortcuts hint with accent */}
       {transform.scale < 0.6 && (

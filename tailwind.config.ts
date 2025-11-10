@@ -57,13 +57,10 @@ const config = {
   			ring: 'hsl(var(--ring))',
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
-  			primary: {
-  				DEFAULT: '#9ACBFF',           // P80 - Light cyan blue (readable in both modes)
-  				foreground: '#003355',        // P100 dark - Deep blue (for text on primary)
-  				light: '#E9F1FF',             // P100 light - Very light blue
-  				dark: '#004A79',              // P80 dark - Dark blue
-  				darker: '#003355'             // P100 dark - Darkest blue
-  			},
+			primary: {
+				DEFAULT: 'hsl(var(--primary))',           // Uses CSS variable - deep navy blue in light, bright blue in dark
+				foreground: 'hsl(var(--primary-foreground))',        // Uses CSS variable - white in light, dark blue in dark
+			},
   			secondary: {
   				DEFAULT: '#FFA312',           // Aldebaran - Brand orange
   				foreground: '#472A00',        // S0 dark - Dark brown (for text on secondary)

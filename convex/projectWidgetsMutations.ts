@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { api } from "./_generated/api";
 import { 
   widgetCategoryValidator,
   widgetBatchValidator,
@@ -359,6 +360,7 @@ export const updateWidgetLayout = mutation({
 
 /**
  * Delete both layout and all individual widgets for a project
+ * Ensures 1:1 relationships: Each widget's conversation, cognitive field, and fingerprint are deleted
  */
 export const deleteProjectWidgets = mutation({
   args: deleteProjectWidgetsArgsValidator,
@@ -378,7 +380,8 @@ export const deleteProjectWidgets = mutation({
       throw new Error("Access denied: You don't own this project");
     }
 
-    // Delete all individual widgets
+    // Delete all individual widgets with cascade deletion
+    // This ensures widget-specific conversations, cognitive fields, and fingerprints are deleted
     const widgets = await ctx.db
       .query("widgets")
       .withIndex("by_project", (q) => q.eq("projectId", projectId))
@@ -386,7 +389,12 @@ export const deleteProjectWidgets = mutation({
       .collect();
 
     for (const widget of widgets) {
-      await ctx.db.delete(widget._id);
+      // Use deleteWidget mutation which has cascade deletion
+      await ctx.runMutation(api.widgetsMutations.deleteWidget, {
+        widgetId: widget._id,
+        userId: userId,
+        hardDelete: true,
+      });
     }
     
     // ✅ PATTERN 13: Atomic Parent-Child Updates - Clear project.widgetIds array
@@ -450,12 +458,15 @@ export const updateWidget = mutation({
 });
 
 /**
- * Delete a single widget using Convex ID
+ * Delete a single widget using Convex ID (Legacy mutation with cascade deletion)
+ * Ensures 1:1 relationships: Each widget has ONE conversation, ONE cognitive field, ONE assignment fingerprint
+ * When deleting a widget, all associated entities are deleted atomically
  */
 export const deleteWidget = mutation({
   args: deleteProjectWidgetArgsValidator,
   returns: v.object({
     success: v.boolean(),
+    summary: v.optional(v.any()),
   }),
   handler: async (ctx, { projectId, userId, widgetId }) => {
     // Get widget directly by Convex ID
@@ -470,19 +481,14 @@ export const deleteWidget = mutation({
       throw new Error("Access denied: You don't own this widget");
     }
 
-    // Delete the widget
-    await ctx.db.delete(widgetId);
-    
-    // ✅ PATTERN 13: Atomic Parent-Child Updates - Remove widget ID from project array
-    const project = await ctx.db.get(projectId) as any;
-    if (project && project.widgetIds) {
-      const updatedWidgetIds = project.widgetIds.filter((id: Id<"widgets">) => id !== widgetId);
-      await ctx.db.patch(projectId, {
-        widgetIds: updatedWidgetIds,
-        updatedAt: Date.now(),
-      });
-    }
+    // Use the main deleteWidget mutation which has cascade deletion
+    // This ensures consistency and proper 1:1 relationship enforcement
+    const result = await ctx.runMutation(api.widgetsMutations.deleteWidget, {
+      widgetId: widgetId,
+      userId: userId,
+      hardDelete: true,
+    });
 
-    return { success: true };
+    return result;
   },
 });
