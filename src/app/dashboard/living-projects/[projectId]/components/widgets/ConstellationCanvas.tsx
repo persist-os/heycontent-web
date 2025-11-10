@@ -26,6 +26,7 @@ import { T } from '@/components/translation/T'
 import { deriveFamilyStatus, type FamilyStatus } from '@/app/types/family-status'
 import { Sparkles, MessageCircle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useIsMobile } from '@/app/dashboard/thinking_lab/layouts/ResponsiveLayout'
 
 interface ConstellationCanvasProps {
   widgets: WidgetConfig[]
@@ -58,6 +59,7 @@ export function ConstellationCanvas({
 }: ConstellationCanvasProps) {
   const { trackWidgetOpen } = useAnalytics()
   const router = useRouter()
+  const isMobile = useIsMobile()
   
   // Explicitly type projectId to ensure correct type inference
   const typedProjectId: Id<"projects"> = projectId;
@@ -279,7 +281,7 @@ export function ConstellationCanvas({
 
   // Virtual rendering - only render widgets visible in viewport + buffer
   const visibleWidgets = useMemo(() => {
-    const buffer = 400
+    const buffer = isMobile ? 200 : 400
     const viewportLeft = -transform.x / transform.scale - buffer
     const viewportTop = -transform.y / transform.scale - buffer
     const viewportRight = viewportLeft + (viewportSize.width / transform.scale) + (buffer * 2)
@@ -291,7 +293,7 @@ export function ConstellationCanvas({
       position.y >= viewportTop &&
       position.y <= viewportBottom
     )
-  }, [widgetPositions, transform, viewportSize])
+  }, [widgetPositions, transform, viewportSize, isMobile])
 
   // Handle minimap viewport click
   const handleMinimapClick = useCallback((x: number, y: number) => {
@@ -370,15 +372,15 @@ export function ConstellationCanvas({
 
 
       {/* Project Control Panel and Spawn Widget Button - Top Right */}
-      <div className="absolute top-4 right-4 z-10 flex items-start gap-3">
+      <div className="absolute top-2 md:top-4 right-2 md:right-4 z-10 flex flex-col md:flex-row items-end md:items-start gap-2 md:gap-3">
         {/* Spawn Widget Button */}
         <button
           onClick={() => setIsSpawnDialogOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground backdrop-blur-lg border border-primary/20 rounded-xl hover:shadow-lg hover:shadow-primary/20 transition-all duration-200"
+          className="flex items-center gap-2 px-3 md:px-4 py-2 min-h-[44px] md:min-h-auto bg-gradient-to-r from-primary to-primary/80 text-primary-foreground backdrop-blur-lg border border-primary/20 rounded-xl hover:shadow-lg hover:shadow-primary/20 transition-all duration-200 touch-manipulation"
           title="Spawn Widget Family"
         >
           <Sparkles className="w-4 h-4" />
-          <span className="text-sm font-medium">
+          <span className="text-sm font-medium hidden sm:inline">
             <T context="constellation.button.spawn_widget">Spawn Widget</T>
           </span>
         </button>
@@ -386,12 +388,12 @@ export function ConstellationCanvas({
         {/* Open Conversation Button */}
         <button
           onClick={handleOpenConversation}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-secondary to-secondary/80 text-secondary-foreground backdrop-blur-lg border border-secondary/20 rounded-xl hover:shadow-lg hover:shadow-secondary/20 transition-all duration-200"
+          className="flex items-center gap-2 px-3 md:px-4 py-2 min-h-[44px] md:min-h-auto bg-gradient-to-r from-secondary to-secondary/80 text-secondary-foreground backdrop-blur-lg border border-secondary/20 rounded-xl hover:shadow-lg hover:shadow-secondary/20 transition-all duration-200 touch-manipulation"
           title="Open Project Conversation"
           disabled={!userId || !projectId}
         >
           <MessageCircle className="w-4 h-4" />
-          <span className="text-sm font-medium">
+          <span className="text-sm font-medium hidden sm:inline">
             <T context="constellation.button.open_conversation">Open Conversation</T>
           </span>
         </button>
@@ -419,12 +421,13 @@ export function ConstellationCanvas({
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
         onReset={resetView}
-        className="absolute bottom-4 left-4 z-10"
+        isMobile={isMobile}
+        className="absolute bottom-16 md:bottom-4 left-2 md:left-4 z-10"
       />
 
       {/* Layout Reset Button with accent */}
       {onLayoutReset && (
-        <div className="absolute bottom-4 left-64 z-10">
+        <div className="absolute bottom-4 left-64 z-10 hidden md:block">
           <button
             onClick={onLayoutReset}
             className="px-4 py-2 text-xs bg-gradient-to-r from-secondary/80 to-secondary/60 backdrop-blur-lg border border-border/40 rounded-lg hover:from-secondary hover:to-secondary/80 hover:shadow-lg hover:shadow-primary/10 transition-all duration-200"
@@ -436,7 +439,7 @@ export function ConstellationCanvas({
       )}
 
       {/* Minimap - Bottom Right (moved from top to avoid overlap with ProjectControlPanel) */}
-      <div className="absolute bottom-8 right-4 z-10">
+      <div className="absolute bottom-2 md:bottom-8 right-2 md:right-4 z-10">
         <ConstellationMinimap
           positions={[
             ...widgetPositions.map(p => ({ id: p.item._id, x: p.x, y: p.y, size: p.size, importance: 1, type: 'widget' as const })),
@@ -448,12 +451,13 @@ export function ConstellationCanvas({
           viewportHeight={viewportSize.height}
           currentTransform={transform}
           onViewportClick={handleMinimapClick}
+          isMobile={isMobile}
         />
       </div>
 
       {/* Keyboard shortcuts hint - Center Bottom, Above Controls with accent */}
       {transform.scale < 0.6 && (
-        <div className="absolute bottom-20 left-1/2 z-10 pointer-events-none" style={{ transform: 'translateX(-50%)' }}>
+        <div className="absolute bottom-20 left-1/2 z-10 pointer-events-none hidden md:block" style={{ transform: 'translateX(-50%)' }}>
           <div className="bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 backdrop-blur-md border border-primary/30 rounded-xl px-5 py-3 shadow-xl shadow-primary/10">
             <div className="text-xs text-foreground text-center font-medium">
               <T context="constellation.canvas.hint.controls">Drag to explore • Scroll to zoom • Click widgets to interact</T>

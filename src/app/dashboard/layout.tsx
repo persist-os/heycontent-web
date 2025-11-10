@@ -185,7 +185,7 @@ export default function DashboardLayout({
       {/* Floating Command Palette Trigger */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="fixed top-12 left-6 z-40 group p-3"
+        className="fixed top-4 left-4 z-[60] group p-3"
         aria-label="Open command palette"
         title="Open command palette (⌘K)"
       >

@@ -24,6 +24,7 @@ interface ConstellationMinimapProps {
   }
   onViewportClick: (x: number, y: number) => void
   className?: string
+  isMobile?: boolean
 }
 
 export function ConstellationMinimap({
@@ -34,11 +35,12 @@ export function ConstellationMinimap({
   viewportHeight,
   currentTransform,
   onViewportClick,
-  className = ''
+  className = '',
+  isMobile = false
 }: ConstellationMinimapProps) {
   // Minimap dimensions
-  const minimapWidth = 160
-  const minimapHeight = 120
+  const minimapWidth = isMobile ? 120 : 160
+  const minimapHeight = isMobile ? 90 : 120
   
   // Calculate scale factors to fit canvas in minimap
   const scaleX = minimapWidth / canvasWidth
@@ -95,10 +97,10 @@ export function ConstellationMinimap({
 
   return (
     <div className={`${className}`}>
-      <div className="bg-background/90 backdrop-blur-sm border border-border/50 rounded-lg p-2 shadow-lg max-w-[180px] max-h-[160px]">
+      <div className="bg-background/90 backdrop-blur-sm border border-border/50 rounded-lg p-2 shadow-lg max-w-[140px] md:max-w-[180px] max-h-[110px] md:max-h-[160px]">
         {/* Minimap Header */}
         <div className="mb-2 px-1">
-          <div className="text-xs font-medium text-foreground/80">
+          <div className="text-[10px] md:text-xs font-medium text-foreground/80">
             <T context="constellation.minimap.title">Constellation</T>
           </div>
         </div>
@@ -193,19 +195,19 @@ export function ConstellationMinimap({
 
         {/* Legend */}
         <div className="mt-2 px-1 space-y-1">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground/70">
+          <div className="flex items-center gap-2 text-[10px] md:text-xs text-muted-foreground/70">
             <div className="w-2 h-2 rounded-full bg-blue-500/80 dark:bg-blue-400/80" />
             <span>
               <T context="constellation.minimap.legend.important">Important</T>
             </span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground/60">
+          <div className="flex items-center gap-2 text-[10px] md:text-xs text-muted-foreground/60">
             <div className="w-1.5 h-1.5 rounded-full bg-blue-400/60 dark:bg-blue-300/60" />
             <span>
               <T context="constellation.minimap.legend.active">Active</T>
             </span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground/50">
+          <div className="flex items-center gap-2 text-[10px] md:text-xs text-muted-foreground/50">
             <div className="w-1 h-1 rounded-full bg-muted-foreground/40" />
             <span>
               <T context="constellation.minimap.legend.others">Others</T>
