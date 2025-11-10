@@ -65,6 +65,7 @@ export function middleware(request: NextRequest) {
     "https://content-backend-216038426364.us-central1.run.app",
     "https://content-backend-216038426364.us-east1.run.app",
     "https://content-backend-216038426364.us-west1.run.app",
+    "https://content-backend-staging-216038426364.us-central1.run.app",
     "http://127.0.0.1:8000",
     "http://localhost:8000",
     "https://us-central1-content-454219.cloudfunctions.net",
