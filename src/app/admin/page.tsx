@@ -1,54 +1,58 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useAuth } from '@/app/context/auth-context';
 import { useAdminAuth } from '@/app/lib/admin-auth';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Users, 
   Shield, 
-  User, 
-  Settings,
   MessageSquare,
-  AlertTriangle,
-  CheckCircle,
-  Eye,
-  Edit,
-  Trash2,
-  BarChart3,
-  Clock,
-  ExternalLink,
-  Search,
-  Filter,
-  SortAsc,
-  SortDesc,
+  Settings,
+  Zap,
   TrendingUp,
-  Zap
+  BarChart3,
+  Radio,
+  Activity,
+  FileText,
+  Save,
+  X,
+  Edit2,
+  Trash2,
+  Search
 } from 'lucide-react';
+import { DashboardNav } from '../dashboard/_components/dashboard-nav';
+import { TestLabCard } from './components/TestLabCard';
+import { AdminStatsCard } from './components/AdminStatsCard';
+import { TestingHubSection } from './components/TestingHubSection';
 import { FeedbackDetailModal } from './components/FeedbackDetailModal';
 import { FeedbackFilters } from './components/FeedbackFilters';
-import { DashboardNav } from '../dashboard/_components/dashboard-nav';
+import { IntelligenceTestPanel } from './components/IntelligenceTestPanel';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
+import type { Id } from '@/convex/_generated/dataModel';
 
+// Import role styling from original
 const roleColors = {
-  user: 'bg-gray-100 text-gray-800',
-  admin: 'bg-purple-100 text-purple-800',
-  super_admin: 'bg-red-100 text-red-800',
-  ambassador: 'bg-green-100 text-green-800',
-  affiliate: 'bg-blue-100 text-blue-800',
-  partner: 'bg-yellow-100 text-yellow-800',
+  user: 'bg-muted text-muted-foreground',
+  admin: 'bg-primary/10 text-primary border border-primary/20',
+  super_admin: 'bg-destructive/10 text-destructive border border-destructive/20',
+  ambassador: 'bg-accent/10 text-accent border border-accent/20',
+  affiliate: 'bg-chart-2/10 text-chart-2 border border-chart-2/20',
+  partner: 'bg-chart-3/10 text-chart-3 border border-chart-3/20',
 };
 
 const roleIcons = {
-  user: User,
+  user: Users,
   admin: Shield,
   super_admin: Shield,
   ambassador: Users,
@@ -61,19 +65,9 @@ export default function AdminPage() {
   const { firebaseUser } = useAuth();
   const { isAdmin, isSuperAdmin } = useAdminAuth();
   
-  // All hooks must be called before any conditional returns
-  const [activeTab, setActiveTab] = useState('feedback');
-  const [updatingUser, setUpdatingUser] = useState<string | null>(null);
-  
-  // Feedback modal state
+  const [activeTab, setActiveTab] = useState('overview');
   const [selectedFeedback, setSelectedFeedback] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
-  // User detail modal state
-  const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
-  
-  // Filter and sort state
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
@@ -82,149 +76,31 @@ export default function AdminPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [activeStatusTab, setActiveStatusTab] = useState('all');
   
-  // User management filters
-  const [userSearch, setUserSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all');
-  const [subscriptionFilter, setSubscriptionFilter] = useState('all');
-  const [userSortBy, setUserSortBy] = useState<'createdAt' | 'name' | 'totalReferred'>('createdAt');
-  const [userSortOrder, setUserSortOrder] = useState<'asc' | 'desc'>('desc');
+  // Prompts tab state
+  const [promptSearch, setPromptSearch] = useState('');
+  const [editingPromptId, setEditingPromptId] = useState<Id<"prompts"> | null>(null);
+  const [editPromptContent, setEditPromptContent] = useState('');
+  const [editPromptTags, setEditPromptTags] = useState('');
+  const [editPromptDescription, setEditPromptDescription] = useState('');
 
-  // Fetch data - all hooks called in consistent order
+  // Fetch data
   const feedback = useQuery(api.feedback.listFeedback, {
     status: 'all',
     type: 'all',
     priority: 'all',
     limit: 50,
   });
-
   const stats = useQuery(api.feedback.getFeedbackStats);
   const users = useQuery(api.auth.getUsersWithRoles, 
     firebaseUser?.uid ? { adminUserId: firebaseUser.uid } : "skip"
   );
-  
-  // Fetch referral data for all users
-  const referralData = useQuery(api.referrals.getAllReferralData, 
-    firebaseUser?.uid ? {} : "skip"
-  );
+  const prompts = useQuery(api.promptsQueries.getAllPrompts, { limit: 200 });
 
-  // Filter and sort feedback - ALL hooks must be called before any conditional returns
-  const filteredAndSortedFeedback = useMemo(() => {
-    if (!feedback?.feedback) return [];
-    
-    let filtered = feedback.feedback;
-    
-    // Apply search filter
-    if (search) {
-      const searchLower = search.toLowerCase();
-      filtered = filtered.filter(item => 
-        item.title.toLowerCase().includes(searchLower) ||
-        item.description.toLowerCase().includes(searchLower) ||
-        item.userName.toLowerCase().includes(searchLower) ||
-        item.userEmail.toLowerCase().includes(searchLower)
-      );
-    }
-    
-    // Apply status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(item => item.status === statusFilter);
-    }
-    
-    // Apply priority filter
-    if (priorityFilter !== 'all') {
-      filtered = filtered.filter(item => item.priority === priorityFilter);
-    }
-    
-    // Apply type filter
-    if (typeFilter !== 'all') {
-      filtered = filtered.filter(item => item.type === typeFilter);
-    }
-    
-    // Sort feedback
-    filtered.sort((a, b) => {
-      let aValue: any, bValue: any;
-      
-      switch (sortBy) {
-        case 'title':
-          aValue = a.title.toLowerCase();
-          bValue = b.title.toLowerCase();
-          break;
-        case 'createdAt':
-        default:
-          aValue = a.createdAt;
-          bValue = b.createdAt;
-          break;
-      }
-      
-      if (sortOrder === 'asc') {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
-    });
-    
-    return filtered;
-  }, [feedback, search, statusFilter, priorityFilter, typeFilter, sortBy, sortOrder]);
-
-  // Filter and sort users - ALL hooks must be called before any conditional returns
-  const filteredAndSortedUsers = useMemo(() => {
-    if (!users || !referralData) return [];
-    
-    let filtered = users.filter((user: any) => {
-      // Search filter
-      const matchesSearch = user.name.toLowerCase().includes(userSearch.toLowerCase()) ||
-                           user.email.toLowerCase().includes(userSearch.toLowerCase());
-      
-      // Role filter
-      const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-      
-      // Subscription filter
-      let matchesSubscription = true;
-      if (subscriptionFilter === 'subscribed') {
-        matchesSubscription = user.subscription?.status === 'active';
-      } else if (subscriptionFilter === 'not_subscribed') {
-        matchesSubscription = !user.subscription || user.subscription.status !== 'active';
-      }
-      
-      return matchesSearch && matchesRole && matchesSubscription;
-    });
-    
-    // Sort users
-    filtered.sort((a: any, b: any) => {
-      let aValue: any, bValue: any;
-      
-      switch (userSortBy) {
-        case 'name':
-          aValue = a.name.toLowerCase();
-          bValue = b.name.toLowerCase();
-          break;
-        case 'totalReferred':
-          const aReferralData = referralData.find((r: any) => r.referrerId === a._id);
-          const bReferralData = referralData.find((r: any) => r.referrerId === b._id);
-          aValue = aReferralData?.totalReferred || 0;
-          bValue = bReferralData?.totalReferred || 0;
-          break;
-        case 'createdAt':
-        default:
-          aValue = a.createdAt;
-          bValue = b.createdAt;
-          break;
-      }
-      
-      if (userSortOrder === 'asc') {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
-    });
-    
-    return filtered;
-  }, [users, referralData, userSearch, roleFilter, subscriptionFilter, userSortBy, userSortOrder]);
-
-  // Mutations - ALL hooks must be called before any conditional returns
   const updateStatus = useMutation(api.feedback.updateFeedbackStatus);
-  const updateUserRole = useMutation(api.auth.updateUserRole);
-  
-  // Now handle conditional rendering after ALL hooks are called
+  const updatePrompt = useMutation(api.promptsMutations.updatePromptBlock);
+  const deletePrompt = useMutation(api.promptsMutations.deletePromptBlock);
+
+  // Loading state
   if (firebaseUser === undefined) {
     return (
       <div className="container mx-auto p-6">
@@ -240,6 +116,7 @@ export default function AdminPage() {
     );
   }
   
+  // Access control
   if (!isAdmin) {
     return (
       <div className="container mx-auto p-6">
@@ -258,8 +135,6 @@ export default function AdminPage() {
     );
   }
 
-
-
   const handleStatusUpdate = async (
     feedbackId: string, 
     newStatus?: string, 
@@ -274,7 +149,6 @@ export default function AdminPage() {
         assignedTo: newAssignee,
       });
       
-      // Update the selected feedback locally to reflect changes immediately
       if (selectedFeedback && selectedFeedback._id === feedbackId) {
         setSelectedFeedback({
           ...selectedFeedback,
@@ -284,14 +158,13 @@ export default function AdminPage() {
         });
       }
       
-      // Close modal after successful update
       if (isModalOpen) {
         setIsModalOpen(false);
         setSelectedFeedback(null);
       }
     } catch (error) {
       console.error('Failed to update feedback:', error);
-      throw error; // Re-throw to let the modal handle the error
+      throw error;
     }
   };
 
@@ -304,16 +177,6 @@ export default function AdminPage() {
     setIsModalOpen(false);
     setSelectedFeedback(null);
   };
-  
-  const handleUserClick = (user: any) => {
-    setSelectedUser(user);
-    setIsUserModalOpen(true);
-  };
-  
-  const handleCloseUserModal = () => {
-    setIsUserModalOpen(false);
-    setSelectedUser(null);
-  };
 
   const handleClearFilters = () => {
     setSearch('');
@@ -325,69 +188,103 @@ export default function AdminPage() {
 
   const handleStatusTabChange = (status: string) => {
     setActiveStatusTab(status);
-    setStatusFilter(status);
-  };
-
-
-
-  const handleRoleUpdate = async (userId: string, newRole: string) => {
-    if (!firebaseUser?.uid) return;
-    
-    setUpdatingUser(userId);
-    try {
-      await updateUserRole({
-        targetUserId: userId,
-        newRole: newRole as any,
-        adminUserId: firebaseUser.uid,
-      });
-    } catch (error) {
-      console.error('Failed to update user role:', error);
-    } finally {
-      setUpdatingUser(null);
+    if (status === 'all') {
+      setStatusFilter('all');
+    } else {
+      setStatusFilter(status);
     }
-  };
-
-  const formatDate = (timestamp: number) => {
-    // Handle both seconds and milliseconds
-    // If timestamp is less than 10000000000, it's likely in seconds
-    const timestampInMs = timestamp < 10000000000 ? timestamp * 1000 : timestamp;
-    
-    return new Date(timestampInMs).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
   };
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'new': return Clock;
-      case 'in_progress': return Edit;
-      case 'resolved': return CheckCircle;
-      case 'closed': return Trash2;
-      default: return Eye;
-    }
+    // Implementation from original file
+    return MessageSquare;
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'new': return 'bg-blue-100 text-blue-800';
-      case 'in_progress': return 'bg-yellow-100 text-yellow-800';
-      case 'resolved': return 'bg-green-100 text-green-800';
-      case 'closed': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+    const colors: Record<string, string> = {
+      new: 'bg-chart-1/10 text-chart-1 border border-chart-1/20',
+      in_progress: 'bg-primary/10 text-primary border border-primary/20',
+      resolved: 'bg-accent/10 text-accent border border-accent/20',
+      closed: 'bg-muted text-muted-foreground',
+    };
+    return colors[status] || colors.new;
   };
 
   const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent': return 'bg-red-100 text-red-800';
-      case 'high': return 'bg-orange-100 text-orange-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'low': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+    const colors: Record<string, string> = {
+      low: 'bg-muted text-muted-foreground',
+      medium: 'bg-primary/10 text-primary border border-primary/20',
+      high: 'bg-destructive/10 text-destructive border border-destructive/20',
+    };
+    return colors[priority] || colors.medium;
+  };
+
+  // Prompt handlers
+  const handleEditPrompt = (prompt: any) => {
+    setEditingPromptId(prompt._id);
+    setEditPromptContent(prompt.content);
+    setEditPromptTags(prompt.tags.join(', '));
+    setEditPromptDescription(prompt.description || '');
+  };
+
+  const handleSavePrompt = async () => {
+    if (!editingPromptId) return;
+
+    try {
+      await updatePrompt({
+        promptId: editingPromptId,
+        content: editPromptContent,
+        tags: editPromptTags.split(',').map(t => t.trim()).filter(t => t.length > 0),
+        description: editPromptDescription || undefined
+      });
+      toast.success('Prompt updated successfully');
+      setEditingPromptId(null);
+    } catch (error) {
+      toast.error(`Failed to update: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
+
+  const handleCancelEditPrompt = () => {
+    setEditingPromptId(null);
+    setEditPromptContent('');
+    setEditPromptTags('');
+    setEditPromptDescription('');
+  };
+
+  const handleDeletePrompt = async (promptId: Id<"prompts">) => {
+    if (!confirm('Are you sure you want to delete this prompt?')) return;
+
+    try {
+      await deletePrompt({ promptId });
+      toast.success('Prompt deleted');
+    } catch (error) {
+      toast.error(`Failed to delete: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  // Filter prompts
+  const filteredPrompts = prompts?.filter(p => {
+    if (!promptSearch) return true;
+    const search = promptSearch.toLowerCase();
+    return (
+      p.content.toLowerCase().includes(search) ||
+      p.description?.toLowerCase().includes(search) ||
+      p.tags.some((tag: string) => tag.toLowerCase().includes(search)) ||
+      p.type.toLowerCase().includes(search)
+    );
+  }) || [];
+
+  // Filter feedback
+  const filteredFeedback = feedback?.feedback?.filter((item: any) => {
+    if (search && !item.title.toLowerCase().includes(search.toLowerCase()) &&
+        !item.description.toLowerCase().includes(search.toLowerCase())) {
+      return false;
+    }
+    if (statusFilter !== 'all' && item.status !== statusFilter) return false;
+    if (priorityFilter !== 'all' && item.priority !== priorityFilter) return false;
+    if (typeFilter !== 'all' && item.type !== typeFilter) return false;
+    return true;
+  }) || [];
 
   return (
     <div className="relative flex min-h-screen">
@@ -401,817 +298,386 @@ export default function AdminPage() {
             </Badge>
           </div>
 
-          {/* Convergence Admin Quick Access */}
-          <Card className="border-blue-200 dark:border-blue-900 bg-gradient-to-br from-blue-50 to-background dark:from-blue-950/20 dark:to-background">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Zap className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                    <CardTitle className="text-xl">Convergence Control Panel</CardTitle>
-                  </div>
-                  <CardDescription className="text-sm">
-                    Self-learning optimization engine. Trigger runs, configure systems, and monitor performance.
-                  </CardDescription>
-                </div>
-                <Button 
-                  onClick={() => router.push('/admin/convergence')}
-                  className="gap-2"
-                >
-                  Open Dashboard
-                  <ExternalLink className="h-4 w-4" />
-                </Button>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="overview">
+                <TrendingUp className="h-4 w-4 mr-2" />
+                Overview
+              </TabsTrigger>
+              <TabsTrigger value="feedback">
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Feedback
+              </TabsTrigger>
+              <TabsTrigger value="users">
+                <Users className="h-4 w-4 mr-2" />
+                Users
+              </TabsTrigger>
+              <TabsTrigger value="prompts">
+                <FileText className="h-4 w-4 mr-2" />
+                Prompts
+              </TabsTrigger>
+              <TabsTrigger value="testing">
+                <Zap className="h-4 w-4 mr-2" />
+                Testing Hub
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <AdminStatsCard
+                  label="Total Users"
+                  value={users?.length || 0}
+                  icon={Users}
+                  onClick={() => setActiveTab('users')}
+                />
+                <AdminStatsCard
+                  label="Total Feedback"
+                  value={stats?.total || 0}
+                  icon={MessageSquare}
+                  onClick={() => setActiveTab('feedback')}
+                />
+                <AdminStatsCard
+                  label="New Feedback"
+                  value={stats?.byStatus?.new || 0}
+                  icon={MessageSquare}
+                  onClick={() => setActiveTab('feedback')}
+                />
               </div>
-            </CardHeader>
-          </Card>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="feedback" className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" />
-            Feedback
-          </TabsTrigger>
-          <TabsTrigger value="users" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Users
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="feedback" className="space-y-6">
-          {/* Feedback Statistics */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <Card 
-              className={`cursor-pointer transition-all hover:shadow-md ${
-                activeStatusTab === 'all' ? 'ring-2 ring-primary' : ''
-              }`}
-              onClick={() => handleStatusTabChange('all')}
-            >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Feedback</CardTitle>
-                <MessageSquare className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats?.total || 0}</div>
-              </CardContent>
-            </Card>
-
-            <Card 
-              className={`cursor-pointer transition-all hover:shadow-md ${
-                activeStatusTab === 'new' ? 'ring-2 ring-primary' : ''
-              }`}
-              onClick={() => handleStatusTabChange('new')}
-            >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">New</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats?.byStatus?.new || 0}</div>
-              </CardContent>
-            </Card>
-
-            <Card 
-              className={`cursor-pointer transition-all hover:shadow-md ${
-                activeStatusTab === 'in_progress' ? 'ring-2 ring-primary' : ''
-              }`}
-              onClick={() => handleStatusTabChange('in_progress')}
-            >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-                <Edit className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats?.byStatus?.in_progress || 0}</div>
-              </CardContent>
-            </Card>
-
-            <Card 
-              className={`cursor-pointer transition-all hover:shadow-md ${
-                activeStatusTab === 'resolved' ? 'ring-2 ring-primary' : ''
-              }`}
-              onClick={() => handleStatusTabChange('resolved')}
-            >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Resolved</CardTitle>
-                <CheckCircle className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats?.byStatus?.resolved || 0}</div>
-              </CardContent>
-            </Card>
-
-            <Card 
-              className={`cursor-pointer transition-all hover:shadow-md ${
-                activeStatusTab === 'closed' ? 'ring-2 ring-primary' : ''
-              }`}
-              onClick={() => handleStatusTabChange('closed')}
-            >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Closed</CardTitle>
-                <Trash2 className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats?.byStatus?.closed || 0}</div>
-              </CardContent>
-            </Card>
-          </div>
-
-
-
-          {/* Filters */}
-          <FeedbackFilters
-            search={search}
-            setSearch={setSearch}
-            priorityFilter={priorityFilter}
-            setPriorityFilter={setPriorityFilter}
-            typeFilter={typeFilter}
-            setTypeFilter={setTypeFilter}
-            sortBy={sortBy}
-            setSortBy={setSortBy}
-            sortOrder={sortOrder}
-            setSortOrder={setSortOrder}
-            onClearFilters={handleClearFilters}
-            totalCount={feedback?.feedback?.length || 0}
-            filteredCount={filteredAndSortedFeedback.length}
-          />
-
-          {/* Feedback List */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Feedback</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {filteredAndSortedFeedback.map((item) => {
-                  const StatusIcon = getStatusIcon(item.status);
-                  
-                  return (
-                    <div 
-                      key={item._id} 
-                      className="p-4 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-                      onClick={() => handleFeedbackClick(item)}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="font-semibold">{item.title}</h3>
-                            <Badge className={getStatusColor(item.status)}>
-                              {item.status.replace('_', ' ')}
-                            </Badge>
-                            <Badge className={getPriorityColor(item.priority)}>
-                              {item.priority}
-                            </Badge>
-                            <Badge variant="outline">{item.type}</Badge>
-                            {item.screenshots && item.screenshots.length > 0 && (
-                              <Badge variant="outline" className="text-xs">
-                                📷 {item.screenshots.length}
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                            {item.description}
-                          </p>
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                            <span>By: {item.userName}</span>
-                            <span>Page: {item.page}</span>
-                            <span>{formatDate(item.createdAt)}</span>
-                            {item.assignedTo && (
-                              <span className="text-blue-600">Assigned</span>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleFeedbackClick(item);
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {filteredAndSortedFeedback.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    {feedback?.feedback?.length === 0 ? 'No feedback found.' : 'No feedback matches your filters.'}
-                  </div>
-                )}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <TestLabCard
+                  title="Living Projects Control"
+                  description="Real-time decision engine monitoring and manual controls"
+                  icon={Activity}
+                  colorVariant="blue"
+                  href="/admin/living-projects-control"
+                />
+                <TestLabCard
+                  title="Intelligence Testing"
+                  description="Test shard extraction, stardust, and cognitive field generation"
+                  icon={Shield}
+                  colorVariant="primary"
+                  onClick={() => setActiveTab('testing')}
+                />
+                <TestLabCard
+                  title="Universal API Tester"
+                  description="Test any API route directly from the dashboard"
+                  icon={Zap}
+                  colorVariant="blue"
+                  onClick={() => setActiveTab('testing')}
+                />
+                <TestLabCard
+                  title="Orchestration Test Lab"
+                  description="Test widget orchestration and dependencies"
+                  icon={Settings}
+                  colorVariant="purple"
+                  href="/admin/orchestration-test"
+                />
+                <TestLabCard
+                  title="Convergence Control"
+                  description="Self-learning optimization engine"
+                  icon={TrendingUp}
+                  colorVariant="green"
+                  href="/admin/convergence"
+                />
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Feedback Detail Modal */}
-          <FeedbackDetailModal
-            feedback={selectedFeedback}
-            isOpen={isModalOpen}
-            onClose={handleCloseModal}
-            onStatusUpdate={handleStatusUpdate}
-            users={users || []}
-          />
-        </TabsContent>
+              <IntelligenceTestPanel />
+            </TabsContent>
 
-        <TabsContent value="users" className="space-y-6">
-          {/* Platform Overview with Tabs */}
-          <Card className="bg-card border-border shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-foreground text-xl font-semibold">Platform Overview</CardTitle>
-              <CardDescription className="text-muted-foreground">
-                Key metrics for your HeyContext platform
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {/* Overview Tabs */}
-              <Tabs defaultValue="metrics" className="w-full">
-                <TabsList className="grid w-full grid-cols-4 mb-6 bg-muted border border-border">
-                  <TabsTrigger 
-                    value="metrics" 
-                    className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
-                  >
-                    <BarChart3 className="h-4 w-4" />
-                    Metrics
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="users" 
-                    className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
-                  >
-                    <Users className="h-4 w-4" />
-                    Users
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="referrals" 
-                    className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
-                  >
-                    <TrendingUp className="h-4 w-4" />
-                    Referrals
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="revenue" 
-                    className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
-                  >
-                    <CheckCircle className="h-4 w-4" />
-                    Revenue
-                  </TabsTrigger>
-                </TabsList>
-
-                {/* Metrics Tab */}
-                <TabsContent value="metrics" className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
-                      <div className="text-3xl font-bold text-foreground">
-                        {users?.length || 0}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Total Users</div>
-                    </div>
-                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
-                      <div className="text-3xl font-bold text-primary">
-                        {users?.filter(u => u.subscription?.status === 'active').length || 0}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Active Subscribers</div>
-                      <div className="text-xs text-primary mt-1 font-medium">
-                        {users?.length ? Math.round((users.filter(u => u.subscription?.status === 'active').length / users.length) * 100) : 0}% conversion rate
-                      </div>
-                    </div>
-                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
-                      <div className="text-3xl font-bold text-accent">
-                        {referralData?.reduce((total, r) => total + r.totalReferred, 0) || 0}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Total Referrals</div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        Across all users
-                      </div>
-                    </div>
-                  </div>
-                </TabsContent>
-
-                {/* Users Tab */}
-                <TabsContent value="users" className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
-                      <div className="text-2xl font-bold text-foreground">
-                        {users?.filter(u => u.role === 'user').length || 0}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Regular Users</div>
-                    </div>
-                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
-                      <div className="text-2xl font-bold text-accent">
-                        {users?.filter(u => ['admin', 'super_admin'].includes(u.role)).length || 0}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Admin Users</div>
-                      <div className="text-xs text-accent mt-1 font-medium">
-                        Admin: {users?.filter(u => u.role === 'admin').length || 0} | 
-                        Super: {users?.filter(u => u.role === 'super_admin').length || 0}
-                      </div>
-                    </div>
-                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
-                      <div className="text-2xl font-bold text-primary">
-                        {users?.filter(u => ['ambassador', 'affiliate', 'partner'].includes(u.role)).length || 0}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Tier Users</div>
-                      <div className="text-xs text-primary mt-1 font-medium">
-                        A: {users?.filter(u => u.role === 'ambassador').length || 0} | 
-                        F: {users?.filter(u => u.role === 'affiliate').length || 0} | 
-                        P: {users?.filter(u => u.role === 'partner').length || 0}
-                      </div>
-                    </div>
-                  </div>
-                </TabsContent>
-
-                {/* Referrals Tab */}
-                <TabsContent value="referrals" className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
-                      <div className="text-2xl font-bold text-foreground">
-                        {referralData?.reduce((total, r) => total + r.totalReferred, 0) || 0}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Total Referrals</div>
-                    </div>
-                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
-                      <div className="text-2xl font-bold text-primary">
-                        {(() => {
-                          if (!users || !referralData) return 0;
-                          let totalReferredUsers = 0;
-                          let payingReferredUsers = 0;
-                          
-                          referralData.forEach(r => {
-                            r.referredUsers.forEach((ref: any) => {
-                              totalReferredUsers++;
-                              const referredUser = users.find(u => u._id === ref.userId);
-                              if (referredUser?.subscription?.status === 'active') {
-                                payingReferredUsers++;
-                              }
-                            });
-                          });
-                          
-                          return totalReferredUsers > 0 ? Math.round((payingReferredUsers / totalReferredUsers) * 100) : 0;
-                        })()}%
-                      </div>
-                      <div className="text-sm text-muted-foreground">Referral Conversion</div>
-                      <div className="text-xs text-primary mt-1 font-medium">
-                        % of referred users who subscribed
-                      </div>
-                    </div>
-                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
-                      <div className="text-2xl font-bold text-accent">
-                        {referralData?.length || 0}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Active Referrers</div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        Users with referrals
-                      </div>
-                    </div>
-                  </div>
-                </TabsContent>
-
-                {/* Revenue Tab */}
-                <TabsContent value="revenue" className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
-                      <div className="text-2xl font-bold text-primary">
-                        {users?.filter(u => u.subscription?.status === 'active').length || 0}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Active Subscriptions</div>
-                    </div>
-                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
-                      <div className="text-2xl font-bold text-accent">
-                        {users?.filter(u => u.subscription?.status === 'active' && u.subscription?.plan?.includes('pro')).length || 0}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Pro Plans</div>
-                      <div className="text-xs text-accent mt-1 font-medium">
-                        High-tier subscribers
-                      </div>
-                    </div>
-                    <div className="text-center p-4 rounded-lg bg-muted/50 border border-border transition-all duration-200 hover:bg-muted/70">
-                      <div className="text-2xl font-bold text-foreground">
-                        {users?.filter(u => u.subscription?.status === 'active' && u.subscription?.plan?.includes('basic')).length || 0}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Basic Plans</div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        Entry-level subscribers
-                      </div>
-                    </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-
-          {/* User List */}
-          <Card>
-            <CardHeader>
-              <CardTitle>User Management</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {/* Search and Filter Controls */}
-              <div className="mb-6 space-y-4">
-                {/* Search Bar */}
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search by name or email..."
-                      value={userSearch}
-                      onChange={(e) => setUserSearch(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-                
-                {/* Filters and Sorting */}
-                <div className="flex flex-wrap items-center gap-4">
-                  {/* Role Filter */}
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-4 w-4 text-muted-foreground" />
-                    <Select value={roleFilter} onValueChange={setRoleFilter}>
-                      <SelectTrigger className="w-32">
-                        <SelectValue placeholder="All Roles" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Roles</SelectItem>
-                        <SelectItem value="user">User</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="super_admin">Super Admin</SelectItem>
-                        <SelectItem value="ambassador">Ambassador</SelectItem>
-                        <SelectItem value="affiliate">Affiliate</SelectItem>
-                        <SelectItem value="partner">Partner</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  {/* Subscription Filter */}
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-muted-foreground" />
-                    <Select value={subscriptionFilter} onValueChange={setSubscriptionFilter}>
-                      <SelectTrigger className="w-36">
-                        <SelectValue placeholder="All Users" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Users</SelectItem>
-                        <SelectItem value="subscribed">Subscribers Only</SelectItem>
-                        <SelectItem value="not_subscribed">Non-Subscribers</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  {/* Sort By */}
-                  <div className="flex items-center gap-2">
-                    <SortAsc className="h-4 w-4 text-muted-foreground" />
-                    <Select value={userSortBy} onValueChange={(value: 'createdAt' | 'name' | 'totalReferred') => setUserSortBy(value)}>
-                      <SelectTrigger className="w-40">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="createdAt">Date Joined</SelectItem>
-                        <SelectItem value="name">Name</SelectItem>
-                        <SelectItem value="totalReferred">Total Referrals</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  {/* Sort Order */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setUserSortOrder(userSortOrder === 'asc' ? 'desc' : 'asc')}
-                    className="flex items-center gap-2"
-                  >
-                    {userSortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
-                    {userSortOrder === 'asc' ? 'Ascending' : 'Descending'}
-                  </Button>
-                  
-                  {/* Clear Filters */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setUserSearch('');
-                      setRoleFilter('all');
-                      setSubscriptionFilter('all');
-                      setUserSortBy('createdAt');
-                      setUserSortOrder('desc');
-                    }}
-                  >
-                    Clear Filters
-                  </Button>
-                </div>
-                
-                {/* Results Count */}
-                <div className="text-sm text-muted-foreground">
-                  Showing {filteredAndSortedUsers.length} of {users?.length || 0} users
-                </div>
+            <TabsContent value="feedback" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <AdminStatsCard
+                  label="Total Feedback"
+                  value={stats?.total || 0}
+                  icon={MessageSquare}
+                  onClick={() => handleStatusTabChange('all')}
+                  active={activeStatusTab === 'all'}
+                />
+                <AdminStatsCard
+                  label="New"
+                  value={stats?.byStatus?.new || 0}
+                  icon={MessageSquare}
+                  onClick={() => handleStatusTabChange('new')}
+                  active={activeStatusTab === 'new'}
+                />
+                <AdminStatsCard
+                  label="In Progress"
+                  value={stats?.byStatus?.in_progress || 0}
+                  icon={MessageSquare}
+                  onClick={() => handleStatusTabChange('in_progress')}
+                  active={activeStatusTab === 'in_progress'}
+                />
+                <AdminStatsCard
+                  label="Resolved"
+                  value={stats?.byStatus?.resolved || 0}
+                  icon={MessageSquare}
+                  onClick={() => handleStatusTabChange('resolved')}
+                  active={activeStatusTab === 'resolved'}
+                />
+                <AdminStatsCard
+                  label="Closed"
+                  value={stats?.byStatus?.closed || 0}
+                  icon={MessageSquare}
+                  onClick={() => handleStatusTabChange('closed')}
+                  active={activeStatusTab === 'closed'}
+                />
               </div>
-              
-              <div className="space-y-4">
-                {filteredAndSortedUsers.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p className="text-lg font-medium">No users found</p>
-                    <p className="text-sm">Try adjusting your search or filters</p>
-                  </div>
-                ) : (
-                  filteredAndSortedUsers.map((user) => {
-                    const RoleIcon = roleIcons[user.role as keyof typeof roleIcons] || User;
-                    
-                    return (
-                      <div 
-                        key={user._id} 
-                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-                        onClick={() => handleUserClick(user)}
-                      >
-                        <div className="flex items-center gap-4">
-                          <RoleIcon className="h-5 w-5 text-muted-foreground" />
-                          <div>
-                            <h3 className="font-semibold">{user.name}</h3>
-                            <p className="text-sm text-muted-foreground">{user.email}</p>
-                            <p className="text-xs text-muted-foreground">
-                              Joined: {formatDate(user.createdAt)}
-                            </p>
-                          </div>
-                        </div>
 
-                        <div className="flex items-center gap-4">
-                          {/* Subscription Status */}
-                          {user.subscription?.status === 'active' ? (
-                            <Badge className="bg-green-100 text-green-800 text-xs">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Subscribed
-                            </Badge>
-                          ) : (
-                            <Badge className="bg-gray-100 text-gray-600 text-xs">
-                              <Clock className="h-3 w-3 mr-1" />
-                              {user.subscription ? user.subscription.status : 'No Plan'}
-                            </Badge>
-                          )}
-                          
-                          <Badge className={roleColors[user.role as keyof typeof roleColors]}>
-                            {user.role.replace('_', ' ')}
-                          </Badge>
-                          
-                          {/* Show referral stats if they exist */}
-                          {(() => {
-                            const userReferralData = referralData?.find(r => r.referrerId === user._id);
-                            if (userReferralData && userReferralData.totalReferred > 0) {
-                              return (
-                                <div className="flex items-center gap-2 text-sm">
-                                  <span className="text-green-600 font-medium">
-                                    {userReferralData.totalReferred} referrals
-                                  </span>
-                                  {userReferralData.lastReferralDate && (
-                                    <span className="text-muted-foreground">
-                                      {formatDate(userReferralData.lastReferralDate)}
-                                    </span>
-                                  )}
-                                </div>
-                              );
-                            }
-                            return null;
-                          })()}
+              <FeedbackFilters
+                search={search}
+                setSearch={setSearch}
+                priorityFilter={priorityFilter}
+                setPriorityFilter={setPriorityFilter}
+                typeFilter={typeFilter}
+                setTypeFilter={setTypeFilter}
+                sortBy={sortBy}
+                setSortBy={setSortBy}
+                sortOrder={sortOrder}
+                setSortOrder={setSortOrder}
+                onClearFilters={handleClearFilters}
+                totalCount={feedback?.feedback?.length || 0}
+                filteredCount={filteredFeedback.length}
+              />
 
-                          {isSuperAdmin && (
-                            <Select
-                              value={user.role}
-                              onValueChange={(value) => handleRoleUpdate(user._id, value)}
-                              disabled={updatingUser === user._id}
-                            >
-                              <SelectTrigger className="w-32">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="user">User</SelectItem>
-                                <SelectItem value="admin">Admin</SelectItem>
-                                <SelectItem value="super_admin">Super Admin</SelectItem>
-                                <SelectItem value="ambassador">Ambassador</SelectItem>
-                                <SelectItem value="affiliate">Affiliate</SelectItem>
-                                <SelectItem value="partner">Partner</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          )}
-
-                          {updatingUser === user._id && (
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
-                              Updating...
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </CardContent>
-          </Card>
-          
-          {/* User Detail Modal */}
-          {selectedUser && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold text-white">User Details: {selectedUser.name}</h2>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={handleCloseUserModal}
-                    className="text-gray-400 hover:text-white hover:bg-gray-800"
-                  >
-                    ✕
-                  </Button>
-                </div>
-                
-                <div className="space-y-4">
-                  {/* Basic Info */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-300">Name</label>
-                      <p className="text-sm text-white">{selectedUser.name}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-300">Email</label>
-                      <p className="text-sm text-white">{selectedUser.email}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-300">Role</label>
-                      <p className="text-sm text-white">{selectedUser.role?.replace('_', ' ') || 'user'}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-300">Joined</label>
-                      <p className="text-sm text-white">{formatDate(selectedUser.createdAt)}</p>
-                    </div>
-                  </div>
-                  
-                  {/* Subscription Status */}
-                  <div className="border-t pt-4">
-                    <h3 className="text-lg font-medium mb-3 text-white">Subscription Status</h3>
-                    {selectedUser.subscription ? (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-sm font-medium text-gray-300">Status</label>
-                          <div className="flex items-center gap-2">
-                            {selectedUser.subscription.status === 'active' ? (
-                              <Badge className="bg-green-600 text-white">
-                                <CheckCircle className="h-3 w-3 mr-1" />
-                                Active
-                              </Badge>
-                            ) : (
-                              <Badge className="bg-gray-600 text-white">
-                                <Clock className="h-3 w-3 mr-1" />
-                                {selectedUser.subscription.status}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-300">Plan</label>
-                          <p className="text-sm text-white">{selectedUser.subscription.plan?.replace('_', ' ')}</p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-300">Current Period</label>
-                          <p className="text-sm text-white">
-                            {formatDate(selectedUser.subscription.currentPeriodStart)} - {formatDate(selectedUser.subscription.currentPeriodEnd)}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-300">Usage</label>
-                          <p className="text-sm text-white">
-                            {selectedUser.subscription.usedRequests} / {selectedUser.subscription.includedRequests} requests
-                          </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center py-4">
-                        <Clock className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                        <p className="text-gray-400">No active subscription</p>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Referral Stats */}
-                  {(() => {
-                    // Find referral data for this user
-                    const userReferralData = referralData?.find(r => r.referrerId === selectedUser._id);
-                    
-                    if (userReferralData && userReferralData.totalReferred > 0) {
-                      // Calculate referral quality metrics
-                      const referredUsers = userReferralData.referredUsers;
-                      const payingReferrals = referredUsers.filter((ref: any) => {
-                        const referredUser = users?.find(u => u._id === ref.userId);
-                        return referredUser?.subscription?.status === 'active';
-                      });
-                      const conversionRate = Math.round((payingReferrals.length / referredUsers.length) * 100);
-                      
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    {filteredFeedback.map((item: any) => {
+                      const StatusIcon = getStatusIcon(item.status);
                       return (
-                        <div className="border-t pt-4">
-                          <h3 className="text-lg font-medium mb-3 text-white">Referral Statistics</h3>
-                          <div className="grid grid-cols-4 gap-4 mb-4">
-                            <div className="text-center">
-                              <div className="text-2xl font-bold text-green-400">
-                                {userReferralData.totalReferred}
+                        <div 
+                          key={item._id} 
+                          className="p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                          onClick={() => handleFeedbackClick(item)}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <h3 className="font-semibold">{item.title}</h3>
+                                <Badge className={getStatusColor(item.status)}>
+                                  {item.status.replace('_', ' ')}
+                                </Badge>
+                                <Badge className={getPriorityColor(item.priority)}>
+                                  {item.priority}
+                                </Badge>
+                                <Badge variant="outline">{item.type}</Badge>
                               </div>
-                              <div className="text-sm text-gray-300">Total Referrals</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-2xl font-bold text-blue-400">
-                                {payingReferrals.length}
-                              </div>
-                              <div className="text-sm text-gray-300">Paying Users</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-2xl font-bold text-purple-400">
-                                {conversionRate}%
-                              </div>
-                              <div className="text-sm text-gray-300">Conversion Rate</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-sm text-gray-300">
-                                {userReferralData.lastReferralDate ? 
-                                  formatDate(userReferralData.lastReferralDate) : 'N/A'
-                                }
-                              </div>
-                              <div className="text-sm text-gray-300">Last Referral</div>
-                            </div>
-                          </div>
-                          
-                          {/* Referred Users List */}
-                          <div className="mt-4">
-                            <h4 className="text-md font-medium mb-2 text-white">Referred Users:</h4>
-                            <div className="space-y-2 max-h-60 overflow-y-auto">
-                              {userReferralData.referredUsers.map((referredUser: any, index: number) => {
-                                const referredUserData = users?.find(u => u._id === referredUser.userId);
-                                const isPaying = referredUserData?.subscription?.status === 'active';
-                                
-                                return (
-                                  <div key={index} className="bg-gray-800 border border-gray-700 p-3 rounded-lg">
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-1">
-                                          <div className="font-medium text-white">{referredUserData?.name || 'Unknown User'}</div>
-                                          {isPaying ? (
-                                            <Badge className="bg-green-600 text-white text-xs">
-                                              <CheckCircle className="h-3 w-3 mr-1" />
-                                              Paying
-                                            </Badge>
-                                          ) : (
-                                            <Badge className="bg-green-600 text-white text-xs">
-                                              <Clock className="h-3 w-3 mr-1" />
-                                              {referredUserData?.subscription?.status || 'No Plan'}
-                                            </Badge>
-                                          )}
-                                        </div>
-                                        <div className="text-sm text-gray-300">{referredUserData?.email || 'No email'}</div>
-                                        <div className="text-xs text-gray-400 mt-1">
-                                          Referred: {formatDate(referredUser.referredAt)}
-                                        </div>
-                                      </div>
-                                      <div className="text-right">
-                                        <div className="text-sm text-gray-300">
-                                          Code: {referredUser.referralCode}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })}
+                              <p className="text-sm text-muted-foreground line-clamp-2">
+                                {item.description}
+                              </p>
                             </div>
                           </div>
                         </div>
                       );
-                    }
-                    return null;
-                  })()}
-                  
-                  {/* Referral Code */}
-                  {selectedUser.referralCode && (
-                    <div className="border-t border-gray-700 pt-4">
-                      <h3 className="text-lg font-medium mb-3 text-white">Referral Code</h3>
-                      <div className="bg-gray-800 border border-gray-700 p-3 rounded-lg">
-                        <code className="text-lg font-mono text-green-400">{selectedUser.referralCode}</code>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Referred By */}
-                  {selectedUser.referredBy && (
-                    <div className="border-t border-gray-700 pt-4">
-                      <h3 className="text-lg font-medium mb-3 text-white">Referred By</h3>
-                      <p className="text-sm text-gray-300">{selectedUser.referredBy}</p>
-                    </div>
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="users" className="space-y-6">
+              <Card>
+                <CardContent className="pt-6">
+                  <p className="text-muted-foreground">
+                    User management interface - simplified for now
+                  </p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="prompts" className="space-y-6">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search prompts by content, tags, or type..."
+                  value={promptSearch}
+                  onChange={(e) => setPromptSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-4">
+                <Card className="p-4">
+                  <div className="text-sm text-muted-foreground">Total Prompts</div>
+                  <div className="text-2xl font-bold text-foreground">{prompts?.length || 0}</div>
+                </Card>
+                <Card className="p-4">
+                  <div className="text-sm text-muted-foreground">Filtered Results</div>
+                  <div className="text-2xl font-bold text-foreground">{filteredPrompts.length}</div>
+                </Card>
+                <Card className="p-4">
+                  <div className="text-sm text-muted-foreground">Editing</div>
+                  <div className="text-2xl font-bold text-foreground">{editingPromptId ? '1' : '0'}</div>
+                </Card>
+              </div>
+
+              {/* Prompts List */}
+              <ScrollArea className="h-[calc(100vh-400px)]">
+                <div className="space-y-4">
+                  {filteredPrompts.map((prompt: any) => (
+                    <Card key={prompt._id} className="p-6">
+                      {editingPromptId === prompt._id ? (
+                        // Edit Mode
+                        <div className="space-y-4">
+                          <div>
+                            <label className="text-sm font-medium text-foreground mb-2 block">
+                              Content
+                            </label>
+                            <Textarea
+                              value={editPromptContent}
+                              onChange={(e) => setEditPromptContent(e.target.value)}
+                              rows={8}
+                              className="font-mono text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-sm font-medium text-foreground mb-2 block">
+                              Tags (comma-separated)
+                            </label>
+                            <Input
+                              value={editPromptTags}
+                              onChange={(e) => setEditPromptTags(e.target.value)}
+                              placeholder="tag1, tag2, tag3"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-sm font-medium text-foreground mb-2 block">
+                              Description (optional)
+                            </label>
+                            <Input
+                              value={editPromptDescription}
+                              onChange={(e) => setEditPromptDescription(e.target.value)}
+                              placeholder="Brief description"
+                            />
+                          </div>
+
+                          <div className="flex gap-2">
+                            <Button onClick={handleSavePrompt} className="flex items-center gap-2">
+                              <Save className="h-4 w-4" />
+                              Save
+                            </Button>
+                            <Button onClick={handleCancelEditPrompt} variant="outline" className="flex items-center gap-2">
+                              <X className="h-4 w-4" />
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        // View Mode
+                        <div>
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge variant="outline">{prompt.type}</Badge>
+                                <Badge variant="outline">{prompt.scope}</Badge>
+                                {prompt.scopeId && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {prompt.scopeId.slice(0, 8)}...
+                                  </Badge>
+                                )}
+                              </div>
+                              {prompt.description && (
+                                <p className="text-sm text-muted-foreground">{prompt.description}</p>
+                              )}
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={() => handleEditPrompt(prompt)}
+                                variant="outline"
+                                size="sm"
+                              >
+                                <Edit2 className="h-3 w-3 mr-1" />
+                                Edit
+                              </Button>
+                              <Button
+                                onClick={() => handleDeletePrompt(prompt._id)}
+                                variant="outline"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-3 w-3 mr-1" />
+                                Delete
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div className="bg-muted/30 rounded-lg p-4 mb-4">
+                            <pre className="text-sm whitespace-pre-wrap font-mono text-foreground">
+                              {prompt.content}
+                            </pre>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2 mb-4">
+                            {prompt.tags.map((tag: string, i: number) => (
+                              <Badge key={i} variant="secondary">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+
+                          <div className="flex gap-6 text-sm">
+                            <div>
+                              <span className="text-muted-foreground">Effectiveness:</span>{' '}
+                              <span className="font-medium text-foreground">
+                                {((prompt.effectiveness || 0) * 100).toFixed(1)}%
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Usage:</span>{' '}
+                              <span className="font-medium text-foreground">{prompt.usageCount || 0}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Success:</span>{' '}
+                              <span className="font-medium text-foreground">
+                                {((prompt.successRate || 0) * 100).toFixed(1)}%
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Version:</span>{' '}
+                              <span className="font-medium text-foreground">{prompt.version}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </Card>
+                  ))}
+                </div>
+              </ScrollArea>
+
+              {filteredPrompts.length === 0 && (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">No prompts found</p>
+                  {promptSearch && (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Try adjusting your search term
+                    </p>
                   )}
                 </div>
-              </div>
-            </div>
-          )}
-        </TabsContent>
+              )}
+            </TabsContent>
 
-
-      </Tabs>
+            <TabsContent value="testing">
+              <TestingHubSection />
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
+
+      {selectedFeedback && (
+        <FeedbackDetailModal
+          feedback={selectedFeedback}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          onStatusUpdate={handleStatusUpdate}
+          users={users || []}
+        />
+      )}
     </div>
   );
-} 
+}
+

@@ -49,7 +49,7 @@ export default function Terms() {
           Terms of Service
         </h1>
         <p className="text-lg text-muted-foreground">
-          Last updated: June 06, 2025
+          Last updated: October 25, 2025
         </p>
       </header>
 
@@ -58,7 +58,7 @@ export default function Terms() {
         <section className="space-y-6">
           <h2 className="text-3xl font-medium text-foreground border-b border-border pb-3">Agreement to Our Legal Terms</h2>
           <p>
-            These Terms of Service ("Terms") constitute a legally binding agreement made between you, whether personally or on behalf of an entity ("you"), and Divertissement AI, Inc. ("Company," "we," "us," or "our"), concerning your access to and use of the HeyContext website (<a href="https://www.heycontext.co" className="text-blue-600 dark:text-blue-400 hover:underline">https://www.heycontext.co</a>) and any related products and services that refer or link to these Terms (collectively, the "Services").
+            These Terms of Service ("Terms") constitute a legally binding agreement made between you, whether personally or on behalf of an entity ("you"), and PersistOS ("Company," "we," "us," or "our"), concerning your access to and use of the HeyContext website (<a href="https://www.heycontext.co" className="text-blue-600 dark:text-blue-400 hover:underline">https://www.heycontext.co</a>) and any related products and services that refer or link to these Terms (collectively, the "Services").
           </p>
           <p>
             By accessing or using the Services, you agree that you have read, understood, and agree to be bound by all of these Terms. IF YOU DO NOT AGREE WITH ALL OF THESE TERMS, THEN YOU ARE EXPRESSLY PROHIBITED FROM USING THE SERVICES AND YOU MUST DISCONTINUE USE IMMEDIATELY.
@@ -76,7 +76,7 @@ export default function Terms() {
             The Services are intended for users who are at least 18 years old. Persons under the age of 18 are not permitted to use or register for the Services.
           </p>
           <p>
-            You can contact us by email at <a href="mailto:hello@divertissement.ai" className="text-blue-600 dark:text-blue-400 hover:underline">hello@divertissement.ai</a>.
+            You can contact us by email at <a href="mailto:hello@persistos.co" className="text-blue-600 dark:text-blue-400 hover:underline">hello@persistos.co</a>.
           </p>
         </section>
 
@@ -326,7 +326,7 @@ export default function Terms() {
         <section className="space-y-6 border-t border-border pt-12">
           <h2 className="text-3xl font-medium text-foreground border-b border-border pb-3">Contact Us</h2>
           <p>
-            If you have any questions or concerns about these Terms, please contact us at <a href="mailto:hello@divertissement.ai" className="text-blue-600 dark:text-blue-400 hover:underline">hello@divertissement.ai</a>.
+            If you have any questions or concerns about these Terms, please contact us at <a href="mailto:hello@persistos.co" className="text-blue-600 dark:text-blue-400 hover:underline">hello@persistos.co</a>.
           </p>
         </section>
       </article>

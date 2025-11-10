@@ -14,8 +14,9 @@ import UpgradeModal from '@/app/settings/tabs/subscription/upgrade-modal';
 import { useContentContextActions } from '@/store/content-context-store';
 import { UsernameRequiredModal } from '@/components/auth/UsernameRequiredModal';
 import { useUsernameRequired } from '@/hooks/useUsernameRequired';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+import { useUpgradeFlow } from '@/app/hooks/useUpgradeFlow';
 
 // Pages that don't require a subscription
 const PUBLIC_PATHS = [
@@ -50,6 +51,7 @@ export default function DashboardLayout({
     api.usageEvents.getUsageSummary,
     firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
   );
+  const initializeFreeTier = useMutation(api.subscriptionQueries.initializeFreeTier);
   
   // Check if current path is public or doesn't require a subscription
   const isPublicPath = useMemo(() => {
@@ -63,15 +65,37 @@ export default function DashboardLayout({
     error: subscriptionError 
   } = useSubscriptionCheck(isPublicPath ? 'free' : 'free');
 
-  // State for subscription enforcement modal
-  const [showSubscriptionRequired, setShowSubscriptionRequired] = useState(false);
+  // REMOVED: State for old subscription enforcement modal (no longer needed)
+  // const [showSubscriptionRequired, setShowSubscriptionRequired] = useState(false);
 
   // Check if username is required
   const { needsUsername, isLoading: isUsernameLoading } = useUsernameRequired();
   const [showUsernameModal, setShowUsernameModal] = useState(false);
 
+  // Upgrade flow for free tier limit detection
+  const { 
+    showUpgradeModal, 
+    upgradeReason, 
+    handlePaymentRequired,
+    handleSelectPlan, 
+    handleClose 
+  } = useUpgradeFlow();
+
   // Monitor API key validity (only when authenticated)
   useApiKeyMonitor(); // 🔒 ENABLED: Provides immediate logout when logged in elsewhere
+  
+  // Listen for upgrade-required events from API (402 responses)
+  useEffect(() => {
+    const handleUpgradeRequired = (event: any) => {
+      handlePaymentRequired(event.detail?.reason || 'limit_reached');
+    };
+    
+    window.addEventListener('upgrade-required', handleUpgradeRequired);
+    
+    return () => {
+      window.removeEventListener('upgrade-required', handleUpgradeRequired);
+    };
+  }, [handlePaymentRequired]);
   
   // Clear content context when user changes (logout/login)
   useEffect(() => {
@@ -97,77 +121,49 @@ export default function DashboardLayout({
   }, [firebaseUser, authLoading]);
 
   // Show username modal ONLY after subscription is confirmed
-  // Priority: Subscription first, then username
+  // Check if username is required and show modal
   useEffect(() => {
-    // Don't show username modal if subscription modal is showing
-    if (showSubscriptionRequired) {
-      setShowUsernameModal(false);
-      return;
-    }
-    
-    // Only show username modal after subscription is confirmed
-    if (!isUsernameLoading && needsUsername && firebaseUser && isSubscribed) {
+    // All users now have free tier subscription by default
+    // Just check if username is needed
+    if (!isUsernameLoading && needsUsername && firebaseUser) {
       setShowUsernameModal(true);
     } else {
       setShowUsernameModal(false);
     }
-  }, [needsUsername, isUsernameLoading, firebaseUser, isSubscribed, showSubscriptionRequired]);
+  }, [needsUsername, isUsernameLoading, firebaseUser]);
 
-  // Handle subscription checks and redirects
+  // Auto-fix broken subscriptions (0/0 requests state)
   useEffect(() => {
-    // Skip if still loading or on a public path
-    if (isSubscriptionLoading || isPublicPath) return;
-    
-    // Don't show modal if subscription status is still being determined (null means not yet checked)
-    if (isSubscribed === null) {
-      return;
-    }
-    
-    // Check if user has a valid subscription
-    // Users must have isSubscribed=true to access the platform
-    if (!isSubscribed) {
-      if (!showSubscriptionRequired) {
-        setShowSubscriptionRequired(true);
-      }
-      return;
-    }
-    
-    // Check if free-tier is exceeded using Convex query
-    if (usageSummary) {
-      const { total, included } = usageSummary;
-      if (included && total >= included) {
-        if (!showSubscriptionRequired) {
-          setShowSubscriptionRequired(true);
-        }
-        return;
+    if (firebaseUser?.uid && usageSummary) {
+      // If usage shows broken state (fallback defaults were used), auto-fix it
+      const isBrokenState = usageSummary.included === 50 && usageSummary.total === 0;
+      if (isBrokenState) {
+        console.log('[Dashboard] Auto-fixing broken subscription...');
+        initializeFreeTier({ userId: firebaseUser.uid })
+          .then(() => console.log('[Dashboard] ✅ Subscription fixed'))
+          .catch(err => console.error('[Dashboard] ❌ Failed to fix subscription:', err));
       }
     }
-  }, [isPublicPath, isSubscriptionLoading, isSubscribed, showSubscriptionRequired, pathname, router, usageSummary]);
+  }, [firebaseUser?.uid, usageSummary, initializeFreeTier]);
 
-  // Global fetch interceptor for subscription required errors
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const originalFetch = window.fetch;
-    const patchedFetch: typeof window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-      const res = await originalFetch(input, init);
-      try {
-        if (res.status === 402) {
-          // Check if it's a subscription required error
-          if (res.headers.get('X-Subscription-Required') === 'true') {
-            if (!showSubscriptionRequired) {
-              setShowSubscriptionRequired(true);
-            }
-            return res;
-          }
-        }
-      } catch {}
-      return res;
-    };
-    window.fetch = patchedFetch;
-    return () => {
-      window.fetch = originalFetch;
-    };
-  }, []);
+  // DISABLED: Subscription enforcement - free tier is now auto-initialized
+  // Users always have a subscription (free tier minimum)
+  // Limits are enforced by middleware with 402 responses
+  // The useUpgradeFlow hook handles showing upgrade modals
+  
+  // useEffect(() => {
+  //   // This subscription check is no longer needed
+  //   // Free tier is auto-initialized, so all users have a subscription
+  // }, []);
+
+  // DISABLED: Global fetch interceptor - replaced by api-helpers.ts event system
+  // The fetchWithApiKey function in api-helpers.ts now handles 402 detection
+  // and emits 'upgrade-required' events that the useUpgradeFlow hook listens for
+  
+  // useEffect(() => {
+  //   // This fetch interceptor is no longer needed
+  //   // 402 detection happens in api-helpers.ts with custom events
+  // }, []);
 
   // Immediately render the layout and let children handle their own loading states.
   // The auth and subscription checks will run in the background and trigger redirects
@@ -208,56 +204,9 @@ export default function DashboardLayout({
         {children}
       </main>
       
-      <UpgradeModal
-        open={showSubscriptionRequired}
-        onClose={() => {}} // Non-dismissible
-        onSelectPlan={async (planId: string) => {
-          if (planId === 'free') {
-            // Handle free tier selection
-            try {
-              const apiKey = await getApiKey();
-              if (!apiKey) {
-                console.error('No API key found. Please log in again.');
-                return;
-              }
-              
-              const response = await fetch('/api/subscription/free-tier', {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${apiKey}`,
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                  userId: firebaseUser?.uid,
-                  email: firebaseUser?.email || '',
-                  name: firebaseUser?.displayName || ''
-                })
-              });
-              
-              if (!response.ok) {
-                console.error('Failed to create free subscription');
-                return;
-              }
-              
-              const result = await response.json();
-              
-              if (result.success) {
-                setShowSubscriptionRequired(false);
-                window.location.reload();
-              } else {
-                console.error('Failed to create free subscription:', result.error);
-              }
-            } catch (error) {
-              console.error('Error creating free subscription:', error);
-            }
-          } else {
-            // For paid plans, the UpgradeModal will handle Stripe checkout
-            // The modal will close automatically after successful checkout
-            setShowSubscriptionRequired(false);
-          }
-        }}
-        context="subscription_required"
-      />
+      {/* REMOVED: Old subscription enforcement modal */}
+      {/* This modal has been replaced by the new upgrade flow system below */}
+      {/* Free tier is now auto-initialized, so this modal is no longer needed */}
 
       <UsernameRequiredModal
         isOpen={showUsernameModal}
@@ -266,6 +215,14 @@ export default function DashboardLayout({
           // Optionally refresh the page or trigger a re-fetch of user data
           window.location.reload();
         }}
+      />
+
+      {/* Free tier limit reached modal - triggered by 402 API responses */}
+      <UpgradeModal
+        open={showUpgradeModal}
+        onClose={handleClose}
+        onSelectPlan={handleSelectPlan}
+        context="subscription_required"
       />
     </div>
   );

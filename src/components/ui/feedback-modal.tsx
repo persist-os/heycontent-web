@@ -11,6 +11,7 @@ import { Loader2, Upload, X, MessageSquare, Bug, Lightbulb, Heart, AlertCircle }
 import { useAuth } from '@/app/context/auth-context';
 import { getApiKey } from '@/app/lib/api-helpers';
 import { T } from '@/components/translation';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -54,23 +55,33 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
   const [screenshots, setScreenshots] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorContext, setErrorContext] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Translate error message when displaying
+  const { text: translatedError } = useTranslation(error || '', {
+    context: errorContext || 'feedback.error.generic',
+    enabled: !!error && !!errorContext
+  })
+
   const handleSubmit = async () => {
     if (!title.trim() || !description.trim()) {
       setError('Please fill in both title and description');
+      setErrorContext('feedback.error.fill.required');
       return;
     }
 
     setIsSubmitting(true);
     setError(null);
+    setErrorContext(null);
 
     try {
       const apiKey = await getApiKey();
       if (!apiKey) {
         setError('You are not authenticated. Please log in again.');
+        setErrorContext('feedback.error.auth.required');
         return;
       }
 
@@ -98,6 +109,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
       });
 
       if (!response.ok) {
+        setErrorContext('feedback.error.submit.failed');
         throw new Error('Failed to submit feedback');
       }
 
@@ -106,7 +118,15 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
         handleClose();
       }, 2000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to submit feedback');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to submit feedback';
+      setError(errorMessage);
+      if (errorMessage === 'Failed to submit feedback') {
+        setErrorContext('feedback.error.submit.failed');
+      } else if (errorMessage.includes('authenticated')) {
+        setErrorContext('feedback.error.auth.required');
+      } else {
+        setErrorContext('feedback.error.generic');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -118,6 +138,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
     setScreenshots([]);
     setFeedbackType('general');
     setError(null);
+    setErrorContext(null);
     setSuccess(false);
     onClose();
   };
@@ -128,11 +149,13 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
     
     if (imageFiles.length + screenshots.length > 3) {
       setError('Maximum 3 screenshots allowed');
+      setErrorContext('feedback.error.screenshots.max');
       return;
     }
 
     setScreenshots(prev => [...prev, ...imageFiles]);
     setError(null);
+    setErrorContext(null);
   };
 
   const removeScreenshot = (index: number) => {
@@ -271,11 +294,16 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
             <div className="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-md">
               <div className="flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-red-500" />
-                <span className="text-sm text-red-700">{error}</span>
+                <span className="text-sm text-red-700">
+                  {errorContext ? translatedError : error}
+                </span>
               </div>
               <button
                 title="Close"
-                onClick={() => setError(null)}
+                onClick={() => {
+                  setError(null);
+                  setErrorContext(null);
+                }}
                 className="text-red-500 hover:text-red-700 transition-colors"
               >
                 <X className="w-4 h-4" />

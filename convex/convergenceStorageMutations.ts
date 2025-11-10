@@ -2,107 +2,26 @@
  * Convergence Storage Mutations - Write operations for Convergence storage system
  * 
  * Provides mutations for:
- * - RL training data (episodes, trajectories, agent legacies)
  * - Optimization experiments (config testing and evolution)
  * - Optimization runs (high-level run metadata)
  * 
  * Used by The Convergence framework to store:
- * - Agent RL episodes for policy training
  * - Experiment results from optimization runs
  * - Run summaries and winner promotions
  * 
  * STORAGE FLOW:
  * 1. Start run → save to convergence_optimization_runs
  * 2. Run experiments → save to convergence_optimization_experiments
- * 3. Complete run → update run with results, promote winners to convergence_configs
- * 4. Production feedback → save to convergence_rl_training_data
+ * 3. Complete run → update run with results, promote winners to convergence_best_configs
  */
 
 import { mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import {
-  rlTrainingDataValidator,
   optimizationExperimentValidator,
   optimizationRunValidator,
 } from "./types/convergenceStorage";
-
-// ============================================================================
-// RL TRAINING DATA MUTATIONS
-// ============================================================================
-
-// Internal handler functions
-async function saveRLDataHandler(ctx: any, args: any) {
-  const now = Date.now();
-  
-  const existing = await ctx.db
-    .query("convergence_rl_training_data")
-    .withIndex("by_rl_key", q => q.eq("rl_key", args.rl_key))
-    .first();
-  
-  if (existing) {
-    await ctx.db.patch(existing._id, {
-      rl_episode_data: args.rl_episode_data,
-      reward_score: args.reward_score,
-      fitness_score: args.fitness_score,
-      success: args.success,
-      updatedAt: now,
-    });
-    return existing._id;
-  } else {
-    const id = await ctx.db.insert("convergence_rl_training_data", {
-      ...args,
-      createdAt: now,
-      updatedAt: now,
-    });
-    return id;
-  }
-}
-
-/**
- * Save RL training data (episodes, trajectories, legacies)
- * 
- * Stores agent interaction data for RL policy training and evolution tracking.
- * Supports upsert pattern - updates if rl_key exists, inserts if new.
- */
-export const saveRLData = mutation({
-  args: rlTrainingDataValidator,
-  returns: v.id("convergence_rl_training_data"),
-  handler: saveRLDataHandler,
-});
-
-async function batchSaveRLDataHandler(ctx: any, args: { records: any[] }) {
-  const record_ids: Id<"convergence_rl_training_data">[] = [];
-  
-  for (const record of args.records) {
-    const id = await saveRLDataHandler(ctx, record);
-    record_ids.push(id);
-  }
-  
-  return {
-    success: true,
-    record_ids,
-    count: record_ids.length,
-  };
-}
-
-/**
- * Batch save RL data (for efficient bulk operations)
- * 
- * Saves multiple RL records in parallel for better performance.
- * Useful when processing multiple episodes from a training session.
- */
-export const batchSaveRLData = mutation({
-  args: {
-    records: v.array(rlTrainingDataValidator),
-  },
-  returns: v.object({
-    success: v.boolean(),
-    record_ids: v.array(v.id("convergence_rl_training_data")),
-    count: v.number(),
-  }),
-  handler: batchSaveRLDataHandler,
-});
 
 // ============================================================================
 // OPTIMIZATION EXPERIMENT MUTATIONS
@@ -207,7 +126,6 @@ export const startOptimizationRun = mutation({
 
 async function completeOptimizationRunHandler(ctx: any, args: {
   run_id: string;
-  winning_config_id?: any;
   winning_config_snapshot?: any;
   total_generations?: number;
   convergence_achieved?: boolean;
@@ -257,7 +175,6 @@ async function completeOptimizationRunHandler(ctx: any, args: {
     best_experiment_score: best_score,
     avg_experiment_score: avg_score,
     experiments_by_generation,
-    winning_config_id: args.winning_config_id,
     winning_config_snapshot: args.winning_config_snapshot,
     total_generations: args.total_generations,
     convergence_achieved: args.convergence_achieved,
@@ -269,13 +186,12 @@ async function completeOptimizationRunHandler(ctx: any, args: {
 /**
  * Complete optimization run
  * 
- * Updates run with final results and links to winning config.
+ * Updates run with final results and winning config snapshot.
  * Automatically calculates duration and aggregates experiment stats.
  */
 export const completeOptimizationRun = mutation({
   args: {
     run_id: v.string(),
-    winning_config_id: v.optional(v.id("convergence_configs")),
     winning_config_snapshot: v.optional(v.any()),
     total_generations: v.optional(v.number()),
     convergence_achieved: v.optional(v.boolean()),
@@ -329,23 +245,22 @@ export const updateOptimizationRunProgress = mutation({
  * 
  * @example
  * ```typescript
- * // Save RL episode
- * await mutateStorage({
- *   operation: "save_rl_data",
- *   data: { rl_key: "episode:agent_1:001", ... }
- * });
- * 
  * // Save experiment
  * await mutateStorage({
  *   operation: "save_experiment",
  *   data: { experiment_id: "exp_1", ... }
+ * });
+ * 
+ * // Start run
+ * await mutateStorage({
+ *   operation: "start_run",
+ *   data: { run_id: "run_123", ... }
  * });
  * ```
  */
 export const mutateStorage = mutation({
   args: {
     operation: v.union(
-      v.literal("save_rl_data"),
       v.literal("save_experiment"),
       v.literal("start_run"),
       v.literal("complete_run"),
@@ -353,7 +268,6 @@ export const mutateStorage = mutation({
     ),
     data: v.optional(v.any()),
     run_id: v.optional(v.string()),
-    winning_config_id: v.optional(v.id("convergence_configs")),
     experiments_completed: v.optional(v.number()),
     current_best_score: v.optional(v.number()),
   },
@@ -362,10 +276,6 @@ export const mutateStorage = mutation({
     const { operation } = args;
     
     switch (operation) {
-      case "save_rl_data":
-        if (!args.data) throw new Error("data required for save_rl_data");
-        return await saveRLDataHandler(ctx, args.data);
-      
       case "save_experiment":
         if (!args.data) throw new Error("data required for save_experiment");
         return await saveExperimentHandler(ctx, args.data);
@@ -378,7 +288,6 @@ export const mutateStorage = mutation({
         if (!args.run_id) throw new Error("run_id required for complete_run");
         return await completeOptimizationRunHandler(ctx, {
           run_id: args.run_id,
-          winning_config_id: args.winning_config_id,
           winning_config_snapshot: args.data,
         });
       

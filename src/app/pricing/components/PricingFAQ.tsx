@@ -36,6 +36,10 @@ export function PricingFAQ() {
       question: 'What payment methods do you accept?',
       answer: 'We accept all major credit cards (Visa, Mastercard, American Express, Discover) through Stripe.',
     },
+    {
+      question: 'Do you offer enterprise plans?',
+      answer: 'Yes! We offer custom enterprise solutions with dedicated support, team collaboration, advanced security, custom integrations, and volume discounts. Contact us at hello@persistos.co to discuss your needs.',
+    },
   ];
 
   return (

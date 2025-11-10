@@ -6,8 +6,7 @@ import { useNotes } from '@/app/context/notes-context'
 import { useCreateNote } from '@/app/dashboard/notes/hooks/useCreateNote'
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
-import { useNotepadStore } from '../../../stores/notepadStore'
-import type { Note, NoteUpdate } from '../../../../notes/types'
+import type { Note } from '../../../../notes/types'
 import type { Id } from "@/convex/_generated/dataModel"
 import type { LexicalNotepadEditorRef } from '@/components/ui/lexical-editor/LexicalNotepadEditor'
 import type { NotepadState, NotepadRefs } from '../types'
@@ -38,11 +37,6 @@ export function useNotepadState({
   const [refinementPreview, setRefinementPreview] = useState<string | null>(null)
   const [isRefining, setIsRefining] = useState(false)
   
-  // Debug logging for note loading
-  if (process.env.NODE_ENV === 'development' && noteId) {
-    console.debug('[useNotepadState] Opening note:', noteId.substring(0, 15) + '...')
-  }
-
   // Internal state for note management (controlled by handlers, not props)
   const [isNewNote, setIsNewNote] = useState(!noteId)
   const [currentNoteId, setCurrentNoteId] = useState<string | Id<"notes"> | null>(noteId || null)
@@ -98,7 +92,10 @@ export function useNotepadState({
   // Initialize content from existing note only when note actually loads
   useEffect(() => {
     if (existingNote && existingNote.content !== undefined) {
-      setContent(existingNote.content)
+      // Only update content if it's actually different to prevent unnecessary re-renders
+      if (existingNote.content !== content) {
+        setContent(existingNote.content)
+      }
     }
     // REMOVED: Premature content clearing that caused erratic behavior
     // Only set content when we actually have note data, never clear preemptively
@@ -113,12 +110,8 @@ export function useNotepadState({
     }
   }, [existingNote?.title, isNewNote])
 
-  // Sync note title to notepad store for cross-component access
-  useEffect(() => {
-    const title = note.title || 'Untitled Note'
-    useNotepadStore.getState().updateTitle(title)
-    useNotepadStore.getState().setCurrentNoteId(currentNoteId as string)
-  }, [note.title, currentNoteId])
+  // Note: Notepad context is now managed by the NotepadProvider
+  // The notepad component will sync its data through the context
 
   // Handle quoted content insertion
   useEffect(() => {
@@ -175,7 +168,7 @@ export function useNotepadState({
     setTitle,
     setRefinementPreview,
     setIsRefining
-  }), [setIsEditingTitle, setIsNewNote, setCurrentNoteId, setContent, setTitle, setRefinementPreview, setIsRefining])
+  }), []) // useState setters are stable, no dependencies needed
 
   // FIXED: Memoize contextData to prevent handlers recreation
   const contextData = useMemo(() => ({

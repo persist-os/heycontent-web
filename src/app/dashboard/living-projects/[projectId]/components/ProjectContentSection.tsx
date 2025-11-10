@@ -28,6 +28,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { ContentTypeTabs } from './ContentTypeTabs';
 import { ProjectContentItem, ContentTypeFilter } from '@/convex/projectContentQueries';
+import { T } from '@/components/translation/T';
 
 interface ProjectContentSectionProps {
   projectId: string;
@@ -121,37 +122,44 @@ export function ProjectContentSection({
 
   // Render empty state
   const renderEmptyState = () => {
-    const getEmptyMessage = () => {
-      if (searchTerm.trim()) {
-        return `No content found matching "${searchTerm}"`;
-      }
-      
-      switch (activeTab) {
-        case 'notes':
-          return 'No notes attached to this project';
-        case 'conversations':
-          return 'No conversations attached to this project';
-        case 'crystals':
-          return 'No crystals attached to this project';
-        case 'shards':
-          return 'No crystal shards attached to this project';
-        default:
-          return 'No content attached to this project';
-      }
-    };
-
     return (
       <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
         <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center mb-4">
           {getContentTypeIcon(activeTab === 'all' ? 'note' : activeTab.slice(0, -1))}
         </div>
-        <h3 className="text-lg font-medium text-foreground mb-2">No Content Found</h3>
+        <h3 className="text-lg font-medium text-foreground mb-2">
+          <T context="project.content.empty.title">No Content Found</T>
+        </h3>
         <p className="text-muted-foreground max-w-sm">
-          {getEmptyMessage()}
+          {searchTerm.trim() ? (
+            <>
+              <T context="project.content.empty.search">No content found matching</T> "{searchTerm}"
+            </>
+          ) : (
+            <>
+              {activeTab === 'notes' && (
+                <T context="project.content.empty.notes">No notes attached to this project</T>
+              )}
+              {activeTab === 'conversations' && (
+                <T context="project.content.empty.conversations">No conversations attached to this project</T>
+              )}
+              {activeTab === 'crystals' && (
+                <T context="project.content.empty.crystals">No crystals attached to this project</T>
+              )}
+              {activeTab === 'shards' && (
+                <T context="project.content.empty.shards">No crystal shards attached to this project</T>
+              )}
+              {activeTab === 'all' && (
+                <T context="project.content.empty.all">No content attached to this project</T>
+              )}
+            </>
+          )}
         </p>
         {!searchTerm.trim() && (
           <p className="text-sm text-muted-foreground mt-2">
-            Content will appear here when you attach notes, conversations, or generate crystals for this project.
+            <T context="project.content.empty.description">
+              Content will appear here when you attach notes, conversations, or generate crystals for this project.
+            </T>
           </p>
         )}
       </div>
@@ -209,7 +217,9 @@ export function ProjectContentSection({
           <div className="col-span-full flex justify-center py-4">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Loading more content...</span>
+              <span>
+                <T context="project.content.loading.more">Loading more content...</T>
+              </span>
             </div>
           </div>
         )}
@@ -233,9 +243,17 @@ export function ProjectContentSection({
             <FileText className="w-4 h-4 text-accent" />
           </div>
           <div className="text-left">
-            <div className="font-medium text-foreground">Project Content</div>
+            <div className="font-medium text-foreground">
+              <T context="project.content.section.title">Project Content</T>
+            </div>
             <div id="project-content-description" className="text-sm text-muted-foreground">
-              {contentCounts ? `${contentCounts.all} items` : 'Loading...'}
+              {contentCounts ? (
+                <>
+                  {contentCounts.all} <T context="project.content.items">items</T>
+                </>
+              ) : (
+                <T context="status.loading">Loading...</T>
+              )}
             </div>
           </div>
         </div>

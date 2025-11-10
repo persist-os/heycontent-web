@@ -1,192 +1,65 @@
 import { query, action, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
-import { Id } from "./_generated/dataModel";
 import { api } from "./_generated/api";
 import { internal } from "./_generated/api";
 
 /**
- * Builds and executes a query with all options in one go
- * @param ctx - Convex query context
- * @param table - The table to query (crystal_shards or crystals)
- * @param userId - User ID for scoping the query
- * @param options - Query configuration object
- * @param options.useIndex - Optional index name for optimization
- * @param options.indexFields - Fields to match in the index
- * @param options.filters - Runtime filters to apply
- * @param options.limit - Maximum number of results
- * @param options.orderBy - Sort direction (asc/desc)
- * @returns Promise resolving to query results
+ * Single crystal query function
+ * 
+ * Flexible query that can get crystals by various criteria.
+ * Simpler and more maintainable than separate functions.
+ * 
+ * CRYSTALS ONLY - For shard queries, use queryShard in shardQueries.ts
  */
-const queryWithOptions = async (
-    ctx: any,
-    table: string,
-    userId: string,
-    options: {
-        useIndex?: string;
-        indexFields?: Record<string, any>;
-        filters?: Record<string, any>;
-        limit?: number;
-        orderBy?: "asc" | "desc";
-    } = {}
-) => {
-    // Build base query with index (using multiple variables for type integrity)
-    const baseQuery = ctx.db.query(table);
-    
-    let indexedQuery;
-    if (options.useIndex) {
-        indexedQuery = baseQuery.withIndex(options.useIndex, (q: any) => {
-            let queryBuilder = q.eq("userId", userId);
-            if (options.indexFields) {
-                Object.entries(options.indexFields).forEach(([field, value]) => {
-                    queryBuilder = queryBuilder.eq(field, value);
-                });
-            }
-            return queryBuilder;
+export const queryCrystal = query({
+  args: {
+    userId: v.string(),
+    useIndex: v.optional(v.string()),
+    indexFields: v.optional(v.record(v.string(), v.union(v.string(), v.number(), v.boolean()))),
+    filters: v.optional(v.record(v.string(), v.union(v.string(), v.number(), v.boolean()))),
+    limit: v.optional(v.number()),
+    orderBy: v.optional(v.union(v.literal("asc"), v.literal("desc"))),
+  },
+  handler: async (ctx, { userId, useIndex, indexFields, filters, limit, orderBy }) => {
+    try {
+      let query;
+      
+      // Start with base query using by_user index for crystals table only
+      if (useIndex && indexFields) {
+        query = ctx.db.query("crystals").withIndex(useIndex as any, (q: any) => {
+          let queryBuilder = q.eq("userId", userId);
+          Object.entries(indexFields).forEach(([field, value]) => {
+            queryBuilder = queryBuilder.eq(field, value);
+          });
+          return queryBuilder;
         });
-    } else {
-        indexedQuery = baseQuery.withIndex("by_user", (q: any) => q.eq("userId", userId));
-    }
+      } else {
+        query = ctx.db.query("crystals").withIndex("by_user", (q) => q.eq("userId", userId));
+      }
 
-    // Apply filters
-    let filteredQuery = indexedQuery;
-    if (options.filters) {
-        Object.entries(options.filters).forEach(([field, value]) => {
-            filteredQuery = filteredQuery.filter((filterQuery: any) => filterQuery.eq(filterQuery.field(field), value));
+      // Apply additional filters
+      if (filters) {
+        Object.entries(filters).forEach(([field, value]) => {
+          query = query.filter((q: any) => q.eq(q.field(field), value));
         });
+      }
+
+      // Apply ordering if specified
+      if (orderBy) {
+        query = query.order(orderBy);
+      }
+
+      // Execute with limit
+      if (limit) {
+        return await query.take(limit);
+      } else {
+        return await query.collect();
+      }
+    } catch (error) {
+      console.error(`[CRYSTAL QUERY] Error querying crystals:`, error);
+      return [];
     }
-
-    // Apply ordering
-    let orderedQuery = filteredQuery;
-    if (options.orderBy) {
-        orderedQuery = filteredQuery.order(options.orderBy);
-    }
-
-    // Execute the query with limits
-    if (options.limit) {
-        return await orderedQuery.take(options.limit);
-    } else {
-        return await orderedQuery.collect();
-    }
-};
-
-/**
- * Master function for flexible crystal data retrieval
- *
- * Provides a unified interface for querying crystal_shards and crystals tables
- * with support for various indexes, filters, and result constraints.
- *
- * @example
- * ```typescript
- * // Get recent high-confidence shards
- * const shards = await getCrystalData(ctx, {
- *   userId: "user123",
- *   table: "crystal_shards",
- *   useIndex: "by_confidence",
- *   indexFields: { confidence_level: "high" },
- *   limit: 10,
- *   orderBy: "desc"
- * });
- * ```
- */
-export const getCrystalData = query({
-    args: {
-        userId: v.string(),
-        table: v.union(v.literal("crystal_shards"), v.literal("crystals")),
-        useIndex: v.optional(v.string()),
-        indexFields: v.optional(v.record(v.string(), v.any())),
-        filters: v.optional(v.record(v.string(), v.any())),
-        limit: v.optional(v.number()),
-        orderBy: v.optional(v.union(v.literal("asc"), v.literal("desc"))),
-    },
-    returns: v.array(v.any()),
-
-    handler: async (ctx, { userId, table, ...options }) => {
-        return queryWithOptions(ctx, table, userId, options);
-    }
-});
-
-/**
- * Convenience function for crystal and shard data operations
- *
- * Provides pre-configured queries for typical use cases in crystal/shard management.
- * Results are structured based on the operation type.
- *
- * @param userId - User ID for scoping queries
- * @param operation - The type of operation to perform
- * @param limit - Optional maximum number of results per query
- *
- * @example
- * ```typescript
- * // Get overview data (recent shards + top crystals)
- * const overview = await getPersonaData(ctx, {
- *   userId: "user123",
- *   operation: "overview",
- *   limit: 5
- * });
- * // Returns: { recentShards: [...], topCrystals: [...] }
- *
- * // Get high confidence items
- * const highConf = await getPersonaData(ctx, {
- *   userId: "user123",
- *   operation: "high_confidence"
- * });
- * // Returns: { shards: [...], crystals: [...] }
- * ```
- */
-export const getPersonaData = query({
-    args: {
-        userId: v.string(),
-        operation: v.union(
-            v.literal("shards"),
-            v.literal("crystals"),
-            v.literal("overview"),
-            v.literal("high_confidence"),
-            v.literal("due_review")
-        ),
-        limit: v.optional(v.number())
-    },
-    returns: v.any(),
-
-    handler: async (ctx, { userId, operation, limit }) => {
-        switch (operation) {
-            case "shards":
-                return queryWithOptions(ctx, "crystal_shards", userId, { limit, orderBy: "desc" });
-
-            case "crystals":
-                return queryWithOptions(ctx, "crystals", userId, { limit, orderBy: "desc" });
-
-            case "high_confidence":
-                const [shards, crystals] = await Promise.all([
-                    queryWithOptions(ctx, "crystal_shards", userId, {
-                        useIndex: "by_confidence",
-                        indexFields: { confidence_level: "high" },
-                        limit,
-                        orderBy: "desc"
-                    }),
-                    queryWithOptions(ctx, "crystals", userId, {
-                        useIndex: "by_confidence",
-                        indexFields: { confidence_score: "high" },
-                        limit,
-                        orderBy: "desc"
-                    })
-                ]);
-                return { shards, crystals };
-
-            case "due_review":
-                return queryWithOptions(ctx, "crystals", userId, {
-                    useIndex: "by_review_due",
-                    filters: { next_review_due: Date.now() },
-                    orderBy: "desc"
-                });
-
-            case "overview":
-                const [recentShards, topCrystals] = await Promise.all([
-                    queryWithOptions(ctx, "crystal_shards", userId, { limit: limit || 10, orderBy: "desc" }),
-                    queryWithOptions(ctx, "crystals", userId, { useIndex: "by_usage", limit: limit || 10, orderBy: "desc" })
-                ]);
-                return { recentShards, topCrystals };
-        }
-    }
+  }
 });
 
 /**
@@ -195,7 +68,7 @@ export const getPersonaData = query({
  * This function performs semantic search on crystals by:
  * 1. Using the hybrid search system to find relevant crystal embeddings
  * 2. Retrieving the actual crystal data for the matched content IDs
- * 3. Returning structured crystal results
+ * 3. Returning structured crystal results with similarity scores
  */
 export const vectorSearchCrystals = action({
     args: {
@@ -204,40 +77,29 @@ export const vectorSearchCrystals = action({
         limit: v.optional(v.number()),
         minSimilarity: v.optional(v.number()),
     },
-    returns: v.array(v.any()),
     handler: async (ctx, { userId, query, limit, minSimilarity }) => {
-        console.log('🔍 [CRYSTAL VECTOR SEARCH] Starting vector search for crystals');
-        console.log('🔍 [CRYSTAL VECTOR SEARCH] Query:', query);
-        console.log('🔍 [CRYSTAL VECTOR SEARCH] User:', userId);
-        
         try {
             // Use the hybrid search system to find relevant crystal embeddings
-            const searchResults = await ctx.runAction(api.vectorSearch.hybridSearchContentWithQuotas, {
+            const searchResults = await ctx.runAction(api.vectorSearch.hybridSearchContent, {
                 userId,
                 query,
                 limit: limit || 10,
-                contentTypes: ["crystal"], // Only search crystal content
+                contentTypes: ["cognitive_field"], // Only search cognitive field content
                 minSimilarity: minSimilarity || 0.35,
             });
             
-            console.log('🔍 [CRYSTAL VECTOR SEARCH] Found', searchResults.length, 'embedding matches');
-            
             if (searchResults.length === 0) {
-                console.log('🔍 [CRYSTAL VECTOR SEARCH] No matches found');
                 return [];
             }
             
             // Extract content IDs from search results
             const contentIds = searchResults.map(result => result.contentId);
-            console.log('🔍 [CRYSTAL VECTOR SEARCH] Content IDs to fetch:', contentIds);
             
             // Fetch the actual crystal data
             const crystals = await ctx.runQuery(internal.crystalQueries.getCrystalsByIds, {
                 userId,
                 crystalIds: contentIds,
             });
-            
-            console.log('🔍 [CRYSTAL VECTOR SEARCH] Retrieved', crystals.length, 'crystals');
             
             // Combine crystal data with similarity scores
             const resultsWithScores = crystals.map(crystal => {
@@ -251,15 +113,10 @@ export const vectorSearchCrystals = action({
             // Sort by similarity score (highest first)
             resultsWithScores.sort((a, b) => (b.similarity_score || 0) - (a.similarity_score || 0));
             
-            console.log('✅ [CRYSTAL VECTOR SEARCH] Returning', resultsWithScores.length, 'results');
             return resultsWithScores;
             
         } catch (error: any) {
-            console.error('❌ [CRYSTAL VECTOR SEARCH] Error:', error);
-            console.error('❌ [CRYSTAL VECTOR SEARCH] Error message:', error.message);
-            
-            // Return empty array instead of throwing to maintain UX
-            console.log('🔍 [CRYSTAL VECTOR SEARCH] Returning empty results due to error');
+            console.error('[CRYSTAL VECTOR SEARCH] Error:', error);
             return [];
         }
     }
@@ -269,52 +126,50 @@ export const vectorSearchCrystals = action({
 /**
  * Internal function to get crystals by their IDs
  * Used by vector search to retrieve actual crystal data after finding matches
+ * 
+ * Atomically fetches all crystals for the user, then filters by requested IDs.
+ * Returns crystals with _originalContentId field for matching with search results.
  */
 export const getCrystalsByIds = internalQuery({
     args: {
         userId: v.string(),
         crystalIds: v.array(v.string()),
     },
-    returns: v.array(v.any()),
     handler: async (ctx, { userId, crystalIds }) => {
-        console.log(`🔍 [GET CRYSTALS BY IDS] Fetching ${crystalIds.length} crystals for user ${userId}`);
-        console.log(`🔍 [GET CRYSTALS BY IDS] Raw crystal IDs:`, crystalIds);
-        
-        const crystals = [];
-        
-        for (const contentId of crystalIds) {
-            try {
-                // Extract actual crystal ID from contentId format "crystal:actualId"
-                const actualCrystalId = contentId.startsWith('crystal:') 
-                    ? contentId.substring(8) // Remove "crystal:" prefix
-                    : contentId;
-                    
-                console.log(`🔍 [GET CRYSTALS BY IDS] Extracted crystal ID: ${actualCrystalId} from contentId: ${contentId}`);
-                
-                // Search for crystal by crystal_id field
-                const crystal = await ctx.db
-                    .query("crystals")
-                    .withIndex("by_user", (q) => q.eq("userId", userId))
-                    .filter((q) => q.eq(q.field("crystal_id"), actualCrystalId))
-                    .first();
-                
-                if (crystal) {
-                    crystals.push({
-                        ...crystal,
-                        // Add the original contentId for matching with search results
-                        _originalContentId: contentId
-                    });
-                    console.log(`✅ [GET CRYSTALS BY IDS] Found crystal: ${crystal.name}`);
-                } else {
-                    console.warn(`⚠️ [GET CRYSTALS BY IDS] Crystal not found for ID: ${actualCrystalId}`);
-                }
-            } catch (error) {
-                console.error(`❌ [GET CRYSTALS BY IDS] Error fetching crystal ${contentId}:`, error);
-            }
+        if (crystalIds.length === 0) {
+            return [];
         }
-        
-        console.log(`✅ [GET CRYSTALS BY IDS] Successfully fetched ${crystals.length} crystals`);
-        return crystals;
+
+        try {
+            // Extract actual crystal IDs from contentId format "crystal:actualId"
+            const actualCrystalIds = crystalIds.map(contentId => 
+                contentId.startsWith('crystal:') 
+                    ? contentId.substring(8)
+                    : contentId
+            );
+
+            // Atomically fetch all crystals for user in single query
+            const allCrystals = await ctx.db
+                .query("crystals")
+                .withIndex("by_user", (q) => q.eq("userId", userId))
+                .collect();
+
+            // Filter to only requested crystals and add original contentId
+            const crystals = allCrystals
+                .filter(crystal => actualCrystalIds.includes(crystal.crystal_id))
+                .map(crystal => {
+                    const index = actualCrystalIds.indexOf(crystal.crystal_id);
+                    return {
+                        ...crystal,
+                        _originalContentId: crystalIds[index]
+                    };
+                });
+
+            return crystals;
+        } catch (error) {
+            console.error('[GET CRYSTALS BY IDS] Error:', error);
+            return [];
+        }
     },
 });
 
@@ -336,10 +191,8 @@ export const getCrystalStats = query({
         }),
     }),
     handler: async (ctx, { userId }) => {
-        console.log(`📊 [CRYSTAL STATS] Getting stats for user ${userId}`);
-        
         try {
-            // Get all crystals and shards for the user
+            // Get all crystals and shards for the user atomically
             const [crystals, shards] = await Promise.all([
                 ctx.db
                     .query("crystals")
@@ -397,7 +250,7 @@ export const getCrystalStats = query({
             const crystalsThisWeek = crystals.filter(c => c._creationTime > oneWeekAgo).length;
             const shardsThisWeek = shards.filter(s => s._creationTime > oneWeekAgo).length;
 
-            const stats = {
+            return {
                 crystalsCount,
                 shardsCount,
                 byDimension,
@@ -407,12 +260,9 @@ export const getCrystalStats = query({
                     shardsThisWeek,
                 },
             };
-
-            console.log(`✅ [CRYSTAL STATS] Generated stats:`, stats);
-            return stats;
             
         } catch (error: any) {
-            console.error(`❌ [CRYSTAL STATS] Error getting stats:`, error);
+            console.error('[CRYSTAL STATS] Error getting stats:', error);
             // Return empty stats instead of throwing
             return {
                 crystalsCount: 0,
@@ -428,108 +278,103 @@ export const getCrystalStats = query({
     }
 });
 
-// Shared handler for retrieving shards by IDs with user validation
-async function getShardsByIdsHandler(
-    ctx: any,
-    userId: string,
-    shardIds: string[]
-) {
-    const shards = [];
-    
-    for (const shardId of shardIds) {
-        try {
-            const shard = await ctx.db.get(shardId as Id<"crystal_shards">);
-            
-            // Only include shards that exist and belong to the user
-            if (shard && shard.userId === userId) {
-                shards.push(shard);
-            }
-        } catch (error) {
-            // Skip invalid IDs, continue with others
-            continue;
-        }
-    }
-    
-    // Sort by creation time, most recent first
-    shards.sort((a, b) => b._creationTime - a._creationTime);
-    
-    return shards;
-}
-
 /**
- * Retrieve crystal shards by their IDs
+ * Get crystals by user ID
  * 
- * Fetches multiple shards in a single query with user ownership validation.
- * Silently skips shards that don't exist or belong to other users.
- * 
- * @param userId - User ID for ownership validation
- * @param shardIds - Array of shard IDs to retrieve
- * @returns Array of shard objects that exist and belong to the user
+ * Parallel to getShardsByUser in shardQueries.ts.
+ * Fetches crystals for a user with optional limit, ordered by most recent first.
  */
-export const getShardsByIds = query({
-    args: {
-        userId: v.string(),
-        shardIds: v.array(v.string())
-    },
-    returns: v.array(v.any()),
-    handler: async (ctx, { userId, shardIds }) => {
-        return await getShardsByIdsHandler(ctx, userId, shardIds);
-    }
+export const getCrystalsByUser = query({
+  args: {
+    userId: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { userId, limit }) => {
+    const crystals = await ctx.db
+      .query("crystals")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .order("desc")
+      .take(limit || 100)
+    
+    return crystals;
+  },
 });
 
 /**
- * Internal query for shard retrieval by IDs
+ * Get ALL crystals for a user without limits - for deletion operations
  * 
- * Used internally by other Convex functions (e.g., vector search).
- * Same functionality as getShardsByIds but accessible only to internal calls.
+ * This query fetches all crystals for a user without any limits.
+ * Used specifically for deletion operations where we need to delete everything.
+ * 
+ * @param userId - User ID to fetch crystals for
+ * @returns Array of all crystal objects for the user
  */
-export const getCrystalShardsByIds = internalQuery({
-    args: {
-        userId: v.string(),
-        shardIds: v.array(v.string()),
-    },
-    returns: v.array(v.any()),
-    handler: async (ctx, { userId, shardIds }) => {
-        return await getShardsByIdsHandler(ctx, userId, shardIds);
-    }
+export const getAllCrystalsByUser = query({
+  args: {
+    userId: v.string(),
+  },
+  handler: async (ctx, { userId }) => {
+    const crystals = await ctx.db
+      .query("crystals")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    
+    return crystals;
+  },
 });
 
 /**
  * Get crystals by widget ID
+ * 
+ * Fetches all crystals associated with a specific widget for a user.
  */
 export const getCrystalsByWidgetId = query({
     args: {
         widgetId: v.union(v.string(), v.id("widgets")),
         userId: v.string(),
     },
-    returns: v.array(v.any()),
     handler: async (ctx, { widgetId, userId }) => {
-        const crystals = await ctx.db
-            .query("crystals")
-            .withIndex("by_widget", (q) => q.eq("widgetId", widgetId))
-            .filter((q) => q.eq(q.field("userId"), userId))
-            .collect();
-        
-        return crystals;
+        try {
+            const crystals = await ctx.db
+                .query("crystals")
+                .withIndex("by_widget", (q) => q.eq("widgetId", widgetId))
+                .filter((q) => q.eq(q.field("userId"), userId))
+                .collect();
+            
+            return crystals;
+        } catch (error) {
+            console.error('[GET CRYSTALS BY WIDGET] Error:', error);
+            return [];
+        }
     },
 });
 
 /**
- * Get shards by widget ID
+ * Get persona data for crystals only
+ * 
+ * This function handles crystal-specific persona data queries.
+ * For shard persona data, use getShardPersonaData in shardQueries.ts
  */
-export const getShardsByWidgetId = query({
+export const getCrystalPersonaData = query({
     args: {
-        widgetId: v.union(v.string(), v.id("widgets")),
         userId: v.string(),
+        limit: v.optional(v.number()),
     },
-    returns: v.array(v.any()),
-    handler: async (ctx, { widgetId, userId }) => {
-        const shards = await ctx.db
-            .query("crystal_shards")
-            .withIndex("by_widget", (q) => q.eq("widgetId", widgetId))
-            .filter((q) => q.eq(q.field("userId"), userId))
-            .collect();
-        
-        return shards;
+    handler: async (ctx, { userId, limit }) => {
+        try {
+            const query = ctx.db
+                .query("crystals")
+                .withIndex("by_user", (q) => q.eq("userId", userId))
+                .order("desc");
+            
+            if (limit) {
+                return await query.take(limit);
+            } else {
+                return await query.collect();
+            }
+        } catch (error) {
+            console.error(`[GET CRYSTAL PERSONA DATA] Error getting crystals:`, error);
+            return [];
+        }
     },
 });

@@ -1,5 +1,7 @@
 import type { Config } from "tailwindcss";
 import tailwindcssAnimate from "tailwindcss-animate";
+import tailwindcssTypography from "@tailwindcss/typography";
+import tailwindScrollbar from "tailwind-scrollbar";
 
 const config = {
   darkMode: ["class"],
@@ -17,19 +19,54 @@ const config = {
   		}
   	},
   	extend: {
+  		typography: {
+  			DEFAULT: {
+  				css: {
+  					'--tw-prose-body': 'hsl(var(--foreground))',
+  					'--tw-prose-headings': 'hsl(var(--foreground))',
+  					'--tw-prose-links': 'hsl(var(--primary))',
+  					'--tw-prose-bold': 'hsl(var(--foreground))',
+  					'--tw-prose-counters': 'hsl(var(--muted-foreground))',
+  					'--tw-prose-bullets': 'hsl(var(--muted-foreground))',
+  					'--tw-prose-quotes': 'hsl(var(--foreground))',
+  					'--tw-prose-code': 'hsl(var(--foreground))',
+  					'--tw-prose-hr': 'hsl(var(--border))',
+  					'--tw-prose-th-borders': 'hsl(var(--border))',
+  					'--tw-prose-td-borders': 'hsl(var(--border))',
+  				},
+  			},
+  			invert: {
+  				css: {
+  					'--tw-prose-body': 'hsl(var(--foreground))',
+  					'--tw-prose-headings': 'hsl(var(--foreground))',
+  					'--tw-prose-links': 'hsl(var(--primary))',
+  					'--tw-prose-bold': 'hsl(var(--foreground))',
+  					'--tw-prose-counters': 'hsl(var(--muted-foreground))',
+  					'--tw-prose-bullets': 'hsl(var(--muted-foreground))',
+  					'--tw-prose-quotes': 'hsl(var(--foreground))',
+  					'--tw-prose-code': 'hsl(var(--foreground))',
+  					'--tw-prose-hr': 'hsl(var(--border))',
+  					'--tw-prose-th-borders': 'hsl(var(--border))',
+  					'--tw-prose-td-borders': 'hsl(var(--border))',
+  				},
+  			},
+  		},
   		colors: {
   			border: 'hsl(var(--border))',
   			input: 'hsl(var(--input))',
   			ring: 'hsl(var(--ring))',
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
-  			primary: {
-  				DEFAULT: 'hsl(var(--primary))',
-  				foreground: 'hsl(var(--primary-foreground))'
-  			},
+			primary: {
+				DEFAULT: 'hsl(var(--primary))',           // Uses CSS variable - deep navy blue in light, bright blue in dark
+				foreground: 'hsl(var(--primary-foreground))',        // Uses CSS variable - white in light, dark blue in dark
+			},
   			secondary: {
-  				DEFAULT: 'hsl(var(--secondary))',
-  				foreground: 'hsl(var(--secondary-foreground))'
+  				DEFAULT: '#FFA312',           // Aldebaran - Brand orange
+  				foreground: '#472A00',        // S0 dark - Dark brown (for text on secondary)
+  				light: '#FFB963',             // S80 - Light amber
+  				dark: '#F09700',              // S70 - Darker orange
+  				darker: '#472A00'             // S0 dark - Darkest brown
   			},
   			destructive: {
   				DEFAULT: 'hsl(var(--destructive))',
@@ -125,7 +162,7 @@ const config = {
   		}
   	}
   },
-  plugins: [tailwindcssAnimate, require('@tailwindcss/typography'), require('tailwind-scrollbar')],
+  plugins: [tailwindcssAnimate, tailwindcssTypography, tailwindScrollbar],
 } satisfies Config;
 
 export default config;

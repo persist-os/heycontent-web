@@ -27,6 +27,7 @@ export interface WidgetRunResponse {
     text: string;
     priority: number;
   }>;
+  opening_message?: string;
   user_id: string;
 }
 

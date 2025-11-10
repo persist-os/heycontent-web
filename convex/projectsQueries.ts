@@ -38,7 +38,8 @@ async function getProjectByIdHandler(
     shardCount: (project.shardIds || []).length,
     
     // Analytics
-    analysisIds: project.analysisIds || [],
+    stardustIds: project.stardustIds || [],
+    stardustCount: (project.stardustIds || []).length,
     
     // Intelligence
     fingerprintId: project.fingerprintId,
@@ -233,17 +234,22 @@ export const getByUser = query({
       name: project.name,
       description: project.description,
       
+      // Living Projects Status
+      status: project.status,
+      
       // Summary counts for dashboard
       totalContent: (
         (project.noteIds || []).length +
         (project.conversationIds || []).length +
         (project.crystalIds || []).length +
-        (project.shardIds || []).length
+        (project.shardIds || []).length +
+        (project.stardustIds || []).length
       ),
       noteCount: (project.noteIds || []).length,
       conversationCount: (project.conversationIds || []).length,
       crystalCount: (project.crystalIds || []).length,
       shardCount: (project.shardIds || []).length,
+      stardustCount: (project.stardustIds || []).length,
       
       // Intelligence status
       hasFingerprintId: !!project.fingerprintId,
@@ -253,6 +259,29 @@ export const getByUser = query({
       createdAt: project.createdAt,
       updatedAt: project.updatedAt,
     }));
+  },
+});
+
+/**
+ * Get ALL projects for a user without limits - for deletion operations
+ * 
+ * This query fetches all projects for a user without any limits.
+ * Used specifically for deletion operations where we need to delete everything.
+ * 
+ * @param userId - User ID to fetch projects for
+ * @returns Array of all project objects for the user
+ */
+export const getAllByUser = query({
+  args: { 
+    userId: v.string(),
+  },
+  handler: async (ctx, { userId }) => {
+    const projects = await ctx.db
+      .query("projects")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    
+    return projects;
   },
 });
 
@@ -275,6 +304,7 @@ export const getWithContentType = query({
       v.literal("conversations"), 
       v.literal("crystals"),
       v.literal("shards"),
+      v.literal("stardust"),
       v.literal("all")
     ),
   },
@@ -301,7 +331,7 @@ export const getWithContentType = query({
         conversationIds: project.conversationIds || [],
         crystalIds: project.crystalIds || [],
         shardIds: project.shardIds || [],
-        analysisIds: project.analysisIds || [],
+        stardustIds: project.stardustIds || [],
       };
     } else {
       const fieldMap = {
@@ -309,6 +339,7 @@ export const getWithContentType = query({
         conversations: "conversationIds",
         crystals: "crystalIds",
         shards: "shardIds",
+        stardust: "stardustIds",
       };
       
       const field = fieldMap[contentType];
@@ -352,7 +383,8 @@ export const getWithFingerprints = query({
         (project.noteIds || []).length +
         (project.conversationIds || []).length +
         (project.crystalIds || []).length +
-        (project.shardIds || []).length
+        (project.shardIds || []).length +
+        (project.stardustIds || []).length
       ),
       createdAt: project.createdAt,
       updatedAt: project.updatedAt,
@@ -462,7 +494,8 @@ export const searchByName = query({
         (project.noteIds || []).length +
         (project.conversationIds || []).length +
         (project.crystalIds || []).length +
-        (project.shardIds || []).length
+        (project.shardIds || []).length +
+        (project.stardustIds || []).length
       ),
       createdAt: project.createdAt,
     }));
@@ -497,12 +530,13 @@ export const getStats = query({
         conversations: (project.conversationIds || []).length,
         crystals: (project.crystalIds || []).length,
         shards: (project.shardIds || []).length,
-        analyses: (project.analysisIds || []).length,
+        stardusts: (project.stardustIds || []).length,
         total: (
           (project.noteIds || []).length +
           (project.conversationIds || []).length +
           (project.crystalIds || []).length +
-          (project.shardIds || []).length
+          (project.shardIds || []).length +
+          (project.stardustIds || []).length
         ),
       },
       

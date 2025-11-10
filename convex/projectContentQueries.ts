@@ -14,7 +14,7 @@ import { Id } from "./_generated/dataModel";
  */
 export interface ProjectContentItem {
   id: string;
-  type: "note" | "conversation" | "crystal" | "shard";
+  type: "note" | "conversation" | "crystal" | "shard" | "stardust";
   title: string;
   content?: string;
   preview?: string;
@@ -30,7 +30,7 @@ export interface ProjectContentItem {
 /**
  * Content type filter for tabbed interface
  */
-export type ContentTypeFilter = "all" | "notes" | "conversations" | "crystals" | "shards";
+export type ContentTypeFilter = "all" | "notes" | "conversations" | "crystals" | "shards" | "stardusts";
 
 /**
  * Batch fetch all content attached to a project with user isolation
@@ -54,7 +54,8 @@ export const getProjectContent = query({
       v.literal("notes"),
       v.literal("conversations"),
       v.literal("crystals"),
-      v.literal("shards")
+      v.literal("shards"),
+      v.literal("stardusts")
     )),
     limit: v.optional(v.number()),
     offset: v.optional(v.number())
@@ -85,7 +86,7 @@ export const getProjectContent = query({
       // Fetch content based on type filter
       if (contentType === "all" || contentType === "notes") {
         const noteIds = project.noteIds || [];
-        const noteLimit = contentType === "notes" ? maxLimit : Math.floor(maxLimit / 4);
+        const noteLimit = contentType === "notes" ? maxLimit : Math.floor(maxLimit / 5);
         
         for (const noteId of noteIds.slice(0, noteLimit)) {
           try {
@@ -119,7 +120,7 @@ export const getProjectContent = query({
 
       if (contentType === "all" || contentType === "conversations") {
         const conversationIds = project.conversationIds || [];
-        const conversationLimit = contentType === "conversations" ? maxLimit : Math.floor(maxLimit / 4);
+        const conversationLimit = contentType === "conversations" ? maxLimit : Math.floor(maxLimit / 5);
         
         for (const conversationId of conversationIds.slice(0, conversationLimit)) {
           try {
@@ -139,7 +140,7 @@ export const getProjectContent = query({
                   lastMessageAt: conversation.lastMessageAt,
                   starred: conversation.starred,
                   conversationType: conversation.conversationType,
-                  widgetId: conversation.widgetId
+                  widgetIds: (conversation as any).widgetIds || []  // Updated to use widgetIds array
                 },
                 projectId: project._id
               });
@@ -153,7 +154,7 @@ export const getProjectContent = query({
 
       if (contentType === "all" || contentType === "crystals") {
         const crystalIds = project.crystalIds || [];
-        const crystalLimit = contentType === "crystals" ? maxLimit : Math.floor(maxLimit / 4);
+        const crystalLimit = contentType === "crystals" ? maxLimit : Math.floor(maxLimit / 5);
         
         for (const crystalId of crystalIds.slice(0, crystalLimit)) {
           try {
@@ -196,7 +197,7 @@ export const getProjectContent = query({
 
       if (contentType === "all" || contentType === "shards") {
         const shardIds = project.shardIds || [];
-        const shardLimit = contentType === "shards" ? maxLimit : Math.floor(maxLimit / 4);
+        const shardLimit = contentType === "shards" ? maxLimit : Math.floor(maxLimit / 5);
         
         for (const shardId of shardIds.slice(0, shardLimit)) {
           try {
@@ -227,6 +228,42 @@ export const getProjectContent = query({
             }
           } catch (error) {
             console.warn(`[PROJECT CONTENT] Error fetching shard ${shardId}:`, error);
+            continue;
+          }
+        }
+      }
+
+      if (contentType === "all" || contentType === "stardusts") {
+        const stardustIds = project.stardustIds || [];
+        const stardustLimit = contentType === "stardusts" ? maxLimit : Math.floor(maxLimit / 5);
+        
+        for (const stardustId of stardustIds.slice(0, stardustLimit)) {
+          try {
+            const stardust = await ctx.db.get(stardustId as Id<"stardust">);
+            if (stardust && stardust.userId === userId) {
+              contentItems.push({
+                id: stardust._id,
+                type: "stardust",
+                title: stardust.name || stardust.description?.substring(0, 50) || "Stardust",
+                content: stardust.description,
+                preview: (stardust.description || "")?.substring(0, 150) + 
+                        (stardust.description && stardust.description.length > 150 ? "..." : ""),
+                metadata: {
+                  createdAt: stardust.createdAt,
+                  updatedAt: stardust.updatedAt,
+                  userId: stardust.userId,
+                  name: stardust.name,
+                  dimension: stardust.dimension,
+                  confidence: stardust.confidence,
+                  lifecycleStage: stardust.lifecycleStage,
+                  health: stardust.health,
+                  suggestedProjectName: stardust.suggestedProjectName
+                },
+                projectId: project._id
+              });
+            }
+          } catch (error) {
+            console.warn(`[PROJECT CONTENT] Error fetching stardust ${stardustId}:`, error);
             continue;
           }
         }
@@ -281,7 +318,8 @@ export const getProjectContentCounts = query({
     notes: v.number(),
     conversations: v.number(),
     crystals: v.number(),
-    shards: v.number()
+    shards: v.number(),
+    stardusts: v.number()
   }),
   handler: async (ctx, { projectId, userId }) => {
     // Validate project ownership
@@ -292,7 +330,8 @@ export const getProjectContentCounts = query({
         notes: 0,
         conversations: 0,
         crystals: 0,
-        shards: 0
+        shards: 0,
+        stardusts: 0
       };
     }
 
@@ -301,14 +340,16 @@ export const getProjectContentCounts = query({
     const conversationCount = (project.conversationIds || []).length;
     const crystalCount = (project.crystalIds || []).length;
     const shardCount = (project.shardIds || []).length;
-    const allCount = noteCount + conversationCount + crystalCount + shardCount;
+    const stardustCount = (project.stardustIds || []).length;
+    const allCount = noteCount + conversationCount + crystalCount + shardCount + stardustCount;
 
     return {
       all: allCount,
       notes: noteCount,
       conversations: conversationCount,
       crystals: crystalCount,
-      shards: shardCount
+      shards: shardCount,
+      stardusts: stardustCount
     };
   }
 });
@@ -332,7 +373,8 @@ export const getProjectContentMetadata = internalQuery({
       v.literal("notes"),
       v.literal("conversations"),
       v.literal("crystals"),
-      v.literal("shards")
+      v.literal("shards"),
+      v.literal("stardusts")
     )
   },
   returns: v.array(v.any()),
@@ -438,8 +480,30 @@ export const getProjectContentMetadata = internalQuery({
             }
           }
           break;
-      }
 
+        case "stardusts":
+          const stardustIds = project.stardustIds || [];
+          for (const stardustId of stardustIds) {
+            try {
+              const stardust = await ctx.db.get(stardustId as Id<"stardust">);
+              if (stardust && stardust.userId === userId) {
+                metadata.push({
+                  id: stardust._id,
+                  type: "stardust",
+                  title: stardust.name || stardust.description?.substring(0, 50) || "Stardust",
+                  createdAt: stardust.createdAt,
+                  updatedAt: stardust.updatedAt,
+                  dimension: stardust.dimension,
+                  confidence: stardust.confidence
+                });
+              }
+            } catch (error) {
+              continue;
+            }
+          }
+          break;
+      }
+      
       return metadata;
     } catch (error) {
       console.error(`[PROJECT CONTENT METADATA] Error fetching metadata:`, error);
@@ -471,7 +535,8 @@ export const searchProjectContent = query({
       v.literal("notes"),
       v.literal("conversations"),
       v.literal("crystals"),
-      v.literal("shards")
+      v.literal("shards"),
+      v.literal("stardusts")
     )),
     limit: v.optional(v.number())
   },
@@ -560,6 +625,23 @@ export const searchProjectContent = query({
       }
     }
 
+    // Fetch and search stardusts
+    if ((contentType === 'all' || contentType === 'stardusts') && project.stardustIds?.length > 0) {
+      for (const stardustId of project.stardustIds.slice(0, 15)) {
+        try {
+          const stardust = await ctx.db.get(stardustId as any);
+          if (stardust && (
+            ((stardust as any).name || '').toLowerCase().includes(searchLower) ||
+            ((stardust as any).description || '').toLowerCase().includes(searchLower)
+          )) {
+            contentItems.push({ ...stardust, _contentType: 'stardust', _contentId: stardustId });
+          }
+        } catch (error) {
+          console.warn(`Failed to search stardust ${stardustId}:`, error);
+        }
+      }
+    }
+
     return contentItems.slice(0, limit);
   }
 });
@@ -586,7 +668,8 @@ export const getProjectContentVirtual = query({
       v.literal("notes"),
       v.literal("conversations"),
       v.literal("crystals"),
-      v.literal("shards")
+      v.literal("shards"),
+      v.literal("stardusts")
     )),
     startIndex: v.number(),
     endIndex: v.number()
@@ -619,6 +702,9 @@ export const getProjectContentVirtual = query({
     }
     if (contentType === "all" || contentType === "shards") {
       allIds = allIds.concat(project.shardIds || []);
+    }
+    if (contentType === "all" || contentType === "stardusts") {
+      allIds = allIds.concat(project.stardustIds || []);
     }
 
     const totalCount = allIds.length;
@@ -678,6 +764,17 @@ export const getProjectContentVirtual = query({
               id: item._id,
               type: "shard",
               title: item.what_it_reveals || item.dimension || "Crystal Shard",
+              createdAt: item.createdAt,
+              updatedAt: item.updatedAt
+            });
+          }
+        } else if ((project.stardustIds || []).includes(id)) {
+          item = await ctx.db.get(id as Id<"stardust">);
+          if (item && item.userId === userId) {
+            items.push({
+              id: item._id,
+              type: "stardust",
+              title: item.name || item.description?.substring(0, 50) || "Stardust",
               createdAt: item.createdAt,
               updatedAt: item.updatedAt
             });

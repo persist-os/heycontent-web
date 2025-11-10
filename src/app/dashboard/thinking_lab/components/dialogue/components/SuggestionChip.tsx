@@ -2,6 +2,7 @@ import React from 'react';
 import { Brain, MessageSquare, Target, Zap } from 'lucide-react';
 import { SuggestedAction } from '../../../types/modules/dialogueModules';
 import { InputButton } from '@/components/ui/input-button';
+import { cn } from '@/lib/utils';
 
 interface SuggestionChipProps {
   suggestion: SuggestedAction | string;
@@ -27,34 +28,39 @@ export const SuggestionChip = ({ suggestion, onClick, onInputPopulate }: Suggest
     : cleanSuggestionText((suggestion as SuggestedAction).description);
   
   const [isHovered, setIsHovered] = React.useState(false);
+  const [isMounted, setIsMounted] = React.useState(false);
+  
+  // Trigger fade+slide animation immediately on mount
+  React.useEffect(() => {
+    requestAnimationFrame(() => {
+      setIsMounted(true);
+    });
+  }, []);
   
   return (
-    <div className="group relative inline-block max-w-full">
+    <div 
+      className="group relative inline-block max-w-full transition-all duration-300 ease-out"
+      style={{
+        opacity: isMounted ? 1 : 0,
+        transform: isMounted ? 'translateY(0)' : 'translateY(10px)'
+      }}
+    >
       <button
         onClick={onClick}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className="text-left select-none chat-font"
-        style={{
-          width: '100%',
-          maxWidth: '310px',
-          minHeight: '30px',
-          height: 'auto',
-          borderRadius: '6px',
-          opacity: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'flex-start',
-          padding: '8px 12px',
-          border: '0.6px solid #2A66CB',
-          wordWrap: 'break-word',
-          whiteSpace: 'normal',
-          // Hover state styling - subtle blue tint on hover, no solid colors
-          backgroundColor: isHovered ? 'rgba(42, 102, 203, 0.2)' : 'transparent',
-          color: '#2A66CB',
-          transition: 'all 150ms ease-out',
-          cursor: 'pointer',
-        }}
+        className={cn(
+          "text-left select-none chat-font",
+          "w-full max-w-[310px] min-h-[30px] h-auto rounded-lg",
+          "flex items-center justify-start px-3.5 py-2",
+          "border border-primary/30 dark:border-primary/40",
+          "break-words whitespace-normal",
+          "transition-all duration-150 ease-out cursor-pointer",
+          "text-primary-darker dark:text-primary",
+          isHovered 
+            ? "bg-primary/20 dark:bg-primary/15" 
+            : "bg-primary/10 dark:bg-primary/5"
+        )}
       >
         <span className="text-sm leading-relaxed break-words w-full text-left">
           {displayText}

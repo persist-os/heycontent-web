@@ -3,7 +3,6 @@ import { HonoWithConvex, HttpRouterWithHono } from "convex-helpers/server/hono";
 import { ActionCtx } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import { cors } from "hono/cors";
-import { ConfigStatus } from "./types/convergence";
 
 /**
  * PARALLEL SYSTEM: Native Convex Actions + Hono Fallback
@@ -26,13 +25,13 @@ app.use('*', async (c, next) => {
   
   // Determine domain for better tracking
   let domain = 'unknown';
-  if (path.includes('/notes')) domain = 'notes';
+  if (path.includes('/artifacts')) domain = 'artifacts';
+  else if (path.includes('/notes')) domain = 'notes';
   else if (path.includes('/users')) domain = 'users';
   else if (path.includes('/stardust')) domain = 'stardust';
   else if (path.includes('/projectSeeds')) domain = 'project_seeds';
   else if (path.includes('/projects')) domain = 'projects';
   else if (path.includes('/widgets')) domain = 'widgets';
-  else if (path.includes('/fingerprintSignals')) domain = 'fingerprint_signals';
   else if (path.includes('/project-fingerprint')) domain = 'fingerprint';
   else if (path.includes('/crystal')) domain = 'crystal';
   else if (path.includes('/contextEnrichmentBandit')) domain = 'context_mab';
@@ -45,13 +44,10 @@ app.use('*', async (c, next) => {
   else if (path.includes('/feedback')) domain = 'feedback';
   else if (path.includes('/backgroundJobs') || path.includes('/background')) domain = 'background_jobs';
   else if (path.includes('/briefing')) domain = 'briefing';
-  
-  console.log(`🔵 [${domain.toUpperCase()}] ${method} ${path} - START`);
+  else if (path.includes('/agnoRunEvents')) domain = 'agno_run_events';
+  else if (path.includes('/chat')) domain = 'chat';
   
   await next();
-  
-  const duration = Date.now() - startTime;
-  console.log(`✅ [${domain.toUpperCase()}] ${method} ${path} - ${c.res.status} (${duration}ms)`);
 });
 
 // Add CORS middleware
@@ -106,23 +102,119 @@ app.get("/api/users/lookup/subscription/:subscriptionId", async (c) => {
 // Persona system has been deprecated and removed
 
 // Conversations
+
+// 🎯 ATOMIC INITIALIZATION: Create Project + Conversation + Fingerprint + Cognitive Field
+app.post("/api/users/:id/initialize_conversation", async (c) => {
+  try {
+    const ctx = c.env;
+    const userId = c.req.param("id");
+    const { title, messages, widgetId, widgetOutputId } = await c.req.json();
+    
+    // Validate required fields
+    if (!title || !messages || !Array.isArray(messages)) {
+      return c.json({ 
+        success: false, 
+        error: "title and messages are required" 
+      }, 400);
+    }
+    
+    // Add timestamps to messages if they don't have them
+    const messagesWithTimestamps = messages.map((message: any) => ({
+      ...message,
+      timestamp: message.timestamp || Date.now(),
+    }));
+    
+    const result = await ctx.runMutation(api.chatMutations.initializeConversation, {
+      userId,
+      title,
+      messages: messagesWithTimestamps,
+      widgetId,
+      widgetOutputId,
+    });
+    
+    // initializeConversation returns { conversationId, projectId, fingerprintId, cognitiveFieldId }
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    console.error('[initialize_conversation] Error:', error);
+    return c.json({ 
+      success: false, 
+      error: `Initialize conversation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      data: null 
+    }, 500);
+  }
+});
+
+// @deprecated Use initialize_conversation instead
 app.post("/api/users/:id/create_conversation", async (c) => {
+  try {
+    const ctx = c.env;
+    const userId = c.req.param("id");
+    const { title, messages } = await c.req.json();
+    
+    // Validate required fields
+    if (!title || !messages || !Array.isArray(messages)) {
+      return c.json({ 
+        success: false, 
+        error: "title and messages are required" 
+      }, 400);
+    }
+    
+    // Add timestamps to messages if they don't have them
+    const messagesWithTimestamps = messages.map((message: any) => ({
+      ...message,
+      timestamp: message.timestamp || Date.now(),
+    }));
+    
+    const result = await ctx.runMutation(api.chatMutations.createConversation, {
+      userId,
+      title,
+      messages: messagesWithTimestamps,
+    });
+    return c.json(result);
+  } catch (error) {
+    console.error('Create conversation error:', error);
+    console.error('Create conversation error details:', {
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : 'No stack',
+      userId: c.req.param("id"),
+      requestBody: await c.req.json().catch(() => 'Failed to parse request body')
+    });
+    return c.json({ 
+      success: false, 
+      error: `Create conversation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      data: null 
+    }, 500);
+  }
+});
+
+// Create conversation for existing project (fallback for legacy/incomplete projects)
+app.post("/api/chat/createConversationForProject", async (c) => {
   const ctx = c.env;
-  const userId = c.req.param("id");
-  const { title, messages } = await c.req.json();
+  const { userId, projectId, title, messages } = await c.req.json();
   
-  // Add timestamps to messages if they don't have them
-  const messagesWithTimestamps = messages.map((message: any) => ({
-    ...message,
-    timestamp: message.timestamp || Date.now(),
-  }));
-  
-  const result = await ctx.runMutation(api.chatMutations.createConversation, {
-    userId,
-    title,
-    messages: messagesWithTimestamps,
-  });
-  return c.json(result);
+  try {
+    if (!userId || !projectId || !title) {
+      return c.json({ 
+        success: false, 
+        error: "userId, projectId, and title are required" 
+      }, 400);
+    }
+    
+    const result = await ctx.runMutation(api.chatMutations.createConversationForProject, {
+      userId,
+      projectId,
+      title,
+      messages: messages || [],
+    });
+    
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    console.error('Create conversation for project error:', error);
+    return c.json({ 
+      success: false, 
+      error: `Failed to create conversation for project: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    }, 500);
+  }
 });
 
 // Add message to conversation (LEGACY - uses old messages array)
@@ -132,16 +224,63 @@ app.post("/api/users/:id/add_message_to_conversation", async (c) => {
   const userId = c.req.param("id");
   const { conversationId, message } = await c.req.json();
   
-  // Add timestamp to message if it doesn't have one
-  const messageWithTimestamp = {
-    ...message,
-    timestamp: message.timestamp || Date.now(),
-  };
+  try {
+    // Add timestamp to message if it doesn't have one
+    const messageWithTimestamp = {
+      ...message,
+      timestamp: message.timestamp || Date.now(),
+    };
+    
+    const result = await ctx.runMutation(api.chatMutations.addMessageToConversation, {
+      userId,
+      conversationId,
+      message: messageWithTimestamp,
+    });
+    
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    console.error('Add message to conversation error:', error);
+    return c.json({ 
+      success: false, 
+      error: `Failed to add message: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    }, 500);
+  }
+});
+
+// Update conversation title (async generation in background)
+app.post("/api/users/:id/update_conversation_title", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const { conversationId, title } = await c.req.json();
   
-  const result = await ctx.runMutation(api.chatMutations.addMessageToConversation, {
+  const result = await ctx.runMutation(api.chatMutations.updateConversationTitle, {
     userId,
     conversationId,
-    message: messageWithTimestamp,
+    title
+  });
+  return c.json(result);
+});
+
+// Update conversation suggestions (async generation)
+app.post("/api/chat/updateSuggestions", async (c) => {
+  const ctx = c.env;
+  const { conversationId, suggestions } = await c.req.json();
+  
+  const result = await ctx.runMutation(api.chatMutations.updateConversationSuggestions, {
+    conversationId,
+    suggestions
+  });
+  return c.json(result);
+});
+
+// Update message suggestions (async generation)
+app.post("/api/chat/updateMessageSuggestions", async (c) => {
+  const ctx = c.env;
+  const { messageId, suggestions } = await c.req.json();
+  
+  const result = await ctx.runMutation(api.messageMutations.updateMessageSuggestions, {
+    messageId,
+    suggestions
   });
   return c.json(result);
 });
@@ -172,6 +311,67 @@ app.post("/api/chat/getMultiple", async (c) => {
   }
 });
 
+// Get recent messages from conversation (for embedding PostAction)
+app.post("/api/chat/getRecentMessages", async (c) => {
+  const ctx = c.env;
+  
+  try {
+    const { conversationId, limit } = await c.req.json();
+    
+    if (!conversationId) {
+      return c.json({ error: "Missing required field: conversationId" }, 400);
+    }
+    
+    const messages = await ctx.runQuery(api.chatQueries.getRecentMessages, {
+      conversationId,
+      limit: limit || 10
+    });
+    
+    return c.json({ success: true, data: messages });
+  } catch (error: any) {
+    console.error("Failed to get recent messages:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get recent messages",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get single conversation by ID (for backend toolkit access)
+app.post("/api/chat/conversation/get", async (c) => {
+  const ctx = c.env;
+  
+  try {
+    const { userId, conversationId } = await c.req.json();
+    
+    if (!userId) {
+      return c.json({ error: "Missing required field: userId" }, 400);
+    }
+    if (!conversationId) {
+      return c.json({ error: "Missing required field: conversationId" }, 400);
+    }
+    
+    const conversation = await ctx.runQuery(api.chatQueries.getConversation, { 
+      userId, 
+      conversationId 
+    });
+    
+    if (!conversation) {
+      return c.json({ error: "Conversation not found" }, 404);
+    }
+    
+    return c.json(conversation);
+  } catch (error: any) {
+    console.error("Failed to get conversation:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get conversation",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
 // ===== NEW MESSAGES TABLE ENDPOINTS (Dual-write system) =====
 
 // Add message to conversation (NEW - writes to messages table + legacy array)
@@ -189,6 +389,7 @@ app.post("/api/users/:id/messages/add", async (c) => {
     context: body.context,
     fileAttachments: body.fileAttachments,
     enrichment_metadata: body.enrichment_metadata,
+    context_summary: body.context_summary,
   });
   
   return c.json({ messageId });
@@ -237,6 +438,21 @@ app.post("/api/users/:id/messages/update_metadata", async (c) => {
   return c.json(result);
 });
 
+// Update message suggestions
+app.post("/api/users/:id/update_message_suggestions", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("id");
+  const body = await c.req.json();
+  
+  const result = await ctx.runMutation(api.messagesMutations.updateMessageSuggestions, {
+    messageId: body.messageId,
+    userId,
+    suggestions: body.suggestions,
+  });
+  
+  return c.json(result);
+});
+
 // Get conversations for a user
 app.get("/api/users/:id/conversations", async (c) => {
   const ctx = c.env;
@@ -249,7 +465,16 @@ app.get("/api/users/:id/conversations", async (c) => {
   return c.json(result);
 });
 
-// ⚠️ DEPRECATED: Gmail integration endpoints removed - use crystal system for email insights
+// Agno Run Events
+app.post("/api/agnoRunEvents/recordAgnoRunEvents", async (c) => {
+  const ctx = c.env;
+  const { events } = await c.req.json();
+  const result = await ctx.runMutation(api.agnoRunEvents.recordAgnoRunEvents, {
+    events,
+  });
+  return c.json(result);
+});
+
 
 // Save insights for a user
 app.post("/api/users/:id/save_insights", async (c) => {
@@ -721,7 +946,6 @@ app.get("/api/users/:id/stripe/customer", async (c) => {
 
   try {
     const user = await ctx.runQuery(api.userQueries.getUser, { userId });
-    console.log("Fetched user for customer lookup:", user);
     if (!user) {
       return c.json({ success: false, error: "User not found" }, 404);
     }
@@ -971,22 +1195,38 @@ app.post("/api/users/:id/usage/log", async (c) => {
     ...(requestId && { requestId }),
   };
   
+  // Log the event (always succeeds - analytics)
   await ctx.runMutation(api.usageEvents.logUsageEvent, eventData);
   
-  // Update user's usage field with all available context
-  await ctx.runMutation(api.usageEvents.updateUserUsage, { 
-    userId, 
-    qty,
-    endpoint,
-    method,
-    path,
-    statusCode: statusCode ? Number(statusCode) : undefined,
-    userAgent,
-    ip,
-    requestId,  // Pass through the requestId
-  });
+  // Update subscription (non-blocking - skip for system user)
+  if (userId !== "system") {
+    try {
+      await ctx.runMutation(api.usageEvents.updateUserUsage, { 
+        userId, 
+        qty,
+        endpoint,
+        method,
+        path,
+        statusCode: statusCode ? Number(statusCode) : undefined,
+        userAgent,
+        ip,
+        requestId,  // Pass through the requestId
+      });
+    } catch (error) {
+      // Log but don't fail - analytics logging succeeded
+    }
+  }
   
   return c.json({ success: true });
+});
+
+// Check if usage event exists (idempotency check)
+app.post("/api/usageEvents/checkUsageEventExists", async (c) => {
+  const ctx = c.env;
+  const { requestId } = await c.req.json();
+  if (!requestId) return c.json({ success: false, error: "Missing requestId" }, 400);
+  const exists = await ctx.runQuery(api.usageEvents.checkUsageEventExists, { requestId });
+  return c.json({ success: true, exists });
 });
 
 // Get usage summary for a user
@@ -1184,6 +1424,188 @@ app.delete("/api/feedback/:id", async (c) => {
   }
 });
 
+// ============================================================================
+// CONTENT FEEDBACK ROUTES - For chat, notes, and widgets
+// ============================================================================
+
+/**
+ * POST /api/feedback/content
+ * Create content feedback (ratings for AI-generated content)
+ */
+app.post("/api/feedback/content", async (c) => {
+  const ctx = c.env;
+  const feedbackData = await c.req.json();
+  
+  try {
+    const feedbackId = await ctx.runMutation(
+      api.feedback.createContentFeedback, 
+      feedbackData
+    );
+    return c.json({ success: true, feedbackId });
+  } catch (error: any) {
+    console.error("Failed to create content feedback:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to create content feedback",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+
+/**
+ * GET /api/feedback/stats/:entityType
+ * Get feedback statistics by entity type
+ * Query params: userId (optional)
+ */
+app.get("/api/feedback/stats/:entityType", async (c) => {
+  const ctx = c.env;
+  const entityType = c.req.param("entityType");
+  const { userId } = c.req.query();
+  
+  if (!["chat_message", "note_generation", "widget_output"].includes(entityType)) {
+    return c.json({
+      success: false,
+      error: "Invalid entityType"
+    }, 400);
+  }
+  
+  try {
+    const stats = await ctx.runQuery(api.feedback.getFeedbackStatsByType, {
+      entityType: entityType as any,
+      userId: userId || undefined,
+    });
+    return c.json({ success: true, data: stats });
+  } catch (error: any) {
+    console.error("Failed to get feedback stats:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get feedback stats",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * GET /api/feedback/low-rated
+ * Get recent low-rated content for monitoring
+ * Query params: entityType (optional), maxRating (optional), limit (optional)
+ */
+app.get("/api/feedback/low-rated", async (c) => {
+  const ctx = c.env;
+  const { entityType, maxRating, limit } = c.req.query();
+  
+  try {
+    const lowRated = await ctx.runQuery(api.feedback.getLowRatedContent, {
+      entityType: entityType as any || undefined,
+      maxRating: maxRating ? parseInt(maxRating) : undefined,
+      limit: limit ? parseInt(limit) : undefined,
+    });
+    return c.json({ success: true, data: lowRated });
+  } catch (error: any) {
+    console.error("Failed to get low-rated content:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get low-rated content",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// ============================================================================
+// PROMPT FEEDBACK ROUTES - For widget prompt learning
+// ============================================================================
+
+/**
+ * POST /api/feedback/storePromptFeedback
+ * Store feedback signals for prompt learning
+ * Links feedback signals to widget_id + operation for prompt improvement
+ */
+app.post("/api/feedback/storePromptFeedback", async (c) => {
+  const ctx = c.env;
+  const feedbackData = await c.req.json();
+  
+  try {
+    const feedbackId = await ctx.runMutation(
+      api.feedback.storePromptFeedback,
+      feedbackData
+    );
+    return c.json({ success: true, feedbackId });
+  } catch (error: any) {
+    console.error("Failed to store prompt feedback:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to store prompt feedback",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/feedback/getPromptFeedback
+ * Get feedback signals for widget_id + operation combination
+ * Returns aggregated feedback patterns for prompt learning
+ */
+app.post("/api/feedback/getPromptFeedback", async (c) => {
+  const ctx = c.env;
+  const { widgetId, operation } = await c.req.json();
+  
+  if (!widgetId || !operation) {
+    return c.json({
+      success: false,
+      error: "Missing required fields: widgetId and operation"
+    }, 400);
+  }
+  
+  try {
+    const feedbackData = await ctx.runMutation(
+      api.feedback.getPromptFeedback,
+      { widgetId, operation }
+    );
+    return c.json({ success: true, data: feedbackData });
+  } catch (error: any) {
+    console.error("Failed to get prompt feedback:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get prompt feedback",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// Get project-scoped conversation (ONE conversation per project for widget communication)
+app.post("/api/conversations/getProjectScoped", async (c) => {
+  try {
+    const ctx = c.env;
+    const { projectId, userId } = await c.req.json();
+    
+    // Validate required fields
+    if (!projectId || !userId) {
+      return c.json({ 
+        success: false, 
+        error: "projectId and userId are required" 
+      }, 400);
+    }
+    
+    const conversation = await ctx.runQuery(api.chatQueries.getProjectScopedConversation, {
+      projectId: projectId as any,
+      userId
+    });
+    
+    return c.json({ 
+      success: true, 
+      data: conversation 
+    });
+  } catch (error) {
+    console.error('Get project-scoped conversation error:', error);
+    return c.json({ 
+      success: false, 
+      error: `Failed to get project-scoped conversation: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      data: null 
+    }, 500);
+  }
+});
+
 // CONVERSATION SUMMARIES ROUTES
 
 // Create conversation summary
@@ -1276,7 +1698,7 @@ app.post("/api/projects/updateProject", async (c) => {
 // Create project
 app.post("/api/projects/create", async (c) => {
   const ctx = c.env;
-  const { userId, name, description, noteIds, conversationIds, crystalIds, shardIds } = await c.req.json();
+  const { userId, name, description, noteIds, conversationIds, cognitiveFieldIds, shardIds } = await c.req.json();
   
   try {
     const projectId = await ctx.runMutation(api.projectsMutations.createProject, {
@@ -1285,7 +1707,7 @@ app.post("/api/projects/create", async (c) => {
       description,
       noteIds,
       conversationIds,
-      crystalIds,
+      cognitiveFieldIds,
       shardIds
     });
     return c.json({ success: true, projectId });
@@ -1317,6 +1739,10 @@ app.post("/api/projects/getById", async (c) => {
   }
 });
 
+// ============================================================================
+// PROJECTS
+// ============================================================================
+
 // Get projects by user
 app.post("/api/projects/getByUser", async (c) => {
   const ctx = c.env;
@@ -1333,6 +1759,25 @@ app.post("/api/projects/getByUser", async (c) => {
     return c.json({ 
       success: false, 
       error: "Failed to get user projects",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+app.post("/api/projects/getAllByUser", async (c) => {
+  const ctx = c.env;
+  const { userId } = await c.req.json();
+  
+  try {
+    const projects = await ctx.runQuery(api.projectsQueries.getAllByUser, { 
+      userId
+    });
+    return c.json({ success: true, data: projects });
+  } catch (error: any) {
+    console.error("Failed to get all user projects:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get all user projects",
       message: error.message || "Internal Server Error"
     }, 500);
   }
@@ -1545,6 +1990,36 @@ app.post("/api/project-widgets/upsert", async (c) => {
     return c.json({ 
       success: false, 
       error: "Failed to upsert project widgets",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/project-widgets/append
+ * Append widgets to existing project widgets without replacing
+ * Used by orchestrator when creating new widgets incrementally
+ */
+app.post("/api/project-widgets/append", async (c) => {
+  const ctx = c.env;
+  const widgetsData = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.projectWidgetsMutations.appendWidgets, widgetsData);
+    
+    return c.json({
+      success: true,
+      data: {
+        layoutId: result.layoutId,
+        widgetIds: result.widgetIds,
+        widgetCount: result.widgetIds.length,
+      }
+    });
+  } catch (error: any) {
+    console.error("Failed to append project widgets:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to append project widgets",
       message: error.message || "Internal Server Error"
     }, 500);
   }
@@ -1925,17 +2400,6 @@ app.patch("/api/widgets/:widgetId/execution", async (c) => {
 
 
 // Single query endpoint that mirrors getCrystalData exactly
-app.post("/api/crystal/query", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runQuery(api.crystalQueries.getCrystalData, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
 
 // Batch fetch crystals by IDs (for context enrichment)
 app.post("/api/crystal/getBatch", async (c) => {
@@ -1974,52 +2438,20 @@ app.post("/api/crystal/mutate", async (c) => {
   const requestBody = await c.req.json();
   
   try {
-    const result = await ctx.runMutation(api.crystalMutations.mutateCrystalData, requestBody);
+    const result = await ctx.runMutation(api.crystalMutations.mutateCrystal, requestBody);
     return c.json({ success: true, data: result });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   }
 });
 
-// Batch mutation endpoint for efficient bulk operations
+// Batch mutation endpoint for efficient bulk crystal operations
 app.post("/api/crystal/batch-mutate", async (c) => {
   const ctx = c.env;
   const requestBody = await c.req.json();
   
   try {
-    const result = await ctx.runMutation(api.crystalMutations.batchMutateCrystalData, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
-// Crystal data convenience endpoint
-app.post("/api/crystal/persona", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runQuery(api.crystalQueries.getPersonaData, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
-// ===== ATOMIC CRYSTAL OPERATIONS =====
-// These endpoints ensure crystal creation and shard consumption happen atomically
-
-/**
- * Atomically create a crystal and mark its shards as consumed.
- * This is the RECOMMENDED way to create crystals - it ensures consistency.
- */
-app.post("/api/crystal/atomic-create", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.crystalAtomicMutations.createCrystalWithShardConsumption, requestBody);
+    const result = await ctx.runMutation(api.crystalMutations.batchMutateCrystals, requestBody);
     return c.json({ success: true, data: result });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
@@ -2027,14 +2459,66 @@ app.post("/api/crystal/atomic-create", async (c) => {
 });
 
 /**
- * Atomically update a crystal and adjust shard associations.
+ * Get crystals by user ID
+ * Parallel to /api/shard/getByUser endpoint
  */
-app.post("/api/crystal/atomic-update", async (c) => {
+app.post("/api/crystal/getByUser", async (c) => {
   const ctx = c.env;
   const requestBody = await c.req.json();
   
   try {
-    const result = await ctx.runMutation(api.crystalAtomicMutations.updateCrystalWithShardAdjustment, requestBody);
+    const result = await ctx.runQuery(api.crystalQueries.getCrystalsByUser, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[GET CRYSTALS BY USER] Error fetching crystals:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/crystal/getAllByUser", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runQuery(api.crystalQueries.getAllCrystalsByUser, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[GET ALL CRYSTALS BY USER] Error fetching all crystals:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+/**
+ * Query crystals with flexible filtering and indexing options
+ * Connects to queryCrystal function in crystalQueries.ts
+ */
+app.post("/api/crystal/query", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runQuery(api.crystalQueries.queryCrystal, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[QUERY CRYSTALS] Error querying crystals:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+
+
+// ===== SHARD OPERATIONS =====
+// Separate endpoints for shard-specific operations
+
+/**
+ * Batch mutation endpoint for efficient bulk shard operations
+ */
+app.post("/api/shard/batch-mutate", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.shardMutations.batchMutateShards, requestBody);
     return c.json({ success: true, data: result });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
@@ -2042,19 +2526,36 @@ app.post("/api/crystal/atomic-update", async (c) => {
 });
 
 /**
- * Delete a crystal and optionally release its shards.
+ * Single shard mutation endpoint (create, update, or delete)
  */
-app.post("/api/crystal/atomic-delete", async (c) => {
+app.post("/api/shard/mutate", async (c) => {
   const ctx = c.env;
   const requestBody = await c.req.json();
   
   try {
-    const result = await ctx.runMutation(api.crystalAtomicMutations.deleteCrystalAndReleaseShards, requestBody);
+    const result = await ctx.runMutation(api.shardMutations.mutateShard, requestBody);
     return c.json({ success: true, data: result });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   }
 });
+
+/**
+ * Query shards with flexible parameters
+ */
+app.post("/api/shard/query", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runQuery(api.shardQueries.queryShard, requestBody);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+
 
 // Formation query endpoint that mirrors queryFormation exactly
 app.post("/api/formation/query", async (c) => {
@@ -2083,136 +2584,161 @@ app.post("/api/formation/mutate", async (c) => {
 });
 
 
-// === OPTIMIZED VECTOR SEARCH HTTP ROUTES ===
-// Following convex-http-integration.mdc and performance optimization patterns
-
-// Input validation schemas for performance and security
-import { z } from 'zod';
-
-const vectorSearchQuerySchema = z.object({
-  userId: z.string().min(1),
-  operation: z.string().min(1),
-  table: z.string().optional(),
-  
-  // Search parameters
-  query: z.string().optional(),
-  contentTypes: z.array(z.string()).optional(),
-  limit: z.number().int().positive().max(50).optional(),
-  threshold: z.number().min(0).max(1).optional(),
-  
-  // Query optimization
-  useIndex: z.string().optional(),
-  indexFields: z.record(z.any()).optional(),
-  filters: z.record(z.any()).optional(),
-  orderBy: z.enum(["asc", "desc"]).optional(),
-  
-  // Batch operations
-  queries: z.array(z.any()).optional(),
-  maxConcurrent: z.number().int().positive().max(10).optional(),
-  includeGrading: z.boolean().optional(),
-});
-
-const vectorSearchMutationSchema = z.object({
-  operation: z.string().min(1),
-  userId: z.string().min(1),
-  table: z.string().optional(),
-  
-  // Direct operation parameters
-  text: z.string().optional(),
-  contentId: z.string().optional(),
-  contentType: z.string().optional(),
-  embedding: z.array(z.number()).optional(),
-  title: z.string().optional(),
-  content: z.string().optional(),
-  metadata: z.any().optional(),
-  
-  // Batch parameters
-  items: z.array(z.any()).optional(),
-  contentIds: z.array(z.string()).optional(),
-  maxConcurrent: z.number().int().positive().max(10).optional(),
-});
-
-// POST /api/vectorSearch/action - Optimized generic action endpoint (supports ctx.runAction)
+// POST /api/vectorSearch/action - Direct action endpoint (calls hybridSearchContent or operations)
 app.post("/api/vectorSearch/action", async (c) => {
   try {
     const requestBody = await c.req.json();
-    const validation = vectorSearchQuerySchema.safeParse(requestBody);
+    const { userId, operation, query, contentType, contentIds, contentTypes, limit, threshold } = requestBody;
     
-    if (!validation.success) {
-      return c.json({
-        error: "Invalid vector search action parameters",
-        details: validation.error.flatten()
-      }, 400);
-    }
-
-    // Ensure required fields are present
-    const { userId, operation, ...rest } = validation.data;
     if (!userId || !operation) {
       return c.json({ error: "userId and operation are required" }, 400);
     }
     
-    // Call as action instead of query to support ctx.runAction calls
-    const result = await c.env.runAction(api.vectorSearchQueries.getVectorSearchData, {
+    // Handle get_by_content_ids operation
+    if (operation === "get_by_content_ids") {
+      if (!contentType || !contentIds) {
+        return c.json({ error: "contentType and contentIds required for get_by_content_ids" }, 400);
+      }
+      
+      const embeddings = await c.env.runQuery(internal.vectorSearch.getEmbeddingsByContentIds, {
+        userId,
+        contentType,
+        contentIds
+      });
+      
+      return c.json({
+        success: true,
+        data: embeddings || []
+      });
+    }
+    
+    // Handle similarity_search operation (default to hybridSearchContent)
+    if (!query) {
+      return c.json({ error: "query is required for similarity search" }, 400);
+    }
+    
+    const results = await c.env.runAction(api.vectorSearch.hybridSearchContent, {
       userId,
-      operation,
-      ...rest
+      query,
+      contentTypes: contentTypes || ["note", "cognitive_field", "conversation", "shard", "stardust"],
+      limit: limit || 10,
+      minSimilarity: threshold || 0.35
     });
-    return c.json(result);
+    
+    return c.json({
+      success: true,
+      data: results || []
+    });
   } catch (error) {
     console.error('Vector search action error:', error);
     return c.json({ 
       success: false, 
-      error: 'Vector search action failed',
+      error: `Vector search action failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
       data: null 
     }, 500);
   }
 });
 
-// POST /api/vectorSearch/mutate - Optimized batch mutation endpoint
+// POST /api/vectorSearch/getEmbeddingsByContentIds - Get embeddings by content IDs (for clustering reuse)
+app.post("/api/vectorSearch/getEmbeddingsByContentIds", async (c) => {
+  try {
+    const requestBody = await c.req.json();
+    const { userId, contentType, contentIds } = requestBody;
+    
+    if (!userId || !contentType || !contentIds || !Array.isArray(contentIds)) {
+      return c.json({ 
+        success: false, 
+        error: "userId, contentType, and contentIds array are required" 
+      }, 400);
+    }
+    
+    const embeddings = await c.env.runQuery(internal.vectorSearch.getEmbeddingsByContentIds, {
+      userId,
+      contentType,
+      contentIds
+    });
+    
+    return c.json({
+      success: true,
+      data: embeddings || []
+    });
+  } catch (error) {
+    console.error('Get embeddings by content IDs error:', error);
+    return c.json({ 
+      success: false, 
+      error: `Failed to get embeddings by content IDs: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      data: null 
+    }, 500);
+  }
+});
+
+// POST /api/vectorSearch/similaritySearch - Direct similarity search endpoint
+app.post("/api/vectorSearch/similaritySearch", async (c) => {
+  try {
+    const requestBody = await c.req.json();
+    const { userId, query, contentTypes, limit, threshold } = requestBody;
+    
+    if (!userId || !query) {
+      return c.json({ 
+        success: false, 
+        error: "userId and query are required" 
+      }, 400);
+    }
+    
+    const results = await c.env.runAction(api.vectorSearch.hybridSearchContent, {
+      userId,
+      query,
+      contentTypes: contentTypes || ["note", "cognitive_field", "conversation", "shard", "stardust"],
+      limit: limit || 10,
+      minSimilarity: threshold || 0.35
+    });
+    
+    return c.json({
+      success: true,
+      data: results || []
+    });
+  } catch (error) {
+    console.error('Similarity search error:', error);
+    return c.json({ 
+      success: false, 
+      error: `Similarity search failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      data: null 
+    }, 500);
+  }
+});
+
+// POST /api/vectorSearch/mutate - Store embeddings from backend
 app.post("/api/vectorSearch/mutate", async (c) => {
   try {
     const requestBody = await c.req.json();
-    const validation = vectorSearchMutationSchema.safeParse(requestBody);
+    const { userId, operation, contentId, contentType, ...rest } = requestBody;
     
-    if (!validation.success) {
-      return c.json({
-        error: "Invalid vector search mutation parameters",
-        details: validation.error.flatten()
-      }, 400);
-    }
-
-    // Ensure required fields are present
-    const { userId, operation, ...rest } = validation.data;
     if (!userId || !operation) {
+      console.error(`❌ [VECTOR] Missing required fields - userId: ${!!userId}, operation: ${!!operation}`);
       return c.json({ error: "userId and operation are required" }, 400);
     }
     
-    const result = await c.env.runMutation(api.vectorSearchMutations.batchMutateVectorSearchData, {
+    const result = await c.env.runMutation(api.vectorSearchMutations.mutateEmbedding, {
       userId,
       operation,
+      contentId,
+      contentType,
       ...rest
     });
+    
+    console.log(`✅ [VECTOR] POST /api/vectorSearch/mutate - ${result.success ? 'SUCCESS' : 'FAILED'} (${result.success ? '200' : '400'})`);
+    if (!result.success) {
+      console.error(`❌ [VECTOR] Mutation failed: ${result.error}`);
+    }
+    
     return c.json(result);
   } catch (error) {
-    console.error('Vector search mutation error:', error);
+    console.error('❌ [VECTOR] Embedding mutation error:', error);
     return c.json({ 
       success: false, 
-      error: 'Vector search mutation failed',
+      error: 'Embedding mutation failed',
       data: null 
     }, 500);
-  }
-});
-
-// Legacy embedding generation route (for backward compatibility)
-app.post("/api/vector-search/generate-embedding", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  const text = requestBody.text;
-  try {
-    const result = await ctx.runAction(api.vectorSearchEmbeddings.generateEmbedding, { text: text });
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
   }
 });
 
@@ -2230,90 +2756,87 @@ app.post("/api/vector-search/crystals", async (c) => {
   }
 });
 
-
-
-// BATCH OPERATIONS AND OPTIMIZATION ENDPOINTS
-
-// Batch vector search operations
-app.post("/api/vector/batch-search", async (c) => {
-  const ctx = c.env;
-  const body = await c.req.json();
-  const { userId, queries } = body;
-  
-  console.log(`🔍 [HTTP] Batch vector search for user ${userId} with ${queries?.length || 0} queries`);
-  
+// POST /api/vectorSearch/getAverageEmbedding - Get average embedding for content items (NO generation)
+app.post("/api/vectorSearch/getAverageEmbedding", async (c) => {
   try {
-    const result = await ctx.runAction(api.vectorSearchBatch.batchVectorSearch, {
+    const requestBody = await c.req.json();
+    const { userId, contentType, contentIds } = requestBody;
+    
+    if (!userId || !contentType || !contentIds || !Array.isArray(contentIds)) {
+      return c.json({ 
+        success: false, 
+        error: "Missing required fields: userId, contentType, contentIds (array)" 
+      }, 400);
+    }
+    
+    console.log(`🔍 [GET_AVG_EMBEDDING] Getting average for ${contentIds.length} ${contentType} items`);
+    
+    const result = await c.env.runAction(internal.vectorSearch.getAverageEmbedding, {
       userId,
-      queries: queries || []
+      contentType,
+      contentIds
     });
-    return c.json({ success: true, data: result });
+    
+    return c.json({
+      success: true,
+      data: result
+    });
   } catch (error: any) {
-    console.error("❌ [HTTP] Batch vector search error:", error);
-    return c.json({ success: false, error: error.message }, 500);
+    console.error("❌ [GET_AVG_EMBEDDING] Error:", error);
+    return c.json({
+      success: false,
+      error: error.message || "Failed to get average embedding"
+    }, 500);
   }
 });
 
-// Batch embedding generation
-app.post("/api/vector/batch-embeddings", async (c) => {
-  const ctx = c.env;
-  const body = await c.req.json();
-  const { userId, items, maxConcurrency } = body;
-  
-  console.log(`🚀 [HTTP] Batch embeddings for user ${userId} with ${items?.length || 0} items`);
-  
+// POST /api/vectorSearch/searchByEmbedding - Search using pre-computed embedding (NO generation)
+app.post("/api/vectorSearch/searchByEmbedding", async (c) => {
   try {
-    const result = await ctx.runAction(api.vectorSearchBatch.batchGenerateEmbeddings, {
+    const requestBody = await c.req.json();
+    const { userId, embedding, contentTypes, limit, threshold } = requestBody;
+    
+    if (!userId || !embedding || !Array.isArray(embedding)) {
+      return c.json({ 
+        success: false, 
+        error: "Missing required fields: userId, embedding (array)" 
+      }, 400);
+    }
+    
+    const result = await c.env.runAction(internal.vectorSearch.searchByEmbedding, {
       userId,
-      items: items || [],
-      maxConcurrency: maxConcurrency || 5
+      embedding,
+      contentTypes: contentTypes || ["note", "cognitive_field", "conversation", "shard", "stardust"],
+      limit: limit || 10,
+      threshold: threshold || 0.35
     });
-    return c.json({ success: true, data: result });
+    
+    return c.json({
+      success: true,
+      data: result
+    });
   } catch (error: any) {
-    console.error("❌ [HTTP] Batch embeddings error:", error);
-    return c.json({ success: false, error: error.message }, 500);
+    console.error("❌ [SEARCH_BY_EMBEDDING] Error:", error);
+    return c.json({
+      success: false,
+      error: error.message || "Failed to search by embedding"
+    }, 500);
   }
 });
 
-// Optimized crystal context
-app.post("/api/crystal/optimized-context", async (c) => {
-  const ctx = c.env;
-  const body = await c.req.json();
-  const { userId, contextQueries, includeRelated, cacheKey } = body;
-  
-  console.log(`🔍 [HTTP] Optimized crystal context for user ${userId}`);
-  
-  try {
-    const result = await ctx.runQuery(api.crystalContextOptimized.getBatchCrystalContext, {
-      userId,
-      contextQueries: contextQueries || [],
-      includeRelated: includeRelated || false,
-      cacheKey
-    });
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    console.error("❌ [HTTP] Optimized crystal context error:", error);
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
 
-// Formation context
-app.post("/api/crystal/formation-context", async (c) => {
+
+
+
+// POST /api/vectorSearch/migrateCrystalContentTypes - Migrate crystal content types to cognitive_field
+app.post("/api/vectorSearch/migrateCrystalContentTypes", async (c) => {
   const ctx = c.env;
-  const body = await c.req.json();
-  const { userId, shardCount, dimensions } = body;
-  
-  console.log(`🔮 [HTTP] Formation context for user ${userId} with ${shardCount} shards`);
-  
+
   try {
-    const result = await ctx.runQuery(api.crystalContextOptimized.getFormationContext, {
-      userId,
-      shardCount: shardCount || 0,
-      dimensions: dimensions || []
-    });
+    const result = await ctx.runAction(api.vectorSearch.migrateCrystalContentTypes, {});
     return c.json({ success: true, data: result });
   } catch (error: any) {
-    console.error("❌ [HTTP] Formation context error:", error);
+    console.error("Failed to migrate crystal content types:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -2322,8 +2845,6 @@ app.post("/api/crystal/formation-context", async (c) => {
 app.get("/api/cache/stats/:userId", async (c) => {
   const ctx = c.env;
   const userId = c.req.param("userId");
-  
-  console.log(`📊 [HTTP] Cache stats for user ${userId}`);
   
   try {
     const result = await ctx.runQuery(api.crystalCache.getCacheStats, { userId });
@@ -2335,27 +2856,6 @@ app.get("/api/cache/stats/:userId", async (c) => {
 });
 
 // Paginated crystals
-app.post("/api/crystal/paginated", async (c) => {
-  const ctx = c.env;
-  const body = await c.req.json();
-  const { userId, paginationOpts, filters, sortBy, sortOrder } = body;
-  
-  console.log(`📄 [HTTP] Paginated crystals for user ${userId}`);
-  
-  try {
-    const result = await ctx.runQuery(api.paginatedQueries.getPaginatedCrystals, {
-      userId,
-      paginationOpts: paginationOpts || { numItems: 20, cursor: null },
-      filters,
-      sortBy,
-      sortOrder
-    });
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    console.error("❌ [HTTP] Paginated crystals error:", error);
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
 
 
 // === INTELLIGENCE SYSTEM ENDPOINTS ===
@@ -2532,13 +3032,15 @@ app.post("/api/intelligenceBandit/createDecision", async (c) => {
 
 app.post("/api/intelligenceBandit/updateArmPerformance", async (c) => {
   const ctx = c.env;
-  const { userId, decisionId, valueScore } = await c.req.json();
+  const { userId, decisionId, valueScore, version, computedUpdate } = await c.req.json();
   
   try {
     const result = await ctx.runMutation(api.intelligenceBandit.updateArmPerformance, {
       userId,
       decisionId,
-      valueScore
+      valueScore,
+      version,
+      computedUpdate  // Pass through pre-computed values from SDK
     });
     return c.json(result);
   } catch (error: any) {
@@ -2663,7 +3165,7 @@ app.post("/api/contextEnrichmentBandit/updateDecisionContext", async (c) => {
 
 app.post("/api/contextEnrichmentBandit/updateArmPerformance", async (c) => {
   const ctx = c.env;
-  const { userId, agentType, decisionId, engagementScore, gradingScore, finalReward } = await c.req.json();
+  const { userId, agentType, decisionId, engagementScore, gradingScore, finalReward, computedUpdate } = await c.req.json();
   
   try {
     const result = await ctx.runMutation(api.contextEnrichmentBandit.updateArmPerformance, {
@@ -2672,11 +3174,25 @@ app.post("/api/contextEnrichmentBandit/updateArmPerformance", async (c) => {
       decisionId,
       engagementScore,
       gradingScore,
-      finalReward
+      finalReward,
+      computedUpdate  // Pass through pre-computed values from SDK
     });
     return c.json(result);
   } catch (error: any) {
     console.error("[ContextMAB] Update arm performance error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/contextEnrichmentBandit/updateDecisionWithFeedback", async (c) => {
+  const ctx = c.env;
+  const args = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.contextEnrichmentBandit.updateDecisionWithFeedback, args);
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ContextMAB] Update decision with feedback error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -2710,6 +3226,221 @@ app.post("/api/contextEnrichmentBandit/getDecisionById", async (c) => {
   }
 });
 
+// === CHAT MODEL SELECTION MAB ENDPOINTS ===
+app.post("/api/chatModelSelection/getUserArms", async (c) => {
+  const ctx = c.env;
+  const { userId, agentType } = await c.req.json();
+  
+  try {
+    const result = await ctx.runQuery(api.chatModelSelectionBandit.getUserArms, { userId, agentType });
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ChatModelMAB] Get arms error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/chatModelSelection/initializeArms", async (c) => {
+  const ctx = c.env;
+  const { userId, agentType, arms } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.chatModelSelectionBandit.initializeArms, { userId, agentType, arms });
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ChatModelMAB] Initialize arms error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/chatModelSelection/createDecision", async (c) => {
+  const ctx = c.env;
+  const requestBody = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.chatModelSelectionBandit.createDecision, requestBody);
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ChatModelMAB] Create decision error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/chatModelSelection/updateArmPerformance", async (c) => {
+  const ctx = c.env;
+  const { userId, agentType, decisionId, engagementScore, gradingScore, finalReward, computedUpdate } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.chatModelSelectionBandit.updateArmPerformance, {
+      userId,
+      agentType,
+      decisionId,
+      engagementScore,
+      gradingScore,
+      finalReward,
+      computedUpdate  // Pass through pre-computed values from SDK
+    });
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ChatModelMAB] Update arm performance error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/chatModelSelection/updateDecisionWithFeedback", async (c) => {
+  const ctx = c.env;
+  const args = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.chatModelSelectionBandit.updateDecisionWithFeedback, args);
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ChatModelMAB] Update decision with feedback error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/chatModelSelection/getDecision", async (c) => {
+  const ctx = c.env;
+  const { userId, decisionId } = await c.req.json();
+  
+  try {
+    const result = await ctx.runQuery(api.chatModelSelectionBandit.getDecision, { userId, decisionId });
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ChatModelMAB] Get decision error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.post("/api/chatModelSelection/countFeedbacks", async (c) => {
+  const ctx = c.env;
+  const { userId, agentType } = await c.req.json();
+  
+  try {
+    const result = await ctx.runQuery(api.chatModelSelectionBandit.countFeedbacks, { userId, agentType });
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ChatModelMAB] Count feedbacks error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// === CONTEXT USAGE TRACKING ENDPOINTS ===
+// Track which context items powered which outputs (chat, widgets, etc.)
+
+/**
+ * Track context usage for outputs
+ */
+app.post("/api/context/track_usage", async (c) => {
+  const ctx = c.env;
+  try {
+    const args = await c.req.json();
+    const result = await ctx.runMutation(api.contextUsageMutations.trackContextUsage, args);
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ContextUsage] Track usage error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+/**
+ * Update engagement score for a context usage log
+ */
+app.post("/api/context/update_engagement", async (c) => {
+  const ctx = c.env;
+  try {
+    const args = await c.req.json();
+    
+    const result = await ctx.runMutation(api.contextUsageMutations.updateContextUsageEngagement, args);
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ContextUsage] Update engagement error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// ============================================================================
+// TOOL CALL TRACKING
+// ============================================================================
+
+/**
+ * Track tool calls from agent runs
+ */
+app.post("/api/tools/track_calls", async (c) => {
+  const ctx = c.env;
+  try {
+    const args = await c.req.json();
+    const result = await ctx.runMutation(api.toolCallMutations.trackToolCalls, args);
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ToolCallTracking] Track calls error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+/**
+ * Update engagement score for a tool call log
+ */
+app.post("/api/tools/update_engagement", async (c) => {
+  const ctx = c.env;
+  try {
+    const args = await c.req.json();
+    const result = await ctx.runMutation(api.toolCallMutations.updateToolCallEngagement, args);
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ToolCallTracking] Update engagement error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+/**
+ * Get recent context usage logs (for debugging/verification)
+ */
+app.get("/api/context/recent", async (c) => {
+  const ctx = c.env;
+  try {
+    const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : 20;
+    
+    const result = await ctx.runQuery(api.contextUsageQueries.getRecentContextUsage, { limit });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[ContextUsage] Get recent error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+/**
+ * Count context usage logs
+ */
+app.get("/api/context/count", async (c) => {
+  const ctx = c.env;
+  try {
+    const result = await ctx.runQuery(api.contextUsageQueries.countContextUsageLogs, {});
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[ContextUsage] Count error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+/**
+ * Get context usage logs with time window filtering
+ * Used by fitness calculator for natural selection evolution
+ */
+app.post("/api/context-usage/get-usage-logs", async (c) => {
+  const ctx = c.env;
+  try {
+    const args = await c.req.json();
+    const result = await ctx.runQuery(api.contextUsageQueries.getUsageLogs, args);
+    return c.json(result);
+  } catch (error: any) {
+    console.error("[ContextUsage] Get usage logs error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+
 
 // === SHARD LIFECYCLE QUERY ENDPOINTS ===
 // Query endpoints for shard data (read-only operations)
@@ -2740,66 +3471,40 @@ app.post("/api/query/searchShardsForInlineWriting", async (c) => {
   }
 });
 
-app.post("/api/crystals/getShardsByIds", async (c) => {
+app.post("/api/shard/getByUser", async (c) => {
   const ctx = c.env;
   const requestBody = await c.req.json();
   
   try {
-    const result = await ctx.runQuery(api.crystalQueries.getShardsByIds, requestBody);
+    const result = await ctx.runQuery(api.shardQueries.getShardsByUser, requestBody);
     return c.json({ success: true, data: result });
   } catch (error: any) {
-    console.error("[GET SHARDS BY IDS] Error fetching shards:", error);
+    console.error("[GET SHARDS BY USER] Error fetching shards:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
 
-app.post("/api/shard-lifecycle/stats", async (c) => {
+app.post("/api/shard/getAllByUser", async (c) => {
   const ctx = c.env;
   const requestBody = await c.req.json();
   
   try {
-    const result = await ctx.runQuery(api.shardLifecycleQueries.getShardConsumptionStats, requestBody);
+    const result = await ctx.runQuery(api.shardQueries.getAllShardsByUser, requestBody);
     return c.json({ success: true, data: result });
   } catch (error: any) {
+    console.error("[GET ALL SHARDS BY USER] Error fetching all shards:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
 
-app.post("/api/shard-lifecycle/validate", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runQuery(api.shardLifecycleQueries.validateShardAvailability, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
 
-app.post("/api/shard-lifecycle/initialize-legacy", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.shardLifecycleMutations.initializeLegacyShardStatus, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
 
-app.post("/api/shard-lifecycle/release-stuck", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.shardLifecycleMutations.releaseStuckReservedShards, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
+
+/**
+ * Get unprocessed shards count
+ */
+
+
 
 // === MIGRATIONS ===
 
@@ -2882,513 +3587,367 @@ app.get("/api/migrations/shard-status-distribution", async (c) => {
 // === SHARD STATUS MANAGEMENT ===
 // Atomic shard lifecycle state transitions with validation
 
-app.post("/api/shard-status/update", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.shardStatusManager.updateShardStatus, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
 
-app.post("/api/shard-status/release", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.shardStatusManager.releaseReservedShards, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
 
-app.post("/api/shard-status/reserve", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.shardStatusManager.reserveShards, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
-app.post("/api/shard-status/archive", async (c) => {
-  const ctx = c.env;
-  const requestBody = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.shardStatusManager.archiveShards, requestBody);
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
-// ============================================================================
-// PROJECT FINGERPRINT ROUTES - Optimized for Discovery Flow
-// ============================================================================
-
-// Create fingerprint when starting discovery process
-app.post("/api/project-fingerprint/create", async (c) => {
-  const ctx = c.env;
-  const { projectId, userId, name, description } = await c.req.json();
-  
-  try {
-    const fingerprintId = await ctx.runMutation(api.projectFingerprintMutations.create, {
-      projectId,
-      userId,
-      name,
-      description
-    });
-    return c.json({ success: true, fingerprintId });
-  } catch (error: any) {
-    console.error("Failed to create project fingerprint:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to create project fingerprint",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// Get fingerprint by project ID - Primary access pattern
-app.post("/api/project-fingerprint/getByProject", async (c) => {
-  const ctx = c.env;
-  const { projectId } = await c.req.json();
-  
-  try {
-    const fingerprint = await ctx.runQuery(api.projectFingerprintQueries.getByProject, { 
-      projectId 
-    });
-    return c.json({ success: true, data: fingerprint });
-  } catch (error: any) {
-    console.error("Failed to get project fingerprint:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to get project fingerprint",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// Get full context for AI agents
-app.post("/api/project-fingerprint/getFullContext", async (c) => {
-  const ctx = c.env;
-  const { projectId } = await c.req.json();
-  
-  try {
-    const fingerprint = await ctx.runQuery(api.projectFingerprintQueries.getFullContext, { 
-      projectId 
-    });
-    return c.json({ success: true, data: fingerprint });
-  } catch (error: any) {
-    console.error("Failed to get fingerprint full context:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to get fingerprint full context",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// Update discovery progress after each AI conversation turn
-app.post("/api/project-fingerprint/updateProgress", async (c) => {
-  const ctx = c.env;
-  const { 
-    projectId, 
-    fieldsUpdate, 
-    trigger, 
-    confidence_scores, 
-    conversationMessageId 
-  } = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.projectFingerprintMutations.updateDiscoveryProgress, {
-      projectId,
-      fieldsUpdate,
-      trigger,
-      confidence_scores,
-      conversationMessageId
-    });
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    console.error("Failed to update discovery progress:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to update discovery progress",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// Mark discovery as complete
-app.post("/api/project-fingerprint/complete", async (c) => {
-  const ctx = c.env;
-  const { projectId, finalFields } = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.projectFingerprintMutations.completeDiscovery, {
-      projectId,
-      finalFields
-    });
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    console.error("Failed to complete discovery:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to complete discovery",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// Quick existence check
-app.post("/api/project-fingerprint/exists", async (c) => {
-  const ctx = c.env;
-  const { projectId } = await c.req.json();
-  
-  try {
-    const exists = await ctx.runQuery(api.projectFingerprintQueries.exists, { 
-      projectId 
-    });
-    return c.json({ success: true, exists });
-  } catch (error: any) {
-    console.error("Failed to check fingerprint existence:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to check fingerprint existence",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// Get completion status for UI progress indicators
-app.post("/api/project-fingerprint/getCompletionStatus", async (c) => {
-  const ctx = c.env;
-  const { projectId } = await c.req.json();
-  
-  try {
-    const status = await ctx.runQuery(api.projectFingerprintQueries.getCompletionStatus, { 
-      projectId 
-    });
-    return c.json({ success: true, data: status });
-  } catch (error: any) {
-    console.error("Failed to get completion status:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to get completion status",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// Update fingerprint status (active, archived, etc.)
-app.post("/api/project-fingerprint/updateStatus", async (c) => {
-  const ctx = c.env;
-  const { fingerprintId, status, reason } = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.projectFingerprintMutations.updateStatus, {
-      fingerprintId,
-      status,
-      reason
-    });
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    console.error("Failed to update fingerprint status:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to update fingerprint status",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// Delete fingerprint and evolution history
-app.post("/api/project-fingerprint/delete", async (c) => {
-  const ctx = c.env;
-  const { fingerprintId, userId } = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.projectFingerprintMutations.deleteFingerprint, {
-      fingerprintId,
-      userId
-    });
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    console.error("Failed to delete fingerprint:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to delete fingerprint",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// Get evolution history for debugging/analysis
-app.post("/api/project-fingerprint/getEvolutionHistory", async (c) => {
-  const ctx = c.env;
-  const { fingerprintId, limit } = await c.req.json();
-  
-  try {
-    const history = await ctx.runQuery(api.projectFingerprintQueries.getEvolutionHistory, { 
-      fingerprintId,
-      limit
-    });
-    return c.json({ success: true, data: history });
-  } catch (error: any) {
-    console.error("Failed to get evolution history:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to get evolution history",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// Get user's fingerprints for dashboard
-app.post("/api/project-fingerprint/getByUser", async (c) => {
-  const ctx = c.env;
-  const { userId, limit } = await c.req.json();
-  
-  try {
-    const fingerprints = await ctx.runQuery(api.projectFingerprintQueries.getByUser, { 
-      userId,
-      limit
-    });
-    return c.json({ success: true, data: fingerprints });
-  } catch (error: any) {
-    console.error("Failed to get user fingerprints:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to get user fingerprints",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// Batch update multiple fields efficiently
-app.post("/api/project-fingerprint/batchUpdate", async (c) => {
-  const ctx = c.env;
-  const { fingerprintId, fieldUpdates, trigger } = await c.req.json();
-  
-  try {
-    const result = await ctx.runMutation(api.projectFingerprintMutations.batchUpdateFields, {
-      fingerprintId,
-      fieldUpdates,
-      trigger
-    });
-    return c.json({ success: true, data: result });
-  } catch (error: any) {
-    console.error("Failed to batch update fields:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to batch update fields",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// FINGERPRINT EVOLUTION SIGNALS ROUTES - MAB-driven evolution tracking
-
-// Initialize signals for a fingerprint
-app.post("/api/fingerprintSignals/initialize", async (c) => {
-  try {
-    const { fingerprintId, projectId, userId } = await c.req.json();
-    const result = await c.env.runMutation(api.fingerprintSignalsMutations.initialize, {
-      fingerprintId,
-      projectId,
-      userId
-    });
-    return c.json(result);
-  } catch (error: any) {
-    console.error("Failed to initialize signals:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to initialize signals",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// Increment signal counter
-app.post("/api/fingerprintSignals/increment", async (c) => {
-  try {
-    const { projectId, signalType, count } = await c.req.json();
-    const result = await c.env.runMutation(api.fingerprintSignalsMutations.increment, {
-      projectId,
-      signalType,
-      count
-    });
-    return c.json(result);
-  } catch (error: any) {
-    console.error("Failed to increment signal:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to increment signal",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// Reset signals after evolution
-app.post("/api/fingerprintSignals/reset", async (c) => {
-  try {
-    const { fingerprintId } = await c.req.json();
-    const result = await c.env.runMutation(api.fingerprintSignalsMutations.reset, {
-      fingerprintId
-    });
-    return c.json(result);
-  } catch (error: any) {
-    console.error("Failed to reset signals:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to reset signals",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// Get signals for a fingerprint
-app.post("/api/fingerprintSignals/getByFingerprint", async (c) => {
-  try {
-    const { fingerprintId } = await c.req.json();
-    const signals = await c.env.runQuery(api.fingerprintSignalsQueries.getByFingerprint, {
-      fingerprintId
-    });
-    return c.json({ success: true, data: signals });
-  } catch (error: any) {
-    console.error("Failed to get signals:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to get signals",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// Get signals for a project
-app.post("/api/fingerprintSignals/getByProject", async (c) => {
-  try {
-    const { projectId } = await c.req.json();
-    const signals = await c.env.runQuery(api.fingerprintSignalsQueries.getByProject, {
-      projectId
-    });
-    return c.json({ success: true, data: signals });
-  } catch (error: any) {
-    console.error("Failed to get signals:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to get signals",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// Get high signal fingerprints for MAB processing
-app.post("/api/fingerprintSignals/getHighSignals", async (c) => {
-  try {
-    const { userId, threshold } = await c.req.json();
-    const signals = await c.env.runQuery(api.fingerprintSignalsQueries.getHighSignals, {
-      userId,
-      threshold
-    });
-    return c.json({ success: true, data: signals });
-  } catch (error: any) {
-    console.error("Failed to get high signals:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to get high signals",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// Get all signals for a user
-app.post("/api/fingerprintSignals/getAllByUser", async (c) => {
-  try {
-    const { userId } = await c.req.json();
-    const signals = await c.env.runQuery(api.fingerprintSignalsQueries.getAllByUser, {
-      userId
-    });
-    return c.json({ success: true, data: signals });
-  } catch (error: any) {
-    console.error("Failed to get user signals:", error);
-    return c.json({ 
-      success: false, 
-      error: "Failed to get user signals",
-      message: error.message || "Internal Server Error"
-    }, 500);
-  }
-});
-
-// WIDGET OUTPUTS ROUTES - Generic pattern for widget execution outputs
+// ASSIGNMENT FINGERPRINT ROUTES - Living Projects simplified fingerprints
 
 /**
- * POST /api/widgetOutputs/query
- * Generic query endpoint for widget outputs with dynamic filtering
+ * POST /api/assignment-fingerprints/mutate
+ * Unified endpoint for create/update operations on assignment fingerprints
+ * Following Pattern 2 (Backend-to-Convex Bridge) from patterns.md
  */
-app.post("/api/widgetOutputs/query", async (c) => {
+app.post("/api/assignment-fingerprints/mutate", async (c) => {
   try {
-    const requestBody = await c.req.json();
-    
-    // Validate required fields
-    if (!requestBody.userId) {
-      return c.json({
-        error: "userId is required",
-        success: false
-      }, 400);
-    }
-
-    const result = await c.env.runQuery(api.widgetOutputsQueries.getWidgetOutputData, requestBody);
+    const body = await c.req.json();
+    const result = await c.env.runMutation(
+      api.assignmentFingerprintMutations.mutateAssignmentFingerprint,
+      body
+    );
     return c.json({ success: true, data: result });
   } catch (error: any) {
-    console.error("Widget outputs query error:", error);
+    console.error("Failed to mutate assignment fingerprint:", error);
     return c.json({ 
-      error: "Internal server error",
-      message: error.message || "Unknown error"
+      success: false, 
+      error: "Failed to mutate assignment fingerprint",
+      message: error.message || "Internal Server Error"
     }, 500);
   }
 });
 
 /**
- * POST /api/widgetOutputs/mutate
- * Batch mutation endpoint for widget outputs (create/update/delete)
+ * POST /api/assignment-fingerprints/getByProject
+ * Get assignment fingerprint by project ID
+ * ✅ SECURITY: Requires userId for ownership validation
  */
-app.post("/api/widgetOutputs/mutate", async (c) => {
+app.post("/api/assignment-fingerprints/getByProject", async (c) => {
   try {
-    const requestBody = await c.req.json();
+    const { projectId, userId } = await c.req.json();
     
-    // Validate operations array
-    if (!Array.isArray(requestBody.operations) || requestBody.operations.length === 0) {
-      return c.json({
-        error: "operations array is required and must not be empty",
-        success: false
+    if (!userId) {
+      return c.json({ 
+        success: false, 
+        error: "userId is required" 
       }, 400);
     }
-
-    const result = await c.env.runMutation(api.widgetOutputsMutations.batchMutateWidgetOutputs, requestBody);
     
-    if (result.success) {
-      return c.json({ success: true, data: result });
-    } else {
+    const fingerprint = await c.env.runQuery(
+      api.assignmentFingerprintQueries.getByProject,
+      { projectId, userId }
+    );
+    return c.json({ success: true, data: fingerprint });
+  } catch (error: any) {
+    console.error("Failed to get assignment fingerprint:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get assignment fingerprint",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/assignment-fingerprints/queryInsights
+ * Query insights by category, time, confidence
+ * ✅ SECURITY: Requires userId for ownership validation
+ */
+app.post("/api/assignment-fingerprints/queryInsights", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { projectId, userId, category, since, minConfidence, limit } = body;
+    
+    if (!projectId || !userId) {
+      return c.json({ success: false, error: "Missing projectId or userId" }, 400);
+    }
+    
+    const insights = await c.env.runQuery(api.assignmentFingerprintQueries.queryInsights, {
+      projectId,
+      userId,
+      category,
+      since,
+      minConfidence,
+      limit,
+    });
+    
+    return c.json({ success: true, data: insights });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+/**
+ * POST /api/assignment-fingerprints/getCurrentPreferences
+ * Get current preferences - FAST query for A2A coordination
+ * ✅ SECURITY: Requires userId for ownership validation
+ */
+app.post("/api/assignment-fingerprints/getCurrentPreferences", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { projectId, userId } = body;
+    
+    if (!projectId || !userId) {
+      return c.json({ success: false, error: "Missing projectId or userId" }, 400);
+    }
+    
+    const preferences = await c.env.runQuery(
+      api.assignmentFingerprintQueries.getCurrentPreferences,
+      { projectId, userId }
+    );
+    
+    return c.json({ success: true, data: preferences });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// ARTIFACT ROUTES - Clean artifact storage (replaces widget_outputs for artifacts)
+
+/**
+ * POST /api/artifacts/create
+ * Create new artifact
+ */
+app.post("/api/artifacts/create", async (c) => {
+  try {
+    const requestBody = await c.req.json();
+    const artifactId = await c.env.runMutation(api.artifactMutations.createArtifact, requestBody);
+    return c.json({ success: true, data: artifactId });
+  } catch (error: any) {
+    console.error("Create artifact error:", error);
+    return c.json({ 
+      error: "Failed to create artifact",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/artifacts/batch
+ * Create multiple artifacts in batch
+ */
+app.post("/api/artifacts/batch", async (c) => {
+  try {
+    const requestBody = await c.req.json();
+    const artifactIds = await c.env.runMutation(api.artifactMutations.createArtifactsBatch, requestBody);
+    return c.json({ success: true, data: artifactIds });
+  } catch (error: any) {
+    console.error("Batch create artifacts error:", error);
+    return c.json({ 
+      error: "Failed to create artifacts batch",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * PATCH /api/artifacts/:artifactId
+ * Update artifact
+ */
+app.patch("/api/artifacts/:artifactId", async (c) => {
+  try {
+    const artifactId = c.req.param("artifactId");
+    const requestBody = await c.req.json();
+    
+    await c.env.runMutation(api.artifactMutations.updateArtifact, {
+      artifactId: artifactId as any,
+      ...requestBody
+    });
+    
+    return c.json({ success: true });
+  } catch (error: any) {
+    console.error("Update artifact error:", error);
+    return c.json({ 
+      error: "Failed to update artifact",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * DELETE /api/artifacts/:artifactId
+ * Delete artifact
+ */
+app.delete("/api/artifacts/:artifactId", async (c) => {
+  try {
+    const artifactId = c.req.param("artifactId");
+    await c.env.runMutation(api.artifactMutations.deleteArtifact, {
+      artifactId: artifactId as any
+    });
+    
+    return c.json({ success: true });
+  } catch (error: any) {
+    console.error("Delete artifact error:", error);
+    return c.json({ 
+      error: "Failed to delete artifact",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * GET /api/artifacts/:artifactId
+ * Get single artifact by ID
+ */
+app.get("/api/artifacts/:artifactId", async (c) => {
+  try {
+    const artifactId = c.req.param("artifactId");
+    const artifact = await c.env.runQuery(api.artifactQueries.getArtifact, {
+      artifactId: artifactId as any
+    });
+    
+    if (!artifact) {
+      return c.json({ 
+        success: false,
+        error: "Artifact not found"
+      }, 404);
+    }
+    
+    return c.json({ success: true, data: artifact });
+  } catch (error: any) {
+    console.error("Get artifact error:", error);
+    return c.json({ 
+      error: "Failed to get artifact",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * GET /api/artifacts/project/:projectId
+ * Get all artifacts for a project
+ */
+app.get("/api/artifacts/project/:projectId", async (c) => {
+  try {
+    const projectId = c.req.param("projectId");
+    const artifacts = await c.env.runQuery(api.artifactQueries.getProjectArtifacts, {
+      projectId: projectId as any
+    });
+    
+    return c.json({ success: true, data: artifacts });
+  } catch (error: any) {
+    console.error("Get project artifacts error:", error);
+    return c.json({ 
+      error: "Failed to get project artifacts",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * GET /api/artifacts/widget/:widgetId
+ * Get all artifacts for a widget
+ */
+app.get("/api/artifacts/widget/:widgetId", async (c) => {
+  try {
+    const widgetId = c.req.param("widgetId");
+    const artifacts = await c.env.runQuery(api.artifactQueries.getWidgetArtifacts, {
+      widgetId: widgetId as any
+    });
+    
+    return c.json({ success: true, data: artifacts });
+  } catch (error: any) {
+    console.error("Get widget artifacts error:", error);
+    return c.json({ 
+      error: "Failed to get widget artifacts",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/artifacts/query
+ * Flexible query endpoint for artifacts
+ * Supports filtering by projectId, widgetId
+ * 
+ * Follows CONVEX_SAVE_ABSOLUTE_LAW patterns:
+ * - Returns { success: true, data: [...] } format
+ * - Handles errors gracefully
+ * - Validates userId for ownership
+ */
+app.post("/api/artifacts/query", async (c) => {
+  try {
+    const ctx = c.env;
+    const { userId, filters, limit, orderBy } = await c.req.json();
+    
+    if (!userId) {
       return c.json({
         success: false,
-        error: "Batch operation partially failed",
-        details: result.results
+        error: "Missing required field: userId"
       }, 400);
     }
+    
+    // Build args conditionally (per LAW #7: Optional fields)
+    const args: any = { userId };
+    if (filters) args.filters = filters;
+    if (limit) args.limit = limit;
+    if (orderBy) args.orderBy = orderBy;
+    
+    const artifacts = await ctx.runQuery(api.artifactQueries.queryArtifacts, args);
+    
+    return c.json({
+      success: true,
+      data: artifacts
+    });
   } catch (error: any) {
-    console.error("Widget outputs mutation error:", error);
+    console.error("[WIDGET_OUTPUTS_QUERY] Error:", error);
+    return c.json({
+      success: false,
+      error: error.message || "Failed to query artifacts"
+    }, 500);
+  }
+});
+
+/**
+ * GET /api/artifacts/:artifactId/versions
+ * Get all versions for an artifact
+ */
+app.get("/api/artifacts/:artifactId/versions", async (c) => {
+  try {
+    const artifactId = c.req.param("artifactId") as any;
+    const limit = parseInt(c.req.query("limit") || "100");
+    
+    const versions = await c.env.runQuery(
+      api.artifactVersionQueries.getArtifactVersions,
+      { artifactId, limit }
+    );
+    
+    return c.json({ success: true, data: versions });
+  } catch (error: any) {
+    console.error("Get artifact versions error:", error);
     return c.json({ 
-      error: "Internal server error",
-      message: error.message || "Unknown error"
+      success: false,
+      error: "Failed to get artifact versions",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * GET /api/artifacts/:artifactId/versions/:versionNumber
+ * Get specific version by number
+ */
+app.get("/api/artifacts/:artifactId/versions/:versionNumber", async (c) => {
+  try {
+    const artifactId = c.req.param("artifactId") as any;
+    const versionNumber = parseInt(c.req.param("versionNumber"));
+    
+    const version = await c.env.runQuery(
+      api.artifactVersionQueries.getVersionByNumber,
+      { artifactId, versionNumber }
+    );
+    
+    if (!version) {
+      return c.json({ 
+        success: false,
+        error: "Version not found"
+      }, 404);
+    }
+    
+    return c.json({ success: true, data: version });
+  } catch (error: any) {
+    console.error("Get artifact version error:", error);
+    return c.json({ 
+      success: false,
+      error: "Failed to get artifact version",
+      message: error.message || "Internal Server Error"
     }, 500);
   }
 });
@@ -4311,38 +4870,32 @@ app.post("/api/stardust/statistics", async (c) => {
 
 
 /**
- * Create a new stardust
+ * Create a new stardust - Crystal Pattern (direct passthrough)
+ * 
+ * Following established Crystal atomic pattern:
+ * - No manual field mapping
+ * - Direct passthrough to mutation
+ * - Schema validates at insert time
  */
 app.post("/api/stardust/create", async (c) => {
   try {
     const ctx = c.env;
-    const body = await c.req.json();
+    const requestBody = await c.req.json();
     
-    const stardustId = await ctx.runMutation(api.stardustMutations.createStardust, {
-      userId: body.userId,
-      stardustId: body.stardustId,
-      name: body.name,
-      description: body.description,
-      confidence: body.confidence,
-      sourceShardIds: body.sourceShardIds || [],
-      keywords: body.keywords || [],
-      dimension: body.dimension,
-      suggestedProjectName: body.suggestedProjectName,
-      suggestedProjectDescription: body.suggestedProjectDescription,
-      suggestedDomain: body.suggestedDomain,
-      suggestedComplexity: body.suggestedComplexity,
-      suggestedTimeHorizon: body.suggestedTimeHorizon,
-      relatedNoteIds: body.relatedNoteIds || [],
-      relatedConversationIds: body.relatedConversationIds || [],
-      shardCount: body.shardCount,
-      evidenceStrength: body.evidenceStrength,
-      lifecycleStage: body.lifecycleStage,
-      health: body.health,
-      energy: body.energy,
-      detectionMethod: body.detectionMethod,
-    });
+    // Validate userId is provided
+    if (!requestBody.userId) {
+      return c.json({ 
+        success: false,
+        error: "userId is required in request body"
+      }, 400);
+    }
     
-    return c.json({ success: true, data: { stardustId } });
+    const result = await ctx.runMutation(
+      api.stardustMutations.createStardust,
+      { stardustData: requestBody }
+    );
+    
+    return c.json({ success: true, data: { stardustId: result } });
   } catch (error: any) {
     console.error("[STARDUST_CREATE] Error:", error);
     return c.json({ 
@@ -4354,19 +4907,19 @@ app.post("/api/stardust/create", async (c) => {
 
 
 /**
- * Update a stardust
+ * Update a stardust - Crystal Pattern (direct passthrough)
  */
 app.post("/api/stardust/update", async (c) => {
   try {
     const ctx = c.env;
-    const body = await c.req.json();
+    const requestBody = await c.req.json();
     
-    const stardustId = await ctx.runMutation(api.stardustMutations.updateStardust, {
-      stardustId: body.stardustId as Id<"stardust">,
-      updates: body.updates,
+    const result = await ctx.runMutation(api.stardustMutations.updateStardust, {
+      stardustId: requestBody.stardustId as Id<"stardust">,
+      updates: requestBody.updates,
     });
     
-    return c.json({ success: true, data: { stardustId } });
+    return c.json({ success: true, data: { stardustId: result } });
   } catch (error: any) {
     console.error("[STARDUST_UPDATE] Error:", error);
     return c.json({ 
@@ -4475,11 +5028,31 @@ app.post("/api/stardust/byDomain", async (c) => {
 
 /**
  * Batch create stardust
+ * 
+ * CRITICAL: Each stardust in stardustList must include userId for backend toolkit compatibility
  */
 app.post("/api/stardust/batchCreate", async (c) => {
   try {
     const ctx = c.env;
     const body = await c.req.json();
+    
+    // Validate stardustList is provided
+    if (!body.stardustList || !Array.isArray(body.stardustList)) {
+      return c.json({ 
+        success: false,
+        error: "stardustList array is required in request body"
+      }, 400);
+    }
+    
+    // Validate each stardust has userId
+    for (const stardust of body.stardustList) {
+      if (!stardust.userId) {
+        return c.json({ 
+          success: false,
+          error: "userId is required for each stardust in stardustList"
+        }, 400);
+      }
+    }
     
     const stardustIds = await ctx.runMutation(api.stardustMutations.batchCreateStardust, {
       stardustList: body.stardustList,
@@ -4491,6 +5064,29 @@ app.post("/api/stardust/batchCreate", async (c) => {
     return c.json({ 
       success: false,
       error: error.message || "Failed to batch create stardust"
+    }, 500);
+  }
+});
+
+
+/**
+ * Batch update stardust
+ */
+app.post("/api/stardust/batchUpdate", async (c) => {
+  try {
+    const ctx = c.env;
+    const body = await c.req.json();
+    
+    const stardustIds = await ctx.runMutation(api.stardustMutations.batchUpdateStardust, {
+      updates: body.updates,
+    });
+    
+    return c.json({ success: true, data: stardustIds });
+  } catch (error: any) {
+    console.error("[STARDUST_BATCH_UPDATE] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to batch update stardust"
     }, 500);
   }
 });
@@ -4546,336 +5142,324 @@ app.post("/api/stardust/createSymbioticPair", async (c) => {
   }
 });
 
-// ============================================================================
-// CONVERGENCE CONFIG ROUTES
-// ============================================================================
-
 /**
- * Get top configs for a system (most common read operation)
+ * Batch delete multiple stardust
  */
-app.get("/api/convergence/configs/:system_name", async (c) => {
+app.post("/api/stardust/batchDelete", async (c) => {
   try {
-    const system_name = c.req.param("system_name");
-    const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : 3;
-    const status = c.req.query("status") as ConfigStatus | undefined;
-    
-    const configs = await c.env.runQuery(api.convergenceQueries.getTopConfigs, {
-      system_name,
-      limit,
-      status,
-    });
-    
-    return c.json({ success: true, data: configs });
-  } catch (error: any) {
-    console.error("[CONVERGENCE] Get configs error:", error);
-    return c.json({ 
-      success: false,
-      error: error.message || "Failed to get configs"
-    }, 500);
-  }
-});
-
-/**
- * Get single config by rank
- */
-app.get("/api/convergence/configs/:system_name/rank/:rank", async (c) => {
-  try {
-    const system_name = c.req.param("system_name");
-    const rank = parseInt(c.req.param("rank"));
-    const status = c.req.query("status") as ConfigStatus | undefined;
-    
-    const config = await c.env.runQuery(api.convergenceQueries.getConfigByRank, {
-      system_name,
-      rank,
-      status,
-    });
-    
-    return c.json({ success: true, data: config });
-  } catch (error: any) {
-    console.error("[CONVERGENCE] Get config by rank error:", error);
-    return c.json({ 
-      success: false,
-      error: error.message || "Failed to get config"
-    }, 500);
-  }
-});
-
-/**
- * Get system statistics
- */
-app.get("/api/convergence/stats/:system_name", async (c) => {
-  try {
-    const system_name = c.req.param("system_name");
-    
-    const stats = await c.env.runQuery(api.convergenceQueries.getSystemStats, {
-      system_name,
-    });
-    
-    return c.json({ success: true, data: stats });
-  } catch (error: any) {
-    console.error("[CONVERGENCE] Get stats error:", error);
-    return c.json({ 
-      success: false,
-      error: error.message || "Failed to get stats"
-    }, 500);
-  }
-});
-
-/**
- * Save single config (called by optimization runs)
- */
-app.post("/api/convergence/configs", async (c) => {
-  try {
+    const ctx = c.env;
     const body = await c.req.json();
     
-    const configId = await c.env.runMutation(api.convergenceMutations.saveConfig, body);
-    
-    return c.json({ success: true, data: { configId } });
-  } catch (error: any) {
-    console.error("[CONVERGENCE] Save config error:", error);
-    return c.json({ 
-      success: false,
-      error: error.message || "Failed to save config"
-    }, 500);
-  }
-});
-
-/**
- * Batch save configs (optimization runs with multiple candidates)
- */
-app.post("/api/convergence/configs/batch", async (c) => {
-  try {
-    const body = await c.req.json();
-    
-    const result = await c.env.runMutation(api.convergenceMutations.batchSaveConfigs, {
-      configs: body.configs,
+    const result = await ctx.runMutation(api.stardustMutations.batchDeleteStardust, {
+      stardustIds: body.stardustIds,
     });
     
     return c.json({ success: true, data: result });
   } catch (error: any) {
-    console.error("[CONVERGENCE] Batch save error:", error);
+    console.error("[STARDUST_BATCH_DELETE] Error:", error);
     return c.json({ 
       success: false,
-      error: error.message || "Failed to batch save configs"
+      error: error.message || "Failed to batch delete stardust"
     }, 500);
   }
 });
 
-/**
- * Update config status (lifecycle management)
- */
-app.patch("/api/convergence/configs/:configId/status", async (c) => {
+// Cognative Fields Routes
+app.post("/api/cognative/create", async (c) => {
   try {
-    const configId = c.req.param("configId") as Id<"convergence_configs">;
-    const { status } = await c.req.json();
-    
-    await c.env.runMutation(api.convergenceMutations.updateConfigStatus, {
-      configId,
-      status,
-    });
-    
-    return c.json({ success: true, data: { configId } });
+    const body = await c.req.json();
+    const field = await c.env.runMutation(api.cognitiveMutations.createCognitiveField, body);
+    return c.json({ success: true, data: field });
   } catch (error: any) {
-    console.error("[CONVERGENCE] Update status error:", error);
+    console.error("[COGNATIVE_CREATE] Error:", error);
     return c.json({ 
       success: false,
-      error: error.message || "Failed to update status"
+      error: error.message || "Failed to create cognative field"
     }, 500);
   }
 });
 
-/**
- * Record config usage (track performance in production)
- */
-app.post("/api/convergence/configs/:configId/usage", async (c) => {
+app.post("/api/cognative/mutate", async (c) => {
   try {
-    const configId = c.req.param("configId") as Id<"convergence_configs">;
-    const { success } = await c.req.json();
-    
-    await c.env.runMutation(api.convergenceMutations.recordConfigUsage, {
-      configId,
-      success,
-    });
-    
-    return c.json({ success: true, data: { configId } });
+    const body = await c.req.json();
+    const field = await c.env.runMutation(api.cognitiveMutations.mutateCognitiveField, body);
+    return c.json({ success: true, data: field });
   } catch (error: any) {
-    console.error("[CONVERGENCE] Record usage error:", error);
+    console.error("[COGNATIVE_MUTATE] Error:", error);
     return c.json({ 
       success: false,
-      error: error.message || "Failed to record usage"
+      error: error.message || "Failed to mutate cognative field"
     }, 500);
   }
 });
 
-/**
- * Promote configs (deploy new optimized configs)
- * 
- * IDEMPOTENT: Pass promotion_id for safe retries
- */
-app.post("/api/convergence/configs/promote", async (c) => {
+app.post("/api/cognative/delete", async (c) => {
   try {
-    const { system_name, new_config_ids, promotion_id } = await c.req.json();
-    
-    const result = await c.env.runMutation(api.convergenceMutations.promoteConfigs, {
-      system_name,
-      new_config_ids,
-      promotion_id,
-    });
-    
-    return c.json({ success: true, data: result });
+    const body = await c.req.json();
+    const field = await c.env.runMutation(api.cognitiveMutations.deleteCognitiveField, body);
+    return c.json({ success: true, data: field });
   } catch (error: any) {
-    console.error("[CONVERGENCE] Promote configs error:", error);
+    console.error("[COGNATIVE_DELETE] Error:", error);
     return c.json({ 
       success: false,
-      error: error.message || "Failed to promote configs"
+      error: error.message || "Failed to delete cognative field"
     }, 500);
   }
 });
 
-/**
- * Search configs by context (contextTag-based retrieval)
- * Vector similarity search endpoint - currently using contextTag filtering
- */
-app.post("/api/convergence/configs/search-by-embedding", async (c) => {
+app.post("/api/cognative/query", async (c) => {
   try {
-    const { system_name, contextTag, limit } = await c.req.json();
-    
-    const configs = await c.env.runQuery(api.convergenceQueries.searchConfigsByContext, {
-      system_name,
-      contextTag,
-      limit,
-    });
-    
-    return c.json({ success: true, data: configs });
+    const body = await c.req.json();
+    const field = await c.env.runQuery(api.cognitiveQueries.queryCognitiveField, body);
+    return c.json({ success: true, data: field });
   } catch (error: any) {
-    console.error("[CONVERGENCE] Context search error:", error);
+    console.error("[COGNATIVE_GET] Error:", error);
     return c.json({ 
       success: false,
-      error: error.message || "Failed to search configs by context"
+      error: error.message || "Failed to query cognative field"
+    }, 500);
+  }
+});
+
+app.post("/api/cognative/getAll", async (c) => {
+  try {
+    const body = await c.req.json();
+    const fields = await c.env.runQuery(api.cognitiveQueries.getAllCognitiveFields, body);
+    return c.json({ success: true, data: fields });
+  } catch (error: any) {
+    console.error("[COGNATIVE_GET_ALL] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get all cognative fields"
+    }, 500);
+  }
+});
+
+app.post("/api/cognative/count", async (c) => {
+  try {
+    const body = await c.req.json();
+    const count = await c.env.runQuery(api.cognitiveQueries.countCognitiveFields, body);
+    return c.json({ success: true, data: count });
+  } catch (error: any) {
+    console.error("[COGNATIVE_COUNT] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to count cognative fields"
+    }, 500);
+  }
+});
+
+app.post("/api/cognative/getNeedingOptimization", async (c) => {
+  try {
+    const body = await c.req.json();
+    const fields = await c.env.runQuery(api.cognitiveQueries.getCognitiveFieldsNeedingOptimization, body);
+    return c.json({ success: true, data: fields });
+  } catch (error: any) {
+    console.error("[COGNATIVE_GET_NEEDING_OPTIMIZATION] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get needing optimization cognative fields"
+    }, 500);
+  }
+});
+
+app.post("/api/cognative/getByConversation", async (c) => {
+  try {
+    const body = await c.req.json();
+    const field = await c.env.runQuery(api.cognitiveQueries.getCognitiveFieldByConversation, body);
+    return c.json({ success: true, data: field });
+  } catch (error: any) {
+    console.error("[COGNATIVE_GET_BY_CONVERSATION] Error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to get cognative field by conversation"
     }, 500);
   }
 });
 
 // ============================================================================
-// CONVERGENCE STORAGE ROUTES - RL Data, Experiments, Optimization Runs
+// A2A (AGENT-TO-AGENT) NOTES
 // ============================================================================
 
 /**
- * Save RL training data
+ * Store A2A note for agent network communication
  */
-app.post("/api/convergence/storage/rl-data", async (c) => {
+app.post("/api/a2a/store", async (c) => {
   try {
     const body = await c.req.json();
+    const { agentId, report, conversationId, projectId } = body;
     
-    const recordId = await c.env.runMutation(api.convergenceStorageMutations.saveRLData, body);
+    // Build args - only include optional fields if they have values
+    const args: any = {
+      agentId,
+      report,
+      createdAt: Date.now()
+    };
     
-    return c.json({ success: true, data: { recordId } });
+    if (conversationId) args.conversationId = conversationId;
+    if (projectId) args.projectId = projectId;
+    
+    const noteId = await c.env.runMutation(internal.a2aMutations.storeA2ANote, args);
+    
+    return c.json({ success: true, data: noteId });
   } catch (error: any) {
-    console.error("[CONVERGENCE_STORAGE] Save RL data error:", error);
+    console.error("[A2A_STORE] Error:", error);
     return c.json({ 
       success: false,
-      error: error.message || "Failed to save RL data"
+      error: error.message || "Failed to store A2A note"
     }, 500);
   }
 });
 
 /**
- * Batch save RL training data
+ * Get latest A2A notes for context
  */
-app.post("/api/convergence/storage/rl-data/batch", async (c) => {
+app.post("/api/a2a/latest", async (c) => {
   try {
     const body = await c.req.json();
+    const { conversationId, projectId, limit = 5 } = body;
     
-    const result = await c.env.runMutation(api.convergenceStorageMutations.batchSaveRLData, {
-      records: body.records,
-    });
+    // Build args object - only include fields if they're truthy (not null/undefined)
+    // Matches Pattern 2 (Backend-to-Convex Bridge) - omit optional fields instead of passing null
+    const args: any = {
+      limit
+    };
     
-    return c.json({ success: true, data: result });
+    if (conversationId) args.conversationId = conversationId;
+    if (projectId) args.projectId = projectId;
+    
+    const notes = await c.env.runQuery(internal.a2aQueries.getLatestA2ANotes, args);
+    
+    return c.json({ success: true, data: notes });
   } catch (error: any) {
-    console.error("[CONVERGENCE_STORAGE] Batch save RL data error:", error);
+    console.error("[A2A_LATEST] Error:", error);
     return c.json({ 
       success: false,
-      error: error.message || "Failed to batch save RL data"
+      error: error.message || "Failed to get A2A notes"
+    }, 500);
+  }
+});
+
+// ============================================================================
+// CONVERGENCE PRESET CONFIGS
+// ============================================================================
+
+/**
+ * Get all preset configurations
+ */
+app.get("/api/convergence/preset-configs", async (c) => {
+  try {
+    const presets = await c.env.runQuery(api.convergencePresetQueries.getPresetConfigs, {});
+    
+    return c.json({
+      success: true,
+      data: presets
+    });
+  } catch (error) {
+    console.error("[CONVERGENCE] Get preset configs error:", error);
+    return c.json({
+      success: false,
+      error: "Failed to get preset configs"
     }, 500);
   }
 });
 
 /**
- * Get RL data by key
+ * Get a specific preset configuration by preset_id
  */
-app.get("/api/convergence/storage/rl-data/:rl_key", async (c) => {
+app.get("/api/convergence/preset-configs/:preset_id", async (c) => {
   try {
-    const rl_key = c.req.param("rl_key");
-    
-    const data = await c.env.runQuery(api.convergenceStorageQueries.getRLDataByKey, {
-      rl_key,
+    const presetId = c.req.param("preset_id");
+    const preset = await c.env.runQuery(api.convergencePresetQueries.getPresetConfigById, {
+      preset_id: presetId
     });
     
-    return c.json({ success: true, data });
-  } catch (error: any) {
-    console.error("[CONVERGENCE_STORAGE] Get RL data error:", error);
-    return c.json({ 
-      success: false,
-      error: error.message || "Failed to get RL data"
-    }, 500);
-  }
-});
-
-/**
- * Query RL episodes for training
- */
-app.get("/api/convergence/storage/rl-data/query", async (c) => {
-  try {
-    const agent_id = c.req.query("agent_id");
-    const record_type = c.req.query("record_type");
-    const station = c.req.query("station");
-    const min_reward_score = c.req.query("min_reward_score") ? parseFloat(c.req.query("min_reward_score")!) : undefined;
-    const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : 100;
-    
-    if (!agent_id) {
-      return c.json({ success: false, error: "agent_id is required" }, 400);
+    if (!preset) {
+      return c.json({
+        success: false,
+        error: `Preset '${presetId}' not found`
+      }, 404);
     }
     
-    const data = await c.env.runQuery(api.convergenceStorageQueries.queryRLEpisodesForTraining, {
-      agent_id,
-      record_type: record_type as any,
-      station,
-      min_reward_score,
-      limit,
+    return c.json({
+      success: true,
+      data: preset
     });
-    
-    return c.json({ success: true, data });
-  } catch (error: any) {
-    console.error("[CONVERGENCE_STORAGE] Query RL episodes error:", error);
-    return c.json({ 
+  } catch (error) {
+    console.error("[CONVERGENCE] Get preset config error:", error);
+    return c.json({
       success: false,
-      error: error.message || "Failed to query RL episodes"
+      error: "Failed to get preset config"
     }, 500);
   }
 });
 
 /**
- * Get top RL performers
+ * Create a new preset configuration
  */
-app.get("/api/convergence/storage/rl-data/top-performers/:agent_id", async (c) => {
+app.post("/api/convergence/preset-configs", async (c) => {
   try {
-    const agent_id = c.req.param("agent_id");
-    const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : 10;
+    const body = await c.req.json();
     
-    const data = await c.env.runQuery(api.convergenceStorageQueries.getTopRLPerformers, {
-      agent_id,
-      limit,
-    });
+    const configId = await c.env.runMutation(api.convergencePresetMutations.createPresetConfig, body);
     
-    return c.json({ success: true, data });
+    return c.json({ success: true, data: { configId } });
   } catch (error: any) {
-    console.error("[CONVERGENCE_STORAGE] Get top RL performers error:", error);
+    console.error("[CONVERGENCE] Create preset config error:", error);
     return c.json({ 
       success: false,
-      error: error.message || "Failed to get top RL performers"
+      error: error.message || "Failed to create preset config"
     }, 500);
   }
 });
+
+/**
+ * Update a preset configuration
+ */
+app.patch("/api/convergence/preset-configs/:configId", async (c) => {
+  try {
+    const configId = c.req.param("configId") as Id<"convergence_preset_configs">;
+    const body = await c.req.json();
+    
+    await c.env.runMutation(api.convergencePresetMutations.updatePresetConfig, {
+      id: configId,
+      ...body
+    });
+    
+    return c.json({ success: true });
+  } catch (error: any) {
+    console.error("[CONVERGENCE] Update preset config error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to update preset config"
+    }, 500);
+  }
+});
+
+/**
+ * Delete a preset configuration
+ */
+app.delete("/api/convergence/preset-configs/:configId", async (c) => {
+  try {
+    const configId = c.req.param("configId") as Id<"convergence_preset_configs">;
+    
+    await c.env.runMutation(api.convergencePresetMutations.deletePresetConfig, {
+      id: configId
+    });
+    
+    return c.json({ success: true });
+  } catch (error: any) {
+    console.error("[CONVERGENCE] Delete preset config error:", error);
+    return c.json({ 
+      success: false,
+      error: error.message || "Failed to delete preset config"
+    }, 500);
+  }
+});
+
+// ============================================================================
+// CONVERGENCE STORAGE ROUTES - Experiments, Optimization Runs
+// ============================================================================
 
 /**
  * Save optimization experiment
@@ -5178,6 +5762,319 @@ app.post("/api/briefing/publishWidgetCompletion", async (c) => {
   }
 });
 
+// ============================================================================
+// CONVERGENCE CURRENT CONFIG
+// ============================================================================
 
+/**
+ * Get current config for a user
+ */
+app.get("/api/convergence/current-config/:user_id", async (c) => {
+  try {
+    const userId = c.req.param("user_id");
+    const currentConfig = await c.env.runQuery(api.convergenceCurrentConfigQueries.getCurrentConfig, {
+      user_id: userId
+    });
+    
+    return c.json({
+      success: true,
+      data: currentConfig
+    });
+  } catch (error) {
+    console.error("[CONVERGENCE] Get current config error:", error);
+    return c.json({
+      success: false,
+      error: "Failed to get current config"
+    }, 500);
+  }
+});
+
+/**
+ * Set current config for a user
+ */
+app.post("/api/convergence/current-config", async (c) => {
+  try {
+    const args = await c.req.json();
+    const configId = await c.env.runMutation(api.convergenceCurrentConfigMutations.setCurrentConfig, args);
+    
+    return c.json({
+      success: true,
+      data: configId
+    });
+  } catch (error) {
+    console.error("[CONVERGENCE] Set current config error:", error);
+    return c.json({
+      success: false,
+      error: "Failed to set current config"
+    }, 500);
+  }
+});
+
+/**
+ * Update current config status
+ */
+app.patch("/api/convergence/current-config/status", async (c) => {
+  try {
+    const args = await c.req.json();
+    await c.env.runMutation(api.convergenceCurrentConfigMutations.updateCurrentConfigStatus, args);
+    
+    return c.json({
+      success: true
+    });
+  } catch (error) {
+    console.error("[CONVERGENCE] Update current config status error:", error);
+    return c.json({
+      success: false,
+      error: "Failed to update current config status"
+    }, 500);
+  }
+});
+
+/**
+ * Clear current config for a user
+ */
+app.delete("/api/convergence/current-config/:user_id", async (c) => {
+  try {
+    const userId = c.req.param("user_id");
+    await c.env.runMutation(api.convergenceCurrentConfigMutations.clearCurrentConfig, {
+      user_id: userId
+    });
+    
+    return c.json({
+      success: true
+    });
+  } catch (error) {
+    console.error("[CONVERGENCE] Clear current config error:", error);
+    return c.json({
+      success: false,
+      error: "Failed to clear current config"
+    }, 500);
+  }
+});
+
+// ============================================================================
+// CONVERGENCE BEST CONFIGS
+// ============================================================================
+
+/**
+ * Save or update best config for a system
+ */
+app.post("/api/convergence/best-configs", async (c) => {
+  try {
+    const args = await c.req.json();
+    const configId = await c.env.runMutation(api.convergenceBestConfigMutations.saveBestConfig, args);
+    
+    return c.json({
+      success: true,
+      data: { configId }
+    });
+  } catch (error: any) {
+    console.error("[CONVERGENCE] Save best config error:", error);
+    return c.json({
+      success: false,
+      error: error.message || "Failed to save best config"
+    }, 500);
+  }
+});
+
+/**
+ * Get all best configs (one per system)
+ */
+app.get("/api/convergence/best-configs", async (c) => {
+  try {
+    const configs = await c.env.runQuery(api.convergenceBestConfigQueries.getAllBestConfigs, {});
+    
+    return c.json({
+      success: true,
+      data: configs
+    });
+  } catch (error) {
+    console.error("[CONVERGENCE] Get all best configs error:", error);
+    return c.json({
+      success: false,
+      error: "Failed to get best configs"
+    }, 500);
+  }
+});
+
+/**
+ * Get best config for a specific system
+ */
+app.get("/api/convergence/best-configs/:system_name", async (c) => {
+  try {
+    const systemName = c.req.param("system_name");
+    const config = await c.env.runQuery(api.convergenceBestConfigQueries.getBestConfig, {
+      system_name: systemName
+    });
+    
+    return c.json({
+      success: true,
+      data: config
+    });
+  } catch (error) {
+    console.error("[CONVERGENCE] Get best config error:", error);
+    return c.json({
+      success: false,
+      error: "Failed to get best config"
+    }, 500);
+  }
+});
+
+// ============================================================================
+// CONVERGENCE OPTIMIZATION RUNS
+// ============================================================================
+
+/**
+ * Save optimization run history
+ */
+app.post("/api/convergence/optimization-runs", async (c) => {
+  try {
+    const args = await c.req.json();
+    const runId = await c.env.runMutation(api.convergenceOptimizationRuns.saveRunHistory, args);
+    
+    return c.json({
+      success: true,
+      data: { runId }
+    });
+  } catch (error: any) {
+    console.error("[CONVERGENCE] Save run history error:", error);
+    return c.json({
+      success: false,
+      error: error.message || "Failed to save run history"
+    }, 500);
+  }
+});
+
+// ============================================================================
+// UNIVERSAL PROMPT SYSTEM
+// ============================================================================
+
+/**
+ * Create a single prompt block
+ */
+app.post("/api/prompts/create", async (c) => {
+  try {
+    const args = await c.req.json();
+    const promptId = await c.env.runMutation(api.promptsMutations.createPromptBlock, args);
+    
+    return c.json({
+      success: true,
+      data: promptId
+    });
+  } catch (error: any) {
+    console.error("[PROMPTS] Create prompt block error:", error);
+    return c.json({
+      success: false,
+      error: error.message || "Failed to create prompt block"
+    }, 500);
+  }
+});
+
+/**
+ * Batch create prompt blocks (for migration)
+ */
+app.post("/api/prompts/batchCreate", async (c) => {
+  try {
+    const args = await c.req.json();
+    const result = await c.env.runMutation(api.promptsMutations.batchCreatePromptBlocks, args);
+    
+    return c.json({
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    console.error("[PROMPTS] Batch create prompts error:", error);
+    return c.json({
+      success: false,
+      error: error.message || "Failed to batch create prompts"
+    }, 500);
+  }
+});
+
+/**
+ * Query prompts by tags
+ */
+app.post("/api/prompts/query/tags", async (c) => {
+  try {
+    const args = await c.req.json();
+    const prompts = await c.env.runQuery(api.promptsQueries.queryPromptsByTags, args);
+    
+    return c.json({
+      success: true,
+      data: prompts
+    });
+  } catch (error: any) {
+    console.error("[PROMPTS] Query by tags error:", error);
+    return c.json({
+      success: false,
+      error: error.message || "Failed to query prompts"
+    }, 500);
+  }
+});
+
+/**
+ * Query prompts by scope
+ */
+app.post("/api/prompts/query/scope", async (c) => {
+  try {
+    const args = await c.req.json();
+    const prompts = await c.env.runQuery(api.promptsQueries.queryPromptsByScope, args);
+    
+    return c.json({
+      success: true,
+      data: prompts
+    });
+  } catch (error: any) {
+    console.error("[PROMPTS] Query by scope error:", error);
+    return c.json({
+      success: false,
+      error: error.message || "Failed to query prompts"
+    }, 500);
+  }
+});
+
+/**
+ * Update effectiveness metrics
+ */
+app.post("/api/prompts/effectiveness", async (c) => {
+  try {
+    const args = await c.req.json();
+    const result = await c.env.runMutation(api.promptsMutations.updateEffectiveness, args);
+    
+    return c.json({
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    console.error("[PROMPTS] Update effectiveness error:", error);
+    return c.json({
+      success: false,
+      error: error.message || "Failed to update effectiveness"
+    }, 500);
+  }
+});
+
+/**
+ * Query prompts by tags (for universal prompt engine)
+ */
+app.post("/api/prompts/queryByTags", async (c) => {
+  try {
+    const body = await c.req.json();
+    
+    const prompts = await c.env.runQuery(api.promptsQueries.queryByTags, {
+      tags: body.tags || [],
+      scope: body.scope,
+      scopeId: body.scopeId,
+      effectivenessThreshold: body.effectivenessThreshold || 0.0
+    });
+    
+    return c.json({ success: true, data: prompts });
+  } catch (error: any) {
+    console.error("[http.ts] /api/prompts/queryByTags error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// Export the router (required by Convex)
 const router = new HttpRouterWithHono(app);
 export default router;

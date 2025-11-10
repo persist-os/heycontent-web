@@ -17,7 +17,6 @@ import {
   MessageCircle, 
   Gem, 
   Sparkles,
-  PlayCircle,
   MoreHorizontal,
   Filter,
   Search,
@@ -36,8 +35,6 @@ interface ProjectGridViewProps {
   widgets: WidgetConfig[]
   contentItems: any[]
   onWidgetClick: (widget: WidgetConfig) => void
-  onWidgetRun?: (widgetId: string) => void
-  runningWidgetId?: string | null
   onContentOpen: (id: string, type: string) => void
 }
 
@@ -51,8 +48,6 @@ export function ProjectGridView({
   widgets,
   contentItems,
   onWidgetClick,
-  onWidgetRun,
-  runningWidgetId,
   onContentOpen
 }: ProjectGridViewProps) {
   const router = useRouter()
@@ -186,13 +181,6 @@ export function ProjectGridView({
       if (widget) onWidgetClick(widget)
     } else {
       onContentOpen(content.id, content.type)
-    }
-  }
-
-  // Handle card action (e.g., run widget)
-  const handleCardAction = (content: ContentCardData) => {
-    if (content.type === 'widget' && onWidgetRun) {
-      onWidgetRun(content.id)
     }
   }
 
@@ -341,9 +329,6 @@ export function ProjectGridView({
               <ContentCard
                 content={card}
                 onClick={handleCardClick}
-                onAction={card.type === 'widget' ? handleCardAction : undefined}
-                actionIcon={card.type === 'widget' ? PlayCircle : undefined}
-                actionLabel={card.type === 'widget' ? 'Run widget' : undefined}
                 showMetadata={true}
                 variant={viewMode === 'list' ? 'compact' : 'default'}
               />

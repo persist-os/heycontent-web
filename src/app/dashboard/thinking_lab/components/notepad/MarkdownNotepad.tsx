@@ -9,9 +9,11 @@ import { DesktopNotepadLayout } from './components/DesktopNotepadLayout'
 import { useNotepadState } from './hooks/useNotepadState'
 import { useNotepadHandlers } from './hooks/useNotepadHandlers'
 import { useNotepadAI } from './hooks/useNotepadAI'
+// Removed useNotepadContext import - no longer needed
 import type { MarkdownNotepadProps, MarkdownNotepadRef } from './types'
 import type { Id } from "@/convex/_generated/dataModel"
 import { ShareNoteModal } from '../../../notes/components/ShareNoteModal'
+import { FeedbackDialog } from './components/FeedbackDialog'
 
 export const MarkdownNotepad = forwardRef<MarkdownNotepadRef, MarkdownNotepadProps>(function MarkdownNotepad({ 
   isOpen, 
@@ -35,6 +37,9 @@ export const MarkdownNotepad = forwardRef<MarkdownNotepadRef, MarkdownNotepadPro
   const { firebaseUser } = useAuth()
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
+  const [showRatingButton, setShowRatingButton] = useState(false)
+  const [showFeedbackDialog, setShowFeedbackDialog] = useState(false)
+  const [lastGenerationTimestamp, setLastGenerationTimestamp] = useState<number | null>(null)
 
   // Fetch user notes for the note selector
   const userNotesQuery = useQuery(
@@ -71,6 +76,8 @@ export const MarkdownNotepad = forwardRef<MarkdownNotepadRef, MarkdownNotepadPro
     sessionId
   })
 
+  // Removed notepad context - using direct ref forwarding instead
+
   const noteHandlers = useNotepadHandlers({
     state,
     refs,
@@ -80,12 +87,19 @@ export const MarkdownNotepad = forwardRef<MarkdownNotepadRef, MarkdownNotepadPro
     existingNote: contextData.existingNote
   })
 
+  // Wrap callback in useCallback to maintain stable reference
+  const handleGenerationComplete = useCallback(() => {
+    setShowRatingButton(true)
+    setLastGenerationTimestamp(Date.now())
+  }, [])
+
   const aiHandlers = useNotepadAI({
     content: state.content,
     userId: firebaseUser?.uid ?? '',
     setContent: setters.setContent,
     setRefinementPreview: setters.setRefinementPreview,
-    setIsRefining: setters.setIsRefining
+    setIsRefining: setters.setIsRefining,
+    onGenerationComplete: handleGenerationComplete
   })
 
   // Share handler
@@ -93,6 +107,17 @@ export const MarkdownNotepad = forwardRef<MarkdownNotepadRef, MarkdownNotepadPro
     if (note && !note.isTemporary) {
       setShowShareModal(true)
     }
+  }
+
+  // Rating handler - shows rating dialog
+  const handleRateLastGeneration = () => {
+    setShowFeedbackDialog(true)
+  }
+
+  // Handle feedback dialog close
+  const handleFeedbackDialogClose = () => {
+    setShowFeedbackDialog(false)
+    setShowRatingButton(false) // Hide the star button after feedback is submitted/dismissed
   }
 
   // Listen for note reference clicks
@@ -157,6 +182,8 @@ export const MarkdownNotepad = forwardRef<MarkdownNotepadRef, MarkdownNotepadPro
           onEditingTitleChange={setIsEditingTitle}
           onLinkNote={onLinkNote}
           onShare={handleShare}
+          showRatingButton={showRatingButton}
+          onRateLastGeneration={handleRateLastGeneration}
           isReadOnly={isReadOnly}
           notePermission={notePermission}
           panelState={panelState}
@@ -171,6 +198,15 @@ export const MarkdownNotepad = forwardRef<MarkdownNotepadRef, MarkdownNotepadPro
             onClose={() => setShowShareModal(false)}
           />
         )}
+
+        {/* Feedback Dialog */}
+        <FeedbackDialog
+          isOpen={showFeedbackDialog}
+          onClose={handleFeedbackDialogClose}
+          generationTimestamp={lastGenerationTimestamp}
+          noteId={note?.isTemporary ? undefined : (note?._id as string)}
+          noteContent={state.content}
+        />
       </>
     )
   }
@@ -197,6 +233,8 @@ export const MarkdownNotepad = forwardRef<MarkdownNotepadRef, MarkdownNotepadPro
         onLinkNote={onLinkNote}
         onShare={handleShare}
         onClose={onClose}
+        showRatingButton={showRatingButton}
+        onRateLastGeneration={handleRateLastGeneration}
         isReadOnly={isReadOnly}
         notePermission={notePermission}
         panelState={panelState}
@@ -211,6 +249,15 @@ export const MarkdownNotepad = forwardRef<MarkdownNotepadRef, MarkdownNotepadPro
           onClose={() => setShowShareModal(false)}
         />
       )}
+
+      {/* Feedback Dialog */}
+      <FeedbackDialog
+        isOpen={showFeedbackDialog}
+        onClose={handleFeedbackDialogClose}
+        generationTimestamp={lastGenerationTimestamp}
+        noteId={note?.isTemporary ? undefined : (note?._id as string)}
+        noteContent={state.content}
+      />
     </>
   )
 });

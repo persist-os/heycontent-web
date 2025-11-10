@@ -6,6 +6,7 @@ import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { toast } from 'sonner';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 
 interface ShardsViewProps {
   recentShards?: any[]; // Legacy prop for fallback
@@ -18,16 +19,13 @@ interface EnhancedShardCardProps {
 const EnhancedShardCard: React.FC<EnhancedShardCardProps> = ({ shard }) => {
   const [showDetails, setShowDetails] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editedShard, setEditedShard] = useState(shard);
   
   // Convex mutation for shard operations
   const batchMutateCrystalData = useMutation(api.crystalMutations.batchMutateCrystalData);
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this shard? This action cannot be undone.')) {
-      return;
-    }
-
     try {
       const result = await batchMutateCrystalData({
         table: "crystal_shards",
@@ -39,6 +37,7 @@ const EnhancedShardCard: React.FC<EnhancedShardCardProps> = ({ shard }) => {
 
       if (result.success) {
         toast.success('Shard deleted successfully');
+        setShowDeleteConfirm(false);
       } else {
         toast.error('Failed to delete shard');
       }
@@ -316,7 +315,7 @@ const EnhancedShardCard: React.FC<EnhancedShardCardProps> = ({ shard }) => {
                     <Edit3 className="h-3 w-3" />
                   </button>
                   <button
-                    onClick={handleDelete}
+                    onClick={() => setShowDeleteConfirm(true)}
                     className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                     title="Delete shard"
                   >
@@ -440,6 +439,21 @@ const EnhancedShardCard: React.FC<EnhancedShardCardProps> = ({ shard }) => {
           </div>
         )}
       </div>
+
+      <ConfirmationModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title="Delete Shard"
+        titleContext="shard.delete_confirm.title"
+        description="Are you sure you want to delete this shard? This action cannot be undone."
+        descriptionContext="shard.delete_confirm.description"
+        confirmText="Delete"
+        confirmContext="button.delete"
+        cancelText="Cancel"
+        cancelContext="button.cancel"
+        variant="destructive"
+      />
     </div>
   );
 };
@@ -466,10 +480,9 @@ export const ShardsView: React.FC<ShardsViewProps> = ({ recentShards }) => {
   
   // Use direct query for shards - load all available (no limit for full data access)
   const shards = useQuery(
-    api.crystalQueries.getPersonaData,
+    api.shardQueries.getShardPersonaData,
     userId ? {
       userId,
-      operation: "shards",
       limit: 2000 // High limit to get all shards
     } : "skip"
   );

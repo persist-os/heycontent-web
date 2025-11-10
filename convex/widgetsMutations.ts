@@ -2,33 +2,21 @@ import { v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { api } from "./_generated/api";
+import {
+  widgetCreateValidator,
+  batchCreateWidgetsArgsValidator,
+  updateWidgetArgsValidator,
+  deleteWidgetArgsValidator,
+  deleteProjectWidgetsArgsValidator,
+  archiveProjectWidgetsArgsValidator,
+  updateWidgetExecutionArgsValidator,
+} from "./types/widgets";
 
 /**
  * Individual Widget Mutations
  * Follows Convex best practices - each widget is its own document with a Convex ID
  * Optimized for efficient updates and queries
  */
-
-// ============================================================================
-// WIDGET VALIDATOR
-// ============================================================================
-
-const widgetValidator = v.object({
-  widget_type: v.string(),
-  title: v.string(),
-  description: v.optional(v.string()),
-  category: v.string(),
-  priority: v.number(),
-  size: v.string(),
-  theme: v.string(),
-  position: v.number(),
-  config: v.any(),
-  data_sources: v.array(v.string()),
-  update_frequency: v.string(),
-  interactive: v.boolean(),
-  editable: v.boolean(),
-  shareable: v.boolean(),
-});
 
 // ============================================================================
 // CREATE WIDGET
@@ -39,30 +27,11 @@ const widgetValidator = v.object({
  * Each widget gets its own Convex ID for optimal queries
  */
 export const createWidget = mutation({
-  args: {
-    projectId: v.id("projects"),
-    fingerprintId: v.id("project_fingerprints"),
-    userId: v.string(),
-    widget_id: v.string(), // Legacy string ID for backward compatibility
-    widget_type: v.string(),
-    title: v.string(),
-    description: v.optional(v.string()),
-    category: v.string(),
-    priority: v.number(),
-    size: v.string(),
-    theme: v.string(),
-    position: v.number(),
-    config: v.any(),
-    data_sources: v.array(v.string()),
-    update_frequency: v.string(),
-    interactive: v.boolean(),
-    editable: v.boolean(),
-    shareable: v.boolean(),
-  },
+  args: widgetCreateValidator,
   returns: v.id("widgets"),
   handler: async (ctx, args) => {
     // Validate user ownership
-    const project = await ctx.db.get(args.projectId);
+    const project = await ctx.db.get(args.projectId) as any;  // ✅ Type assertion needed due to v.any() fingerprintId
     if (!project) {
       throw new Error("Project not found");
     }
@@ -70,14 +39,6 @@ export const createWidget = mutation({
       throw new Error("Access denied: You don't own this project");
     }
 
-    // Validate fingerprint
-    const fingerprint = await ctx.db.get(args.fingerprintId);
-    if (!fingerprint) {
-      throw new Error("Fingerprint not found");
-    }
-    if (fingerprint.projectId !== args.projectId) {
-      throw new Error("Fingerprint doesn't belong to this project");
-    }
 
     const now = Date.now();
 
@@ -102,10 +63,20 @@ export const createWidget = mutation({
       shareable: args.shareable,
       lastRunAt: undefined,
       lastRunStatus: undefined,
-      status: "active",
+      status: "active",  // ✅ Widgets are active immediately (decision engine removed)
       createdAt: now,
       updatedAt: now,
     });
+
+    // ✅ PATTERN 13: Atomic Parent-Child Updates - Add widget ID to project array
+    // Reuse existing project variable (already fetched above)
+    if (project) {
+      const existingWidgetIds = project.widgetIds || [];
+      await ctx.db.patch(args.projectId, {
+        widgetIds: [...existingWidgetIds, widgetId],
+        updatedAt: now,
+      });
+    }
 
     return widgetId;
   },
@@ -120,53 +91,21 @@ export const createWidget = mutation({
  * Used by backend widget generation
  */
 export const batchCreateWidgets = mutation({
-  args: {
-    projectId: v.id("projects"),
-    fingerprintId: v.id("project_fingerprints"),
-    userId: v.string(),
-    widgets: v.array(
-      v.object({
-        widget_id: v.string(),
-        widget_type: v.string(),
-        title: v.string(),
-        description: v.optional(v.string()),
-        category: v.string(),
-        priority: v.number(),
-        size: v.string(),
-        theme: v.string(),
-        position: v.number(),
-        config: v.any(),
-        data_sources: v.array(v.string()),
-        update_frequency: v.string(),
-        interactive: v.boolean(),
-        editable: v.boolean(),
-        shareable: v.boolean(),
-      })
-    ),
-  },
+  args: batchCreateWidgetsArgsValidator,
   returns: v.object({
     success: v.boolean(),
     widgetIds: v.array(v.id("widgets")),
   }),
   handler: async (ctx, { projectId, fingerprintId, userId, widgets }) => {
     // Validate user ownership
-    const project = await ctx.db.get(projectId);
+    const project = await ctx.db.get(projectId) as any;  // ✅ Type assertion needed due to v.any() fingerprintId
     if (!project) {
       throw new Error("Project not found");
     }
     if (project.userId !== userId) {
       throw new Error("Access denied: You don't own this project");
     }
-
-    // Validate fingerprint
-    const fingerprint = await ctx.db.get(fingerprintId);
-    if (!fingerprint) {
-      throw new Error("Fingerprint not found");
-    }
-    if (fingerprint.projectId !== projectId) {
-      throw new Error("Fingerprint doesn't belong to this project");
-    }
-
+ 
     const now = Date.now();
     const widgetIds: Id<"widgets">[] = [];
 
@@ -175,8 +114,9 @@ export const batchCreateWidgets = mutation({
         projectId,
         fingerprintId,
         userId,
-        widget_id: widget.widget_id,
-        widget_type: widget.widget_type,
+        // ✅ Validator uses camelCase, DB uses snake_case for old fields
+        widget_id: widget.widgetId,
+        widget_type: widget.widgetType,
         title: widget.title,
         description: widget.description,
         category: widget.category,
@@ -185,16 +125,32 @@ export const batchCreateWidgets = mutation({
         theme: widget.theme,
         position: widget.position,
         config: widget.config,
-        data_sources: widget.data_sources,
-        update_frequency: widget.update_frequency,
+        data_sources: widget.dataSource || [],
+        update_frequency: widget.updateFrequency || "on_demand",
         interactive: widget.interactive,
         editable: widget.editable,
         shareable: widget.shareable,
-        status: "active",
+        // Orchestration metadata (if provided) - validator uses camelCase
+        inputRequirements: widget.inputRequirements,
+        outputArtifacts: widget.outputArtifacts,
+        dependencyHints: widget.dependencyHints,
+        executionProfile: widget.executionProfile,
+        workflowStage: widget.workflowStage,
+        status: "active",  // ✅ Widgets are active immediately (decision engine removed)
         createdAt: now,
         updatedAt: now,
       });
       widgetIds.push(widgetId);
+    }
+
+    // ✅ PATTERN 13: Atomic Parent-Child Updates - Add widget IDs to project array
+    // Reuse existing project variable (already fetched above)
+    if (project) {
+      const existingWidgetIds = project.widgetIds || [];
+      await ctx.db.patch(projectId, {
+        widgetIds: [...existingWidgetIds, ...widgetIds],
+        updatedAt: now,
+      });
     }
 
     return { success: true, widgetIds };
@@ -210,41 +166,7 @@ export const batchCreateWidgets = mutation({
  * Much more efficient than updating array elements
  */
 export const updateWidget = mutation({
-  args: {
-    widgetId: v.id("widgets"),
-    userId: v.string(),
-    updates: v.object({
-      title: v.optional(v.string()),
-      description: v.optional(v.string()),
-      category: v.optional(v.string()),
-      priority: v.optional(v.number()),
-      size: v.optional(v.string()),
-      theme: v.optional(v.string()),
-      position: v.optional(v.number()),
-      config: v.optional(v.any()),
-      data_sources: v.optional(v.array(v.string())),
-      update_frequency: v.optional(v.string()),
-      interactive: v.optional(v.boolean()),
-      editable: v.optional(v.boolean()),
-      shareable: v.optional(v.boolean()),
-      lastRunAt: v.optional(v.number()),
-      lastRunStatus: v.optional(
-        v.union(
-          v.literal("idle"),
-          v.literal("running"),
-          v.literal("success"),
-          v.literal("failed")
-        )
-      ),
-      status: v.optional(
-        v.union(
-          v.literal("active"),
-          v.literal("archived"),
-          v.literal("deleted")
-        )
-      ),
-    }),
-  },
+  args: updateWidgetArgsValidator,
   returns: v.object({
     success: v.boolean(),
   }),
@@ -264,17 +186,6 @@ export const updateWidget = mutation({
       updatedAt: Date.now(),
     });
 
-    // 🆕 INCREMENT FINGERPRINT SIGNALS
-    try {
-      await ctx.runMutation(api.fingerprintSignalsMutations.increment, {
-        projectId: widget.projectId,
-        signalType: "widget_updated",
-        count: 1,
-      });
-    } catch (error) {
-      console.error("Failed to increment signal:", error);
-    }
-
     return { success: true };
   },
 });
@@ -284,16 +195,15 @@ export const updateWidget = mutation({
 // ============================================================================
 
 /**
- * Delete a single widget (soft delete by setting status)
+ * Delete a single widget with cascade deletion
+ * Ensures 1:1 relationships: Each widget has ONE conversation, ONE cognitive field, ONE assignment fingerprint
+ * When deleting a widget, all associated entities are deleted atomically
  */
 export const deleteWidget = mutation({
-  args: {
-    widgetId: v.id("widgets"),
-    userId: v.string(),
-    hardDelete: v.optional(v.boolean()),
-  },
+  args: deleteWidgetArgsValidator,
   returns: v.object({
     success: v.boolean(),
+    summary: v.optional(v.any()),
   }),
   handler: async (ctx, { widgetId, userId, hardDelete }) => {
     const widget = await ctx.db.get(widgetId);
@@ -306,17 +216,132 @@ export const deleteWidget = mutation({
       throw new Error("Access denied: You don't own this widget");
     }
 
+    const summary: Record<string, any> = { errors: [] };
+    const BATCH_SIZE = 50;
+
+    // Helper for batch deletion with resilient error handling (Gold Standard pattern)
+    async function batchDelete(table: string, getQuery: () => Promise<any[]>) {
+      let deleted = 0;
+      const errors: any[] = [];
+      try {
+        let hasMore = true;
+        while (hasMore) {
+          const items = await getQuery();
+          if (!items || items.length === 0) break;
+          for (const item of items) {
+            try {
+              await ctx.db.delete(item._id);
+              deleted++;
+            } catch (err) {
+              errors.push({ id: item._id, error: String(err) });
+            }
+          }
+          hasMore = items.length === BATCH_SIZE;
+        }
+        summary[table] = { deleted, errors };
+        if (errors.length > 0) summary.errors.push({ table, errors });
+      } catch (err) {
+        // Table or index might not exist - log but continue
+        summary[table] = { deleted, errors: [{ table, error: String(err) }] };
+        summary.errors.push({ table, error: String(err) });
+      }
+    }
+
+    // CRITICAL: Cascade deletion for widget's 1:1 relationships
+    // Each widget has ONE conversation, ONE cognitive field, ONE assignment fingerprint
+    const conversationId = (widget as any).conversationId;
+    
+    if (conversationId) {
+      // 1. Delete messages for this widget's conversation
+      await batchDelete("messages", () =>
+        ctx.db.query("messages")
+          .withIndex("by_conversation", (q) => q.eq("conversationId", conversationId))
+          .take(BATCH_SIZE)
+      );
+
+      // 2. Delete cognitive field for this widget's conversation (1:1 relationship)
+      const cognitiveField = await ctx.db
+        .query("cognitive_fields")
+        .withIndex("by_conversation", (q) => q.eq("conversationId", conversationId))
+        .first();
+      
+      if (cognitiveField) {
+        try {
+          await ctx.db.delete(cognitiveField._id);
+          summary["cognitive_fields"] = { deleted: 1, errors: [] };
+        } catch (err) {
+          summary["cognitive_fields"] = { deleted: 0, errors: [{ id: cognitiveField._id, error: String(err) }] };
+          summary.errors.push({ table: "cognitive_fields", errors: [{ id: cognitiveField._id, error: String(err) }] });
+        }
+      }
+
+      // 3. Delete assignment fingerprint for this widget's conversation (1:1 relationship)
+      // Query by projectId and filter by conversationId since conversationId is optional in fingerprint
+      const fingerprint = await ctx.db
+        .query("assignment_fingerprints")
+        .withIndex("by_project_user", (q) => 
+          q.eq("projectId", widget.projectId).eq("userId", userId)
+        )
+        .first();
+      
+      if (fingerprint && (fingerprint as any).conversationId === conversationId) {
+        try {
+          await ctx.db.delete(fingerprint._id);
+          summary["assignment_fingerprints"] = { deleted: 1, errors: [] };
+        } catch (err) {
+          summary["assignment_fingerprints"] = { deleted: 0, errors: [{ id: fingerprint._id, error: String(err) }] };
+          summary.errors.push({ table: "assignment_fingerprints", errors: [{ id: fingerprint._id, error: String(err) }] });
+        }
+      }
+
+      // 4. Delete artifacts for this widget
+      await batchDelete("artifacts", () =>
+        ctx.db.query("artifacts")
+          .withIndex("by_widget", (q) => q.eq("widgetId", widgetId))
+          .take(BATCH_SIZE)
+      );
+
+      // 5. Delete the conversation (1:1 with widget)
+      try {
+        await ctx.db.delete(conversationId);
+        summary["conversations"] = { deleted: 1, errors: [] };
+      } catch (err) {
+        summary["conversations"] = { deleted: 0, errors: [{ id: conversationId, error: String(err) }] };
+        summary.errors.push({ table: "conversations", errors: [{ id: conversationId, error: String(err) }] });
+      }
+    } else {
+      // Widget has no conversation - still delete artifacts
+      await batchDelete("artifacts", () =>
+        ctx.db.query("artifacts")
+          .withIndex("by_widget", (q) => q.eq("widgetId", widgetId))
+          .take(BATCH_SIZE)
+      );
+    }
+
+    // 6. Delete the widget itself
     if (hardDelete) {
       await ctx.db.delete(widgetId);
+      summary["widgets"] = { deleted: 1, errors: [] };
     } else {
       // Soft delete
       await ctx.db.patch(widgetId, {
         status: "deleted",
         updatedAt: Date.now(),
       });
+      summary["widgets"] = { updated: 1, errors: [] };
+    }
+    
+    // ✅ PATTERN 13: Atomic Parent-Child Updates - Remove widget ID from project array
+    const project = await ctx.db.get(widget.projectId) as any;
+    if (project && project.widgetIds) {
+      const updatedWidgetIds = project.widgetIds.filter((id: Id<"widgets">) => id !== widgetId);
+      await ctx.db.patch(widget.projectId, {
+        widgetIds: updatedWidgetIds,
+        updatedAt: Date.now(),
+      });
     }
 
-    return { success: true };
+    return { success: summary.errors.length === 0, summary };
   },
 });
 
@@ -329,18 +354,14 @@ export const deleteWidget = mutation({
  * Used when deleting a project or regenerating widgets
  */
 export const deleteProjectWidgets = mutation({
-  args: {
-    projectId: v.id("projects"),
-    userId: v.string(),
-    hardDelete: v.optional(v.boolean()),
-  },
+  args: deleteProjectWidgetsArgsValidator,
   returns: v.object({
     success: v.boolean(),
     deletedCount: v.number(),
   }),
   handler: async (ctx, { projectId, userId, hardDelete }) => {
     // Validate project ownership
-    const project = await ctx.db.get(projectId);
+    const project = await ctx.db.get(projectId) as any;  // ✅ Type assertion needed due to v.any() fingerprintId
     if (!project) {
       throw new Error("Project not found");
     }
@@ -368,6 +389,12 @@ export const deleteProjectWidgets = mutation({
         });
       }
     }
+    
+    // ✅ PATTERN 13: Atomic Parent-Child Updates - Clear project.widgetIds array
+    await ctx.db.patch(projectId, {
+      widgetIds: [],
+      updatedAt: now,
+    });
 
     return { success: true, deletedCount: userWidgets.length };
   },
@@ -382,16 +409,7 @@ export const deleteProjectWidgets = mutation({
  * Used when widgets are run by backend
  */
 export const updateWidgetExecution = mutation({
-  args: {
-    widgetId: v.id("widgets"),
-    userId: v.string(),
-    status: v.union(
-      v.literal("idle"),
-      v.literal("running"),
-      v.literal("success"),
-      v.literal("failed")
-    ),
-  },
+  args: updateWidgetExecutionArgsValidator,
   returns: v.object({
     success: v.boolean(),
   }),
@@ -412,20 +430,62 @@ export const updateWidgetExecution = mutation({
       updatedAt: Date.now(),
     });
 
-    // 🆕 INCREMENT FINGERPRINT SIGNALS (only on success)
-    if (status === "success") {
-      try {
-        await ctx.runMutation(api.fingerprintSignalsMutations.increment, {
-          projectId: widget.projectId,
-          signalType: "widget_executed",
-          count: 1,
-        });
-      } catch (error) {
-        console.error("Failed to increment signal:", error);
-      }
+    return { success: true };
+  },
+});
+
+// ============================================================================
+// ARCHIVE/UNARCHIVE PROJECT WIDGETS
+// ============================================================================
+
+/**
+ * Archive or unarchive all widgets for a project
+ * Used when pausing/resuming a project
+ * ✅ PATTERN 13: Atomic Parent-Child Updates - All widgets updated together
+ */
+export const archiveProjectWidgets = mutation({
+  args: archiveProjectWidgetsArgsValidator,
+  returns: v.object({
+    success: v.boolean(),
+    archivedCount: v.number(),
+  }),
+  handler: async (ctx, { projectId, userId, archived }) => {
+    // Validate project ownership
+    const project = await ctx.db.get(projectId) as any;  // ✅ Type assertion needed due to v.any() fingerprintId
+    if (!project) {
+      throw new Error("Project not found");
+    }
+    if (project.userId !== userId) {
+      throw new Error("Access denied: You don't own this project");
     }
 
-    return { success: true };
+    // Get all widgets for this project
+    const widgets = await ctx.db
+      .query("widgets")
+      .withIndex("by_project", (q) => q.eq("projectId", projectId))
+      .collect();
+
+    // Filter to only user's widgets
+    const userWidgets = widgets.filter((w) => w.userId === userId);
+
+    const now = Date.now();
+    let archivedCount = 0;
+    
+    // Update each widget status atomically
+    for (const widget of userWidgets) {
+      // When archiving: set status to "archived"
+      // When unarchiving: restore to "active" (default for simplicity)
+      const newStatus = archived ? "archived" : "active";
+      
+      await ctx.db.patch(widget._id, {
+        status: newStatus,
+        updatedAt: now,
+      });
+      
+      archivedCount++;
+    }
+
+    return { success: true, archivedCount };
   },
 });
 

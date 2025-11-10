@@ -119,8 +119,8 @@ export function ContentAttachmentPanel({
 
   // Fetch data
   const conversations = useQuery(api.chatQueries.getHistory, userId ? { userId } : "skip");
-  const crystals = useQuery(api.crystalQueries.getPersonaData, userId ? { userId, operation: "crystals", limit: 100 } : "skip");
-  const shards = useQuery(api.crystalQueries.getPersonaData, userId ? { userId, operation: "shards", limit: 100 } : "skip");
+  const crystals = useQuery(api.crystalQueries.getCrystalPersonaData, userId ? { userId, limit: 100 } : "skip");
+  const shards = useQuery(api.shardQueries.getShardPersonaData, userId ? { userId, limit: 100 } : "skip");
 
   // Transform all items using utility function
   // In selection mode, use local state; otherwise use props

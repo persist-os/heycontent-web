@@ -7,19 +7,12 @@ export async function POST(request: Request) {
   const startTime = Date.now();
   const requestId = Math.random().toString(36).substring(7);
 
-  console.log(`[${requestId}] Context grading request started`, {
-    timestamp: new Date().toISOString(),
-    method: request.method,
-    url: request.url
-  });
-
   try {
     // Get API key and user ID from Authorization header
     const authHeader = request.headers.get('Authorization');
     const { apiKey, userId } = extractAuthInfo(authHeader);
     
     if (!apiKey) {
-      console.warn(`[${requestId}] Authentication failed: No Authorization header or invalid format`);
       return NextResponse.json({ error: 'Unauthorized - Missing or invalid Authorization header' }, { status: 401 });
     }
 
@@ -27,28 +20,18 @@ export async function POST(request: Request) {
     const { query, vector_search_results } = body;
 
     if (!query) {
-      console.warn(`[${requestId}] Invalid request: Missing query`);
       return NextResponse.json({ error: 'Query is required' }, { status: 400 });
     }
 
     if (!vector_search_results || !Array.isArray(vector_search_results)) {
-      console.warn(`[${requestId}] Invalid request: Missing or invalid vector_search_results`);
       return NextResponse.json({ error: 'Vector search results are required' }, { status: 400 });
     }
 
     // Always extract user_id from API key, never from client
     const user_id = userId;
     if (!user_id) {
-      console.warn(`[${requestId}] Authentication failed: Could not determine user_id from API key`);
       return NextResponse.json({ error: 'Unauthorized - Invalid API key format or missing user_id' }, { status: 401 });
     }
-
-    console.debug(`[${requestId}] Grading context relevance`, {
-      user_id: user_id,
-      query_length: query?.length,
-      vector_results_count: vector_search_results?.length,
-      has_api_key: !!apiKey
-    });
 
     // Prepare the request body for the backend
     const backendRequestBody = {
@@ -57,12 +40,6 @@ export async function POST(request: Request) {
       vector_search_results,
       action: 'grade_context' // Tell backend this is a grading request
     };
-
-    // Log the full request body
-    console.debug(`[${requestId}] Sending context grading request to backend`, {
-      url: `${BACKEND_URL}/api/v1/chat/grade-context`,
-      body: backendRequestBody
-    });
 
     // Make request to backend
     const response = await fetch(`${BACKEND_URL}/api/v1/chat/grade-context`, {

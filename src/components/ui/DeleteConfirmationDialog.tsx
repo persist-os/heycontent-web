@@ -15,8 +15,8 @@ interface DeleteConfirmationDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  title: string;
-  description: string;
+  title: React.ReactNode;
+  description: React.ReactNode;
   confirmText?: string;
   cancelText?: string;
   isLoading?: boolean;

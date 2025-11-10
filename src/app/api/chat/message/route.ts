@@ -33,48 +33,44 @@ export async function POST(request: Request) {
     const { apiKey, user_id, parsedBody } = await normalizeAuthAndIdentity();
     
     if (!apiKey) {
-      console.warn(`[${requestId}] Authentication failed`);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Chat messages require a valid user_id
     if (!user_id) {
-      console.warn(`[${requestId}] Missing or invalid user_id`);
       return NextResponse.json({ error: 'Bad Request', detail: 'user_id is required and must be a non-empty string' }, { status: 400 });
     }
 
     const body = parsedBody ?? await request.json();
     
-    console.log(`[${requestId}] Forwarding chat message to backend`, {
-      has_user_id: true,
-      has_content: typeof body?.content === 'string' ? body.content.length > 0 : !!body?.content,
-      has_file_attachments: Array.isArray(body?.file_attachments) ? body.file_attachments.length : 0,
-      timestamp: new Date().toISOString()
-    });
-
-    // Forward request to backend with minimal processing
-    const response = await fetch(`${BACKEND_URL}/api/v1/chat/message`, {
+    // Forward request to backend streaming endpoint
+    const response = await fetch(`${BACKEND_URL}/api/v1/chat/stream`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        'Accept': 'text/event-stream',
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify(body)
     });
 
     if (!response.ok) {
-      console.error(`[${requestId}] Backend error:`, response.status, response.statusText);
+      console.error(`[${requestId}] Backend streaming error:`, response.status, response.statusText);
       return NextResponse.json(
-        { error: 'Backend service error' }, 
+        { error: 'Backend streaming service error' }, 
         { status: response.status }
       );
     }
 
-    const data = await response.json();
-    console.log(`[${requestId}] Chat message completed successfully`);
-    
-    return NextResponse.json(data);
+    // Return streaming response
+    return new Response(response.body, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no'
+      }
+    });
 
   } catch (error) {
     console.error(`[${requestId}] Request failed:`, error);

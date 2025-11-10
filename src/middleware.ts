@@ -8,7 +8,13 @@ function isLocalhost(request: NextRequest) {
 
 export function middleware(request: NextRequest) {
   const token = request.cookies.get('firebase-auth-token')?.value;
+  const apiKey = request.cookies.get('apiKey')?.value;
   const { pathname } = request.nextUrl;
+
+  // Gmail-style behavior: if logged in and on homepage, redirect to dashboard
+  if (pathname === '/' && (token || apiKey)) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
 
   // Public routes that don't need auth
   const publicRoutes = [
@@ -53,13 +59,14 @@ export function middleware(request: NextRequest) {
     "https://storage.googleapis.com",
     "https://*.googleapis.com",
     "https://*.gstatic.com",
+    "https://www.google.com",
   ];
  
   const CSP = [
     "default-src 'self'",
     `connect-src ${connectSrc.join(' ')}`,
-    `script-src 'self' 'unsafe-inline'${local ? " 'unsafe-eval'" : ''} https://js.stripe.com https://va.vercel-scripts.com https://apis.google.com https://accounts.google.com`,
-    "frame-src https://js.stripe.com https://accounts.google.com https://*.firebaseapp.com",
+    `script-src 'self' 'unsafe-inline'${local ? " 'unsafe-eval'" : ''} https://js.stripe.com https://va.vercel-scripts.com https://apis.google.com https://accounts.google.com https://www.googletagmanager.com https://googleads.g.doubleclick.net`,
+    "frame-src https://js.stripe.com https://accounts.google.com https://*.firebaseapp.com https://www.googletagmanager.com",
     "img-src 'self' data: https://*",
     "style-src 'self' 'unsafe-inline'",
   ].join('; ');

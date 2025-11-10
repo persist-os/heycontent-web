@@ -1,191 +1,43 @@
-/**
- * Translation Type Definitions
- * 
- * CRITICAL: These types MUST match backend/app/models/translation_models.py exactly
- * Any changes here should be mirrored in Python and vice versa.
- */
+import { v } from "convex/values";
 
-// Language name mapping - matches Python LANGUAGE_NAMES
-export const LANGUAGE_NAMES: Record<string, string> = {
-  // European Languages
-  en: "English",
-  es: "Spanish",
-  fr: "French",
-  de: "German",
-  it: "Italian",
-  pt: "Portuguese",
-  ru: "Russian",
-  pl: "Polish",
-  nl: "Dutch",
-  cs: "Czech",
-  hu: "Hungarian",
-  ro: "Romanian",
-  uk: "Ukrainian",
-  el: "Greek",
+export const translationMethodValidator = v.union(
+  v.literal("ai"),                // AI-generated (Gemini)
+  v.literal("manual"),            // Manually entered
+  v.literal("edited")             // AI-generated, then manually edited
+);
+
+export const translationSchemaFields = {
+  // Cache key
+  sourceText: v.string(),           // Original text (usually English)
+  sourceTextHash: v.string(),       // SHA-256 hash for fast lookup
+  sourceLang: v.string(),           // ISO 639-1 code (e.g., "en")
+  targetLang: v.string(),           // ISO 639-1 code (e.g., "ko", "ja", "es")
   
-  // Northern European Languages
-  sv: "Swedish",
-  no: "Norwegian",
-  da: "Danish",
-  fi: "Finnish",
-  is: "Icelandic",
-  et: "Estonian",
-  lv: "Latvian",
-  lt: "Lithuanian",
+  // Translation
+  translatedText: v.string(),       // The translated text
+  translationMethod: translationMethodValidator,
   
-  // Asian Languages - East Asia
-  zh: "Chinese (Simplified)",
-  "zh-TW": "Chinese (Traditional)",
-  ja: "Japanese",
-  ko: "Korean",
-  mn: "Mongolian",
+  // Context (helps with context-aware translation)
+  context: v.optional(v.string()),  // Where it's used (e.g., "button.save", "heading.welcome")
+  componentPath: v.optional(v.string()), // Component path for tracking
   
-  // Asian Languages - Southeast Asia
-  th: "Thai",
-  vi: "Vietnamese",
-  id: "Indonesian",
-  ms: "Malay",
-  fil: "Filipino",
-  my: "Burmese",
-  km: "Khmer",
-  lo: "Lao",
+  // Usage tracking
+  usageCount: v.number(),           // How many times requested
+  firstUsedAt: v.number(),          // When first user encountered this
+  lastUsedAt: v.number(),           // Most recent request
   
-  // Asian Languages - South Asia
-  hi: "Hindi",
-  bn: "Bengali",
-  ta: "Tamil",
-  te: "Telugu",
-  mr: "Marathi",
-  ur: "Urdu",
-  pa: "Punjabi",
-  ne: "Nepali",
-  si: "Sinhala",
+  // Quality control
+  verified: v.boolean(),            // Manually verified/approved
+  needsReview: v.optional(v.boolean()), // Flagged for review
+  version: v.number(),              // For translation updates/improvements
   
-  // Asian Languages - Central & West Asia
-  ar: "Arabic",
-  tr: "Turkish",
-  fa: "Persian",
-  he: "Hebrew",
-  hy: "Armenian",
-  az: "Azerbaijani",
-  kk: "Kazakh",
-  uz: "Uzbek",
-  ps: "Pashto",
+  // Metadata
+  translatedBy: v.optional(v.string()), // userId who first triggered or manually edited
+  reviewedBy: v.optional(v.string()),   // userId who verified
+  notes: v.optional(v.string()),        // Admin notes about translation
+  
+  createdAt: v.number(),
+  updatedAt: v.number(),
 };
 
-/**
- * Request to translate a single text
- * Matches backend TranslateRequest
- */
-export interface TranslateRequest {
-  sourceText: string;
-  sourceLang?: string; // Default: "en"
-  targetLang: string;
-  context?: string;
-}
-
-/**
- * Request to translate multiple texts
- * Matches backend BatchTranslateRequest
- */
-export interface BatchTranslateRequest {
-  texts: string[];
-  sourceLang?: string; // Default: "en"
-  targetLang: string;
-  context?: string;
-}
-
-/**
- * Response for single translation
- * Matches backend TranslateResponse
- */
-export interface TranslateResponse {
-  success: boolean;
-  translatedText?: string;
-  sourceLang?: string;
-  targetLang?: string;
-  method?: string;
-  error?: string;
-}
-
-/**
- * Response for batch translation
- * Matches backend BatchTranslateResponse
- */
-export interface BatchTranslateResponse {
-  success: boolean;
-  translations?: string[];
-  sourceLang?: string;
-  targetLang?: string;
-  method?: string;
-  error?: string;
-}
-
-/**
- * Language information
- * Matches backend LanguageInfo
- */
-export interface LanguageInfo {
-  code: string;
-  name: string;
-}
-
-/**
- * Response for supported languages
- * Matches backend LanguagesResponse
- */
-export interface LanguagesResponse {
-  success: boolean;
-  languages: LanguageInfo[];
-  total: number;
-}
-
-/**
- * Request to detect language
- * Matches backend DetectLanguageRequest
- */
-export interface DetectLanguageRequest {
-  text: string;
-}
-
-/**
- * Response for language detection
- * Matches backend DetectLanguageResponse
- */
-export interface DetectLanguageResponse {
-  success: boolean;
-  languageCode?: string;
-  languageName?: string;
-  error?: string;
-}
-
-// Type guards for runtime validation
-export function isTranslateResponse(obj: any): obj is TranslateResponse {
-  return (
-    typeof obj === "object" &&
-    obj !== null &&
-    typeof obj.success === "boolean"
-  );
-}
-
-export function isBatchTranslateResponse(
-  obj: any
-): obj is BatchTranslateResponse {
-  return (
-    typeof obj === "object" &&
-    obj !== null &&
-    typeof obj.success === "boolean" &&
-    (obj.translations === undefined || Array.isArray(obj.translations))
-  );
-}
-
-export function isDetectLanguageResponse(
-  obj: any
-): obj is DetectLanguageResponse {
-  return (
-    typeof obj === "object" &&
-    obj !== null &&
-    typeof obj.success === "boolean"
-  );
-}
-
+export const translationValidator = v.object(translationSchemaFields);

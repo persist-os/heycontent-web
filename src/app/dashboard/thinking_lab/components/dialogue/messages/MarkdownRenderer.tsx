@@ -7,6 +7,7 @@
 
 'use client'
 
+import React from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
@@ -15,7 +16,7 @@ import { LinkEmbed } from './LinkEmbed'
 import type { MarkdownRendererProps } from '../../../types/components/contentRenderer'
 
 
-export function MarkdownRenderer({ content, className = '' }: MarkdownRendererProps) {
+export const MarkdownRenderer = React.memo<MarkdownRendererProps>(function MarkdownRenderer({ content, className = '' }) {
   // Enhanced preprocessing to preserve empty lines and handle line breaks better
   const processedContent = content
     // First, preserve empty lines by replacing them with a placeholder
@@ -182,4 +183,4 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
       </ReactMarkdown>
     </div>
   )
-}
+})

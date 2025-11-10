@@ -10,7 +10,7 @@ interface InsightsNavigationProps {
 export const InsightsNavigation: React.FC<InsightsNavigationProps> = ({ activeView, onViewChange }) => {
   const tabs = [
     { id: 'overview' as const, label: 'Overview', description: 'Summary and recent activity', labelContext: 'crystals.nav.overview', descContext: 'crystals.nav.overview_desc' },
-    { id: 'crystals' as const, label: 'Crystals', description: 'Consciousness insights', labelContext: 'crystals.nav.crystals', descContext: 'crystals.nav.crystals_desc' },
+    { id: 'crystals' as const, label: 'Cognitive Fields', description: 'Living intelligence patterns', labelContext: 'crystals.nav.cognitive_fields', descContext: 'crystals.nav.cognitive_fields_desc' },
     { id: 'shards' as const, label: 'Shards', description: 'Memory fragments', labelContext: 'crystals.nav.shards', descContext: 'crystals.nav.shards_desc' },
     { id: 'stardust' as const, label: 'Stardust', description: 'Emerging potentials', labelContext: 'crystals.nav.stardust', descContext: 'crystals.nav.stardust_desc' },
     { id: 'stars' as const, label: 'Stars', description: 'Your project organisms', labelContext: 'crystals.nav.stars', descContext: 'crystals.nav.stars_desc' }

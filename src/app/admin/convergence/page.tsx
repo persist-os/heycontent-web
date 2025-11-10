@@ -21,10 +21,8 @@ import { Tab, TabId } from './types';
 import { ConvergenceHeader } from './components/ConvergenceHeader';
 import { ConvergenceTabs } from './components/ConvergenceTabs';
 import { OptimizationRunner } from './components/tabs/OptimizationRunner';
-import { ExperimentsView } from './components/tabs/ExperimentsView';
-import { ConfigsView } from './components/tabs/ConfigsView';
-import { RLMetaView } from './components/tabs/RLMetaView';
-import { RunsView } from './components/tabs/RunsView';
+import { BestConfigsView } from './components/tabs/BestConfigsView';
+import { RunHistoryView } from './components/tabs/RunHistoryView';
 import { TerminalView } from './components/tabs/TerminalView';
 import { ConfigGenerator } from './components/tabs/ConfigGenerator';
 
@@ -40,23 +38,13 @@ const TABS: Tab[] = [
     cmd: 'convergence optimize',
   },
   {
-    id: 'experiments',
-    label: 'EXPERIMENTS',
-    cmd: 'query experiments --live',
+    id: 'best_configs',
+    label: 'BEST_CONFIGS',
+    cmd: 'query best_configs --all',
   },
   {
-    id: 'configs',
-    label: 'CONFIG_VAULT',
-    cmd: 'convex deploy --configs',
-  },
-  {
-    id: 'rl_meta',
-    label: 'RL_META',
-    cmd: 'query rl_episodes --agent all',
-  },
-  {
-    id: 'runs',
-    label: 'ARCHIVES',
+    id: 'run_history',
+    label: 'RUN_HISTORY',
     cmd: 'query optimization_runs --history',
   },
   {
@@ -84,11 +72,7 @@ export default function ConvergenceDashboard() {
     limit: 1000
   });
   
-  const allConfigs = useQuery(api.convergenceQueries.getConfigs, {
-    system_name: 'context_enrichment',
-    operation: 'all',
-    limit: 1000
-  });
+  const allConfigs = useQuery(api.convergenceBestConfigQueries.getAllBestConfigs, {});
 
   // Calculate real counts
   const totalRuns = allRuns?.length || 0;
@@ -129,14 +113,10 @@ export default function ConvergenceDashboard() {
         return <ConfigGenerator />;
       case 'runner':
         return <OptimizationRunner />;
-      case 'experiments':
-        return <ExperimentsView />;
-      case 'configs':
-        return <ConfigsView />;
-      case 'rl_meta':
-        return <RLMetaView />;
-      case 'runs':
-        return <RunsView />;
+      case 'best_configs':
+        return <BestConfigsView />;
+      case 'run_history':
+        return <RunHistoryView />;
       case 'terminal':
         return <TerminalView />;
       default:

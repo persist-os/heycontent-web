@@ -3,7 +3,7 @@
 import React, { memo, useCallback, useMemo, useEffect, useState, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  FileText, Shield, Zap, Sparkles, Gem, Radio
+  FileText, Shield, Zap, Sparkles, Radio, Home
 } from 'lucide-react'
 import { useSidebar } from '@/app/context/sidebar-context'
 import { getApiKey } from '@/app/lib/api-helpers'
@@ -11,7 +11,9 @@ import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDial
 import { useAdminAuth } from '@/app/lib/admin-auth'
 import { cn } from '@/lib/utils'
 import { useLanguagePreference, useTranslation } from '@/hooks/useTranslation'
+import { T } from '@/components/translation/T'
 import { useUnifiedSearch } from '@/hooks/useUnifiedSearch'
+import { useTiptapEditor } from '@/app/context/tiptap-editor-context'
 import {
   CommandPaletteHeader,
   CommandPaletteSearch,
@@ -22,6 +24,15 @@ import {
 } from '@/components/command-palette'
 
 const navItems = [
+  {
+    id: 'home',
+    label: 'Home',
+    description: 'Your personalized dashboard',
+    icon: Home,
+    href: '/dashboard/home',
+    dataAttr: 'data-home-link',
+    category: 'navigate',
+  },
   // {
   //   id: 'briefing-room',
   //   label: 'Briefing Room',
@@ -58,15 +69,6 @@ const navItems = [
     dataAttr: 'data-thinking-lab-link',
     category: 'explore',
   },
-  {
-    id: 'crystals',
-    label: 'Cosmic Intelligence',
-    description: 'Stars and crystals evolving from your world',
-    icon: Gem,
-    href: '/dashboard/crystals',
-    dataAttr: 'data-crystals-link',
-    category: 'explore',
-  },
 ]
 
 interface ChatHistory {
@@ -99,6 +101,7 @@ export const DashboardNav = memo(function DashboardNav() {
   const { isExpanded, setIsExpanded } = useSidebar();
   const { canAccessAdmin } = useAdminAuth();
   const { language } = useLanguagePreference();
+  const { isTiptapEditorActive } = useTiptapEditor();
   
   // Get translated placeholder text
   const { text: searchPlaceholder } = useTranslation('Search spaces, chats, or actions...', {
@@ -210,8 +213,12 @@ export const DashboardNav = memo(function DashboardNav() {
   // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Command/Ctrl + K to open command palette
+      // Command/Ctrl + K to open command palette (disabled when Tiptap editor is active)
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        // Don't open if Tiptap editor is active
+        if (isTiptapEditorActive) {
+          return;
+        }
         e.preventDefault();
         setIsExpanded(!isExpanded);
       }
@@ -225,7 +232,7 @@ export const DashboardNav = memo(function DashboardNav() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isExpanded, setIsExpanded, setSearchQuery, setSearchMode]);
+  }, [isExpanded, setIsExpanded, setSearchQuery, setSearchMode, isTiptapEditorActive]);
 
   // Close chat menu when clicking outside
   useEffect(() => {
@@ -321,6 +328,9 @@ export const DashboardNav = memo(function DashboardNav() {
   // Memoize active item calculation
   const isItemActive = useCallback((item: typeof dynamicNavItems[0]) => {
     switch (item.id) {
+      case 'home':
+        // Home is active for /dashboard/home or just /dashboard
+        return pathname === '/dashboard/home' || pathname === '/dashboard';
       case 'briefing-room':
         // This tab is active for briefing room routes
         return pathname.startsWith('/dashboard/briefing_room');
@@ -330,9 +340,6 @@ export const DashboardNav = memo(function DashboardNav() {
       case 'thinking-lab':
         // This tab is active for thinking lab routes
         return pathname.startsWith('/dashboard/thinking_lab');
-      case 'crystals':
-        // This tab is active for crystals routes
-        return pathname.startsWith('/dashboard/crystals');
       case 'chat':
       case 'notes':
       case 'admin':
@@ -432,8 +439,8 @@ export const DashboardNav = memo(function DashboardNav() {
         isOpen={deleteDialogOpen}
         onClose={cancelDelete}
         onConfirm={confirmDelete}
-        title="Delete Conversation"
-        description="Are you sure you want to delete this conversation? This action cannot be undone."
+        title={<T context="dialog.delete.conversation.title">Delete Conversation</T>}
+        description={<T context="dialog.delete.conversation.description">Are you sure you want to delete this conversation? This action cannot be undone.</T>}
         isLoading={isDeleting}
       />
     </>

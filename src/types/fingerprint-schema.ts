@@ -1,650 +1,192 @@
 /**
- * CENTRALIZED FINGERPRINT SCHEMA DEFINITION
- *
- * This file serves as the single source of truth for all Project Fingerprint fields.
- * Both frontend and backend must use this schema to ensure perfect alignment.
- *
- * All fingerprint operations (create, update, queries) should reference these field definitions.
+ * Fingerprint Schema Definition
+ * 
+ * Centralized schema for project fingerprint fields used across the application.
+ * This schema defines the structure, types, validation rules, and metadata for
+ * all fingerprint fields used in Living Projects.
+ * 
+ * Fields match the backend Python model in backend/app/models/fingerprint_models.py
+ * and follow camelCase naming convention for Convex compatibility.
  */
+
+export type FieldType = 'string' | 'number' | 'boolean' | 'array' | 'object' | 'id';
+
+export interface FieldValidation {
+  max?: number;
+  min?: number;
+  pattern?: string;
+  enum?: string[];
+  required?: boolean;
+}
 
 export interface FingerprintField {
   name: string;
-  type: 'string' | 'number' | 'boolean' | 'array' | 'object' | 'id';
-  required: boolean;
+  type: FieldType;
   description: string;
-  translationKey?: string; // Key for progressive translation system
-  validation?: {
-    min?: number;
-    max?: number;
-    pattern?: string;
-    enum?: string[];
-  };
+  required?: boolean;
   default?: any;
+  validation?: FieldValidation;
+  translationKey?: string;
 }
 
-// Core Identity Fields
-export const FINGERPRINT_CORE_IDENTITY_FIELDS: FingerprintField[] = [
-  {
-    name: 'projectId',
-    type: 'id',
-    required: true,
-    description: 'Reference to the parent project',
-    translationKey: 'fingerprint.field.projectId.description'
-  },
-  {
-    name: 'userId',
-    type: 'string',
-    required: true,
-    description: 'Owner of this fingerprint',
-    translationKey: 'fingerprint.field.userId.description'
-  },
-  {
-    name: 'name',
-    type: 'string',
-    required: true,
-    description: 'Display name for the fingerprint',
-    translationKey: 'fingerprint.field.name.description',
-    validation: { max: 200 }
-  },
-  {
-    name: 'description',
-    type: 'string',
-    required: false,
-    description: 'Optional description',
-    translationKey: 'fingerprint.field.description.description',
-    validation: { max: 1000 }
-  }
-];
-
-// AI-Discovered Project Nature Fields
-export const FINGERPRINT_AI_NATURE_FIELDS: FingerprintField[] = [
-  {
-    name: 'domain',
-    type: 'string',
-    required: true,
-    description: 'Project domain classification',
-    translationKey: 'fingerprint.field.domain.description',
-    validation: {
-      enum: ['academic', 'creative', 'business', 'skill_development', 'personal', 'professional']
-    }
-  },
-  {
-    name: 'complexity_level',
-    type: 'number',
-    required: true,
-    description: 'Complexity level (1-10 scale)',
-    translationKey: 'fingerprint.field.complexity_level.description',
-    validation: { min: 1, max: 10 },
-    default: 1
-  },
-  {
-    name: 'collaboration_style',
-    type: 'string',
-    required: true,
-    description: 'How the project involves others',
-    translationKey: 'fingerprint.field.collaboration_style.description',
-    validation: {
-      enum: ['solo', 'small_team', 'large_group', 'community', 'distributed']
-    },
-    default: 'solo'
-  },
-  {
-    name: 'time_horizon',
-    type: 'string',
-    required: true,
-    description: 'Expected timeframe for completion',
-    translationKey: 'fingerprint.field.time_horizon.description',
-    validation: {
-      enum: ['sprint', 'project', 'journey', 'lifestyle', 'ongoing']
-    },
-    default: 'project'
-  },
-  {
-    name: 'primary_pattern',
-    type: 'string',
-    required: true,
-    description: 'Primary working pattern identified',
-    translationKey: 'fingerprint.field.primary_pattern.description',
-    validation: {
-      enum: ['iterative_creator', 'systematic_builder', 'exploratory_learner', 'collaborative_orchestrator']
-    },
-    default: 'iterative_creator'
-  },
-  {
-    name: 'working_style',
-    type: 'array',
-    required: false,
-    description: 'Array of working style preferences',
-    translationKey: 'fingerprint.field.working_style.description',
-    default: []
-  }
-];
-
-// AI-Generated Project Archetype Fields
-export const FINGERPRINT_ARCHETYPE_FIELDS: FingerprintField[] = [
-  {
-    name: 'decision_making',
-    type: 'string',
-    required: false,
-    description: 'How user approaches decisions',
-    translationKey: 'fingerprint.field.decision_making.description',
-    default: ''
-  },
-  {
-    name: 'energy_patterns',
-    type: 'string',
-    required: false,
-    description: 'When and how user works best',
-    translationKey: 'fingerprint.field.energy_patterns.description',
-    default: ''
-  }
-];
-
-// Intentions Fields
-export const FINGERPRINT_INTENTIONS_FIELDS: FingerprintField[] = [
-  {
-    name: 'core_intention',
-    type: 'string',
-    required: false,
-    description: 'The deep "why" behind the project',
-    translationKey: 'fingerprint.field.core_intention.description',
-    default: ''
-  },
-  {
-    name: 'success_vision',
-    type: 'string',
-    required: false,
-    description: 'What success looks and feels like',
-    translationKey: 'fingerprint.field.success_vision.description',
-    default: ''
-  },
-  {
-    name: 'value_creation',
-    type: 'string',
-    required: false,
-    description: 'What this creates for user/world',
-    translationKey: 'fingerprint.field.value_creation.description',
-    default: ''
-  },
-  {
-    name: 'personal_growth',
-    type: 'array',
-    required: false,
-    description: 'How user wants to evolve through this project',
-    translationKey: 'fingerprint.field.personal_growth.description',
-    default: []
-  }
-];
-
-// Dynamic Timeline Fields
-export const FINGERPRINT_TIMELINE_FIELDS: FingerprintField[] = [
-  {
-    name: 'natural_rhythm',
-    type: 'string',
-    required: false,
-    description: 'Natural working rhythm',
-    translationKey: 'fingerprint.field.natural_rhythm.description',
-    validation: {
-      enum: ['daily', 'weekly', 'monthly', 'seasonal', 'milestone_driven']
-    },
-    default: 'daily'
-  },
-  {
-    name: 'key_phases',
-    type: 'array',
-    required: false,
-    description: 'Major project phases with details',
-    translationKey: 'fingerprint.field.key_phases.description',
-    default: []
-  },
-  {
-    name: 'flexibility_preference',
-    type: 'string',
-    required: false,
-    description: 'How structured vs flexible the approach is',
-    translationKey: 'fingerprint.field.flexibility_preference.description',
-    validation: {
-      enum: ['structured', 'adaptive', 'emergent']
-    },
-    default: 'adaptive'
-  }
-];
-
-// Output Desires Fields
-export const FINGERPRINT_OUTPUTS_FIELDS: FingerprintField[] = [
-  {
-    name: 'tangible_deliverables',
-    type: 'array',
-    required: false,
-    description: 'Concrete outputs/deliverables',
-    translationKey: 'fingerprint.field.tangible_deliverables.description',
-    default: []
-  },
-  {
-    name: 'intangible_benefits',
-    type: 'array',
-    required: false,
-    description: 'Intangible benefits and outcomes',
-    translationKey: 'fingerprint.field.intangible_benefits.description',
-    default: []
-  },
-  {
-    name: 'measurement_approach',
-    type: 'string',
-    required: false,
-    description: 'How progress will be measured',
-    translationKey: 'fingerprint.field.measurement_approach.description',
-    default: ''
-  },
-  {
-    name: 'sharing_intention',
-    type: 'string',
-    required: false,
-    description: 'Who the work will be shared with',
-    translationKey: 'fingerprint.field.sharing_intention.description',
-    validation: {
-      enum: ['private', 'selective', 'public', 'community']
-    },
-    default: 'private'
-  }
-];
-
-// Interface Preferences Fields
-export const FINGERPRINT_INTERFACE_FIELDS: FingerprintField[] = [
-  {
-    name: 'cognitive_load_preference',
-    type: 'string',
-    required: false,
-    description: 'How much information to show at once',
-    translationKey: 'fingerprint.field.cognitive_load_preference.description',
-    validation: {
-      enum: ['minimal', 'rich', 'customizable']
-    },
-    default: 'rich'
-  },
-  {
-    name: 'information_density',
-    type: 'string',
-    required: false,
-    description: 'How dense the information display should be',
-    translationKey: 'fingerprint.field.information_density.description',
-    validation: {
-      enum: ['focused', 'contextual', 'comprehensive']
-    },
-    default: 'contextual'
-  },
-  {
-    name: 'motivation_style',
-    type: 'array',
-    required: false,
-    description: 'What keeps the user motivated',
-    translationKey: 'fingerprint.field.motivation_style.description',
-    default: []
-  },
-  {
-    name: 'feedback_frequency',
-    type: 'string',
-    required: false,
-    description: 'How often to provide feedback/check-ins',
-    translationKey: 'fingerprint.field.feedback_frequency.description',
-    validation: {
-      enum: ['daily', 'weekly', 'monthly', 'milestone', 'as_needed']
-    },
-    default: 'weekly'
-  }
-];
-
-// Evolution Intelligence Fields
-export const FINGERPRINT_EVOLUTION_FIELDS: FingerprintField[] = [
-  {
-    name: 'learning_sensitivity',
-    type: 'number',
-    required: false,
-    description: 'How quickly to adapt (1-10)',
-    translationKey: 'fingerprint.field.learning_sensitivity.description',
-    validation: { min: 1, max: 10 },
-    default: 5
-  },
-  {
-    name: 'change_triggers',
-    type: 'array',
-    required: false,
-    description: 'What triggers evolution suggestions',
-    translationKey: 'fingerprint.field.change_triggers.description',
-    default: []
-  },
-  {
-    name: 'stability_zones',
-    type: 'array',
-    required: false,
-    description: 'What should rarely change',
-    translationKey: 'fingerprint.field.stability_zones.description',
-    default: []
-  },
-  {
-    name: 'growth_edges',
-    type: 'array',
-    required: false,
-    description: 'What should evolve actively',
-    translationKey: 'fingerprint.field.growth_edges.description',
-    default: []
-  }
-];
-
-// AI Agent Coordination Fields
-export const FINGERPRINT_AGENT_FIELDS: FingerprintField[] = [
-  {
-    name: 'morning_persona',
-    type: 'object',
-    required: false,
-    description: 'Morning AI behavior configuration',
-    translationKey: 'fingerprint.field.morning_persona.description',
-    default: {
-      energy_match: '',
-      focus_style: '',
-      preparation_depth: ''
-    }
-  },
-  {
-    name: 'evening_persona',
-    type: 'object',
-    required: false,
-    description: 'Evening AI behavior configuration',
-    translationKey: 'fingerprint.field.evening_persona.description',
-    default: {
-      reflection_approach: '',
-      consolidation_style: '',
-      transition_support: ''
-    }
-  },
-  {
-    name: 'event_triggers',
-    type: 'array',
-    required: false,
-    description: 'Contextual triggers for AI responses',
-    translationKey: 'fingerprint.field.event_triggers.description',
-    default: []
-  }
-];
-
-// AI Prompt Generation Fields
-export const FINGERPRINT_PROMPT_FIELDS: FingerprintField[] = [
-  {
-    name: 'base_personality',
-    type: 'string',
-    required: false,
-    description: 'Base AI personality derived from user',
-    translationKey: 'fingerprint.field.base_personality.description',
-    default: ''
-  },
-  {
-    name: 'project_voice',
-    type: 'string',
-    required: false,
-    description: 'AI voice specific to this project',
-    translationKey: 'fingerprint.field.project_voice.description',
-    default: ''
-  },
-  {
-    name: 'question_generation_style',
-    type: 'string',
-    required: false,
-    description: 'How AI generates questions',
-    translationKey: 'fingerprint.field.question_generation_style.description',
-    default: ''
-  },
-  {
-    name: 'suggestion_approach',
-    type: 'string',
-    required: false,
-    description: 'How AI provides suggestions',
-    translationKey: 'fingerprint.field.suggestion_approach.description',
-    default: ''
-  },
-  {
-    name: 'clarification_method',
-    type: 'string',
-    required: false,
-    description: 'How AI seeks clarification',
-    translationKey: 'fingerprint.field.clarification_method.description',
-    default: ''
-  }
-];
-
-// Dynamic Intelligence Fields
-export const FINGERPRINT_DYNAMIC_FIELDS: FingerprintField[] = [
-  {
-    name: 'dynamic_dimensions',
-    type: 'array',
-    required: false,
-    description: 'AI-generated custom dimensions',
-    translationKey: 'fingerprint.field.dynamic_dimensions.description',
-    default: []
-  }
-];
-
-// Contextual Awareness Fields
-export const FINGERPRINT_CONTEXT_FIELDS: FingerprintField[] = [
-  {
-    name: 'user_constraints',
-    type: 'array',
-    required: false,
-    description: 'User limitations and constraints',
-    translationKey: 'fingerprint.field.user_constraints.description',
-    default: []
-  },
-  {
-    name: 'external_dependencies',
-    type: 'array',
-    required: false,
-    description: 'External factors that affect the project',
-    translationKey: 'fingerprint.field.external_dependencies.description',
-    default: []
-  },
-  {
-    name: 'support_systems',
-    type: 'array',
-    required: false,
-    description: 'Available support and resources',
-    translationKey: 'fingerprint.field.support_systems.description',
-    default: []
-  },
-  {
-    name: 'potential_obstacles',
-    type: 'array',
-    required: false,
-    description: 'Potential challenges and obstacles',
-    translationKey: 'fingerprint.field.potential_obstacles.description',
-    default: []
-  }
-];
-
-// Metadata Fields
-export const FINGERPRINT_METADATA_FIELDS: FingerprintField[] = [
-  {
-    name: 'created_at',
-    type: 'number',
-    required: true,
-    description: 'When fingerprint was created',
-    translationKey: 'fingerprint.field.created_at.description'
-  },
-  {
-    name: 'last_evolution',
-    type: 'number',
-    required: true,
-    description: 'Last time fingerprint was evolved',
-    translationKey: 'fingerprint.field.last_evolution.description'
-  },
-  {
-    name: 'intelligence_version',
-    type: 'string',
-    required: true,
-    description: 'Version of intelligence schema',
-    translationKey: 'fingerprint.field.intelligence_version.description',
-    default: '1.0'
-  },
-  {
-    name: 'status',
-    type: 'string',
-    required: true,
-    description: 'Current fingerprint status',
-    translationKey: 'fingerprint.field.status.description',
-    validation: {
-      enum: ['discovering', 'active', 'evolving', 'completing', 'archived']
-    },
-    default: 'discovering'
-  }
-];
-
-// ALL FINGERPRINT FIELDS - Complete schema definition
+/**
+ * All fingerprint fields based on the backend FingerprintUpdate model
+ * Fields are in camelCase to match Convex schema conventions
+ */
 export const ALL_FINGERPRINT_FIELDS: FingerprintField[] = [
-  ...FINGERPRINT_CORE_IDENTITY_FIELDS,
-  ...FINGERPRINT_AI_NATURE_FIELDS,
-  ...FINGERPRINT_ARCHETYPE_FIELDS,
-  ...FINGERPRINT_INTENTIONS_FIELDS,
-  ...FINGERPRINT_TIMELINE_FIELDS,
-  ...FINGERPRINT_OUTPUTS_FIELDS,
-  ...FINGERPRINT_INTERFACE_FIELDS,
-  ...FINGERPRINT_EVOLUTION_FIELDS,
-  ...FINGERPRINT_AGENT_FIELDS,
-  ...FINGERPRINT_PROMPT_FIELDS,
-  ...FINGERPRINT_DYNAMIC_FIELDS,
-  ...FINGERPRINT_CONTEXT_FIELDS,
-  ...FINGERPRINT_METADATA_FIELDS
+  {
+    name: 'goals',
+    type: 'string',
+    description: 'What they want to achieve or create',
+    required: false,
+    translationKey: 'fingerprint.field.goals.description'
+  },
+  {
+    name: 'constraints',
+    type: 'string',
+    description: 'Limitations (time, money, skills, resources)',
+    required: false,
+    translationKey: 'fingerprint.field.constraints.description'
+  },
+  {
+    name: 'timeline',
+    type: 'string',
+    description: 'When things need to happen (deadlines, milestones)',
+    required: false,
+    translationKey: 'fingerprint.field.timeline.description'
+  },
+  {
+    name: 'people',
+    type: 'string',
+    description: "Who's involved or who this is for",
+    required: false,
+    translationKey: 'fingerprint.field.people.description'
+  },
+  {
+    name: 'requirements',
+    type: 'string',
+    description: 'Must-haves, preferences, technical needs',
+    required: false,
+    translationKey: 'fingerprint.field.requirements.description'
+  },
+  {
+    name: 'context',
+    type: 'string',
+    description: 'Why this matters, background, inspiration',
+    required: false,
+    translationKey: 'fingerprint.field.context.description'
+  },
+  {
+    name: 'artifactsNeeded',
+    type: 'string',
+    description: 'What artifacts/documents to generate (reports, plans, trackers, lists, etc.)',
+    required: false,
+    translationKey: 'fingerprint.field.artifactsNeeded.description'
+  },
+  {
+    name: 'helpWanted',
+    type: 'string',
+    description: 'How AI should help (brainstorm, organize, track, research, write, etc.)',
+    required: false,
+    translationKey: 'fingerprint.field.helpWanted.description'
+  },
+  {
+    name: 'workingStyle',
+    type: 'string',
+    description: "User's preferred way of working (async updates, check-ins, autonomous, collaborative)",
+    required: false,
+    translationKey: 'fingerprint.field.workingStyle.description'
+  }
 ];
 
-// Helper functions
-export function getRequiredFields(): FingerprintField[] {
-  return ALL_FINGERPRINT_FIELDS.filter(field => field.required);
-}
-
-export function getOptionalFields(): FingerprintField[] {
-  return ALL_FINGERPRINT_FIELDS.filter(field => !field.required);
-}
-
-export function getFieldByName(name: string): FingerprintField | undefined {
-  return ALL_FINGERPRINT_FIELDS.find(field => field.name === name);
-}
-
-export function validateFieldValue(fieldName: string, value: any): boolean {
-  const field = getFieldByName(fieldName);
-  if (!field) return false;
-
-  if (field.required && (value === undefined || value === null || value === '')) {
-    return false;
-  }
-
-  if (field.validation) {
-    if (field.type === 'number' && typeof value === 'number') {
-      if (field.validation.min !== undefined && value < field.validation.min) return false;
-      if (field.validation.max !== undefined && value > field.validation.max) return false;
-    }
-
-    if (field.validation.enum && !field.validation.enum.includes(value)) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-// Evolution History Schema
+/**
+ * Evolution history fields (if needed for future use)
+ */
 export interface EvolutionHistoryField {
   name: string;
-  type: 'string' | 'number' | 'boolean' | 'array' | 'object' | 'id';
+  type: FieldType;
   required: boolean;
   description: string;
 }
 
 export const FINGERPRINT_EVOLUTION_HISTORY_FIELDS: EvolutionHistoryField[] = [
   {
-    name: 'fingerprintId',
-    type: 'id',
-    required: true,
-    description: 'Reference to the fingerprint'
-  },
-  {
-    name: 'userId',
-    type: 'string',
-    required: true,
-    description: 'Owner of this evolution entry'
-  },
-  {
-    name: 'projectId',
-    type: 'id',
-    required: true,
-    description: 'Project this evolution belongs to'
-  },
-  {
-    name: 'timestamp',
+    name: 'confidence_score',
     type: 'number',
-    required: true,
-    description: 'When this evolution occurred'
+    required: false,
+    description: 'Confidence score for the evolution (0-1)'
   },
   {
     name: 'evolution_trigger',
     type: 'string',
-    required: true,
+    required: false,
     description: 'What triggered this evolution'
-  },
-  {
-    name: 'changes_made',
-    type: 'object',
-    required: true,
-    description: 'Key-value pairs of what changed'
-  },
-  {
-    name: 'reasoning',
-    type: 'string',
-    required: true,
-    description: 'AI reasoning for the evolution'
-  },
-  {
-    name: 'confidence_score',
-    type: 'number',
-    required: true,
-    description: 'Confidence in the evolution (0-1)'
-  },
-  {
-    name: 'user_response',
-    type: 'string',
-    required: false,
-    description: 'User response to the evolution'
-  },
-  {
-    name: 'user_feedback',
-    type: 'string',
-    required: false,
-    description: 'Any user comments on the evolution'
-  },
-  {
-    name: 'learning_captured',
-    type: 'string',
-    required: true,
-    description: 'What AI learned from this evolution'
-  },
-  {
-    name: 'trigger_context',
-    type: 'object',
-    required: false,
-    description: 'Additional context about what triggered the evolution'
-  },
-  {
-    name: 'evolution_metrics',
-    type: 'object',
-    required: false,
-    description: 'Metrics about the evolution process'
-  },
-  {
-    name: 'processing_time_ms',
-    type: 'number',
-    required: false,
-    description: 'How long the evolution took to process'
-  },
-  {
-    name: 'ai_model_version',
-    type: 'string',
-    required: false,
-    description: 'Which AI model version was used'
   }
 ];
+
+/**
+ * Get a field by its name
+ */
+export function getFieldByName(name: string): FingerprintField | undefined {
+  return ALL_FINGERPRINT_FIELDS.find(field => field.name === name);
+}
+
+/**
+ * Get all required fields
+ */
+export function getRequiredFields(): FingerprintField[] {
+  return ALL_FINGERPRINT_FIELDS.filter(field => field.required === true);
+}
+
+/**
+ * Get all optional fields
+ */
+export function getOptionalFields(): FingerprintField[] {
+  return ALL_FINGERPRINT_FIELDS.filter(field => field.required !== true);
+}
+
+/**
+ * Validate a field value based on its type and validation rules
+ */
+export function validateFieldValue(fieldName: string, value: any): boolean {
+  const field = getFieldByName(fieldName);
+  if (!field) {
+    return false;
+  }
+
+  // Type checking
+  switch (field.type) {
+    case 'string':
+      if (typeof value !== 'string') return false;
+      if (field.validation?.max && value.length > field.validation.max) return false;
+      if (field.validation?.min && value.length < field.validation.min) return false;
+      if (field.validation?.pattern && !new RegExp(field.validation.pattern).test(value)) return false;
+      if (field.validation?.enum && !field.validation.enum.includes(value)) return false;
+      return true;
+
+    case 'number':
+      if (typeof value !== 'number' || isNaN(value)) return false;
+      if (field.validation?.max !== undefined && value > field.validation.max) return false;
+      if (field.validation?.min !== undefined && value < field.validation.min) return false;
+      return true;
+
+    case 'boolean':
+      return typeof value === 'boolean';
+
+    case 'array':
+      if (!Array.isArray(value)) return false;
+      if (field.validation?.max && value.length > field.validation.max) return false;
+      if (field.validation?.min && value.length < field.validation.min) return false;
+      return true;
+
+    case 'object':
+      return typeof value === 'object' && value !== null && !Array.isArray(value);
+
+    case 'id':
+      return typeof value === 'string' && value.length > 0;
+
+    default:
+      return false;
+  }
+}
+

@@ -10,7 +10,7 @@ import { LucideIcon } from 'lucide-react'
 /**
  * Supported item types for the unified panel
  */
-export type DetailItemType = 'widget' | 'note' | 'conversation' | 'crystal' | 'shard'
+export type DetailItemType = 'widget' | 'note' | 'conversation' | 'crystal' | 'shard' | 'artifact'
 
 /**
  * Available tabs in the expanded panel view

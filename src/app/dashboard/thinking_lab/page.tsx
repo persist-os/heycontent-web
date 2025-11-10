@@ -5,12 +5,14 @@
  *
  * Main page for the integrated thinking lab experience.
  * Provides dialogue, reflection, and insight capabilities in one interface.
+ * 
+ * NOTE: Thread selection is now available via @ button in ChatInput.
+ * Currently using existing FullThinkingLab composition which has resizable panes.
  */
 
 import React, { useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { FullThinkingLab } from './compositions/LabCompositions'
-import { useDialogueStore } from './stores/dialogueStore'
 
 /**
  * Validates that a URL parameter is a valid non-empty string
@@ -38,20 +40,10 @@ export default function ThinkingLabPage() {
     
     // Only set context if at least one valid context param exists
     if (validProjectId || validWidgetId || validWidgetOutputId) {
-      console.log('[THINKING LAB] Initializing context container from URL:', {
-        projectId: validProjectId,
-        widgetId: validWidgetId,
-        widgetOutputId: validWidgetOutputId
-      });
-      useDialogueStore.getState().setProjectContext(
-        validProjectId,
-        validWidgetId,
-        validWidgetOutputId
-      );
+      // Note: Project context now handled by conversation hooks
     } else if (projectId !== null || widgetId !== null || widgetOutputId !== null) {
       // Context params exist but are invalid/empty - clear context
-      console.log('[THINKING LAB] Invalid context params detected - clearing context');
-      useDialogueStore.getState().clearProjectContext();
+      // Note: Project context clearing now handled by conversation hooks
     }
     // Note: If no context params at all, we don't clear (might be navigating within lab)
   }, [projectId, widgetId, widgetOutputId]);

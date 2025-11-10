@@ -48,6 +48,13 @@ export function UnifiedDetailsPanel({
     <>
       {instances.map((instance) => {
         const config = TYPE_CONFIGS[instance.itemType]
+        
+        // Safety check: skip if config is undefined
+        if (!config) {
+          console.warn(`No config found for item type: ${instance.itemType}`)
+          return null
+        }
+        
         const activeTab = activeTabsMap[instance.id] || config.tabs[0]
 
         // Collapsed view

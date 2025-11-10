@@ -47,7 +47,7 @@ export function ConnectedContentSection({
   ) as any[] | undefined;
 
   const connectedShards = useQuery(
-    api.crystalQueries.getShardsByWidgetId,
+    api.shardQueries.getShardsByWidgetId,
     userId && widgetId ? { widgetId, userId } : 'skip'
   ) as any[] | undefined;
 

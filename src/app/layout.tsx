@@ -5,8 +5,8 @@ import './globals.css'
 import { Providers } from './providers'
 import { headers } from 'next/headers'
 import { Toaster } from 'react-hot-toast'
-import { CommandPaletteProvider } from './context/CommandPaletteProvider'
 import { InlineReplyProvider } from './context/inline-reply-context'
+import { TiptapEditorProvider } from './context/tiptap-editor-context'
 import { Analytics } from "@vercel/analytics/next"
 
 const siteUrl = 'https://heycontext.co'
@@ -210,6 +210,12 @@ export default async function RootLayout({
         {/* Canonical URL */}
         <link rel="canonical" href={siteUrl} />
         
+        {/* Favicon links with cache-busting - browsers cache favicons aggressively */}
+        <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />
+        <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png?v=2" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2" />
+        
         {/* Additional SEO Meta Tags */}
         <meta name="theme-color" content="#3b82f6" />
         <meta name="mobile-web-app-capable" content="yes" />
@@ -264,10 +270,10 @@ export default async function RootLayout({
       <body className="font-sans min-h-screen">
         <Providers>
           <InlineReplyProvider>
-            <CommandPaletteProvider>
+            <TiptapEditorProvider>
               <Toaster position="top-center" />
               {children}
-            </CommandPaletteProvider>
+            </TiptapEditorProvider>
           </InlineReplyProvider>
         </Providers>
         <Analytics />

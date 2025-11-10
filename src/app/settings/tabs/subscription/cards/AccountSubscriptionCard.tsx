@@ -2,6 +2,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import React from 'react';
 import { User } from 'lucide-react';
+import { T } from '@/components/translation/T';
 
 /**
  * Type definition for the user object
@@ -82,7 +83,7 @@ export const AccountSubscriptionCard: React.FC<AccountSubscriptionCardProps> = (
   return (
     <Card className="w-full p-4 sm:p-6 rounded-xl shadow-md bg-card">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg sm:text-xl font-bold">Account & Subscription</CardTitle>
+        <CardTitle className="text-lg sm:text-xl font-bold"><T context="settings.subscription.account.title">Account & Subscription</T></CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
         {/* User Information Section */}
@@ -90,14 +91,14 @@ export const AccountSubscriptionCard: React.FC<AccountSubscriptionCardProps> = (
           <div className="flex items-center space-x-3">
             <User className="w-5 h-5 text-primary" />
             <div>
-              <h3 className="font-semibold text-foreground">{user?.displayName || 'User'}</h3>
-              <div className="text-sm text-muted-foreground break-all">{user?.email || 'No email provided'}</div>
+              <h3 className="font-semibold text-foreground">{user?.displayName || <T context="settings.subscription.account.user.default">User</T>}</h3>
+              <div className="text-sm text-muted-foreground break-all">{user?.email || <T context="settings.subscription.account.email.missing">No email provided</T>}</div>
             </div>
           </div>
         </div>
         {/* Subscription Plan Information */}
         <div className="mt-2 text-base">
-          <span className="font-semibold">Plan:</span>{' '}
+          <span className="font-semibold"><T context="settings.subscription.account.plan.label">Plan:</T></span>{' '}
           {isSubscribed ? (
             <>
               {plan.name}
@@ -116,20 +117,32 @@ export const AccountSubscriptionCard: React.FC<AccountSubscriptionCardProps> = (
               )}
             </>
           ) : (
-            'Not subscribed'
+            <T context="settings.subscription.account.plan.not_subscribed">Not subscribed</T>
           )}
         </div>
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-2 mt-4">
-          <Button
-            size="lg"
-            variant="outline"
-            className="min-w-[120px]"
-            onClick={handleManageSubscription}
-            aria-label="Manage subscription settings"
-          >
-            Manage Subscription
-          </Button>
+          {!isSubscribed ? (
+            <Button
+              size="lg"
+              variant="default"
+              className="min-w-[120px]"
+              onClick={handleUpgrade}
+              aria-label="Subscribe to a paid plan"
+            >
+              <T context="button.subscribe.now">Subscribe Now</T>
+            </Button>
+          ) : (
+            <Button
+              size="lg"
+              variant="outline"
+              className="min-w-[120px]"
+              onClick={handleManageSubscription}
+              aria-label="Manage subscription settings"
+            >
+              <T context="button.manage.subscription">Manage Subscription</T>
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

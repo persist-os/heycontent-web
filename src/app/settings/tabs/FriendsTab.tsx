@@ -182,7 +182,6 @@ const FriendsTab = ({ userId }: FriendsTabProps) => {
         toast.success('Friend request sent!')
       } else {
         // Handle different error cases gracefully
-        console.warn('Friend request failed:', result.message)
         toast.error(result.message)
       }
     } catch (error) {

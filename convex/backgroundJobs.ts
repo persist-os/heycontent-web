@@ -7,7 +7,7 @@
  * - Statistics and monitoring
  */
 
-import { mutation, query } from "./_generated/server";
+import { mutation, query, action } from "./_generated/server";
 import { v } from "convex/values";
 import { 
   jobTypeValidator, 
@@ -417,6 +417,152 @@ export const getJobStats = query({
     }
     
     return stats;
+  },
+});
+
+/**
+ * ✅ Get assignment (project) status by aggregating widget_execution jobs
+ * Frontend uses this reactively - NO POLLING NEEDED
+ */
+export const getAssignmentStatus = query({
+  args: {
+    projectId: v.id("projects"),
+    userId: v.string(),
+  },
+  handler: async (ctx, { projectId, userId }) => {
+    // Get all widgets for this project
+    const widgets = await ctx.db
+      .query("widgets")
+      .withIndex("by_project", (q) => q.eq("projectId", projectId))
+      .collect();
+    
+    if (widgets.length === 0) {
+      return {
+        assignment_id: projectId,
+        overall_status: "not_started",
+        widgets: [],
+        artifacts: [],
+      };
+    }
+    
+    // Get all widget_execution jobs for this user's widgets
+    // Note: Must collect first, then filter in JavaScript (Convex can't filter nested payload fields)
+    const allJobs = await ctx.db
+      .query("background_jobs")
+      .withIndex("by_user_type_status", (q) =>
+        q.eq("userId", userId).eq("type", "widget_execution")
+      )
+      .collect();
+    
+    // Filter jobs by projectId in JavaScript (payload.projectId is nested)
+    const jobs = allJobs.filter(job => job.payload?.projectId === projectId);
+    
+    // Map jobs to widget IDs
+    const jobsByWidgetId = new Map();
+    for (const job of jobs) {
+      const widgetId = job.payload?.widget_id || job.payload?.widgetId;
+      if (widgetId) {
+        jobsByWidgetId.set(widgetId, job);
+      }
+    }
+    
+    // Build widget statuses
+    const widgetStatuses = widgets.map((widget) => {
+      const job = jobsByWidgetId.get(widget._id);
+      let status = "pending";
+      
+      if (job) {
+        if (job.status === "completed") status = "completed";
+        else if (job.status === "running" || job.status === "queued") status = "in_progress";
+        else if (job.status === "failed") status = "failed";
+      }
+      
+      return {
+        widget_id: widget._id,
+        title: widget.title || "Unnamed Widget",
+        status,
+      };
+    });
+    
+    // Determine overall status
+    const completedCount = widgetStatuses.filter((w) => w.status === "completed").length;
+    const inProgressCount = widgetStatuses.filter((w) => w.status === "in_progress").length;
+    
+    let overallStatus = "not_started";
+    if (completedCount === widgets.length) {
+      overallStatus = "completed";
+    } else if (inProgressCount > 0 || completedCount > 0) {
+      overallStatus = "active";
+    }
+    
+
+    return {
+      assignment_id: projectId,
+      overall_status: overallStatus,
+      widgets: widgetStatuses,
+      artifacts: [], // Frontend queries artifacts separately
+    };
+  },
+});
+
+/**
+ * Enqueue job to Redis queue after Convex record creation.
+ * 
+ * Called by frontend after creating job record via mutation.
+ * Completes the atomic job creation pattern: Convex record → Redis enqueue.
+ * 
+ * This action calls the backend HTTP endpoint to enqueue the job to Redis,
+ * allowing workers to pick it up for execution.
+ */
+export const enqueueToRedis = action({
+  args: {
+    jobId: v.string(),
+    jobType: jobTypeValidator,
+    userId: v.string(),
+    payload: v.any(),
+    priority: jobPriorityValidator,
+  },
+  handler: async (ctx, { jobId, jobType, userId, payload, priority }) => {
+    try {
+      const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
+      
+      if (!backendUrl) {
+        throw new Error("BACKEND_URL not configured");
+      }
+      
+      const response = await fetch(`${backendUrl}/api/v1/background-jobs/enqueue`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          jobId,
+          jobType,
+          userId,
+          payload,
+          priority,
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Backend returned ${response.status}: ${errorText}`);
+      }
+      
+      const data = await response.json();
+      
+      return {
+        success: true,
+        jobId: data.jobId,
+        redisMessageId: data.redisMessageId,
+      };
+    } catch (error) {
+      console.error(`[ENQUEUE_TO_REDIS] Failed to enqueue job ${jobId}:`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
   },
 });
 

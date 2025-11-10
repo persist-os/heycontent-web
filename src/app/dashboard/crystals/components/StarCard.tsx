@@ -6,6 +6,8 @@ import { toast } from 'sonner';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
 import { Edit3, Trash2, Save, X, ExternalLink } from 'lucide-react';
 import { T } from '@/components/translation';
+import { useTranslation } from '@/hooks/useTranslation';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 
 interface StarCardProps {
   project: {
@@ -26,7 +28,30 @@ interface StarCardProps {
 
 export const StarCard: React.FC<StarCardProps> = ({ project }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  
+  // Translations for button titles
+  const { text: saveChangesTitle } = useTranslation('Save changes', {
+    sourceLang: 'en',
+    context: 'button.star.save.title'
+  });
+  const { text: cancelEditingTitle } = useTranslation('Cancel editing', {
+    sourceLang: 'en',
+    context: 'button.star.cancel.title'
+  });
+  const { text: openConstellationTitle } = useTranslation('Open in constellation', {
+    sourceLang: 'en',
+    context: 'button.star.constellation.title'
+  });
+  const { text: editStarTitle } = useTranslation('Edit star', {
+    sourceLang: 'en',
+    context: 'button.star.edit.title'
+  });
+  const { text: deleteStarTitle } = useTranslation('Delete star', {
+    sourceLang: 'en',
+    context: 'button.star.delete.title'
+  });
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editedProject, setEditedProject] = useState({
     name: project.name,
     description: project.description || '',
@@ -81,10 +106,6 @@ export const StarCard: React.FC<StarCardProps> = ({ project }) => {
   };
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this star? This will remove the project but keep all associated content (notes, crystals, etc.). This action cannot be undone.')) {
-      return;
-    }
-
     try {
       const userId = await getCurrentUserId();
       if (!userId) {
@@ -98,6 +119,7 @@ export const StarCard: React.FC<StarCardProps> = ({ project }) => {
       });
 
       toast.success('Star deleted successfully');
+      setShowDeleteConfirm(false);
     } catch (error) {
       console.error('Error deleting star:', error);
       toast.error('Failed to delete star');
@@ -118,14 +140,14 @@ export const StarCard: React.FC<StarCardProps> = ({ project }) => {
                 <button
                   onClick={handleSave}
                   className="p-1.5 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950/20 rounded-md transition-colors"
-                  title="Save changes"
+                  title={saveChangesTitle}
                 >
                   <Save className="h-3.5 w-3.5" />
                 </button>
                 <button
                   onClick={handleCancel}
                   className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
-                  title="Cancel editing"
+                  title={cancelEditingTitle}
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -135,21 +157,21 @@ export const StarCard: React.FC<StarCardProps> = ({ project }) => {
                 <button
                   onClick={handleOpenConstellation}
                   className="p-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-950/20 rounded-md transition-colors"
-                  title="Open in constellation"
+                  title={openConstellationTitle}
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
                 </button>
                 <button
                   onClick={() => setIsEditing(true)}
                   className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
-                  title="Edit star"
+                  title={editStarTitle}
                 >
                   <Edit3 className="h-3.5 w-3.5" />
                 </button>
                 <button
-                  onClick={handleDelete}
+                  onClick={() => setShowDeleteConfirm(true)}
                   className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors"
-                  title="Delete star"
+                  title={deleteStarTitle}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -302,6 +324,21 @@ export const StarCard: React.FC<StarCardProps> = ({ project }) => {
           </span>
         )}
       </div>
+
+      <ConfirmationModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title="Delete Star"
+        titleContext="star.delete_confirm.title"
+        description="Are you sure you want to delete this star? This will remove the project but keep all associated content (notes, crystals, etc.). This action cannot be undone."
+        descriptionContext="star.delete_confirm.description"
+        confirmText="Delete"
+        confirmContext="button.delete"
+        cancelText="Cancel"
+        cancelContext="button.cancel"
+        variant="destructive"
+      />
     </div>
   );
 };

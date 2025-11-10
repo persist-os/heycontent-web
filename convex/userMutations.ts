@@ -133,10 +133,8 @@ export const create_user = mutation(async ({ db }, { name, email, image, userId,
       createdAt: now,
       updatedAt: now,
     });
-    console.log(`[USER CREATION] Initialized intelligence config for user ${userId}`);
   } catch (error) {
-    // Non-critical - log but don't fail user creation
-    console.log(`[USER CREATION] Failed to initialize intelligence config: ${error}`);
+    // Non-critical - don't fail user creation
   }
   
   // Process referral if user was referred by someone
@@ -275,14 +273,35 @@ export const deleteUserAndData = mutation({
         summary.errors.push({ table, error: String(err) });
       }
     }
-    // Conversations (must be before messages)
-    await batchDelete("conversations", () =>
-      ctx.db.query("conversations").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    
-    // Messages (new messages table)
+    // Phase 1: Child Records (Must Delete Before Parents)
+    // Messages (before conversations)
     await batchDelete("messages", () =>
       ctx.db.query("messages").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Conversation Summaries (before conversations)
+    await batchDelete("conversation_summaries", () =>
+      ctx.db.query("conversation_summaries").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Shared Notes (bidirectional - before notes)
+    await batchDelete("shared_notes", async () => {
+      const asOwner = await ctx.db.query("shared_notes").withIndex("by_owner", (q) => q.eq("ownerId", userId)).take(BATCH_SIZE);
+      const asShared = await ctx.db.query("shared_notes").withIndex("by_shared_user", (q) => q.eq("sharedWithUserId", userId)).take(BATCH_SIZE);
+      return [...asOwner, ...asShared].slice(0, BATCH_SIZE);
+    });
+    
+    // Shared Content (bidirectional - before content)
+    await batchDelete("shared_content", async () => {
+      const asOwner = await ctx.db.query("shared_content").withIndex("by_ownerId", (q) => q.eq("ownerId", userId)).take(BATCH_SIZE);
+      const asShared = await ctx.db.query("shared_content").withIndex("by_sharedWithUserId", (q) => q.eq("sharedWithUserId", userId)).take(BATCH_SIZE);
+      return [...asOwner, ...asShared].slice(0, BATCH_SIZE);
+    });
+    
+    // Phase 2: Content & Artifacts
+    // Artifacts (before widgets/projects)
+    await batchDelete("artifacts", () =>
+      ctx.db.query("artifacts").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
     
     // Notes
@@ -290,11 +309,12 @@ export const deleteUserAndData = mutation({
       ctx.db.query("notes").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
     
-    // Projects (must be deleted before related items)
-    await batchDelete("projects", () =>
-      ctx.db.query("projects").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    // Conversations
+    await batchDelete("conversations", () =>
+      ctx.db.query("conversations").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
     
+    // Phase 3: Project Hierarchy
     // Widgets
     await batchDelete("widgets", () =>
       ctx.db.query("widgets").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
@@ -305,29 +325,25 @@ export const deleteUserAndData = mutation({
       ctx.db.query("project_widgets").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
     
-    // Widget Outputs
-    await batchDelete("widget_outputs", () =>
-      ctx.db.query("widget_outputs").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    // Assignment Fingerprints (fixed name from project_fingerprints)
+    await batchDelete("assignment_fingerprints", () =>
+      ctx.db.query("assignment_fingerprints").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
     
-    // Project Fingerprints
-    await batchDelete("project_fingerprints", () =>
-      ctx.db.query("project_fingerprints").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    // Projects (must be deleted after related items)
+    await batchDelete("projects", () =>
+      ctx.db.query("projects").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
     
-    // Fingerprint Evolutions
-    await batchDelete("fingerprint_evolutions", () =>
-      ctx.db.query("fingerprint_evolutions").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    // Phase 4: Crystal System (Dependencies)
+    // Crystal Shards
+    await batchDelete("crystal_shards", () =>
+      ctx.db.query("crystal_shards").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
     
-    // Content Embeddings
-    await batchDelete("contentEmbeddings", () =>
-      ctx.db.query("contentEmbeddings").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
-    );
-    
-    // Embedding Syncs
-    await batchDelete("embeddingSyncs", () =>
-      ctx.db.query("embeddingSyncs").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    // Crystal Intelligence (before crystals)
+    await batchDelete("crystal_intelligence", () =>
+      ctx.db.query("crystal_intelligence").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
     
     // Crystals
@@ -335,9 +351,19 @@ export const deleteUserAndData = mutation({
       ctx.db.query("crystals").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
     
-    // Crystal Shards
-    await batchDelete("crystal_shards", () =>
-      ctx.db.query("crystal_shards").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    // Stardust
+    await batchDelete("stardust", () =>
+      ctx.db.query("stardust").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Cognitive Fields
+    await batchDelete("cognitive_fields", () =>
+      ctx.db.query("cognitive_fields").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Crystal Cache
+    await batchDelete("crystalCache", () =>
+      ctx.db.query("crystalCache").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
     
     // Crystal Formation Runs
@@ -345,19 +371,130 @@ export const deleteUserAndData = mutation({
       ctx.db.query("crystal_formation_runs").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
     
+    // Phase 5: Intelligence System
+    // Intelligence Bandit Decisions (before arms)
+    await batchDelete("intelligence_bandit_decisions", () =>
+      ctx.db.query("intelligence_bandit_decisions").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Intelligence Bandit Arms
+    await batchDelete("intelligence_bandit_arms", () =>
+      ctx.db.query("intelligence_bandit_arms").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Intelligence Jobs
+    await batchDelete("intelligence_jobs", () =>
+      ctx.db.query("intelligence_jobs").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // User Activity Counters
+    await batchDelete("user_activity_counters", () =>
+      ctx.db.query("user_activity_counters").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
     // Intelligence Config
     await batchDelete("intelligence_config", () =>
       ctx.db.query("intelligence_config").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
     
-    // MAB Arms (context enrichment)
-    await batchDelete("mab_arms", () =>
-      ctx.db.query("mab_arms").withIndex("by_user_agent", (q) => q.eq("user_id", userId)).take(BATCH_SIZE)
+    // Phase 6: Context Enrichment MAB
+    // Context Enrichment Decisions (before arms)
+    await batchDelete("context_enrichment_decisions", () =>
+      ctx.db.query("context_enrichment_decisions").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
     
-    // Subscriptions
-    await batchDelete("subscriptions", () =>
-      ctx.db.query("subscriptions").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    // Context Enrichment Arms (fixed name from mab_arms)
+    await batchDelete("context_enrichment_arms", () =>
+      ctx.db.query("context_enrichment_arms").withIndex("by_user_agent", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Phase 7: Chat Model Selection MAB
+    // Chat Model Selection Decisions (before arms)
+    await batchDelete("chat_model_selection_decisions", () =>
+      ctx.db.query("chat_model_selection_decisions").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Chat Model Selection Arms
+    await batchDelete("chat_model_selection_arms", () =>
+      ctx.db.query("chat_model_selection_arms").withIndex("by_user_agent", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Phase 8: Embedding System
+    // Content Embeddings
+    await batchDelete("contentEmbeddings", () =>
+      ctx.db.query("contentEmbeddings").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Embedding Updates
+    await batchDelete("embeddingUpdates", () =>
+      ctx.db.query("embeddingUpdates").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Embedding Queue
+    await batchDelete("embeddingQueue", () =>
+      ctx.db.query("embeddingQueue").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Embedding Syncs
+    await batchDelete("embeddingSyncs", () =>
+      ctx.db.query("embeddingSyncs").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Phase 9: Social Features (Bidirectional)
+    // Friendships (bidirectional - check both userId1 and userId2)
+    await batchDelete("friendships", async () => {
+      const asUser1 = await ctx.db.query("friendships").withIndex("by_userId1", (q) => q.eq("userId1", userId)).take(BATCH_SIZE);
+      const asUser2 = await ctx.db.query("friendships").withIndex("by_userId2", (q) => q.eq("userId2", userId)).take(BATCH_SIZE);
+      return [...asUser1, ...asUser2].slice(0, BATCH_SIZE);
+    });
+    
+    // Referrals (where user is referrer)
+    await batchDelete("referrals", async () => {
+      const userDoc = await ctx.db.query("users").withIndex("by_userId", (q) => q.eq("userId", userId)).first();
+      if (!userDoc) return [];
+      return await ctx.db.query("referrals").withIndex("by_referrer", (q) => q.eq("referrerId", userDoc._id)).take(BATCH_SIZE);
+    });
+    
+    // Phase 10: Briefing System
+    // Briefing Events
+    await batchDelete("briefing_events", () =>
+      ctx.db.query("briefing_events").withIndex("by_user_timestamp", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Briefing Clusters
+    await batchDelete("briefing_clusters", () =>
+      ctx.db.query("briefing_clusters").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Briefing Preferences
+    await batchDelete("briefing_preferences", () =>
+      ctx.db.query("briefing_preferences").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Phase 11: Tracking & Logging
+    // Context Usage Logs
+    await batchDelete("context_usage_logs", () =>
+      ctx.db.query("context_usage_logs").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Tool Call Logs
+    await batchDelete("tool_call_logs", () =>
+      ctx.db.query("tool_call_logs").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Webhook Events
+    await batchDelete("webhook_events", () =>
+      ctx.db.query("webhook_events").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Agno Run Events
+    await batchDelete("agnoRunEvents", () =>
+      ctx.db.query("agnoRunEvents").withIndex("by_user_time", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Background Jobs
+    await batchDelete("background_jobs", () =>
+      ctx.db.query("background_jobs").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
     
     // Usage Events
@@ -365,6 +502,23 @@ export const deleteUserAndData = mutation({
       ctx.db.query("usageEvents").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
     
+    // Phase 12: User Preferences & Config
+    // User Preferences
+    await batchDelete("user_preferences", () =>
+      ctx.db.query("user_preferences").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Convergence Current Config
+    await batchDelete("convergence_current_config", () =>
+      ctx.db.query("convergence_current_config").withIndex("by_user_id", (q) => q.eq("user_id", userId)).take(BATCH_SIZE)
+    );
+    
+    // Ambient Insights
+    await batchDelete("ambientInsights", () =>
+      ctx.db.query("ambientInsights").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
+    
+    // Phase 13: Infrastructure
     // Rate Limits
     await batchDelete("rate_limits", () =>
       ctx.db.query("rate_limits").withIndex("by_user_resource", (q) => q.eq("user_id", userId)).take(BATCH_SIZE)
@@ -381,18 +535,17 @@ export const deleteUserAndData = mutation({
       ctx.db.query("folders").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
     
-    // User Preferences
-    await batchDelete("user_preferences", () =>
-      ctx.db.query("user_preferences").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    // Data Imports
+    await batchDelete("data_imports", () =>
+      ctx.db.query("data_imports").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
     );
     
-    // Referrals (where user is referrer)
-    await batchDelete("referrals", async () => {
-      const userDoc = await ctx.db.query("users").withIndex("by_userId", (q) => q.eq("userId", userId)).first();
-      if (!userDoc) return [];
-      return await ctx.db.query("referrals").withIndex("by_referrer", (q) => q.eq("referrerId", userDoc._id)).take(BATCH_SIZE);
-    });
+    // Feedback
+    await batchDelete("feedback", () =>
+      ctx.db.query("feedback").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH_SIZE)
+    );
     
+    // Phase 14: Final Cleanup
     // Users (must be last)
     await batchDelete("users", () =>
       ctx.db.query("users").withIndex("by_userId", (q) => q.eq("userId", userId)).take(BATCH_SIZE)

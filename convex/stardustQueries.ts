@@ -87,11 +87,13 @@ export const getStardustReadyForPromotion = query({
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .collect();
     
-    // Filter: not promoted + above threshold + mature lifecycle
+    // Filter: not promoted + above threshold + mature/ghost lifecycle
+    // ghost = awaiting user review/promotion (primary target)
+    // mature = could be promoted to ghost first
     const ready = allStardust.filter(
       s => !s.promoted && 
            s.confidence >= args.confidenceThreshold &&
-           (s.lifecycleStage === "mature" || s.lifecycleStage === "elder")
+           (s.lifecycleStage === "mature" || s.lifecycleStage === "ghost")
     );
     
     // Sort by confidence descending
@@ -160,18 +162,13 @@ export const getStardustStatistics = query({
 
 
 /**
- * Get stardust by lifecycle stage
+ * Get stardust by lifecycle stage (flexible, LLM-driven)
+ * Common stages: embryo, juvenile, mature, ghost, transcendent, archived
  */
 export const getStardustByLifecycleStage = query({
   args: {
     userId: v.string(),
-    lifecycleStage: v.union(
-      v.literal("embryo"),
-      v.literal("juvenile"),
-      v.literal("mature"),
-      v.literal("elder"),
-      v.literal("transcendent")
-    ),
+    lifecycleStage: v.string(),  // Flexible - accepts any LLM-generated stage
   },
   returns: v.array(v.any()),
   handler: async (ctx, args) => {

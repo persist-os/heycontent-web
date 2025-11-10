@@ -7,7 +7,6 @@ import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { Button } from '@/components/ui/button'
-import { CreateProjectModal } from './CreateProjectModal'
 import { ProjectStar } from './ProjectStar'
 import { ConnectionLines } from './ConnectionLines'
 import { ConstellationControls } from './ConstellationControls'
@@ -21,6 +20,7 @@ interface Project {
   _id: string
   name: string
   description?: string
+  status?: string
   fingerprintId?: string
   createdAt: number
   updatedAt: number
@@ -29,7 +29,6 @@ interface Project {
 export function ConstellationView() {
   const router = useRouter()
   const { firebaseUser } = useAuth()
-  const [showCreateModal, setShowCreateModal] = useState(false)
   const [highlightedProject, setHighlightedProject] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [viewportSize, setViewportSize] = useState({
@@ -56,15 +55,6 @@ export function ConstellationView() {
 
   // Generate constellation layout
   const layout = useConstellationLayout(projects || [])
-  
-  // Debug logging
-  console.log('ConstellationView Debug:', {
-    firebaseUser: !!firebaseUser,
-    projects: projects,
-    projectsLength: projects?.length,
-    layout: layout,
-    layoutPositionsLength: layout.positions.length
-  })
   
   // Pan and zoom functionality
   const {
@@ -111,47 +101,19 @@ export function ConstellationView() {
       position.y <= viewportBottom
     )
     
-    console.log('Virtual rendering debug:', {
-      totalPositions: layout.positions.length,
-      visiblePositions: filtered.length,
-      viewport: { viewportLeft, viewportTop, viewportRight, viewportBottom },
-      transform,
-      viewportSize
-    })
-    
     return filtered
     */
   }, [layout.positions, transform, viewportSize])
 
-  // Handle creating a new project
-  const handleCreateProject = useCallback(async (
-    name: string, 
-    description?: string,
-    noteIds?: string[],
-    conversationIds?: string[],
-    crystalIds?: string[],
-    shardIds?: string[]
-  ): Promise<string> => {
-    const params = new URLSearchParams({
-      mode: 'create',
-      name,
-      ...(description && { description }),
-      ...(noteIds && noteIds.length > 0 && { noteIds: noteIds.join(',') }),
-      ...(conversationIds && conversationIds.length > 0 && { conversationIds: conversationIds.join(',') }),
-      ...(crystalIds && crystalIds.length > 0 && { crystalIds: crystalIds.join(',') }),
-      ...(shardIds && shardIds.length > 0 && { shardIds: shardIds.join(',') })
-    })
-    router.push(`/dashboard/living-projects/project-discovery?${params}`)
-    return 'temp-id' // Return temp ID since we're navigating away
+
+  // Handle clicking on a project - Navigate to project page
+  const handleProjectClick = useCallback((project: Project) => {
+    router.push(`/dashboard/living-projects/${project._id}`)
   }, [router])
 
-  // Handle clicking on a project
-  const handleProjectClick = useCallback((project: Project) => {
-    if (project.fingerprintId) {
-      router.push(`/dashboard/living-projects/${project._id}`)
-    } else {
-      router.push(`/dashboard/living-projects/project-discovery?projectId=${project._id}`)
-    }
+  // Handle double-click on a project - Navigate to project page
+  const handleProjectDoubleClick = useCallback((project: Project) => {
+    router.push(`/dashboard/living-projects/${project._id}`)
   }, [router])
 
   // Handle minimap viewport click
@@ -190,7 +152,11 @@ export function ConstellationView() {
         <div className="text-center space-y-8 max-w-md mx-auto px-6">
           <div className="space-y-5 bg-gradient-to-br from-card/80 via-card/70 to-primary/10 backdrop-blur-xl border border-border/60 rounded-2xl p-8 shadow-2xl shadow-primary/10">
             <div className="w-20 h-20 mx-auto bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center border border-primary/30">
-              <div className="w-12 h-12 bg-primary/30 rounded-full animate-pulse"></div>
+              <div className="w-12 h-12 text-primary/60 animate-pulse">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+              </div>
             </div>
             <h2 className="text-3xl font-light text-foreground">
               <T context="constellation.empty.heading">Your constellation awaits</T>
@@ -202,20 +168,13 @@ export function ConstellationView() {
             </p>
           </div>
           <Button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => router.push('/dashboard/thinking_lab')}
             className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-xl shadow-primary/20 ring-1 ring-primary/30"
             size="lg"
           >
             <T context="constellation.button.create_first">Create your first star</T>
           </Button>
         </div>
-        
-        <CreateProjectModal
-          isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onCreateProject={handleCreateProject}
-          userId={userId || ''}
-        />
       </div>
     )
   }
@@ -310,37 +269,40 @@ export function ConstellationView() {
         </div>
       </div>
 
-      {/* New Project Button - Top Right with accent */}
+      {/* Top Right - New Assignment Button */}
       <div className="absolute top-6 right-6 z-10">
         <Button
-          onClick={() => setShowCreateModal(true)}
+          onClick={() => router.push('/dashboard/thinking_lab')}
           className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-xl shadow-primary/20 ring-1 ring-primary/30"
         >
-          <T context="constellation.button.new_project">New Project</T>
+          <T context="constellation.button.new_project">New Assignment</T>
         </Button>
       </div>
 
-      {/* Navigation Controls */}
+      {/* Bottom Right - Minimap */}
+      <div className="absolute bottom-6 right-6 z-10">
+        <div className="bg-background/80 backdrop-blur-sm border border-border/40 rounded-lg shadow-xl overflow-hidden">
+          <ConstellationMinimap
+            positions={layout.positions}
+            canvasWidth={layout.canvasWidth}
+            canvasHeight={layout.canvasHeight}
+            viewportWidth={viewportSize.width}
+            viewportHeight={viewportSize.height}
+            currentTransform={transform}
+            onViewportClick={handleMinimapClick}
+          />
+        </div>
+      </div>
+
+      {/* Bottom Left - Navigation Controls */}
       <ConstellationControls
         scale={transform.scale}
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
         onReset={resetView}
-        className="absolute bottom-6 left-20 z-10"
+        className="absolute bottom-6 left-6 z-10"
       />
 
-      {/* Minimap with responsive positioning */}
-      <div className="absolute bottom-6 right-6 z-10 max-sm:bottom-2 max-sm:right-2">
-        <ConstellationMinimap
-          positions={layout.positions}
-          canvasWidth={layout.canvasWidth}
-          canvasHeight={layout.canvasHeight}
-          viewportWidth={viewportSize.width}
-          viewportHeight={viewportSize.height}
-          currentTransform={transform}
-          onViewportClick={handleMinimapClick}
-        />
-      </div>
 
       {/* Stats Overlay - Bottom Center with color variety */}
       <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 z-10 pointer-events-none">
@@ -363,20 +325,13 @@ export function ConstellationView() {
         </div>
       </div>
 
-      {/* Create Project Modal */}
-      <CreateProjectModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onCreateProject={handleCreateProject}
-        userId={userId || ''}
-      />
 
       {/* Keyboard shortcuts hint with accent */}
       {transform.scale < 0.6 && (
         <div className="absolute bottom-32 left-1/2 z-10 pointer-events-none" style={{ transform: 'translateX(-50%)' }}>
           <div className="bg-gradient-to-r from-accent/10 via-primary/10 to-accent/10 backdrop-blur-md border border-accent/30 rounded-xl px-5 py-3 shadow-xl shadow-accent/10">
             <div className="text-xs text-foreground text-center font-medium">
-              <T context="constellation.hint.controls">Drag to explore • Scroll to zoom • Click projects to open</T>
+              <T context="constellation.hint.controls">Drag to explore • Scroll to zoom • Click to open project</T>
             </div>
           </div>
         </div>

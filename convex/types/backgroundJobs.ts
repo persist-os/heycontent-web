@@ -10,14 +10,22 @@ import { v } from "convex/values";
 // Job type validator - matches Python JobType enum
 export const jobTypeValidator = v.union(
   v.literal("shard_extraction"),
-  v.literal("crystal_formation"),
   v.literal("intelligence_analysis"),
   v.literal("chatgpt_import"),
   v.literal("context_enrichment_feedback"),
+  v.literal("chat_model_feedback"),
   v.literal("stardust_stream_detection"),
   v.literal("convergence_optimization"),
   v.literal("evolution_mab_reward"),
-  v.literal("formation_mab_reward")
+  v.literal("formation_mab_reward"),
+  v.literal("stardust_promotion"),
+  v.literal("widget_execution"),
+  v.literal("chat_post_message_tasks"),
+  v.literal("conversation_title_generation"),
+  v.literal("chaos_generation"),
+  v.literal("cognitive_field_formation"),
+  v.literal("crystal_formation"),  // Added for backwards compatibility
+  v.literal("plan_execution")
 );
 
 // Job status validator - matches Python JobStatus enum
@@ -37,18 +45,30 @@ export const jobPriorityValidator = v.union(
 );
 
 // Type exports for TypeScript code
-export type JobType = "shard_extraction" | "crystal_formation" | "intelligence_analysis" | "chatgpt_import" | "context_enrichment_feedback" | "stardust_stream_detection" | "convergence_optimization" | "evolution_mab_reward" | "formation_mab_reward";
+export type JobType = "shard_extraction" | "intelligence_analysis" | "chatgpt_import" | "context_enrichment_feedback" | "chat_model_feedback" | "stardust_stream_detection" | "convergence_optimization" | "evolution_mab_reward" | "formation_mab_reward" | "stardust_promotion" | "widget_execution" | "chat_post_message_tasks" | "conversation_title_generation" | "chaos_generation" | "cognitive_field_formation" | "crystal_formation" | "plan_execution";
 export type JobStatus = "queued" | "running" | "completed" | "failed";
 export type JobPriority = "low" | "normal" | "high" | "urgent";
 
 // Payload type validators (match Python dataclasses)
+export const planExecutionPayloadValidator = v.object({
+  plan_id: v.string(),
+  project_id: v.string(),
+  user_id: v.string(),
+  steps: v.array(v.any()),
+  execute_immediately: v.boolean(),
+});
+
 export const shardExtractionPayloadValidator = v.object({
   batch_content: v.array(v.any()),
   batch_size: v.number(),
 });
 
-export const crystalFormationPayloadValidator = v.object({
+export const cognitiveFieldFormationPayloadValidator = v.object({
   trigger_source: v.string(),
+  content: v.string(),
+  source_type: v.string(),
+  force_formation: v.boolean(),
+  max_fields: v.number(),
 });
 
 export const intelligenceAnalysisPayloadValidator = v.object({
@@ -69,14 +89,36 @@ export const contextEnrichmentFeedbackPayloadValidator = v.object({
   agent_type: v.string(),
 });
 
+export const stardustStreamDetectionPayloadValidator = v.object({
+  shard_ids: v.array(v.string()),
+  trigger_source: v.string(),
+});
+
+export const stardustPromotionPayloadValidator = v.object({
+  // Empty payload for stardust promotion jobs
+});
+
+export const widgetExecutionPayloadValidator = v.object({
+  widget_id: v.string(),
+  project_id: v.string(),
+  user_id: v.string(),
+  scheduled: v.boolean(),
+  execution_prompt: v.optional(v.string()),
+  metadata: v.optional(v.any()),
+});
+
 // TypeScript interfaces matching Python dataclasses
 export interface ShardExtractionPayload {
   batch_content: any[];
   batch_size: number;
 }
 
-export interface CrystalFormationPayload {
+export interface CognitiveFieldFormationPayload {
   trigger_source: string;
+  content: string;
+  source_type: string;
+  force_formation: boolean;
+  max_fields: number;
 }
 
 export interface IntelligenceAnalysisPayload {
@@ -86,8 +128,9 @@ export interface IntelligenceAnalysisPayload {
 }
 
 export interface ChatGPTImportPayload {
-  file_path: string;
+  file_content_base64: string;  // Base64-encoded file content
   filename: string;
+  file_size_mb: number;
 }
 
 export interface ContextEnrichmentFeedbackPayload {
@@ -95,4 +138,43 @@ export interface ContextEnrichmentFeedbackPayload {
   conversation_id: string;
   message_index: number;
   agent_type: string;
+}
+
+export interface StardustStreamDetectionPayload {
+  shard_ids: string[];
+  trigger_source: string;
+}
+
+export interface StardustPromotionPayload {
+  // Empty payload for stardust promotion jobs
+  [key: string]: never;
+}
+
+export interface WidgetExecutionPayload {
+  widget_id: string;
+  project_id: string;
+  user_id: string;
+  scheduled: boolean;
+  execution_prompt?: string;
+  metadata?: any;
+}
+
+export interface ChatPostMessageTasksPayload {
+  user_id: string;
+  session_id: string;
+  is_first_message: boolean;
+  user_message: string;
+  ai_response: string;
+  user_info?: string;
+  enrichment_result?: any;
+  enrichment_metadata?: any;
+  memory_key: string;
+}
+
+export interface ConversationTitleGenerationPayload {
+  user_id: string;
+  session_id: string;
+  user_message: string;
+  ai_response: string;
+  user_info?: string;
 }

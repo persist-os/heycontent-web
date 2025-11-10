@@ -101,9 +101,6 @@ export function ConstellationMinimap({
           <div className="text-xs font-medium text-foreground/80">
             <T context="constellation.minimap.title">Constellation</T>
           </div>
-          <div className="text-xs text-muted-foreground/60 font-mono">
-            {positions.length} <T context="constellation.minimap.project">{positions.length !== 1 ? 'projects' : 'project'}</T>
-          </div>
         </div>
 
         {/* Minimap Canvas */}
