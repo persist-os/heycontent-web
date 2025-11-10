@@ -74,7 +74,7 @@ export function MessageBubble({
       // Extract message_index from message sequence field
       // sequence is the message's position in the conversation (0, 1, 2, ...)
       // For assistant messages, this IS the message_index we need
-      let message_index: number | undefined = (message as any).sequence
+      const message_index: number | undefined = (message as any).sequence
       
       // If sequence not available, try to calculate from message index in conversation
       // This is a fallback - ideally sequence should always be present
@@ -135,9 +135,9 @@ export function MessageBubble({
             id={`message-${message.id}`}
             className={`
               ${isCoordination
-                ? 'rounded-2xl px-5 sm:px-7 py-2 sm:py-3 bg-blue-50 dark:bg-blue-950 text-blue-900 dark:text-blue-100 border border-blue-200 dark:border-blue-800'
+                ? 'rounded-xl px-4 sm:px-5 py-3 sm:py-4 bg-card/60 backdrop-blur-sm text-card-foreground border border-border/50'
                 : isUser 
-                ? 'rounded-2xl px-5 sm:px-7 py-2 sm:py-3 bg-primary text-primary-darker [&_*]:!text-primary-darker mr-1 sm:mr-2' 
+                ? 'rounded-2xl px-5 sm:px-7 py-2 sm:py-3 bg-accent text-accent-foreground [&_*]:!text-accent-foreground mr-1 sm:mr-2' 
                 : 'px-0 py-1 text-foreground'
               }
               relative w-full min-w-0
@@ -155,14 +155,14 @@ export function MessageBubble({
               <>
                 {/* Coordination badge for A2A messages */}
                 {isCoordination && (
-                  <div className="flex items-center gap-2 mb-2 text-sm font-medium text-blue-700 dark:text-blue-300">
-                    <span className="text-lg">🤝</span>
+                  <div className="flex items-center gap-2 mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    <span className="text-base">🤝</span>
                     <span>Widget Coordination</span>
                   </div>
                 )}
                 
                 {/* Message content - show streaming content in real-time */}
-                <div className={`${isCoordination ? 'text-blue-900 dark:text-blue-100' : isUser ? 'text-primary-darker' : 'text-foreground'}`}>
+                <div className={isCoordination ? 'text-card-foreground' : isUser ? 'text-accent-foreground' : 'text-foreground'}>
                   <MarkdownRenderer content={message.content} />
                 </div>
 
