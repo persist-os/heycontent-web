@@ -94,7 +94,7 @@
     --widget-primary: 199 89% 58%; /* Sky blue */
     --widget-bg: 199 89% 97%; /* Very light sky background */
     --widget-border: 199 89% 68%; /* Light sky border */
-    --widget-text: 199 89% 20%; /* Dark sky text */
+    --widget-text: 199 89% 35%; /* Medium dark sky text - readable contrast */
     --widget-glow: 199 89% 58%; /* Sky glow */
   }
 
@@ -177,7 +177,7 @@
     --widget-primary: 199 89% 63%; /* Brighter sky blue */
     --widget-bg: 199 89% 8%; /* Very dark sky background */
     --widget-border: 199 89% 32%; /* Medium sky border */
-    --widget-text: 199 89% 85%; /* Light sky text */
+    --widget-text: 199 89% 70%; /* Medium light sky text - softer than white, readable */
     --widget-glow: 199 89% 58%; /* Sky glow */
   }
 }

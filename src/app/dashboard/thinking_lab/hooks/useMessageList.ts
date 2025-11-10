@@ -48,7 +48,8 @@ export function useMessageList(props: UseMessageListProps): Message[] {
         contextDecisionId: msg.contextDecisionId,  // Context enrichment decision ID (for feedback loop)
         sessionId: msg.conversationId,  // Use conversationId as sessionId fallback
         sequence: msg.sequence,  // Message sequence (for message_index calculation)
-      } as any)  // Type assertion needed since Message type doesn't include sequence yet
+        contentType: msg.contentType,  // Message content type (widget_coordination, etc.)
+         } as any)  // Type assertion needed since Message type doesn't include sequence yet
     })
     
     // Helper: Check if user message already exists in Convex (exact match only)
