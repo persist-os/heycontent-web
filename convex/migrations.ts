@@ -490,6 +490,87 @@ export const deleteProjectsWithSocialMediaFields = internalMutation({
   },
 });
 
+// Migration 6: Remove Stripe fields (stripeCustomerId, stripeSubscriptionId, subscription) from users table
+export const removeStripeFieldsFromUsers = internalMutation({
+  args: { 
+    batchSize: v.optional(v.number()),
+    dryRun: v.optional(v.boolean())
+  },
+  returns: v.object({
+    updatedCount: v.number(),
+    totalProcessed: v.number(),
+    completed: v.boolean()
+  }),
+  handler: async (ctx, args) => {
+    const batchSize = args.batchSize ?? 100;
+    const dryRun = args.dryRun ?? false;
+    
+    console.log(`Starting users Stripe fields cleanup (dryRun: ${dryRun}, batchSize: ${batchSize})`);
+    
+    let totalProcessed = 0;
+    let updatedCount = 0;
+    let cursor: string | undefined = undefined;
+    
+    while (true) {
+      const result = await ctx.runQuery(internal.migrations.getAllDocuments, {
+        tableName: "users",
+        cursor,
+        limit: batchSize
+      });
+      
+      if (result.documents.length === 0) {
+        break;
+      }
+      
+      for (const doc of result.documents) {
+        totalProcessed++;
+        
+        // Check if document has any of the Stripe fields
+        const hasStripeFields = 
+          'stripeCustomerId' in doc || 
+          'stripeSubscriptionId' in doc || 
+          'subscription' in doc;
+        
+        if (hasStripeFields) {
+          if (!dryRun) {
+            // Create a new object without the Stripe fields
+            const updatedFields: any = {};
+            
+            // Copy all existing fields except the Stripe ones
+            for (const [key, value] of Object.entries(doc)) {
+              if (key !== 'stripeCustomerId' && key !== 'stripeSubscriptionId' && key !== 'subscription') {
+                updatedFields[key] = value;
+              }
+            }
+            
+            // Replace the entire document (this removes the unwanted fields)
+            await ctx.db.replace(doc._id, updatedFields);
+            updatedCount++;
+          } else {
+            updatedCount++; // Count what would be updated in dry run
+          }
+        }
+      }
+      
+      console.log(`Processed ${totalProcessed} users documents, updated ${updatedCount}${dryRun ? ' (dry run)' : ''}`);
+      
+      if (result.isDone) {
+        break;
+      }
+      
+      cursor = result.continueCursor || undefined;
+    }
+    
+    console.log(`Completed users Stripe fields cleanup. Total processed: ${totalProcessed}, Updated: ${updatedCount}`);
+    
+    return {
+      updatedCount,
+      totalProcessed,
+      completed: true
+    };
+  },
+});
+
 // Utility function to check migration status
 export const getMigrationStatus = internalQuery({
   args: {},
