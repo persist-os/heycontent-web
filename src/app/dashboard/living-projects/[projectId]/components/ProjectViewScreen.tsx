@@ -97,8 +97,9 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   // Fetch artifacts for constellation display
   const artifacts = useQuery(
     api.artifactQueries.getProjectArtifacts,
-    isValidProjectId ? { 
-      projectId: projectId as any
+    isValidProjectId && userId ? { 
+      projectId: projectId as any,
+      userId
     } : 'skip'
   )
 

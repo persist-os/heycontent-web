@@ -393,13 +393,27 @@ handler: async (ctx, args) => {
 
     const conversation = doc as any; // Type assertion after validation
 
-    // Verify ownership
-    if (conversation.userId !== args.userId) {
+    // Verify ownership or collaborator access
+    const isOwner = conversation.userId === args.userId;
+    if (!isOwner && conversation.projectId) {
+      // Check if user is a collaborator on the project
+      const permission = await ctx.runQuery(api.contentAccessHelpers.getUserContentPermission, {
+        userId: args.userId,
+        contentType: "project",
+        contentId: conversation.projectId,
+      });
+      if (!permission) {
+        throw new Error("Unauthorized access to conversation");
+      }
+    } else if (!isOwner) {
       throw new Error("Unauthorized access to conversation");
     }
 
     const now = Date.now();
-    const sequence = conversation.messageCount || (conversation.messages || []).length;
+    // ✅ FIX RACE CONDITION: Use messageIds.length as source of truth (single source of truth)
+    // This prevents duplicate sequence numbers when multiple users send messages simultaneously
+    const currentMessageIds = conversation.messageIds || [];
+    const sequence = currentMessageIds.length;
 
     // 🔄 DUAL-WRITE: Write to BOTH new messages table AND update conversation messageIds array
     
@@ -427,11 +441,13 @@ handler: async (ctx, args) => {
     });
 
     // 2. Update conversation metadata atomically (Pattern 13: Atomic Parent-Child Updates)
+    // ✅ ATOMIC: Derive messageCount from messageIds array length (single source of truth)
+    const updatedMessageIds = [...currentMessageIds, messageId];
     await ctx.db.patch(args.conversationId as any, {
-      messageCount: sequence + 1,
+      messageCount: updatedMessageIds.length,  // Derive from array length
       lastMessageAt: args.message.timestamp,
       updatedAt: now,
-      messageIds: [...(conversation.messageIds || []), messageId],  // Append message ID
+      messageIds: updatedMessageIds,  // Append message ID
     });
 
     // ✅ TRACK INTELLIGENCE: Only track user messages for activity monitoring

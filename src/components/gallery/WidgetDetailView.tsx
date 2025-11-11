@@ -35,14 +35,20 @@ export function WidgetDetailView({ widget, userId, projectId }: WidgetDetailView
   // ✅ Using NEW artifacts table queries
   const widgetArtifacts = useQuery(
     api.artifactQueries.getWidgetArtifacts,
-    widget?._id ? { widgetId: widget._id } : 'skip'
+    widget?._id && userId ? { 
+      widgetId: widget._id,
+      userId
+    } : 'skip'
   )
   
   // Fetch all project artifacts
   // ✅ Using NEW artifacts table queries
   const projectArtifacts = useQuery(
     api.artifactQueries.getProjectArtifacts,
-    projectId ? { projectId: projectId as any } : 'skip'
+    projectId && userId ? { 
+      projectId: projectId as any,
+      userId
+    } : 'skip'
   )
   
   const widgetType = widget.widget_type || widget.widgetType || 'unknown'

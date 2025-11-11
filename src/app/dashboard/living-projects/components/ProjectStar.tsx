@@ -1,15 +1,17 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { MoreHorizontal, Trash2 } from 'lucide-react'
-import { useMutation } from 'convex/react'
+import { MoreHorizontal, Trash2, Lock } from 'lucide-react'
+import { useMutation, useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { useAuth } from '@/app/context/auth-context'
 import { DeleteProjectModal } from '../[projectId]/components/DeleteProjectModal'
 import { formatDistanceToNow } from '../[projectId]/components/utils/dateFormatting'
 import { getProjectStatus, getCardDimensions } from '../[projectId]/components/utils/widgetStyling'
+import { Badge } from '@/components/ui/badge'
 import { T } from '@/components/translation/T'
 import { useTranslation } from '@/hooks/useTranslation'
+import { cn } from '@/lib/utils'
 
 interface Project {
   _id: string
@@ -32,6 +34,7 @@ interface ProjectStarProps {
   onClick: () => void
   onHover?: (projectId: string | null) => void
   onDelete?: () => void
+  userId?: string | null // ✅ Add userId prop for permission checks
 }
 
 export function ProjectStar({
@@ -44,7 +47,8 @@ export function ProjectStar({
   scale,
   onClick,
   onHover,
-  onDelete
+  onDelete,
+  userId // ✅ Accept userId prop
 }: ProjectStarProps) {
   const { firebaseUser } = useAuth()
   const [showMenu, setShowMenu] = useState(false)
@@ -52,6 +56,41 @@ export function ProjectStar({
   const [isDeleting, setIsDeleting] = useState(false)
   const deleteProject = useMutation(api.projectsMutations.deleteProject)
   const menuRef = useRef<HTMLDivElement>(null)
+  
+  // ✅ FIX BLOCKER 1: Get user permission for visual distinction
+  const effectiveUserId = userId || firebaseUser?.uid
+  const userPermission = useQuery(
+    api.contentAccessHelpers.getUserContentPermission,
+    effectiveUserId && project._id ? {
+      userId: effectiveUserId,
+      contentType: 'project',
+      contentId: project._id,
+    } : 'skip'
+  ) as 'owner' | 'edit' | 'read' | null
+  
+  // ✅ FIX BLOCKER 1: Determine visual styling based on permission
+  const isOwner = userPermission === 'owner'
+  const isEditor = userPermission === 'edit'
+  const isViewer = userPermission === 'read'
+  const canDelete = isOwner // Only owner can delete
+  
+  // Border styling: Owner (solid), Editor (dashed), Viewer (dotted)
+  const borderStyle = isOwner ? 'border-solid' : isEditor ? 'border-dashed' : isViewer ? 'border-dotted' : 'border-solid'
+  
+  // Badge styling
+  const getBadgeVariant = () => {
+    if (isOwner) return 'default' // Primary color
+    if (isEditor) return 'secondary' // Blue
+    if (isViewer) return 'outline' // Gray
+    return 'outline'
+  }
+  
+  const getBadgeText = () => {
+    if (isOwner) return 'Owner'
+    if (isEditor) return 'Can Edit'
+    if (isViewer) return 'Can View'
+    return ''
+  }
   
   const hasFingerprint = !!project.fingerprintId
   const isRecent = Date.now() - project.updatedAt < 24 * 60 * 60 * 1000
@@ -140,14 +179,15 @@ export function ProjectStar({
       onMouseLeave={() => onHover?.(null)}
     >
       {/* Main Card */}
-      <div className={`
+      <div className={cn(`
         relative w-full h-full rounded-lg border backdrop-blur-sm
         transition-all duration-300 ease-out
         hover:scale-[1.02] hover:z-10
         ${status.borderColor} ${status.bgGradient}
         ${isHighlighted ? status.activeGlow : status.glowColor}
         ${isHighlighted ? 'ring-2 scale-[1.01]' : 'ring-1'}
-      `}>
+        ${borderStyle} // ✅ FIX BLOCKER 1: Apply border style based on permission
+      `)}>
         {/* Subtle border glow effect */}
         <div className={`
           absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300
@@ -159,13 +199,27 @@ export function ProjectStar({
           {/* Header */}
           <div className="flex-shrink-0 mb-3">
             <div className="flex items-start justify-between mb-1">
-              <h3 className={`
-                font-medium text-foreground leading-tight transition-colors duration-300
-                group-hover:text-blue-600 dark:group-hover:text-blue-400
-                ${size === 'large' ? 'text-lg' : size === 'medium' ? 'text-base' : 'text-sm'}
-              `}>
-                {project.name}
-              </h3>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <h3 className={cn(`
+                    font-medium text-foreground leading-tight transition-colors duration-300
+                    group-hover:text-blue-600 dark:group-hover:text-blue-400
+                    ${size === 'large' ? 'text-lg' : size === 'medium' ? 'text-base' : 'text-sm'}
+                  `)}>
+                    {project.name}
+                  </h3>
+                  {/* ✅ FIX BLOCKER 1: Permission badge - only show at medium zoom and above */}
+                  {scale > 0.8 && userPermission && (
+                    <Badge variant={getBadgeVariant()} className="text-[10px] px-1.5 py-0 flex-shrink-0">
+                      {getBadgeText()}
+                    </Badge>
+                  )}
+                  {/* ✅ FIX BLOCKER 1: Lock icon for view-only */}
+                  {scale > 0.8 && isViewer && (
+                    <Lock className="w-2.5 h-2.5 text-muted-foreground flex-shrink-0" />
+                  )}
+                </div>
+              </div>
               <div className="flex items-center gap-1">
                 {/* 3-dots menu - only show at medium zoom and above */}
                 {scale > 0.8 && (
@@ -183,8 +237,13 @@ export function ProjectStar({
                       <div className="absolute right-0 top-6 bg-background border border-border rounded-md shadow-lg z-20 min-w-[100px]">
                         <button
                           onClick={handleDeleteClick}
-                          disabled={isDeleting}
-                          className="w-full px-2 py-1.5 text-left text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 flex items-center gap-1.5 transition-colors"
+                          disabled={isDeleting || !canDelete} // ✅ FIX BLOCKER 1: Disable delete for non-owners
+                          className={cn(
+                            "w-full px-2 py-1.5 text-left text-xs flex items-center gap-1.5 transition-colors",
+                            canDelete 
+                              ? "text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
+                              : "text-muted-foreground cursor-not-allowed opacity-50"
+                          )}
                         >
                           <Trash2 className="w-2.5 h-2.5" />
                           <T context="project.action.delete">Delete</T>

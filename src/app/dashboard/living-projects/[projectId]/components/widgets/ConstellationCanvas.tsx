@@ -24,9 +24,10 @@ import { SpawnWidgetDialog } from './SpawnWidgetDialog'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { T } from '@/components/translation/T'
 import { deriveFamilyStatus, type FamilyStatus } from '@/app/types/family-status'
-import { Sparkles, MessageCircle } from 'lucide-react'
+import { Sparkles, MessageCircle, Share2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useIsMobile } from '@/app/dashboard/thinking_lab/layouts/ResponsiveLayout'
+import { ProjectCollaboratorsModal } from '@/components/projects/ProjectCollaboratorsModal'
 
 interface ConstellationCanvasProps {
   widgets: WidgetConfig[]
@@ -112,6 +113,31 @@ export function ConstellationCanvas({
   
   // Spawn widget dialog state
   const [isSpawnDialogOpen, setIsSpawnDialogOpen] = useState(false)
+  
+  // ✅ Sharing modal state
+  const [showCollaboratorsModal, setShowCollaboratorsModal] = useState(false)
+  
+  // Get project name for sharing modal
+  const project = useQuery(
+    api.projectsQueries.getById,
+    projectId && userId ? {
+      projectId: projectId,
+      userId: userId,
+    } : 'skip'
+  )
+  
+  // Get user permission for project
+  const userPermission = useQuery(
+    api.contentAccessHelpers.getUserContentPermission,
+    projectId && userId ? {
+      userId,
+      contentType: 'project',
+      contentId: projectId,
+    } : 'skip'
+  ) as 'owner' | 'edit' | 'read' | null
+  
+  // Only show share button if user has permission (owner or editor)
+  const canShare = userPermission === 'owner' || userPermission === 'edit'
   
   // Handle content card click - delegate to parent (deprecated)
   const handleContentOpen = useCallback((id: string, type: string) => {
@@ -385,6 +411,20 @@ export function ConstellationCanvas({
           </span>
         </button>
         
+        {/* Share Button - Show if user has permission */}
+        {canShare && (
+          <button
+            onClick={() => setShowCollaboratorsModal(true)}
+            className="flex items-center gap-2 px-3 md:px-4 py-2 min-h-[44px] md:min-h-auto bg-gradient-to-r from-secondary/80 to-secondary/60 text-secondary-foreground backdrop-blur-lg border border-secondary/20 rounded-xl hover:shadow-lg hover:shadow-secondary/20 transition-all duration-200 touch-manipulation"
+            title="Share project with collaborators"
+          >
+            <Share2 className="w-4 h-4" />
+            <span className="text-sm font-medium hidden sm:inline">
+              <T context="constellation.button.share">Share</T>
+            </span>
+          </button>
+        )}
+        
         {/* Open Conversation Button */}
         <button
           onClick={handleOpenConversation}
@@ -403,6 +443,16 @@ export function ConstellationCanvas({
           userId={userId || ''}
         />
       </div>
+      
+      {/* Collaborators Modal */}
+      {projectId && project && (
+        <ProjectCollaboratorsModal
+          projectId={projectId}
+          projectName={project.name || 'Untitled Project'}
+          isOpen={showCollaboratorsModal}
+          onClose={() => setShowCollaboratorsModal(false)}
+        />
+      )}
       
       {/* Spawn Widget Dialog */}
       <SpawnWidgetDialog

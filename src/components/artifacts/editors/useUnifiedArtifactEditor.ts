@@ -68,9 +68,12 @@ export function useUnifiedArtifactEditor({
   const updatedBy = effectiveEditSource === 'user' ? (userId || '') : (widgetId || '')
 
   // PHASE 3: Fetch artifact to get current version for optimistic concurrency control
+  // ✅ FIX: Only query when both artifactId and userId are valid non-empty strings
   const artifact = useQuery(
     api.artifactQueries.getArtifact,
-    artifactId ? { artifactId } : 'skip'
+    artifactId && userId && typeof userId === 'string' && userId.length > 0
+      ? { artifactId, userId }
+      : 'skip'
   )
 
   // Update local version when artifact changes (use query result as source of truth)

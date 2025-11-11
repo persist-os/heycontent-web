@@ -35,6 +35,11 @@ import { useAdminAuth } from '@/app/lib/admin-auth'
 import { ProgressiveWidgetView } from './ProgressiveWidgetView'
 import { T } from '@/components/translation/T'
 import { useIsMobile } from '@/app/dashboard/thinking_lab/layouts/ResponsiveLayout'
+import { ProjectCollaboratorsModal } from '@/components/projects/ProjectCollaboratorsModal'
+import { ProjectPresenceIndicator } from '@/components/projects/ProjectPresenceIndicator'
+import { Share2 } from 'lucide-react'
+import type { Id } from '@/convex/_generated/dataModel'
+import { getCurrentUserId } from '@/app/lib/api-helpers'
 
 export function UnifiedGalleryView({
   projectId,
@@ -46,6 +51,44 @@ export function UnifiedGalleryView({
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const { isAdmin } = useAdminAuth()
   const isMobile = useIsMobile()
+  
+  // Collaboration state
+  const [showCollaboratorsModal, setShowCollaboratorsModal] = useState(false)
+  
+  // Get user ID if not provided
+  const [currentUserId, setCurrentUserId] = useState<string | null>(userId || null)
+  useEffect(() => {
+    if (!userId) {
+      const fetchUserId = async () => {
+        try {
+          const id = await getCurrentUserId()
+          setCurrentUserId(id)
+        } catch (error) {
+          console.error('Failed to get user ID:', error)
+        }
+      }
+      fetchUserId()
+    }
+  }, [userId])
+  
+  // Get user permission for project
+  const userPermission = useQuery(
+    api.contentAccessHelpers.getUserContentPermission,
+    projectId && currentUserId ? {
+      userId: currentUserId,
+      contentType: 'project',
+      contentId: projectId,
+    } : 'skip'
+  )
+  
+  // Get project name for modal
+  const project = useQuery(
+    api.projectsQueries.getById,
+    projectId && currentUserId ? {
+      projectId: projectId as Id<'projects'>,
+      userId: currentUserId,
+    } : 'skip'
+  )
   
   // On mobile, sidebar should be closed by default
   useEffect(() => {
@@ -77,10 +120,13 @@ export function UnifiedGalleryView({
   const entityId = currentItem?._id || null
   const entityType = isArtifact ? 'artifact' : 'widget_output'
   
+  // Use currentUserId consistently (from prop or fetched)
+  const effectiveUserId = currentUserId || userId
+  
   // Query existing feedback for current item
   const existingFeedback = useQuery(
     api.feedback.getFeedbackByEntity,
-    entityId && userId ? {
+    entityId && effectiveUserId ? {
       entityType: entityType as any,
       entityId: entityId
     } : 'skip'
@@ -88,10 +134,10 @@ export function UnifiedGalleryView({
   
   // Get current user's rating (most recent feedback from this user)
   const currentRating = useMemo(() => {
-    if (!existingFeedback || !userId) return undefined
-    const userFeedback = existingFeedback.find((f: any) => f.userId === userId)
+    if (!existingFeedback || !effectiveUserId) return undefined
+    const userFeedback = existingFeedback.find((f: any) => f.userId === effectiveUserId)
     return userFeedback?.rating
-  }, [existingFeedback, userId])
+  }, [existingFeedback, effectiveUserId])
   
   // Feedback submission state
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false)
@@ -101,8 +147,8 @@ export function UnifiedGalleryView({
   
   // Handler for feedback submission (direct Convex call)
   const handleFeedbackSubmit = async (rating: number, feedbackText?: string) => {
-    if (!userId || !entityId || !projectId) {
-      console.warn('Missing required fields for feedback', { userId, entityId, projectId })
+    if (!effectiveUserId || !entityId || !projectId) {
+      console.warn('Missing required fields for feedback', { userId: effectiveUserId, entityId, projectId })
       return
     }
     
@@ -127,7 +173,7 @@ export function UnifiedGalleryView({
         entityType: entityType as any,
         entityId,
         rating,
-        userId,
+        userId: effectiveUserId,
         contentSnapshot,
         feedbackText: feedbackText || undefined,
         projectId,
@@ -151,7 +197,7 @@ export function UnifiedGalleryView({
   // Uses Convex reactive query - UI updates automatically when job status changes
   const jobs = useQuery(
     api.backgroundJobs.getUserJobs,
-    userId && widgetId ? { userId, jobType: 'widget_execution' as any, limit: 100 } : 'skip'
+    effectiveUserId && widgetId ? { userId: effectiveUserId, jobType: 'widget_execution' as any, limit: 100 } : 'skip'
   )
   const widgetJob = useMemo(() => 
     jobs?.find((j: any) => j.payload?.widget_id === widgetId),
@@ -164,8 +210,9 @@ export function UnifiedGalleryView({
   // Uses Convex index 'by_widget' for efficient querying (Pattern: Convex Direct Access)
   const outputs = useQuery(
     api.artifactQueries.getWidgetArtifacts,
-    widgetId ? {
-      widgetId: widgetId as any
+    widgetId && effectiveUserId ? {
+      widgetId: widgetId as any,
+      userId: effectiveUserId
     } : 'skip'
   )
   
@@ -250,7 +297,7 @@ export function UnifiedGalleryView({
           isMobile ? "p-4" : "p-6"
         )}>
           {/* Star Rating for Artifact */}
-          {userId && (
+          {effectiveUserId && (
             <div className="flex items-center justify-end">
               <StarRating
                 size="sm"
@@ -264,11 +311,11 @@ export function UnifiedGalleryView({
           
           <EditableArtifactRenderer 
             artifact={currentItem as any} 
-            userId={userId}
+            userId={effectiveUserId}
           />
         </div>
       )
-    } else if (!userId) {
+    } else if (!effectiveUserId) {
       return (
         <div className="text-center py-8 text-muted-foreground">
           <p>
@@ -282,7 +329,7 @@ export function UnifiedGalleryView({
         <ProgressiveWidgetView
           currentItem={currentItem}
           widgetId={widgetId}
-          userId={userId}
+          userId={effectiveUserId}
           projectId={projectId}
           widgetJob={widgetJob}
           a2aMessages={a2aMessages}
@@ -299,6 +346,16 @@ export function UnifiedGalleryView({
   return (
     <TooltipProvider>
       <div className="fixed inset-0 bg-background flex flex-col">
+        {/* Collaborators Modal */}
+        {projectId && project && (
+          <ProjectCollaboratorsModal
+            projectId={projectId as Id<'projects'>}
+            projectName={project.name || 'Untitled Project'}
+            isOpen={showCollaboratorsModal}
+            onClose={() => setShowCollaboratorsModal(false)}
+          />
+        )}
+        
         {/* Header with gradient theme */}
         <div className={cn(
           "border-b backdrop-blur-xl",
@@ -341,11 +398,40 @@ export function UnifiedGalleryView({
                 </span>
               </div>
               
-              {/* Right: Actions */}
+              {/* Right: Collaboration & Actions */}
               <div className={cn(
                 "flex items-center gap-2 sm:gap-3",
-                isMobile ? "w-full justify-between" : ""
+                isMobile ? "w-full justify-between flex-wrap" : ""
               )}>
+                {/* Collaboration Features - Show when in project context */}
+                {projectId && currentUserId && (
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    {/* Presence Indicator */}
+                    <ProjectPresenceIndicator
+                      projectId={projectId as Id<'projects'>}
+                      currentView={isArtifact ? 'artifact' : 'widget'}
+                      currentItemId={entityId || undefined}
+                    />
+                    
+                    {/* Share Button - Show if user has permission */}
+                    {(userPermission === 'owner' || userPermission === 'editor') && (
+                      <Button
+                        variant="default"
+                        size={isMobile ? "sm" : "sm"}
+                        onClick={() => setShowCollaboratorsModal(true)}
+                        className={cn(
+                          "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm flex items-center gap-2",
+                          isMobile ? "min-h-[44px] px-3" : "px-4"
+                        )}
+                        title="Share project with collaborators"
+                      >
+                        <Share2 className="h-4 w-4" />
+                        <span className={isMobile ? "hidden sm:inline" : ""}>Share</span>
+                      </Button>
+                    )}
+                  </div>
+                )}
+                
                 {/* Toggle Sidebar */}
                 <Button
                   variant="ghost"

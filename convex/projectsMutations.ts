@@ -59,14 +59,21 @@ export const updateProject = mutation({
     updates: projectUpdateValidator,
   },
   handler: async (ctx, { projectId, userId, updates }) => {
-    // Validate project ownership
+    // Validate project access (owner or editor)
     const project = await ctx.db.get(projectId);
     if (!project) {
       throw new Error("Project not found");
     }
     
-    if (project.userId !== userId) {
-      throw new Error("Access denied: You don't own this project");
+    // Check permission using helper
+    const permission = await ctx.runQuery(api.contentAccessHelpers.getUserContentPermission, {
+      userId,
+      contentType: "project",
+      contentId: projectId,
+    });
+    
+    if (!permission || (permission !== "owner" && permission !== "editor")) {
+      throw new Error("Access denied: You don't have permission to edit this project");
     }
     
     // Prepare update object
@@ -127,14 +134,21 @@ export const addContent = mutation({
     contentId: v.string(),
   },
   handler: async (ctx, { projectId, userId, contentType, contentId }) => {
-    // Validate project ownership
+    // Validate project access (owner or editor)
     const project = await ctx.db.get(projectId);
     if (!project) {
       throw new Error("Project not found");
     }
     
-    if (project.userId !== userId) {
-      throw new Error("Access denied: You don't own this project");
+    // Check permission using helper
+    const permission = await ctx.runQuery(api.contentAccessHelpers.getUserContentPermission, {
+      userId,
+      contentType: "project",
+      contentId: projectId,
+    });
+    
+    if (!permission || (permission !== "owner" && permission !== "editor")) {
+      throw new Error("Access denied: You don't have permission to edit this project");
     }
     
     // Map content type to field
@@ -181,14 +195,21 @@ export const removeContent = mutation({
     contentId: v.string(),
   },
   handler: async (ctx, { projectId, userId, contentType, contentId }) => {
-    // Validate project ownership
+    // Validate project access (owner or editor)
     const project = await ctx.db.get(projectId);
     if (!project) {
       throw new Error("Project not found");
     }
     
-    if (project.userId !== userId) {
-      throw new Error("Access denied: You don't own this project");
+    // Check permission using helper
+    const permission = await ctx.runQuery(api.contentAccessHelpers.getUserContentPermission, {
+      userId,
+      contentType: "project",
+      contentId: projectId,
+    });
+    
+    if (!permission || (permission !== "owner" && permission !== "editor")) {
+      throw new Error("Access denied: You don't have permission to edit this project");
     }
     
     // Map content type to field
@@ -335,6 +356,178 @@ export const unlinkFingerprint = mutation({
     });
     
     return { success: true, projectId };
+  },
+});
+
+// ============================================================================
+// COLLABORATOR MANAGEMENT
+// ============================================================================
+
+/**
+ * Add a collaborator to a project
+ * Used by: Project sharing UI
+ * Pattern: Copy from noteSharing.ts:shareNote
+ */
+export const addProjectCollaborator = mutation({
+  args: {
+    projectId: v.id("projects"),
+    invitedByUserId: v.string(),
+    invitedEmail: v.string(),
+    role: v.union(v.literal("owner"), v.literal("editor"), v.literal("viewer")),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+    collaborator: v.optional(v.object({
+      userId: v.string(),
+      name: v.string(),
+      email: v.string(),
+    })),
+  }),
+  handler: async (ctx, args) => {
+    // Get the project to verify ownership or edit permission
+    const project = await ctx.db.get(args.projectId);
+    if (!project) {
+      return {
+        success: false,
+        message: "Project not found",
+      };
+    }
+
+    // Check if the inviter has permission to add collaborators
+    const isOwner = project.userId === args.invitedByUserId;
+    const isEditor = project.collaborators?.some(
+      c => c.userId === args.invitedByUserId && c.role === "editor"
+    );
+    
+    if (!isOwner && !isEditor) {
+      return {
+        success: false,
+        message: "You don't have permission to add collaborators",
+      };
+    }
+
+    // Find the user to invite by email
+    const targetUser = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.invitedEmail))
+      .unique();
+
+    if (!targetUser) {
+      return {
+        success: false,
+        message: "User not found with that email address",
+      };
+    }
+
+    // Don't allow inviting yourself
+    if (targetUser.userId === args.invitedByUserId) {
+      return {
+        success: false,
+        message: "You cannot invite yourself as a collaborator",
+      };
+    }
+
+    // Check if already a collaborator
+    const existingCollaborator = project.collaborators?.find(
+      c => c.userId === targetUser.userId
+    );
+
+    if (existingCollaborator) {
+      // Update existing collaborator role
+      const updatedCollaborators = project.collaborators!.map(c =>
+        c.userId === targetUser.userId 
+          ? { ...c, role: args.role, addedAt: Date.now(), addedBy: args.invitedByUserId }
+          : c
+      );
+      
+      await ctx.db.patch(args.projectId, {
+        collaborators: updatedCollaborators,
+        updatedAt: Date.now(),
+      });
+      
+      return {
+        success: true,
+        message: `Updated ${targetUser.name}'s role to ${args.role}`,
+        collaborator: {
+          userId: targetUser.userId,
+          name: targetUser.name,
+          email: targetUser.email,
+        },
+      };
+    }
+
+    // Add new collaborator (Pattern 13: Atomic update with updatedAt)
+    const newCollaborator = {
+      userId: targetUser.userId,
+      role: args.role,
+      addedAt: Date.now(),
+      addedBy: args.invitedByUserId,
+    };
+    
+    await ctx.db.patch(args.projectId, {
+      collaborators: [...(project.collaborators || []), newCollaborator],
+      updatedAt: Date.now(),
+    });
+    
+    return {
+      success: true,
+      message: `Added ${targetUser.name} as ${args.role}`,
+      collaborator: {
+        userId: targetUser.userId,
+        name: targetUser.name,
+        email: targetUser.email,
+      },
+    };
+  },
+});
+
+/**
+ * Remove a collaborator from a project
+ * Used by: Project sharing UI
+ * Pattern: Only owner can remove
+ */
+export const removeProjectCollaborator = mutation({
+  args: {
+    projectId: v.id("projects"),
+    removedByUserId: v.string(),
+    collaboratorUserId: v.string(),
+  },
+  returns: v.object({ 
+    success: v.boolean(), 
+    message: v.string() 
+  }),
+  handler: async (ctx, args) => {
+    const project = await ctx.db.get(args.projectId);
+    if (!project) {
+      return { 
+        success: false, 
+        message: "Project not found" 
+      };
+    }
+    
+    // Only owner can remove collaborators
+    if (project.userId !== args.removedByUserId) {
+      return { 
+        success: false, 
+        message: "Only project owner can remove collaborators" 
+      };
+    }
+    
+    // Filter out the collaborator (Pattern 13: Atomic update with updatedAt)
+    const updatedCollaborators = (project.collaborators || []).filter(
+      c => c.userId !== args.collaboratorUserId
+    );
+    
+    await ctx.db.patch(args.projectId, {
+      collaborators: updatedCollaborators,
+      updatedAt: Date.now(),
+    });
+    
+    return { 
+      success: true, 
+      message: "Collaborator removed" 
+    };
   },
 });
 

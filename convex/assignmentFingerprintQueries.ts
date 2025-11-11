@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
+import { api } from "./_generated/api";
 
 /**
  * Assignment Fingerprint Queries
@@ -12,7 +13,7 @@ import { query } from "./_generated/server";
  * Get assignment fingerprint by project ID
  * Used by: Backend fingerprint updater agent
  * 
- * ✅ SECURITY: Requires userId to prevent unauthorized access
+ * ✅ SECURITY: Requires userId and checks project collaborator access
  */
 export const getByProject = query({
   args: {
@@ -20,10 +21,27 @@ export const getByProject = query({
     userId: v.string(),
   },
   handler: async (ctx, { projectId, userId }) => {
+    // ✅ FIX BLOCKER 3: Check project permission (owner or collaborator)
+    const permission = await ctx.runQuery(api.contentAccessHelpers.getUserContentPermission, {
+      userId,
+      contentType: "project",
+      contentId: projectId,
+    });
+    
+    if (!permission) {
+      throw new Error("Access denied: You don't have permission to view this project");
+    }
+    
+    // Get fingerprint - check by project owner's userId (fingerprints are owned by project creator)
+    const project = await ctx.db.get(projectId);
+    if (!project) {
+      throw new Error("Project not found");
+    }
+    
     const fingerprint = await ctx.db
       .query("assignment_fingerprints")
       .withIndex("by_project_user", (q) => 
-        q.eq("projectId", projectId).eq("userId", userId)
+        q.eq("projectId", projectId).eq("userId", project.userId)
       )
       .first();
     
@@ -35,7 +53,7 @@ export const getByProject = query({
  * Query insights by category, time, confidence
  * For decision engine and rich analysis
  * 
- * ✅ SECURITY: Requires userId for ownership validation
+ * ✅ SECURITY: Requires userId and checks project collaborator access
  */
 export const queryInsights = query({
   args: {
@@ -47,10 +65,27 @@ export const queryInsights = query({
     limit: v.optional(v.number()),          // Max results
   },
   handler: async (ctx, args) => {
+    // ✅ FIX BLOCKER 3: Check project permission (owner or collaborator)
+    const permission = await ctx.runQuery(api.contentAccessHelpers.getUserContentPermission, {
+      userId: args.userId,
+      contentType: "project",
+      contentId: args.projectId,
+    });
+    
+    if (!permission) {
+      throw new Error("Access denied: You don't have permission to view this project");
+    }
+    
+    // Get fingerprint - check by project owner's userId
+    const project = await ctx.db.get(args.projectId);
+    if (!project) {
+      throw new Error("Project not found");
+    }
+    
     const fingerprint = await ctx.db
       .query("assignment_fingerprints")
       .withIndex("by_project_user", (q) => 
-        q.eq("projectId", args.projectId).eq("userId", args.userId)
+        q.eq("projectId", args.projectId).eq("userId", project.userId)
       )
       .first();
     
@@ -85,7 +120,7 @@ export const queryInsights = query({
  * Get current preferences - FAST query for A2A coordination
  * Optimized for <10ms response time (denormalized data)
  * 
- * ✅ SECURITY: Requires userId for ownership validation
+ * ✅ SECURITY: Requires userId and checks project collaborator access
  */
 export const getCurrentPreferences = query({
   args: {
@@ -93,10 +128,27 @@ export const getCurrentPreferences = query({
     userId: v.string(),
   },
   handler: async (ctx, { projectId, userId }) => {
+    // ✅ FIX BLOCKER 3: Check project permission (owner or collaborator)
+    const permission = await ctx.runQuery(api.contentAccessHelpers.getUserContentPermission, {
+      userId,
+      contentType: "project",
+      contentId: projectId,
+    });
+    
+    if (!permission) {
+      throw new Error("Access denied: You don't have permission to view this project");
+    }
+    
+    // Get fingerprint - check by project owner's userId
+    const project = await ctx.db.get(projectId);
+    if (!project) {
+      throw new Error("Project not found");
+    }
+    
     const fingerprint = await ctx.db
       .query("assignment_fingerprints")
       .withIndex("by_project_user", (q) => 
-        q.eq("projectId", projectId).eq("userId", userId)
+        q.eq("projectId", projectId).eq("userId", project.userId)
       )
       .first();
     
