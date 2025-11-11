@@ -15,6 +15,7 @@ interface InsightCardProps {
   maxFontSize?: number;
   minFontSize?: number;
   responsive?: boolean;
+  titleSize?: string; // Custom title size class override
 }
 
 /**
@@ -37,7 +38,8 @@ export const InsightCard: React.FC<InsightCardProps> = ({
   variant = 'default',
   maxFontSize,
   minFontSize,
-  responsive = true
+  responsive = true,
+  titleSize
 }) => {
   const isClickable = !!onClick;
   const height = variant === 'compact' ? 'h-48' : 'h-64 sm:h-72 lg:h-80';
@@ -69,7 +71,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
         {/* Title */}
         <h3 className={cn(
           'font-medium text-foreground group-hover:text-primary leading-tight transition-colors duration-300 line-clamp-2 flex-shrink-0',
-          variant === 'compact' ? 'text-lg mb-3' : 'text-lg sm:text-xl lg:text-2xl mb-4'
+          titleSize || (variant === 'compact' ? 'text-lg mb-3' : 'text-lg sm:text-xl lg:text-2xl mb-4')
         )}>
           <T context="insight.title">{title}</T>
         </h3>
