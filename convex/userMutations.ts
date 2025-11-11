@@ -209,6 +209,9 @@ export const updateUserStripeData = mutation({
     updates: v.object({
       stripeCustomerId: v.optional(v.string()),
       stripeSubscriptionId: v.optional(v.string()),
+      email: v.optional(v.string()),
+      name: v.optional(v.string()),
+      default_payment_method: v.optional(v.string()),
       // Add more Stripe/user fields here as needed
     })
   },
