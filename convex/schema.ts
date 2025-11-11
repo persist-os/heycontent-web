@@ -114,7 +114,7 @@ import { contextUsageSchemaFields } from "./types/contextUsage";
 import { toolCallSchemaFields } from "./types/toolCall";
 
 // Gmail
-import { gmailTokenSchemaFields } from "./types/gmail";
+import { gmailTokenSchemaFields, gmailAccountSchemaFields } from "./types/gmail";
 
 export default defineSchema({
   // User Info
@@ -720,5 +720,10 @@ export default defineSchema({
 
   // Gmail Tokens - OAuth tokens for Gmail integration
   gmailTokens: defineTable(gmailTokenSchemaFields)
+    .index("by_userId", ["userId"]),
+
+  // Gmail Accounts - Profile data for Gmail accounts
+  gmailAccounts: defineTable(gmailAccountSchemaFields)
+    .index("by_email", ["email"])
     .index("by_userId", ["userId"]),
 });

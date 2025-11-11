@@ -28,8 +28,10 @@ export function useGmailAuth() {
   /**
    * Initiate Gmail OAuth flow
    * Opens Google OAuth consent screen in new window
+   * 
+   * @param returnUrl Optional URL to redirect to after successful OAuth (defaults to current page)
    */
-  const connectGmail = async (): Promise<void> => {
+  const connectGmail = async (returnUrl?: string): Promise<void> => {
     if (!userId) {
       throw new Error('User must be authenticated to connect Gmail')
     }
@@ -37,8 +39,17 @@ export function useGmailAuth() {
     setIsConnecting(true)
     
     try {
+      // Use provided returnUrl or current page URL
+      const redirectUrl = returnUrl || (typeof window !== 'undefined' ? window.location.href : null)
+      
+      // Build auth URL with return_url query param
+      const authApiUrl = new URL('/api/platforms/gmail/auth', window.location.origin)
+      if (redirectUrl) {
+        authApiUrl.searchParams.set('return_url', redirectUrl)
+      }
+      
       // Get auth URL from backend
-      const response = await fetchWithApiKey('/api/platforms/gmail/auth', {
+      const response = await fetchWithApiKey(authApiUrl.toString(), {
         method: 'GET'
       })
       

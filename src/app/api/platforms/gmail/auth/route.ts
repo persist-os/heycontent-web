@@ -21,8 +21,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Extract return_url from query params (current page URL)
+    const { searchParams } = new URL(request.url)
+    const returnUrl = searchParams.get('return_url') || null
+
+    // Build backend URL with return_url if provided
+    const backendUrl = new URL(`${BACKEND_URL}/gmail/auth`)
+    if (returnUrl) {
+      backendUrl.searchParams.set('return_url', returnUrl)
+    }
+
     // Forward to backend Gmail auth endpoint
-    const backendResponse = await fetch(`${BACKEND_URL}/gmail/auth`, {
+    const backendResponse = await fetch(backendUrl.toString(), {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${apiKey}`,

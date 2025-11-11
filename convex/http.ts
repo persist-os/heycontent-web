@@ -744,6 +744,47 @@ app.get("/api/users/:userId/gmail/tokens", async (c) => {
   }
 });
 
+// POST /api/users/:userId/gmail/account - Save or update Gmail profile data
+app.post("/api/users/:userId/gmail/account", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("userId");
+
+  if (!userId) {
+    return c.json({ success: false, error: "Missing userId in path" }, 400);
+  }
+
+  try {
+    const { email, messagesTotal, threadsTotal, historyId, labelsTotal } = await c.req.json();
+
+    if (!email) {
+      return c.json({ 
+        success: false, 
+        error: "Missing required field: email" 
+      }, 400);
+    }
+
+    const result = await ctx.runMutation(api.gmailMutations.saveProfileData, {
+      userId,
+      email,
+      profileData: {
+        messagesTotal: messagesTotal !== undefined ? messagesTotal : undefined,
+        threadsTotal: threadsTotal !== undefined ? threadsTotal : undefined,
+        historyId: historyId !== undefined ? historyId : undefined,
+        labelsTotal: labelsTotal !== undefined ? labelsTotal : undefined,
+      },
+    });
+
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Failed to save Gmail profile:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to save Gmail profile",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
 // Batch fetch multiple notes (for context enrichment)
 app.post("/api/notes/getMultiple", async (c) => {
   const ctx = c.env;

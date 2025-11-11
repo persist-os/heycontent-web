@@ -29,3 +29,36 @@ export const getGmailTokenArgsValidator = v.object({
   userId: v.string(),
 });
 
+// Gmail Account Schema Fields (for profile data)
+export const gmailAccountSchemaFields = {
+  userId: v.string(),
+  email: v.string(),
+  messagesTotal: v.optional(v.number()),
+  threadsTotal: v.optional(v.number()),
+  historyId: v.optional(v.string()),
+  labelsTotal: v.optional(v.number()),
+  data: v.optional(v.object({
+    messagesTotal: v.optional(v.number()),
+    threadsTotal: v.optional(v.number()),
+    historyId: v.optional(v.string()),
+    labelsTotal: v.optional(v.number()),
+  })),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+};
+
+// Gmail Account Validator
+export const gmailAccountValidator = v.object(gmailAccountSchemaFields);
+
+// Validator for storing Gmail profile (used in mutations)
+export const storeGmailProfileArgsValidator = v.object({
+  userId: v.string(),
+  email: v.string(),
+  profileData: v.object({
+    messagesTotal: v.optional(v.number()),
+    threadsTotal: v.optional(v.number()),
+    historyId: v.optional(v.string()),
+    labelsTotal: v.optional(v.number()),
+  }),
+});
+
