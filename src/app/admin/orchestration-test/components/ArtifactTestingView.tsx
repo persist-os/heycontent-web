@@ -18,9 +18,10 @@ export function ArtifactTestingView({ testProjectId, currentUserId, onRunArtifac
   // ✅ Auto-query artifacts for the current project
   const artifacts = useQuery(
     api.artifactQueries.getProjectArtifacts,
-    testProjectId
+    testProjectId && currentUserId
       ? {
           projectId: testProjectId as Id<"projects">,
+          userId: currentUserId
         }
       : 'skip'
   );

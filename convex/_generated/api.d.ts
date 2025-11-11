@@ -95,6 +95,7 @@ import type * as platformRouter from "../platformRouter.js";
 import type * as presence from "../presence.js";
 import type * as priceConfig from "../priceConfig.js";
 import type * as projectContentQueries from "../projectContentQueries.js";
+import type * as projectPresence from "../projectPresence.js";
 import type * as projectWidgetsMutations from "../projectWidgetsMutations.js";
 import type * as projectWidgetsQueries from "../projectWidgetsQueries.js";
 import type * as projectsMutations from "../projectsMutations.js";
@@ -283,6 +284,7 @@ declare const fullApi: ApiFromModules<{
   presence: typeof presence;
   priceConfig: typeof priceConfig;
   projectContentQueries: typeof projectContentQueries;
+  projectPresence: typeof projectPresence;
   projectWidgetsMutations: typeof projectWidgetsMutations;
   projectWidgetsQueries: typeof projectWidgetsQueries;
   projectsMutations: typeof projectsMutations;

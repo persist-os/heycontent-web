@@ -1,10 +1,10 @@
 'use client'
 
 import React, { useMemo, useState } from 'react'
-import { Pencil, Plus, Trash, Pause, Image, Sparkles, MoreVertical, MessageSquare } from 'lucide-react'
+import { Pencil, Plus, Trash, Pause, Image, Sparkles, MoreVertical, MessageSquare, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Badge, type BadgeProps } from '@/components/ui/badge'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useMutation, useQuery } from 'convex/react'
@@ -43,11 +43,46 @@ interface AssignmentItemProps {
  * - Tags and metadata (artifacts/widgets counts)
  * - Progress bar
  * - Action buttons (Open Gallery, Open Conversation, etc.)
+ * - ✅ Permission indicators (badge, border style, lock icon)
  */
 export function AssignmentItem({ project, userId }: AssignmentItemProps) {
   const router = useRouter()
   const [isPausing, setIsPausing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  
+  // ✅ FIX BLOCKER 1: Get user permission for visual distinction
+  const userPermission = useQuery(
+    api.contentAccessHelpers.getUserContentPermission,
+    userId && project?._id ? {
+      userId,
+      contentType: 'project',
+      contentId: project._id,
+    } : 'skip'
+  ) as 'owner' | 'edit' | 'read' | null
+  
+  // ✅ FIX BLOCKER 1: Determine visual styling based on permission
+  const isOwner = userPermission === 'owner'
+  const isEditor = userPermission === 'edit'
+  const isViewer = userPermission === 'read'
+  const canDelete = isOwner // Only owner can delete
+  
+  // Border styling: Owner (solid), Editor (dashed), Viewer (dotted)
+  const borderStyle = isOwner ? 'border-solid' : isEditor ? 'border-dashed' : isViewer ? 'border-dotted' : 'border-solid'
+  
+  // Badge styling
+  const getBadgeVariant = (): BadgeProps['variant'] => {
+    if (isOwner) return 'default' // Primary color
+    if (isEditor) return 'success' // Green
+    if (isViewer) return 'outline' // Gray
+    return 'outline'
+  }
+  
+  const getBadgeText = () => {
+    if (isOwner) return 'Owner'
+    if (isEditor) return 'Can Edit'
+    if (isViewer) return 'Can View'
+    return ''
+  }
   
   // Translation for title attributes
   const { text: viewGalleryTitle } = useTranslation('View Gallery', {
@@ -67,7 +102,10 @@ export function AssignmentItem({ project, userId }: AssignmentItemProps) {
   // Get project artifacts and widgets for metadata display
   const artifacts = useQuery(
     api.artifactQueries.getProjectArtifacts,
-    project?._id ? { projectId: project._id as any } : 'skip'
+    project?._id && userId ? { 
+      projectId: project._id as any,
+      userId
+    } : 'skip'
   )
   
   const widgets = useQuery(
@@ -149,7 +187,8 @@ export function AssignmentItem({ project, userId }: AssignmentItemProps) {
       className={cn(
         "group bg-card/50 backdrop-blur-sm border border-border/40 hover:border-border/60",
         "hover:bg-card/70 hover:shadow-lg transition-all duration-300 cursor-pointer",
-        "min-h-[320px] flex flex-col overflow-hidden"
+        "min-h-[320px] flex flex-col overflow-hidden",
+        borderStyle // ✅ FIX BLOCKER 1: Apply border style based on permission
       )}
       onClick={() => router.push(`/dashboard/living-projects/${project._id}`)}
     >
@@ -157,13 +196,27 @@ export function AssignmentItem({ project, userId }: AssignmentItemProps) {
       
       {/* Header: Title + Timestamp */}
         <div className="flex items-start justify-between gap-3">
-          <h3 className="text-lg font-semibold text-foreground leading-tight group-hover:text-primary transition-colors line-clamp-2 flex-1">
-          {project.name || <T context="dashboard.home.assignments.item.untitled">Untitled Assignment</T>}
-        </h3>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-lg font-semibold text-foreground leading-tight group-hover:text-primary transition-colors line-clamp-2 flex-1 min-w-0">
+                {project.name || <T context="dashboard.home.assignments.item.untitled">Untitled Assignment</T>}
+              </h3>
+              {/* ✅ FIX BLOCKER 1: Permission badge */}
+              {userPermission && (
+                <Badge variant={getBadgeVariant()} className="text-xs flex-shrink-0">
+                  {getBadgeText()}
+                </Badge>
+              )}
+              {/* ✅ FIX BLOCKER 1: Lock icon for view-only */}
+              {isViewer && (
+                <Lock className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+              )}
+            </div>
+          </div>
           <span className="text-xs text-muted-foreground flex-shrink-0 whitespace-nowrap">
-          {relativeTime}
-        </span>
-      </div>
+            {relativeTime}
+          </span>
+        </div>
       
         {/* Metadata Badges - Compact */}
         <div className="flex flex-wrap gap-1.5">
@@ -319,6 +372,7 @@ export function AssignmentItem({ project, userId }: AssignmentItemProps) {
                   <DropdownMenuItem
                     onSelect={(e) => e.preventDefault()}
                     className="text-destructive focus:text-destructive"
+                    disabled={!canDelete} // ✅ FIX BLOCKER 1: Disable delete for non-owners
             >
                     <Trash className="w-4 h-4 mr-2" />
               Delete
@@ -328,17 +382,22 @@ export function AssignmentItem({ project, userId }: AssignmentItemProps) {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete "{project.name}"?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will permanently delete this project and all its content. This action cannot be undone.
+                {canDelete 
+                  ? "This will permanently delete this project and all its content. This action cannot be undone."
+                  : "Only the project owner can delete this project." // ✅ FIX BLOCKER 1: Show message for non-owners
+                }
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={handleDelete}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Delete Project
-              </AlertDialogAction>
+              {canDelete && (
+                <AlertDialogAction 
+                  onClick={handleDelete}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Delete Project
+                </AlertDialogAction>
+              )}
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

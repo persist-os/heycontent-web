@@ -17,7 +17,15 @@ async function getProjectByIdHandler(
 ) {
   const project = await ctx.db.get(projectId);
   
-  if (!project || project.userId !== userId) {
+  if (!project) return null;
+  
+  // Check if user owns the project or is a collaborator
+  const isOwner = project.userId === userId;
+  const isCollaborator = project.collaborators?.some(
+    c => c.userId === userId
+  );
+  
+  if (!isOwner && !isCollaborator) {
     return null;
   }
 
@@ -54,6 +62,84 @@ async function getProjectByIdHandler(
     updatedAt: project.updatedAt,
   };
 }
+
+/**
+ * Get project collaborators with user details
+ * Used by: Project sharing UI
+ */
+export const getProjectCollaborators = query({
+  args: {
+    projectId: v.id("projects"),
+    requestingUserId: v.string(),
+  },
+  returns: v.array(v.object({
+    userId: v.string(),
+    name: v.string(),
+    email: v.string(),
+    role: v.union(v.literal("owner"), v.literal("editor"), v.literal("viewer")),
+    addedAt: v.number(),
+    addedBy: v.string(),
+  })),
+  handler: async (ctx, args) => {
+    const project = await ctx.db.get(args.projectId);
+    if (!project) {
+      return [];
+    }
+
+    // Verify the requesting user has access to this project
+    const hasAccess = project.userId === args.requestingUserId ||
+      project.collaborators?.some(c => c.userId === args.requestingUserId);
+    
+    if (!hasAccess) {
+      return [];
+    }
+
+    // Get owner details
+    const owner = await ctx.db
+      .query("users")
+      .withIndex("by_userId", (q) => q.eq("userId", project.userId))
+      .unique();
+
+    const collaborators = [];
+    
+    // Add owner as first collaborator
+    if (owner) {
+      collaborators.push({
+        userId: project.userId,
+        name: owner.name || "Unknown User",
+        email: owner.email || "Unknown Email",
+        role: "owner" as const,
+        addedAt: project.createdAt,
+        addedBy: project.userId,
+      });
+    }
+
+    // Get collaborator details
+    if (project.collaborators && project.collaborators.length > 0) {
+      const collaboratorDetails = await Promise.all(
+        project.collaborators.map(async (collab) => {
+          const user = await ctx.db
+            .query("users")
+            .withIndex("by_userId", (q) => q.eq("userId", collab.userId))
+            .unique();
+          
+          return {
+            userId: collab.userId,
+            name: user?.name || "Unknown User",
+            email: user?.email || "Unknown Email",
+            role: collab.role,
+            addedAt: collab.addedAt,
+            addedBy: collab.addedBy,
+          };
+        })
+      );
+
+      collaborators.push(...collaboratorDetails);
+    }
+
+    return collaborators;
+  },
+});
 
 /**
  * Retrieve project by ID with ownership validation
@@ -222,14 +308,44 @@ export const getByUser = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, { userId, limit = 50 }) => {
-    const projects = await ctx.db
+    // Get projects where user is owner (efficient with index)
+    const ownedProjects = await ctx.db
       .query("projects")
       .withIndex("by_user", (q) => q.eq("userId", userId))
-      .order("desc") // Most recent first
-      .take(Math.min(limit, 100)); // Cap at 100 for performance
+      .order("desc")
+      .collect();
+    
+    // Get projects where user is a collaborator
+    // Note: We need to scan projects since there's no index on collaborators array
+    // This is acceptable since collaborator projects are typically fewer
+    const allProjects = await ctx.db
+      .query("projects")
+      .collect();
+    
+    const collaboratedProjects = allProjects.filter(project => 
+      project.collaborators?.some(c => c.userId === userId)
+    );
+    
+    // Combine and deduplicate (user might be both owner and collaborator)
+    const projectMap = new Map();
+    
+    // Add owned projects
+    ownedProjects.forEach(project => {
+      projectMap.set(project._id, project);
+    });
+    
+    // Add collaborated projects
+    collaboratedProjects.forEach(project => {
+      projectMap.set(project._id, project);
+    });
+    
+    // Convert to array, sort by updatedAt desc, and limit
+    const allUserProjects = Array.from(projectMap.values())
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, Math.min(limit, 100));
 
     // Return optimized list with summary data
-    return projects.map(project => ({
+    return allUserProjects.map(project => ({
       _id: project._id,
       userId: project.userId,
       name: project.name,
@@ -267,6 +383,7 @@ export const getByUser = query({
  * Get ALL projects for a user without limits - for deletion operations
  * 
  * This query fetches all projects for a user without any limits.
+ * Includes both owned projects and projects where user is a collaborator.
  * Used specifically for deletion operations where we need to delete everything.
  * 
  * @param userId - User ID to fetch projects for
@@ -277,12 +394,27 @@ export const getAllByUser = query({
     userId: v.string(),
   },
   handler: async (ctx, { userId }) => {
-    const projects = await ctx.db
+    // Get projects where user is owner (efficient with index)
+    const ownedProjects = await ctx.db
       .query("projects")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
     
-    return projects;
+    // Get projects where user is a collaborator
+    const allProjects = await ctx.db
+      .query("projects")
+      .collect();
+    
+    const collaboratedProjects = allProjects.filter(project => 
+      project.collaborators?.some(c => c.userId === userId)
+    );
+    
+    // Combine and deduplicate
+    const projectMap = new Map();
+    ownedProjects.forEach(project => projectMap.set(project._id, project));
+    collaboratedProjects.forEach(project => projectMap.set(project._id, project));
+    
+    return Array.from(projectMap.values());
   },
 });
 
@@ -357,6 +489,7 @@ export const getWithContentType = query({
  * 
  * Returns only projects with linked intelligence fingerprints,
  * useful for analytics and intelligence dashboards.
+ * Includes both owned projects and projects where user is a collaborator.
  * 
  * @param userId - User ID to retrieve projects for
  * @param limit - Maximum number of projects to return (capped at 50)
@@ -368,14 +501,33 @@ export const getWithFingerprints = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, { userId, limit = 20 }) => {
-    const projects = await ctx.db
+    // Get projects where user is owner (efficient with index)
+    const ownedProjects = await ctx.db
       .query("projects")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .filter((q) => q.neq(q.field("fingerprintId"), undefined))
-      .order("desc")
-      .take(Math.min(limit, 50));
+      .collect();
+    
+    // Get projects where user is a collaborator
+    const allProjects = await ctx.db
+      .query("projects")
+      .collect();
+    
+    const collaboratedProjects = allProjects.filter(project => 
+      project.collaborators?.some(c => c.userId === userId) &&
+      project.fingerprintId !== undefined
+    );
+    
+    // Combine and deduplicate
+    const projectMap = new Map();
+    ownedProjects.forEach(project => projectMap.set(project._id, project));
+    collaboratedProjects.forEach(project => projectMap.set(project._id, project));
+    
+    const allUserProjects = Array.from(projectMap.values())
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, Math.min(limit, 50));
 
-    return projects.map(project => ({
+    return allUserProjects.map(project => ({
       _id: project._id,
       name: project.name,
       description: project.description,
@@ -396,11 +548,12 @@ export const getWithFingerprints = query({
 /**
  * Check project existence and access permissions
  * 
- * Validates whether a project exists and optionally checks user ownership.
- * Lightweight query for authorization without fetching full project data.
+ * Validates whether a project exists and optionally checks user access
+ * (ownership or collaborator status). Lightweight query for authorization 
+ * without fetching full project data.
  * 
  * @param projectId - Project ID to check
- * @param userId - Optional user ID for ownership validation
+ * @param userId - Optional user ID for access validation
  * @returns Existence status, access status, and project name if accessible
  */
 export const exists = query({
@@ -413,9 +566,15 @@ export const exists = query({
     
     if (!project) return { exists: false };
     
-    // Check ownership if userId provided
-    if (userId && project.userId !== userId) {
-      return { exists: true, hasAccess: false };
+    // Check access if userId provided (owner or collaborator)
+    if (userId) {
+      const isOwner = project.userId === userId;
+      const isCollaborator = project.collaborators?.some(c => c.userId === userId);
+      const hasAccess = isOwner || isCollaborator;
+      
+      if (!hasAccess) {
+        return { exists: true, hasAccess: false };
+      }
     }
     
     return { 
@@ -431,6 +590,7 @@ export const exists = query({
  * 
  * Returns minimal project data sorted by last update time,
  * optimized for quick access menus and project switchers.
+ * Includes both owned projects and projects where user is a collaborator.
  * 
  * @param userId - User ID to retrieve projects for
  * @param limit - Maximum number of projects to return (capped at 20)
@@ -442,14 +602,32 @@ export const getRecent = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, { userId, limit = 10 }) => {
-    const projects = await ctx.db
+    // Get projects where user is owner (efficient with index)
+    const ownedProjects = await ctx.db
       .query("projects")
       .withIndex("by_user", (q) => q.eq("userId", userId))
-      .order("desc") // Most recent by updatedAt
-      .take(Math.min(limit, 20));
+      .collect();
+    
+    // Get projects where user is a collaborator
+    const allProjects = await ctx.db
+      .query("projects")
+      .collect();
+    
+    const collaboratedProjects = allProjects.filter(project => 
+      project.collaborators?.some(c => c.userId === userId)
+    );
+    
+    // Combine and deduplicate
+    const projectMap = new Map();
+    ownedProjects.forEach(project => projectMap.set(project._id, project));
+    collaboratedProjects.forEach(project => projectMap.set(project._id, project));
+    
+    const allUserProjects = Array.from(projectMap.values())
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, Math.min(limit, 20));
 
     // Minimal data for quick access
-    return projects.map(project => ({
+    return allUserProjects.map(project => ({
       _id: project._id,
       name: project.name,
       description: project.description,

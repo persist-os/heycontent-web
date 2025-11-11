@@ -28,6 +28,8 @@ import { useIsMobile } from '../layouts/ResponsiveLayout'
 import { MobileBottomNav } from '@/components/ui/MobileBottomNav'
 import { ChatMobileView } from '../components/mobile/ChatMobileView'
 import { PanelMobileView } from '../components/mobile/PanelMobileView'
+import { ProjectCollaboratorsModal } from '@/components/projects/ProjectCollaboratorsModal'
+import type { Id } from '@/convex/_generated/dataModel'
 
 // =============================================================================
 // PANEL COMPONENTS
@@ -104,6 +106,9 @@ function FullThinkingLabInternal({
   // Mobile tab state
   const [mobileTab, setMobileTab] = useState<'chat' | 'panel'>('chat')
   
+  // Collaboration state
+  const [showCollaboratorsModal, setShowCollaboratorsModal] = useState(false)
+  
   // Right panel mode (notepad, artifacts, or widgets)
   // Initialize from localStorage or default to 'notepad'
   const [rightPanelMode, setRightPanelMode] = useState<'notepad' | 'artifacts' | 'widgets'>(() => {
@@ -125,6 +130,31 @@ function FullThinkingLabInternal({
   
   // Use the notepad context
   const notepadContext = useNotepadContext()
+  
+  // Get user permission for project (if projectId exists)
+  const userPermission = useQuery(
+    api.contentAccessHelpers.getUserContentPermission,
+    projectId && userId ? {
+      userId,
+      contentType: 'project',
+      contentId: projectId,
+    } : 'skip'
+  )
+  
+  // Get project name for modal
+  const project = useQuery(
+    api.projectsQueries.getById,
+    projectId && userId ? {
+      projectId: projectId as Id<'projects'>,
+      userId,
+    } : 'skip'
+  )
+  
+  // Determine current view for presence
+  const currentView = rightPanelMode === 'notepad' ? 'notepad' 
+    : rightPanelMode === 'artifacts' ? 'artifacts'
+    : rightPanelMode === 'widgets' ? 'widgets'
+    : 'chat'
   
   // Use the conversation state hook with notepad context getter
   const {
@@ -277,8 +307,25 @@ function FullThinkingLabInternal({
   // Desktop layout (existing resizable panes)
   return (
     <div className={`h-screen flex flex-col bg-background overflow-hidden ${className || ''}`}>
-      {/* Context Indicator */}
-      <ContextIndicator />
+      {/* Context Indicator with Collaboration Features */}
+      <ContextIndicator
+        projectId={projectId}
+        userId={userId}
+        userPermission={userPermission as 'owner' | 'editor' | 'read' | null}
+        currentView={currentView}
+        conversationId={conversationId}
+        onShareClick={() => setShowCollaboratorsModal(true)}
+      />
+      
+      {/* Collaborators Modal */}
+      {projectId && project && (
+        <ProjectCollaboratorsModal
+          projectId={projectId as Id<'projects'>}
+          projectName={project.name || 'Untitled Project'}
+          isOpen={showCollaboratorsModal}
+          onClose={() => setShowCollaboratorsModal(false)}
+        />
+      )}
 
       {/* Floating Action Buttons - Desktop only */}
       {!isMobile && (

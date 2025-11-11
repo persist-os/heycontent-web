@@ -1,5 +1,6 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
+import { api } from "./_generated/api";
 
 export const getHistory = query({
   args: {
@@ -37,8 +38,19 @@ export const getConversation = query({
 
     const conversation = doc as any; // Type assertion after validation
 
-    // Verify ownership
-    if (conversation.userId !== args.userId) {
+    // ✅ FIX BLOCKER 3: Check ownership or project collaborator access
+    const isOwner = conversation.userId === args.userId;
+    if (!isOwner && conversation.projectId) {
+      // Check if user is a collaborator on the project
+      const permission = await ctx.runQuery(api.contentAccessHelpers.getUserContentPermission, {
+        userId: args.userId,
+        contentType: "project",
+        contentId: conversation.projectId,
+      });
+      if (!permission) {
+        return null;
+      }
+    } else if (!isOwner) {
       return null;
     }
 
@@ -151,6 +163,7 @@ export const getConversationsByWidgetId = query({
  * Get all conversations connected to a specific project
  * @param projectId - The project ID to filter conversations by
  * @param userId - The user ID for authorization
+ * ✅ FIX BLOCKER 3: Checks project collaborator access
  */
 export const getConversationsByProjectId = query({
   args: {
@@ -159,11 +172,20 @@ export const getConversationsByProjectId = query({
   },
   handler: async (ctx, { projectId, userId }) => {
     try {
+      // ✅ FIX BLOCKER 3: Check project permission
+      const permission = await ctx.runQuery(api.contentAccessHelpers.getUserContentPermission, {
+        userId,
+        contentType: "project",
+        contentId: projectId,
+      });
+      
+      if (!permission) {
+        return [];
+      }
+      
       const conversations = await ctx.db
         .query("conversations")
-        .withIndex("by_user_project", (q) =>
-          q.eq("userId", userId).eq("projectId", projectId)
-        )
+        .withIndex("by_project", (q) => q.eq("projectId", projectId))
         .order("desc")
         .collect();
 
@@ -178,6 +200,7 @@ export const getConversationsByProjectId = query({
 /**
  * Get the project-scoped conversation for a project (ONE conversation per project)
  * Used for widget communication and family questions
+ * ✅ FIX BLOCKER 3: Checks project collaborator access
  */
 export const getProjectScopedConversation = query({
   args: {
@@ -186,11 +209,20 @@ export const getProjectScopedConversation = query({
   },
   handler: async (ctx, { projectId, userId }) => {
     try {
+      // ✅ FIX BLOCKER 3: Check project permission
+      const permission = await ctx.runQuery(api.contentAccessHelpers.getUserContentPermission, {
+        userId,
+        contentType: "project",
+        contentId: projectId,
+      });
+      
+      if (!permission) {
+        return null;
+      }
+      
       const conversations = await ctx.db
         .query("conversations")
-        .withIndex("by_user_project", (q) =>
-          q.eq("userId", userId).eq("projectId", projectId)
-        )
+        .withIndex("by_project", (q) => q.eq("projectId", projectId))
         .filter((q) => q.eq(q.field("conversationType"), "project_scoped"))
         .first();
 

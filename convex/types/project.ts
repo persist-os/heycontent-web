@@ -73,6 +73,14 @@ export const projectSchemaFields = {
     canvasHeight: v.number(),
   })),
   
+  // Multi-user collaboration
+  collaborators: v.optional(v.array(v.object({
+    userId: v.string(),
+    role: v.union(v.literal("owner"), v.literal("editor"), v.literal("viewer")),
+    addedAt: v.number(),
+    addedBy: v.string(),
+  }))),
+  
   // Timestamps
   createdAt: v.number(),
   updatedAt: v.number(),
@@ -215,6 +223,12 @@ export interface Project {
   isActive: boolean;
   status?: "fresh" | "working" | "stable" | "sleeping" | "archived";
   constellationLayout?: ConstellationLayout;
+  collaborators?: Array<{
+    userId: string;
+    role: "owner" | "editor" | "viewer";
+    addedAt: number;
+    addedBy: string;
+  }>;
   createdAt: number;
   updatedAt: number;
 }

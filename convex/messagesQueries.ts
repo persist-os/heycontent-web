@@ -3,21 +3,46 @@
  * 
  * DATA FLOW: Frontend components -> These queries -> Convex DB
  * Frontend uses these queries DIRECTLY (no HTTP layer)
+ * ✅ FIX BLOCKER 3: All queries check conversation/project access
  */
 
 import { query, action, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { api } from "./_generated/api";
 
 /**
  * Get all messages for a conversation
  * Used by chat UI to display conversation history
+ * ✅ FIX BLOCKER 3: Checks conversation/project access
  */
 export const getConversationMessages = query({
   args: {
     conversationId: v.id("conversations"),
+    userId: v.string(),
   },
   handler: async (ctx, args) => {
+    // Get conversation to check access
+    const conversation = await ctx.db.get(args.conversationId);
+    if (!conversation) {
+      throw new Error("Conversation not found");
+    }
+    
+    // ✅ FIX BLOCKER 3: Check ownership or project collaborator access
+    const isOwner = conversation.userId === args.userId;
+    if (!isOwner && conversation.projectId) {
+      const permission = await ctx.runQuery(api.contentAccessHelpers.getUserContentPermission, {
+        userId: args.userId,
+        contentType: "project",
+        contentId: conversation.projectId,
+      });
+      if (!permission) {
+        throw new Error("Access denied: You don't have permission to view this conversation");
+      }
+    } else if (!isOwner) {
+      throw new Error("Access denied: You don't have permission to view this conversation");
+    }
+    
     const messages = await ctx.db
       .query("messages")
       .withIndex("by_conversation", (q) => q.eq("conversationId", args.conversationId))

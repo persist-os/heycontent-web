@@ -403,6 +403,7 @@ app.post("/api/users/:id/messages/get", async (c) => {
   
   const messages = await ctx.runQuery(api.messagesQueries.getConversationMessages, {
     conversationId: body.conversationId,  // Convex ID from body
+    userId,  // ✅ FIX BLOCKER 3: Pass userId for permission check
   });
   
   return c.json({ messages });
@@ -3789,8 +3790,18 @@ app.delete("/api/artifacts/:artifactId", async (c) => {
 app.get("/api/artifacts/:artifactId", async (c) => {
   try {
     const artifactId = c.req.param("artifactId");
+    const userId = c.req.query("userId"); // Get userId from query parameter
+    
+    if (!userId) {
+      return c.json({ 
+        success: false,
+        error: "Missing required query parameter: userId"
+      }, 400);
+    }
+    
     const artifact = await c.env.runQuery(api.artifactQueries.getArtifact, {
-      artifactId: artifactId as any
+      artifactId: artifactId as any,
+      userId: userId
     });
     
     if (!artifact) {

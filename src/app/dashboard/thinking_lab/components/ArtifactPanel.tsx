@@ -64,7 +64,10 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   // CRITICAL: Uses artifactQueries.getProjectArtifacts (NOT widgetOutputsQueries)
   const artifacts = useQuery(
     api.artifactQueries.getProjectArtifacts,
-    effectiveProjectId ? { projectId: effectiveProjectId as Id<"projects"> } : "skip"
+    effectiveProjectId && userId ? { 
+      projectId: effectiveProjectId as Id<"projects">,
+      userId
+    } : "skip"
   )
 
   // Loading state: waiting for conversation or artifacts

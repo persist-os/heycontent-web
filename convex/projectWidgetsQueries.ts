@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
+import { api } from "./_generated/api";
 import {
   getProjectWidgetLayoutArgsValidator,
   getProjectWidgetsByIdArgsValidator,
@@ -132,10 +133,15 @@ export const getProjectWidgetsByProject = query({
   args: getProjectWidgetsByProjectArgsValidator,
   returns: v.union(v.null(), v.any()),
   handler: async (ctx, { projectId, userId }) => {
-    // Validate project access if userId provided
+    // ✅ FIX: Use getUserContentPermission for collaborator support
     if (userId) {
-      const project = await ctx.db.get(projectId);
-      if (!project || project.userId !== userId) {
+      const permission = await ctx.runQuery(api.contentAccessHelpers.getUserContentPermission, {
+        userId,
+        contentType: "project",
+        contentId: projectId,
+      });
+      
+      if (!permission) {
         return null;
       }
     }
@@ -150,24 +156,17 @@ export const getProjectWidgetsByProject = query({
       return null;
     }
 
-    // Additional user validation
-    if (userId && layout.userId !== userId) {
-      return null;
-    }
-
     // Get all widgets for this project (no status filter - show everything)
     const widgets = await ctx.db
       .query("widgets")
       .withIndex("by_project", (q) => q.eq("projectId", projectId))
       .collect();
 
-    // Filter by user if provided
-    const userWidgets = userId 
-      ? widgets.filter(w => w.userId === userId)
-      : widgets;
+    // ✅ FIX: Don't filter by userId - if user has project permission, show ALL widgets
+    // The permission check above ensures only authorized users can access widgets
 
     // Sort by position
-    const sortedWidgets = userWidgets.sort((a, b) => a.position - b.position);
+    const sortedWidgets = widgets.sort((a, b) => a.position - b.position);
 
     // Return with Convex IDs included
     return {
@@ -283,10 +282,15 @@ export const getProjectWidgetsSummary = query({
     })
   ),
   handler: async (ctx, { projectId, userId }) => {
-    // Validate project access if userId provided
+    // ✅ FIX: Use getUserContentPermission for collaborator support
     if (userId) {
-      const project = await ctx.db.get(projectId);
-      if (!project || project.userId !== userId) {
+      const permission = await ctx.runQuery(api.contentAccessHelpers.getUserContentPermission, {
+        userId,
+        contentType: "project",
+        contentId: projectId,
+      });
+      
+      if (!permission) {
         return null;
       }
     }
@@ -301,25 +305,19 @@ export const getProjectWidgetsSummary = query({
       return null;
     }
 
-    // Additional user validation
-    if (userId && layout.userId !== userId) {
-      return null;
-    }
-
     // Get widget IDs only (no status filter - show everything)
     const widgets = await ctx.db
       .query("widgets")
       .withIndex("by_project", (q) => q.eq("projectId", projectId))
       .collect();
 
-    const userWidgets = userId 
-      ? widgets.filter(w => w.userId === userId)
-      : widgets;
+    // ✅ FIX: Don't filter by userId - if user has project permission, show ALL widgets
+    // The permission check above ensures only authorized users can access widgets
 
     return {
       layout,
-      widgetIds: userWidgets.map(w => w._id),
-      widgetCount: userWidgets.length,
+      widgetIds: widgets.map(w => w._id),
+      widgetCount: widgets.length,
     };
   },
 });

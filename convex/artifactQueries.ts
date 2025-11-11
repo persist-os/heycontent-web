@@ -2,19 +2,34 @@
  * Artifact Queries
  * 
  * Simple, focused queries for artifact retrieval
+ * ✅ FIX BLOCKER 3/4: All queries check project collaborator access
  */
 
 import { v } from "convex/values";
 import { query } from "./_generated/server";
+import { api } from "./_generated/api";
 
 /**
  * Get artifacts for a project
+ * ✅ FIX BLOCKER 3: Checks project collaborator access
  */
 export const getProjectArtifacts = query({
   args: {
     projectId: v.id("projects"),
+    userId: v.string(),
   },
   handler: async (ctx, args) => {
+    // ✅ FIX BLOCKER 3: Check project permission (owner or collaborator)
+    const permission = await ctx.runQuery(api.contentAccessHelpers.getUserContentPermission, {
+      userId: args.userId,
+      contentType: "project",
+      contentId: args.projectId,
+    });
+    
+    if (!permission) {
+      throw new Error("Access denied: You don't have permission to view this project");
+    }
+    
     return await ctx.db
       .query("artifacts")
       .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
@@ -25,12 +40,38 @@ export const getProjectArtifacts = query({
 
 /**
  * Get artifacts for a widget
+ * ✅ FIX BLOCKER 3: Checks widget/project collaborator access
  */
 export const getWidgetArtifacts = query({
   args: {
     widgetId: v.id("widgets"),
+    userId: v.string(),
   },
   handler: async (ctx, args) => {
+    // Get widget to check project access
+    const widget = await ctx.db.get(args.widgetId);
+    if (!widget) {
+      throw new Error("Widget not found");
+    }
+    
+    // ✅ FIX BLOCKER 3: Check project permission if widget has projectId
+    if (widget.projectId) {
+      const permission = await ctx.runQuery(api.contentAccessHelpers.getUserContentPermission, {
+        userId: args.userId,
+        contentType: "project",
+        contentId: widget.projectId,
+      });
+      
+      if (!permission) {
+        throw new Error("Access denied: You don't have permission to view this project");
+      }
+    } else {
+      // If no projectId, check widget ownership
+      if (widget.userId !== args.userId) {
+        throw new Error("Access denied: You don't have permission to view this widget");
+      }
+    }
+    
     return await ctx.db
       .query("artifacts")
       .withIndex("by_widget", (q) => q.eq("widgetId", args.widgetId))
@@ -41,13 +82,38 @@ export const getWidgetArtifacts = query({
 
 /**
  * Get single artifact by ID
+ * ✅ FIX BLOCKER 4: Checks artifact ownership OR project collaborator access
  */
 export const getArtifact = query({
   args: {
     artifactId: v.id("artifacts"),
+    userId: v.string(),
   },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.artifactId);
+    const artifact = await ctx.db.get(args.artifactId);
+    if (!artifact) {
+      throw new Error("Artifact not found");
+    }
+    
+    // ✅ FIX BLOCKER 4: Check if user owns the artifact
+    if (artifact.userId === args.userId) {
+      return artifact;
+    }
+    
+    // ✅ FIX BLOCKER 4: Check if user has access to the parent project
+    if (artifact.projectId) {
+      const permission = await ctx.runQuery(api.contentAccessHelpers.getUserContentPermission, {
+        userId: args.userId,
+        contentType: "project",
+        contentId: artifact.projectId,
+      });
+      
+      if (permission) {
+        return artifact;  // User is a collaborator
+      }
+    }
+    
+    throw new Error("Access denied: You don't have permission to view this artifact");
   },
 });
 
@@ -106,6 +172,28 @@ export const queryArtifacts = query({
         ? filters.widgetId as any 
         : filters.widgetId;
       
+      // ✅ FIX BLOCKER 3: Check widget/project permission
+      const widget = await ctx.db.get(widgetId);
+      if (!widget) {
+        throw new Error("Widget not found");
+      }
+      
+      if (widget.projectId) {
+        const permission = await ctx.runQuery(api.contentAccessHelpers.getUserContentPermission, {
+          userId: args.userId,
+          contentType: "project",
+          contentId: widget.projectId,
+        });
+        
+        if (!permission) {
+          throw new Error("Access denied: You don't have permission to view this project");
+        }
+      } else {
+        if (widget.userId !== args.userId) {
+          throw new Error("Access denied: You don't have permission to view this widget");
+        }
+      }
+      
       const artifactQuery = ctx.db
         .query("artifacts")
         .withIndex("by_widget", (q) => q.eq("widgetId", widgetId));
@@ -129,6 +217,17 @@ export const queryArtifacts = query({
       const projectId = typeof filters.projectId === "string"
         ? filters.projectId as any
         : filters.projectId;
+      
+      // ✅ FIX BLOCKER 3: Check project permission
+      const permission = await ctx.runQuery(api.contentAccessHelpers.getUserContentPermission, {
+        userId: args.userId,
+        contentType: "project",
+        contentId: projectId,
+      });
+      
+      if (!permission) {
+        throw new Error("Access denied: You don't have permission to view this project");
+      }
       
       const artifactQuery = ctx.db
         .query("artifacts")

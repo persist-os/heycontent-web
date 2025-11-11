@@ -3,11 +3,15 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Project } from '../../types/project';
-import { Folder, Calendar, Trash2, Share2 } from 'lucide-react';
+import { Folder, Calendar, Trash2, Share2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useDroppable } from '@dnd-kit/core';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import { useAuth } from '@/app/context/auth-context';
 
 interface ProjectCardProps {
   project: Project;
@@ -19,7 +23,43 @@ interface ProjectCardProps {
 
 export function ProjectCard({ project, onEdit, onDelete, onShare, dragOverProject }: ProjectCardProps) {
   const router = useRouter();
+  const { firebaseUser } = useAuth();
+  const userId = firebaseUser?.uid;
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // ✅ FIX BLOCKER 1: Get user permission for visual distinction
+  const userPermission = useQuery(
+    api.contentAccessHelpers.getUserContentPermission,
+    userId && project._id ? {
+      userId,
+      contentType: 'project',
+      contentId: String(project._id),
+    } : 'skip'
+  ) as 'owner' | 'edit' | 'read' | null;
+  
+  // ✅ FIX BLOCKER 1: Determine visual styling based on permission
+  const isOwner = userPermission === 'owner';
+  const isEditor = userPermission === 'edit';
+  const isViewer = userPermission === 'read';
+  const canDelete = isOwner; // Only owner can delete
+  
+  // Border styling: Owner (solid), Editor (dashed), Viewer (dotted)
+  const borderStyle = isOwner ? 'border-solid' : isEditor ? 'border-dashed' : isViewer ? 'border-dotted' : 'border-solid';
+  
+  // Badge styling
+  const getBadgeVariant = () => {
+    if (isOwner) return 'default';
+    if (isEditor) return 'success';
+    if (isViewer) return 'outline';
+    return 'outline';
+  };
+  
+  const getBadgeText = () => {
+    if (isOwner) return 'Owner';
+    if (isEditor) return 'Can Edit';
+    if (isViewer) return 'Can View';
+    return '';
+  };
 
   // Set up droppable functionality
   const { isOver, setNodeRef } = useDroppable({
@@ -60,7 +100,10 @@ export function ProjectCard({ project, onEdit, onDelete, onShare, dragOverProjec
         "hover:shadow-md hover:border-border/60 cursor-pointer",
         "hover:shadow-lg hover:bg-blue-100 dark:hover:bg-blue-900/20",
         // Add visual feedback for drag over
-        isDraggedOver && "ring-2 ring-primary ring-offset-2 bg-primary/5 border-primary/50 scale-105"
+        isDraggedOver && "ring-2 ring-primary ring-offset-2 bg-primary/5 border-primary/50 scale-105",
+        // ✅ FIX BLOCKER 1: Border style based on permission
+        borderStyle,
+        isViewer && "opacity-90" // Slightly dimmed for view-only
       )}
     >
       {/* Drop zone indicator */}
@@ -84,14 +127,28 @@ export function ProjectCard({ project, onEdit, onDelete, onShare, dragOverProjec
             )}>
               <Folder className="w-4 h-4" />
             </div>
-            <h3 className="font-medium text-foreground truncate flex-1">
-              {project.name}
-            </h3>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <h3 className="font-medium text-foreground truncate">
+                  {project.name}
+                </h3>
+                {/* ✅ FIX BLOCKER 1: Permission badge */}
+                {userPermission && (
+                  <Badge variant={getBadgeVariant()} className="text-xs flex-shrink-0">
+                    {getBadgeText()}
+                  </Badge>
+                )}
+                {/* ✅ FIX BLOCKER 1: Lock icon for view-only */}
+                {isViewer && (
+                  <Lock className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                )}
+              </div>
+            </div>
           </div>
           
           {/* Actions */}
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            {onShare && (
+            {onShare && (isOwner || isEditor) && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -105,7 +162,14 @@ export function ProjectCard({ project, onEdit, onDelete, onShare, dragOverProjec
               variant="ghost"
               size="sm"
               onClick={handleDelete}
-              className="h-8 w-8 p-0 hover:bg-muted hover:text-destructive"
+              disabled={!canDelete}
+              className={cn(
+                "h-8 w-8 p-0",
+                canDelete 
+                  ? "hover:bg-muted hover:text-destructive"
+                  : "opacity-50 cursor-not-allowed"
+              )}
+              title={!canDelete ? "Only project owner can delete" : undefined}
             >
               <Trash2 className="w-3 h-3" />
             </Button>
@@ -160,7 +224,7 @@ export function ProjectCard({ project, onEdit, onDelete, onShare, dragOverProjec
       <ConfirmationModal
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
-        onConfirm={(e) => {
+        onConfirm={() => {
           onDelete();
           setShowDeleteConfirm(false);
         }}
