@@ -37,8 +37,8 @@ export function ActivityStream({ projectId }: ActivityStreamProps) {
   // ✅ CORRECT Convex conditional query pattern
   const messages = useQuery(
     api.messagesQueries.getConversationMessages,
-    conversation?._id 
-      ? { conversationId: conversation._id }
+    conversation?._id && userId
+      ? { conversationId: conversation._id, userId }
       : "skip"  // Skip query if no conversation yet
   )
 

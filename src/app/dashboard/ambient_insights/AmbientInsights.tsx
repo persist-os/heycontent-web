@@ -382,7 +382,7 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
     <InsightsContainer isMobile={isMobile}>
       {/* Header with greeting and Refresh button - Show on all screen sizes */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-6 sm:mb-8">
-        <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-light text-foreground pr-0 sm:pr-6 flex-1 leading-tight">
+        <h2 className="text-base sm:text-lg lg:text-xl font-light text-foreground pr-0 sm:pr-6 flex-1 leading-tight">
           <T context="ambient_insights.greeting">{selectedGreeting}</T>
         </h2>
         <Button
@@ -419,8 +419,9 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
                     recommendation={insight.recommendation}
                     icon={insight.icon}
                     onClick={() => onInsightClick?.(insight.action, insight)}
-                    maxFontSize={18}
-                    minFontSize={16}
+                    titleSize="text-sm mb-3"
+                    maxFontSize={14}
+                    minFontSize={12}
                     responsive={false}
                   />
                 </div>
@@ -455,6 +456,9 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
               recommendation={insight.recommendation}
               icon={insight.icon}
               onClick={() => onInsightClick?.(insight.action, insight)}
+              titleSize="text-sm sm:text-base mb-4"
+              maxFontSize={14}
+              minFontSize={12}
             />
           ))}
         </div>

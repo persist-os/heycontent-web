@@ -1,13 +1,16 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { MoreHorizontal, Trash2 } from 'lucide-react'
-import { useMutation } from 'convex/react'
+import { MoreHorizontal, Trash2, Lock } from 'lucide-react'
+import { useMutation, useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { useAuth } from '@/app/context/auth-context'
 import { DeleteProjectModal } from '../[projectId]/components/DeleteProjectModal'
 import { formatDistanceToNow } from '../[projectId]/components/utils/dateFormatting'
 import { getProjectStatus } from '../[projectId]/components/utils/widgetStyling'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
+import type { Id } from '@/convex/_generated/dataModel'
 
 interface ProjectCardProps {
   project: {
@@ -24,14 +27,49 @@ interface ProjectCardProps {
 
 export function ProjectCard({ project, onClick, onDelete }: ProjectCardProps) {
   const { firebaseUser } = useAuth()
+  const userId = firebaseUser?.uid
   const [showMenu, setShowMenu] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const deleteProject = useMutation(api.projectsMutations.batchDeleteProjects)
   const menuRef = useRef<HTMLDivElement>(null)
   
+  // ✅ FIX BLOCKER 1: Get user permission for visual distinction
+  const userPermission = useQuery(
+    api.contentAccessHelpers.getUserContentPermission,
+    userId && project._id ? {
+      userId,
+      contentType: 'project',
+      contentId: project._id,
+    } : 'skip'
+  ) as 'owner' | 'edit' | 'read' | null
+  
   const hasFingerprint = !!project.fingerprintId
   const isRecent = Date.now() - project.updatedAt < 24 * 60 * 60 * 1000 // Less than 24 hours
+  
+  // ✅ FIX BLOCKER 1: Determine visual styling based on permission
+  const isOwner = userPermission === 'owner'
+  const isEditor = userPermission === 'edit'
+  const isViewer = userPermission === 'read'
+  const canDelete = isOwner // Only owner can delete
+  
+  // Border styling: Owner (solid), Editor (dashed), Viewer (dotted)
+  const borderStyle = isOwner ? 'border-solid' : isEditor ? 'border-dashed' : isViewer ? 'border-dotted' : 'border-solid'
+  
+  // Badge styling
+  const getBadgeVariant = () => {
+    if (isOwner) return 'default' // Primary color
+    if (isEditor) return 'secondary' // Blue
+    if (isViewer) return 'outline' // Gray
+    return 'outline'
+  }
+  
+  const getBadgeText = () => {
+    if (isOwner) return 'Owner'
+    if (isEditor) return 'Can Edit'
+    if (isViewer) return 'Can View'
+    return ''
+  }
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -92,7 +130,11 @@ export function ProjectCard({ project, onClick, onDelete }: ProjectCardProps) {
       onClick={onClick}
     >
       {/* Main Card */}
-      <div className="bg-card border border-border/50 hover:border-border transition-colors duration-300 relative overflow-hidden">
+      <div className={cn(
+        "bg-card border border-border/50 hover:border-border transition-colors duration-300 relative overflow-hidden",
+        borderStyle,
+        isViewer && "opacity-90" // Slightly dimmed for view-only
+      )}>
         {/* Status Indicator - Subtle line */}
         <div className={`h-px w-full ${
           status.stage === 'early' ? 'bg-gradient-to-r from-transparent via-amber-400/60 to-transparent' :
@@ -106,9 +148,21 @@ export function ProjectCard({ project, onClick, onDelete }: ProjectCardProps) {
           <div className="space-y-2">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <h3 className="text-lg font-medium text-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300 leading-tight">
-                  {project.name}
-                </h3>
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-lg font-medium text-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300 leading-tight">
+                    {project.name}
+                  </h3>
+                  {/* ✅ FIX BLOCKER 1: Permission badge */}
+                  {userPermission && (
+                    <Badge variant={getBadgeVariant()} className="text-xs">
+                      {getBadgeText()}
+                    </Badge>
+                  )}
+                  {/* ✅ FIX BLOCKER 1: Lock icon for view-only */}
+                  {isViewer && (
+                    <Lock className="w-3 h-3 text-muted-foreground" />
+                  )}
+                </div>
                 <div className="mt-1 text-xs text-muted-foreground/70 font-mono tracking-wide">
                   {status.label.toLowerCase()}
                 </div>
@@ -127,10 +181,17 @@ export function ProjectCard({ project, onClick, onDelete }: ProjectCardProps) {
                   
                   {showMenu && (
                     <div className="absolute right-0 top-8 bg-background border border-border rounded-md shadow-lg z-10 min-w-[120px]">
+                      {/* ✅ FIX BLOCKER 1: Disable delete for non-owners */}
                       <button
                         onClick={handleDeleteClick}
-                        disabled={isDeleting}
-                        className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 flex items-center gap-2 transition-colors"
+                        disabled={isDeleting || !canDelete}
+                        className={cn(
+                          "w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors",
+                          canDelete 
+                            ? "text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
+                            : "text-muted-foreground cursor-not-allowed opacity-50"
+                        )}
+                        title={!canDelete ? "Only project owner can delete" : undefined}
                       >
                         <Trash2 className="w-3 h-3" />
                         Delete

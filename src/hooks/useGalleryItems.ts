@@ -47,7 +47,10 @@ export function useGalleryItems(props: UseGalleryItemsProps | string) {
   // Fetch BOTH artifacts AND widgets using effective projectId
   const artifacts = useQuery(
     api.artifactQueries.getProjectArtifacts,
-    effectiveProjectId ? { projectId: effectiveProjectId as Id<'projects'> } : 'skip'
+    effectiveProjectId && userId ? { 
+      projectId: effectiveProjectId as Id<'projects'>,
+      userId
+    } : 'skip'
   )
   
   const widgets = useQuery(

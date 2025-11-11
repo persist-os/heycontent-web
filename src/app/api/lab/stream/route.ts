@@ -33,6 +33,7 @@ export async function POST(request: Request) {
       session_identifier,
       notepad_context,
       workspace_context,
+      file_attachments,
       project_id,
       widget_id,
       widget_output_id,
@@ -44,7 +45,9 @@ export async function POST(request: Request) {
       query_length: query?.length || 0,
       is_first_message,
       session_identifier,
-      has_notepad_context: !!notepad_context
+      has_notepad_context: !!notepad_context,
+      has_file_attachments: !!(file_attachments && file_attachments.length > 0),
+      file_attachment_count: file_attachments?.length || 0
     });
 
     if (!query) {
@@ -67,6 +70,11 @@ export async function POST(request: Request) {
       session_id: session_identifier || null,  // Always pass session_id (frontend creates conversation)
       notepad_context
     };
+
+    // Add file attachments if present
+    if (file_attachments && file_attachments.length > 0) {
+      chatRequestBody.file_attachments = file_attachments;
+    }
 
     // Add workspace context as content_context if provided
     if (workspace_context) {

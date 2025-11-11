@@ -232,6 +232,7 @@ export function ConstellationView() {
                 scale={transform.scale}
                 onClick={() => handleProjectClick(project)}
                 onHover={handleProjectHover}
+                userId={userId} // ✅ FIX BLOCKER 1: Pass userId for permission checks
                 onDelete={() => {
                   // Refresh the projects list after deletion
                   // The query will automatically update due to Convex reactivity

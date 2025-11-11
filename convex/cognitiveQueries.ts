@@ -112,6 +112,7 @@ export const getAllCognitiveFields = query({
 
 /**
  * Get cognitive field by conversation (1:1 relationship)
+ * ✅ FIX BLOCKER 3: Checks project collaborator access
  */
 export const getCognitiveFieldByConversation = query({
   args: { 
@@ -120,10 +121,34 @@ export const getCognitiveFieldByConversation = query({
   },
   handler: async (ctx, { conversationId, userId }) => {
     try {
-      // Use compound index for efficient per-conversation query with ownership validation
+      // Get conversation to check project access
+      const conversation = await ctx.db.get(conversationId as any);
+      if (!conversation) {
+        throw new Error("Conversation not found");
+      }
+      
+      // ✅ FIX BLOCKER 3: Check project permission if conversation has projectId
+      if (conversation.projectId) {
+        const permission = await ctx.runQuery(api.contentAccessHelpers.getUserContentPermission, {
+          userId,
+          contentType: "project",
+          contentId: conversation.projectId,
+        });
+        
+        if (!permission) {
+          throw new Error("Access denied: You don't have permission to view this project");
+        }
+      } else {
+        // If no projectId, check conversation ownership
+        if (conversation.userId !== userId) {
+          throw new Error("Access denied: You don't have permission to view this conversation");
+        }
+      }
+      
+      // Get cognitive field - check by conversation owner's userId (fields are owned by conversation creator)
       const field = await ctx.db.query("cognitive_fields")
         .withIndex("by_conversation_user", (q) => 
-          q.eq("conversationId", conversationId).eq("userId", userId)
+          q.eq("conversationId", conversationId).eq("userId", conversation.userId)
         )
         .first();
       

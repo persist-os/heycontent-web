@@ -3,22 +3,40 @@
 import React from 'react'
 // Removed dialogueStore import - using conversation hooks instead
 import { Badge } from '@/components/ui/badge'
-import { X, Layers, FolderKanban, ArrowLeft } from 'lucide-react'
+import { X, Layers, FolderKanban, ArrowLeft, Share2, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
+import { ProjectPresenceIndicator } from '@/components/projects/ProjectPresenceIndicator'
+import type { Id } from '@/convex/_generated/dataModel'
+
+interface ContextIndicatorProps {
+  projectId?: string
+  widgetId?: string
+  widgetOutputId?: string
+  userId?: string | null
+  userPermission?: 'owner' | 'editor' | 'read' | null
+  currentView?: string
+  conversationId?: string
+  onShareClick?: () => void
+}
 
 /**
  * Context Indicator
  * 
  * Shows a subtle badge when user is in a project/widget context container.
  * Allows user to exit the context and return to general chat.
+ * Also shows collaboration features when in a project context.
  */
-export function ContextIndicator() {
-  // Note: Context indicator now gets project context from props or conversation hooks
-  const projectId = undefined
-  const widgetId = undefined  
-  const widgetOutputId = undefined
-  const clearProjectContext = () => {}
+export function ContextIndicator({
+  projectId,
+  widgetId,
+  widgetOutputId,
+  userId,
+  userPermission,
+  currentView,
+  conversationId,
+  onShareClick
+}: ContextIndicatorProps = {}) {
   const router = useRouter()
 
   // Only show if there's an active context
@@ -37,7 +55,6 @@ export function ContextIndicator() {
 
   const handleExitContext = () => {
     console.log('[CONTEXT INDICATOR] Exiting context container')
-    clearProjectContext()
     // Navigate to clean thinking lab (back button behavior)
     router.push('/dashboard/thinking_lab')
   }
@@ -65,8 +82,34 @@ export function ContextIndicator() {
         </Badge>
       </div>
 
-      {/* Right - Buttons */}
-      <div className="flex items-center gap-2 flex-1 justify-end">
+      {/* Right - Collaboration Features & Actions */}
+      <div className="flex items-center gap-3 flex-1 justify-end">
+        {/* Collaboration Features - Show when in project context */}
+        {isProjectContext && projectId && userId && (
+          <div className="flex items-center gap-3 mr-2">
+            {/* Presence Indicator */}
+            <ProjectPresenceIndicator
+              projectId={projectId as Id<'projects'>}
+              currentView={currentView}
+              currentItemId={conversationId}
+            />
+            
+            {/* Share Button - Show if user has permission */}
+            {(userPermission === 'owner' || userPermission === 'editor') && onShareClick && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={onShareClick}
+                className="h-8 px-4 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm flex items-center gap-2"
+                title="Share project with collaborators"
+              >
+                <Share2 className="h-4 w-4" />
+                Share Project
+              </Button>
+            )}
+          </div>
+        )}
+        
         <div className="flex items-center gap-2">
           {isWidgetContext && (
             <Button

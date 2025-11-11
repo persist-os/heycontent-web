@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, internalQuery } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { api } from "./_generated/api";
 
 /**
  * Content Access Helper Functions
@@ -17,7 +18,7 @@ import { Id } from "./_generated/dataModel";
  * @param contentId - ID of the content to check
  * @returns boolean indicating if user has access
  */
-export const validateContentAccess = internalQuery({
+export const validateContentAccess = query({
   args: {
     userId: v.string(),
     contentType: v.union(v.literal("note"), v.literal("project")),
@@ -55,7 +56,13 @@ export const validateContentAccess = internalQuery({
         // User owns the project
         if (project.userId === userId) return true;
 
-        // Check if project is shared with user via shared_content table
+        // Check if user is a collaborator
+        const isCollaborator = project.collaborators?.some(
+          c => c.userId === userId
+        );
+        if (isCollaborator) return true;
+
+        // Check if project is shared with user via shared_content table (legacy)
         const shareRecord = await ctx.db
           .query("shared_content")
           .withIndex("by_content_user", (q) => 
@@ -84,7 +91,7 @@ export const validateContentAccess = internalQuery({
  * @param contentId - ID of the content to check
  * @returns Permission level: 'owner' | 'edit' | 'read' | null
  */
-export const getUserContentPermission = internalQuery({
+export const getUserContentPermission = query({
   args: {
     userId: v.string(),
     contentType: v.union(v.literal("note"), v.literal("project")),
@@ -129,7 +136,18 @@ export const getUserContentPermission = internalQuery({
         // User owns the project
         if (project.userId === userId) return "owner";
 
-        // Check shared access via shared_content table
+        // Check if user is a collaborator
+        const collaborator = project.collaborators?.find(
+          c => c.userId === userId
+        );
+        if (collaborator) {
+          // Map collaborator roles to permission format: editor -> edit, viewer -> read
+          if (collaborator.role === "owner") return "owner";
+          if (collaborator.role === "editor") return "edit";
+          if (collaborator.role === "viewer") return "read";
+        }
+
+        // Check shared access via shared_content table (legacy)
         const shareRecord = await ctx.db
           .query("shared_content")
           .withIndex("by_content_user", (q) => 
@@ -179,17 +197,23 @@ export const enrichContentWithSharingInfo = internalQuery({
           const isOwner = item.userId === userId;
           
           // Get sharing information
-          let sharingInfo = {
-            isOwner,
-            permission: isOwner ? "owner" as const : null as const,
-            sharedWith: [] as Array<{
+          const sharingInfo: {
+            isOwner: boolean;
+            permission: "owner" | "read" | "edit" | null;
+            sharedWith: Array<{
               userId: string;
               permission: "read" | "edit";
               sharedAt: number;
               sharedBy: string;
-            }>,
-            sharedBy: null as string | null,
-            sharedAt: null as number | null,
+            }>;
+            sharedBy: string | null;
+            sharedAt: number | null;
+          } = {
+            isOwner,
+            permission: isOwner ? "owner" : null,
+            sharedWith: [],
+            sharedBy: null,
+            sharedAt: null,
           };
 
           if (contentType === "note") {
@@ -296,9 +320,9 @@ export const checkContentAccess = query({
   }),
   handler: async (ctx, args) => {
     try {
-      const hasAccess = await ctx.runQuery(validateContentAccess, args);
+      const hasAccess = await ctx.runQuery(api.contentAccessHelpers.validateContentAccess, args);
       const permission = hasAccess 
-        ? await ctx.runQuery(getUserContentPermission, args)
+        ? await ctx.runQuery(api.contentAccessHelpers.getUserContentPermission, args)
         : null;
 
       return {

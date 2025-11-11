@@ -33,6 +33,7 @@ export async function POST(request: Request) {
       session_identifier,
       notepad_context,
       workspace_context,
+      file_attachments,
       intent_analysis,
       vector_search_metadata,
       // Context parameters for project/widget linkage
@@ -49,6 +50,8 @@ export async function POST(request: Request) {
       session_identifier,
       has_notepad_context: !!notepad_context,
       has_workspace_context: !!workspace_context,
+      has_file_attachments: !!(file_attachments && file_attachments.length > 0),
+      file_attachment_count: file_attachments?.length || 0,
       has_intent_analysis: !!intent_analysis,
       has_vector_search_metadata: !!vector_search_metadata
     });
@@ -74,6 +77,11 @@ export async function POST(request: Request) {
       notepad_context,
       vector_search_metadata
     };
+
+    // Add file attachments if present
+    if (file_attachments && file_attachments.length > 0) {
+      chatRequestBody.file_attachments = file_attachments;
+    }
 
     // Add workspace context as content_context if provided
     if (workspace_context) {
