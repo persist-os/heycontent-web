@@ -252,6 +252,7 @@ export interface SummaryArtifact {
  * 
  * Email composition and sending artifacts
  * Supports draft, scheduled, and sent statuses
+ * Allows multiple sends with full history tracking
  */
 export interface EmailArtifact {
   type: 'email'
@@ -264,8 +265,24 @@ export interface EmailArtifact {
     subject: string
     body: string  // HTML or plain text content
     is_html?: boolean  // Explicit flag indicating if body is HTML (defaults to true for backward compatibility)
-    status: 'draft' | 'scheduled' | 'sent'  // Default: 'draft'
+    status: 'draft' | 'scheduled' | 'sent'  // Default: 'draft' - can remain draft after sends
     scheduledAt?: number  // Timestamp for scheduled emails
+    sendHistory?: Array<{
+      timestamp: number
+      to: string
+      subject: string
+      status: 'sent' | 'failed'
+      emailId?: string
+      threadId?: string
+      error?: string
+      scheduledAt?: number
+    }>
+    scheduledSends?: Array<{
+      scheduledAt: number
+      to: string
+      subject: string
+      status: 'pending' | 'sent' | 'failed'
+    }>
   }
   metadata: ArtifactMetadata
   tags?: string[]

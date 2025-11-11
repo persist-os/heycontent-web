@@ -15,11 +15,12 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Pencil, Mail, Send, Calendar, CheckCircle, Clock, AlertCircle, X } from 'lucide-react'
+import { Pencil, Mail, Send, Calendar, CheckCircle, Clock, AlertCircle, X, History, ExternalLink } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { useGmailAuth } from '@/app/hooks/useGmailAuth'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { fetchWithApiKey } from '@/app/lib/api-helpers'
 
 export function EmailLayout({ 
   artifact,
@@ -52,9 +53,13 @@ export function EmailLayout({
   const [isSendConfirmOpen, setIsSendConfirmOpen] = useState(false)
   const [authError, setAuthError] = useState<string | null>(null)
   const [validationError, setValidationError] = useState<string | null>(null)
+  const [isSending, setIsSending] = useState(false)
+  const [sendError, setSendError] = useState<string | null>(null)
   const [scheduledDateTime, setScheduledDateTime] = useState(
     data.scheduledAt ? new Date(data.scheduledAt).toISOString().slice(0, 16) : ''
   )
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const editorRef = useRef<HTMLDivElement>(null)
 
   // Sync state when artifact data changes
@@ -99,8 +104,165 @@ export function EmailLayout({
     })
   }
 
-  // Get status badge variant - using semantic variants
+  // Format timestamp with relative time (e.g., "2 hours ago")
+  const formatRelativeTime = (timestamp: number) => {
+    const now = Date.now()
+    const diff = now - timestamp
+    const seconds = Math.floor(diff / 1000)
+    const minutes = Math.floor(seconds / 60)
+    const hours = Math.floor(minutes / 60)
+    const days = Math.floor(hours / 24)
+
+    if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`
+    if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`
+    if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`
+    return 'Just now'
+  }
+
+  // Generate time slots (8am to 6pm)
+  const generateTimeSlots = (): string[] => {
+    return ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00']
+  }
+
+  // Format time slot for display (e.g., "08:00" -> "8:00 AM")
+  const formatTimeSlot = (time: string): string => {
+    const [hours, minutes] = time.split(':')
+    const hour = parseInt(hours)
+    const ampm = hour >= 12 ? 'PM' : 'AM'
+    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
+    return `${displayHour}:${minutes} ${ampm}`
+  }
+
+  // Check if time is in the past for a given date
+  const isTimeInPast = (date: Date, time: string): boolean => {
+    const [hours, minutes] = time.split(':')
+    const dateTime = new Date(date)
+    dateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0)
+    return dateTime < new Date()
+  }
+
+  // Get date for "Today"
+  const getToday = (): Date => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return today
+  }
+
+  // Get date for "Tomorrow"
+  const getTomorrow = (): Date => {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    tomorrow.setHours(0, 0, 0, 0)
+    return tomorrow
+  }
+
+  // Get dates for current week (Mon-Sun) with Today/Tomorrow labels
+  const getWeekDays = (): Array<{ date: Date; label: string }> => {
+    const today = getToday()
+    const tomorrow = getTomorrow()
+    const todayDay = today.getDay()
+    
+    // Calculate Monday of current week
+    const mondayOffset = todayDay === 0 ? -6 : 1 - todayDay
+    const monday = new Date(today)
+    monday.setDate(today.getDate() + mondayOffset)
+    monday.setHours(0, 0, 0, 0)
+    
+    const days: Array<{ date: Date; label: string }> = []
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(monday)
+      date.setDate(monday.getDate() + i)
+      
+      let label: string
+      if (date.getTime() === today.getTime()) {
+        label = 'Today'
+      } else if (date.getTime() === tomorrow.getTime()) {
+        label = 'Tomorrow'
+      } else {
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+        label = dayNames[date.getDay()]
+      }
+      
+      days.push({ date, label })
+    }
+    return days
+  }
+
+  // Format natural language preview (e.g., "Tomorrow at 8:00 AM")
+  const formatNaturalLanguage = (date: Date | null, time: string | null): string => {
+    if (!date || !time) return 'Select date and time'
+    
+    const today = getToday()
+    const tomorrow = getTomorrow()
+    const [hours, minutes] = time.split(':')
+    const hour = parseInt(hours)
+    const ampm = hour >= 12 ? 'PM' : 'AM'
+    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
+    const timeStr = `${displayHour}:${minutes.padStart(2, '0')} ${ampm}`
+    
+    if (date.getTime() === today.getTime()) {
+      return `Today at ${timeStr}`
+    }
+    if (date.getTime() === tomorrow.getTime()) {
+      return `Tomorrow at ${timeStr}`
+    }
+    
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    return `${dayNames[date.getDay()]}, ${monthNames[date.getMonth()]} ${date.getDate()} at ${timeStr}`
+  }
+
+  // Handle date selection
+  const handleDateSelect = (date: Date) => {
+    setSelectedDate(date)
+    setSelectedTime(null) // Clear time when date changes
+  }
+
+  // Handle time selection
+  const handleTimeSelect = (time: string) => {
+    if (selectedDate && !isTimeInPast(selectedDate, time)) {
+      setSelectedTime(time)
+    }
+  }
+
+  // Reset schedule modal state when dialog opens/closes
+  useEffect(() => {
+    if (!isScheduleOpen) {
+      setSelectedDate(null)
+      setSelectedTime(null)
+    } else {
+      // Initialize with today if no date selected
+      if (!selectedDate) {
+        setSelectedDate(getToday())
+      }
+    }
+  }, [isScheduleOpen, selectedDate])
+
+  // Get status badge variant - Phase 7: Show last send status if history exists
   const getStatusBadge = () => {
+    const sendHistory = data.sendHistory || []
+    const lastSend = sendHistory.length > 0 ? sendHistory[sendHistory.length - 1] : null
+    
+    // Show last send status if history exists
+    if (lastSend) {
+      if (lastSend.status === 'sent') {
+        return (
+          <Badge variant="success">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Sent ({sendHistory.length}x)
+          </Badge>
+        )
+      } else if (lastSend.status === 'failed') {
+        return (
+          <Badge variant="destructive">
+            <AlertCircle className="w-3 h-3 mr-1" />
+            Failed
+          </Badge>
+        )
+      }
+    }
+    
+    // Fall back to current status
     switch (data.status) {
       case 'sent':
         return (
@@ -176,21 +338,55 @@ export function EmailLayout({
 
   const handleSendConfirm = async () => {
     setIsSendConfirmOpen(false)
+    setIsSending(true)
+    setSendError(null)
     
+    try {
+      // First, update artifact with current form data
     if (onUpdate) {
-      onUpdate({
+        await onUpdate({
         ...data,
         to: toEmail,
         subject: subject,
         body: emailContent,
-        status: 'sent' as const
+          // Keep status as draft - backend will track history
+        })
+      }
+      
+      // Call backend API to send email
+      const response = await fetchWithApiKey('/api/emails/send-artifact', {
+        method: 'POST',
+        body: JSON.stringify({
+          artifact_id: artifact._id
+        })
       })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to send email' }))
+        throw new Error(errorData.error || errorData.detail || 'Failed to send email')
+      }
+      
+      const result = await response.json()
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to send email')
+      }
+      
+      // Convex reactive queries will automatically update the artifact with send history
+      // No need to manually refresh - Convex handles reactivity
+      
+    } catch (error) {
+      console.error('Error sending email:', error)
+      setSendError(error instanceof Error ? error.message : 'Failed to send email')
+      setIsSendConfirmOpen(true) // Reopen dialog to show error
+    } finally {
+      setIsSending(false)
     }
   }
 
   // Handle schedule action
   const handleScheduleClick = async () => {
-    if (!scheduledDateTime) {
+    if (!selectedDate || !selectedTime) {
       setValidationError('Please select a date and time')
       return
     }
@@ -205,7 +401,12 @@ export function EmailLayout({
       return
     }
 
-    const scheduledTimestamp = new Date(scheduledDateTime).getTime()
+    // Combine selected date and time
+    const [hours, minutes] = selectedTime.split(':')
+    const scheduledDate = new Date(selectedDate)
+    scheduledDate.setHours(parseInt(hours), parseInt(minutes), 0, 0)
+    
+    const scheduledTimestamp = scheduledDate.getTime()
     if (onUpdate) {
       onUpdate({
         ...data,
@@ -253,6 +454,14 @@ export function EmailLayout({
             </Alert>
           )}
 
+          {/* Send Error */}
+          {sendError && (
+            <Alert className="border-destructive/50 bg-destructive/10">
+              <AlertCircle className="h-4 w-4 text-destructive" />
+              <AlertDescription className="text-destructive">{sendError}</AlertDescription>
+            </Alert>
+          )}
+
           {/* Email Form Fields */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/20 rounded-lg border">
             {/* To Field */}
@@ -266,7 +475,6 @@ export function EmailLayout({
                   onChange={(e) => setToEmail(e.target.value)}
                   placeholder="recipient@example.com"
                   className="pl-9"
-                  disabled={data.status === 'sent'}
                 />
                 <Mail className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 transform -translate-y-1/2" />
               </div>
@@ -281,7 +489,6 @@ export function EmailLayout({
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="Enter email subject..."
-                disabled={data.status === 'sent'}
               />
             </div>
           </div>
@@ -291,7 +498,7 @@ export function EmailLayout({
             <Label htmlFor="email-body" className="text-sm font-medium">Body</Label>
             <div
               ref={editorRef}
-              contentEditable={data.status !== 'sent'}
+              contentEditable={editable}
               onInput={handleEditorInput}
               suppressContentEditableWarning={true}
               className="min-h-[200px] max-h-[400px] overflow-y-auto border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-primary/50 bg-background text-foreground"
@@ -315,16 +522,16 @@ export function EmailLayout({
             </Alert>
           )}
 
-          {/* Action Buttons */}
-          {data.status === 'draft' && editable && (
+          {/* Action Buttons - Phase 7: Always show if editable, allow resending */}
+          {editable && (
             <div className="flex items-center gap-2 pt-2 border-t">
               <Button
                 onClick={handleSendClick}
-                disabled={!isComplete || authLoading || isConnecting}
+                disabled={!isComplete || authLoading || isConnecting || isSending}
                 className="flex-1"
               >
                 <Send className="w-4 h-4 mr-2" />
-                {isConnecting ? 'Connecting...' : 'Send Now'}
+                {isSending ? 'Sending...' : isConnecting ? 'Connecting...' : (data.sendHistory && data.sendHistory.length > 0 ? 'Send Again' : 'Send Now')}
               </Button>
               
               <Button
@@ -349,14 +556,156 @@ export function EmailLayout({
             </Alert>
           )}
 
-          {/* Sent Info */}
-          {data.status === 'sent' && (
-            <Alert className="bg-primary/10 border-primary/20">
-              <CheckCircle className="h-4 w-4 text-foreground" />
-              <AlertDescription className="text-sm text-foreground">
-                Email sent successfully
-              </AlertDescription>
-            </Alert>
+          {/* Send History Section - Phase 7 */}
+          {data.sendHistory && data.sendHistory.length > 0 && (
+            <div className="space-y-3 pt-4 border-t">
+              <div className="flex items-center gap-2">
+                <History className="w-4 h-4 text-muted-foreground" />
+                <h4 className="text-sm font-semibold">Send History</h4>
+                <Badge variant="outline" className="text-xs">
+                  {data.sendHistory.length} {data.sendHistory.length === 1 ? 'send' : 'sends'}
+                </Badge>
+              </div>
+              <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                {/* Reverse chronological order (newest first) */}
+                {[...data.sendHistory].reverse().map((entry, index) => (
+                  <div 
+                    key={index} 
+                    className="p-3 bg-muted/30 rounded-lg border border-border/50 hover:bg-muted/40 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-medium text-foreground">
+                            {formatDate(entry.timestamp)}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            ({formatRelativeTime(entry.timestamp)})
+                          </span>
+                        </div>
+                        <div className="text-xs text-muted-foreground space-y-0.5">
+                          <div className="truncate">
+                            <span className="font-medium">To:</span> {entry.to}
+                          </div>
+                          <div className="truncate">
+                            <span className="font-medium">Subject:</span> {entry.subject}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0">
+                        {entry.status === 'sent' ? (
+                          <Badge variant="success" className="text-xs">
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Sent
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive" className="text-xs">
+                            <AlertCircle className="w-3 h-3 mr-1" />
+                            Failed
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Gmail IDs and error details */}
+                    {(entry.emailId || entry.threadId || entry.error) && (
+                      <div className="mt-2 pt-2 border-t border-border/30 space-y-1">
+                        {entry.emailId && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <span className="font-medium">Gmail ID:</span>
+                            <code className="px-1.5 py-0.5 bg-background rounded text-[10px] font-mono">
+                              {entry.emailId}
+                            </code>
+                            <a
+                              href={`https://mail.google.com/mail/u/0/#inbox/${entry.emailId}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="ml-1 text-primary hover:underline inline-flex items-center gap-0.5"
+                              title="Open in Gmail"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </div>
+                        )}
+                        {entry.threadId && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <span className="font-medium">Thread ID:</span>
+                            <code className="px-1.5 py-0.5 bg-background rounded text-[10px] font-mono">
+                              {entry.threadId}
+                            </code>
+                          </div>
+                        )}
+                        {entry.error && (
+                          <div className="text-xs text-destructive mt-1 p-2 bg-destructive/10 rounded border border-destructive/20">
+                            <span className="font-medium">Error:</span> {entry.error}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Scheduled Emails Section - Phase 7 */}
+          {data.scheduledSends && data.scheduledSends.length > 0 && (
+            <div className="space-y-3 pt-4 border-t">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+                <h4 className="text-sm font-semibold">Scheduled Emails</h4>
+                <Badge variant="outline" className="text-xs">
+                  {data.scheduledSends.filter(s => s.status === 'pending').length} pending
+                </Badge>
+              </div>
+              <div className="space-y-3">
+                {data.scheduledSends.map((scheduled, index) => (
+                  <div 
+                    key={index} 
+                    className="p-3 bg-muted/30 rounded-lg border border-border/50 hover:bg-muted/40 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-medium text-foreground">
+                            {formatDate(scheduled.scheduledAt)}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            ({formatRelativeTime(scheduled.scheduledAt)})
+                          </span>
+                        </div>
+                        <div className="text-xs text-muted-foreground space-y-0.5">
+                          <div className="truncate">
+                            <span className="font-medium">To:</span> {scheduled.to}
+                          </div>
+                          <div className="truncate">
+                            <span className="font-medium">Subject:</span> {scheduled.subject}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0">
+                        {scheduled.status === 'pending' ? (
+                          <Badge variant="default" className="text-xs bg-primary/10 text-primary-foreground">
+                            <Clock className="w-3 h-3 mr-1" />
+                            Pending
+                          </Badge>
+                        ) : scheduled.status === 'sent' ? (
+                          <Badge variant="success" className="text-xs">
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Sent
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive" className="text-xs">
+                            <AlertCircle className="w-3 h-3 mr-1" />
+                            Failed
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
 
           {/* Metadata footer */}
@@ -400,31 +749,73 @@ export function EmailLayout({
 
       {/* Schedule Dialog - Root Level */}
       <Dialog open={isScheduleOpen} onOpenChange={setIsScheduleOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Schedule Email</DialogTitle>
             <DialogDescription>
-              Select date and time to send this email
+              Choose when to send this email
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="schedule-datetime">Date & Time</Label>
-              <Input
-                id="schedule-datetime"
-                type="datetime-local"
-                value={scheduledDateTime}
-                onChange={(e) => setScheduledDateTime(e.target.value)}
-                min={new Date().toISOString().slice(0, 16)}
-              />
+          
+          <div className="space-y-6 py-4">
+            {/* Day Selection */}
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold text-foreground">Select Day</Label>
+              <div className="flex flex-wrap gap-2">
+                {getWeekDays().map(({ date, label }, idx) => (
+                  <Button
+                    key={idx}
+                    type="button"
+                    variant={selectedDate?.getTime() === date.getTime() ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handleDateSelect(date)}
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </div>
             </div>
+
+            {/* Time Selection */}
+            {selectedDate && (
+              <div className="space-y-3 border-t border-border/20 pt-4">
+                <Label className="text-sm font-semibold text-foreground">Select Time</Label>
+                <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+                  {generateTimeSlots().map(time => (
+                    <Button
+                      key={time}
+                      type="button"
+                      variant={selectedTime === time ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => handleTimeSelect(time)}
+                      disabled={isTimeInPast(selectedDate, time)}
+                    >
+                      {formatTimeSlot(time)}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Preview Section */}
+            {selectedDate && selectedTime && (
+              <div className="border-t border-border/20 pt-4">
+                <div className="bg-muted/30 rounded-lg p-4">
+                  <div className="text-sm text-muted-foreground mb-1">Scheduled for</div>
+                  <div className="text-lg font-semibold text-foreground">
+                    {formatNaturalLanguage(selectedDate, selectedTime)}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsScheduleOpen(false)}>
               <X className="w-4 h-4 mr-2" />
               Cancel
             </Button>
-            <Button onClick={handleScheduleClick} disabled={!scheduledDateTime}>
+            <Button onClick={handleScheduleClick} disabled={!selectedDate || !selectedTime}>
               Schedule
             </Button>
           </DialogFooter>
@@ -441,9 +832,9 @@ export function EmailLayout({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSendConfirm}>
-              Send
+            <AlertDialogCancel disabled={isSending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSendConfirm} disabled={isSending}>
+              {isSending ? 'Sending...' : 'Send'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
