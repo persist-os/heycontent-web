@@ -73,6 +73,8 @@ export default function SubscriptionOverview() {
   );
   // Convex overage settings
   const overageSettings = useQuery(api.usageEvents.getOverageSettings, userId ? { userId } : "skip");
+  // Convex subscription data - PRIMARY SOURCE
+  const convexSubscription = useQuery(api.subscriptionQueries.getCurrentSubscription, userId ? { userId } : "skip");
   
 
   const mutateOverageSettings = useMutation(api.usageEvents.updateOverageSettings);
@@ -123,21 +125,23 @@ export default function SubscriptionOverview() {
   // Fetch plans from Convex (cached, instant)
   const convexPlans = useQuery(api.subscriptionPlansQueries.getAllPlans, {});
   
-  // Fetch subscription status from API
+  // Fetch subscription status from API (fallback only - Convex is primary)
   useEffect(() => {
     async function fetchData() {
       if (!userId) return;
+      // Only fetch from backend if Convex data is not available
+      if (convexSubscription !== undefined) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       try {
         const apiKey = await getApiKeyWithRetry();
         if (!apiKey) {
-          // Gracefully show a clear message and avoid crashing the tab
           setError('No API key found. Please log in again.');
           setLoading(false);
           return;
         }
-        // Plans are now fetched from Convex via useQuery above (instant, cached)
-        // Fetch subscription status from backend
         let statusObj = null;
         try {
           const statusUrl = `/api/subscription/status`;
@@ -159,7 +163,6 @@ export default function SubscriptionOverview() {
           }
         } catch (e) {
           statusObj = null;
-          // Clear any existing subscription data when API fails
           setCurrentSubscription(null);
         }
         setStatus(statusObj);
@@ -170,7 +173,7 @@ export default function SubscriptionOverview() {
       }
     }
     fetchData();
-  }, [userId]);
+  }, [userId, convexSubscription]);
 
   // Update plans state when Convex data loads
   useEffect(() => {
@@ -179,23 +182,103 @@ export default function SubscriptionOverview() {
     }
   }, [convexPlans]);
 
-  // Map plan using plan_type whenever plans or status changes
+  // Helper function to get plan display name from Convex plan field
+  const getPlanDisplayName = (plan: string): string => {
+    switch (plan) {
+      case 'monthly_free':
+        return 'Free Monthly';
+      case 'monthly_basic':
+        return 'Basic Monthly';
+      case 'monthly_pro':
+        return 'Pro Monthly';
+      case 'yearly_basic':
+        return 'Basic Yearly';
+      case 'yearly_pro':
+        return 'Pro Yearly';
+      default:
+        return plan;
+    }
+  };
+
+  // Map Convex subscription data to display format - PRIMARY SOURCE
   useEffect(() => {
-    if (!status) return;
+    // Use Convex subscription data as primary source
+    if (convexSubscription) {
+      const plan = convexSubscription.plan || 'monthly_free';
+      const planTypeMatch = plan.match(/^(monthly|yearly)_(.+)$/);
+      const interval = planTypeMatch ? planTypeMatch[1] : 'monthly';
+      const planKey = planTypeMatch ? planTypeMatch[2].toLowerCase() : 'free';
+      
+      let planPrice = 0;
+      let planIncludedRequests = convexSubscription.includedRequests || 50;
+      let isMetered = false;
+      
+      // Try to get plan details from Convex plans table
+      if (plans && typeof plans === 'object' && plans[planKey] && plans[planKey][interval]) {
+        const planDetails = plans[planKey][interval];
+        planPrice = planDetails.amount || 0;
+        planIncludedRequests = planDetails.includedRequests || planIncludedRequests;
+        isMetered = planDetails.is_metered || false;
+      }
+      
+      const mappedSubscription = {
+        plan_type: plan,
+        plan_name: getPlanDisplayName(plan),
+        is_subscribed: convexSubscription.status === 'active',
+        status: convexSubscription.status,
+        current_period_end: convexSubscription.currentPeriodEnd,
+        cancel_at_period_end: convexSubscription.cancelAtPeriodEnd || false,
+        price: planPrice,
+        plan: {
+          name: getPlanDisplayName(plan),
+          price: planPrice,
+          interval: interval === 'monthly' ? 'month' : 'year',
+          is_metered: isMetered,
+        }
+      };
+      
+      setCurrentSubscription(mappedSubscription);
+      
+      // Update usageSummary.included to match the plan's includedRequests
+      if (planIncludedRequests !== undefined) {
+        setUsageSummary(prev => ({ ...prev, included: planIncludedRequests }));
+      }
+      return;
+    }
+    
+    // Fallback to backend API status if Convex data not available
+    if (!status) {
+      // If subscription field is missing, assume monthly_free
+      const mappedSubscription = {
+        plan_type: 'monthly_free',
+        plan_name: 'Free Monthly',
+        is_subscribed: true,
+        status: 'active',
+        plan: {
+          name: 'Free Monthly',
+          price: 0,
+          interval: 'month',
+          is_metered: false,
+        }
+      };
+      setCurrentSubscription(mappedSubscription);
+      return;
+    }
+    
+    // Legacy backend API mapping (fallback only)
     let mappedSubscription = status;
     let planIncludedRequests = undefined;
+    
     if (status && (status.plan_name || status.planType || status.plan_type)) {
       let planPrice = undefined;
       let planInterval = 'month';
       let matchedPlan = undefined;
       let matchedInterval = undefined;
-      // Use planType or plan_type for matching
       const planType = status.planType || status.plan_type || '';
       const planTypeMatch = planType.match(/^(monthly|yearly)_(.+)$/);
       if (planTypeMatch && plans && typeof plans === 'object') {
         const interval = planTypeMatch[1];
         const planKey = planTypeMatch[2].toLowerCase();
-        // Directly access the plan by key
         const planObj = plans[planKey];
         if (planObj && planObj[interval]) {
           matchedPlan = planObj;
@@ -214,42 +297,31 @@ export default function SubscriptionOverview() {
           };
         }
       }
-      // fallback: try to match by plan_name (case-insensitive, check both intervals)
-      if (!matchedPlan && status.plan_name && plans && typeof plans === 'object') {
-        const planObj = Object.values(plans as Record<string, any>).find((p: any) => p.name?.toLowerCase() === status.plan_name.toLowerCase());
-        if (planObj) {
-          // Prefer interval from planType if available, else default to monthly
-          const interval = planTypeMatch ? planTypeMatch[1] : 'monthly';
-          const intervalObj = planObj[interval] || planObj['monthly'] || planObj['yearly'];
-          if (intervalObj) {
-            matchedPlan = planObj;
-            matchedInterval = intervalObj;
-            planPrice = matchedInterval.amount;
-            planInterval = matchedInterval.interval;
-            planIncludedRequests = matchedInterval.includedRequests;
-            mappedSubscription = {
-              ...status,
-              plan: {
-                name: planObj.name,
-                price: planPrice,
-                interval: planInterval,
-                is_metered: matchedInterval.is_metered,
-              }
-            };
+      
+      // Fallback: Use backend plan_name if mapping failed
+      if (!matchedPlan && status.plan_name) {
+        const planType = status.planType || status.plan_type || '';
+        const planTypeMatch = planType.match(/^(monthly|yearly)_(.+)$/);
+        mappedSubscription = {
+          ...status,
+          plan: {
+            name: status.plan_name,
+            price: status.price || 0,
+            interval: planTypeMatch ? planTypeMatch[1] : 'month',
+            is_metered: false,
           }
-        }
+        };
       }
     }
-    // Always override the plan price with the backend's price field if present
+    
     if (status && status.price !== undefined && mappedSubscription.plan) {
       mappedSubscription.plan.price = status.price;
     }
     setCurrentSubscription(mappedSubscription);
-    // Update usageSummary.included to match the plan's includedRequests if available
     if (planIncludedRequests !== undefined) {
       setUsageSummary(prev => ({ ...prev, included: planIncludedRequests }));
     }
-  }, [plans, status]);
+  }, [convexSubscription, plans, status]);
 
   // Update usage state from Convex
   useEffect(() => {
@@ -343,7 +415,7 @@ export default function SubscriptionOverview() {
     }
   };
 
-  if (loading) {
+  if (loading || convexSubscription === undefined) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -398,7 +470,12 @@ export default function SubscriptionOverview() {
   if (error) return <div className="p-8 text-center text-red-600">{error}</div>;
 
   // If user doesn't have any subscription (including free), show the checkout form
-  if (!status || (!status.is_subscribed && !status.plan_type)) {
+  // Check Convex subscription first, then fallback to status
+  const hasSubscription = convexSubscription 
+    ? (convexSubscription.status === 'active' && convexSubscription.plan)
+    : (status && (status.is_subscribed || status.plan_type));
+  
+  if (!hasSubscription && !loading && convexSubscription !== undefined) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[300px] py-12 px-4 w-full">
         <div className="w-full max-w-4xl mx-auto">

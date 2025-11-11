@@ -43,42 +43,28 @@ export const syncPlans = mutation({
     const now = Date.now();
     const syncedPlans = [];
     
+    // ✅ ATOMIC: Query all existing plans upfront (single atomic read)
+    const existingPlans = await ctx.db
+      .query("subscription_plans")
+      .collect();
+    
+    // ✅ Build map by (planKey, interval) key for O(1) lookup
+    const existingMap = new Map<string, typeof existingPlans[0]>();
+    for (const plan of existingPlans) {
+      const key = `${plan.planKey}-${plan.interval}`;
+      existingMap.set(key, plan);
+    }
+    
+    // ✅ Process each plan atomically
     for (const planData of args.plans) {
-      // Check if plan already exists
-      const existing = await ctx.db
-        .query("subscription_plans")
-        .withIndex("by_plan_key_interval", (q) => 
-          q.eq("planKey", planData.planKey).eq("interval", planData.interval)
-        )
-        .first();
+      const key = `${planData.planKey}-${planData.interval}`;
+      const existing = existingMap.get(key);
       
       if (existing) {
-        // Update existing plan
-        await ctx.db.patch(existing._id, {
-          planName: planData.planName,
-          priceId: planData.priceId,
-          productId: planData.productId,
-          meteredPriceId: planData.meteredPriceId,
-          amount: planData.amount,
-          currency: planData.currency,
-          includedRequests: planData.includedRequests,
-          overage: planData.overage,
-          features: planData.features,
-          isMetered: planData.isMetered,
-          active: planData.active,
-          sortOrder: planData.sortOrder,
-          updatedAt: now,
-          lastSyncedAt: now,
-        });
-        syncedPlans.push({
-          id: existing._id,
-          action: "updated",
-          planKey: planData.planKey,
-          interval: planData.interval
-        });
-      } else {
-        // Create new plan
-        const id = await ctx.db.insert("subscription_plans", {
+        // ✅ Use replace for idempotent updates (preserves _id, _creationTime, createdAt)
+        await ctx.db.replace(existing._id, {
+          _id: existing._id,
+          _creationTime: existing._creationTime,
           planKey: planData.planKey,
           planName: planData.planName,
           interval: planData.interval,
@@ -93,16 +79,86 @@ export const syncPlans = mutation({
           isMetered: planData.isMetered,
           active: planData.active,
           sortOrder: planData.sortOrder,
-          createdAt: now,
+          createdAt: existing.createdAt, // Preserve original creation time
           updatedAt: now,
           lastSyncedAt: now,
         });
         syncedPlans.push({
-          id,
-          action: "created",
+          id: existing._id,
+          action: "updated",
           planKey: planData.planKey,
           interval: planData.interval
         });
+      } else {
+        // ✅ Try insert, catch conflict and retry with replace
+        try {
+          const id = await ctx.db.insert("subscription_plans", {
+            planKey: planData.planKey,
+            planName: planData.planName,
+            interval: planData.interval,
+            priceId: planData.priceId,
+            productId: planData.productId,
+            meteredPriceId: planData.meteredPriceId,
+            amount: planData.amount,
+            currency: planData.currency,
+            includedRequests: planData.includedRequests,
+            overage: planData.overage,
+            features: planData.features,
+            isMetered: planData.isMetered,
+            active: planData.active,
+            sortOrder: planData.sortOrder,
+            createdAt: now,
+            updatedAt: now,
+            lastSyncedAt: now,
+          });
+          syncedPlans.push({
+            id,
+            action: "created",
+            planKey: planData.planKey,
+            interval: planData.interval
+          });
+        } catch (error) {
+          // ✅ Conflict: Another mutation created it - query again and use replace
+          const created = await ctx.db
+            .query("subscription_plans")
+            .withIndex("by_plan_key_interval", (q) => 
+              q.eq("planKey", planData.planKey).eq("interval", planData.interval)
+            )
+            .first();
+          
+          if (created) {
+            await ctx.db.replace(created._id, {
+              _id: created._id,
+              _creationTime: created._creationTime,
+              planKey: planData.planKey,
+              planName: planData.planName,
+              interval: planData.interval,
+              priceId: planData.priceId,
+              productId: planData.productId,
+              meteredPriceId: planData.meteredPriceId,
+              amount: planData.amount,
+              currency: planData.currency,
+              includedRequests: planData.includedRequests,
+              overage: planData.overage,
+              features: planData.features,
+              isMetered: planData.isMetered,
+              active: planData.active,
+              sortOrder: planData.sortOrder,
+              createdAt: created.createdAt, // Preserve original creation time
+              updatedAt: now,
+              lastSyncedAt: now,
+            });
+            syncedPlans.push({
+              id: created._id,
+              action: "updated", // Was created by concurrent mutation, now updated
+              planKey: planData.planKey,
+              interval: planData.interval
+            });
+          } else {
+            // Re-throw if still not found after conflict
+            throw error;
+          }
+        }
       }
     }
     

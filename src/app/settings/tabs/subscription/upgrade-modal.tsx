@@ -232,10 +232,14 @@ export default function UpgradeModal({
                 let displayedPrice = plan.amount;
                 let originalPrice: number | null = null;
                 let discountPercent: number | null = null;
-                // Only for yearly pro plan, show discount
-                if (billingInterval === "yearly" && plan.id === "pro") {
-                  originalPrice = plan.amount; // Backend returns 300
-                  displayedPrice = 249; // Discounted price
+                // Show discount for yearly basic and pro plans
+                if (billingInterval === "yearly" && plan.id === "basic") {
+                  originalPrice = 120; // Original price crossed out
+                  displayedPrice = 100; // Discounted price
+                  discountPercent = 17;
+                } else if (billingInterval === "yearly" && plan.id === "pro") {
+                  originalPrice = 238.80; // Original price crossed out
+                  displayedPrice = 199.90; // Discounted price
                   discountPercent = 17;
                 }
                 const includedRequests = plan.includedRequests;
@@ -253,10 +257,10 @@ export default function UpgradeModal({
                     <div className="flex-1">
                       <h3 className="font-bold text-xl mb-2">{plan.name}</h3>
                       <div className="mb-4 flex items-baseline gap-2">
-                        {billingInterval === "yearly" && plan.id === "pro" ? (
+                        {billingInterval === "yearly" && (plan.id === "basic" || plan.id === "pro") && originalPrice !== null ? (
                           <>
                             <span className="text-xl text-gray-400 line-through">${originalPrice}</span>
-                            <span className="text-3xl font-bold text-primary">${displayedPrice}</span>
+                            <span className="text-3xl font-bold text-primary">${displayedPrice.toFixed(2)}</span>
                             <span className="text-gray-500 text-lg"> {intervalLabel}</span>
                           </>
                         ) : (
