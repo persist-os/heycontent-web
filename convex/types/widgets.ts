@@ -55,7 +55,8 @@ export const widgetOutputArtifactTypeValidator = v.union(
   v.literal("analysis"),
   v.literal("summary"),
   v.literal("tracker"),
-  v.literal("timeline")
+  v.literal("timeline"),
+  v.literal("email")
 );
 
 // Schema fields for individual widgets (unwrapped for defineTable)
@@ -641,7 +642,7 @@ export type WidgetStatus =
 export type WidgetRunStatus = "idle" | "running" | "success" | "failed";
 export type WidgetScheduleFrequency = "manual" | "hourly" | "daily" | "weekly" | "monthly";
 export type WidgetWorkflowStage = "gathering" | "analysis" | "synthesis" | "tracking" | "reporting";
-export type WidgetOutputArtifactType = "structured_list" | "report" | "analysis" | "summary" | "tracker" | "timeline";
+export type WidgetOutputArtifactType = "structured_list" | "report" | "analysis" | "summary" | "tracker" | "timeline" | "email";
 
 export interface WidgetCategory {
   name: string;

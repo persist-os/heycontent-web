@@ -677,6 +677,73 @@ app.get("/api/users/:userId/notes", async (c) => {
   }
 });
 
+// Gmail Token Management
+// POST /api/users/:userId/gmail/token - Save or update Gmail OAuth tokens
+app.post("/api/users/:userId/gmail/token", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("userId");
+
+  if (!userId) {
+    return c.json({ success: false, error: "Missing userId in path" }, 400);
+  }
+
+  try {
+    const { accessToken, refreshToken, expiryDate, scope, tokenType } = await c.req.json();
+
+    if (!accessToken || !refreshToken || expiryDate === undefined) {
+      return c.json({ 
+        success: false, 
+        error: "Missing required fields: accessToken, refreshToken, expiryDate" 
+      }, 400);
+    }
+
+    const result = await ctx.runMutation(api.gmailMutations.updateGmailToken, {
+      userId,
+      accessToken,
+      refreshToken,
+      expiryDate: typeof expiryDate === 'string' ? parseFloat(expiryDate) : expiryDate,
+      scope: scope || "",
+      tokenType: tokenType || "Bearer",
+    });
+
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("Failed to save Gmail token:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to save Gmail token",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+// GET /api/users/:userId/gmail/tokens - Get Gmail OAuth tokens
+app.get("/api/users/:userId/gmail/tokens", async (c) => {
+  const ctx = c.env;
+  const userId = c.req.param("userId");
+
+  if (!userId) {
+    return c.json({ success: false, error: "Missing userId in path" }, 400);
+  }
+
+  try {
+    const token = await ctx.runQuery(api.gmailQueries.getGmailToken, { userId });
+    
+    if (!token) {
+      return c.json({ success: true, data: null });
+    }
+
+    return c.json({ success: true, data: token });
+  } catch (error: any) {
+    console.error("Failed to get Gmail token:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get Gmail token",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
 // Batch fetch multiple notes (for context enrichment)
 app.post("/api/notes/getMultiple", async (c) => {
   const ctx = c.env;

@@ -12,7 +12,8 @@ export const artifactTypeValidator = v.union(
   v.literal("analysis"),        // Data insights with charts
   v.literal("summary"),         // KPI metrics
   v.literal("tracker"),         // Execution logs
-  v.literal("timeline")         // Timeline events
+  v.literal("timeline"),        // Timeline events
+  v.literal("email")            // Email artifacts
 );
 
 /**

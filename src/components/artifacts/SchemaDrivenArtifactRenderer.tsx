@@ -19,6 +19,7 @@ import { TrackerLayoutRenderer } from './layouts/renderers/TrackerLayoutRenderer
 import { MarkdownLayoutRenderer } from './layouts/renderers/MarkdownLayoutRenderer'
 import { InsightsLayoutRenderer } from './layouts/renderers/InsightsLayoutRenderer'
 import { CardLayoutRenderer } from './layouts/renderers/CardLayoutRenderer'
+import { EmailLayout } from './layouts/EmailLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useQuery } from 'convex/react'
@@ -256,6 +257,16 @@ export function SchemaDrivenArtifactRenderer({
           artifactId={artifactId as Id<'artifacts'> | undefined}
           selectedVersion={selectedVersion}
           onVersionChange={setSelectedVersion}
+        />
+      )
+    
+    case 'compose':
+      return (
+        <EmailLayout
+          artifact={displayArtifact as any}
+          editable={isEditable}
+          onUpdate={onUpdate}
+          editButton={editButton}
         />
       )
     
