@@ -28,37 +28,37 @@ export function ValueCards() {
             <div className="space-y-3 sm:space-y-4 lg:space-y-6">
               <div className="p-4 sm:p-5 rounded-lg sm:rounded-xl bg-gradient-to-br from-card/70 via-primary/[0.06] to-accent/[0.05] dark:bg-card/20 backdrop-blur-lg border border-primary/[0.25] dark:border-primary/[0.10] shadow-lg shadow-primary/[0.15] dark:shadow-primary/[0.05]">
                 <h3 className="text-sm sm:text-base lg:text-lg font-medium text-foreground mb-1.5 sm:mb-2">
-                  <T context="valueCards.currentFeature1.title">One Message, Everything Happens</T>
+                  Complete Systems, Not Single Responses
                 </h3>
                 <p className="text-xs sm:text-sm lg:text-base text-muted-foreground leading-relaxed">
-                  <T context="valueCards.currentFeature1.description">One message sets everything in motion—specialist agents spin up, widgets appear, prompts write themselves, and artifacts take shape in real time.</T>
+                  Coordinated agents generate Itinerary Builder + Foodie Tracker + Budget Analyzer + Hidden Gems Report for vacation planning. Coordinated agents create Research Outline + Key Sources + Timeline for research papers. Coordinated agents build Budget Tracker + Quick Wins List + Implementation Timeline for business projects. Complete systems from one request.
                 </p>
               </div>
 
               <div className="p-4 sm:p-5 rounded-lg sm:rounded-xl bg-gradient-to-br from-card/70 via-primary/[0.06] to-accent/[0.05] dark:bg-card/20 backdrop-blur-lg border border-primary/[0.25] dark:border-primary/[0.10] shadow-lg shadow-primary/[0.15] dark:shadow-primary/[0.05]">
                 <h3 className="text-sm sm:text-base lg:text-lg font-medium text-foreground mb-1.5 sm:mb-2">
-                  <T context="valueCards.currentFeature2.title">One Conversation, Forever</T>
+                  90 Seconds to Complete System
                 </h3>
                 <p className="text-xs sm:text-sm lg:text-base text-muted-foreground leading-relaxed">
-                  <T context="valueCards.currentFeature2.description">One project, one conversation—no resets. Vector search pulls the exact messages each agent needs; cross-agent coordination ensures seamless collaboration.</T>
+                  Korea vacation planning: Itinerary Builder + Foodie Tracker + Budget Analyzer + Hidden Gems Report in 90 seconds. Research paper: Research Outline + Key Sources + Timeline in 90 seconds. Business project: Budget Tracker + Quick Wins List + Implementation Timeline in 90 seconds. Ready to use immediately.
                 </p>
               </div>
 
               <div className="p-4 sm:p-5 rounded-lg sm:rounded-xl bg-gradient-to-br from-card/70 via-primary/[0.06] to-accent/[0.05] dark:bg-card/20 backdrop-blur-lg border border-primary/[0.25] dark:border-primary/[0.10] shadow-lg shadow-primary/[0.15] dark:shadow-primary/[0.05]">
                 <h3 className="text-sm sm:text-base lg:text-lg font-medium text-foreground mb-1.5 sm:mb-2">
-                  <T context="valueCards.currentFeature3.title">Agents Work Together</T>
+                  Interconnected Artifacts
                 </h3>
                 <p className="text-xs sm:text-sm lg:text-base text-muted-foreground leading-relaxed">
-                  <T context="valueCards.currentFeature3.description">Specialists work in concert—sharing discoveries, handing off seamlessly, and producing coordinated deliverables from a single request.</T>
+                  Itinerary references foodie tracker (vacation plan aligns with restaurant locations). Research outline references key sources (paper cites specific studies). Budget analyzer informs timeline (project budget aligns with implementation dates). Systems that work together, not isolated documents.
                 </p>
               </div>
 
               <div className="p-4 sm:p-5 rounded-lg sm:rounded-xl bg-gradient-to-br from-card/70 via-primary/[0.06] to-accent/[0.05] dark:bg-card/20 backdrop-blur-lg border border-primary/[0.25] dark:border-primary/[0.10] shadow-lg shadow-primary/[0.15] dark:shadow-primary/[0.05]">
                 <h3 className="text-sm sm:text-base lg:text-lg font-medium text-foreground mb-1.5 sm:mb-2">
-                  <T context="valueCards.currentFeature4.title">Structured, Not Just Text</T>
+                  Immediate Utility
                 </h3>
                 <p className="text-xs sm:text-sm lg:text-base text-muted-foreground leading-relaxed">
-                  <T context="valueCards.currentFeature4.description">Not just text—structured artifacts you edit and track: lists, timelines, reports, trackers; versioned, collaborative, and built to evolve.</T>
+                  Email templates ready to send via Gmail. Content calendars with specific post dates and topics. Budget trackers with real line items and percentages. Launch blueprints with assigned teams and due dates. Working systems, not reading material.
                 </p>
               </div>
 

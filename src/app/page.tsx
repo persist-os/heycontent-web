@@ -1,22 +1,25 @@
 import React from 'react'
 import { Metadata } from 'next'
 import { HeroSection } from '../components/ui/hero-section'
-import { ValueCards } from '../components/ui/value-cards'
-import { WhoThisIsFor } from '../components/ui/who-this-is-for'
+import { TheDifference } from '../components/ui/the-difference'
+import { HotSauceProof } from '../components/ui/hot-sauce-proof'
 import { WhyItWorks } from '../components/ui/why-it-works'
-import { CTABand } from '../components/ui/cta-band'
+import { RealExamples } from '../components/ui/real-examples'
 import { FAQ } from '../components/ui/faq'
+import { TheBottomLine } from '../components/ui/the-bottom-line'
+import { BlogSection } from '../components/ui/blog-section'
 import Footer from '../components/ui/Footer'
 import { siteConfig } from './metadata'
+import { T } from '@/components/translation'
 
 // Server-side metadata for SEO
 export const metadata: Metadata = {
-  title: 'HeyContext - One Message, Everything Happens | AI That Multiplies Your Work',
-  description: 'One message triggers coordinated agents that create complete projects—task lists, timelines, reports, and more. Watch your work multiply in real-time.',
-  keywords: siteConfig.keywords,
+  title: 'System Generator | Complete Systems in 90 Seconds',
+  description: 'HeyContext generates complete systems—not single responses. Coordinated agents create 3-4 interconnected artifacts: lists, reports, timelines, trackers, emails. From question to complete system in 90 seconds. Research papers, vacation plans, business projects—ready to use immediately.',
+  keywords: [...siteConfig.keywords, 'system generator', 'complete systems', 'interconnected artifacts', 'coordinated agents', '90-second generation'],
   openGraph: {
-    title: 'HeyContext - Where One Message Does Everything',
-    description: 'Specialized agents coordinate automatically to create structured deliverables. From planning weddings to building businesses—one message multiplies your work.',
+    title: 'System Generator | Complete Systems in 90 Seconds',
+    description: 'HeyContext generates complete systems—not single responses. Coordinated agents create 3-4 interconnected artifacts in 90 seconds. Research papers, vacation plans, business projects—ready to use immediately.',
     type: 'website',
     url: siteConfig.url,
     // images: [
@@ -30,8 +33,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'HeyContext - One Message. Everything Happens.',
-    description: 'One message → Multiple coordinated results. Agents swarm, artifacts build, work multiplies. Watch magic happen in real-time.',
+    title: 'System Generator - Complete Systems in 90 Seconds',
+    description: 'HeyContext generates complete systems—not single responses. Coordinated agents create 3-4 interconnected artifacts in 90 seconds. Research papers, vacation plans, business projects—ready to use immediately.',
     // images: [`${siteConfig.url}/dashboard-preview.png`], // Commented out until image is created
     creator: '@heycontext',
   },
@@ -47,42 +50,42 @@ const faqJsonLd = {
   "mainEntity": [
     {
       "@type": "Question",
-      "name": "How does this save me time?",
+      "name": "What is a system generator?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "One message creates multiple coordinated results. Instead of asking ChatGPT five times for five things, you ask once and get everything."
+        "text": "HeyContext generates complete systems—not single responses. Coordinated agents create 3-4 interconnected artifacts: lists, reports, timelines, trackers, emails. Research papers, vacation plans, business projects—from question to complete system in 90 seconds."
       }
     },
     {
       "@type": "Question",
-      "name": "How is this different from ChatGPT?",
+      "name": "How does HeyContext create complete systems?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "ChatGPT is a conversation. HeyContext is a team that delivers finished work. One message leads to complete projects."
+        "text": "Coordinated agents create interconnected artifacts that reference each other. Reports cite analyses, emails align with calendars, budgets inform timelines. Complete systems from one request."
       }
     },
     {
       "@type": "Question",
-      "name": "What's available now?",
+      "name": "What are interconnected artifacts?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Coordinated agents, multi-layer memory, structured deliverables, autonomous scheduling, and continuous learning. Everything works today."
+        "text": "Structured deliverables that work together: lists, reports, timelines, trackers, emails. Unlike single documents, artifacts reference each other and form complete systems ready to use."
       }
     },
     {
       "@type": "Question",
-      "name": "Can businesses use this?",
+      "name": "How fast is system generation?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Absolutely. From consulting strategies to research reports to client presentations—one system handles all knowledge work."
+        "text": "Complete systems generated in 90 seconds. Research paper outlines, vacation itineraries, business plans, interview prep—all created instantly with interconnected artifacts."
       }
     },
     {
       "@type": "Question",
-      "name": "Is it complicated?",
+      "name": "Can teams collaborate on systems?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Dead simple. Send a message describing what you need. Watch your work happen. That's it."
+        "text": "Yes. Share projects with collaborators. Multiple team members can edit the same artifacts simultaneously. Real-time coordination on interconnected systems."
       }
     },
     {
@@ -90,7 +93,7 @@ const faqJsonLd = {
       "name": "How do I start?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Sign up, send one message, get structured results. Within minutes you'll have usable deliverables."
+        "text": "Sign up, describe your need, get a complete system in 90 seconds. Research outline + key sources + timeline ready to use immediately."
       }
     }
   ]
@@ -114,10 +117,10 @@ const breadcrumbJsonLd = {
 const howToJsonLd = {
   "@context": "https://schema.org",
   "@type": "HowTo",
-  "name": "How to Use HeyContext - AI Memory System",
-  "description": "Complete guide to setting up and using HeyContext's AI-powered memory system that learns from every conversation",
+  "name": "How to Generate Complete Systems with HeyContext",
+  "description": "Complete guide to generating interconnected systems in 90 seconds using coordinated agents",
   // "image": `${siteConfig.url}/dashboard-preview.png`, // Commented out until image is created
-  "totalTime": "PT5M",
+  "totalTime": "PT2M",
   "estimatedCost": {
     "@type": "MonetaryAmount",
     "currency": "USD",
@@ -127,26 +130,26 @@ const howToJsonLd = {
     {
       "@type": "HowToStep",
       "name": "Create Your Account",
-      "text": "Sign up for HeyContext with your email or Google account. The setup takes less than 60 seconds.",
+      "text": "Sign up for HeyContext with your email or Google account. Setup takes less than 60 seconds.",
       "url": `${siteConfig.url}/auth/register`,
       "position": 1
     },
     {
       "@type": "HowToStep",
-      "name": "Start Your First Conversation",
-      "text": "Begin talking about your work, projects, or ideas. HeyContext starts building your personal AI memory immediately.",
+      "name": "Describe Your Need",
+      "text": "Describe the system you need: 'Write my research paper' or 'Plan my vacation' or 'Launch my business'. Be specific about what you want to accomplish.",
       "position": 2
     },
     {
       "@type": "HowToStep",
-      "name": "Create Smart Notes",
-      "text": "Write notes naturally. HeyContext automatically connects them to your conversations and extracts insights.",
+      "name": "Agents Coordinate Automatically",
+      "text": "Coordinated agents work together to create 3-4 interconnected artifacts. Reports reference analyses, emails align with calendars, budgets inform timelines.",
       "position": 3
     },
     {
       "@type": "HowToStep",
-      "name": "Let Memory Evolve",
-      "text": "As you use HeyContext, it builds deeper understanding. Your AI learns your thinking patterns, preferences, and context.",
+      "name": "Review Structured Artifacts",
+      "text": "Review and edit your complete system. Research outline, vacation itinerary, business plan—all interconnected and ready to use immediately.",
       "position": 4
     }
   ]
@@ -176,12 +179,13 @@ const speakableJsonLd = {
   }
 };
 
-// Aggregate rating schema
-const aggregateRatingJsonLd = {
+// Product schema
+const productJsonLd = {
   "@context": "https://schema.org",
   "@type": "Product",
-  "name": "HeyContext",
-  "description": "AI-powered memory system that learns from every conversation",
+  "name": "HeyContext - System Generator",
+  "description": "System Generator—Complete Systems in 90 Seconds",
+  "category": "System Generator",
   "brand": {
     "@type": "Brand",
     "name": "HeyContext"
@@ -226,51 +230,49 @@ export default function LandingPage() {
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(aggregateRatingJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
       />
       
       {/* Hidden semantic content for AI search engines */}
       <div className="sr-only" aria-hidden="true">
-        <h2>What is HeyContext?</h2>
+        <h2><T context="seo.what.title">What is HeyContext?</T></h2>
         <p>
-          HeyContext is an autonomous work platform where one message creates complete projects. Specialized agents coordinate 
-          automatically to create structured deliverables like task lists, timelines, and reports. Unlike ChatGPT which requires 
-          constant conversation, HeyContext delivers finished work from a single message. Watch your work multiply in real-time.
+          <T context="seo.what.description">HeyContext is a System Generator that creates complete systems in 90 seconds. Coordinated agents create
+          3-4 interconnected artifacts: lists, reports, timelines, trackers, emails. Unlike single responses, complete systems
+          with artifacts that reference each other. Research paper systems, vacation planning systems, business systems.</T>
         </p>
-        
-        <h2>Who should use HeyContext?</h2>
+
+        <h2><T context="seo.who.title">Who should use HeyContext?</T></h2>
         <p>
-          HeyContext works for individuals planning life events and businesses managing knowledge work. Individuals can plan weddings, 
-          research topics, and organize projects. Businesses can create client strategies, automate due diligence, and generate reports. 
-          One system, infinite possibilities.
+          <T context="seo.who.description">Individuals and teams who need complete systems, not single responses. Complex tasks that can't be done in one prompt.
+          Research papers, vacation plans, business projects, interview prep. Teams collaborate on interconnected artifacts in real-time.</T>
         </p>
-        
-        <h2>HeyContext vs ChatGPT: What's the difference?</h2>
+
+        <h2><T context="seo.comparison.title">System generation vs single responses</T></h2>
         <p>
-          ChatGPT is a conversation. You ask, it answers, you ask again. HeyContext is a team that delivers finished work. 
-          Send one message describing what you need, and multiple coordinated agents create complete projects. Work happens 
-          autonomously while you watch or while you're away.
+          <T context="seo.comparison.description">HeyContext builds you a complete system with 3-4 interconnected artifacts.
+          Research outline + key sources + timeline. Vacation itinerary + budget + packing list. Recipe vs meal delivery service. Information vs infrastructure.</T>
         </p>
-        
-        <h2>Key features of HeyContext</h2>
+
+        <h2><T context="seo.features.title">Key features of HeyContext</T></h2>
         <ul>
-          <li>Agents swarm—specialized teams work in parallel automatically</li>
-          <li>Memory never forgets—context layers track goals and patterns</li>
-          <li>Artifacts materialize—six deliverable types from lists to reports</li>
-          <li>Work never stops—schedule hourly, daily, or weekly execution</li>
-          <li>Intelligence evolves—learns preferences and adapts continuously</li>
+          <li><T context="seo.features.1">Coordinated agents create interconnected artifacts</T></li>
+          <li><T context="seo.features.2">90-second generation of complete systems</T></li>
+          <li><T context="seo.features.3">Immediate utility with Gmail integration and real dates</T></li>
+          <li><T context="seo.features.4">Team collaboration on shared artifacts</T></li>
+          <li><T context="seo.features.5">System generation for any complex task</T></li>
         </ul>
-        
-        <h2>How much does HeyContext cost?</h2>
+
+        <h2><T context="seo.pricing.title">How much does HeyContext cost?</T></h2>
         <p>
-          HeyContext offers a free tier to get started. Create an account and begin using the platform immediately. 
-          Premium plans unlock advanced features like unlimited projects and enhanced capabilities.
+          <T context="seo.pricing.description">HeyContext offers a free tier to get started. Create an account and generate your first complete system immediately.
+          Premium plans unlock advanced features and higher usage limits.</T>
         </p>
-        
-        <h2>What's coming to HeyContext?</h2>
+
+        <h2><T context="seo.future.title">What's coming to HeyContext?</T></h2>
         <p>
-          Tool integrations arriving soon: Discord, Google Drive, Calendar, Sheets, Browserbase, yfinance, and Resend. 
-          Connect once, agents use tools automatically. Intelligence compounds as the system learns which tools work best.
+          <T context="seo.future.description">Tool integrations arriving soon: Gmail, Google Drive, Calendar, Sheets. Agents use tools automatically to create
+          working systems with real integrations. Intelligence compounds as systems learn and improve.</T>
         </p>
       </div>
       
@@ -279,19 +281,25 @@ export default function LandingPage() {
           <HeroSection />
         </section>
         <section className="snap-start">
-          <WhoThisIsFor />
+          <TheDifference />
+        </section>
+        <section className="snap-start">
+          <HotSauceProof />
         </section>
         <section className="snap-start">
           <WhyItWorks />
         </section>
         <section className="snap-start">
-          <CTABand />
-        </section>
-        <section className="snap-start">
-          <ValueCards />
+          <RealExamples />
         </section>
         <section className="snap-start">
           <FAQ />
+        </section>
+        <section className="snap-start">
+          <TheBottomLine />
+        </section>
+        <section className="snap-start">
+          <BlogSection />
         </section>
         <section className="snap-end">
           <Footer />

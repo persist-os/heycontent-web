@@ -3,12 +3,12 @@
 import React, { memo, useCallback, useMemo, useEffect, useState, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  FileText, Shield, Zap, Sparkles, Radio, Home
+  FileText, Shield, Zap, Sparkles, Radio, Home, PenTool
 } from 'lucide-react'
 import { useSidebar } from '@/app/context/sidebar-context'
 import { getApiKey } from '@/app/lib/api-helpers'
 import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDialog'
-import { useAdminAuth } from '@/app/lib/admin-auth'
+import { useAdminAuth, useBloggerAuth } from '@/app/lib/admin-auth'
 import { cn } from '@/lib/utils'
 import { useLanguagePreference, useTranslation } from '@/hooks/useTranslation'
 import { T } from '@/components/translation/T'
@@ -100,6 +100,7 @@ export const DashboardNav = memo(function DashboardNav() {
   const router = useRouter()
   const { isExpanded, setIsExpanded } = useSidebar();
   const { canAccessAdmin } = useAdminAuth();
+  const { canAccessBlogger } = useBloggerAuth();
   const { language } = useLanguagePreference();
   const { isTiptapEditorActive } = useTiptapEditor();
   
@@ -135,6 +136,18 @@ export const DashboardNav = memo(function DashboardNav() {
   // Build nav items based on user permissions
   const dynamicNavItems = [
     ...navItems,
+    // Only show blogger dashboard to users with blogger access
+    ...(canAccessBlogger ? [
+      {
+        id: 'blogger',
+        label: 'Blog Editor',
+        description: 'Create and manage blog posts',
+        icon: PenTool,
+        href: '/dashboard/blogger',
+        dataAttr: 'data-blogger-link',
+        category: 'create',
+      }
+    ] : []),
     // Only show admin and briefing room to users with admin access
     ...(canAccessAdmin ? [
       {
@@ -343,6 +356,7 @@ export const DashboardNav = memo(function DashboardNav() {
       case 'chat':
       case 'notes':
       case 'admin':
+      case 'blogger':
         // These tabs are only active on their exact pages, not sub-pages
         return pathname === item.href;
       default:

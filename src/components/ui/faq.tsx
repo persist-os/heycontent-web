@@ -6,44 +6,32 @@ import { T } from '@/components/translation'
 
 const faqData = [
   {
-    question: "How does it work without prompts?",
-    answer: "The system automatically creates the right instructions for each agent based on your project. You never write prompts—everything is handled behind the scenes. Each agent gets exactly what it needs to do its job, tailored to your specific work. And every time they work, they learn and get better."
-  },
-  {
-    question: "Why one conversation per project?",
-    answer: "Traditional AI forgets after a few messages and requires constant new conversations. HeyContext remembers everything by tying one conversation to one project and searching through individual messages so it finds exactly what you mentioned, even weeks later. Each agent only looks at what it needs and can share what it discovers with other agents."
-  },
-  {
-    question: "What actually happens when I send a message?",
-    answer: "Everything starts moving: widgets appear, an execution plan is created, instructions are created automatically, and agents begin working. They understand your context, figure out what needs to happen first, and work together. Your deliverables appear as they're built—lists, timelines, reports—all ready to edit. It all happens quickly."
+    question: "What happens when I send a message?",
+    answer: "Widgets appear, agents coordinate, and deliverables are built—lists, timelines, reports—all ready to edit. Everything runs autonomously in the background."
   },
   {
     question: "What are structured artifacts?",
-    answer: "Not just text—real work you can edit and use: lists, reports, timelines, trackers, and more. Everything is saved with version tracking, so multiple agents can update the same piece as your project evolves. Think of them as living documents that grow with your work."
+    answer: "Real work you can edit: lists, reports, timelines, trackers. Version-tracked and editable. Multiple agents can update the same artifact as your project evolves."
   },
   {
-    question: "Can I really walk away and come back?",
-    answer: "Yes—that's the design. Start a project, close your laptop, and return later to completed work. Or watch it happen in real-time if you prefer. Agents can schedule recurring work and keep going while you're offline. Updates appear in your conversation when ready."
+    question: "How do agents coordinate?",
+    answer: "Specialized agents share discoveries and work in the right order. Research happens first, then analysis uses those findings, then writers create the final work. Everyone stays in sync."
   },
   {
-    question: "How do agents coordinate on complex projects?",
-    answer: "Each project brings together specialized agents—researchers, analysts, writers—that share what they discover. The system figures out the right order: research happens first, then analysis uses those findings, then writers create the final work. Everyone stays in sync."
+    question: "Can I edit artifacts after they're created?",
+    answer: "Yes. Edit directly, and related artifacts automatically reflect changes. Everything is versioned so you can see what changed and when."
   },
   {
-    question: "Does it actually learn and improve?",
-    answer: "Yes. The system learns from how you interact—what you like, what you change, how you work. Agents adapt to your style, remember your preferences, and get better with each project. The more you use it, the smarter it becomes for you."
+    question: "Does this integrate with my existing tools?",
+    answer: "Yes. Email templates connect to Gmail. Timelines sync with calendars. Reports export to PDF or markdown. Works with tools you already use."
   },
   {
-    question: "What about teams and enterprises?",
-    answer: "Coming soon: company-wide setups with admin tools, industry grade security, team collaboration, and custom features for different industries. Consulting firms save significant time per person each week. Law firms write briefs much faster. Enterprise plans will be available with flexible pricing. Contact us at hello@persistos.co to discuss your needs."
+    question: "What if agents create something I don't want?",
+    answer: "Delete it, edit it, or ask for revisions. You're always in control. Agents learn from your edits and get better over time."
   },
   {
-    question: "How much time does this actually save?",
-    answer: "Individual users save massive amounts of time on research and planning—what used to take hours now takes just minutes of review. Enterprise teams save many hours per employee each week, effectively multiplying capacity without adding people."
-  },
-  {
-    question: "How do I start?",
-    answer: "Sign up free—no credit card required. Create your first project, send one message describing what you need, and watch widgets appear. The system handles everything behind the scenes. Review, edit, and reference when ready. "
+    question: "How does team collaboration work?",
+    answer: "Share the link. Everyone sees agents building and can edit artifacts in real-time. All changes are tracked and versioned."
   }
 ]
 
@@ -70,11 +58,8 @@ export function FAQ() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-12 relative z-10 w-full">
           <div className="text-center mb-8 sm:mb-12 lg:mb-16">
             <h2 className="text-xl sm:text-3xl lg:text-5xl font-light text-foreground leading-tight tracking-wide mb-3 sm:mb-4 lg:mb-6 animate-fade-in-up">
-              <T context="faq.heading">Frequently asked questions</T>
+              FAQ
             </h2>
-            <p className="text-sm sm:text-base lg:text-xl text-muted-foreground font-light max-w-2xl mx-auto leading-relaxed animate-fade-in-up" style={{animationDelay: '0.2s'}}>
-              <T context="faq.subheading">Everything you need to know about HeyContext and how it works.</T>
-            </p>
           </div>
 
           <div className="space-y-2.5 sm:space-y-3 lg:space-y-4 animate-fade-in-up" style={{animationDelay: '0.4s'}}>
@@ -108,10 +93,9 @@ export function FAQ() {
                   >
                     <div className="px-4 sm:px-5 lg:px-7 pb-4 sm:pb-5 lg:pb-6 pt-0">
                       <div className="w-full h-px bg-gradient-to-r from-primary/[0.30] via-accent/[0.25] to-primary/[0.20] dark:bg-border mb-3 sm:mb-4 lg:mb-5" />
-                      <div 
-                        className="text-xs sm:text-sm lg:text-base text-muted-foreground leading-relaxed"
-                        dangerouslySetInnerHTML={{ __html: item.answer }}
-                      />
+                      <div className="text-xs sm:text-sm lg:text-base text-muted-foreground leading-relaxed">
+                        <T context={`faq.answer${index + 1}`}>{item.answer}</T>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -149,3 +133,4 @@ export function FAQ() {
       </section>
     )
 }
+

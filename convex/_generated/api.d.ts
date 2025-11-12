@@ -29,6 +29,9 @@ import type * as assignmentFingerprintMutations from "../assignmentFingerprintMu
 import type * as assignmentFingerprintQueries from "../assignmentFingerprintQueries.js";
 import type * as auth from "../auth.js";
 import type * as backgroundJobs from "../backgroundJobs.js";
+import type * as blogPostMigrations from "../blogPostMigrations.js";
+import type * as blogPostMutations from "../blogPostMutations.js";
+import type * as blogPostQueries from "../blogPostQueries.js";
 import type * as briefingRoomHelpers from "../briefingRoomHelpers.js";
 import type * as briefingRoomInternal from "../briefingRoomInternal.js";
 import type * as briefingRoomMutations from "../briefingRoomMutations.js";
@@ -134,6 +137,7 @@ import type * as types_artifactVersion from "../types/artifactVersion.js";
 import type * as types_assignmentFingerprint from "../types/assignmentFingerprint.js";
 import type * as types_backgroundJob from "../types/backgroundJob.js";
 import type * as types_backgroundJobs from "../types/backgroundJobs.js";
+import type * as types_blogPost from "../types/blogPost.js";
 import type * as types_briefingCluster from "../types/briefingCluster.js";
 import type * as types_briefingEvent from "../types/briefingEvent.js";
 import type * as types_briefingPreferences from "../types/briefingPreferences.js";
@@ -224,6 +228,9 @@ declare const fullApi: ApiFromModules<{
   assignmentFingerprintQueries: typeof assignmentFingerprintQueries;
   auth: typeof auth;
   backgroundJobs: typeof backgroundJobs;
+  blogPostMigrations: typeof blogPostMigrations;
+  blogPostMutations: typeof blogPostMutations;
+  blogPostQueries: typeof blogPostQueries;
   briefingRoomHelpers: typeof briefingRoomHelpers;
   briefingRoomInternal: typeof briefingRoomInternal;
   briefingRoomMutations: typeof briefingRoomMutations;
@@ -329,6 +336,7 @@ declare const fullApi: ApiFromModules<{
   "types/assignmentFingerprint": typeof types_assignmentFingerprint;
   "types/backgroundJob": typeof types_backgroundJob;
   "types/backgroundJobs": typeof types_backgroundJobs;
+  "types/blogPost": typeof types_blogPost;
   "types/briefingCluster": typeof types_briefingCluster;
   "types/briefingEvent": typeof types_briefingEvent;
   "types/briefingPreferences": typeof types_briefingPreferences;

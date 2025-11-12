@@ -13,7 +13,7 @@ const searchSuggestions = [
   "Find the pattern in my recent notes",
   "Help me think through this idea",
   "What am I missing here?"
-]
+] // These are user inputs, not UI text - no translation needed
 
 export function HeroSection() {
   const [placeholder, setPlaceholder] = useState(searchSuggestions[0])
@@ -83,6 +83,12 @@ export function HeroSection() {
           
           <div className="flex items-center gap-2 sm:gap-3 lg:gap-4">
             <button 
+              onClick={() => router.push('/blog')}
+              className="text-xs sm:text-sm lg:text-base text-muted-foreground hover:text-foreground transition-colors font-light"
+            >
+              <T context="nav.blog">Blog</T>
+            </button>
+            <button 
               onClick={() => router.push('/pricing')}
               className="text-xs sm:text-sm lg:text-base text-muted-foreground hover:text-foreground transition-colors font-light"
             >
@@ -112,16 +118,13 @@ export function HeroSection() {
           <div className="space-y-6 sm:space-y-8 lg:space-y-10">
             <div className="space-y-4 sm:space-y-6 lg:space-y-8">
               <h1 className="text-2xl sm:text-4xl lg:text-7xl font-light text-foreground leading-tight animate-fade-in-up hover:text-foreground/90 transition-colors duration-300 cursor-default" style={{animationDelay: '0.1s'}}>
-                <span className="inline-block"><T context="hero.headline1">One message. </T></span>
-                <span className="block text-3xl sm:text-5xl lg:text-8xl font-light text-foreground mt-1 sm:mt-2 hover:text-foreground/90 transition-colors duration-300"><T context="hero.headline2">Everything happens.</T></span>
+                <span className="inline-block"><T context="hero.headline1">Other AI Tells You What to Do.</T></span>
+                <span className="block text-3xl sm:text-5xl lg:text-8xl font-light text-foreground mt-1 sm:mt-2 hover:text-foreground/90 transition-colors duration-300"><T context="hero.headline2">We Build What You Need.</T></span>
               </h1>
               
-              <div className="max-w-4xl mx-auto space-y-3 sm:space-y-4 lg:space-y-6 animate-fade-in-up" style={{animationDelay: '0.2s'}}>
-                <p className="text-base sm:text-lg lg:text-2xl text-muted-foreground font-light leading-relaxed hover:text-foreground transition-colors duration-300 cursor-default">
-                  <T context="hero.description1">AI that works for you, not with you.</T>
-                </p>
-                <p className="text-sm sm:text-base lg:text-xl text-muted-foreground font-light leading-relaxed hover:text-foreground transition-colors duration-300 cursor-default">
-                  <T context="hero.description2">It's not a chatbot, it's a team that delivers finished work.</T>
+              <div className="max-w-4xl mx-auto animate-fade-in-up" style={{animationDelay: '0.2s'}}>
+                <p className="text-base sm:text-lg lg:text-xl text-muted-foreground font-light leading-relaxed hover:text-foreground transition-colors duration-300 cursor-default">
+                  <T context="hero.subtitle">One request. Multiple agents coordinate. Complete systems in 90 seconds.</T>
                 </p>
               </div>
             </div>

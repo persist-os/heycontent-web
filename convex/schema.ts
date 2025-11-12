@@ -29,6 +29,9 @@ import { assignmentFingerprintSchemaFields } from "./types/assignmentFingerprint
 // Prompts (Universal Prompt System)
 import { promptSchemaFields } from "./types/prompt";
 
+// Blog Posts (CMS)
+import { blogPostSchemaFields } from "./types/blogPost";
+
 // Widgets
 import { widgetSchemaFields, projectWidgetsSchemaFields } from "./types/widgets";
 
@@ -737,6 +740,20 @@ export default defineSchema({
     .index("by_type", ["type"])
     .index("by_scope_and_tags", ["scope", "tags"])
     .index("by_parent", ["parentId"]),
+
+  // ============================================================================
+  // BLOG POSTS - CMS for blog content
+  // ============================================================================
+  /**
+   * Blog posts stored in Convex for admin editing.
+   * Enables versioning, draft/published states, and admin editing interface.
+   */
+  blogPosts: defineTable(blogPostSchemaFields)
+    .index("by_slug", ["slug"])
+    .index("by_status", ["status"])
+    .index("by_category", ["category"])
+    .index("by_series_order", ["series", "order"])
+    .index("by_publishedAt", ["publishedAt"]),
 
   // ============================================================================
   // PROMPT FEEDBACK - Feedback signals for prompt learning
