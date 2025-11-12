@@ -3847,6 +3847,56 @@ app.post("/api/artifacts/batch", async (c) => {
 });
 
 /**
+ * POST /api/actions/create
+ * Create new action
+ */
+app.post("/api/actions/create", async (c) => {
+  try {
+    const requestBody = await c.req.json();
+    const result = await c.env.runMutation(api.actionMutations.createAction, requestBody);
+    if (result.success) {
+      return c.json({ success: true, data: result.actionId });
+    } else {
+      return c.json({ 
+        error: "Failed to create action",
+        message: "Unknown error"
+      }, 500);
+    }
+  } catch (error: any) {
+    console.error("Create action error:", error);
+    return c.json({ 
+      error: "Failed to create action",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/actions/update
+ * Update action
+ */
+app.post("/api/actions/update", async (c) => {
+  try {
+    const requestBody = await c.req.json();
+    const result = await c.env.runMutation(api.actionMutations.updateAction, requestBody);
+    if (result.success) {
+      return c.json({ success: true });
+    } else {
+      return c.json({ 
+        error: "Failed to update action",
+        message: "Unknown error"
+      }, 500);
+    }
+  } catch (error: any) {
+    console.error("Update action error:", error);
+    return c.json({ 
+      error: "Failed to update action",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
+/**
  * PATCH /api/artifacts/:artifactId
  * Update artifact
  */

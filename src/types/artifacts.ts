@@ -265,24 +265,16 @@ export interface EmailArtifact {
     subject: string
     body: string  // HTML or plain text content
     is_html?: boolean  // Explicit flag indicating if body is HTML (defaults to true for backward compatibility)
-    status: 'draft' | 'scheduled' | 'sent'  // Default: 'draft' - can remain draft after sends
-    scheduledAt?: number  // Timestamp for scheduled emails
-    sendHistory?: Array<{
+    scheduledAt?: number  // Timestamp for scheduled emails (used for scheduling, not stored status)
+    replies?: Array<{
+      messageId: string
+      from: string
+      body: string
       timestamp: number
-      to: string
-      subject: string
-      status: 'sent' | 'failed'
-      emailId?: string
-      threadId?: string
-      error?: string
-      scheduledAt?: number
+      snippet?: string
     }>
-    scheduledSends?: Array<{
-      scheduledAt: number
-      to: string
-      subject: string
-      status: 'pending' | 'sent' | 'failed'
-    }>
+    // NOTE: Status, sendHistory, and scheduledSends are now tracked in actions table
+    // Query actions table for send history and computed status
   }
   metadata: ArtifactMetadata
   tags?: string[]

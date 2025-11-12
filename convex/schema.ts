@@ -113,6 +113,9 @@ import { contextUsageSchemaFields } from "./types/contextUsage";
 // Tool Call Tracking
 import { toolCallSchemaFields } from "./types/toolCall";
 
+// Unified Actions System
+import { actionSchemaFields } from "./types/actions";
+
 // Gmail
 import { gmailTokenSchemaFields, gmailAccountSchemaFields } from "./types/gmail";
 
@@ -296,7 +299,6 @@ export default defineSchema({
   .index("by_user", ["userId"])
   .index("by_fingerprint", ["fingerprintId"])
   .index("by_category", ["projectId", "category"])
-  .index("by_status", ["projectId", "status"])
   .index("by_widget_id", ["projectId", "widget_id"]) // For legacy lookups
   .index("by_created", ["createdAt"])
   .index("by_schedule", ["nextScheduledRun", "scheduleEnabled"])
@@ -535,6 +537,48 @@ export default defineSchema({
     .index("by_agent", ["agentType", "timestamp"])
     .index("by_run", ["runId"])
     .index("by_user_agent", ["userId", "agentType", "timestamp"]),
+
+  // Unified Actions Table - tracks ALL actions
+  actions: defineTable(actionSchemaFields)
+    // User isolation - ALWAYS first index
+    .index("by_user", ["userId"])
+    
+    // Action type queries
+    .index("by_type", ["actionType"])
+    .index("by_status", ["status"])
+    .index("by_user_type", ["userId", "actionType"])
+    .index("by_user_status", ["userId", "status"])
+    
+    // Widget actions
+    .index("by_widget", ["widgetId"])
+    .index("by_widget_type", ["widgetId", "actionType"])
+    .index("by_widget_status", ["widgetId", "status"])
+    
+    // Artifact actions
+    .index("by_artifact", ["artifactId"])
+    .index("by_artifact_type", ["artifactId", "actionType"])
+    .index("by_artifact_status", ["artifactId", "status"])
+    
+    // Project actions
+    .index("by_project", ["projectId"])
+    .index("by_project_type", ["projectId", "actionType"])
+    
+    // Scheduling queries
+    .index("by_scheduled", ["scheduledAt"])
+    .index("by_scheduled_status", ["scheduledAt", "status"])
+    
+    // Time-based queries
+    .index("by_created", ["createdAt"])
+    .index("by_completed", ["completedAt"])
+    
+    // Widget-Artifact relationship queries
+    .index("by_widget_artifact", ["widgetId", "artifactId"])
+    
+    // Agent actions (future)
+    .index("by_agent", ["agentId"])
+    
+    // Tool usage (future)
+    .index("by_tool", ["toolId"]),
 
   // Stripe Webhook Events Tracking
   webhook_events: defineTable(webhookEventSchemaFields)

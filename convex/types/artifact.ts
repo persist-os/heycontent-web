@@ -103,6 +103,7 @@ export const artifactUpdateValidator = v.object({
   updatedBy: v.string(), // widget_id or user_id
   editSource: v.optional(v.union(v.literal("widget"), v.literal("user"))),  // Track edit source
   expectedVersion: v.optional(v.number()),  // Optimistic concurrency control
+  skipVersion: v.optional(v.boolean()),  // Skip version creation (e.g., for sends, not content edits)
 });
 
 /**
