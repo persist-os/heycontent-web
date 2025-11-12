@@ -52,12 +52,12 @@ export function RealExamples() {
               <div key={index} className="space-y-6 sm:space-y-8">
                 <div className="space-y-3 sm:space-y-4">
                   <h3 className="text-lg sm:text-xl lg:text-2xl font-medium text-foreground">
-                    {example.title}
+                    <T context={`section.examples.example${index + 1}.title`}>{example.title}</T>
                   </h3>
                   <div className="p-4 sm:p-5 rounded-lg bg-card/50 dark:bg-card/30 border border-border/50">
                     <p className="text-xs sm:text-sm text-muted-foreground uppercase tracking-wide mb-2"><T context="section.examples.inputLabel">Input</T></p>
                     <p className="text-sm sm:text-base text-foreground italic">
-                      "{example.input}"
+                      <T context={`section.examples.example${index + 1}.input`}>"{example.input}"</T>
                     </p>
                   </div>
                 </div>
@@ -69,7 +69,7 @@ export function RealExamples() {
                       <div key={artifactIndex} className="flex items-start gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg bg-gradient-to-br from-primary/[0.05] to-accent/[0.03] dark:from-primary/[0.02] dark:to-accent/[0.01] border border-primary/20">
                         <span className="text-primary mt-0.5 text-sm">•</span>
                         <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
-                          {artifact}
+                          <T context={`section.examples.example${index + 1}.artifact${artifactIndex + 1}`}>{artifact}</T>
                         </p>
                       </div>
                     ))}
