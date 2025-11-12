@@ -402,41 +402,42 @@ export function EmailLayout({
     }
   }
 
+  // SCHEDULING TEMPORARILY DISABLED - Commented out for merge
   // Handle schedule action
-  const handleScheduleClick = async () => {
-    if (!selectedDate || !selectedTime) {
-      setValidationError('Please select a date and time')
-      return
-    }
+  // const handleScheduleClick = async () => {
+  //   if (!selectedDate || !selectedTime) {
+  //     setValidationError('Please select a date and time')
+  //     return
+  //   }
 
-    if (!validateForm()) {
-      return
-    }
+  //   if (!validateForm()) {
+  //     return
+  //   }
 
-    // Check Gmail auth first
-    if (!isAuthenticated) {
-      await ensureGmailAuth()
-      return
-    }
+  //   // Check Gmail auth first
+  //   if (!isAuthenticated) {
+  //     await ensureGmailAuth()
+  //     return
+  //   }
 
-    // Combine selected date and time
-    const [hours, minutes] = selectedTime.split(':')
-    const scheduledDate = new Date(selectedDate)
-    scheduledDate.setHours(parseInt(hours), parseInt(minutes), 0, 0)
+  //   // Combine selected date and time
+  //   const [hours, minutes] = selectedTime.split(':')
+  //   const scheduledDate = new Date(selectedDate)
+  //   scheduledDate.setHours(parseInt(hours), parseInt(minutes), 0, 0)
     
-    const scheduledTimestamp = scheduledDate.getTime()
-    if (onUpdate) {
-      onUpdate({
-        ...data,
-        to: toEmail,
-        subject: subject,
-        body: emailContent,
-        status: 'scheduled' as const,
-        scheduledAt: scheduledTimestamp
-      })
-    }
-    setIsScheduleOpen(false)
-  }
+  //   const scheduledTimestamp = scheduledDate.getTime()
+  //   if (onUpdate) {
+  //     onUpdate({
+  //       ...data,
+  //       to: toEmail,
+  //       subject: subject,
+  //       body: emailContent,
+  //       status: 'scheduled' as const,
+  //       scheduledAt: scheduledTimestamp
+  //     })
+  //   }
+  //   setIsScheduleOpen(false)
+  // }
 
   // Check if fields are complete
   const isComplete = toEmail.trim() && subject.trim() && emailContent.trim()
@@ -546,7 +547,7 @@ export function EmailLayout({
             <Alert className="bg-yellow-500/10 border-yellow-500/20">
               <AlertCircle className="h-4 w-4 text-foreground" />
               <AlertDescription className="text-sm text-foreground">
-                Connect your Gmail account to send or schedule emails.
+                Connect your Gmail account to send emails.
               </AlertDescription>
             </Alert>
           )}
@@ -562,7 +563,8 @@ export function EmailLayout({
               {isConnecting ? 'Connecting...' : (sendHistory.length > 0 ? 'Send Again' : 'Send Now')}
             </Button>
             
-            <Button
+            {/* SCHEDULING TEMPORARILY DISABLED - Commented out for merge */}
+            {/* <Button
               variant="outline"
               disabled={!isComplete || authLoading || isConnecting}
               className="flex-1"
@@ -570,18 +572,19 @@ export function EmailLayout({
             >
               <Calendar className="w-4 h-4 mr-2" />
               Schedule
-            </Button>
+            </Button> */}
           </div>
 
+          {/* SCHEDULING TEMPORARILY DISABLED - Commented out for merge */}
           {/* Scheduled Info */}
-          {computedStatus === 'scheduled' && (data as any).scheduledAt && (
+          {/* {computedStatus === 'scheduled' && (data as any).scheduledAt && (
             <Alert className="bg-primary/10 border-primary/20">
               <Clock className="h-4 w-4 text-foreground" />
               <AlertDescription className="text-sm text-foreground">
                 Scheduled for: {formatDate((data as any).scheduledAt)}
               </AlertDescription>
             </Alert>
-          )}
+          )} */}
 
           {/* Send History Section - Phase 7 */}
           {/* Always show history section, even when empty */}
@@ -821,7 +824,7 @@ export function EmailLayout({
           <DialogHeader>
             <DialogTitle>Connect Gmail Account</DialogTitle>
             <DialogDescription>
-              You need to connect your Gmail account to send or schedule emails. 
+              You need to connect your Gmail account to send emails. 
               This will open Google's authorization page in a popup window.
             </DialogDescription>
           </DialogHeader>
@@ -845,8 +848,9 @@ export function EmailLayout({
         </DialogContent>
       </Dialog>
 
+      {/* SCHEDULING TEMPORARILY DISABLED - Commented out for merge */}
       {/* Schedule Dialog - Root Level */}
-      <Dialog open={isScheduleOpen} onOpenChange={setIsScheduleOpen}>
+      {/* <Dialog open={isScheduleOpen} onOpenChange={setIsScheduleOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Schedule Email</DialogTitle>
@@ -856,7 +860,6 @@ export function EmailLayout({
           </DialogHeader>
           
           <div className="space-y-6 py-4">
-            {/* Day Selection */}
             <div className="space-y-3">
               <Label className="text-sm font-semibold text-foreground">Select Day</Label>
               <div className="flex flex-wrap gap-2">
@@ -874,7 +877,6 @@ export function EmailLayout({
               </div>
             </div>
 
-            {/* Time Selection */}
             {selectedDate && (
               <div className="space-y-3 border-t border-border/20 pt-4">
                 <Label className="text-sm font-semibold text-foreground">Select Time</Label>
@@ -895,7 +897,6 @@ export function EmailLayout({
               </div>
             )}
 
-            {/* Preview Section */}
             {selectedDate && selectedTime && (
               <div className="border-t border-border/20 pt-4">
                 <div className="bg-muted/30 rounded-lg p-4">
@@ -918,7 +919,7 @@ export function EmailLayout({
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
 
       {/* Send Confirmation Dialog - Root Level */}
       <AlertDialog open={isSendConfirmOpen} onOpenChange={setIsSendConfirmOpen}>
