@@ -8,6 +8,7 @@ import { LogOut, Upload, ArrowRight } from 'lucide-react'
 import AccountTab from './tabs/AccountTab'
 import DataTab from './tabs/DataTab'
 import FriendsTab from './tabs/FriendsTab'
+import ConnectionsTab from './tabs/ConnectionsTab'
 import { handleSignOut } from './utils'
 import SubscriptionOverview from './tabs/subscription/subscription-overview'
 import { getFirebaseAuth } from '@/app/lib/firebase'
@@ -42,7 +43,7 @@ const SettingsScreen = () => {
     // 0) Session flag set before navigating to /settings
     try {
       const stored = window.sessionStorage.getItem('settingsActiveTab')
-      if (stored && ['account', 'friends', 'subscription', 'notifications', 'integrations', 'ai-preferences', 'data', 'imports'].includes(stored)) {
+      if (stored && ['account', 'friends', 'subscription', 'notifications', 'integrations', 'ai-preferences', 'data', 'imports', 'connections'].includes(stored)) {
         setActiveTab(stored)
         window.sessionStorage.removeItem('settingsActiveTab')
         return
@@ -51,14 +52,14 @@ const SettingsScreen = () => {
 
     // 1) Prefer hash routing e.g. /settings#subscription
     const hash = (window.location.hash || '').replace('#', '')
-    if (['account', 'friends', 'subscription', 'notifications', 'integrations', 'ai-preferences', 'data', 'imports'].includes(hash)) {
+    if (['account', 'friends', 'subscription', 'notifications', 'integrations', 'ai-preferences', 'data', 'imports', 'connections'].includes(hash)) {
       setActiveTab(hash)
       return
     }
     // 2) Fallback to tab query parameter e.g. /settings?tab=subscription
     const urlParams = new URLSearchParams(window.location.search)
     const tabParam = urlParams.get('tab')
-    if (tabParam && ['account', 'friends', 'subscription', 'notifications', 'integrations', 'ai-preferences', 'data', 'imports'].includes(tabParam)) {
+    if (tabParam && ['account', 'friends', 'subscription', 'notifications', 'integrations', 'ai-preferences', 'data', 'imports', 'connections'].includes(tabParam)) {
       setActiveTab(tabParam)
       return
     }
@@ -153,6 +154,7 @@ const SettingsScreen = () => {
               { id: 'account', label: 'Account', description: 'Profile and personal information' },
               { id: 'friends', label: 'Friends', description: 'Manage friends and sharing' },
               { id: 'subscription', label: 'Subscription', description: 'Billing and plan details' },
+              { id: 'connections', label: 'Connections', description: 'Platform integrations' },
               { id: 'imports', label: 'Imports', description: 'Import external data' },
               { id: 'data', label: 'Privacy', description: 'Security and data management' }
             ].map((tab) => (
@@ -207,6 +209,12 @@ const SettingsScreen = () => {
           {activeTab === 'subscription' && (
             <div className="space-y-8">
               <SubscriptionOverview />
+            </div>
+          )}
+
+          {activeTab === 'connections' && (
+            <div className="space-y-8">
+              <ConnectionsTab userId={userId} />
             </div>
           )}
 

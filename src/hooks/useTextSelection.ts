@@ -126,8 +126,25 @@ export function useTextSelection(options: UseTextSelectionOptions) {
   // Cleanup live region on unmount
   useEffect(() => {
     return () => {
-      if (announcementRef.current && document.body.contains(announcementRef.current)) {
-        document.body.removeChild(announcementRef.current)
+      // Defensive cleanup: check if node exists and is still a child before removal
+      const node = announcementRef.current
+      if (node && node.parentNode === document.body) {
+        try {
+          document.body.removeChild(node)
+          // Clear ref after successful removal to prevent double-removal attempts
+          announcementRef.current = null
+        } catch (error) {
+          // Silently handle removal errors (node may have been removed by another cleanup)
+          // This prevents React Strict Mode double-unmount from causing errors
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('[useTextSelection] Cleanup warning:', error)
+          }
+          // Clear ref even if removal failed (node is gone)
+          announcementRef.current = null
+        }
+      } else if (node) {
+        // Node exists but isn't a child - clear ref anyway
+        announcementRef.current = null
       }
     }
   }, [])

@@ -19,6 +19,7 @@ import { TrackerLayout } from './layouts/TrackerLayout'
 import { ReportLayout } from './layouts/ReportLayout'
 import { AnalysisLayout } from './layouts/AnalysisLayout'
 import { SummaryLayout } from './layouts/SummaryLayout'
+import { EmailLayout } from './layouts/EmailLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
@@ -72,14 +73,27 @@ function validateArtifactStructure(artifact: Artifact): { valid: boolean; errors
   } else if (layout === 'insights') {
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
       errors.push('insights layout: data must be an object')
-    } else if (!Array.isArray(dataAny.insights)) {
-      errors.push('insights layout: data.insights is required (array)')
+    } else {
+      // Allow missing insights - renderer handles empty state gracefully
+      // Check multiple possible field locations (match renderer's defensive checks)
+      const hasInsights = Array.isArray(dataAny.insights) || Array.isArray(dataAny?.data?.insights)
+      if (!hasInsights) {
+        // Don't error - just log a warning. The renderer will handle empty state
+        console.warn('[ArtifactRenderer] Insights artifact missing insights array - will render empty state')
+      }
     }
   } else if (layout === 'markdown') {
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
       errors.push('markdown layout: data must be an object')
-    } else if (!dataAny.markdown && !dataAny.sections) {
-      errors.push('markdown layout: data.markdown or data.sections is required')
+    } else {
+      // Allow empty markdown/sections - initialize if missing rather than failing
+      // This handles edge cases where artifacts were created before normalization
+      const hasMarkdown = dataAny.markdown !== undefined && dataAny.markdown !== null
+      const hasSections = dataAny.sections !== undefined && dataAny.sections !== null
+      if (!hasMarkdown && !hasSections) {
+        // Don't error - just log a warning. The renderer will handle empty state
+        console.warn('[ArtifactRenderer] Markdown artifact missing both markdown and sections - will render empty state')
+      }
     }
   } else if (layout === 'table' || layout === 'cards') {
     if (!Array.isArray(data)) {
@@ -277,6 +291,16 @@ export function ArtifactRenderer({
     case 'summary':
       return (
         <SummaryLayout
+          artifact={artifact}
+          editable={editable}
+          onUpdate={onUpdate}
+          editButton={editButton}
+        />
+      )
+    
+    case 'email':
+      return (
+        <EmailLayout
           artifact={artifact}
           editable={editable}
           onUpdate={onUpdate}

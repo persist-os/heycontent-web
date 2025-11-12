@@ -128,87 +128,102 @@ export const updateArtifact = mutation({
       updates.tags = args.tags;
     }
     
-    // ✅ NEW: Create version snapshot BEFORE update
     const currentVersion = existing.metadata?.version || 1;
     const editSource = args.editSource || "widget";  // Default to "widget" for backward compatibility
+    const skipVersion = args.skipVersion || false;  // Skip version creation for non-content updates (e.g., sends)
     
-    // Find existing latest version record (if exists)
-    const currentLatest = await ctx.db
-      .query("artifact_versions")
-      .withIndex("by_latest", (q) =>
-        q.eq("artifactId", args.artifactId).eq("isLatest", true)
-      )
-      .first();
-    
-    // If latest version exists and matches current version, mark it as historical
-    // Otherwise, create snapshot of current version
-    let versionSnapshotId;
-    if (currentLatest && currentLatest.versionNumber === currentVersion) {
-      // Update existing version record to mark as historical
-      await ctx.db.patch(currentLatest._id, { isLatest: false });
-      versionSnapshotId = currentLatest._id;
-    } else {
-      // Create snapshot of current version (shouldn't happen normally, but handle edge case)
-      const previousVersion = await ctx.db
+    // Only create versions for actual content edits, not for sends or metadata-only updates
+    if (!skipVersion) {
+      // ✅ Create version snapshot BEFORE update (only for content edits)
+      // Find existing latest version record (if exists)
+      const currentLatest = await ctx.db
         .query("artifact_versions")
-        .withIndex("by_artifact_version", (q) =>
-          q.eq("artifactId", args.artifactId).eq("versionNumber", currentVersion)
+        .withIndex("by_latest", (q) =>
+          q.eq("artifactId", args.artifactId).eq("isLatest", true)
         )
         .first();
       
-      versionSnapshotId = await ctx.db.insert("artifact_versions", {
+      // If latest version exists and matches current version, mark it as historical
+      // Otherwise, create snapshot of current version
+      let versionSnapshotId;
+      if (currentLatest && currentLatest.versionNumber === currentVersion) {
+        // Update existing version record to mark as historical
+        await ctx.db.patch(currentLatest._id, { isLatest: false });
+        versionSnapshotId = currentLatest._id;
+      } else {
+        // Create snapshot of current version (shouldn't happen normally, but handle edge case)
+        const previousVersion = await ctx.db
+          .query("artifact_versions")
+          .withIndex("by_artifact_version", (q) =>
+            q.eq("artifactId", args.artifactId).eq("versionNumber", currentVersion)
+          )
+          .first();
+        
+        versionSnapshotId = await ctx.db.insert("artifact_versions", {
+          artifactId: args.artifactId,
+          versionNumber: currentVersion,
+          isLatest: false,  // Mark as historical
+          data: existing.data,
+          dataModel: existing.data_model,
+          tags: existing.tags,
+          createdAt: existing.updatedAt,  // Use artifact's last update time
+          createdBy: existing.metadata?.lastUpdatedBy || "system",
+          editSource: existing.metadata?.editSource || "widget",
+          parentVersionId: previousVersion?._id,
+          storageType: "snapshot",
+          widgetExecutionId: undefined,
+          taskRunId: undefined,
+        });
+      }
+      
+      // Build edit history entry
+      const editHistory = existing.metadata?.editHistory || [];
+      const newEditEntry = {
+        timestamp: now,
+        ...(editSource === "widget" ? { widgetId: args.updatedBy } : { userId: args.updatedBy }),
+        editSource: editSource,
+        changes: JSON.stringify({ data: args.data !== undefined, dataModel: args.dataModel !== undefined, tags: args.tags !== undefined })
+      };
+      
+      updates.metadata = {
+        ...existing.metadata,
+        version: currentVersion + 1,  // Increment version on content edit
+        lastUpdatedBy: args.updatedBy,
+        lastUpdatedAt: now,
+        editSource: editSource,  // Track edit source
+        editHistory: [...editHistory, newEditEntry].slice(-50),  // Keep last 50 edits
+      };
+      
+      await ctx.db.patch(args.artifactId, updates);
+      
+      // ✅ Create new version record (version N+1) - only for content edits
+      await ctx.db.insert("artifact_versions", {
         artifactId: args.artifactId,
-        versionNumber: currentVersion,
-        isLatest: false,  // Mark as historical
-        data: existing.data,
-        dataModel: existing.data_model,
-        tags: existing.tags,
-        createdAt: existing.updatedAt,  // Use artifact's last update time
-        createdBy: existing.metadata?.lastUpdatedBy || "system",
-        editSource: existing.metadata?.editSource || "widget",
-        parentVersionId: previousVersion?._id,
+        versionNumber: currentVersion + 1,
+        isLatest: true,  // This is the new latest
+        data: updates.data !== undefined ? updates.data : existing.data,
+        dataModel: updates.data_model !== undefined ? updates.data_model : existing.data_model,
+        tags: updates.tags !== undefined ? updates.tags : existing.tags,
+        createdAt: now,
+        createdBy: args.updatedBy,
+        editSource: editSource,
+        parentVersionId: versionSnapshotId,  // Link to previous version
         storageType: "snapshot",
         widgetExecutionId: undefined,
         taskRunId: undefined,
       });
+    } else {
+      // Skip version creation - just update metadata (for sends, metadata-only updates)
+      updates.metadata = {
+        ...existing.metadata,
+        // Keep same version - don't increment
+        lastUpdatedBy: args.updatedBy,
+        lastUpdatedAt: now,
+        editSource: editSource,
+      };
+      
+      await ctx.db.patch(args.artifactId, updates);
     }
-    
-    // Build edit history entry
-    const editHistory = existing.metadata?.editHistory || [];
-    const newEditEntry = {
-      timestamp: now,
-      ...(editSource === "widget" ? { widgetId: args.updatedBy } : { userId: args.updatedBy }),
-      editSource: editSource,
-      changes: JSON.stringify({ data: args.data !== undefined, dataModel: args.dataModel !== undefined, tags: args.tags !== undefined })
-    };
-    
-    updates.metadata = {
-      ...existing.metadata,
-      version: currentVersion + 1,  // Increment version on each update
-      lastUpdatedBy: args.updatedBy,
-      lastUpdatedAt: now,
-      editSource: editSource,  // Track edit source
-      editHistory: [...editHistory, newEditEntry].slice(-50),  // Keep last 50 edits
-    };
-    
-    await ctx.db.patch(args.artifactId, updates);
-    
-    // ✅ NEW: Create new version record (version N+1)
-    await ctx.db.insert("artifact_versions", {
-      artifactId: args.artifactId,
-      versionNumber: currentVersion + 1,
-      isLatest: true,  // This is the new latest
-      data: updates.data !== undefined ? updates.data : existing.data,
-      dataModel: updates.data_model !== undefined ? updates.data_model : existing.data_model,  // ✅ FIXED: Use updated dataModel if provided
-      tags: updates.tags !== undefined ? updates.tags : existing.tags,
-      createdAt: now,
-      createdBy: args.updatedBy,
-      editSource: editSource,
-      parentVersionId: versionSnapshotId,  // Link to previous version
-      storageType: "snapshot",
-      widgetExecutionId: undefined,
-      taskRunId: undefined,
-    });
     
     return true;
   },

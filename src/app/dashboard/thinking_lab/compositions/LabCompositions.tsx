@@ -9,7 +9,7 @@
  */
 
 import React, { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuery } from 'convex/react'
 import { api } from '../../../../../convex/_generated/api'
 import { MarkdownNotepad } from '../components/notepad/MarkdownNotepad'
@@ -99,6 +99,7 @@ function FullThinkingLabInternal({
   const { user, isLoading: authLoading } = useOptimizedAuth()
   const userId = user?.uid
   const router = useRouter()
+  const searchParams = useSearchParams()
   
   // Mobile detection
   const isMobile = useIsMobile()
@@ -120,6 +121,14 @@ function FullThinkingLabInternal({
     }
     return 'notepad'
   })
+  
+  // Override panel mode from URL param on mount (for programmatic navigation)
+  React.useEffect(() => {
+    const panelParam = searchParams.get('panel')
+    if (panelParam === 'widgets' || panelParam === 'artifacts' || panelParam === 'notepad') {
+      setRightPanelMode(panelParam)
+    }
+  }, [searchParams]) // Run when searchParams changes (e.g., navigation from HomepageChat)
   
   // Persist rightPanelMode to localStorage
   React.useEffect(() => {

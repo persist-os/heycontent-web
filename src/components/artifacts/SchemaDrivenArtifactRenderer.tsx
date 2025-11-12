@@ -10,7 +10,7 @@
 
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Artifact, ArtifactRendererProps } from '@/types/artifacts'
 import { TableLayoutRenderer } from './layouts/renderers/TableLayoutRenderer'
 import { CardsLayoutRenderer } from './layouts/renderers/CardsLayoutRenderer'
@@ -19,6 +19,7 @@ import { TrackerLayoutRenderer } from './layouts/renderers/TrackerLayoutRenderer
 import { MarkdownLayoutRenderer } from './layouts/renderers/MarkdownLayoutRenderer'
 import { InsightsLayoutRenderer } from './layouts/renderers/InsightsLayoutRenderer'
 import { CardLayoutRenderer } from './layouts/renderers/CardLayoutRenderer'
+import { EmailLayout } from './layouts/EmailLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useQuery } from 'convex/react'
@@ -67,6 +68,32 @@ export function SchemaDrivenArtifactRenderer({
   onUpdate,
   editButton
 }: ArtifactRendererProps) {
+  // CRITICAL: All hooks must be called before any early returns
+  // Version state management - must be at top level
+  const artifactId = artifact ? ((artifact as any)._id || (artifact as any).id) : null;
+  const currentArtifactVersion = artifact?.metadata?.version || 1;
+  const [selectedVersion, setSelectedVersion] = useState<number>(currentArtifactVersion);
+
+  // CRITICAL: Sync selectedVersion when currentArtifactVersion changes (e.g., after artifact update)
+  // This ensures editability is not lost when artifact version increments
+  useEffect(() => {
+    if (currentArtifactVersion !== selectedVersion && selectedVersion < currentArtifactVersion) {
+      // Artifact was updated (version incremented) - sync to latest version
+      setSelectedVersion(currentArtifactVersion);
+    }
+  }, [currentArtifactVersion, selectedVersion]);
+
+  // Fetch version data if different from current (must be before early returns)
+  const versionData = useQuery(
+    api.artifactVersionQueries.getVersionByNumber,
+    selectedVersion !== currentArtifactVersion && artifactId
+      ? {
+          artifactId: artifactId as Id<'artifacts'>,
+          versionNumber: selectedVersion,
+        }
+      : "skip"
+  );
+
   // Defensive: handle null/undefined artifact
   if (!artifact) {
     return (
@@ -107,21 +134,7 @@ export function SchemaDrivenArtifactRenderer({
     )
   }
 
-  // Version state management
-  const artifactId = (artifact as any)._id || (artifact as any).id;
-  const currentArtifactVersion = artifact.metadata?.version || 1;
-  const [selectedVersion, setSelectedVersion] = useState<number>(currentArtifactVersion);
-
-  // Fetch version data if different from current
-  const versionData = useQuery(
-    api.artifactVersionQueries.getVersionByNumber,
-    selectedVersion !== currentArtifactVersion && artifactId
-      ? {
-          artifactId: artifactId as Id<'artifacts'>,
-          versionNumber: selectedVersion,
-        }
-      : "skip"
-  );
+  // versionData already fetched above (before early returns)
 
   // Use version data if available, otherwise use artifact
   const displayArtifact = versionData && selectedVersion !== currentArtifactVersion
@@ -256,6 +269,16 @@ export function SchemaDrivenArtifactRenderer({
           artifactId={artifactId as Id<'artifacts'> | undefined}
           selectedVersion={selectedVersion}
           onVersionChange={setSelectedVersion}
+        />
+      )
+    
+    case 'compose':
+      return (
+        <EmailLayout
+          artifact={displayArtifact as any}
+          editable={isEditable}
+          onUpdate={onUpdate}
+          editButton={editButton}
         />
       )
     

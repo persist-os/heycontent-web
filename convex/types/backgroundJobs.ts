@@ -25,7 +25,9 @@ export const jobTypeValidator = v.union(
   v.literal("chaos_generation"),
   v.literal("cognitive_field_formation"),
   v.literal("crystal_formation"),  // Added for backwards compatibility
-  v.literal("plan_execution")
+  v.literal("plan_execution"),
+  v.literal("email_send"),  // Send email artifacts via Gmail API
+  v.literal("email_reply_check")  // Check for replies to sent emails
 );
 
 // Job status validator - matches Python JobStatus enum
@@ -45,7 +47,7 @@ export const jobPriorityValidator = v.union(
 );
 
 // Type exports for TypeScript code
-export type JobType = "shard_extraction" | "intelligence_analysis" | "chatgpt_import" | "context_enrichment_feedback" | "chat_model_feedback" | "stardust_stream_detection" | "convergence_optimization" | "evolution_mab_reward" | "formation_mab_reward" | "stardust_promotion" | "widget_execution" | "chat_post_message_tasks" | "conversation_title_generation" | "chaos_generation" | "cognitive_field_formation" | "crystal_formation" | "plan_execution";
+export type JobType = "shard_extraction" | "intelligence_analysis" | "chatgpt_import" | "context_enrichment_feedback" | "chat_model_feedback" | "stardust_stream_detection" | "convergence_optimization" | "evolution_mab_reward" | "formation_mab_reward" | "stardust_promotion" | "widget_execution" | "chat_post_message_tasks" | "conversation_title_generation" | "chaos_generation" | "cognitive_field_formation" | "crystal_formation" | "plan_execution" | "email_send" | "email_reply_check";
 export type JobStatus = "queued" | "running" | "completed" | "failed";
 export type JobPriority = "low" | "normal" | "high" | "urgent";
 

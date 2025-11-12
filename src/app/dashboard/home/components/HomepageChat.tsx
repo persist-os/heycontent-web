@@ -8,7 +8,7 @@ import { useConversationState } from '@/app/dashboard/thinking_lab/hooks/useConv
 import { useMessageList } from '@/app/dashboard/thinking_lab/hooks/useMessageList'
 import { ChatInputBox } from './ChatInputBox'
 import ChatMessagesList from '@/app/dashboard/thinking_lab/components/dialogue/components/ChatMessagesList'
-import { ArrowRight, Home, RotateCcw } from 'lucide-react'
+import { Home, RotateCcw } from 'lucide-react'
 import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDialog'
 import { T } from '@/components/translation/T'
 import { useTranslation } from '@/hooks/useTranslation'
@@ -42,6 +42,7 @@ export function HomepageChat({
   const [showResetDialog, setShowResetDialog] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
   const router = useRouter()
+  const hasRedirectedRef = React.useRef(false)
   
   // Translations for titles and labels
   const { text: backToMainChatTitle } = useTranslation('Back to main chat', {
@@ -95,12 +96,13 @@ export function HomepageChat({
     isStreaming
   })
 
-  // Navigate to Thinking Lab with conversation
-  const openInThinkingLab = useCallback(() => {
-    if (conversationId) {
-      router.push(`/dashboard/thinking_lab?chatId=${conversationId}`)
+  // Auto-redirect to Thinking Lab after first message is sent
+  useEffect(() => {
+    if (conversationId && messages.length > 0 && !hasRedirectedRef.current && !isStreaming) {
+      hasRedirectedRef.current = true
+      router.push(`/dashboard/thinking_lab?chatId=${conversationId}&panel=widgets`)
     }
-  }, [conversationId, router])
+  }, [conversationId, messages.length, isStreaming, router])
 
   // Handle suggestion clicks
   const handleSuggestionClick = useCallback((suggestion: any, onSendMessage: (text: string) => void) => {
@@ -193,20 +195,11 @@ export function HomepageChat({
           {/* Messages Display - only show if messages exist */}
           {messageList.length > 0 && (
             <div className="space-y-4 px-6 pt-6 pb-4">
-              {/* Header with "Open in Lab" button */}
+              {/* Header */}
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-foreground">
                   {activeProjectId ? <T context="dashboard.home.chat.messages.family">Family Messages</T> : <T context="dashboard.home.chat.messages.conversation">Conversation</T>}
                 </h3>
-                {conversationId && !activeProjectId && (
-                  <button
-                    onClick={openInThinkingLab}
-                    className="text-sm text-primary-dark hover:text-primary flex items-center gap-2 transition-colors font-medium hover:underline"
-                  >
-                    <T context="dashboard.home.chat.open_lab">Open in Thinking Lab</T>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                )}
               </div>
 
               {/* Message List - scrollable with fixed height */}

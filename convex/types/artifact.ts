@@ -12,7 +12,8 @@ export const artifactTypeValidator = v.union(
   v.literal("analysis"),        // Data insights with charts
   v.literal("summary"),         // KPI metrics
   v.literal("tracker"),         // Execution logs
-  v.literal("timeline")         // Timeline events
+  v.literal("timeline"),        // Timeline events
+  v.literal("email")            // Email artifacts
 );
 
 /**
@@ -102,6 +103,7 @@ export const artifactUpdateValidator = v.object({
   updatedBy: v.string(), // widget_id or user_id
   editSource: v.optional(v.union(v.literal("widget"), v.literal("user"))),  // Track edit source
   expectedVersion: v.optional(v.number()),  // Optimistic concurrency control
+  skipVersion: v.optional(v.boolean()),  // Skip version creation (e.g., for sends, not content edits)
 });
 
 /**
