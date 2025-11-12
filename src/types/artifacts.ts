@@ -248,6 +248,46 @@ export interface SummaryArtifact {
 }
 
 /**
+ * EMAIL ARTIFACT
+ * 
+ * Email composition and sending artifacts
+ * Supports draft, scheduled, and sent statuses
+ * Allows multiple sends with full history tracking
+ */
+export interface EmailArtifact {
+  type: 'email'
+  data_model: {
+    layout: 'compose'
+    fields?: string[]  // Optional: ['to', 'subject', 'body', 'scheduledAt', 'status']
+  }
+  data: {
+    to: string
+    subject: string
+    body: string  // HTML or plain text content
+    is_html?: boolean  // Explicit flag indicating if body is HTML (defaults to true for backward compatibility)
+    scheduledAt?: number  // Timestamp for scheduled emails (used for scheduling, not stored status)
+    replies?: Array<{
+      messageId: string
+      from: string
+      body: string
+      timestamp: number
+      snippet?: string
+    }>
+    // NOTE: Status, sendHistory, and scheduledSends are now tracked in actions table
+    // Query actions table for send history and computed status
+  }
+  metadata: ArtifactMetadata
+  tags?: string[]
+  // Convex IDs
+  _id: Id<"artifacts">
+  projectId: Id<"projects">
+  widgetId?: Id<"widgets">
+  userId: string
+  createdAt: number
+  updatedAt: number
+}
+
+/**
  * Union type for all artifacts
  * Add new artifact types here as they're implemented
  */
@@ -258,6 +298,7 @@ export type Artifact =
   | ReportArtifact
   | AnalysisArtifact
   | SummaryArtifact
+  | EmailArtifact
 
 /**
  * Props for artifact renderer

@@ -55,7 +55,8 @@ export const widgetOutputArtifactTypeValidator = v.union(
   v.literal("analysis"),
   v.literal("summary"),
   v.literal("tracker"),
-  v.literal("timeline")
+  v.literal("timeline"),
+  v.literal("email")
 );
 
 // Schema fields for individual widgets (unwrapped for defineTable)
@@ -101,17 +102,8 @@ export const widgetSchemaFields = {
     })
   )),
   
-  // Execution History (NEW - self-learning data)
-  // Note: v.union(v.null(), ...) allows explicit null values from backend
-  execution_history: v.optional(v.union(
-    v.null(),
-    v.object({
-      avg_quality_score: v.optional(v.number()),
-      avg_duration_minutes: v.optional(v.number()),
-      total_executions: v.optional(v.number()),
-      improvement_trend: v.optional(v.string()), // "increasing", "stable", "declining"
-    })
-  )),
+  // NOTE: Execution history is now tracked in actions table (widget_execution_start, widget_execution_complete, widget_execution_failed)
+  // Do NOT store execution_history here - query actions table instead
   
   // Family Identity (NEW - Phase 2: Widget as Family of Agents)
   familyIdentity: v.optional(v.object({
@@ -170,8 +162,11 @@ export const widgetSchemaFields = {
   // ✅ PHASE 2: Default artifact type for widget family
   defaultArtifactType: v.optional(widgetOutputArtifactTypeValidator),  // ✅ Default artifact type for agents without explicit type
   
+  // Widget status (legacy field - kept for backward compatibility)
+  // NOTE: Status can also be computed from actions table, but stored here for compatibility
+  status: v.optional(widgetStatusValidator),
+  
   // Metadata
-  status: widgetStatusValidator,
   createdAt: v.number(),
   updatedAt: v.number(),
 };
@@ -280,17 +275,7 @@ export const widgetBatchValidator = v.object({
       can_track: v.optional(v.array(v.string())),
     })
   )),
-  // Execution History (NEW - Phase 1.3)
-  // Note: v.union(v.null(), ...) allows explicit null values from backend
-  execution_history: v.optional(v.union(
-    v.null(),
-    v.object({
-      avg_quality_score: v.optional(v.number()),
-      avg_duration_minutes: v.optional(v.number()),
-      total_executions: v.optional(v.number()),
-      improvement_trend: v.optional(v.string()),
-    })
-  )),
+  // NOTE: Execution history is now tracked in actions table - do NOT include execution_history here
   // Orchestration metadata (optional) - using camelCase to match backend
   inputRequirements: v.optional(v.array(v.string())),
   outputArtifacts: v.optional(v.array(v.object({
@@ -368,17 +353,7 @@ export const widgetCreateValidator = v.object({
       can_track: v.optional(v.array(v.string())),
     })
   )),
-  // Execution History (NEW - Phase 1.3)
-  // Note: v.union(v.null(), ...) allows explicit null values from backend
-  execution_history: v.optional(v.union(
-    v.null(),
-    v.object({
-      avg_quality_score: v.optional(v.number()),
-      avg_duration_minutes: v.optional(v.number()),
-      total_executions: v.optional(v.number()),
-      improvement_trend: v.optional(v.string()),
-    })
-  )),
+  // NOTE: Execution history is now tracked in actions table - do NOT include execution_history here
   // Scheduling fields (for recurring widget execution)
   scheduleEnabled: v.optional(v.boolean()),
   scheduleFrequency: v.optional(widgetScheduleFrequencyValidator),
@@ -414,20 +389,10 @@ export const widgetUpdateValidator = v.object({
       can_track: v.optional(v.array(v.string())),
     })
   )),
-  // Execution History (NEW - Phase 1.3)
-  // Note: v.union(v.null(), ...) allows explicit null values from backend
-  execution_history: v.optional(v.union(
-    v.null(),
-    v.object({
-      avg_quality_score: v.optional(v.number()),
-      avg_duration_minutes: v.optional(v.number()),
-      total_executions: v.optional(v.number()),
-      improvement_trend: v.optional(v.string()),
-    })
-  )),
+  // NOTE: Execution history is now tracked in actions table - do NOT include execution_history here
+  // NOTE: Status is now computed from actions table - do NOT include status here
   lastRunAt: v.optional(v.number()),
   lastRunStatus: v.optional(widgetRunStatusValidator),
-  status: v.optional(widgetStatusValidator),
   // Scheduling fields (for recurring widget execution)
   scheduleEnabled: v.optional(v.boolean()),
   scheduleFrequency: v.optional(widgetScheduleFrequencyValidator),
@@ -641,7 +606,7 @@ export type WidgetStatus =
 export type WidgetRunStatus = "idle" | "running" | "success" | "failed";
 export type WidgetScheduleFrequency = "manual" | "hourly" | "daily" | "weekly" | "monthly";
 export type WidgetWorkflowStage = "gathering" | "analysis" | "synthesis" | "tracking" | "reporting";
-export type WidgetOutputArtifactType = "structured_list" | "report" | "analysis" | "summary" | "tracker" | "timeline";
+export type WidgetOutputArtifactType = "structured_list" | "report" | "analysis" | "summary" | "tracker" | "timeline" | "email";
 
 export interface WidgetCategory {
   name: string;
@@ -701,7 +666,7 @@ export interface Widget {
   dependency_hints?: WidgetDependencyHints;
   execution_profile?: WidgetExecutionProfile;
   workflow_stage?: WidgetWorkflowStage;
-  status: WidgetStatus;
+  // NOTE: status is now computed from actions table - do NOT include here
   createdAt: number;
   updatedAt: number;
 }
@@ -765,7 +730,7 @@ export function widgetValidatorToDbSchema(
     agentRoster?: any;
     defaultArtifactType?: string;
     capabilities?: any;
-    execution_history?: any;
+    // NOTE: execution_history is now tracked in actions table - do NOT include here
     inputRequirements?: string[];
     outputArtifacts?: any;
     dependencyHints?: any;
@@ -807,7 +772,7 @@ export function widgetValidatorToDbSchema(
     agentRoster: widget.agentRoster,
     defaultArtifactType: widget.defaultArtifactType,
     capabilities: widget.capabilities,
-    execution_history: widget.execution_history,
+    // NOTE: execution_history is now tracked in actions table - do NOT include here
     inputRequirements: widget.inputRequirements,
     outputArtifacts: widget.outputArtifacts,
     dependencyHints: widget.dependencyHints,

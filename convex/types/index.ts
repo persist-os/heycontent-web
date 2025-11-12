@@ -22,3 +22,6 @@ export * from './intelligenceBandit';
 // Background Jobs types
 export * from './backgroundJobs';
 
+// Gmail types
+export * from './gmail';
+
