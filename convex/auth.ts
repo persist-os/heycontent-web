@@ -15,7 +15,8 @@ export const getUserRole = query({
       v.literal("super_admin"),
       v.literal("ambassador"),
       v.literal("affiliate"),
-      v.literal("partner")
+      v.literal("partner"),
+      v.literal("blogger")
     ),
     permissions: v.array(v.string()),
     email: v.string(),
@@ -84,6 +85,20 @@ export const hasPermission = query({
       return userPermissions.includes(args.permission);
     }
 
+    // Bloggers have blog post management permissions
+    if (userRole.role === "blogger") {
+      const bloggerPermissions = [
+        "blog:read",
+        "blog:write",
+        "blog:update",
+        "blog:delete",
+        "blog:publish",
+        "profile:read",
+        "profile:update",
+      ];
+      return bloggerPermissions.includes(args.permission);
+    }
+
     return false;
   },
 });
@@ -103,6 +118,21 @@ export const canAccessAdmin = query({
   },
 });
 
+// Check if user can access blogger features
+export const canAccessBlogger = query({
+  args: {
+    userId: v.string(),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const userRole = await ctx.runQuery(api.auth.getUserRole, {
+      userId: args.userId,
+    });
+
+    return ["blogger", "admin", "super_admin"].includes(userRole.role);
+  },
+});
+
 // Update user role (admin only)
 export const updateUserRole = mutation({
   args: {
@@ -114,7 +144,8 @@ export const updateUserRole = mutation({
       v.literal("super_admin"),
       v.literal("ambassador"),
       v.literal("affiliate"),
-      v.literal("partner")
+      v.literal("partner"),
+      v.literal("blogger")
     ),
     adminUserId: v.string(), // The admin making the change
   },
@@ -165,7 +196,8 @@ export const getUsersWithRoles = query({
       v.literal("super_admin"),
       v.literal("ambassador"),
       v.literal("affiliate"),
-      v.literal("partner")
+      v.literal("partner"),
+      v.literal("blogger")
     ),
     createdAt: v.number(),
     subscription: v.optional(v.object({

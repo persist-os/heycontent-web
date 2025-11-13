@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useAuth } from '@/app/context/auth-context';
@@ -33,11 +33,13 @@ import { TestingHubSection } from './components/TestingHubSection';
 import { FeedbackDetailModal } from './components/FeedbackDetailModal';
 import { FeedbackFilters } from './components/FeedbackFilters';
 import { IntelligenceTestPanel } from './components/IntelligenceTestPanel';
+import { BlogPostEditor } from './components/BlogPostEditor';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import type { Id } from '@/convex/_generated/dataModel';
 
@@ -64,6 +66,7 @@ export default function AdminPage() {
   const router = useRouter();
   const { firebaseUser } = useAuth();
   const { isAdmin, isSuperAdmin } = useAdminAuth();
+  const [currentUserId, setCurrentUserId] = useState<string>('');
   
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedFeedback, setSelectedFeedback] = useState<any>(null);
@@ -83,6 +86,11 @@ export default function AdminPage() {
   const [editPromptTags, setEditPromptTags] = useState('');
   const [editPromptDescription, setEditPromptDescription] = useState('');
 
+  // Blog posts tab state
+  const [blogPostStatusFilter, setBlogPostStatusFilter] = useState<'all' | 'draft' | 'published' | 'archived'>('all');
+  const [blogPostCategoryFilter, setBlogPostCategoryFilter] = useState<'all' | 'code' | 'ux' | 'design'>('all');
+  const [blogPostSeriesFilter, setBlogPostSeriesFilter] = useState<string>('all');
+
   // Fetch data
   const feedback = useQuery(api.feedback.listFeedback, {
     status: 'all',
@@ -92,13 +100,34 @@ export default function AdminPage() {
   });
   const stats = useQuery(api.feedback.getFeedbackStats);
   const users = useQuery(api.auth.getUsersWithRoles, 
-    firebaseUser?.uid ? { adminUserId: firebaseUser.uid } : "skip"
+    currentUserId ? { adminUserId: currentUserId } : "skip"
   );
+
+  // Initialize user ID
+  useEffect(() => {
+    const fetchUserId = async () => {
+      try {
+        const id = await getCurrentUserId();
+        setCurrentUserId(id);
+      } catch (error) {
+        console.error('Failed to get user ID:', error);
+      }
+    };
+    fetchUserId();
+  }, []);
   const prompts = useQuery(api.promptsQueries.getAllPrompts, { limit: 200 });
+  const blogPosts = useQuery(api.blogPostQueries.getAllBlogPosts, {
+    includeDrafts: true,
+    limit: 200,
+  });
 
   const updateStatus = useMutation(api.feedback.updateFeedbackStatus);
   const updatePrompt = useMutation(api.promptsMutations.updatePromptBlock);
   const deletePrompt = useMutation(api.promptsMutations.deletePromptBlock);
+  const updateBlogPost = useMutation(api.blogPostMutations.updateBlogPost);
+  const deleteBlogPost = useMutation(api.blogPostMutations.deleteBlogPost);
+  const publishBlogPost = useMutation(api.blogPostMutations.publishBlogPost);
+  const createBlogPost = useMutation(api.blogPostMutations.createBlogPost);
 
   // Loading state
   if (firebaseUser === undefined) {
@@ -262,6 +291,65 @@ export default function AdminPage() {
     }
   };
 
+  // Blog post handlers
+  const handleSaveBlogPost = async (blogPostId: Id<"blogPosts">, updates: {
+    title?: string;
+    slug?: string;
+    description?: string;
+    content?: string;
+    category?: 'code' | 'ux' | 'design';
+    readTime?: string;
+    date?: string;
+    series?: string;
+    order?: number;
+    status?: 'draft' | 'published' | 'archived';
+  }) => {
+    try {
+      const userId = await getCurrentUserId();
+      await updateBlogPost({
+        blogPostId,
+        updates,
+        authorId: userId,
+      });
+      toast.success('Blog post updated successfully');
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('User identification required')) {
+        toast.error('Must be logged in to save posts');
+      } else {
+        toast.error(`Failed to update: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+      throw error;
+    }
+  };
+
+  const handleDeleteBlogPost = async (blogPostId: Id<"blogPosts">) => {
+    if (!confirm('Are you sure you want to delete this blog post?')) return;
+
+    try {
+      await deleteBlogPost({ blogPostId });
+      toast.success('Blog post deleted');
+    } catch (error) {
+      toast.error(`Failed to delete: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const handlePublishBlogPost = async (blogPostId: Id<"blogPosts">) => {
+    try {
+      await publishBlogPost({ blogPostId });
+      toast.success('Blog post published');
+    } catch (error) {
+      toast.error(`Failed to publish: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  // Filter blog posts
+  const filteredBlogPosts = blogPosts?.filter(post => {
+    if (blogPostStatusFilter !== 'all' && post.status !== blogPostStatusFilter) return false;
+    if (blogPostCategoryFilter !== 'all' && post.category !== blogPostCategoryFilter) return false;
+    if (blogPostSeriesFilter !== 'all' && post.series !== blogPostSeriesFilter) return false;
+    return true;
+  }) || [];
+
   // Filter prompts
   const filteredPrompts = prompts?.filter(p => {
     if (!promptSearch) return true;
@@ -299,7 +387,7 @@ export default function AdminPage() {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="overview">
                 <TrendingUp className="h-4 w-4 mr-2" />
                 Overview
@@ -315,6 +403,10 @@ export default function AdminPage() {
               <TabsTrigger value="prompts">
                 <FileText className="h-4 w-4 mr-2" />
                 Prompts
+              </TabsTrigger>
+              <TabsTrigger value="blog-posts">
+                <FileText className="h-4 w-4 mr-2" />
+                Blog Posts
               </TabsTrigger>
               <TabsTrigger value="testing">
                 <Zap className="h-4 w-4 mr-2" />
@@ -657,6 +749,137 @@ export default function AdminPage() {
                       Try adjusting your search term
                     </p>
                   )}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="blog-posts" className="space-y-6">
+              {/* Filters */}
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    Status
+                  </label>
+                  <Select value={blogPostStatusFilter} onValueChange={(v: 'all' | 'draft' | 'published' | 'archived') => setBlogPostStatusFilter(v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="published">Published</SelectItem>
+                      <SelectItem value="archived">Archived</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    Category
+                  </label>
+                  <Select value={blogPostCategoryFilter} onValueChange={(v: 'all' | 'code' | 'ux' | 'design') => setBlogPostCategoryFilter(v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="code">Code</SelectItem>
+                      <SelectItem value="ux">UX</SelectItem>
+                      <SelectItem value="design">Design</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    Series
+                  </label>
+                  <Select value={blogPostSeriesFilter} onValueChange={setBlogPostSeriesFilter}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      {Array.from(new Set(blogPosts?.map(p => p.series).filter(Boolean))).map(series => (
+                        <SelectItem key={series} value={series!}>{series}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-4">
+                <Card className="p-4">
+                  <div className="text-sm text-muted-foreground">Total Posts</div>
+                  <div className="text-2xl font-bold text-foreground">{blogPosts?.length || 0}</div>
+                </Card>
+                <Card className="p-4">
+                  <div className="text-sm text-muted-foreground">Filtered Results</div>
+                  <div className="text-2xl font-bold text-foreground">{filteredBlogPosts.length}</div>
+                </Card>
+                <Card className="p-4">
+                  <div className="text-sm text-muted-foreground">Published</div>
+                  <div className="text-2xl font-bold text-foreground">
+                    {blogPosts?.filter(p => p.status === 'published').length || 0}
+                  </div>
+                </Card>
+              </div>
+
+              {/* Create New Post Button */}
+              <div className="flex justify-end">
+                <Button
+                  onClick={async () => {
+                    const newSlug = `new-post-${Date.now()}`
+                    try {
+                      const userId = await getCurrentUserId();
+                      await createBlogPost({
+                        slug: newSlug,
+                        title: 'New Blog Post',
+                        description: 'Edit this description',
+                        content: '# New Blog Post\n\nEdit this content...',
+                        category: 'code',
+                        readTime: '5 min',
+                        date: new Date().toISOString().split('T')[0],
+                        authorId: userId,
+                        status: 'draft',
+                      })
+                      toast.success('Draft post created! Refresh to see it.')
+                    } catch (error) {
+                      if (error instanceof Error && error.message.includes('User identification required')) {
+                        toast.error('Must be logged in to create posts');
+                      } else {
+                        toast.error(`Failed to create: ${error instanceof Error ? error.message : 'Unknown error'}`)
+                      }
+                    }
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <FileText className="h-4 w-4" />
+                  Create New Post
+                </Button>
+              </div>
+
+              {/* Blog Posts List */}
+              <ScrollArea className="h-[calc(100vh-500px)]">
+                <div className="space-y-4">
+                  {filteredBlogPosts.map((post: any) => (
+                    <BlogPostEditor
+                      key={post._id}
+                      post={post}
+                      onSave={(updates) => handleSaveBlogPost(post._id, updates)}
+                      onDelete={() => handleDeleteBlogPost(post._id)}
+                      onPublish={post.status === 'draft' ? () => handlePublishBlogPost(post._id) : undefined}
+                      authorId={currentUserId}
+                    />
+                  ))}
+                </div>
+              </ScrollArea>
+
+              {filteredBlogPosts.length === 0 && (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">No blog posts found</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {blogPosts?.length === 0 ? 'Create your first blog post using the "Create New Post" button above' : 'Try adjusting your filters'}
+                  </p>
                 </div>
               )}
             </TabsContent>

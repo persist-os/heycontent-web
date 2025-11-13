@@ -39,6 +39,13 @@ export function T({
   // Extract text from children
   const sourceText = extractText(children);
   
+  // Debug logging (remove in production)
+  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+    if (language !== 'en' && sourceText.length > 0) {
+      console.log('[Translation]', { sourceText: sourceText.substring(0, 50), language, context });
+    }
+  }
+  
   // Get translation
   const { text, isTranslating, isFromCache, error, retryTranslation } = useTranslation(sourceText, {
     sourceLang,
