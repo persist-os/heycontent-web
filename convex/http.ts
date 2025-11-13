@@ -261,6 +261,23 @@ app.post("/api/users/:id/update_conversation_title", async (c) => {
   return c.json(result);
 });
 
+// Update conversation metadata (e.g., awaitingInitialContext)
+app.post("/api/chat/conversation/updateMetadata", async (c) => {
+  const ctx = c.env;
+  const { userId, conversationId, metadata } = await c.req.json();
+  
+  try {
+    const result = await ctx.runMutation(api.chatMutations.updateConversationMetadata, {
+      userId,
+      conversationId,
+      metadata
+    });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 // Update conversation suggestions (async generation)
 app.post("/api/chat/updateSuggestions", async (c) => {
   const ctx = c.env;

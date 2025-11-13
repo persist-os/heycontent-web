@@ -624,6 +624,48 @@ handler: async (ctx, args) => {
 },
 });
 
+export const updateConversationMetadata = mutation({
+  args: {
+    userId: v.string(),
+    conversationId: v.id("conversations"),
+    metadata: v.any()
+  },
+  handler: async (ctx, args) => {
+    const doc = await ctx.db.get(args.conversationId);
+    if (!doc) {
+      throw new Error("Conversation not found");
+    }
+
+    // Type check to ensure it's a conversation document
+    if (!('userId' in doc)) {
+      throw new Error("Invalid document type - not a conversation");
+    }
+
+    const conversation = doc as any;
+
+    // Verify ownership
+    if (conversation.userId !== args.userId) {
+      throw new Error("Access denied: You don't have permission to update this conversation");
+    }
+
+    // Patch conversation with metadata fields (only update provided fields)
+    const updateData: any = {
+      updatedAt: Date.now()
+    };
+    
+    // Only update fields that are provided in metadata
+    if (args.metadata.awaitingInitialContext !== undefined) {
+      updateData.awaitingInitialContext = args.metadata.awaitingInitialContext;
+    }
+    
+    // Add other metadata fields here as needed
+    
+    await ctx.db.patch(args.conversationId, updateData);
+    
+    return true;
+  }
+});
+
 export const updateConversationTitle = mutation({
   args: {
     userId: v.string(),
