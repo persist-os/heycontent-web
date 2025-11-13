@@ -42,4 +42,26 @@ export function requireAdmin() {
     throw new Error('Admin access required');
   }
 }
+
+export function useBloggerAuth() {
+  const { firebaseUser } = useAuth();
+  
+  // Always call these hooks in the same order, even if we skip them
+  const userRole = useQuery(api.auth.getUserRole, 
+    firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
+  );
+  
+  const canAccessBlogger = useQuery(api.auth.canAccessBlogger,
+    firebaseUser?.uid ? { userId: firebaseUser.uid } : "skip"
+  );
+  
+  // Return consistent structure regardless of auth state
+  return {
+    isBlogger: userRole?.role === 'blogger',
+    canAccessBlogger: canAccessBlogger || false,
+    userRole: userRole?.role || 'user',
+    userEmail: firebaseUser?.email,
+    permissions: userRole?.permissions || [],
+  };
+}
  

@@ -7,7 +7,8 @@ export const userRoleValidator = v.union(
   v.literal("super_admin"),
   v.literal("ambassador"),
   v.literal("affiliate"),
-  v.literal("partner")
+  v.literal("partner"),
+  v.literal("blogger")
 );
 
 export const subscriptionStatusValidator = v.union(

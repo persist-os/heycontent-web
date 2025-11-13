@@ -104,8 +104,18 @@ class TranslationBatcher {
       const texts = items.map(item => item.sourceText);
       
       try {
-        const response = await fetchWithApiKey('/api/translations/translate-batch', {
+        // For guest users, make unauthenticated request (translations are public)
+        const apiKey = await import('@/app/lib/api-helpers').then(m => m.getApiKey().catch(() => null));
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+        if (apiKey) {
+          headers['Authorization'] = `Bearer ${apiKey}`;
+        }
+        
+        const response = await fetch('/api/translations/translate-batch', {
           method: 'POST',
+          headers,
           body: JSON.stringify({
             texts,
             sourceLang,

@@ -4,16 +4,15 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:800
 
 export async function POST(request: NextRequest) {
   try {
-    // Extract API key from Authorization header
+    // Extract API key from Authorization header (optional for public translations)
     const authHeader = request.headers.get('Authorization') || '';
     const bearerPrefix = 'Bearer ';
     const apiKey = authHeader.startsWith(bearerPrefix)
       ? authHeader.slice(bearerPrefix.length).trim()
       : '';
 
-    if (!apiKey) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // Translations are public - backend middleware allows unauthenticated requests
+    // Only include Authorization header if API key is provided
 
     const body = await request.json();
     const { texts, sourceLang = 'en', targetLang, context } = body;
@@ -33,12 +32,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Only add Authorization header if API key is provided
+    if (apiKey) {
+      headers['Authorization'] = `Bearer ${apiKey}`;
+    }
+    
     const response = await fetch(`${BACKEND_URL}/api/v1/translate/batch`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
+      headers,
       body: JSON.stringify({
         texts,
         sourceLang,
