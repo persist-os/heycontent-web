@@ -189,9 +189,20 @@ export const getUsageSummary = query({
         .collect();
       
       // Filter events to current billing period
-      const filteredEvents = events.filter(
-        (event) => event.timestamp >= periodStart && event.timestamp < periodEnd
-      );
+      // CRITICAL: Normalize timestamps to milliseconds before comparison
+      // Backend sends timestamps in seconds, subscription periods are in milliseconds
+      // Threshold: year 2000 in milliseconds (946684800000)
+      // If timestamp < threshold, it's in seconds and needs conversion
+      const TIMESTAMP_THRESHOLD_MS = 946684800000; // Year 2000 in milliseconds
+      const filteredEvents = events.filter((event) => {
+        // Convert event timestamp to milliseconds if it's in seconds
+        let eventTimeMs = event.timestamp;
+        if (eventTimeMs < TIMESTAMP_THRESHOLD_MS) {
+          eventTimeMs = eventTimeMs * 1000;
+        }
+        // Compare normalized timestamp to period (both in milliseconds)
+        return eventTimeMs >= periodStart && eventTimeMs < periodEnd;
+      });
       
       // Calculate total usage
       const total = filteredEvents.reduce((sum, e) => sum + (e.qty || 0), 0);
