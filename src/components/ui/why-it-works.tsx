@@ -21,7 +21,7 @@ export function WhyItWorks() {
                 <T context="section.features.feature1.title">Multiplayer AI</T>
               </h3>
               <p className="text-sm sm:text-base lg:text-lg text-muted-foreground leading-relaxed max-w-3xl">
-                <T context="section.features.feature1.description">Share link. Everyone sees agents building. Sarah adds a requirement mid-build. Tom adjusts priorities. The agents edit the artifacts in real-time. It's multiplayer AI.</T>
+                <T context="section.features.feature1.description">Add anyone to your assignment. Everyone sees agents building. Sarah adds a requirement mid-build. Tom adjusts priorities. The agents edit the artifacts in real-time. It's multiplayer AI.</T>
               </p>
             </div>
 

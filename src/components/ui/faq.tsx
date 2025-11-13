@@ -11,7 +11,7 @@ const faqData = [
   },
   {
     question: "What are structured artifacts?",
-    answer: "Real work you can edit: lists, reports, timelines, trackers. Version-tracked and editable. Multiple agents can update the same artifact as your project evolves."
+    answer: "Real work you can edit: lists, reports, timelines, trackers, emails. Version-tracked and editable. Multiple agents can update the same artifact as your project evolves."
   },
   {
     question: "How do agents coordinate?",
@@ -23,7 +23,7 @@ const faqData = [
   },
   {
     question: "Does this integrate with my existing tools?",
-    answer: "Yes. Email templates connect to Gmail. Timelines sync with calendars. Reports export to PDF or markdown. Works with tools you already use."
+    answer: "Yes. Email templates already connect to Gmail. Timelines will soon sync with calendars. Reports will soon export to PDF or markdown. All your existing tools will work with HeyContext."
   },
   {
     question: "What if agents create something I don't want?",
@@ -31,7 +31,7 @@ const faqData = [
   },
   {
     question: "How does team collaboration work?",
-    answer: "Share the link. Everyone sees agents building and can edit artifacts in real-time. All changes are tracked and versioned."
+    answer: "Add other users with their emails. Everyone sees agents building and can edit artifacts in real-time. All changes are tracked and versioned."
   }
 ]
 
