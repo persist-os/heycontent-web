@@ -58,17 +58,16 @@ export const getAllBlogPosts = query({
     // Default to published only for public queries
     const effectiveStatus = args.status ?? (args.includeDrafts ? undefined : "published");
     
-    let query = ctx.db.query("blogPosts");
-    
     // Filter by status if provided
+    let allPosts;
     if (effectiveStatus) {
-      query = query.withIndex("by_status", (q) => q.eq("status", effectiveStatus));
+      allPosts = await ctx.db
+        .query("blogPosts")
+        .withIndex("by_status", (q) => q.eq("status", effectiveStatus))
+        .collect();
     } else {
-      // Get all if no status filter
-      query = query;
+      allPosts = await ctx.db.query("blogPosts").collect();
     }
-    
-    const allPosts = await query.collect();
     
     // Filter by category if provided
     let filtered = allPosts;
@@ -83,9 +82,11 @@ export const getAllBlogPosts = query({
     
     // Sort by date (newest first), then by order if in series
     filtered.sort((a, b) => {
-      // First sort by date
-      const dateCompare = b.date.localeCompare(a.date);
-      if (dateCompare !== 0) return dateCompare;
+      // Sort by date if both exist
+      if (a.date && b.date) {
+        const dateCompare = b.date.localeCompare(a.date);
+        if (dateCompare !== 0) return dateCompare;
+      }
       
       // Then by order if in same series
       if (a.series === b.series && a.order !== undefined && b.order !== undefined) {
