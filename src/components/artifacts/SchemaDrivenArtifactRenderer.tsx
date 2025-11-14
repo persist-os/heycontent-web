@@ -10,7 +10,7 @@
 
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import { Artifact, ArtifactRendererProps } from '@/types/artifacts'
 import { TableLayoutRenderer } from './layouts/renderers/TableLayoutRenderer'
 import { CardsLayoutRenderer } from './layouts/renderers/CardsLayoutRenderer'
@@ -25,6 +25,7 @@ import { Badge } from '@/components/ui/badge'
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { Id } from '@/convex/_generated/dataModel'
+import { useArtifactVersionSelection } from '@/hooks/useArtifactVersionSelection'
 
 /**
  * Unsupported layout fallback
@@ -69,21 +70,15 @@ export function SchemaDrivenArtifactRenderer({
   editButton
 }: ArtifactRendererProps) {
   // CRITICAL: All hooks must be called before any early returns
-  // Version state management - must be at top level
+  // Version selection via URL state (source of truth)
   const artifactId = artifact ? ((artifact as any)._id || (artifact as any).id) : null;
   const currentArtifactVersion = artifact?.metadata?.version || 1;
-  const [selectedVersion, setSelectedVersion] = useState<number>(currentArtifactVersion);
+  const { selectedVersion, selectVersion } = useArtifactVersionSelection(
+    artifactId,
+    currentArtifactVersion
+  );
 
-  // CRITICAL: Sync selectedVersion when currentArtifactVersion changes (e.g., after artifact update)
-  // This ensures editability is not lost when artifact version increments
-  useEffect(() => {
-    if (currentArtifactVersion !== selectedVersion && selectedVersion < currentArtifactVersion) {
-      // Artifact was updated (version incremented) - sync to latest version
-      setSelectedVersion(currentArtifactVersion);
-    }
-  }, [currentArtifactVersion, selectedVersion]);
-
-  // Fetch version data if different from current (must be before early returns)
+  // Simple query: fetch version if different from current
   const versionData = useQuery(
     api.artifactVersionQueries.getVersionByNumber,
     selectedVersion !== currentArtifactVersion && artifactId
@@ -134,10 +129,8 @@ export function SchemaDrivenArtifactRenderer({
     )
   }
 
-  // versionData already fetched above (before early returns)
-
   // Use version data if available, otherwise use artifact
-  const displayArtifact = versionData && selectedVersion !== currentArtifactVersion
+  const displayArtifact = versionData
     ? {
         ...artifact,
         data: versionData.data,
@@ -172,7 +165,7 @@ export function SchemaDrivenArtifactRenderer({
           editButton={editButton}
           artifactId={artifactId as Id<'artifacts'> | undefined}
           selectedVersion={selectedVersion}
-          onVersionChange={setSelectedVersion}
+          onVersionChange={selectVersion}
         />
       )
     
@@ -188,7 +181,7 @@ export function SchemaDrivenArtifactRenderer({
           editButton={editButton}
           artifactId={artifactId as Id<'artifacts'> | undefined}
           selectedVersion={selectedVersion}
-          onVersionChange={setSelectedVersion}
+          onVersionChange={selectVersion}
         />
       )
     
@@ -204,7 +197,7 @@ export function SchemaDrivenArtifactRenderer({
           editButton={editButton}
           artifactId={artifactId as Id<'artifacts'> | undefined}
           selectedVersion={selectedVersion}
-          onVersionChange={setSelectedVersion}
+          onVersionChange={selectVersion}
         />
       )
     
@@ -220,7 +213,7 @@ export function SchemaDrivenArtifactRenderer({
           editButton={editButton}
           artifactId={artifactId as Id<'artifacts'> | undefined}
           selectedVersion={selectedVersion}
-          onVersionChange={setSelectedVersion}
+          onVersionChange={selectVersion}
         />
       )
     
@@ -236,7 +229,7 @@ export function SchemaDrivenArtifactRenderer({
           editButton={editButton}
           artifactId={artifactId as Id<'artifacts'> | undefined}
           selectedVersion={selectedVersion}
-          onVersionChange={setSelectedVersion}
+          onVersionChange={selectVersion}
         />
       )
     
@@ -252,7 +245,7 @@ export function SchemaDrivenArtifactRenderer({
           editButton={editButton}
           artifactId={artifactId as Id<'artifacts'> | undefined}
           selectedVersion={selectedVersion}
-          onVersionChange={setSelectedVersion}
+          onVersionChange={selectVersion}
         />
       )
     
@@ -268,7 +261,7 @@ export function SchemaDrivenArtifactRenderer({
           editButton={editButton}
           artifactId={artifactId as Id<'artifacts'> | undefined}
           selectedVersion={selectedVersion}
-          onVersionChange={setSelectedVersion}
+          onVersionChange={selectVersion}
         />
       )
     
