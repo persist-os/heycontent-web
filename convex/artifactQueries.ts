@@ -8,6 +8,7 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { api } from "./_generated/api";
+import { Id } from "./_generated/dataModel";
 
 /**
  * Get artifacts for a project
@@ -20,6 +21,34 @@ export const getProjectArtifacts = query({
   },
   handler: async (ctx, args) => {
     // ✅ FIX BLOCKER 3: Check project permission (owner or collaborator)
+    // First check if project exists and user owns it (fast path)
+    const project = await ctx.db.get(args.projectId);
+    if (!project) {
+      throw new Error("Project not found");
+    }
+    
+    // Fast path: User owns the project
+    if (project.userId === args.userId) {
+      return await ctx.db
+        .query("artifacts")
+        .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+        .order("desc")
+        .collect();
+    }
+    
+    // Check if user is a collaborator
+    const isCollaborator = project.collaborators?.some(
+      c => c.userId === args.userId
+    );
+    if (isCollaborator) {
+      return await ctx.db
+        .query("artifacts")
+        .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+        .order("desc")
+        .collect();
+    }
+    
+    // Fallback: Check shared access via permission helper
     const permission = await ctx.runQuery(api.contentAccessHelpers.getUserContentPermission, {
       userId: args.userId,
       contentType: "project",
@@ -173,7 +202,8 @@ export const queryArtifacts = query({
         : filters.widgetId;
       
       // ✅ FIX BLOCKER 3: Check widget/project permission
-      const widget = await ctx.db.get(widgetId);
+      // Cast widgetId to Id<"widgets"> to properly narrow the return type
+      const widget = await ctx.db.get(widgetId as Id<"widgets">);
       if (!widget) {
         throw new Error("Widget not found");
       }
