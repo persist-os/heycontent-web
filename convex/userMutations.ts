@@ -242,12 +242,21 @@ export const deleteUserAndData = mutation({
   handler: async (ctx, args) => {
     const { userId } = args;
     const summary: Record<string, any> = { errors: [] };
-    // 1. Validate user exists
+    // 1. Check if user exists (but don't fail if they don't - idempotent deletion)
     const user = await ctx.db
       .query("users")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .first();
-    if (!user) throw new Error("User not found");
+    
+    if (!user) {
+      // User doesn't exist in Convex - this is OK, they may have been deleted already
+      // or never created. Return success summary indicating no data to delete.
+      summary.warning = "User not found in Convex database - may have been already deleted or never created";
+      summary.user_found = false;
+      return summary; // Return early with success - nothing to delete
+    }
+    
+    summary.user_found = true;
     const BATCH_SIZE = 50;
     // Helper for batch deletion with resilient error handling
     async function batchDelete(table: string, getQuery: () => Promise<any[]>) {
