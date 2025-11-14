@@ -6261,6 +6261,48 @@ app.post("/api/prompts/queryByTags", async (c) => {
   }
 });
 
+// EMAIL ROUTES
+/**
+ * Log email send (mutation)
+ */
+app.post("/api/mutation/logEmailSend", async (c) => {
+  try {
+    const args = await c.req.json();
+    const result = await c.env.runMutation(api.emailMutations.logEmailSend, args);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error("[EMAIL] Log email send error:", error);
+    return c.json({ success: false, error: error.message || "Failed to log email send" }, 500);
+  }
+});
+
+/**
+ * Get email history (query)
+ */
+app.post("/api/query/getEmailHistory", async (c) => {
+  try {
+    const args = await c.req.json();
+    const emails = await c.env.runQuery(api.emailQueries.getEmailHistory, args);
+    return c.json({ success: true, data: emails });
+  } catch (error: any) {
+    console.error("[EMAIL] Get email history error:", error);
+    return c.json({ success: false, error: error.message || "Failed to get email history" }, 500);
+  }
+});
+
+/**
+ * Get email stats (query)
+ */
+app.post("/api/query/getEmailStats", async (c) => {
+  try {
+    const stats = await c.env.runQuery(api.emailQueries.getEmailStats, {});
+    return c.json({ success: true, data: stats });
+  } catch (error: any) {
+    console.error("[EMAIL] Get email stats error:", error);
+    return c.json({ success: false, error: error.message || "Failed to get email stats" }, 500);
+  }
+});
+
 // Export the router (required by Convex)
 const router = new HttpRouterWithHono(app);
 export default router;
