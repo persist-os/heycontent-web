@@ -122,6 +122,9 @@ import { actionSchemaFields } from "./types/actions";
 // Gmail
 import { gmailTokenSchemaFields, gmailAccountSchemaFields } from "./types/gmail";
 
+// Email Tracking
+import { emailSendSchemaFields } from "./types/email";
+
 export default defineSchema({
   // User Info
   users: defineTable(userSchemaFields)
@@ -787,4 +790,9 @@ export default defineSchema({
   gmailAccounts: defineTable(gmailAccountSchemaFields)
     .index("by_email", ["email"])
     .index("by_userId", ["userId"]),
+
+  // Email Sends - Tracking for admin email sends
+  emailSends: defineTable(emailSendSchemaFields)
+    .index("by_sender", ["senderUserId"])
+    .index("by_sentAt", ["sentAt"]),
 });

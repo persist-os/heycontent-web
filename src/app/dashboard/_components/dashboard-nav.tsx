@@ -3,7 +3,7 @@
 import React, { memo, useCallback, useMemo, useEffect, useState, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  FileText, Shield, Zap, Sparkles, Radio, Home, PenTool
+  FileText, Shield, Zap, Sparkles, Radio, Home, PenTool, Mail
 } from 'lucide-react'
 import { useSidebar } from '@/app/context/sidebar-context'
 import { getApiKey } from '@/app/lib/api-helpers'
@@ -166,6 +166,15 @@ export const DashboardNav = memo(function DashboardNav() {
         icon: Shield,
         href: '/admin',
         dataAttr: 'data-admin-link',
+        category: 'system',
+      },
+      {
+        id: 'admin-emails',
+        label: 'Email Campaigns',
+        description: 'Draft and send emails to users',
+        icon: Mail,
+        href: '/admin/emails',
+        dataAttr: 'data-admin-emails-link',
         category: 'system',
       }
     ] : []),
@@ -357,6 +366,7 @@ export const DashboardNav = memo(function DashboardNav() {
       case 'notes':
       case 'admin':
       case 'blogger':
+      case 'admin-emails':
         // These tabs are only active on their exact pages, not sub-pages
         return pathname === item.href;
       default:
