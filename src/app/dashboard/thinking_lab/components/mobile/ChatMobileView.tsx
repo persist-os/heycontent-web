@@ -10,6 +10,7 @@ interface ChatMobileViewProps {
   sendMessage: (message: string, fileAttachments?: any[]) => void
   startNewConversation: () => void
   isLoading: boolean
+  isStreaming?: boolean  // NEW: Track streaming state
   error: string | null
   inputComponent: React.ReactNode
 }
@@ -23,6 +24,7 @@ export function ChatMobileView({
   sendMessage,
   startNewConversation,
   isLoading,
+  isStreaming = false,
   error,
   inputComponent
 }: ChatMobileViewProps) {
@@ -42,6 +44,7 @@ export function ChatMobileView({
           sendMessage={sendMessage}
           startNewConversation={startNewConversation}
           isLoading={isLoading}
+          isStreaming={isStreaming}
           error={error}
         />
       </div>
