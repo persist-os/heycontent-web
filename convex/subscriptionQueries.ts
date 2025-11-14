@@ -62,7 +62,15 @@ export const initializeFreeTier = mutation({
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .unique();
     
-    if (!user) throw new Error("User not found");
+    if (!user) {
+      // User doesn't exist yet or was deleted - this is OK for auto-fix scenarios
+      console.warn(`[initializeFreeTier] User ${args.userId} not found, skipping init`);
+      return { 
+        success: false, 
+        message: "User not found - may not be created yet or was deleted", 
+        userId: args.userId 
+      };
+    }
     
     const now = Date.now();
     
