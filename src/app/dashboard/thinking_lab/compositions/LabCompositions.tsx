@@ -29,6 +29,7 @@ import { MobileBottomNav } from '@/components/ui/MobileBottomNav'
 import { ChatMobileView } from '../components/mobile/ChatMobileView'
 import { PanelMobileView } from '../components/mobile/PanelMobileView'
 import { ProjectCollaboratorsModal } from '@/components/projects/ProjectCollaboratorsModal'
+import { usePanelModeSelection } from '@/hooks/usePanelModeSelection'
 import type { Id } from '@/convex/_generated/dataModel'
 
 // =============================================================================
@@ -101,6 +102,9 @@ function FullThinkingLabInternal({
   const router = useRouter()
   const searchParams = useSearchParams()
   
+  // Panel mode selection (URL state hook)
+  const { panelMode, setPanelMode } = usePanelModeSelection('notepad')
+  
   // Mobile detection
   const isMobile = useIsMobile()
   
@@ -109,33 +113,6 @@ function FullThinkingLabInternal({
   
   // Collaboration state
   const [showCollaboratorsModal, setShowCollaboratorsModal] = useState(false)
-  
-  // Right panel mode (notepad, artifacts, or widgets)
-  // Initialize from localStorage or default to 'notepad'
-  const [rightPanelMode, setRightPanelMode] = useState<'notepad' | 'artifacts' | 'widgets'>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('thinking-lab-right-panel-mode')
-      if (saved === 'notepad' || saved === 'artifacts' || saved === 'widgets') {
-        return saved
-      }
-    }
-    return 'notepad'
-  })
-  
-  // Override panel mode from URL param on mount (for programmatic navigation)
-  React.useEffect(() => {
-    const panelParam = searchParams.get('panel')
-    if (panelParam === 'widgets' || panelParam === 'artifacts' || panelParam === 'notepad') {
-      setRightPanelMode(panelParam)
-    }
-  }, [searchParams]) // Run when searchParams changes (e.g., navigation from HomepageChat)
-  
-  // Persist rightPanelMode to localStorage
-  React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('thinking-lab-right-panel-mode', rightPanelMode)
-    }
-  }, [rightPanelMode])
   
   // Use the notepad context
   const notepadContext = useNotepadContext()
@@ -160,9 +137,9 @@ function FullThinkingLabInternal({
   )
   
   // Determine current view for presence
-  const currentView = rightPanelMode === 'notepad' ? 'notepad' 
-    : rightPanelMode === 'artifacts' ? 'artifacts'
-    : rightPanelMode === 'widgets' ? 'widgets'
+  const currentView = panelMode === 'notepad' ? 'notepad' 
+    : panelMode === 'artifacts' ? 'artifacts'
+    : panelMode === 'widgets' ? 'widgets'
     : 'chat'
   
   // Use the conversation state hook with notepad context getter
@@ -290,13 +267,14 @@ function FullThinkingLabInternal({
               sendMessage={sendMessage}
               startNewConversation={startNewConversation}
               isLoading={isStreaming}
+              isStreaming={isStreaming}
               error={error}
               inputComponent={inputComponent}
             />
           ) : (
             <PanelMobileView
-              rightPanelMode={rightPanelMode}
-              setRightPanelMode={setRightPanelMode}
+              rightPanelMode={panelMode}
+              setRightPanelMode={setPanelMode}
               noteId={noteId}
               quotedContent={quotedContent}
               onClearQuoted={clearQuotedContent}
@@ -364,6 +342,7 @@ function FullThinkingLabInternal({
                 sendMessage={sendMessage}
                 startNewConversation={startNewConversation}
                 isLoading={isStreaming}
+                isStreaming={isStreaming}
                 error={error}
               />
             </div>
@@ -376,69 +355,73 @@ function FullThinkingLabInternal({
 
           {/* Right Panel (Notepad or Artifacts) */}
           <div style={resizable.styles.rightPanelStyle} className="flex flex-col h-full overflow-hidden">
-            {/* Panel Mode Toggle - Always Visible */}
-            <div className="border-b border-border/20 p-2 flex gap-2 bg-card/50 backdrop-blur-sm flex-shrink-0 min-w-[200px]">
-              <button
-                onClick={() => setRightPanelMode('notepad')}
-                className={`px-3 py-1 rounded text-sm transition-colors ${
-                  rightPanelMode === 'notepad'
-                    ? 'bg-primary text-primary-foreground font-semibold'
-                    : 'hover:bg-accent text-muted-foreground'
-                }`}
-              >
-                Notepad
-              </button>
-              <button
-                onClick={() => setRightPanelMode('artifacts')}
-                className={`px-3 py-1 rounded text-sm transition-colors ${
-                  rightPanelMode === 'artifacts'
-                    ? 'bg-primary text-primary-foreground font-semibold'
-                    : 'hover:bg-accent text-muted-foreground'
-                }`}
-              >
-                Artifacts
-              </button>
-              <button
-                onClick={() => setRightPanelMode('widgets')}
-                className={`px-3 py-1 rounded text-sm transition-colors ${
-                  rightPanelMode === 'widgets'
-                    ? 'bg-primary text-primary-foreground font-semibold'
-                    : 'hover:bg-accent text-muted-foreground'
-                }`}
-              >
-                Widgets
-              </button>
-            </div>
+            {/* Panel Mode Toggle - Only visible when panel is expanded */}
+            {resizable.state.splitRatio === 1 ? null : (
+              <div className="border-b border-border/20 p-2 flex gap-2 bg-card/50 backdrop-blur-sm flex-shrink-0 min-w-[200px]">
+                <button
+                  onClick={() => setPanelMode('notepad')}
+                  className={`px-3 py-1 rounded text-sm transition-colors ${
+                    panelMode === 'notepad'
+                      ? 'bg-primary text-primary-foreground font-semibold'
+                      : 'hover:bg-accent text-muted-foreground'
+                  }`}
+                >
+                  Notepad
+                </button>
+                <button
+                  onClick={() => setPanelMode('artifacts')}
+                  className={`px-3 py-1 rounded text-sm transition-colors ${
+                    panelMode === 'artifacts'
+                      ? 'bg-primary text-primary-foreground font-semibold'
+                      : 'hover:bg-accent text-muted-foreground'
+                  }`}
+                >
+                  Artifacts
+                </button>
+                <button
+                  onClick={() => setPanelMode('widgets')}
+                  className={`px-3 py-1 rounded text-sm transition-colors ${
+                    panelMode === 'widgets'
+                      ? 'bg-primary text-primary-foreground font-semibold'
+                      : 'hover:bg-accent text-muted-foreground'
+                  }`}
+                >
+                  Widgets
+                </button>
+              </div>
+            )}
             
-            {/* Conditional Panel Rendering - Hide content when panel is collapsed */}
-            <div className={`flex-1 overflow-hidden ${resizable.state.splitRatio === 1 ? 'hidden' : ''}`}>
-              {rightPanelMode === 'notepad' ? (
-                <NotepadPanel
-                  noteId={noteId}
-                  quotedContent={quotedContent}
-                  onClearQuoted={clearQuotedContent}
-                  onClose={handleNotepadClose}
-                />
-              ) : rightPanelMode === 'artifacts' ? (
-                <ArtifactPanel
-                  projectId={projectId}
-                  conversationId={conversationId}
-                  userId={userId}
-                />
-              ) : userId ? (
-                <WidgetPanel
-                  projectId={projectId}
-                  conversationId={conversationId}
-                  userId={userId}
-                />
-              ) : (
-                <div className="h-full flex items-center justify-center p-6">
-                  <div className="text-center text-muted-foreground">
-                    <p className="text-sm">Loading...</p>
+            {/* Conditional Panel Rendering - Don't render content when panel is collapsed */}
+            {resizable.state.splitRatio === 1 ? null : (
+              <div className="flex-1 overflow-hidden">
+                {panelMode === 'notepad' ? (
+                  <NotepadPanel
+                    noteId={noteId}
+                    quotedContent={quotedContent}
+                    onClearQuoted={clearQuotedContent}
+                    onClose={handleNotepadClose}
+                  />
+                ) : panelMode === 'artifacts' ? (
+                  <ArtifactPanel
+                    projectId={projectId}
+                    conversationId={conversationId}
+                    userId={userId}
+                  />
+                ) : userId ? (
+                  <WidgetPanel
+                    projectId={projectId}
+                    conversationId={conversationId}
+                    userId={userId}
+                  />
+                ) : (
+                  <div className="h-full flex items-center justify-center p-6">
+                    <div className="text-center text-muted-foreground">
+                      <p className="text-sm">Loading...</p>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
