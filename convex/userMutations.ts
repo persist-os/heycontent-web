@@ -242,7 +242,14 @@ export const deleteUserAndData = mutation({
   handler: async (ctx, args) => {
     const { userId } = args;
     const summary: Record<string, any> = { errors: [] };
-    // 1. Check if user exists (but don't fail if they don't - idempotent deletion)
+    
+    if (!userId) {
+      summary.warning = "Empty userId provided";
+      summary.user_found = false;
+      return summary;
+    }
+    
+    // Check if user exists (idempotent deletion - don't fail if user doesn't exist)
     const user = await ctx.db
       .query("users")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
