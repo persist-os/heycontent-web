@@ -111,6 +111,7 @@ export const widgetSchemaFields = {
     mission: v.string(),
     collaborationStyle: v.string(),
     qualityStandard: v.string(),
+    executionType: v.optional(v.union(v.literal("standard"), v.literal("tool_based"))),  // Pattern 24: Tool-based execution routing
   })),
   
   // Agent Roster (NEW - Phase 2: Dynamic agent spawning)
@@ -121,6 +122,7 @@ export const widgetSchemaFields = {
     responsibilities: v.array(v.string()),
     spawnCondition: v.string(),
     artifactType: v.optional(v.string()),  // ✅ Artifact type this agent generates
+    tools: v.optional(v.array(v.string())),  // Pattern 24: Tools for tool-based agents (e.g., ["GmailTools"])
   }))),
   
   // ❌ NO artifact relationships here - widgets discover artifacts at runtime
@@ -303,6 +305,7 @@ export const widgetBatchValidator = v.object({
     mission: v.string(),
     collaborationStyle: v.string(),
     qualityStandard: v.string(),
+    executionType: v.optional(v.union(v.literal("standard"), v.literal("tool_based"))),  // Pattern 24: Tool-based execution routing
   })),
   // ✅ PHASE 2: Agent Roster
   agentRoster: v.optional(v.array(v.object({
@@ -312,6 +315,7 @@ export const widgetBatchValidator = v.object({
     responsibilities: v.array(v.string()),
     spawnCondition: v.string(),
     artifactType: v.optional(v.string()),  // ✅ Artifact type this agent generates
+    tools: v.optional(v.array(v.string())),  // Pattern 24: Tools for tool-based agents (e.g., ["GmailTools"])
   }))),
   // Scheduling fields (for recurring widget execution)
   scheduleEnabled: v.optional(v.boolean()),
