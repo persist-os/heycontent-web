@@ -63,6 +63,9 @@ export const conversationSchemaFields = {
   // 🔄 MIGRATION TRACKING: Temporary fields for migration
   migrated: v.optional(v.boolean()),  // Track migration status
   migrationVerified: v.optional(v.boolean()),  // Verify data integrity
+  
+  // Early message context gate - pause orchestrator until user responds
+  awaitingInitialContext: v.optional(v.boolean()),
 };
 
 export const conversationValidator = v.object(conversationSchemaFields);
