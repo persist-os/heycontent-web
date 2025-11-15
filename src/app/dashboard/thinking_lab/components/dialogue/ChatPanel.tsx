@@ -12,8 +12,7 @@ import { useAutoScroll } from '../../hooks/useAutoScroll'
 import ChatMessagesList from './components/ChatMessagesList'
 import { AmbientInsights } from '@/app/dashboard/ambient_insights/AmbientInsights'
 import { WidgetPrompts } from '../../components/WidgetPrompts'
-import { HorizontalProgressiveThinking } from './components/HorizontalProgressiveThinking'
-import { filterMessages } from '../../utils/messageTypes'
+import { deriveChatState } from '../../utils/deriveChatState'
 import type { Message } from '@/app/types/chat'
 import { T } from '@/components/translation/T'
 
@@ -50,66 +49,24 @@ export const ChatPanel = React.memo<ChatPanelProps>(({
 }) => {
   const authData = useOptimizedAuth()
   
-  // Filter messages into A2A and user-facing categories
-  const { a2aMessages, userFacingMessages } = React.useMemo(() => {
-    return filterMessages(messages)
-  }, [messages])
-  
-  // Check if last message is currently streaming (visible in chat)
-  const lastMessageIsStreaming = React.useMemo(() => {
-    if (userFacingMessages.length === 0) return false
-    const lastMessage = userFacingMessages[userFacingMessages.length - 1]
-    // Last message is streaming if it's an assistant message and isStreaming is true
-    return lastMessage.role === 'assistant' && isStreaming
-  }, [userFacingMessages, isStreaming])
-  
-  // Check if there's a gap after user message (waiting for response)
-  const hasGapAfterUserMessage = React.useMemo(() => {
-    if (userFacingMessages.length === 0) return false
-    const lastMessage = userFacingMessages[userFacingMessages.length - 1]
-    // Gap if: last message is user and no assistant response yet (not streaming, not loading)
-    return lastMessage.role === 'user' && !isStreaming && !isLoading
-  }, [userFacingMessages, isStreaming, isLoading])
-  
-  // Check if we have at least one user message (processing started)
-  const hasUserMessage = React.useMemo(() => {
-    return userFacingMessages.some(msg => msg.role === 'user')
-  }, [userFacingMessages])
-  
-  // Determine if we should show thinking indicator
-  // CRITICAL RULE: Always show thinking OR streaming message from first user message → last artifact created
-  // - If message is streaming → message is visible, don't show thinking (user sees the message)
-  // - Once message finishes streaming → immediately show thinking again (background processing)
-  // - If gap after user message → show thinking (waiting for response)
-  // - If we have A2A messages → show thinking (background processing)
-  // - If we're loading → show thinking
-  const shouldShowThinking = React.useMemo(() => {
-    // Only show thinking if we have at least one user message (processing has started)
-    if (!hasUserMessage) return false
-    
-    // Don't show thinking if last message is currently streaming (message is visible)
-    if (lastMessageIsStreaming) return false
-    
-    // After streaming completes, always show thinking until artifact is created
-    // Show thinking if: has A2A messages, loading, or gap after user message
-    // This ensures continuous feedback from first user message → last artifact created
-    return a2aMessages.length > 0 || isLoading || hasGapAfterUserMessage
-  }, [hasUserMessage, lastMessageIsStreaming, a2aMessages.length, isLoading, hasGapAfterUserMessage])
+  // Single source of truth for chat state derivation
+  const chatState = deriveChatState(messages, isStreaming, isLoading)
   
   // Auto-scroll when messages change
   const scrollRef = useAutoScroll([messages])
 
-  const handleSuggestionClick = React.useCallback((suggestion: any, onSendMessage: (text: string) => void) => {
+  // Simple handlers (no useCallback needed - stable functions)
+  const handleSuggestionClick = (suggestion: any, onSendMessage: (text: string) => void) => {
     if (typeof suggestion === 'string') {
       onSendMessage(suggestion)
     } else if (suggestion.action || suggestion.text || suggestion.description) {
       onSendMessage(suggestion.action || suggestion.text || suggestion.description)
     }
-  }, [])
+  }
 
-  const handleActionClick = React.useCallback((action: string) => {
+  const handleActionClick = (action: string) => {
     sendMessage(action)
-  }, [sendMessage])
+  }
 
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden">
@@ -158,8 +115,9 @@ export const ChatPanel = React.memo<ChatPanelProps>(({
               <div className="p-4 sm:p-6 pl-12 sm:pl-12">
                 <div className="max-w-4xl mx-auto space-y-6">
                   {/* User-facing messages - chat responses, preflight questions, etc. */}
+                  {/* Thinking component is now IN-LINE, rendered inside ChatMessagesList */}
                   <ChatMessagesList
-                    messages={userFacingMessages}
+                    messages={chatState.userFacingMessages}
                     referencedMessage={null}
                     handleMessageReference={() => {}}
                     handleReferenceClick={() => {}}
@@ -172,18 +130,12 @@ export const ChatPanel = React.memo<ChatPanelProps>(({
                     notepadOpen={true}
                     onQuoteToNotepad={onQuoteToNotepad}
                     onContentClick={() => {}}
+                    shouldShowThinking={chatState.shouldShowThinking}
+                    a2aMessages={chatState.a2aMessages}
+                    isStreaming={isStreaming}
+                    isLoading={isLoading}
+                    hasFinalArtifact={chatState.hasFinalArtifact}
                   />
-                  
-                  {/* A2A Thinking Component - shows below most recent user message */}
-                  {/* Show when: loading, streaming, has A2A messages, or gap after user message */}
-                  {shouldShowThinking && (
-                    <HorizontalProgressiveThinking
-                      messages={a2aMessages.length > 0 ? a2aMessages : undefined}
-                      isStreaming={isStreaming}
-                      isLoading={isLoading}
-                      hasFinalArtifact={false}  // TODO: Track artifact creation from widget execution
-                    />
-                  )}
                   
                   {/* Scroll anchor */}
                   <div ref={scrollRef} />

@@ -123,7 +123,8 @@ export function useConversationState(
   // For now, we skip this query since artifacts don't support outputId lookup
   const openingMessage = null
   
-  // Extract messages and merge with A2A notes - memoized to prevent unnecessary re-renders
+  // Extract messages - CRITICAL FIX: Sort user-facing messages first, then append A2A messages at the end
+  // This ensures A2A messages (thinking component) always appear last, not in the middle
   const messages = React.useMemo(() => {
     const regularMessages = conversation?.messages || []
     
@@ -131,7 +132,6 @@ export function useConversationState(
     const a2aMessages = (a2aNotes || [])
       .filter((note: any) => {
         // Skip A2A notes that were already posted as messages
-        // Check if there's a message with matching a2aMetadata.agentId and similar timestamp
         const noteTimestamp = note.createdAt
         const alreadyPosted = regularMessages.some((msg: any) => {
           if (msg.contentType !== "a2a_announcement") return false
@@ -183,9 +183,25 @@ export function useConversationState(
         }
       })
     
-    // Merge and sort by timestamp
-    const allMessages = [...regularMessages, ...a2aMessages]
-    return allMessages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0))
+    // CRITICAL FIX: Separate user-facing messages from A2A messages
+    // Sort user-facing messages by timestamp, then append A2A messages at the end
+    const a2aTypes = ['a2a_announcement', 'widget_agent_announcement', 'widget_introduction', 'artifact_created', 'widget_status']
+    const userFacingMessages = regularMessages.filter((msg: any) => {
+      return !msg.contentType || !a2aTypes.includes(msg.contentType)
+    })
+    const a2aFromMessages = regularMessages.filter((msg: any) => {
+      return msg.contentType && a2aTypes.includes(msg.contentType)
+    })
+    
+    // Sort user-facing messages by timestamp
+    const sortedUserFacing = userFacingMessages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0))
+    
+    // Append A2A messages at the end (they'll be filtered out by deriveChatState but this ensures correct order)
+    // Sort A2A messages by timestamp for consistent ordering
+    const allA2A = [...a2aMessages, ...a2aFromMessages].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0))
+    
+    // Return user-facing messages first, then A2A messages at the end
+    return [...sortedUserFacing, ...allA2A]
   }, [conversation?.messages, a2aNotes])
   const suggestions = (() => {
     if (!messages.length) return []

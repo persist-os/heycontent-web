@@ -1,10 +1,9 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import { useQuery, useMutation } from 'convex/react'
+import { useQuery } from 'convex/react'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { api } from '@/convex/_generated/api'
-import { Id } from '@/convex/_generated/dataModel'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { T } from '@/components/translation'
 import { 
@@ -13,41 +12,29 @@ import {
   Edit3,
   RefreshCw,
   Trash2,
-  LayoutGrid,
-  List,
   FileText,
   Plus
 } from 'lucide-react'
-import { ConstellationTransition } from '@/app/dashboard/living-projects/components/widgets/ConstellationTransition'
 import { DeleteProjectModal } from './DeleteProjectModal'
 import { WidgetConfig } from '@/types/projectWidgets'
 import { useWidgetGeneration } from './hooks/useWidgetGeneration'
 import { useProjectActions } from './hooks/useProjectActions'
 import { UnifiedDetailsPanel, usePanelInstances } from './widgets/unified-panel/UnifiedDetailsPanel'
-import { WidgetGenerationLoader } from './widgets/WidgetGenerationLoader'
-import { ConstellationCanvas } from './widgets/ConstellationCanvas'
-import { formatDistanceToNow } from './utils/dateFormatting'
 import { ContentAttachmentPanel } from '@/app/dashboard/living-projects/components/ContentAttachmentPanel'
 import { ProjectGridView } from './ProjectGridView'
 import { motion } from 'framer-motion'
-import { cn } from '@/lib/utils'
 
 interface ProjectViewScreenProps {
   projectId: string
 }
 
-type ViewMode = "constellation" | "grid";
-
 export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
   const { trackProjectOpen } = useAnalytics()
   const [userId, setUserId] = useState<string | null>(null)
-  const [showTransition, setShowTransition] = useState(false)
-  const [highlightedWidget, setHighlightedWidget] = useState<string | null>(null)
   const [showMenu, setShowMenu] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showProjectContentPanel, setShowProjectContentPanel] = useState(false)
-  const [viewMode, setViewMode] = useState<ViewMode>("constellation")
   const menuRef = useRef<HTMLDivElement>(null)
   
   // Validate projectId - must be a valid Convex ID (not "project-discovery" or other invalid values)
@@ -85,22 +72,13 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
     isValidProjectId && userId ? { 
       projectId: projectId as any,
       userId: userId,
-      includeContent: true // Include content items for constellation view
+      includeContent: true // Include content items for grid view
     } : 'skip'
   )
 
   const projectWidgets = useQuery(
     api.projectWidgetsQueries.getProjectWidgetsByProject,
     isValidProjectId ? { projectId: projectId as any } : 'skip'
-  )
-
-  // Fetch artifacts for constellation display
-  const artifacts = useQuery(
-    api.artifactQueries.getProjectArtifacts,
-    isValidProjectId && userId ? { 
-      projectId: projectId as any,
-      userId
-    } : 'skip'
   )
 
   // Fetch assignment fingerprint
@@ -112,8 +90,6 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
     } : 'skip'
   )
 
-  const clearConstellationLayout = useMutation(api.projectsMutations.clearConstellationLayout)
-  
   // Business logic hooks
   const { isGenerating, regenerateWidgets } = useWidgetGeneration({
     projectId,
@@ -138,29 +114,6 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
     }
   };
 
-  // Handle artifact opening
-  const handleArtifactClick = (artifact: any) => {
-    const position = {
-      x: window.innerWidth / 2 - 200,
-      y: window.innerHeight / 2 - 150
-    }
-    openPanel(artifact, 'artifact', position)
-  };
-
-  // Handle layout reset
-  const handleLayoutReset = async () => {
-    if (!userId) return;
-    
-    try {
-      await clearConstellationLayout({
-        projectId: projectId as Id<'projects'>,
-        userId,
-      })
-    } catch (error) {
-      console.error('Failed to reset layout:', error);
-    }
-  };
-
   // Event handlers - unified panel opens at widget/content position
   const handleWidgetClick = (widget: WidgetConfig) => {
     // Open panel at widget position (center of viewport as fallback)
@@ -169,10 +122,6 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
       y: window.innerHeight / 2 - 150
     }
     openPanel(widget, 'widget', position)
-  }
-
-  const handleWidgetHover = (widgetId: string | null) => {
-    setHighlightedWidget(widgetId)
   }
 
   const handleDeleteProject = async () => {
@@ -188,10 +137,6 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
     }
   }
 
-  // Handle view mode toggle
-  const handleViewModeToggle = (mode: ViewMode) => {
-    setViewMode(mode)
-  }
 
   if (!project) {
     return (
@@ -221,10 +166,6 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
       </div>
     )
   }
-
-  const lastEvolution = assignmentFingerprint?.lastEvolution 
-    ? formatDistanceToNow(new Date(assignmentFingerprint.lastEvolution), { addSuffix: true })
-    : 'Never'
 
   return (
     <>
@@ -277,39 +218,6 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
                   <Plus className="w-4 h-4" />
                   <T context="button.add_content">Add Content</T>
                 </button>
-
-                {/* View Mode Toggle */}
-                <div className="flex items-center bg-muted/20 rounded-lg p-1">
-                  <button
-                    onClick={() => handleViewModeToggle("constellation")}
-                    className={cn(
-                      "px-3 py-2 rounded-md transition-colors flex items-center gap-2 text-sm",
-                      viewMode === "constellation"
-                        ? "bg-background text-foreground shadow-sm" 
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    <LayoutGrid className="w-4 h-4" />
-                    <T context="view.constellation">Constellation</T>
-                  </button>
-                  <button
-                    onClick={() => handleViewModeToggle("grid")}
-                    className={cn(
-                      "px-3 py-2 rounded-md transition-colors flex items-center gap-2 text-sm",
-                      viewMode === "grid"
-                        ? "bg-background text-foreground shadow-sm" 
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    <List className="w-4 h-4" />
-                    <T context="view.grid">Grid View</T>
-                    {project && (
-                      <span className="ml-1 text-xs bg-muted/50 px-2 py-0.5 rounded-full">
-                        {(projectWidgets?.widgets?.length || 0) + ((project as any)?.contentItems?.length || 0)}
-                      </span>
-                    )}
-                  </button>
-                </div>
 
                 {/* Menu */}
                 <div className="relative" ref={menuRef}>
@@ -376,91 +284,38 @@ export function ProjectViewScreen({ projectId }: ProjectViewScreenProps) {
 
         {/* Content */}
         <div className="relative">
-
-          {viewMode === "constellation" && (
-            <>
-              {isGenerating ? (
-                <WidgetGenerationLoader />
-              ) : assignmentFingerprint ? (
-                <ConstellationCanvas
-                  widgets={(projectWidgets?.widgets || []) as WidgetConfig[]}
-                  artifacts={artifacts || []}
-                  userId={userId}
-                  projectId={projectId as Id<"projects">}
-                  onWidgetClick={handleWidgetClick}
-                  onWidgetHover={handleWidgetHover}
-                  highlightedWidget={highlightedWidget}
-                  contentItems={(project as any)?.contentItems || []}
-                  storedLayout={(project as any)?.constellationLayout}
-                  onContentOpen={handleContentOpen}
-                  onArtifactClick={handleArtifactClick}
-                  onLayoutReset={handleLayoutReset}
-                />
-              ) : (
-                <div className="flex items-center justify-center h-64">
-                  <div className="text-center">
-                    <div className="text-muted-foreground mb-2">
-                      <T context="error.no_fingerprint">No fingerprint available</T>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      <T context="error.complete_discovery">Please complete the project discovery process</T>
-                    </div>
+          <div className="max-w-7xl mx-auto px-6 py-8">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-8"
+            >
+              <div className="bg-gradient-to-br from-background to-muted/10 rounded-lg border border-border">
+                <div className="p-6 border-b border-border">
+                  <div>
+                    <h2 className="text-xl font-semibold text-foreground">
+                      <T context="grid.title">Project Items</T>
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      <T context="grid.description">All your widgets, notes, conversations, crystals, and shards in a structured view</T>
+                    </p>
                   </div>
                 </div>
-              )}
-            </>
-          )}
-
-          {viewMode === "grid" && (
-            <div className="max-w-7xl mx-auto px-6 py-8">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mb-8"
-              >
-                <div className="bg-gradient-to-br from-background to-muted/10 rounded-lg border border-border">
-                  <div className="p-6 border-b border-border">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h2 className="text-xl font-semibold text-foreground">
-                          <T context="grid.title">Project Items</T>
-                        </h2>
-                        <p className="text-sm text-muted-foreground">
-                          <T context="grid.description">All your widgets, notes, conversations, crystals, and shards in a structured view</T>
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => handleViewModeToggle("constellation")}
-                        className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-2"
-                      >
-                        <LayoutGrid className="w-4 h-4" />
-                        <T context="button.back_to_constellation">Back to Constellation</T>
-                      </button>
-                    </div>
-                  </div>
-                  <div className="p-6">
-                    {userId && (
-                      <ProjectGridView
-                        projectId={projectId}
-                        userId={userId}
-                        widgets={(projectWidgets?.widgets || []) as WidgetConfig[]}
-                        contentItems={(project as any)?.contentItems || []}
-                        onWidgetClick={handleWidgetClick}
-                        onContentOpen={handleContentOpen}
-                      />
-                    )}
-                  </div>
+                <div className="p-6">
+                  {userId && (
+                    <ProjectGridView
+                      projectId={projectId}
+                      userId={userId}
+                      widgets={(projectWidgets?.widgets || []) as WidgetConfig[]}
+                      contentItems={(project as any)?.contentItems || []}
+                      onWidgetClick={handleWidgetClick}
+                      onContentOpen={handleContentOpen}
+                    />
+                  )}
                 </div>
-              </motion.div>
-            </div>
-          )}
-
-          {/* Transition overlay */}
-          <ConstellationTransition
-            isActive={showTransition}
-            onComplete={() => setShowTransition(false)}
-            duration={3000}
-          />
+              </div>
+            </motion.div>
+          </div>
         </div>
       </div>
 

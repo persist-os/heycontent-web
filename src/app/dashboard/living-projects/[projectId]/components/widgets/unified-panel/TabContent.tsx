@@ -144,7 +144,7 @@ export const OverviewTab = ({ item, itemType, config, projectId }: TabContentPro
             {/* Info Message */}
             <div className="text-xs text-muted-foreground/60 italic">
               <T context="panel.overview.widget_execution_info">
-                This family executes automatically when you start the project. Check the constellation for real-time updates.
+                This family executes automatically when you start the project. Check the project view for real-time updates.
               </T>
             </div>
           </div>
@@ -385,7 +385,7 @@ export const ActionsTab = ({ item, itemType, projectId, onClose }: TabContentPro
         <div className="bg-muted/30 rounded-lg p-3 border border-border/20">
           <p className="text-xs text-muted-foreground">
             <T context="panel.actions.widget_info">
-              Families execute automatically when you start the project. Check the constellation for real-time status.
+              Families execute automatically when you start the project. Check the project view for real-time status.
             </T>
           </p>
         </div>

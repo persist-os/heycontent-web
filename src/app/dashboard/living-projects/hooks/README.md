@@ -1,6 +1,6 @@
 # Living Projects Hooks
 
-Specialized React hooks for managing project intelligence, layout algorithms, and interactive behaviors in the living projects system.
+Specialized React hooks for managing project intelligence and interactive behaviors in the living projects system.
 
 ## 🎣 Available Hooks
 
@@ -43,122 +43,6 @@ function ProjectDiscoveryChat({ projectId, userId }) {
 - Formats content for optimal AI context window usage
 - Handles content truncation and prioritization
 - Provides real-time loading states
-
-### `useConstellationLayout`
-
-Physics-based layout algorithm for positioning projects in constellation view.
-
-```tsx
-import { useConstellationLayout } from '../hooks/useConstellationLayout'
-
-function ConstellationCanvas({ projects }) {
-  const layout = useConstellationLayout(projects)
-
-  return (
-    <svg width={layout.canvasWidth} height={layout.canvasHeight}>
-      {layout.positions.map(position => (
-        <ProjectNode
-          key={position.id}
-          x={position.x}
-          y={position.y}
-          size={position.size}
-          importance={position.importance}
-        />
-      ))}
-
-      {layout.connections.map(connection => (
-        <ConnectionLine
-          key={`${connection.from}-${connection.to}`}
-          from={connection.from}
-          to={connection.to}
-          strength={connection.strength}
-        />
-      ))}
-    </svg>
-  )
-}
-```
-
-**Parameters:**
-
-- `projects: Project[]` - Array of project objects with fingerprint data
-
-**Returns:**
-
-- `positions: ProjectPosition[]` - Positioned project nodes with coordinates
-- `canvasWidth: number` - Calculated canvas dimensions
-- `canvasHeight: number`
-- `connections: Connection[]` - Relationship connections between projects
-
-**Algorithm Features:**
-
-- **Force-directed positioning** using spring physics
-- **Importance-based clustering** - high-priority projects attract related ones
-- **Collision avoidance** - prevents overlapping nodes
-- **Responsive scaling** - adapts to different screen sizes
-- **Performance optimized** - memoized calculations prevent unnecessary re-layout
-
-### `usePanZoom`
-
-Smooth pan and zoom functionality with gesture support for constellation navigation.
-
-```tsx
-import { usePanZoom } from '../hooks/usePanZoom'
-
-function InteractiveCanvas({ canvasWidth, canvasHeight }) {
-  const {
-    transform,
-    containerRef,
-    handleWheel,
-    handleMouseDown,
-    zoomIn,
-    zoomOut,
-    resetView,
-    focusOnPoint
-  } = usePanZoom(canvasWidth, canvasHeight)
-
-  return (
-    <div
-      ref={containerRef}
-      className="canvas-container"
-      onWheel={handleWheel}
-      onMouseDown={handleMouseDown}
-      style={{
-        transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`
-      }}
-    >
-      <CanvasContent />
-    </div>
-  )
-}
-```
-
-**Parameters:**
-
-- `canvasWidth: number` - Canvas width for bounds calculation
-- `canvasHeight: number` - Canvas height for bounds calculation
-- `viewportWidth?: number` - Viewport width (defaults to window.innerWidth)
-- `viewportHeight?: number` - Viewport height (defaults to window.innerHeight)
-
-**Returns:**
-
-- `transform: PanZoomState` - Current { x, y, scale } transformation
-- `containerRef: React.RefObject<HTMLDivElement>` - Container reference for event handling
-- `handleWheel: (e: React.WheelEvent) => void` - Wheel event handler
-- `handleMouseDown: (e: React.MouseEvent) => void` - Mouse event handler
-- `zoomIn: () => void` - Zoom in function
-- `zoomOut: () => void` - Zoom out function
-- `resetView: () => void` - Reset to initial view
-- `focusOnPoint: (x: number, y: number) => void` - Focus on specific point
-
-**Features:**
-
-- **Smooth animations** with momentum and easing
-- **Multi-touch support** for mobile devices
-- **Bounds checking** prevents panning outside canvas
-- **Zoom constraints** with configurable min/max values
-- **Keyboard shortcuts** for accessibility
-- **Touch gesture recognition** for pinch-to-zoom
 
 ### `useProjectConnections`
 
@@ -239,22 +123,15 @@ function ProjectDashboard({ projectId }) {
   // Data fetching
   const { projectContext, isLoading } = useProjectContext(projectId) // from chat/hooks
 
-  // Layout calculation
-  const layout = useConstellationLayout([projectContext])
-
-  // Interactive behavior
-  const panZoom = usePanZoom(layout.canvasWidth, layout.canvasHeight)
-
   // Relationship analysis
   const connections = useProjectConnections([projectContext])
 
   if (isLoading) return <LoadingState />
 
   return (
-    <InteractiveCanvas
-      layout={layout}
+    <ProjectGrid
+      project={projectContext}
       connections={connections}
-      panZoom={panZoom}
     />
   )
 }
@@ -269,21 +146,12 @@ function ComplexProjectView({ projectIds }) {
     useProjectContext(id) // from chat/hooks
   )
 
-  // Combine layouts
-  const combinedLayout = useMemo(() => {
-    const allProjects = projectContexts
-      .filter(ctx => ctx.projectContext)
-      .map(ctx => ctx.projectContext)
-
-    return useConstellationLayout(allProjects)
-  }, [projectContexts])
-
   // Cross-project connections
   const crossConnections = useProjectConnections(
-    combinedLayout.positions
+    projectContexts.filter(ctx => ctx.projectContext).map(ctx => ctx.projectContext)
   )
 
-  return <MultiProjectCanvas layout={combinedLayout} />
+  return <MultiProjectGrid projects={projectContexts} connections={crossConnections} />
 }
 ```
 

@@ -449,7 +449,7 @@ export function UnifiedGalleryView({
                   )}
                 </Button>
                 
-                {/* Back to Constellation */}
+                {/* Back to Thinking Lab */}
                 <Button
                   onClick={onClose}
                   variant="outline"
@@ -461,7 +461,7 @@ export function UnifiedGalleryView({
                       : "bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400"
                   )}
                 >
-                  <T context="button.gallery.back.to.constellation">Back to Constellation</T>
+                  <T context="button.gallery.back.to.thinking_lab">Back to Thinking Lab</T>
                 </Button>
               </div>
             </div>

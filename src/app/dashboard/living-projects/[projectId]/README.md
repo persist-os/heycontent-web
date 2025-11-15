@@ -1,6 +1,6 @@
 # Individual Project Views
 
-Components and pages for viewing and interacting with individual living projects in the constellation system.
+Components and pages for viewing and interacting with individual living projects in the living projects system.
 
 ## 📁 Directory Structure
 
@@ -62,17 +62,17 @@ function IndividualProjectPage({ projectId }) {
 
 ## 🔄 Navigation Flow
 
-### From Constellation to Project
+### From Projects List to Project
 
 ```tsx
-// User clicks project star in constellation
+// User clicks project in projects list
 const handleProjectClick = (project: Project) => {
   if (project.fingerprintId) {
     // Has fingerprint - go to living project view
     router.push(`/dashboard/living-projects/${project._id}`)
   } else {
     // No fingerprint - go to discovery
-    router.push(`/dashboard/project-discovery?projectId=${project._id}`)
+    router.push(`/dashboard/thinking_lab?projectId=${project._id}`)
   }
 }
 ```
