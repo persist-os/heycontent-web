@@ -43,15 +43,6 @@ const navItems = [
   //   category: 'explore',
   // },
   {
-    id: 'constellations',
-    label: 'Constellations',
-    description: 'Collaborative spaces that evolve',
-    icon: Zap,
-    href: '/dashboard/living-projects',
-    dataAttr: 'data-living-projects-link',
-    category: 'create',
-  },
-  {
     id: 'notes',
     label: 'Files',
     description: 'AI-enhanced thoughts and ideas',
@@ -356,9 +347,6 @@ export const DashboardNav = memo(function DashboardNav() {
       case 'briefing-room':
         // This tab is active for briefing room routes
         return pathname.startsWith('/dashboard/briefing_room');
-      case 'constellations':
-        // This tab is active for constellation/living projects routes
-        return pathname.startsWith('/dashboard/living-projects');
       case 'thinking-lab':
         // This tab is active for thinking lab routes
         return pathname.startsWith('/dashboard/thinking_lab');

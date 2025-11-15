@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useEffect, startTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
@@ -8,10 +8,13 @@ import { useConversationState } from '@/app/dashboard/thinking_lab/hooks/useConv
 import { useMessageList } from '@/app/dashboard/thinking_lab/hooks/useMessageList'
 import { ChatInputBox } from './ChatInputBox'
 import ChatMessagesList from '@/app/dashboard/thinking_lab/components/dialogue/components/ChatMessagesList'
+import { deriveChatState } from '@/app/dashboard/thinking_lab/utils/deriveChatState'
 import { Home, RotateCcw } from 'lucide-react'
 import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDialog'
 import { T } from '@/components/translation/T'
 import { useTranslation } from '@/hooks/useTranslation'
+import { InsightPills, type InsightWithOptionalIcon } from '@/components/ui/insight-pills'
+import { Users, BarChart3, TrendingUp, Lightbulb, Target, Calendar, Zap } from 'lucide-react'
 
 interface HomepageChatProps {
   userId: string | null
@@ -41,6 +44,7 @@ export function HomepageChat({
   const [inputValue, setInputValue] = useState('')
   const [showResetDialog, setShowResetDialog] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
+  // Note: inputValue, showResetDialog, and isResetting are user interaction state - keep them
   const router = useRouter()
   const hasRedirectedRef = React.useRef(false)
   
@@ -52,6 +56,18 @@ export function HomepageChat({
   const { text: resetConversationTitle } = useTranslation('Reset conversation', {
     sourceLang: 'en',
     context: 'dashboard.home.chat.reset.title'
+  })
+  const { text: resetButtonText } = useTranslation('Reset', {
+    sourceLang: 'en',
+    context: 'button.reset'
+  })
+  const { text: cancelButtonText } = useTranslation('Cancel', {
+    sourceLang: 'en',
+    context: 'button.cancel'
+  })
+  const { text: projectChatTitle } = useTranslation('Project Chat', {
+    sourceLang: 'en',
+    context: 'dashboard.home.chat.project.title'
   })
   
   // Mutation for deleting conversation
@@ -96,35 +112,92 @@ export function HomepageChat({
     isStreaming
   })
 
-  // Auto-redirect to Thinking Lab after first message is sent
-  useEffect(() => {
-    if (conversationId && messages.length > 0 && !hasRedirectedRef.current && !isStreaming) {
-      hasRedirectedRef.current = true
-      router.push(`/dashboard/thinking_lab?chatId=${conversationId}&panel=widgets`)
+  // Single source of truth for chat state derivation
+  const isLoading = isStreaming
+  const chatState = deriveChatState(messageList, isStreaming, isLoading)
+
+  // Get AmbientInsights for pill display
+  const convexInsights = useQuery(
+    api.ambientInsights.getMostRecentByUserId,
+    userId ? { userId } : 'skip'
+  )
+
+  // Icon mapping for different insight types
+  const getIconForCategory = (category: string) => {
+    const iconMap: Record<string, React.ReactNode> = {
+      'audience': <Users className="w-6 h-6" />,
+      'data_driven': <BarChart3 className="w-6 h-6" />,
+      'engagement': <TrendingUp className="w-6 h-6" />,
+      'strategy': <Target className="w-6 h-6" />,
+      'content': <Lightbulb className="w-6 h-6" />,
+      'timing': <Calendar className="w-6 h-6" />,
+      'boost': <Zap className="w-6 h-6" />,
+      'default': <Lightbulb className="w-6 h-6" />
     }
-  }, [conversationId, messages.length, isStreaming, router])
+    return iconMap[category.toLowerCase()] || iconMap['default']
+  }
+
+  // Map Convex data to InsightWithOptionalIcon format
+  const mappedInsights = React.useMemo<InsightWithOptionalIcon[]>(() => {
+    if (convexInsights && Array.isArray(convexInsights.data) && convexInsights.data.length > 0) {
+      return convexInsights.data.map((item: any, index: number) => ({
+        type: item.category || 'auto_generated',
+        title: item.title,
+        description: item.content,
+        action: item.recommendation || '',
+        recommendation: item.recommendation || '',
+        icon: getIconForCategory(item.category || 'default'),
+        id: `${convexInsights._id}-${index}`
+      }))
+    }
+    return []
+  }, [convexInsights?._id, convexInsights?.data])
+
+  // Auto-redirect to Thinking Lab after first message stream completes
+  useEffect(() => {
+    if (conversationId && messageList.length > 0 && !isStreaming && !hasRedirectedRef.current) {
+      hasRedirectedRef.current = true
+      startTransition(() => {
+        const params = new URLSearchParams()
+        params.set('chatId', conversationId)
+        if (activeProjectId) {
+          params.set('projectId', activeProjectId)
+        }
+        params.set('panel', 'widgets')
+        router.push(`/dashboard/thinking_lab?${params.toString()}`)
+      })
+    }
+  }, [conversationId, messageList.length, isStreaming, activeProjectId, router])
+
+  // Handle insight click - format message and send
+  const handleInsightClick = async (insight: InsightWithOptionalIcon) => {
+    const message = `${insight.title}\n\n${insight.description}\n\n${insight.action}`
+    await sendMessage(message.trim())
+  }
 
   // Handle suggestion clicks
-  const handleSuggestionClick = useCallback((suggestion: any, onSendMessage: (text: string) => void) => {
+  const handleSuggestionClick = (suggestion: any, onSendMessage: (text: string) => void) => {
     if (typeof suggestion === 'string') {
       onSendMessage(suggestion)
     } else if (suggestion.action || suggestion.text || suggestion.description) {
       onSendMessage(suggestion.action || suggestion.text || suggestion.description)
     }
-  }, [])
+  }
 
   // Handle send from ChatInputBox
-  const handleSend = useCallback((message: string, fileAttachments?: any[]) => {
+  const handleSend = async (message: string, fileAttachments?: any[]) => {
     if (message.trim()) {
+      setInputValue('')
       // Note: sendMessage from useConversationState handles file attachments
       // The fileAttachments will be passed through the addMessageToConversation
-      sendMessage(message.trim(), fileAttachments)
-      setInputValue('')
+      // sendMessage is async and will create conversation if needed
+      // Auto-redirect is handled by useEffect above when streaming completes
+      await sendMessage(message.trim(), fileAttachments)
     }
-  }, [sendMessage])
+  }
 
   // Handle conversation reset
-  const handleResetConversation = useCallback(async () => {
+  const handleResetConversation = async () => {
     if (!conversationId || !userId) return
 
     setIsResetting(true)
@@ -146,7 +219,7 @@ export function HomepageChat({
     } finally {
       setIsResetting(false)
     }
-  }, [conversationId, userId, deleteConversation, startNewConversation])
+  }
 
   return (
     <div className="space-y-4">
@@ -169,7 +242,7 @@ export function HomepageChat({
                   </button>
                   <div>
                     <h3 className="text-sm font-medium text-foreground">
-                      {project?.name || <T context="dashboard.home.chat.project.title">Project Chat</T>}
+                      {project?.name || projectChatTitle}
                     </h3>
                     <p className="text-xs text-muted-foreground">
                       <T context="dashboard.home.chat.project.description">Project conversation with your families</T>
@@ -204,8 +277,10 @@ export function HomepageChat({
 
               {/* Message List - scrollable with fixed height */}
               <div className="max-h-96 overflow-y-auto space-y-4">
+                {/* User-facing messages - chat responses, preflight questions, etc. */}
+                {/* Thinking component is now IN-LINE, rendered inside ChatMessagesList */}
                 <ChatMessagesList
-                  messages={messageList}
+                  messages={chatState.userFacingMessages}
                   referencedMessage={null}
                   handleMessageReference={() => {}}
                   handleReferenceClick={() => {}}
@@ -214,6 +289,11 @@ export function HomepageChat({
                   userId={userId ?? undefined}
                   handleSuggestionClick={handleSuggestionClick}
                   handleSendMessage={sendMessage}
+                  shouldShowThinking={chatState.shouldShowThinking}
+                  a2aMessages={chatState.a2aMessages}
+                  isStreaming={isStreaming}
+                  isLoading={isLoading}
+                  hasFinalArtifact={chatState.hasFinalArtifact}
                 />
               </div>
             </div>
@@ -230,6 +310,15 @@ export function HomepageChat({
         </div>
       </div>
 
+      {/* Insight Pills - OUTSIDE chat container, below input bar */}
+      {mappedInsights.length > 0 && (
+        <InsightPills
+          insights={mappedInsights}
+          onInsightClick={handleInsightClick}
+          isLoading={convexInsights === undefined}
+        />
+      )}
+
       {/* Reset Confirmation Dialog */}
       <DeleteConfirmationDialog
         isOpen={showResetDialog}
@@ -237,8 +326,8 @@ export function HomepageChat({
         onConfirm={handleResetConversation}
         title={<T context="dialog.reset.conversation.title">Reset Conversation</T>}
         description={<T context="dialog.reset.conversation.description">Are you sure you want to reset this conversation? This will delete all messages and start fresh. This action cannot be undone.</T>}
-        confirmText={<T context="button.reset">Reset</T>}
-        cancelText={<T context="button.cancel">Cancel</T>}
+        confirmText={resetButtonText}
+        cancelText={cancelButtonText}
         isLoading={isResetting}
       />
     </div>

@@ -5,7 +5,7 @@ import { T } from '@/components/translation';
 
 export const metadata: Metadata = {
   title: 'About HeyContext - Cosmic Intelligence That Evolves With You',
-  description: 'Learn about HeyContext, the cosmic intelligence system that discovers patterns you never noticed. Living projects, crystal formation, and constellation thinking that evolves with your mind.',
+  description: 'Learn about HeyContext, the cosmic intelligence system that discovers patterns you never noticed. Living projects, crystal formation, and pattern thinking that evolves with your mind.',
   keywords: [
     'about HeyContext',
     'AI memory platform',
@@ -18,21 +18,21 @@ export const metadata: Metadata = {
     'cosmic intelligence system',
     'living projects AI',
     'crystal formation insights',
-    'constellation thinking',
+    'living projects',
     'pattern recognition AI',
     'shard extraction',
     'thinking lab memory'
   ],
   openGraph: {
     title: 'About HeyContext - Cosmic Intelligence That Evolves With You',
-    description: 'Discover how HeyContext creates living constellations from your scattered thinking, forming crystals of insight that reveal patterns you never noticed about yourself.',
+    description: 'Discover how HeyContext creates living projects from your scattered thinking, forming crystals of insight that reveal patterns you never noticed about yourself.',
     type: 'website',
     url: 'https://heycontext.co/about',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'About HeyContext - Cosmic Intelligence That Evolves With You',
-    description: 'Cosmic intelligence that spots patterns in your scattered thinking and creates living constellations that evolve with your mind.',
+    description: 'Cosmic intelligence that spots patterns in your scattered thinking and creates living projects that evolve with your mind.',
   },
   alternates: {
     canonical: 'https://heycontext.co/about',
@@ -72,7 +72,7 @@ export default function About() {
             <T context="about.platform.heading">What is HeyContext?</T>
           </h2>
           <p>
-            <T context="about.platform.description1">HeyContext is a cosmic intelligence system that discovers patterns you never noticed about yourself. We create living constellations from your scattered thinking, forming crystals of insight through shard extraction, and building understanding that evolves with your mind.</T>
+            <T context="about.platform.description1">HeyContext is a cosmic intelligence system that discovers patterns you never noticed about yourself. We create living projects from your scattered thinking, forming crystals of insight through shard extraction, and building understanding that evolves with your mind.</T>
           </p>
           <p>
             <T context="about.platform.description2">Our system transforms disconnected thoughts into living projects that grow and adapt. Through crystal formation and pattern recognition, we reveal the hidden connections in your thinking while keeping everything completely private and exclusively yours.</T>
@@ -85,7 +85,7 @@ export default function About() {
             <T context="about.mission.heading">Our Mission</T>
           </h2>
           <p>
-            <T context="about.mission.description">Our mission is to create cosmic intelligence that helps you discover patterns in your scattered thinking. We build living constellations that evolve with your mind, forming crystals of insight that reveal who you are and how you think, while keeping everything completely secure and personal.</T>
+            <T context="about.mission.description">Our mission is to create cosmic intelligence that helps you discover patterns in your scattered thinking. We build living projects that evolve with your mind, forming crystals of insight that reveal who you are and how you think, while keeping everything completely secure and personal.</T>
           </p>
         </section>
 
@@ -110,7 +110,7 @@ export default function About() {
             <T context="about.howItWorks.heading">How It Works</T>
           </h2>
           <ul className="space-y-2 ml-6 list-disc">
-            <li><T context="about.howItWorks.item1">Constellations: Create goals that evolve with AI-generated tools tailored to your working style.</T></li>
+            <li><T context="about.howItWorks.item1">Living Projects: Create goals that evolve with AI-generated tools tailored to your working style.</T></li>
             <li><T context="about.howItWorks.item2">Thinking Lab: Have deep conversations that remember everything and connect ideas across time.</T></li>
             <li><T context="about.howItWorks.item3">Files: Write notes that automatically link to related content across all your work.</T></li>
             <li><T context="about.howItWorks.item4">Cosmic Intelligence: Watch insights crystallize from your patterns—stars for your concrete achievements, crystals for your consciousness and thinking patterns.</T></li>
@@ -165,7 +165,7 @@ export default function About() {
             <T context="about.join.heading">Join HeyContext</T>
           </h2>
           <p>
-            <T context="about.join.description">Whether you're drowning in scattered thinking or seeking AI that discovers patterns you never noticed, HeyContext is here to provide cosmic intelligence that evolves with your mind. Experience living constellations, crystal formation, and pattern recognition that keeps everything completely yours.</T>
+            <T context="about.join.description">Whether you're drowning in scattered thinking or seeking AI that discovers patterns you never noticed, HeyContext is here to provide cosmic intelligence that evolves with your mind. Experience living projects, crystal formation, and pattern recognition that keeps everything completely yours.</T>
           </p>
         </section>
       </article>

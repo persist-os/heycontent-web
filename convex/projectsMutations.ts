@@ -893,32 +893,3 @@ export const batchDeleteProjects = mutation({
   },
 });
 
-/**
- * Clear constellation layout for a project (manual reset)
- * Used by: Layout reset functionality
- */
-export const clearConstellationLayout = mutation({
-  args: {
-    projectId: v.id("projects"),
-    userId: v.string(),
-  },
-  handler: async (ctx, { projectId, userId }) => {
-    // Validate project ownership
-    const project = await ctx.db.get(projectId);
-    if (!project) {
-      throw new Error("Project not found");
-    }
-    
-    if (project.userId !== userId) {
-      throw new Error("Access denied: You don't own this project");
-    }
-    
-    // Clear the layout
-    await ctx.db.patch(projectId, {
-      constellationLayout: null,
-      updatedAt: Date.now(),
-    });
-    
-    return { success: true, projectId };
-  },
-});

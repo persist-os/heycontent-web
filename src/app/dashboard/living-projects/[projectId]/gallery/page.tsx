@@ -56,14 +56,15 @@ function GalleryContent() {
     return <GalleryLoadingSkeleton />;
   }
   
-  // Navigate back to project or conversation
+  // Navigate back to Thinking Lab chat
   const handleClose = () => {
     if (projectId) {
-      router.push(`/dashboard/living-projects/${projectId}`);
+      // Navigate to Thinking Lab with project context
+      router.push(`/dashboard/thinking_lab?projectId=${projectId}`);
     } else if (conversationId) {
       router.push(`/dashboard/thinking_lab?conversationId=${conversationId}`);
     } else {
-      router.push('/dashboard');
+      router.push('/dashboard/thinking_lab');
     }
   };
   

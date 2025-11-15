@@ -21,7 +21,7 @@ export function WidgetGenerationLoader() {
             <T context="loading.generating">Generating</T>
           </h1>
           <p className="text-lg text-muted-foreground font-light">
-            <T context="loading.constellation">Your project constellation</T>
+            <T context="loading.constellation">Your project</T>
           </p>
         </div>
 

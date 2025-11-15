@@ -29,97 +29,31 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
   userExpanded,
   onExpansionChange
 }) => {
-  // PURE COMPUTATION: Derive completion from data (no state)
-  const isCompleted = React.useMemo(() => {
-    return deriveThinkingCompletion(isStreaming, isLoading, hasFinalArtifact)
-  }, [isStreaming, isLoading, hasFinalArtifact])
-
-  // Progressive loading for hardcoded steps (when no messages)
-  // Use minimal state: only track current step index for progressive display
-  const [currentStepIndex, setCurrentStepIndex] = React.useState(0)
+  // PURE COMPUTATION: No state, no effects, just derived values
+  const isCompleted = deriveThinkingCompletion(isStreaming, isLoading, hasFinalArtifact)
   const hasMessages = messages && messages.length > 0
+  const steps = deriveThinkingSteps(messages, isCompleted)
   
-  // Internal expansion state (allows collapsing at all times)
-  // If parent provides userExpanded, use that; otherwise use internal state
-  const [internalExpanded, setInternalExpanded] = React.useState(true) // Default: expanded
-  const effectiveExpanded = userExpanded !== undefined ? userExpanded : internalExpanded
-
-  // Progressive step loading: only for hardcoded steps (no messages)
-  React.useEffect(() => {
-    if (hasMessages || isCompleted) {
-      // Reset when messages arrive or completed
-      setCurrentStepIndex(0)
-      return
-    }
-
-    // Progressive loading: show steps one by one at intervals
-    const intervals: NodeJS.Timeout[] = []
-    const HARDCODED_STEPS = [
-      "Understanding what you need",
-      "Looking through our past conversations...",
-      "Finding what's most relevant",
-      "Putting my thoughts together"
-    ]
-
-    // Start with first step
-    setCurrentStepIndex(1)
-
-    // Add remaining steps progressively
-    for (let i = 1; i < HARDCODED_STEPS.length; i++) {
-      const timeout = setTimeout(() => {
-        setCurrentStepIndex(i + 1)
-      }, i * 2500)
-      intervals.push(timeout)
-    }
-
-    return () => intervals.forEach(clearTimeout)
-  }, [hasMessages, isCompleted])
-
-  // PURE COMPUTATION: Derive steps from messages OR progressive hardcoded steps
-  const steps = React.useMemo(() => {
-    if (hasMessages) {
-      // Use real messages
-      return deriveThinkingSteps(messages, isCompleted)
-    }
-    
-    // Progressive hardcoded steps (show up to currentStepIndex)
-    const HARDCODED_STEPS = [
-      "Understanding what you need",
-      "Looking through our past conversations...",
-      "Finding what's most relevant",
-      "Putting my thoughts together"
-    ]
-    
-    return HARDCODED_STEPS.slice(0, currentStepIndex).map((msg, i) => {
-      const isLast = i === currentStepIndex - 1
-      return {
-        id: `step-${i}`,
-        message: msg,
-        isCompleted: isCompleted && isLast,
-        isActive: !isCompleted && isLast
-      }
-    })
-  }, [messages, isCompleted, hasMessages, currentStepIndex])
-
-  // Track previous completion state to call onComplete (no useEffect - use ref)
+  // Track completion change for callback (simple ref check, no useEffect)
   const prevCompletedRef = React.useRef(isCompleted)
   if (isCompleted && !prevCompletedRef.current) {
-    // Completion just changed from false to true - call callback
     onComplete?.()
   }
   prevCompletedRef.current = isCompleted
 
-  // Handle manual expansion toggle - always allow collapsing/expanding
-  const handleToggle = React.useCallback(() => {
+  // ONLY state: user expansion toggle (user interaction, not derived)
+  const [internalExpanded, setInternalExpanded] = React.useState(true)
+  const effectiveExpanded = userExpanded !== undefined ? userExpanded : internalExpanded
+
+  // Simple toggle handler (no useCallback needed - stable function)
+  const handleToggle = () => {
     const newExpanded = !effectiveExpanded
     if (onExpansionChange) {
-      // Parent controls expansion
       onExpansionChange(newExpanded)
     } else {
-      // Internal state controls expansion
       setInternalExpanded(newExpanded)
     }
-  }, [effectiveExpanded, onExpansionChange])
+  }
 
   const getStepIcon = (isActive: boolean, isCompleted: boolean, isLastMessage: boolean) => {
     // Show "done" (CheckCircle) only on last message when completed
@@ -171,7 +105,8 @@ export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinki
             transition={{ duration: 0.2 }}
             className="overflow-hidden mt-2"
           >
-            <div className="space-y-2">
+            {/* Scrollable container for A2A messages - max-height with overflow */}
+            <div className="max-h-64 overflow-y-auto space-y-2 pr-2">
               {/* Thinking Steps */}
               {steps.length > 0 && (
                 <div className="space-y-1">
