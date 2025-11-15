@@ -6,34 +6,6 @@ React components for the living projects system, providing interactive interface
 
 ### Core Components
 
-#### `ConstellationView`
-
-Main canvas component for exploring project relationships and connections.
-
-```tsx
-import { ConstellationView } from './ConstellationView'
-
-function LivingProjectsPage() {
-  return (
-    <div className="min-h-screen">
-      <ConstellationView />
-    </div>
-  )
-}
-```
-
-**Features:**
-
-- **Interactive Canvas** - Pan, zoom, and navigate project constellation
-- **Project Stars** - Visual nodes representing each project
-- **Connection Lines** - Animated relationships between projects
-- **Minimap** - Overview navigation with viewport indicator
-- **Controls** - Zoom and reset functionality
-
-**Props:**
-
-- None - Uses global auth and query state
-
 #### `ProjectDiscoveryChat` *(in chat/components)*
 
 Interactive conversation interface for discovering project characteristics.
@@ -154,134 +126,6 @@ function ProjectGrid({ projects }) {
 
 ### UI Components
 
-#### `ConstellationControls`
-
-Navigation controls for the constellation canvas.
-
-```tsx
-import { ConstellationControls } from './ConstellationControls'
-
-function CanvasInterface({ scale, onZoomIn, onZoomOut, onReset }) {
-  return (
-    <ConstellationControls
-      scale={scale}
-      onZoomIn={onZoomIn}
-      onZoomOut={onZoomOut}
-      onReset={onReset}
-    />
-  )
-}
-```
-
-**Features:**
-
-- **Zoom Controls** - In/out buttons with scale display
-- **Reset View** - Return to initial constellation state
-- **Instructions** - Contextual help based on zoom level
-- **Responsive Design** - Adapts to different control layouts
-
-#### `ConstellationMinimap`
-
-Overview navigation with project clustering.
-
-```tsx
-import { ConstellationMinimap } from './ConstellationMinimap'
-
-function NavigationInterface({ positions, currentTransform, onViewportClick }) {
-  return (
-    <ConstellationMinimap
-      positions={positions}
-      canvasWidth={1000}
-      canvasHeight={800}
-      viewportWidth={window.innerWidth}
-      viewportHeight={window.innerHeight}
-      currentTransform={currentTransform}
-      onViewportClick={onViewportClick}
-    />
-  )
-}
-```
-
-**Features:**
-
-- **Project Clusters** - Visual grouping by importance/relationships
-- **Viewport Indicator** - Current view bounds on minimap
-- **Click Navigation** - Jump to different areas of constellation
-- **Legend** - Color coding explanation
-- **Performance Optimized** - Efficient rendering for large datasets
-
-### Connection Components
-
-#### `ConnectionLines`
-
-Animated relationship lines between projects in constellation view.
-
-```tsx
-import { ConnectionLines } from './ConnectionLines'
-
-function ProjectConnections({
-  connections,
-  positions,
-  transform,
-  highlightedProject
-}) {
-  return (
-    <ConnectionLines
-      connections={connections}
-      positions={positions}
-      canvasWidth={2000}
-      canvasHeight={1500}
-      scale={transform.scale}
-      translateX={transform.x}
-      translateY={transform.y}
-      highlightedProject={highlightedProject}
-      viewportWidth={1200}
-      viewportHeight={800}
-    />
-  )
-}
-```
-
-**Features:**
-
-- **Curved Connections** - Organic relationship lines
-- **Strength-based Styling** - Opacity and width based on relationship strength
-- **Highlight Effects** - Enhanced visibility for related projects
-- **Performance Culling** - Only render visible connections
-- **Animated Gradients** - Smooth flowing energy effects
-
-#### `ProjectStar`
-
-Interactive project node in constellation view.
-
-```tsx
-import { ProjectStar } from './ProjectStar'
-
-function ProjectNode({ project, position, isHighlighted, scale, onClick }) {
-  return (
-    <ProjectStar
-      project={project}
-      x={position.x}
-      y={position.y}
-      size={position.size}
-      importance={position.importance}
-      isHighlighted={isHighlighted}
-      scale={scale}
-      onClick={onClick}
-      onHover={setHighlightedProject}
-    />
-  )
-}
-```
-
-**Features:**
-
-- **Adaptive Detail** - Content density based on zoom level
-- **Importance Indicators** - Visual weight based on project significance
-- **Status Visualization** - Color coding for project state
-- **Hover Interactions** - Smooth transitions and highlights
-- **Performance Optimized** - Efficient rendering at all zoom levels
-
 ## 🎨 Design System
 
 ### Theme Architecture
@@ -386,31 +230,24 @@ function VirtualizedProjectList({ projects }) {
 
 ```tsx
 import { render, screen, fireEvent } from '@testing-library/react'
-import { ConstellationView } from './ConstellationView'
+import { CreateProjectModal } from './CreateProjectModal'
 
-describe('ConstellationView', () => {
-  it('renders project stars for each project', () => {
-    const mockProjects = [
-      { _id: '1', name: 'Project A', fingerprintId: 'fp1' },
-      { _id: '2', name: 'Project B', fingerprintId: 'fp2' }
-    ]
+describe('CreateProjectModal', () => {
+  it('renders project creation form', () => {
+    render(<CreateProjectModal isOpen={true} onClose={() => {}} onCreateProject={() => {}} />)
 
-    render(<ConstellationView />)
-
-    expect(screen.getByText('Project A')).toBeInTheDocument()
-    expect(screen.getByText('Project B')).toBeInTheDocument()
+    expect(screen.getByText(/create project/i)).toBeInTheDocument()
   })
 
-  it('handles project click navigation', () => {
-    const mockRouter = { push: jest.fn() }
-    // Mock router context
+  it('handles project creation', () => {
+    const onCreateProject = jest.fn()
+    render(<CreateProjectModal isOpen={true} onClose={() => {}} onCreateProject={onCreateProject} />)
 
-    render(<ConstellationView />)
+    const nameInput = screen.getByLabelText(/project name/i)
+    fireEvent.change(nameInput, { target: { value: 'Test Project' } })
+    fireEvent.click(screen.getByText(/create/i))
 
-    const projectStar = screen.getByText('Project A')
-    fireEvent.click(projectStar)
-
-    expect(mockRouter.push).toHaveBeenCalledWith('/dashboard/living-projects/1')
+    expect(onCreateProject).toHaveBeenCalled()
   })
 })
 ```
@@ -491,12 +328,12 @@ const mockFingerprint = {
 ```tsx
 // Component files
 ProjectCard.tsx
-ConstellationView.tsx
 ProjectDiscoveryChat.tsx
+CreateProjectModal.tsx
 
 // Component names
 export function ProjectCard() { /* ... */ }
-export function ConstellationView() { /* ... */ }
+export function CreateProjectModal() { /* ... */ }
 
 // Hook names
 export function useProjectContext() { /* ... */ }
@@ -507,13 +344,8 @@ export function useProjectContext() { /* ... */ }
 ```
 components/
 ├── index.ts              # Component exports
-├── ConstellationView.tsx # Main constellation
-├── ProjectDiscoveryChat.tsx # Discovery interface
-├── AmbientFingerprintCanvas.tsx # Visual canvas
-├── ConnectionLines.tsx   # Relationship lines
-├── ProjectStar.tsx       # Project nodes
-├── ConstellationControls.tsx # Navigation controls
-├── ConstellationMinimap.tsx # Overview map
+├── ProjectDiscoveryChat.tsx # Discovery interface (in chat/components)
+├── AmbientFingerprintCanvas.tsx # Visual canvas (in chat/components)
 ├── CreateProjectModal.tsx # Creation modal
 ├── LoadingState.tsx      # Loading UI
 └── widgets/              # Widget components
