@@ -7,10 +7,12 @@ import { api } from '@/convex/_generated/api';
 import { UnifiedGalleryView } from '@/components/gallery';
 import { GalleryLoadingSkeleton } from '@/components/gallery/GalleryLoadingSkeleton';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
+import { AuthenticationError } from '@/app/lib/errors';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { T } from '@/components/translation/T';
 import { ArrowLeft, Lock } from 'lucide-react';
+import { toast } from 'sonner';
 import type { Id } from '@/convex/_generated/dataModel';
 import type { GalleryItem } from '@/types/gallery';
 
@@ -19,25 +21,32 @@ function GalleryContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
   
   const projectId = params.projectId as string;
   const initialItemId = searchParams.get('id') as string;
   const conversationId = searchParams.get('conversationId') as string | null;
   
-  // Get current user
+  // Get current user - Gold Standard pattern with error handling
   useEffect(() => {
-    const fetchUserId = async () => {
-      const id = await getCurrentUserId();
-      setUserId(id);
-    };
-    fetchUserId();
+    getCurrentUserId()
+      .then(setUserId)
+      .catch(err => {
+        console.error('[Gallery] Failed to get user ID:', err);
+        const errorMessage = err instanceof AuthenticationError 
+          ? 'Authentication error. Please sign in again.'
+          : 'Failed to authenticate. Please refresh the page.';
+        setAuthError(errorMessage);
+        toast.error(errorMessage);
+      });
   }, []);
   
   // ✅ PRIMARY PATTERN: Component calls useQuery directly (not through hook)
   // Step 1: If conversationId provided, fetch conversation to get projectId
+  // Skip queries if authError is set (prevent queries on auth failure)
   const conversation = useQuery(
     api.chatQueries.getConversation,
-    conversationId && userId && typeof userId === 'string' && userId.trim().length > 0
+    !authError && conversationId && userId && typeof userId === 'string' && userId.trim().length > 0
       ? { conversationId: conversationId as Id<"conversations">, userId: userId.trim() }
       : "skip"
   );
@@ -46,9 +55,10 @@ function GalleryContent() {
   const effectiveProjectId = conversation?.projectId || projectId;
   
   // ✅ CRITICAL: Check project access FIRST before calling any queries that might throw
+  // Skip queries if authError is set (prevent queries on auth failure)
   const projectAccess = useQuery(
     api.contentAccessHelpers.getUserContentPermission,
-    effectiveProjectId && userId && typeof userId === 'string' && userId.trim().length > 0 ? {
+    !authError && effectiveProjectId && userId && typeof userId === 'string' && userId.trim().length > 0 ? {
       userId: userId.trim(),
       contentType: 'project',
       contentId: effectiveProjectId
@@ -64,18 +74,20 @@ function GalleryContent() {
   }, [userId, effectiveProjectId, projectAccess]);
   
   // Step 3: Fetch artifacts using effective projectId (ONLY if access is granted)
+  // Skip queries if authError is set (prevent queries on auth failure)
   const artifacts = useQuery(
     api.artifactQueries.getProjectArtifacts,
-    effectiveProjectId && userId && typeof userId === 'string' && userId.trim().length > 0 && hasAccess === true ? { 
+    !authError && effectiveProjectId && userId && typeof userId === 'string' && userId.trim().length > 0 && hasAccess === true ? { 
       projectId: effectiveProjectId as Id<'projects'>,
       userId: userId.trim()
     } : 'skip'
   );
   
   // Step 4: Fetch widgets using effective projectId (ONLY if access is granted)
+  // Skip queries if authError is set (prevent queries on auth failure)
   const widgets = useQuery(
     api.widgetsQueries.getProjectWidgets,
-    effectiveProjectId && userId && typeof userId === 'string' && userId.trim().length > 0 && hasAccess === true ? { 
+    !authError && effectiveProjectId && userId && typeof userId === 'string' && userId.trim().length > 0 && hasAccess === true ? { 
       projectId: effectiveProjectId as Id<'projects'>, 
       userId: userId.trim(),
       includeArchived: true
@@ -137,6 +149,46 @@ function GalleryContent() {
             <p className="text-muted-foreground">
               <T context="gallery.error.invalid.parameters">Invalid gallery parameters. Please provide an item ID and either a project ID or conversation ID.</T>
             </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
+  // ✅ Error handling: Show authentication error UI (check BEFORE queries run)
+  if (authError) {
+    return (
+      <div className="container mx-auto py-8">
+        <Card className="bg-card/50 backdrop-blur-sm border border-destructive/50">
+          <CardContent className="py-12 text-center space-y-6">
+            <div className="flex justify-center">
+              <div className="rounded-full bg-destructive/10 p-4">
+                <Lock className="h-8 w-8 text-destructive" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-semibold">Authentication Error</h2>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                {authError}
+              </p>
+            </div>
+            <div className="flex gap-4 justify-center">
+              <Button
+                onClick={() => window.location.reload()}
+                variant="default"
+                className="mt-4"
+              >
+                Refresh Page
+              </Button>
+              <Button
+                onClick={() => router.push('/dashboard/thinking_lab')}
+                variant="outline"
+                className="mt-4"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Go Back to Thinking Lab
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
