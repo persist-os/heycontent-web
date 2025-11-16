@@ -125,6 +125,10 @@ import { gmailTokenSchemaFields, gmailAccountSchemaFields } from "./types/gmail"
 // Email Tracking
 import { emailSendSchemaFields } from "./types/email";
 
+// Files
+import { fileSchemaFields } from "./types/file";
+import { projectFileSchemaFields } from "./types/projectFile";
+
 export default defineSchema({
   // User Info
   users: defineTable(userSchemaFields)
@@ -294,6 +298,21 @@ export default defineSchema({
   .index("by_project", ["projectId"])
   .index("by_user", ["userId"])
   .index("by_project_user", ["projectId", "userId"]),
+
+  // Files - Independent file storage (not tied to conversations)
+  // Enables many-to-many relationships with projects
+  files: defineTable(fileSchemaFields)
+  .index("by_user", ["userId"])
+  .index("by_conversation", ["conversationId"])
+  .index("by_created", ["createdAt"]),
+
+  // Project Files - Many-to-many junction table (files ↔ projects)
+  // Allows same file to be attached to multiple assignments
+  project_files: defineTable(projectFileSchemaFields)
+  .index("by_project", ["projectId"])
+  .index("by_file", ["fileId"])
+  .index("by_user", ["userId"])
+  .index("by_project_file", ["projectId", "fileId"]),
 
   // Project Widgets - Personalized widgets for each project (aligned with backend models)
   // ============================================================================

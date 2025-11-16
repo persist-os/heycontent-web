@@ -137,7 +137,9 @@ function AssignmentPageContent() {
   if (!project || !userId) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="text-muted-foreground">Loading assignment...</div>
+        <div className="text-muted-foreground">
+          <T context="assignment.loading">Loading assignment...</T>
+        </div>
       </div>
     )
   }

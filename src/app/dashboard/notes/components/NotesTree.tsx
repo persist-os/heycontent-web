@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { FileText, Star, Trash2, CheckSquare, Square, X } from 'lucide-react';
 import { DndContext, DragOverlay } from '@dnd-kit/core';
 import { useRouter } from 'next/navigation';
@@ -27,6 +27,7 @@ import { NotesTreeMobile } from './NotesTreeMobile';
 import { QuickEntryCard } from './QuickEntryCard';
 import { useQuickEntryStats } from '../hooks/useQuickEntryStats';
 import { RecentActivityTable } from './RecentActivityTable';
+import { uploadFile, type FileUploadResponse, getFileDisplayUrl } from '@/lib/file-upload';
 
 export function NotesTree({
   notes,
@@ -58,6 +59,9 @@ export function NotesTree({
   const { updateNote, deleteNote } = useNotes();
   const { firebaseUser } = useAuth();
   const batchDeleteNotesMutation = useMutation(api.noteMutations.batchDeleteNotes);
+  const createFileMutation = useMutation(api.fileMutations.createFile);
+  const [isUploadingFiles, setIsUploadingFiles] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { 
     projects: hookProjects, 
@@ -155,6 +159,70 @@ export function NotesTree({
     const folderId = await createFolder(name, description, parentFolderId, color);
     return folderId;
   }, [createFolder]);
+
+  // File upload handler
+  const handleFileUpload = useCallback(async (files: FileList | null) => {
+    if (!files || files.length === 0 || !firebaseUser?.uid) {
+      return;
+    }
+
+    setIsUploadingFiles(true);
+    const uploadPromises: Promise<FileUploadResponse>[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      uploadPromises.push(uploadFile(file, firebaseUser.uid));
+    }
+
+    try {
+      const uploadResults = await Promise.all(uploadPromises);
+      
+      // Create file records in Convex
+      const fileRecordPromises = uploadResults.map(async (result) => {
+        if (result.success && result.file_metadata) {
+          const fileUrl = getFileDisplayUrl(result.file_metadata.gcs_url);
+          return await createFileMutation({
+            userId: firebaseUser.uid!,
+            fileData: {
+              originalFilename: result.file_metadata.original_filename,
+              filename: result.file_metadata.file_id, // file_id is the final filename after conflict resolution
+              contentType: result.file_metadata.content_type,
+              fileSize: result.file_metadata.file_size,
+              gcsUrl: result.file_metadata.gcs_url,
+              fileUrl: fileUrl,
+              conversationId: undefined, // General files, not tied to conversation
+            },
+          });
+        }
+        return null;
+      });
+
+      await Promise.all(fileRecordPromises);
+      
+      toast.success(
+        <T context="toast.dashboard.notes.upload.success">
+          Successfully uploaded {uploadResults.length} file{uploadResults.length !== 1 ? 's' : ''}
+        </T>
+      );
+    } catch (error) {
+      console.error('File upload error:', error);
+      toast.error(
+        <T context="toast.dashboard.notes.upload.error">
+          Failed to upload files. Please try again.
+        </T>
+      );
+    } finally {
+      setIsUploadingFiles(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  }, [firebaseUser?.uid, createFileMutation]);
+
+  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    handleFileUpload(e.target.files);
+  }, [handleFileUpload]);
 
   const handleDeleteProject = useCallback(async (projectId: string) => {
     setProjectToDelete(projectId);
@@ -439,8 +507,7 @@ export function NotesTree({
           onCreateProject={handleCreateProject}
           onCreateFolder={() => setShowCreateFolderModal(true)}
           onUpload={() => {
-            // TODO: Implement file upload functionality
-            toast('File upload coming soon');
+            fileInputRef.current?.click();
           }}
           isCreatingNote={isCreatingNote}
           isCreatingProject={false}
@@ -542,6 +609,18 @@ export function NotesTree({
           cancelContext="button.cancel"
           variant="destructive"
           isLoading={isBatchDeleting || isBatchDeletingNotes}
+        />
+
+        {/* Hidden file input for uploads */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          onChange={handleFileInputChange}
+          className="hidden"
+          accept="image/*,.pdf,.doc,.docx,.txt,.csv,.xlsx,.xls,.zip,.rar"
+          disabled={isUploadingFiles}
+          aria-label="Upload files"
         />
       </div>
 

@@ -48,36 +48,25 @@ export function useQuickEntryStats(): QuickEntryStats {
   // Get projects (assignments) count
   const { projects } = useProjects(userId);
 
-  // Get uploaded files count from messages
-  const uploadedFiles = useQuery(
-    api.messagesQueries.getUserMessagesWithFiles,
+  // Get uploaded files count from files table (new approach)
+  const fileStats = useQuery(
+    api.fileQueries.getUserFileStats,
     userId ? { userId } : 'skip'
   );
 
   const isLoading = 
     (userId && recentThreads === undefined) ||
     (userId && userArtifacts === undefined) ||
-    (userId && uploadedFiles === undefined);
+    (userId && fileStats === undefined);
 
   // Calculate counts
   const chatsCount = recentThreads?.length || 0;
   const artifactsCount = userArtifacts?.length || 0;
   const assignmentsCount = projects?.length || 0;
   
-  // Calculate total file count and size from messages with attachments
-  let filesCount = 0;
-  let totalFileSize = 0;
-  
-  if (uploadedFiles) {
-    uploadedFiles.forEach((msg) => {
-      if (msg.fileAttachments && msg.fileAttachments.length > 0) {
-        filesCount += msg.fileAttachments.length;
-        msg.fileAttachments.forEach((file: any) => {
-          totalFileSize += file.file_size || file.file_metadata?.file_size || 0;
-        });
-      }
-    });
-  }
+  // Get file count and size from files table
+  const filesCount = fileStats?.count || 0;
+  const totalFileSize = fileStats?.totalSize || 0;
 
   const mbUsed = totalFileSize > 0 
     ? `${(totalFileSize / (1024 * 1024)).toFixed(1)} MB`

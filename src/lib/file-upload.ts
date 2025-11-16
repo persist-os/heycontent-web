@@ -6,8 +6,9 @@ export interface FileUploadResponse {
   success: boolean;
   file_url: string;
   file_metadata: {
-    file_id: string;
+    file_id: string; // Final filename after conflict resolution (used as filename)
     original_filename: string;
+    filename?: string; // Optional: same as file_id if present
     content_type: string;
     file_size: number;
     gcs_url: string;

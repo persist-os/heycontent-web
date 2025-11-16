@@ -115,7 +115,7 @@ export function NotesTreeHeader({
               ) : (
                 <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               )}
-              <span className="hidden sm:inline"><T context="button.create-new">+ Create New</T></span>
+              <span className="hidden sm:inline"><T context="button.create-new">Create New</T></span>
               <span className="sm:hidden"><T context="button.create">Create</T></span>
             </button>
           </div>

@@ -70,6 +70,16 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     } : "skip"
   )
 
+  // Reverse artifacts array so newest appear at the bottom
+  // Query returns newest first (desc order), so we reverse to show oldest first (newest at bottom)
+  // MUST be called before any conditional returns to follow Rules of Hooks
+  const reversedArtifacts = React.useMemo(() => {
+    if (!artifacts || artifacts.length === 0) {
+      return []
+    }
+    return [...artifacts].reverse()
+  }, [artifacts])
+
   // Loading state: waiting for conversation or artifacts
   if (conversationId && userId && conversation === undefined) {
     return (
@@ -129,12 +139,6 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       </div>
     )
   }
-
-  // Reverse artifacts array so newest appear at the bottom
-  // Query returns newest first (desc order), so we reverse to show oldest first (newest at bottom)
-  const reversedArtifacts = React.useMemo(() => {
-    return [...artifacts].reverse()
-  }, [artifacts])
 
   // Display artifacts using existing ArtifactRenderer
   return (
