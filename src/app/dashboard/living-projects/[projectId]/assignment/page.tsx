@@ -16,7 +16,8 @@ import {
   ArrowUpRight,
   ChevronUp,
   ChevronDown,
-  Sparkles
+  Sparkles,
+  Plus
 } from 'lucide-react'
 import { T } from '@/components/translation/T'
 import type { Id } from '@/convex/_generated/dataModel'
@@ -24,12 +25,14 @@ import { useGalleryItems } from '@/hooks/useGalleryItems'
 import Link from 'next/link'
 import { formatDistanceToNow } from '../components/utils/dateFormatting'
 import { CheckCircle2 } from 'lucide-react'
+import { ContentAttachmentPanel } from '@/app/dashboard/living-projects/components/ContentAttachmentPanel'
 
 function AssignmentPageContent() {
   const params = useParams()
   const router = useRouter()
   const projectId = params.projectId as string
   const [userId, setUserId] = useState<string | null>(null)
+  const [showProjectContentPanel, setShowProjectContentPanel] = useState(false)
 
   // Get user ID
   useEffect(() => {
@@ -154,24 +157,38 @@ function AssignmentPageContent() {
             {/* Breadcrumb */}
             <div className="flex items-center gap-1 text-[32px] font-extralight leading-[60px] tracking-[-0.96px] text-foreground">
               <Link href="/dashboard" className="hover:underline cursor-pointer">
-                Files
+                <T context="assignment.breadcrumb.files">Files</T>
               </Link>
               <span>/</span>
               <Link href="/dashboard/home" className="hover:underline cursor-pointer">
-                Assignments
+                <T context="assignment.breadcrumb.assignments">Assignments</T>
               </Link>
               <span>/</span>
-              <span className="text-foreground">{project.name || 'Untitled Assignment'}</span>
+              <span className="text-foreground">{project.name || <T context="assignment.breadcrumb.untitled">Untitled Assignment</T>}</span>
             </div>
 
-            {/* Discuss In Chat Button */}
-            <Button
-              onClick={handleDiscussInChat}
-              className="bg-[hsl(var(--assignment-primary-blue))] text-[hsl(var(--assignment-primary-blue-text))] hover:bg-[hsl(var(--assignment-primary-blue))]/90 px-4 py-2 h-auto rounded-lg"
-            >
-              <MessageSquare className="w-4 h-4 mr-2" />
-              <span className="text-sm">Discuss In Chat</span>
-            </Button>
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3">
+              {/* Add Content Button */}
+              <Button
+                onClick={() => setShowProjectContentPanel(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md font-medium"
+              >
+                <Plus className="w-4 h-4" />
+                <T context="button.add_content">Add Content</T>
+              </Button>
+              
+              {/* Discuss In Chat Button */}
+              <Button
+                onClick={handleDiscussInChat}
+                className="bg-[hsl(var(--assignment-primary-blue))] text-[hsl(var(--assignment-primary-blue-text))] hover:bg-[hsl(var(--assignment-primary-blue))]/90 px-4 py-2 h-auto rounded-lg"
+              >
+                <MessageSquare className="w-4 h-4 mr-2" />
+                <span className="text-sm">
+                  <T context="assignment.header.discuss_chat">Discuss In Chat</T>
+                </span>
+              </Button>
+            </div>
           </div>
 
           {/* Synopsis */}
@@ -185,7 +202,7 @@ function AssignmentPageContent() {
         {/* Activity Section */}
         <div className="flex flex-col gap-5 mb-10">
           <h2 className="text-2xl font-semibold leading-9 tracking-[-0.72px] text-foreground">
-            Activity
+            <T context="assignment.activity.title">Activity</T>
           </h2>
           
           <Card className="bg-[hsl(var(--assignment-surface-container))] border-none rounded-xl p-5">
@@ -200,7 +217,7 @@ function AssignmentPageContent() {
                       <div className="flex items-center gap-3">
                         <div className="w-3 h-3 rounded-full border-2 border-[hsl(var(--assignment-outline-variant))] flex-shrink-0" />
                         <span className="text-base text-[hsl(var(--assignment-text-subtle))]">
-                          No tasks yet
+                          <T context="assignment.activity.no_tasks">No tasks yet</T>
                         </span>
                       </div>
                     ) : (
@@ -231,7 +248,7 @@ function AssignmentPageContent() {
                                   ? 'text-foreground'
                                   : 'text-[hsl(var(--assignment-text-subtle))]'
                               }`}>
-                                {widget.title || 'Unnamed Widget'}
+                                {widget.title || <T context="assignment.activity.unnamed_widget">Unnamed Widget</T>}
                               </span>
                             </div>
                           </React.Fragment>
@@ -246,11 +263,13 @@ function AssignmentPageContent() {
               {a2aNotes && a2aNotes.length > 0 && (
                 <Card className="bg-[hsl(var(--assignment-bg))] border-none rounded-xl p-4 mt-2">
                   <div className="flex flex-col gap-2">
-                    <h3 className="text-sm font-semibold text-foreground mb-2">Status Updates</h3>
+                    <h3 className="text-sm font-semibold text-foreground mb-2">
+                      <T context="assignment.activity.status_updates">Status Updates</T>
+                    </h3>
                     <div className="flex flex-col gap-2 max-h-[400px] overflow-y-auto">
                       {a2aNotes.map((note: any) => {
                         const report = note.report || {}
-                        const announcement = report.announcement || report.summary || 'Status update'
+                        const announcement = report.announcement || report.summary
                         
                         return (
                           <div
@@ -262,7 +281,7 @@ function AssignmentPageContent() {
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-medium text-foreground line-clamp-2">
-                                {announcement}
+                                {announcement || <T context="assignment.activity.status_update_fallback">Status update</T>}
                               </p>
                               <p className="text-[10px] text-[hsl(var(--assignment-text-subtle))] mt-1">
                                 {formatDistanceToNow(new Date(note.createdAt), { addSuffix: true, short: true })}
@@ -282,7 +301,7 @@ function AssignmentPageContent() {
         {/* Artifacts Section */}
         <div className="flex flex-col gap-5 mb-10">
           <h2 className="text-2xl font-semibold leading-9 tracking-[-0.72px] text-foreground">
-            Artifacts
+            <T context="assignment.artifacts.title">Artifacts</T>
           </h2>
           
           <div className="flex items-center justify-between gap-6">
@@ -304,12 +323,12 @@ function AssignmentPageContent() {
                 <CardContent className="p-2 h-full flex flex-col justify-between">
                   <div className="flex flex-col gap-1 pr-8">
                     <h3 className="text-2xl font-semibold leading-9 tracking-[-0.72px] text-foreground line-clamp-1">
-                      {artifact.title || 'artifact name'}
+                      {artifact.title || <T context="assignment.artifacts.artifact_name_fallback">artifact name</T>}
                     </h3>
                     <p className={`text-base leading-5 ${
                       index === 0 ? 'text-foreground' : 'text-[hsl(var(--assignment-text-subtle))]'
                     }`}>
-                      {widgets.find(w => w._id === artifact.widgetId)?.title || 'project/widget name as a tag'}
+                      {widgets.find(w => w._id === artifact.widgetId)?.title || <T context="assignment.artifacts.widget_name_fallback">project/widget name as a tag</T>}
                     </p>
                   </div>
                   
@@ -356,7 +375,7 @@ function AssignmentPageContent() {
         {/* Files Section */}
         <div className="flex flex-col gap-5">
           <h2 className="text-2xl font-semibold leading-9 tracking-[-0.72px] text-foreground">
-            Files
+            <T context="assignment.files.title">Files</T>
           </h2>
           
           <div className="flex flex-col">
@@ -364,15 +383,21 @@ function AssignmentPageContent() {
             <div className="flex items-center justify-between px-4 py-2 border-b border-[hsl(var(--assignment-outline-variant))]">
               <div className="flex items-center gap-3 w-[400px]">
                 <Checkbox />
-                <span className="text-sm font-semibold text-[hsl(var(--assignment-on-surface-variant))]">Name</span>
+                <span className="text-sm font-semibold text-[hsl(var(--assignment-on-surface-variant))]">
+                  <T context="assignment.files.table.name">Name</T>
+                </span>
                 <ChevronUp className="w-6 h-6 text-[hsl(var(--assignment-on-surface-variant))]" />
               </div>
               <div className="flex items-center gap-3 w-[120px]">
-                <span className="text-sm font-semibold text-[hsl(var(--assignment-on-surface-variant))]">Type</span>
+                <span className="text-sm font-semibold text-[hsl(var(--assignment-on-surface-variant))]">
+                  <T context="assignment.files.table.type">Type</T>
+                </span>
                 <ChevronUp className="w-6 h-6 text-[hsl(var(--assignment-on-surface-variant))]" />
               </div>
               <div className="flex items-center gap-3 w-[300px]">
-                <span className="text-base text-foreground">Last opened</span>
+                <span className="text-base text-foreground">
+                  <T context="assignment.files.table.last_opened">Last opened</T>
+                </span>
                 <ChevronUp className="w-6 h-6 text-[hsl(var(--assignment-on-surface-variant))]" />
               </div>
             </div>
@@ -386,12 +411,18 @@ function AssignmentPageContent() {
                 <div className="flex items-center gap-3 w-[400px]">
                   <Checkbox />
                   <span className="text-sm font-semibold text-[hsl(var(--assignment-on-surface-variant))]">
-                    {item.title || 'Untitled'}
+                    {item.title || <T context="assignment.files.untitled">Untitled</T>}
                   </span>
                 </div>
                 <div className="w-[120px]">
                   <span className="text-sm font-semibold text-[hsl(var(--assignment-on-surface-variant))]">
-                    {item.itemType === 'artifact' ? 'Artifact' : item.itemType === 'widget' ? 'Widget' : 'Chat'}
+                    {item.itemType === 'artifact' ? (
+                      <T context="assignment.files.type.artifact">Artifact</T>
+                    ) : item.itemType === 'widget' ? (
+                      <T context="assignment.files.type.widget">Widget</T>
+                    ) : (
+                      <T context="assignment.files.type.chat">Chat</T>
+                    )}
                   </span>
                 </div>
                 <div className="w-[300px]">
@@ -410,6 +441,20 @@ function AssignmentPageContent() {
           </div>
         </div>
       </div>
+
+      {/* Project Content Management Panel */}
+      {userId && project && (
+        <ContentAttachmentPanel
+          projectId={projectId as Id<'projects'>}
+          userId={userId}
+          isOpen={showProjectContentPanel}
+          onClose={() => setShowProjectContentPanel(false)}
+          attachedNoteIds={project.noteIds || []}
+          attachedArtifactIds={project.artifactIds || []}
+          attachedStardustIds={project.stardustIds || []}
+          attachedShardIds={project.shardIds || []}
+        />
+      )}
     </div>
   )
 }

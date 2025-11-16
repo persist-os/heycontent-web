@@ -4,7 +4,6 @@ import React, { useState, useCallback, useRef } from 'react';
 import { FileText, Star, Trash2, CheckSquare, Square, X } from 'lucide-react';
 import { DndContext, DragOverlay } from '@dnd-kit/core';
 import { useRouter } from 'next/navigation';
-import { useCreateNote } from '../hooks/useCreateNote';
 import { useNotes } from '@/app/context/notes-context';
 import { useProjects } from '../hooks/useProjects';
 import { useFolders } from '../hooks/useFolders';
@@ -42,7 +41,7 @@ export function NotesTree({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['recent', 'projects', 'tags', 'important', 'shared', 'my-shared', 'user-folders']));
-  const [isCreatingNote, setIsCreatingNote] = useState(false);
+  const isCreatingNote = false; // No longer creating notes, just navigating
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
   const [isDeletingProject, setIsDeletingProject] = useState(false);
@@ -55,7 +54,6 @@ export function NotesTree({
   const [isBatchDeletingNotes, setIsBatchDeletingNotes] = useState(false);
   
   const router = useRouter();
-  const { createNote } = useCreateNote();
   const { updateNote, deleteNote } = useNotes();
   const { firebaseUser } = useAuth();
   const batchDeleteNotesMutation = useMutation(api.noteMutations.batchDeleteNotes);
@@ -134,21 +132,9 @@ export function NotesTree({
     }
   }, [isSelectionMode]);
 
-  const handleCreateNote = useCallback(async () => {
-    setIsCreatingNote(true);
-    try {
-      const newNoteId = await createNote('', {
-        customType: selectedFilter === 'projects' ? undefined : (selectedFilter !== 'all' ? selectedFilter : undefined)
-      });
-      if (newNoteId) {
-        router.push(`/dashboard/thinking_lab?noteId=${newNoteId}`);
-      }
-    } catch (error) {
-      console.error('Failed to create note:', error);
-    } finally {
-      setIsCreatingNote(false);
-    }
-  }, [createNote, router, selectedFilter]);
+  const handleCreateNote = useCallback(() => {
+    router.push('/dashboard/thinking_lab');
+  }, [router]);
 
   const handleCreateProject = useCallback(() => {
     // Navigate to thinking lab - a new conversation will create a new project automatically
@@ -522,25 +508,25 @@ export function NotesTree({
           <div className="flex flex-col sm:flex-row gap-5 mb-6">
             <QuickEntryCard
               type="chats"
-              title="Chats"
+              title={<T context="notes.quick_entry.chats">Chats</T>}
               tokenUsed={quickEntryStats.chats.tokenUsed}
               fileCount={quickEntryStats.chats.count}
             />
             <QuickEntryCard
               type="artifacts"
-              title="Artifacts"
+              title={<T context="notes.quick_entry.artifacts">Artifacts</T>}
               tokenUsed={quickEntryStats.artifacts.tokenUsed}
               fileCount={quickEntryStats.artifacts.count}
             />
             <QuickEntryCard
               type="assignments"
-              title="Assignments"
+              title={<T context="notes.quick_entry.assignments">Assignments</T>}
               tokenUsed={quickEntryStats.assignments.tokenUsed}
               fileCount={quickEntryStats.assignments.count}
             />
             <QuickEntryCard
               type="uploaded-files"
-              title="Uploaded Files"
+              title={<T context="notes.quick_entry.uploaded_files">Uploaded Files</T>}
               mbUsed={quickEntryStats.uploadedFiles.mbUsed}
               fileCount={quickEntryStats.uploadedFiles.count}
             />
@@ -596,14 +582,14 @@ export function NotesTree({
               parts.push(`${noteCount} note${noteCount !== 1 ? 's' : ''}`);
             }
             return `Are you sure you want to delete ${parts.join(' and ')}? This action cannot be undone.`;
-          })()}
+          })() as string}
           descriptionContext="modal.delete_items_description"
           confirmText={(() => {
             const projectCount = projectsToBatchDelete?.length || 0;
             const noteCount = notesToBatchDelete?.length || 0;
             const total = projectCount + noteCount;
             return `Delete ${total} Item${total !== 1 ? 's' : ''}`;
-          })()}
+          })() as string}
           confirmContext="button.delete_items"
           cancelText="Cancel"
           cancelContext="button.cancel"

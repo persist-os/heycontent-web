@@ -83,7 +83,7 @@ export function RecentActivityTable() {
           name: note.title || 'Untitled Note',
           type: 'note',
           lastOpened: note.updatedAt || note._creationTime,
-          url: `/dashboard/notes/${note._id}`,
+          url: `/dashboard/thinking_lab?noteId=${note._id}`,
         });
       });
     }

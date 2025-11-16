@@ -3,10 +3,11 @@
 import React from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import { T } from '@/components/translation/T';
 
 export interface QuickEntryCardProps {
   type: 'chats' | 'artifacts' | 'assignments' | 'uploaded-files';
-  title: string;
+  title: React.ReactNode;
   tokenUsed?: string;
   fileCount?: number;
   mbUsed?: string;
@@ -65,7 +66,7 @@ export function QuickEntryCard({
             <div className="overflow-hidden rounded-[8px] shrink-0 size-[44px] flex items-center justify-center">
               <Image
                 src={config.iconSrc}
-                alt={`${title} icon`}
+                alt={typeof title === 'string' ? `${title} icon` : 'Card icon'}
                 width={44}
                 height={44}
                 className="size-full"
@@ -86,7 +87,11 @@ export function QuickEntryCard({
           </p>
           {/* Right stat */}
           <p className="text-body-l text-[hsl(var(--assignment-text-regular))]">
-            {fileCount !== undefined ? `${fileCount} file${fileCount !== 1 ? 's' : ''}` : '—'}
+            {fileCount !== undefined ? (
+              <T context="notes.quick_entry.file_count">
+                {fileCount} file{fileCount !== 1 ? 's' : ''}
+              </T>
+            ) : '—'}
           </p>
         </div>
       </div>
