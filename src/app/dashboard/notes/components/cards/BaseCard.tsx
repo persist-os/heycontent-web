@@ -152,7 +152,7 @@ export function BaseCard({
             </Button>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Image Gallery Modal */}
       {showImageGallery && hasImages && (
