@@ -119,9 +119,9 @@ export const AutoScalingText: React.FC<AutoScalingTextProps> = ({
       const textHeight = textElement.scrollHeight;
       const textWidth = textElement.scrollWidth;
       
-      // Much more conservative margins to prevent cutoff
-      const heightMargin = 16;
-      const widthMargin = 12;
+      // Reduced margins to allow more text space and prevent cutoff
+      const heightMargin = 8;
+      const widthMargin = 6;
       
       const fitsHeight = textHeight <= (containerHeight - heightMargin);
       const fitsWidth = textWidth <= (containerWidth - widthMargin);

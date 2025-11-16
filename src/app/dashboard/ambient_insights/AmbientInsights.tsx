@@ -420,8 +420,8 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
                     icon={insight.icon}
                     onClick={() => onInsightClick?.(insight.action, insight)}
                     titleSize="text-sm mb-3"
-                    maxFontSize={14}
-                    minFontSize={12}
+                    maxFontSize={12}
+                    minFontSize={10}
                     responsive={false}
                   />
                 </div>
@@ -457,8 +457,8 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
               icon={insight.icon}
               onClick={() => onInsightClick?.(insight.action, insight)}
               titleSize="text-sm sm:text-base mb-4"
-              maxFontSize={14}
-              minFontSize={12}
+              maxFontSize={12}
+              minFontSize={10}
             />
           ))}
         </div>

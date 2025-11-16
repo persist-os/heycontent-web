@@ -14,6 +14,7 @@ import { StarRating } from '@/components/ui/star-rating'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
+import { ResponseOptions } from '@/components/ui/response-options'
 
 interface MessageBubbleProps {
   message: Message
@@ -137,7 +138,7 @@ export function MessageBubble({
               ${isCoordination
                 ? 'rounded-xl px-4 sm:px-5 py-3 sm:py-4 bg-card/60 backdrop-blur-sm text-card-foreground border border-border/50'
                 : isUser 
-                ? 'rounded-2xl px-5 sm:px-7 py-2 sm:py-3 bg-accent text-accent-foreground [&_*]:!text-accent-foreground mr-1 sm:mr-2' 
+                ? 'rounded-2xl px-5 sm:px-7 py-2 sm:py-3 bg-foreground dark:bg-accent text-background dark:text-accent-foreground [&_*]:!text-background dark:[&_*]:!text-accent-foreground mr-1 sm:mr-2' 
                 : 'px-0 py-1 text-foreground'
               }
               relative w-full min-w-0
@@ -162,7 +163,7 @@ export function MessageBubble({
                 )}
                 
                 {/* Message content - show streaming content in real-time */}
-                <div className={isCoordination ? 'text-card-foreground' : isUser ? 'text-accent-foreground' : 'text-foreground'}>
+                <div className={isCoordination ? 'text-card-foreground' : isUser ? 'text-background dark:text-accent-foreground' : 'text-foreground'}>
                   <MarkdownRenderer content={message.content} />
                 </div>
 
@@ -179,6 +180,36 @@ export function MessageBubble({
                     content={message.content}
                     onContentClick={onContentClick}
                   />
+                )}
+
+                {/* ResponseOptions component - render when hasQuestions is true */}
+                {!isUser && message.hasQuestions && message.questions && message.questions.length > 0 && (
+                  <div className="mt-4">
+                    <ResponseOptions
+                      message={
+                        // Format questions nicely: show each question as a numbered list
+                        message.questions.length === 1
+                          ? message.questions[0]
+                          : message.questions.map((q, idx) => `${idx + 1}. ${q}`).join('\n\n')
+                      }
+                      options={[
+                        // Add "Skip questions" option if responseOptions exists
+                        ...(message.responseOptions ? [{
+                          text: message.responseOptions.text || "Skip questions, generate immediately",
+                          onClick: () => {
+                            if (onOptionClick) {
+                              onOptionClick({
+                                action: message.responseOptions?.action || "skip_questions",
+                                type: message.responseOptions?.type || "action"
+                              })
+                            }
+                          },
+                          type: (message.responseOptions.type || 'action') as 'action' | 'detail' | 'suggestion' | 'explore',
+                          action: message.responseOptions.action
+                        }] : [])
+                      ]}
+                    />
+                  </div>
                 )}
 
               </>

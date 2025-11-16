@@ -80,6 +80,21 @@ export const messageSchemaFields = {
   // A2A Metadata (for agent-to-agent announcements)
   a2aMetadata: v.optional(v.any()),
   
+  // Structured output fields from ChatResponse (for question detection and UI rendering)
+  hasQuestions: v.optional(v.boolean()),
+  questions: v.optional(v.array(v.string())),
+  awaitingUserResponse: v.optional(v.boolean()),  // Whether orchestrator should wait for user response
+  responseOptions: v.optional(v.object({
+    text: v.string(),
+    type: v.optional(v.union(
+      v.literal("action"),
+      v.literal("detail"),
+      v.literal("suggestion"),
+      v.literal("explore")
+    )),
+    action: v.optional(v.string()),
+  })),
+  
   // Future Extensions (for gradual rollout)
   editedAt: v.optional(v.number()),
   deletedAt: v.optional(v.number()),  // Soft delete
@@ -110,6 +125,20 @@ export const messageInputValidator = v.object({
   context_summary: v.optional(v.any()),
   suggestions: v.optional(v.any()),
   a2aMetadata: v.optional(v.any()),  // A2A announcement metadata
+  // Structured output fields from ChatResponse (for question detection and UI rendering)
+  hasQuestions: v.optional(v.boolean()),
+  questions: v.optional(v.array(v.string())),
+  awaitingUserResponse: v.optional(v.boolean()),  // Whether orchestrator should wait for user response
+  responseOptions: v.optional(v.object({
+    text: v.string(),
+    type: v.optional(v.union(
+      v.literal("action"),
+      v.literal("detail"),
+      v.literal("suggestion"),
+      v.literal("explore")
+    )),
+    action: v.optional(v.string()),
+  })),
 });
 
 // Message array validator for createConversation

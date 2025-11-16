@@ -4,6 +4,12 @@ export interface InteractiveOption {
   action?: string;
 }
 
+export interface ResponseOptionData {
+  text: string;
+  type?: 'action' | 'detail' | 'suggestion' | 'explore';
+  action?: string;
+}
+
 export interface InteractiveResponse {
   options?: InteractiveOption[];
   followUp?: {
@@ -62,6 +68,10 @@ export interface Message {
     question: string;
     choices: string[];
   }[];
+  // Structured output fields from ChatResponse
+  hasQuestions?: boolean;
+  questions?: string[];
+  responseOptions?: ResponseOptionData;
 }
 
 export interface ChatHistory {

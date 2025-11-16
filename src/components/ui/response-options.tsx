@@ -65,8 +65,9 @@ export function ResponseOptions({
           'bg-[hsl(var(--response-options-bg))]',
           'box-border',
           'flex',
-          'gap-[10px]',
-          'items-center',
+          'flex-col',
+          'gap-[8px]',
+          'items-start',
           'justify-center',
           'p-[12px]',
           'rounded-[12px]',
@@ -87,10 +88,23 @@ export function ResponseOptions({
             'shrink-0',
             'text-[hsl(var(--response-options-text))]',
             'text-[16px]', // Body/L
-            'whitespace-pre-wrap'
+            'whitespace-pre-wrap',
+            'w-full'
           )}
         >
           {message}
+        </p>
+        {/* Hint to use chat input */}
+        <p
+          className={cn(
+            'text-[12px]',
+            'text-[hsl(var(--response-options-text))]',
+            'opacity-70',
+            'italic',
+            'mt-1'
+          )}
+        >
+          Type your answers in the chat input below
         </p>
       </div>
 

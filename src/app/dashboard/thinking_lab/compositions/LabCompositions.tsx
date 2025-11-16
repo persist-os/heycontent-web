@@ -231,8 +231,9 @@ function FullThinkingLabInternal({
       onThreadSelect={handleThreadSelect}
       isMobile={isMobile}
       activeTab="chat"
+      messages={messageList}
     />
-  ), [sendMessage, isStreaming, isOrchestratorRunning, inputValue, handleInputPopulate, quotedContent, clearQuotedContent, notepadContext.includeInMessages, notepadContext.setIncludeInMessages, userId, chatId, handleThreadSelect, isMobile])
+  ), [sendMessage, isStreaming, isOrchestratorRunning, inputValue, handleInputPopulate, quotedContent, clearQuotedContent, notepadContext.includeInMessages, notepadContext.setIncludeInMessages, userId, chatId, handleThreadSelect, isMobile, messageList])
 
   // Show loading state while auth is initializing
   if (authLoading) {

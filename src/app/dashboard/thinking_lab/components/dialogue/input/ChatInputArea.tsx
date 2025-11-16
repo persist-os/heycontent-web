@@ -36,6 +36,8 @@ interface ChatInputAreaProps {
   userId?: string;
   activeThreadId?: string;
   onThreadSelect?: (threadId: string) => void;
+  // Question handling - allow input when questions are asked
+  messages?: Message[];
 }
 
 const ChatInputArea: React.FC<ChatInputAreaProps> = ({
@@ -65,10 +67,20 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   onToggleNotepadInMessages,
   userId,
   activeThreadId,
-  onThreadSelect
+  onThreadSelect,
+  messages = []
 }) => {
   // Only show ambient content when there are no messages
   const showAmbientContent = showAmbient && !currentContext;
+  
+  // Check if last assistant message has questions - if so, allow input even if orchestrator is running
+  const lastAssistantMessage = messages
+    .filter(msg => msg.role === 'assistant')
+    .slice(-1)[0];
+  const hasQuestionsAsked = lastAssistantMessage?.hasQuestions === true;
+  
+  // Allow input when questions are asked, even if orchestrator is running
+  const shouldDisableInput = !isAuthenticated || isLoading || (isOrchestratorRunning && !hasQuestionsAsked);
   
   return (
     <div className={`bg-background ${showAmbientContent ? 'h-full flex flex-col' : ''}`}>
@@ -103,7 +115,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
             inputRef={inputRef}
             onSend={handleSendMessage}
             isLoading={isLoading || !isAuthenticated}
-            disabled={!isAuthenticated || isLoading || isOrchestratorRunning}
+            disabled={shouldDisableInput}
             referencedMessage={referencedMessage}
             onClearReference={handleClearReference}
             hasContext={!!currentContext}
