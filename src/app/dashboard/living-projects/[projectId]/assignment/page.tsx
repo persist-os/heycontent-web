@@ -84,12 +84,12 @@ function AssignmentPageContent() {
   // Pause mutation
   const pauseAssignment = useMutation(api.projectsMutations.toggleArchive)
 
-  // Fetch A2A notes for status updates and time estimates
+  // Fetch A2A notes for status updates and time estimates (no limit - show all)
   const a2aNotes = useQuery(
     api.a2aQueries.getLatestA2ANotesPublic,
     projectId ? {
-      projectId: projectId,
-      limit: 20
+      projectId: projectId as string,
+      limit: 1000  // Show all notes - high limit to get everything
     } : 'skip'
   )
 
@@ -340,6 +340,40 @@ function AssignmentPageContent() {
                   </Button>
                 </div>
               </Card>
+
+              {/* A2A Notes Status Updates - Display ALL notes */}
+              {a2aNotes && a2aNotes.length > 0 && (
+                <Card className="bg-[hsl(var(--assignment-bg))] border-none rounded-xl p-4 mt-2">
+                  <div className="flex flex-col gap-2">
+                    <h3 className="text-sm font-semibold text-foreground mb-2">Status Updates</h3>
+                    <div className="flex flex-col gap-2 max-h-[400px] overflow-y-auto">
+                      {a2aNotes.map((note: any) => {
+                        const report = note.report || {}
+                        const announcement = report.announcement || report.summary || 'Status update'
+                        
+                        return (
+                          <div
+                            key={note._id}
+                            className="flex items-start gap-3 p-2 rounded-lg bg-[hsl(var(--assignment-surface-container))] border border-[hsl(var(--assignment-outline-variant))]"
+                          >
+                            <div className="mt-0.5 flex-shrink-0">
+                              <Sparkles className="w-3 h-3 text-[hsl(var(--assignment-brand-orange))]" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium text-foreground line-clamp-2">
+                                {announcement}
+                              </p>
+                              <p className="text-[10px] text-[hsl(var(--assignment-text-subtle))] mt-1">
+                                {formatDistanceToNow(new Date(note.createdAt), { addSuffix: true, short: true })}
+                              </p>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </Card>
+              )}
             </div>
           </Card>
         </div>

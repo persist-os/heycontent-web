@@ -130,6 +130,13 @@
     --notes-primary-hover: 210 100% 45%; /* Slightly darker blue for hover in light mode */
     --notes-secondary-default: 38 100% 50%; /* T-50: Orange for light mode */
     --notes-on-secondary: 0 0% 100%; /* White text on secondary in light mode */
+
+    /* Response Options Component Colors - Light Mode */
+    --response-options-bg: 0 0% 96%; /* N-96: #F5F5F5 - Light background */
+    --response-options-text: 0 0% 10%; /* N-10: #1A1A1A - Dark text for contrast */
+    --response-options-button-bg: 0 0% 94%; /* N-94: #F0F0F0 - Light button background */
+    --response-options-button-border: 210 100% 40%; /* P-40: #0066CC - Medium blue border */
+    --response-options-button-text: 210 100% 40%; /* P-40: #0066CC - Medium blue text */
   }
 
   .dark {
@@ -247,6 +254,13 @@
     --notes-primary-hover: 210 100% 85%; /* #cfe5ff - Figma BG/Primary/Default(Blue)/Hover */
     --notes-secondary-default: 38 100% 56%; /* #ffb963 - Figma default/secondary */
     --notes-on-secondary: 38 100% 14%; /* #472a00 - Figma default/on-secondary */
+
+    /* Response Options Component Colors - Dark Mode */
+    --response-options-bg: 0 0% 28%; /* N-30: #474647 - Dark background */
+    --response-options-text: 0 0% 93%; /* N-100: #eef1fe - Light text */
+    --response-options-button-bg: 0 0% 11%; /* Tertiary/Ghost: #1c1b1c - Dark button background */
+    --response-options-button-border: 210 100% 78%; /* #9acbff - Light blue border */
+    --response-options-button-text: 210 100% 78%; /* #9acbff - Light blue text */
   }
 }
 

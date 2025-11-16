@@ -17,6 +17,7 @@ import { useUsernameRequired } from '@/hooks/useUsernameRequired';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useUpgradeFlow } from '@/app/hooks/useUpgradeFlow';
+import { OmnipresentBackButton } from '@/components/ui/omnipresent-back-button';
 
 // Pages that don't require a subscription
 const PUBLIC_PATHS = [
@@ -173,6 +174,9 @@ export default function DashboardLayout({
     <div className="relative flex min-h-screen">
       {/* Global Navigation Sidebar */}
       <GlobalNav />
+      
+      {/* Omnipresent Back Button - appears on every screen */}
+      <OmnipresentBackButton />
       
       {/* Backdrop overlay for command palette */}
       {isExpanded && (

@@ -26,6 +26,7 @@ export default function ThinkingLabPage() {
   
   const noteId = searchParams.get('noteId')
   const chatId = searchParams.get('chatId')
+  const conversationId = searchParams.get('conversationId') // Support conversationId parameter (used by assignment page)
   const query = searchParams.get('query')
   const widgetOutputId = searchParams.get('widgetOutputId')
   const projectId = searchParams.get('projectId')
@@ -50,7 +51,7 @@ export default function ThinkingLabPage() {
   
   return (
     <FullThinkingLab 
-      chatId={chatId || undefined}
+      chatId={chatId || conversationId || undefined} // Support both chatId and conversationId parameters
       noteId={noteId || undefined}
       askQuery={query || undefined}
       widgetOutputId={widgetOutputId || undefined}
