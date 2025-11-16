@@ -133,12 +133,16 @@ export const getUserContentPermission = query({
         const project = await ctx.db.get(contentId as Id<"projects">);
         if (!project) return null;
         
+        // ✅ FIX: Normalize userId for consistent comparison
+        const normalizedUserId = userId?.trim() || userId;
+        const normalizedProjectUserId = project.userId?.trim() || project.userId;
+        
         // User owns the project
-        if (project.userId === userId) return "owner";
+        if (normalizedProjectUserId === normalizedUserId) return "owner";
 
         // Check if user is a collaborator
         const collaborator = project.collaborators?.find(
-          c => c.userId === userId
+          c => (c.userId?.trim() || c.userId) === normalizedUserId
         );
         if (collaborator) {
           // Map collaborator roles to permission format: editor -> edit, viewer -> read

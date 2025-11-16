@@ -20,6 +20,14 @@ export const getProjectArtifacts = query({
     userId: v.string(),
   },
   handler: async (ctx, args) => {
+    // ✅ FIX: Validate userId first
+    if (!args.userId || typeof args.userId !== 'string' || args.userId.trim().length === 0) {
+      throw new Error("Invalid userId: userId must be a non-empty string");
+    }
+    
+    // Normalize userId (trim whitespace for consistent comparison)
+    const normalizedUserId = args.userId.trim();
+    
     // ✅ FIX BLOCKER 3: Check project permission (owner or collaborator)
     // First check if project exists and user owns it (fast path)
     const project = await ctx.db.get(args.projectId);
@@ -27,8 +35,11 @@ export const getProjectArtifacts = query({
       throw new Error("Project not found");
     }
     
+    // Normalize project.userId for comparison
+    const normalizedProjectUserId = project.userId?.trim() || project.userId;
+    
     // Fast path: User owns the project
-    if (project.userId === args.userId) {
+    if (normalizedProjectUserId === normalizedUserId) {
       return await ctx.db
         .query("artifacts")
         .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
@@ -38,7 +49,7 @@ export const getProjectArtifacts = query({
     
     // Check if user is a collaborator
     const isCollaborator = project.collaborators?.some(
-      c => c.userId === args.userId
+      c => (c.userId?.trim() || c.userId) === normalizedUserId
     );
     if (isCollaborator) {
       return await ctx.db
@@ -50,13 +61,21 @@ export const getProjectArtifacts = query({
     
     // Fallback: Check shared access via permission helper
     const permission = await ctx.runQuery(api.contentAccessHelpers.getUserContentPermission, {
-      userId: args.userId,
+      userId: normalizedUserId,
       contentType: "project",
       contentId: args.projectId,
     });
     
     if (!permission) {
-      throw new Error("Access denied: You don't have permission to view this project");
+      // Enhanced error message for debugging
+      console.error("Access denied for artifact query:", {
+        projectId: args.projectId,
+        requestedUserId: normalizedUserId,
+        projectUserId: normalizedProjectUserId,
+        hasCollaborators: !!project.collaborators?.length,
+        collaboratorCount: project.collaborators?.length || 0,
+      });
+      throw new Error(`Access denied: You don't have permission to view this project. Project owner: ${normalizedProjectUserId}, Requested user: ${normalizedUserId}`);
     }
     
     return await ctx.db

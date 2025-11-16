@@ -464,7 +464,7 @@ function FullThinkingLabInternal({
                   className={`px-3 py-1 rounded text-sm transition-colors ${
                     panelMode === 'notepad'
                       ? 'bg-primary text-primary-foreground font-semibold'
-                      : 'hover:bg-accent text-muted-foreground'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   }`}
                 >
                   Notepad
@@ -474,7 +474,7 @@ function FullThinkingLabInternal({
                   className={`px-3 py-1 rounded text-sm transition-colors ${
                     panelMode === 'artifacts'
                       ? 'bg-primary text-primary-foreground font-semibold'
-                      : 'hover:bg-accent text-muted-foreground'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   }`}
                 >
                   Artifacts
@@ -484,7 +484,7 @@ function FullThinkingLabInternal({
                   className={`px-3 py-1 rounded text-sm transition-colors ${
                     panelMode === 'widgets'
                       ? 'bg-primary text-primary-foreground font-semibold'
-                      : 'hover:bg-accent text-muted-foreground'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   }`}
                 >
                   Widgets

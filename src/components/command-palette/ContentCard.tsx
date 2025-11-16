@@ -1,18 +1,20 @@
 /**
- * Centralized Content Card Component
+ * Unified Content Card Component
  * 
- * Material Design 3 card for all content types (notes, artifacts, stardust, shards, widgets).
- * Features glassmorphism, semantic colors, and sophisticated visual hierarchy.
- * Reusable across search results, grid views, and content sections.
+ * Matches AssignmentArtifactCard styling for consistency across all content types.
+ * Uses artifact-widget.svg icon and AssignmentArtifactCard layout.
  */
 
 'use client'
 
 import React from 'react'
 import { useRouter } from 'next/navigation'
-import { FileText, Package, Sparkles, Gem, PlayCircle, Clock, Star, Tag, TrendingUp } from 'lucide-react'
+import { ArrowUpRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { motion } from 'framer-motion'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import Image from 'next/image'
+import { formatDistanceToNow } from '@/app/dashboard/living-projects/[projectId]/components/utils/dateFormatting'
 
 export interface ContentCardData {
   id: string
@@ -63,93 +65,6 @@ export function ContentCard({
 }: ContentCardProps) {
   const router = useRouter()
 
-  const getTypeConfig = (type: string) => {
-    switch (type) {
-      case 'note':
-        return {
-          label: 'Note',
-          icon: FileText,
-          // Blue quantum field - knowledge crystallization
-          iconColor: 'text-[hsl(var(--note-primary))]',
-          bgGradient: 'bg-gradient-to-br from-[hsl(var(--note-bg))] to-[hsl(var(--note-bg))]/60',
-          bgColor: 'bg-[hsl(var(--note-bg))]',
-          borderColor: 'border-[hsl(var(--note-border))]',
-          textColor: 'text-[hsl(var(--note-text))]',
-          accentColor: 'bg-[hsl(var(--note-primary))]/20',
-          glowColor: 'hover:shadow-[hsl(var(--note-glow))]/20'
-        }
-      case 'artifact':
-        return {
-          label: 'Artifact',
-          icon: Package,
-          // Indigo - structured outputs and reports
-          iconColor: 'text-indigo-500',
-          bgGradient: 'bg-gradient-to-br from-indigo-500/10 to-indigo-500/5',
-          bgColor: 'bg-indigo-500/10',
-          borderColor: 'border-indigo-500/30',
-          textColor: 'text-foreground',
-          accentColor: 'bg-indigo-500/20',
-          glowColor: 'hover:shadow-indigo-500/20'
-        }
-      case 'stardust':
-        return {
-          label: 'Stardust',
-          icon: Sparkles,
-          // Gold - potential opportunities
-          iconColor: 'text-amber-500',
-          bgGradient: 'bg-gradient-to-br from-amber-500/10 to-amber-500/5',
-          bgColor: 'bg-amber-500/10',
-          borderColor: 'border-amber-500/30',
-          textColor: 'text-foreground',
-          accentColor: 'bg-amber-500/20',
-          glowColor: 'hover:shadow-amber-500/20'
-        }
-      case 'shard':
-        return {
-          label: 'Shard',
-          icon: Gem,
-          // Amber energy - quantum fragments
-          iconColor: 'text-[hsl(var(--shard-primary))]',
-          bgGradient: 'bg-gradient-to-br from-[hsl(var(--shard-bg))] to-[hsl(var(--shard-bg))]/60',
-          bgColor: 'bg-[hsl(var(--shard-bg))]',
-          borderColor: 'border-[hsl(var(--shard-border))]',
-          textColor: 'text-[hsl(var(--shard-text))]',
-          accentColor: 'bg-[hsl(var(--shard-primary))]/20',
-          glowColor: 'hover:shadow-[hsl(var(--shard-glow))]/20'
-        }
-      case 'widget':
-        return {
-          label: 'Widget',
-          icon: PlayCircle,
-          // Sky blue - AI tools and actions
-          iconColor: 'text-[hsl(var(--widget-primary))]',
-          bgGradient: 'bg-gradient-to-br from-[hsl(var(--widget-bg))] to-[hsl(var(--widget-bg))]/60',
-          bgColor: 'bg-[hsl(var(--widget-bg))]',
-          borderColor: 'border-[hsl(var(--widget-border))]',
-          textColor: 'text-[hsl(var(--widget-text))]',
-          accentColor: 'bg-[hsl(var(--widget-primary))]/20',
-          glowColor: 'hover:shadow-[hsl(var(--widget-glow))]/20'
-        }
-      default:
-        return {
-          label: 'Content',
-          icon: FileText,
-          iconColor: 'text-muted-foreground',
-          bgGradient: 'bg-gradient-to-br from-muted/30 to-muted/10',
-          bgColor: 'bg-muted/20',
-          borderColor: 'border-border/50',
-          textColor: 'text-foreground',
-          accentColor: 'bg-muted/30',
-          glowColor: 'hover:shadow-muted/20'
-        }
-    }
-  }
-
-  const config = getTypeConfig(content.type)
-  const Icon = config.icon
-
-  const displayContent = content.content || content.description || content.preview || ''
-
   const handleClick = () => {
     if (onClick) {
       onClick(content)
@@ -160,7 +75,8 @@ export function ContentCard({
           router.push(`/dashboard/thinking_lab?noteId=${content.id}`)
           break
         case 'artifact':
-          router.push(`/dashboard/living-projects/${content.metadata?.projectId || ''}/gallery?id=${content.id}&type=artifact`)
+          // Navigate to gallery - projectId can be extracted from URL or passed separately
+          router.push(`/dashboard/living-projects/gallery?id=${content.id}&type=artifact`)
           break
         case 'stardust':
           // Stardust navigation - could go to stardust detail page if exists
@@ -181,202 +97,71 @@ export function ContentCard({
     }
   }
 
-  const formatDate = (timestamp?: number) => {
-    if (!timestamp) return ''
-    const date = new Date(timestamp)
-    const now = new Date()
-    const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
-    
-    if (diffInDays === 0) return 'Today'
-    if (diffInDays === 1) return 'Yesterday'
-    if (diffInDays < 7) return `${diffInDays}d ago`
-    return date.toLocaleDateString()
+  // Format metadata string
+  const getMetadataString = () => {
+    const parts = []
+    if (content.type) {
+      parts.push(content.type.charAt(0).toUpperCase() + content.type.slice(1))
+    }
+    if (content.metadata?.updatedAt) {
+      const relativeTime = formatDistanceToNow(new Date(content.metadata.updatedAt), { addSuffix: true, short: true })
+      parts.push(relativeTime)
+    }
+    return parts.join(' • ')
   }
 
-  const getMetadataTags = () => {
-    const tags = []
-    const meta = content.metadata
-
-    if (!meta) return tags
-
-    if (meta.important || meta.starred) {
-      tags.push({ icon: Star, text: 'Important', color: 'text-[hsl(38_92%_50%)]' })
-    }
-
-    if (meta.dimension) {
-      tags.push({ icon: Tag, text: meta.dimension, color: config.iconColor })
-    }
-
-    if (meta.messageCount) {
-      tags.push({ icon: MessageCircle, text: `${meta.messageCount} msgs`, color: config.iconColor })
-    }
-
-    if (meta.priority && meta.priority > 7) {
-      tags.push({ icon: TrendingUp, text: `P${meta.priority}`, color: config.iconColor })
-    }
-
-    return tags
-  }
-
-  const metadataTags = showMetadata ? getMetadataTags() : []
-
-  if (variant === 'compact') {
-    return (
-      <motion.button
-        onClick={handleClick}
-        whileHover={{ scale: 1.01 }}
-        whileTap={{ scale: 0.99 }}
-        className={cn(
-          'w-full text-left px-4 py-3 rounded-xl border transition-all duration-200',
-          'backdrop-blur-md shadow-lg',
-          'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
-          config.bgGradient,
-          config.borderColor,
-          config.glowColor,
-          className
-        )}
-      >
-        <div className="flex items-start gap-3">
-          <div className={cn('p-2 rounded-lg', config.accentColor)}>
-            <Icon className={cn('w-4 h-4', config.iconColor)} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className={cn('font-semibold truncate', config.textColor)}>
-              {content.title}
-            </div>
-            {displayContent && (
-              <div className={cn('text-sm line-clamp-1 mt-1 opacity-90', config.textColor)}>
-                {displayContent}
-              </div>
-            )}
-          </div>
-          {ActionIcon && (
-            <div
-              onClick={handleAction}
-              className={cn('p-1.5 hover:bg-background/30 rounded-lg transition-colors cursor-pointer', config.accentColor)}
-              title={actionLabel}
-            >
-              <ActionIcon className={cn('w-4 h-4', config.iconColor)} />
-            </div>
-          )}
-        </div>
-      </motion.button>
-    )
-  }
+  const subtitle = content.content || content.description || content.preview || ''
+  const metadata = getMetadataString()
 
   return (
-    <motion.button
+    <Card
       onClick={handleClick}
-      whileHover={{ y: -2 }}
-      whileTap={{ scale: 0.98 }}
       className={cn(
-        'group relative w-full text-left px-4 py-3.5 rounded-xl border transition-all duration-300',
-        'backdrop-blur-md shadow-lg',
-        'hover:shadow-xl',
-        'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
-        config.bgGradient,
-        config.borderColor,
-        config.glowColor,
+        'relative w-[348px] h-[129px] cursor-pointer border-2 rounded-[12px] overflow-hidden transition-all opacity-75',
+        'bg-[hsl(var(--assignment-bg))] border-[hsl(var(--assignment-stroke-focus))]',
         className
       )}
     >
-      <div className="flex items-start gap-3">
-        {/* Icon with accent background */}
-        <div className={cn(
-          'relative p-2.5 rounded-lg flex items-center justify-center flex-shrink-0',
-          'transition-transform duration-300 group-hover:scale-110',
-          config.accentColor
-        )}>
-          <Icon className={cn('w-5 h-5', config.iconColor)} />
-          {/* Pulse effect on hover */}
-          <div className={cn(
-            'absolute inset-0 rounded-lg opacity-0 group-hover:opacity-20 group-hover:animate-ping',
-            config.accentColor
-          )} />
-        </div>
-
-        <div className="flex-1 min-w-0">
-          {/* Title with proper contrast */}
-          <div className={cn('font-semibold text-sm leading-snug mb-1.5', config.textColor)}>
-            {content.title}
-          </div>
-
-          {/* Content/Description with better readability */}
-          {displayContent && (
-            <div className={cn('text-sm leading-relaxed line-clamp-2 mb-2 opacity-90', config.textColor)}>
-              {displayContent}
-            </div>
-          )}
-
-          {/* Metadata Tags with vibrant colors */}
-          {metadataTags.length > 0 && (
-            <div className="flex items-center gap-2 mb-2 flex-wrap">
-              {metadataTags.slice(0, 3).map((tag, idx) => {
-                const TagIcon = tag.icon
-                return (
-                  <div
-                    key={idx}
-                    className={cn(
-                      'flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium',
-                      tag.color,
-                      config.accentColor
-                    )}
-                  >
-                    <TagIcon className="w-3 h-3" />
-                    <span>{tag.text}</span>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
-          {/* Footer with proper spacing */}
-          <div className="flex items-center justify-between pt-2 border-t border-current/10">
-            <div className={cn('flex items-center gap-2 text-xs', config.textColor, 'opacity-70')}>
-              {content.metadata?.createdAt && (
-                <>
-                  <Clock className="w-3 h-3" />
-                  <span>{formatDate(content.metadata.createdAt)}</span>
-                </>
-              )}
-              <span className={cn('text-xs px-2 py-0.5 rounded-full', config.accentColor)}>
-                {config.label}
-              </span>
-            </div>
-
-            {/* Action Button with accent styling */}
-            {ActionIcon && (
-              <div
-                onClick={handleAction}
-                className={cn('p-1.5 rounded-md transition-all duration-200 hover:scale-110 cursor-pointer', config.accentColor)}
-                title={actionLabel}
-              >
-                <ActionIcon className={cn('w-4 h-4', config.iconColor)} />
-              </div>
-            )}
-          </div>
-
-          {/* Score/Relevance Indicator */}
-          {showScore && content.score !== undefined && (
-            <div className="flex items-center gap-1.5 mt-2">
-              <div className={cn('h-1.5 flex-1 rounded-full overflow-hidden max-w-[100px]', config.accentColor)}>
-                <div 
-                  className={cn('h-full rounded-full transition-all', config.iconColor)}
-                  style={{ width: `${Math.min(100, Math.max(0, content.score * 100))}%` }}
-                  aria-hidden="true"
-                />
-              </div>
-              <span className={cn('text-xs font-medium', config.textColor, 'opacity-70')}>
-                {Math.round(content.score * 100)}%
-              </span>
-            </div>
-          )}
-        </div>
+      {/* Widget Icon - Top Right */}
+      <div className="absolute top-[9px] left-[307px] w-6 h-6">
+        <Image
+          src="/icons/artifact-widget.svg"
+          alt="Widget icon"
+          width={24}
+          height={24}
+          className="opacity-75"
+        />
       </div>
-
-      {/* Holographic effect on hover */}
-      <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none bg-gradient-to-br from-white/5 via-transparent to-white/10" />
-    </motion.button>
+      
+      <div className="absolute left-[6px] top-[7px] px-[8px] py-0 w-[335px] h-[116px] flex flex-col gap-[16px]">
+        <div className="flex flex-col gap-[4px]">
+          <h3 className="text-[24px] font-semibold leading-[36px] tracking-[-0.72px] text-[hsl(var(--assignment-text-regular))] line-clamp-1">
+            {content.title}
+          </h3>
+          {subtitle && (
+            <p className="text-[16px] font-normal leading-[20px] text-[hsl(var(--assignment-text-subtle))] line-clamp-1">
+              {subtitle}
+            </p>
+          )}
+        </div>
+        
+        {metadata && (
+          <div className="flex items-center justify-between">
+            <span className="text-[16px] font-normal leading-[20px] text-[hsl(var(--assignment-text-regular))] whitespace-nowrap">
+              {metadata}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-10 h-10 p-[8px]"
+              onClick={handleAction || handleClick}
+            >
+              <ArrowUpRight className="w-6 h-6 text-[hsl(var(--assignment-stroke-focus))]" />
+            </Button>
+          </div>
+        )}
+      </div>
+    </Card>
   )
 }
 

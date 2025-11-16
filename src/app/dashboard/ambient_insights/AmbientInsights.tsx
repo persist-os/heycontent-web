@@ -3,7 +3,6 @@ import { AmbientInsight } from '@/types/index';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { getApiKey } from '@/app/lib/api-helpers';
-import { Button } from '@/components/ui/button';
 import { InsightCard } from '@/components/ui/insight-card';
 import { LoadingGrid } from '@/components/ui/loading-grid';
 import { Users, BarChart3, TrendingUp, Lightbulb, Target, Calendar, Zap, RefreshCw } from 'lucide-react';
@@ -385,19 +384,17 @@ export const AmbientInsights: React.FC<AmbientInsightsProps> = ({
         <h2 className="text-base sm:text-lg lg:text-xl font-light text-foreground pr-0 sm:pr-6 flex-1 leading-tight">
           <T context="ambient_insights.greeting">{selectedGreeting}</T>
         </h2>
-        <Button
+        <button
           onClick={handleRefresh}
           disabled={isRefreshing}
-          variant="outline"
-          size="default"
-          className="flex items-center gap-2 text-base sm:text-lg shrink-0"
+          className="flex items-center gap-2 text-sm font-normal text-muted-foreground hover:text-foreground transition-colors duration-200 px-2 py-1 rounded-[8px] hover:bg-muted/20 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
         >
-          <RefreshCw className={`w-5 h-5 sm:w-6 sm:h-6 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span className="hidden sm:inline">
+          <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <span className="hidden sm:inline text-sm sm:text-base">
             <T context="button.refresh">Refresh</T>
           </span>
-          <span className="sm:hidden">Refresh</span>
-        </Button>
+          <span className="sm:hidden text-sm">Refresh</span>
+        </button>
       </div>
 
       {/* Mobile: Horizontal swipeable carousel */}

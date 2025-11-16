@@ -6,11 +6,11 @@ import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { MessageSquare, Sparkles } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
+import { MessageSquare, Sparkles, Lock, ArrowLeft } from 'lucide-react'
 import { T } from '@/components/translation/T'
 import type { Id } from '@/convex/_generated/dataModel'
-import { useGalleryItems } from '@/hooks/useGalleryItems'
+import type { GalleryItem } from '@/types/gallery'
 import { formatDistanceToNow } from '../components/utils/dateFormatting'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { SectionHeader } from '@/components/ui/section-header'
@@ -38,12 +38,30 @@ function AssignmentPageContent() {
     fetchUserId()
   }, [])
 
-  // Fetch project data
+  // ✅ CRITICAL: Check project access FIRST before calling any queries that might throw
+  const projectAccess = useQuery(
+    api.contentAccessHelpers.getUserContentPermission,
+    projectId && userId && typeof userId === 'string' && userId.trim().length > 0 ? {
+      userId: userId.trim(),
+      contentType: 'project',
+      contentId: projectId
+    } : 'skip'
+  )
+  
+  // Determine if user has access (only call other queries if access is granted)
+  const hasAccess = useMemo(() => {
+    if (!userId || !projectId) return false;
+    if (projectAccess === undefined) return undefined; // Still checking
+    if (projectAccess === null) return false; // Access denied
+    return true; // Has access (owner, editor, or viewer)
+  }, [userId, projectId, projectAccess])
+  
+  // Fetch project data (ONLY if access is granted)
   const project = useQuery(
     api.projectsQueries.getById,
-    projectId && userId ? {
+    projectId && userId && typeof userId === 'string' && userId.trim().length > 0 && hasAccess === true ? {
       projectId: projectId as Id<'projects'>,
-      userId: userId,
+      userId: userId.trim(),
     } : 'skip'
   )
 
@@ -56,21 +74,77 @@ function AssignmentPageContent() {
     } : 'skip'
   )
 
-  // Fetch artifacts and widgets
-  const { items: galleryItems, isLoading: isLoadingItems } = useGalleryItems({
-    projectId: projectId,
-    userId: userId || undefined
-  })
-
+  // ✅ PRIMARY PATTERN: Component calls useQuery directly (not through hook)
+  // Fetch artifacts (ONLY if access is granted)
+  const artifacts = useQuery(
+    api.artifactQueries.getProjectArtifacts,
+    projectId && userId && typeof userId === 'string' && userId.trim().length > 0 && hasAccess === true ? { 
+      projectId: projectId as Id<'projects'>,
+      userId: userId.trim()
+    } : 'skip'
+  );
+  
+  // Fetch widgets (ONLY if access is granted)
+  const widgets = useQuery(
+    api.widgetsQueries.getProjectWidgets,
+    projectId && userId && typeof userId === 'string' && userId.trim().length > 0 && hasAccess === true ? { 
+      projectId: projectId as Id<'projects'>, 
+      userId: userId.trim(),
+      includeArchived: true
+    } : 'skip'
+  );
+  
+  // Merge and normalize into unified list
+  const galleryItems = useMemo(() => {
+    const artifactItems: GalleryItem[] = (artifacts || [])
+      .filter((a: any) => a && a._id)
+      .map((a: any) => {
+        let title = a.title;
+        if (!title && a.data?.title) {
+          title = a.data.title;
+        }
+        if (!title && a.type === 'report' && a.data?.markdown) {
+          const match = a.data.markdown.match(/^#\s+(.+)$/m);
+          if (match) {
+            title = match[1].trim();
+          }
+        }
+        if (!title) {
+          title = a.type?.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'Artifact';
+        }
+        return {
+          ...a,
+          itemType: 'artifact' as const,
+          title,
+          description: a.tags?.join(' • ') || `v${a.metadata?.version || 1}`,
+          updatedAt: a.updatedAt || a._creationTime
+        };
+      });
+    
+    const widgetItems: GalleryItem[] = (widgets || [])
+      .filter((w: any) => w && w._id && w.status !== 'deleted')
+      .map((w: any) => ({
+        ...w,
+        itemType: 'widget' as const,
+        title: w.title || 'Untitled Widget',
+        description: w.description || 'No description',
+        updatedAt: w.updatedAt || w._creationTime
+      }));
+    
+    return [...artifactItems, ...widgetItems].sort((a, b) => b.updatedAt - a.updatedAt);
+  }, [artifacts, widgets]);
+  
   // Separate artifacts and widgets
-  const artifacts = useMemo(() => 
+  const artifactItems = useMemo(() => 
     galleryItems.filter(item => item.itemType === 'artifact'),
     [galleryItems]
-  )
-  const widgets = useMemo(() => 
+  );
+  const widgetItems = useMemo(() => 
     galleryItems.filter(item => item.itemType === 'widget'),
     [galleryItems]
-  )
+  );
+  
+  const isLoadingItems = artifacts === undefined || widgets === undefined;
 
   // Fetch A2A notes for status updates (no limit - show all)
   const a2aNotes = useQuery(
@@ -156,6 +230,40 @@ function AssignmentPageContent() {
     { label: 'Assignments', href: '/dashboard/home' },
     { label: project?.name || 'Untitled Assignment' }
   ], [project])
+
+  // ✅ Error handling: Show access denied message with back button (check BEFORE queries run)
+  const isLoadingAccess = hasAccess === undefined && userId && projectId;
+  if (hasAccess === false && !isLoadingAccess) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="container mx-auto px-4 py-8 max-w-2xl">
+          <Card className="bg-card/50 backdrop-blur-sm border border-destructive/50">
+            <CardContent className="py-12 text-center space-y-6">
+              <div className="flex justify-center">
+                <div className="rounded-full bg-destructive/10 p-4">
+                  <Lock className="h-8 w-8 text-destructive" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-2xl font-semibold">Access Denied</h2>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  You don't have permission to view this assignment. This project may be private or you may need to be added as a collaborator.
+                </p>
+              </div>
+              <Button
+                onClick={() => router.push('/dashboard/home')}
+                variant="outline"
+                className="mt-4"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Go Back to Assignments
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
 
   if (!project || !userId) {
     return (
@@ -253,18 +361,18 @@ function AssignmentPageContent() {
           <SectionHeader title="Artifacts" />
           
           <div className="flex items-center justify-between gap-6">
-            {artifacts.slice(0, 3).map((artifact, index) => (
+            {artifactItems.slice(0, 3).map((artifact, index) => (
               <AssignmentArtifactCard
                 key={artifact._id}
                 artifact={artifact}
-                widgetTitle={widgets.find(w => w._id === artifact.widgetId)?.title}
+                widgetTitle={widgetItems.find(w => w._id === artifact.widgetId)?.title}
                 isHighlighted={index === 0}
                 onClick={() => handleOpenGallery(artifact._id, 'artifact')}
               />
             ))}
             
             {/* Fill empty slots if less than 3 artifacts */}
-            {artifacts.length < 3 && Array.from({ length: 3 - artifacts.length }).map((_, i) => (
+            {artifactItems.length < 3 && Array.from({ length: 3 - artifactItems.length }).map((_, i) => (
               <Card
                 key={`empty-${i}`}
                 className="w-[348px] h-[129px] bg-[hsl(var(--assignment-bg))] border-2 border-[hsl(var(--assignment-outline))] opacity-75 rounded-xl"
@@ -277,39 +385,38 @@ function AssignmentPageContent() {
         <div className="flex flex-col gap-5 mb-10">
           <SectionHeader title="Widgets" />
           
-          {widgets.length === 0 ? (
+          {widgetItems.length === 0 ? (
             <Card className="bg-[hsl(var(--assignment-surface-container))] border-none rounded-xl p-5">
               <p className="text-muted-foreground text-sm">
                 <T context="assignment.widgets.empty">No widgets yet</T>
               </p>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {widgets.map((widget) => {
-                const widgetCardData: ContentCardData = {
-                  id: widget._id,
-                  type: 'widget',
-                  title: widget.title || 'Untitled Widget',
-                  description: widget.description || 'No description',
-                  metadata: {
-                    createdAt: widget._creationTime,
+            <div className="flex items-center justify-between gap-6">
+              {widgetItems.slice(0, 3).map((widget, index) => (
+                <AssignmentArtifactCard
+                  key={widget._id}
+                  artifact={{
+                    _id: widget._id,
+                    title: widget.title || 'Untitled Widget',
+                    widgetId: widget._id,
+                    type: 'widget',
                     updatedAt: widget.updatedAt,
-                    priority: (widget as any).priority,
-                    size: (widget as any).size,
-                    theme: (widget as any).theme
-                  }
-                }
-                
-                return (
-                  <ContentCard
-                    key={widget._id}
-                    content={widgetCardData}
-                    onClick={() => handleOpenGallery(widget._id, 'widget')}
-                    showMetadata={true}
-                    variant="default"
-                  />
-                )
-              })}
+                    _creationTime: widget._creationTime
+                  }}
+                  widgetTitle={widget.description || 'Widget'}
+                  isHighlighted={index === 0}
+                  onClick={() => handleOpenGallery(widget._id, 'widget')}
+                />
+              ))}
+              
+              {/* Fill empty slots if less than 3 widgets */}
+              {widgetItems.length < 3 && Array.from({ length: 3 - widgetItems.length }).map((_, i) => (
+                <Card
+                  key={`empty-${i}`}
+                  className="w-[348px] h-[129px] bg-[hsl(var(--assignment-bg))] border-2 border-[hsl(var(--assignment-stroke-focus))] opacity-75 rounded-[12px]"
+                />
+              ))}
             </div>
           )}
         </div>

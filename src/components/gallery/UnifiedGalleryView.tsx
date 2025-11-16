@@ -285,8 +285,8 @@ export function UnifiedGalleryView({
     : 'border-purple-500/20'
   
   const typeBadgeGradient = isArtifact
-    ? 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-600 dark:text-blue-400'
-    : 'bg-gradient-to-r from-purple-500/20 to-indigo-500/20 text-purple-600 dark:text-purple-400'
+    ? 'bg-primary/50 text-foreground dark:bg-primary/40 dark:text-foreground border border-primary/30 dark:border-primary/40'
+    : 'bg-accent/50 text-foreground dark:bg-accent/40 dark:text-foreground border border-accent/30 dark:border-accent/40'
   
   // Render current item based on its type
   const renderCurrentItem = () => {
