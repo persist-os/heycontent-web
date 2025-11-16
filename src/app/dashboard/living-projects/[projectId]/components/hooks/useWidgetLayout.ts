@@ -1,7 +1,7 @@
 /**
  * WIDGET LAYOUT HOOK
  * 
- * Advanced constellation layout algorithm for widget and content positioning using
+ * Advanced widget layout algorithm for widget and content positioning using
  * force-directed placement, clustering, and connection generation.
  * Supports both widgets and content items with stored layout caching.
  */
@@ -61,7 +61,7 @@ export interface WidgetLayoutResult {
 }
 
 /**
- * Advanced constellation layout hook for widget and content positioning
+ * Advanced widget layout hook for widget and content positioning
  * Uses force-directed algorithm with clustering and importance-based placement
  * Supports both widgets and content items with stored layout caching
  */

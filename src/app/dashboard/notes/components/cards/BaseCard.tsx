@@ -4,6 +4,10 @@ import { Note } from '../../types';
 import { cn } from '@/lib/utils';
 import { ImageMosaic } from '../ImageMosaic';
 import { ImageGalleryModal } from '../ImageGalleryModal';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import Image from 'next/image';
+import { formatDistanceToNow } from '@/app/dashboard/living-projects/[projectId]/components/utils/dateFormatting';
 
 interface BaseCardProps {
   note: Note;
@@ -54,40 +58,41 @@ export function BaseCard({
     onShare?.(String(note._id));
   };
 
+  const updatedAt = note.updatedAt || note._creationTime || Date.now()
+  const relativeTime = formatDistanceToNow(new Date(updatedAt), { addSuffix: true, short: true })
+  const noteType = note.type || 'note'
+  const formattedType = noteType.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
+
   return (
     <>
-      <div
+      <Card
         className={cn(
-          "group relative overflow-hidden transition-all duration-300 ease-out",
-          "border-0 bg-card/50 backdrop-blur-sm",
-          "hover:scale-[1.02] hover:bg-card/80",
+          "group relative w-[348px] h-[129px] overflow-hidden transition-all duration-300 ease-out opacity-75",
+          "border-2 rounded-[12px]",
+          "bg-[hsl(var(--assignment-bg))] border-[hsl(var(--assignment-stroke-focus))]",
           !isOverlay && !isDragging && "cursor-pointer",
           // Drag states with subtle animations
           isDragging && "opacity-60 scale-95 blur-sm",
-          isOverlay && "shadow-2xl rotate-1 scale-105 bg-card border border-primary/30",
+          isOverlay && "shadow-2xl rotate-1 scale-105",
           className
         )}
         onClick={!isDragging && !isOverlay ? handleEdit : undefined}
       >
-        {/* Subtle top accent line - sharing and AI status indicator */}
-        <div className={cn(
-          "h-px w-full transition-all duration-500",
-          // Sharing status takes priority
-          note.isSharedWithMe
-            ? "bg-gradient-to-r from-transparent via-blue-500/60 to-transparent"
-            : note.isShared
-            ? "bg-gradient-to-r from-transparent via-green-500/60 to-transparent"
-            // Then AI generation status
-            : note.titleGenerated && note.typeGenerated 
-            ? "bg-gradient-to-r from-transparent via-blue-400/60 to-transparent"
-            : note.titleGenerated || note.typeGenerated
-            ? "bg-gradient-to-r from-transparent via-amber-400/60 to-transparent" 
-            : "bg-gradient-to-r from-transparent via-muted-foreground/20 to-transparent"
-        )} />
+        {/* Widget Icon - Top Right - Hide on hover when actions are shown */}
+        <div className="absolute top-[9px] right-[9px] w-6 h-6 z-20 group-hover:opacity-0 transition-opacity duration-300">
+          <Image
+            src="/icons/artifact-widget.svg"
+            alt="Widget icon"
+            width={24}
+            height={24}
+            className="opacity-75"
+          />
+        </div>
 
         {/* Floating actions - mobile-friendly with touch targets */}
+        {/* Hide widget icon on hover to show actions */}
         {!isOverlay && !isDragging && (
-          <div className="absolute top-2 sm:top-3 right-2 sm:right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 delay-75 z-10">
+          <div className="absolute top-[9px] right-[9px] opacity-0 group-hover:opacity-100 transition-all duration-300 delay-75 z-30">
             <div className="flex items-center gap-1 sm:gap-2">
               <button
                 onClick={handleToggleImportant}
@@ -121,113 +126,33 @@ export function BaseCard({
             </div>
           </div>
         )}
-
-        {/* Drag indicator with elegant styling */}
-        {isOverlay && (
-          <div className="absolute -top-1 -right-1 bg-primary/90 text-primary-foreground px-3 py-1 rounded-full text-xs font-medium backdrop-blur-sm">
-            Moving...
+        
+        {/* Content wrapper with AssignmentArtifactCard layout */}
+        <div className="absolute left-[6px] top-[7px] right-[41px] px-[8px] py-0 h-[116px] flex flex-col gap-[16px] z-10">
+          {/* Title and subtitle section */}
+          <div className="flex flex-col gap-[4px] min-w-0">
+            {children}
           </div>
-        )}
-
-        {/* Image preview with breathing space */}
-        {hasImages && (
-          <div className="px-6 pt-6 pb-2">
-            <ImageMosaic
-              images={note.images}
-              onOpenGallery={(e) => {
-                e.stopPropagation();
-                setShowImageGallery(true);
-              }}
-              className="rounded-lg overflow-hidden"
-            />
-          </div>
-        )}
-
-        {/* Card content with responsive spacing */}
-        <div className={cn("px-4 sm:px-6 py-3 sm:py-4", hasImages && "pt-2 sm:pt-3")}>
-          {children}
-        </div>
-
-        {/* Tags with responsive styling */}
-        {note.tags && note.tags.length > 0 && (
-          <div className="px-4 sm:px-6 pb-3 sm:pb-4">
-            <div className="flex flex-wrap gap-1.5 sm:gap-2">
-              {note.tags.slice(0, 4).map((tag, index) => (
-                <span 
-                  key={index} 
-                  className="px-2 sm:px-2.5 py-0.5 sm:py-1 text-xs font-medium bg-muted/50 text-muted-foreground/80 rounded-md border border-border/30 transition-colors duration-200 hover:bg-muted/70 touch-manipulation"
-                >
-                  {tag}
-                </span>
-              ))}
-              {note.tags.length > 4 && (
-                <span className="px-2 sm:px-2.5 py-0.5 sm:py-1 text-xs text-muted-foreground/60">
-                  +{note.tags.length - 4} more
-                </span>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Sharing information banner */}
-        {(note.isSharedWithMe || note.isShared) && (
-          <div className="px-4 sm:px-6 pb-2">
-            <div className={cn(
-              "flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium",
-              note.isSharedWithMe 
-                ? "bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
-                : "bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800"
-            )}>
-              {note.isSharedWithMe ? (
-                <>
-                  <ArrowUpRight className="w-3.5 h-3.5" />
-                  <span>Shared by {note.ownerName}</span>
-                  <div className="ml-auto flex items-center gap-1">
-                    {note.permission === 'edit' ? (
-                      <><Edit3 className="w-3 h-3" /> Can edit</>
-                    ) : (
-                      <><Eye className="w-3 h-3" /> View only</>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <Share2 className="w-3.5 h-3.5" />
-                  <span>Shared with {note.sharedWithCount} {note.sharedWithCount === 1 ? 'person' : 'people'}</span>
-                  <Users className="w-3 h-3 ml-auto" />
-                </>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Date with responsive spacing and typography */}
-        <div className="px-4 sm:px-6 pb-3 sm:pb-4">
-          <div className="h-px bg-gradient-to-r from-transparent via-border/30 to-transparent mb-2 sm:mb-3" />
-          <div className="flex items-center justify-between text-xs text-muted-foreground/60">
-            <span className="font-light">
-              {note.isSharedWithMe && note.sharedAt 
-                ? `Shared ${new Date(note.sharedAt).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: new Date(note.sharedAt).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
-                  })}`
-                : new Date(note.updatedAt).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: new Date(note.updatedAt).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
-                  })
-              }
+          
+          {/* Metadata and action button */}
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            <span className="text-[16px] font-normal leading-[20px] text-[hsl(var(--assignment-text-regular))] truncate min-w-0">
+              {`${formattedType} • ${relativeTime}`}
             </span>
-            {/* AI generation status indicator */}
-            {(note.titleGenerated || note.typeGenerated) && (
-              <span className="text-xs font-light text-blue-400/70">
-                AI-enhanced
-              </span>
-            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-10 h-10 p-[8px]"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleEdit(e)
+              }}
+            >
+              <ArrowUpRight className="w-6 h-6 text-[hsl(var(--assignment-stroke-focus))]" />
+            </Button>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Image Gallery Modal */}
       {showImageGallery && hasImages && (

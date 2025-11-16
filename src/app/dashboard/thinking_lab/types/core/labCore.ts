@@ -77,7 +77,6 @@ export interface DialogueState {
     quotedContent: string
     lastSuggestions?: string[]  // Ephemeral suggestions from last backend response
     pendingUserMessage?: string // Optimistic UI: user message before Convex write
-    streamingContent: string    // Real-time streaming content during chat
     // Project/widget context
     projectId?: string
     widgetId?: string
@@ -93,7 +92,6 @@ export interface DialogueActions {
     setStatus: (status: string | undefined) => void
     setQuotedContent: (content: string) => void
     clearQuotedContent: () => void
-    clearStreamingContent: () => void
     resetForWidget: () => void
     setProjectContext: (projectId?: string, widgetId?: string, widgetOutputId?: string) => void
     clearProjectContext: () => void

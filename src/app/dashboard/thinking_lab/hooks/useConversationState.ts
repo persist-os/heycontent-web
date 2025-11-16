@@ -10,7 +10,7 @@ import { useQuery, useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { Id } from 'convex/_generated/dataModel'
 // Removed useNotepadContext import - no longer needed
-import { transmitMessageWithStreaming } from '../modules/api/messageService'
+import { transmitMessageWithContext } from '../modules/api/messageService'
 import type { MessageTransmissionRequest } from '../types'
 import type { FileUploadResponse } from '@/lib/file-upload'
 
@@ -27,15 +27,15 @@ export function useConversationState(
   widgetId?: string, 
   widgetOutputId?: string,
   getNotepadContext?: () => { content: string; title: string } | null,
-  chatId?: string
+  initialConversationId?: string
 ) {
   // Local state - clean and minimal
-  // Initialize with chatId if provided (for loading existing conversations)
-  const [conversationId, setConversationId] = useState<string | undefined>(chatId)
-  const [isStreaming, setIsStreaming] = useState(false)
+  // Initialize with initialConversationId if provided (for loading existing conversations from URL)
+  const [conversationId, setConversationId] = useState<string | undefined>(initialConversationId)
+  
+  // Ref to track if we've explicitly cleared the conversation (prevents re-syncing from URL)
+  const clearedConversationRef = useRef(false)
   const [optimisticMessages, setOptimisticMessages] = useState<OptimisticMessage[]>([])
-  const [streamingContent, setStreamingContent] = useState('')
-  const [currentStreamingId, setCurrentStreamingId] = useState<string | null>(null)
   const [currentStatus, setCurrentStatus] = useState<string | undefined>()
   const [error, setError] = useState<string | undefined>()
   const [quotedContent, setQuotedContent] = useState("")
@@ -78,44 +78,40 @@ export function useConversationState(
   // Track previous projectId to detect switches
   const prevProjectIdRef = useRef<string | undefined>(projectId)
   
-  // Load conversation from chatId when provided (e.g., from URL)
-  // CRITICAL: Update conversationId whenever chatId changes (thread switching)
-  useEffect(() => {
-    if (chatId && chatId !== conversationId) {
-      // Clear streaming state when switching threads
-      setIsStreaming(false)
-      setStreamingContent('')
-      setCurrentStreamingId(null)
-      setOptimisticMessages([])
-      setError(undefined)
-      // Set new conversation
-      setConversationId(chatId)
-    } else if (!chatId && !projectId && conversationId) {
-      // If no chatId and no projectId, clear conversation (new thread)
-      setConversationId(undefined)
-    }
-  }, [chatId, projectId])
-  
-  // Auto-set conversationId when project conversation is found
-  // Reset conversationId when switching projects or back to main chat
+  // UNIFIED CONVERSATION ID LOGIC:
+  // Priority: initialConversationId (from URL) > projectConversation > undefined
+  // This ensures URL conversationId always takes precedence, and project conversation is used as fallback
   useEffect(() => {
     const prevProjectId = prevProjectIdRef.current
     
-    if (projectId && projectConversation?._id) {
-      // Set to project conversation
+    // Priority 1: If user explicitly provided conversationId from URL, use it (don't override)
+    if (initialConversationId && initialConversationId !== conversationId && !clearedConversationRef.current) {
+      setConversationId(initialConversationId)
+      clearedConversationRef.current = false // Reset flag after syncing
+      return
+    }
+    
+    // Priority 2: If we have a projectId and project conversation exists, use it (only if no initialConversationId)
+    if (projectId && projectConversation?._id && !initialConversationId) {
       if (conversationId !== projectConversation._id) {
         setConversationId(projectConversation._id)
       }
-    } else if (!projectId && prevProjectId && conversationId && !chatId) {
-      // ONLY clear conversationId when SWITCHING from project to non-project
-      // (prevProjectId exists but projectId doesn't = we just switched away from a project)
-      // BUT don't clear if we have a chatId (user opened a specific conversation)
+    }
+    
+    // Priority 3: Clear conversation when switching away from project (only if no initialConversationId)
+    if (!projectId && prevProjectId && conversationId && !initialConversationId) {
+      // We switched away from a project - clear conversation unless user explicitly provided one
       setConversationId(undefined)
+    }
+    
+    // If initialConversationId is cleared from URL, reset the flag
+    if (!initialConversationId) {
+      clearedConversationRef.current = false
     }
     
     // Update ref for next render
     prevProjectIdRef.current = projectId
-  }, [projectId, projectConversation, conversationId, chatId])
+  }, [initialConversationId, projectId, projectConversation, conversationId])
 
   // NOTE: widgetOutputId is a legacy field from widget outputs table
   // Artifacts don't have outputId, so we can't query by it
@@ -123,7 +119,8 @@ export function useConversationState(
   // For now, we skip this query since artifacts don't support outputId lookup
   const openingMessage = null
   
-  // Extract messages and merge with A2A notes - memoized to prevent unnecessary re-renders
+  // Extract messages - CRITICAL FIX: Sort user-facing messages first, then append A2A messages at the end
+  // This ensures A2A messages (thinking component) always appear last, not in the middle
   const messages = React.useMemo(() => {
     const regularMessages = conversation?.messages || []
     
@@ -131,11 +128,10 @@ export function useConversationState(
     const a2aMessages = (a2aNotes || [])
       .filter((note: any) => {
         // Skip A2A notes that were already posted as messages
-        // Check if there's a message with matching a2aMetadata.agentId and similar timestamp
         const noteTimestamp = note.createdAt
         const alreadyPosted = regularMessages.some((msg: any) => {
           if (msg.contentType !== "a2a_announcement") return false
-          const msgAgentId = msg.a2aMetadata?.agentId || msg.a2aMetadata?.report?.agent_id
+          const msgAgentId = msg.a2aMetadata?.agentId
           const msgTimestamp = msg.timestamp || 0
           // Match if same agent and timestamp within 5 seconds
           return msgAgentId === note.agentId && Math.abs(msgTimestamp - noteTimestamp) < 5000
@@ -144,7 +140,7 @@ export function useConversationState(
       })
       .map((note: any) => {
         const report = note.report || {}
-        const agentId = note.agentId || report.agent_id || "orchestrator"
+        const agentId = note.agentId || "orchestrator"
         const announcement = report.announcement || (agentId === "orchestrator" 
           ? "Orchestration complete" 
           : "Chat agent communication")
@@ -183,9 +179,25 @@ export function useConversationState(
         }
       })
     
-    // Merge and sort by timestamp
-    const allMessages = [...regularMessages, ...a2aMessages]
-    return allMessages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0))
+    // CRITICAL FIX: Separate user-facing messages from A2A messages
+    // Sort user-facing messages by timestamp, then append A2A messages at the end
+    const a2aTypes = ['a2a_announcement', 'widget_agent_announcement', 'widget_introduction', 'artifact_created', 'widget_status']
+    const userFacingMessages = regularMessages.filter((msg: any) => {
+      return !msg.contentType || !a2aTypes.includes(msg.contentType)
+    })
+    const a2aFromMessages = regularMessages.filter((msg: any) => {
+      return msg.contentType && a2aTypes.includes(msg.contentType)
+    })
+    
+    // Sort user-facing messages by timestamp
+    const sortedUserFacing = userFacingMessages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0))
+    
+    // Append A2A messages at the end (they'll be filtered out by deriveChatState but this ensures correct order)
+    // Sort A2A messages by timestamp for consistent ordering
+    const allA2A = [...a2aMessages, ...a2aFromMessages].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0))
+    
+    // Return user-facing messages first, then A2A messages at the end
+    return [...sortedUserFacing, ...allA2A]
   }, [conversation?.messages, a2aNotes])
   const suggestions = (() => {
     if (!messages.length) return []
@@ -194,10 +206,10 @@ export function useConversationState(
     return lastAssistantMessage?.suggestions || []
   })()
   
-  // Reactive cleanup: Clear optimistic messages and streaming content when Convex confirms them
+  // Reactive cleanup: Clear optimistic messages when Convex confirms them
   useEffect(() => {
-    // Don't cleanup while actively streaming or if already cleaned up
-    if (isStreaming || cleanupDoneRef.current) return
+    // Don't cleanup if already cleaned up
+    if (cleanupDoneRef.current) return
     
     // Check if ALL optimistic user messages are now in Convex
     const allUserMessagesConfirmed = optimisticMessages.length === 0 || optimisticMessages.every(optMsg => {
@@ -215,25 +227,18 @@ export function useConversationState(
       })
     })
     
-    // Check if streaming content has a matching Convex assistant message
-    const streamingContentConfirmed = !streamingContent || messages.some((convexMsg: any) => {
-      return convexMsg.role === 'assistant' && convexMsg.content === streamingContent
-    })
-    
     // If all confirmed, clear optimistic state (only once per message cycle)
-    if (allUserMessagesConfirmed && streamingContentConfirmed) {
+    if (allUserMessagesConfirmed) {
       cleanupDoneRef.current = true  // Prevent cleanup from running multiple times
       
       // Batch all state updates together with startTransition to prevent multiple renders
       startTransition(() => {
         setOptimisticMessages([])
-        setStreamingContent('')
-        setCurrentStreamingId(null)
       })
     }
-  }, [messages, optimisticMessages, isStreaming, streamingContent])
+  }, [messages, optimisticMessages])
 
-  // Send message function - clean streaming implementation
+  // Send message function - backend writes to Convex, subscription updates UI
   const sendMessage = useCallback(async (content: string, fileAttachments?: FileUploadResponse[]) => {
     if (!userId) {
       setError('User not authenticated')
@@ -274,10 +279,7 @@ export function useConversationState(
       }
     ])
     
-    // 4. Start streaming (no assistant message ID needed)
-    setCurrentStreamingId(null)
-    setStreamingContent('')
-    setIsStreaming(true)
+    // 4. Send message - backend writes to Convex, subscription updates UI
     setError(undefined)
     setCurrentStatus('Connecting...')
     
@@ -299,32 +301,16 @@ export function useConversationState(
         }
       }
       
-      // 5. Start streaming - chunks update in real-time
-      const response = await transmitMessageWithStreaming(
-        requestParams,
-        (chunk: string) => {
-          setStreamingContent(prev => prev + chunk)
-        },
-        {
-          onOrchestratorStart: () => {
-            setIsOrchestratorRunning(true)
-            setCurrentStatus('Analyzing conversation...')
-          },
-          onOrchestratorComplete: () => {
-            setIsOrchestratorRunning(false)
-            setCurrentStatus(undefined)
-          }
-        }
-      )
+      // 5. Send message - backend writes to Convex immediately
+      const response = await transmitMessageWithContext(requestParams)
       
-      // 6. Streaming complete - update conversation ID
+      // 6. Update conversation ID if returned
       const newConversationId = response.session_identifier || response.conversationId
       if (newConversationId) {
         setConversationId(newConversationId)
       }
       
-      // 7. Mark streaming as complete
-      setIsStreaming(false)
+      // 7. Clear status - messages will appear via Convex subscription
       setCurrentStatus(undefined)
       
       // 8. Optimistic messages will be cleared by useEffect when Convex confirms them
@@ -332,10 +318,7 @@ export function useConversationState(
       
     } catch (error) {
       console.error('Failed to send message:', error)
-      setIsStreaming(false)
       setCurrentStatus(undefined)
-      setStreamingContent('')
-      setCurrentStreamingId(null)
       // On error, clear the failed optimistic messages
       setOptimisticMessages([])
       setError(error instanceof Error ? error.message : 'Failed to send message')
@@ -364,7 +347,7 @@ export function useConversationState(
   // Creates conversation if needed, then adds the opening message
   useEffect(() => {
     // Only proceed if conditions are met
-    if (!openingMessage || hasAutoSentRef.current || !userId || messages.length > 0 || isStreaming) {
+    if (!openingMessage || hasAutoSentRef.current || !userId || messages.length > 0) {
       return
     }
 
@@ -402,7 +385,7 @@ export function useConversationState(
     }
 
     createAndAddOpeningMessage()
-  }, [openingMessage, messages.length, userId, isStreaming, conversationId, createConversation, addMessageToConversation, projectId, widgetId, widgetOutputId])
+  }, [openingMessage, messages.length, userId, conversationId, createConversation, addMessageToConversation, projectId, widgetId, widgetOutputId])
 
   // Reset auto-send flag when widgetOutputId changes (new widget launch)
   useEffect(() => {
@@ -411,19 +394,10 @@ export function useConversationState(
 
   // Start new conversation
   const startNewConversation = useCallback(() => {
+    clearedConversationRef.current = true // Mark as explicitly cleared
     setConversationId(undefined)
     setError(undefined)
     setCurrentStatus(undefined)
-    setOptimisticMessages([])
-    setStreamingContent('')
-    setCurrentStreamingId(null)
-    setIsStreaming(false)
-  }, [])
-
-  // Clear streaming content manually (for edge cases)
-  const clearStreamingContent = useCallback(() => {
-    setStreamingContent('')
-    setCurrentStreamingId(null)
     setOptimisticMessages([])
   }, [])
 
@@ -449,10 +423,7 @@ export function useConversationState(
   return {
     // State
     conversationId,
-    isStreaming,
-    streamingContent,
     optimisticMessages,
-    currentStreamingId,
     currentStatus,
     error,
     messages,
@@ -464,7 +435,6 @@ export function useConversationState(
     // Actions
     sendMessage,
     startNewConversation,
-    clearStreamingContent,
     setError: (error: string | undefined) => setError(error),
     setStatus: (status: string | undefined) => setCurrentStatus(status),
     

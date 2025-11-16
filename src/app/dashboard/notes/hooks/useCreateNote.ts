@@ -104,14 +104,14 @@ export const useCreateNote = () => {
       if (success && noteId) {
         track('note_create');
         // Block duplicate metadata generation for this note
-        console.log('🔍 [DEBUG] useCreateNote checking pending state:', {
+        console.log('[DEBUG] useCreateNote checking pending state:', {
           noteId,
           isPending: !!pendingRef.current[noteId],
           hasContent: !!content?.trim()
         });
         
         if (!pendingRef.current[noteId]) {
-          console.log('🚀 [DEBUG] Checking metadata generation conditions in useCreateNote');
+          console.log('[DEBUG] Checking metadata generation conditions in useCreateNote');
           
           // CRITICAL FIX: Only generate metadata if BOTH flags are false (first time only)
           const shouldGenerateMetadata = content && 
@@ -119,7 +119,7 @@ export const useCreateNote = () => {
             !noteObj?.titleGenerated && 
             !noteObj?.typeGenerated;
             
-          console.log('🔍 [DEBUG] useCreateNote metadata conditions:', {
+          console.log('[DEBUG] useCreateNote metadata conditions:', {
             noteId,
             hasContent: !!content?.trim(),
             titleGenerated: noteObj?.titleGenerated,
@@ -128,7 +128,7 @@ export const useCreateNote = () => {
           });
           
           if (shouldGenerateMetadata) {
-            console.log('🚀 [DEBUG] Triggering metadata generation from useCreateNote');
+            console.log('[DEBUG] Triggering metadata generation from useCreateNote');
             setMetadataPending(prev => ({ ...prev, [noteId]: true }));
             const metaResult = await generateMetadata(noteId.toString(), content);
             if (!metaResult.success) {
@@ -142,7 +142,7 @@ export const useCreateNote = () => {
               // Wait for Convex to confirm in the main notes hook (not here)
             }
           } else {
-            console.log('🚫 [DEBUG] Skipping metadata generation - conditions not met');
+            console.log('[DEBUG] Skipping metadata generation - conditions not met');
           }
         }
         if (redirect) {
@@ -166,4 +166,4 @@ export const useCreateNote = () => {
   };
 
   return { createNote: createNoteInternal, isCreating, error };
-}; 
+};

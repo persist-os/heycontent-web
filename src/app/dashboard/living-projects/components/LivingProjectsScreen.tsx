@@ -1,8 +1,14 @@
 'use client'
 
-import React from 'react'
-import { ConstellationView } from './ConstellationView'
+import React, { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 export function LivingProjectsScreen() {
-  return <ConstellationView />
+  const router = useRouter()
+  
+  useEffect(() => {
+    router.push('/dashboard/thinking_lab')
+  }, [router])
+  
+  return null
 }

@@ -1,133 +1,41 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { useQuery, useMutation } from 'convex/react';
-import { api } from '@/convex/_generated/api';
-import { useAuth } from '@/app/context/auth-context';
-import { useAdminAuth } from '@/app/lib/admin-auth';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Users, 
-  Shield, 
-  MessageSquare,
-  Settings,
-  Zap,
-  TrendingUp,
-  BarChart3,
-  Radio,
-  Activity,
-  FileText,
-  Save,
-  X,
-  Edit2,
-  Trash2,
-  Search
-} from 'lucide-react';
-import { DashboardNav } from '../dashboard/_components/dashboard-nav';
-import { TestLabCard } from './components/TestLabCard';
-import { AdminStatsCard } from './components/AdminStatsCard';
-import { TestingHubSection } from './components/TestingHubSection';
-import { FeedbackDetailModal } from './components/FeedbackDetailModal';
-import { FeedbackFilters } from './components/FeedbackFilters';
-import { IntelligenceTestPanel } from './components/IntelligenceTestPanel';
-import { BlogPostEditor } from './components/BlogPostEditor';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from 'sonner';
-import type { Id } from '@/convex/_generated/dataModel';
-
-// Import role styling from original
-const roleColors = {
-  user: 'bg-muted text-muted-foreground',
-  admin: 'bg-primary/10 text-primary border border-primary/20',
-  super_admin: 'bg-destructive/10 text-destructive border border-destructive/20',
-  ambassador: 'bg-accent/10 text-accent border border-accent/20',
-  affiliate: 'bg-chart-2/10 text-chart-2 border border-chart-2/20',
-  partner: 'bg-chart-3/10 text-chart-3 border border-chart-3/20',
-};
-
-const roleIcons = {
-  user: Users,
-  admin: Shield,
-  super_admin: Shield,
-  ambassador: Users,
-  affiliate: BarChart3,
-  partner: BarChart3,
-};
+import { useState } from 'react'
+import { useAuth } from '@/app/context/auth-context'
+import { useAdminAuth } from '@/app/lib/admin-auth'
+import { useRouter } from 'next/navigation'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Users, Shield, MessageSquare, Zap, TrendingUp, FileText, Mail } from 'lucide-react'
+import { DashboardNav } from '../dashboard/_components/dashboard-nav'
+import { TestingHubSection } from './components/TestingHubSection'
+import { FeedbackDetailModal } from './components/FeedbackDetailModal'
+import { OverviewTab } from './components/tabs/OverviewTab'
+import { FeedbackTab } from './components/tabs/FeedbackTab'
+import { UsersTab } from './components/tabs/UsersTab'
+import { PromptsTab } from './components/tabs/PromptsTab'
+import { BlogPostsTab } from './components/tabs/BlogPostsTab'
+import { useAdminData } from './hooks/useAdminData'
+import { useFeedbackHandlers } from './hooks/useFeedbackHandlers'
 
 export default function AdminPage() {
-  const router = useRouter();
-  const { firebaseUser } = useAuth();
-  const { isAdmin, isSuperAdmin } = useAdminAuth();
-  const [currentUserId, setCurrentUserId] = useState<string>('');
-  
-  const [activeTab, setActiveTab] = useState('overview');
-  const [selectedFeedback, setSelectedFeedback] = useState<any>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [priorityFilter, setPriorityFilter] = useState('all');
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('createdAt');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [activeStatusTab, setActiveStatusTab] = useState('all');
-  
-  // Prompts tab state
-  const [promptSearch, setPromptSearch] = useState('');
-  const [editingPromptId, setEditingPromptId] = useState<Id<"prompts"> | null>(null);
-  const [editPromptContent, setEditPromptContent] = useState('');
-  const [editPromptTags, setEditPromptTags] = useState('');
-  const [editPromptDescription, setEditPromptDescription] = useState('');
+  const router = useRouter()
+  const { firebaseUser } = useAuth()
+  const { isAdmin, isSuperAdmin } = useAdminAuth()
+  const [activeTab, setActiveTab] = useState('overview')
 
-  // Blog posts tab state
-  const [blogPostStatusFilter, setBlogPostStatusFilter] = useState<'all' | 'draft' | 'published' | 'archived'>('all');
-  const [blogPostCategoryFilter, setBlogPostCategoryFilter] = useState<'all' | 'code' | 'ux' | 'design'>('all');
-  const [blogPostSeriesFilter, setBlogPostSeriesFilter] = useState<string>('all');
+  // Data and mutations
+  const { currentUserId, feedback, stats, users, prompts, blogPosts, mutations } = useAdminData()
 
-  // Fetch data
-  const feedback = useQuery(api.feedback.listFeedback, {
-    status: 'all',
-    type: 'all',
-    priority: 'all',
-    limit: 50,
-  });
-  const stats = useQuery(api.feedback.getFeedbackStats);
-  const users = useQuery(api.auth.getUsersWithRoles, 
-    currentUserId ? { adminUserId: currentUserId } : "skip"
-  );
-
-  // Initialize user ID
-  useEffect(() => {
-    const fetchUserId = async () => {
-      try {
-        const id = await getCurrentUserId();
-        setCurrentUserId(id);
-      } catch (error) {
-        console.error('Failed to get user ID:', error);
-      }
-    };
-    fetchUserId();
-  }, []);
-  const prompts = useQuery(api.promptsQueries.getAllPrompts, { limit: 200 });
-  const blogPosts = useQuery(api.blogPostQueries.getAllBlogPosts, {
-    includeDrafts: true,
-    limit: 200,
-  });
-
-  const updateStatus = useMutation(api.feedback.updateFeedbackStatus);
-  const updatePrompt = useMutation(api.promptsMutations.updatePromptBlock);
-  const deletePrompt = useMutation(api.promptsMutations.deletePromptBlock);
-  const updateBlogPost = useMutation(api.blogPostMutations.updateBlogPost);
-  const deleteBlogPost = useMutation(api.blogPostMutations.deleteBlogPost);
-  const publishBlogPost = useMutation(api.blogPostMutations.publishBlogPost);
-  const createBlogPost = useMutation(api.blogPostMutations.createBlogPost);
+  // Feedback handlers
+  const {
+    selectedFeedback,
+    isModalOpen,
+    handleStatusUpdate,
+    handleFeedbackClick,
+    handleCloseModal,
+  } = useFeedbackHandlers(mutations.updateStatus)
 
   // Loading state
   if (firebaseUser === undefined) {
@@ -142,7 +50,7 @@ export default function AdminPage() {
           </CardContent>
         </Card>
       </div>
-    );
+    )
   }
   
   // Access control
@@ -161,218 +69,8 @@ export default function AdminPage() {
           </CardContent>
         </Card>
       </div>
-    );
+    )
   }
-
-  const handleStatusUpdate = async (
-    feedbackId: string, 
-    newStatus?: string, 
-    newPriority?: string, 
-    newAssignee?: string
-  ) => {
-    try {
-      await updateStatus({
-        feedbackId: feedbackId as any,
-        status: newStatus || 'new',
-        priority: newPriority,
-        assignedTo: newAssignee,
-      });
-      
-      if (selectedFeedback && selectedFeedback._id === feedbackId) {
-        setSelectedFeedback({
-          ...selectedFeedback,
-          status: newStatus || selectedFeedback.status,
-          priority: newPriority || selectedFeedback.priority,
-          assignedTo: newAssignee,
-        });
-      }
-      
-      if (isModalOpen) {
-        setIsModalOpen(false);
-        setSelectedFeedback(null);
-      }
-    } catch (error) {
-      console.error('Failed to update feedback:', error);
-      throw error;
-    }
-  };
-
-  const handleFeedbackClick = (feedbackItem: any) => {
-    setSelectedFeedback(feedbackItem);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedFeedback(null);
-  };
-
-  const handleClearFilters = () => {
-    setSearch('');
-    setStatusFilter('all');
-    setPriorityFilter('all');
-    setTypeFilter('all');
-    setActiveStatusTab('all');
-  };
-
-  const handleStatusTabChange = (status: string) => {
-    setActiveStatusTab(status);
-    if (status === 'all') {
-      setStatusFilter('all');
-    } else {
-      setStatusFilter(status);
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    // Implementation from original file
-    return MessageSquare;
-  };
-
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      new: 'bg-chart-1/10 text-chart-1 border border-chart-1/20',
-      in_progress: 'bg-primary/10 text-primary border border-primary/20',
-      resolved: 'bg-accent/10 text-accent border border-accent/20',
-      closed: 'bg-muted text-muted-foreground',
-    };
-    return colors[status] || colors.new;
-  };
-
-  const getPriorityColor = (priority: string) => {
-    const colors: Record<string, string> = {
-      low: 'bg-muted text-muted-foreground',
-      medium: 'bg-primary/10 text-primary border border-primary/20',
-      high: 'bg-destructive/10 text-destructive border border-destructive/20',
-    };
-    return colors[priority] || colors.medium;
-  };
-
-  // Prompt handlers
-  const handleEditPrompt = (prompt: any) => {
-    setEditingPromptId(prompt._id);
-    setEditPromptContent(prompt.content);
-    setEditPromptTags(prompt.tags.join(', '));
-    setEditPromptDescription(prompt.description || '');
-  };
-
-  const handleSavePrompt = async () => {
-    if (!editingPromptId) return;
-
-    try {
-      await updatePrompt({
-        promptId: editingPromptId,
-        content: editPromptContent,
-        tags: editPromptTags.split(',').map(t => t.trim()).filter(t => t.length > 0),
-        description: editPromptDescription || undefined
-      });
-      toast.success('Prompt updated successfully');
-      setEditingPromptId(null);
-    } catch (error) {
-      toast.error(`Failed to update: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  };
-
-  const handleCancelEditPrompt = () => {
-    setEditingPromptId(null);
-    setEditPromptContent('');
-    setEditPromptTags('');
-    setEditPromptDescription('');
-  };
-
-  const handleDeletePrompt = async (promptId: Id<"prompts">) => {
-    if (!confirm('Are you sure you want to delete this prompt?')) return;
-
-    try {
-      await deletePrompt({ promptId });
-      toast.success('Prompt deleted');
-    } catch (error) {
-      toast.error(`Failed to delete: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  };
-
-  // Blog post handlers
-  const handleSaveBlogPost = async (blogPostId: Id<"blogPosts">, updates: {
-    title?: string;
-    slug?: string;
-    description?: string;
-    content?: string;
-    category?: 'code' | 'ux' | 'design';
-    readTime?: string;
-    date?: string;
-    series?: string;
-    order?: number;
-    status?: 'draft' | 'published' | 'archived';
-  }) => {
-    try {
-      const userId = await getCurrentUserId();
-      await updateBlogPost({
-        blogPostId,
-        updates,
-        authorId: userId,
-      });
-      toast.success('Blog post updated successfully');
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('User identification required')) {
-        toast.error('Must be logged in to save posts');
-      } else {
-        toast.error(`Failed to update: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
-      throw error;
-    }
-  };
-
-  const handleDeleteBlogPost = async (blogPostId: Id<"blogPosts">) => {
-    if (!confirm('Are you sure you want to delete this blog post?')) return;
-
-    try {
-      await deleteBlogPost({ blogPostId });
-      toast.success('Blog post deleted');
-    } catch (error) {
-      toast.error(`Failed to delete: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  };
-
-  const handlePublishBlogPost = async (blogPostId: Id<"blogPosts">) => {
-    try {
-      await publishBlogPost({ blogPostId });
-      toast.success('Blog post published');
-    } catch (error) {
-      toast.error(`Failed to publish: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  };
-
-  // Filter blog posts
-  const filteredBlogPosts = blogPosts?.filter(post => {
-    if (blogPostStatusFilter !== 'all' && post.status !== blogPostStatusFilter) return false;
-    if (blogPostCategoryFilter !== 'all' && post.category !== blogPostCategoryFilter) return false;
-    if (blogPostSeriesFilter !== 'all' && post.series !== blogPostSeriesFilter) return false;
-    return true;
-  }) || [];
-
-  // Filter prompts
-  const filteredPrompts = prompts?.filter(p => {
-    if (!promptSearch) return true;
-    const search = promptSearch.toLowerCase();
-    return (
-      p.content.toLowerCase().includes(search) ||
-      p.description?.toLowerCase().includes(search) ||
-      p.tags.some((tag: string) => tag.toLowerCase().includes(search)) ||
-      p.type.toLowerCase().includes(search)
-    );
-  }) || [];
-
-  // Filter feedback
-  const filteredFeedback = feedback?.feedback?.filter((item: any) => {
-    if (search && !item.title.toLowerCase().includes(search.toLowerCase()) &&
-        !item.description.toLowerCase().includes(search.toLowerCase())) {
-      return false;
-    }
-    if (statusFilter !== 'all' && item.status !== statusFilter) return false;
-    if (priorityFilter !== 'all' && item.priority !== priorityFilter) return false;
-    if (typeFilter !== 'all' && item.type !== typeFilter) return false;
-    return true;
-  }) || [];
 
   return (
     <div className="relative flex min-h-screen">
@@ -387,7 +85,7 @@ export default function AdminPage() {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-6">
+            <TabsList className="grid w-full grid-cols-7">
               <TabsTrigger value="overview">
                 <TrendingUp className="h-4 w-4 mr-2" />
                 Overview
@@ -408,6 +106,10 @@ export default function AdminPage() {
                 <FileText className="h-4 w-4 mr-2" />
                 Blog Posts
               </TabsTrigger>
+              <TabsTrigger value="emails" onClick={() => router.push('/admin/emails')}>
+                <Mail className="h-4 w-4 mr-2" />
+                Emails
+              </TabsTrigger>
               <TabsTrigger value="testing">
                 <Zap className="h-4 w-4 mr-2" />
                 Testing Hub
@@ -415,473 +117,39 @@ export default function AdminPage() {
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <AdminStatsCard
-                  label="Total Users"
-                  value={users?.length || 0}
-                  icon={Users}
-                  onClick={() => setActiveTab('users')}
-                />
-                <AdminStatsCard
-                  label="Total Feedback"
-                  value={stats?.total || 0}
-                  icon={MessageSquare}
-                  onClick={() => setActiveTab('feedback')}
-                />
-                <AdminStatsCard
-                  label="New Feedback"
-                  value={stats?.byStatus?.new || 0}
-                  icon={MessageSquare}
-                  onClick={() => setActiveTab('feedback')}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <TestLabCard
-                  title="Living Projects Control"
-                  description="Real-time decision engine monitoring and manual controls"
-                  icon={Activity}
-                  colorVariant="blue"
-                  href="/admin/living-projects-control"
-                />
-                <TestLabCard
-                  title="Intelligence Testing"
-                  description="Test shard extraction, stardust, and cognitive field generation"
-                  icon={Shield}
-                  colorVariant="primary"
-                  onClick={() => setActiveTab('testing')}
-                />
-                <TestLabCard
-                  title="Universal API Tester"
-                  description="Test any API route directly from the dashboard"
-                  icon={Zap}
-                  colorVariant="blue"
-                  onClick={() => setActiveTab('testing')}
-                />
-                <TestLabCard
-                  title="Orchestration Test Lab"
-                  description="Test widget orchestration and dependencies"
-                  icon={Settings}
-                  colorVariant="purple"
-                  href="/admin/orchestration-test"
-                />
-                <TestLabCard
-                  title="Convergence Control"
-                  description="Self-learning optimization engine"
-                  icon={TrendingUp}
-                  colorVariant="green"
-                  href="/admin/convergence"
-                />
-              </div>
-
-              <IntelligenceTestPanel />
+              <OverviewTab stats={stats} users={users || []} onTabChange={setActiveTab} />
             </TabsContent>
 
             <TabsContent value="feedback" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                <AdminStatsCard
-                  label="Total Feedback"
-                  value={stats?.total || 0}
-                  icon={MessageSquare}
-                  onClick={() => handleStatusTabChange('all')}
-                  active={activeStatusTab === 'all'}
-                />
-                <AdminStatsCard
-                  label="New"
-                  value={stats?.byStatus?.new || 0}
-                  icon={MessageSquare}
-                  onClick={() => handleStatusTabChange('new')}
-                  active={activeStatusTab === 'new'}
-                />
-                <AdminStatsCard
-                  label="In Progress"
-                  value={stats?.byStatus?.in_progress || 0}
-                  icon={MessageSquare}
-                  onClick={() => handleStatusTabChange('in_progress')}
-                  active={activeStatusTab === 'in_progress'}
-                />
-                <AdminStatsCard
-                  label="Resolved"
-                  value={stats?.byStatus?.resolved || 0}
-                  icon={MessageSquare}
-                  onClick={() => handleStatusTabChange('resolved')}
-                  active={activeStatusTab === 'resolved'}
-                />
-                <AdminStatsCard
-                  label="Closed"
-                  value={stats?.byStatus?.closed || 0}
-                  icon={MessageSquare}
-                  onClick={() => handleStatusTabChange('closed')}
-                  active={activeStatusTab === 'closed'}
-                />
-              </div>
-
-              <FeedbackFilters
-                search={search}
-                setSearch={setSearch}
-                priorityFilter={priorityFilter}
-                setPriorityFilter={setPriorityFilter}
-                typeFilter={typeFilter}
-                setTypeFilter={setTypeFilter}
-                sortBy={sortBy}
-                setSortBy={setSortBy}
-                sortOrder={sortOrder}
-                setSortOrder={setSortOrder}
-                onClearFilters={handleClearFilters}
-                totalCount={feedback?.feedback?.length || 0}
-                filteredCount={filteredFeedback.length}
+              <FeedbackTab
+                feedback={feedback}
+                stats={stats}
+                users={users || []}
+                onFeedbackClick={handleFeedbackClick}
               />
-
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="space-y-4">
-                    {filteredFeedback.map((item: any) => {
-                      const StatusIcon = getStatusIcon(item.status);
-                      return (
-                        <div 
-                          key={item._id} 
-                          className="p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                          onClick={() => handleFeedbackClick(item)}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <h3 className="font-semibold">{item.title}</h3>
-                                <Badge className={getStatusColor(item.status)}>
-                                  {item.status.replace('_', ' ')}
-                                </Badge>
-                                <Badge className={getPriorityColor(item.priority)}>
-                                  {item.priority}
-                                </Badge>
-                                <Badge variant="outline">{item.type}</Badge>
-                              </div>
-                              <p className="text-sm text-muted-foreground line-clamp-2">
-                                {item.description}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
             </TabsContent>
 
             <TabsContent value="users" className="space-y-6">
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-muted-foreground">
-                    User management interface - simplified for now
-                  </p>
-                </CardContent>
-              </Card>
+              <UsersTab users={users || []} />
             </TabsContent>
 
             <TabsContent value="prompts" className="space-y-6">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search prompts by content, tags, or type..."
-                  value={promptSearch}
-                  onChange={(e) => setPromptSearch(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-
-              {/* Stats */}
-              <div className="grid grid-cols-3 gap-4">
-                <Card className="p-4">
-                  <div className="text-sm text-muted-foreground">Total Prompts</div>
-                  <div className="text-2xl font-bold text-foreground">{prompts?.length || 0}</div>
-                </Card>
-                <Card className="p-4">
-                  <div className="text-sm text-muted-foreground">Filtered Results</div>
-                  <div className="text-2xl font-bold text-foreground">{filteredPrompts.length}</div>
-                </Card>
-                <Card className="p-4">
-                  <div className="text-sm text-muted-foreground">Editing</div>
-                  <div className="text-2xl font-bold text-foreground">{editingPromptId ? '1' : '0'}</div>
-                </Card>
-              </div>
-
-              {/* Prompts List */}
-              <ScrollArea className="h-[calc(100vh-400px)]">
-                <div className="space-y-4">
-                  {filteredPrompts.map((prompt: any) => (
-                    <Card key={prompt._id} className="p-6">
-                      {editingPromptId === prompt._id ? (
-                        // Edit Mode
-                        <div className="space-y-4">
-                          <div>
-                            <label className="text-sm font-medium text-foreground mb-2 block">
-                              Content
-                            </label>
-                            <Textarea
-                              value={editPromptContent}
-                              onChange={(e) => setEditPromptContent(e.target.value)}
-                              rows={8}
-                              className="font-mono text-sm"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="text-sm font-medium text-foreground mb-2 block">
-                              Tags (comma-separated)
-                            </label>
-                            <Input
-                              value={editPromptTags}
-                              onChange={(e) => setEditPromptTags(e.target.value)}
-                              placeholder="tag1, tag2, tag3"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="text-sm font-medium text-foreground mb-2 block">
-                              Description (optional)
-                            </label>
-                            <Input
-                              value={editPromptDescription}
-                              onChange={(e) => setEditPromptDescription(e.target.value)}
-                              placeholder="Brief description"
-                            />
-                          </div>
-
-                          <div className="flex gap-2">
-                            <Button onClick={handleSavePrompt} className="flex items-center gap-2">
-                              <Save className="h-4 w-4" />
-                              Save
-                            </Button>
-                            <Button onClick={handleCancelEditPrompt} variant="outline" className="flex items-center gap-2">
-                              <X className="h-4 w-4" />
-                              Cancel
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        // View Mode
-                        <div>
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <Badge variant="outline">{prompt.type}</Badge>
-                                <Badge variant="outline">{prompt.scope}</Badge>
-                                {prompt.scopeId && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    {prompt.scopeId.slice(0, 8)}...
-                                  </Badge>
-                                )}
-                              </div>
-                              {prompt.description && (
-                                <p className="text-sm text-muted-foreground">{prompt.description}</p>
-                              )}
-                            </div>
-                            <div className="flex gap-2">
-                              <Button
-                                onClick={() => handleEditPrompt(prompt)}
-                                variant="outline"
-                                size="sm"
-                              >
-                                <Edit2 className="h-3 w-3 mr-1" />
-                                Edit
-                              </Button>
-                              <Button
-                                onClick={() => handleDeletePrompt(prompt._id)}
-                                variant="outline"
-                                size="sm"
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="h-3 w-3 mr-1" />
-                                Delete
-                              </Button>
-                            </div>
-                          </div>
-
-                          <div className="bg-muted/30 rounded-lg p-4 mb-4">
-                            <pre className="text-sm whitespace-pre-wrap font-mono text-foreground">
-                              {prompt.content}
-                            </pre>
-                          </div>
-
-                          <div className="flex flex-wrap gap-2 mb-4">
-                            {prompt.tags.map((tag: string, i: number) => (
-                              <Badge key={i} variant="secondary">
-                                {tag}
-                              </Badge>
-                            ))}
-                          </div>
-
-                          <div className="flex gap-6 text-sm">
-                            <div>
-                              <span className="text-muted-foreground">Effectiveness:</span>{' '}
-                              <span className="font-medium text-foreground">
-                                {((prompt.effectiveness || 0) * 100).toFixed(1)}%
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Usage:</span>{' '}
-                              <span className="font-medium text-foreground">{prompt.usageCount || 0}</span>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Success:</span>{' '}
-                              <span className="font-medium text-foreground">
-                                {((prompt.successRate || 0) * 100).toFixed(1)}%
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Version:</span>{' '}
-                              <span className="font-medium text-foreground">{prompt.version}</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </Card>
-                  ))}
-                </div>
-              </ScrollArea>
-
-              {filteredPrompts.length === 0 && (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">No prompts found</p>
-                  {promptSearch && (
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Try adjusting your search term
-                    </p>
-                  )}
-                </div>
-              )}
+              <PromptsTab
+                prompts={prompts || []}
+                updatePrompt={mutations.updatePrompt}
+                deletePrompt={mutations.deletePrompt}
+              />
             </TabsContent>
 
             <TabsContent value="blog-posts" className="space-y-6">
-              {/* Filters */}
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">
-                    Status
-                  </label>
-                  <Select value={blogPostStatusFilter} onValueChange={(v: 'all' | 'draft' | 'published' | 'archived') => setBlogPostStatusFilter(v)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="published">Published</SelectItem>
-                      <SelectItem value="archived">Archived</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">
-                    Category
-                  </label>
-                  <Select value={blogPostCategoryFilter} onValueChange={(v: 'all' | 'code' | 'ux' | 'design') => setBlogPostCategoryFilter(v)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      <SelectItem value="code">Code</SelectItem>
-                      <SelectItem value="ux">UX</SelectItem>
-                      <SelectItem value="design">Design</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">
-                    Series
-                  </label>
-                  <Select value={blogPostSeriesFilter} onValueChange={setBlogPostSeriesFilter}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      {Array.from(new Set(blogPosts?.map(p => p.series).filter(Boolean))).map(series => (
-                        <SelectItem key={series} value={series!}>{series}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Stats */}
-              <div className="grid grid-cols-3 gap-4">
-                <Card className="p-4">
-                  <div className="text-sm text-muted-foreground">Total Posts</div>
-                  <div className="text-2xl font-bold text-foreground">{blogPosts?.length || 0}</div>
-                </Card>
-                <Card className="p-4">
-                  <div className="text-sm text-muted-foreground">Filtered Results</div>
-                  <div className="text-2xl font-bold text-foreground">{filteredBlogPosts.length}</div>
-                </Card>
-                <Card className="p-4">
-                  <div className="text-sm text-muted-foreground">Published</div>
-                  <div className="text-2xl font-bold text-foreground">
-                    {blogPosts?.filter(p => p.status === 'published').length || 0}
-                  </div>
-                </Card>
-              </div>
-
-              {/* Create New Post Button */}
-              <div className="flex justify-end">
-                <Button
-                  onClick={async () => {
-                    const newSlug = `new-post-${Date.now()}`
-                    try {
-                      const userId = await getCurrentUserId();
-                      await createBlogPost({
-                        slug: newSlug,
-                        title: 'New Blog Post',
-                        description: 'Edit this description',
-                        content: '# New Blog Post\n\nEdit this content...',
-                        category: 'code',
-                        readTime: '5 min',
-                        date: new Date().toISOString().split('T')[0],
-                        authorId: userId,
-                        status: 'draft',
-                      })
-                      toast.success('Draft post created! Refresh to see it.')
-                    } catch (error) {
-                      if (error instanceof Error && error.message.includes('User identification required')) {
-                        toast.error('Must be logged in to create posts');
-                      } else {
-                        toast.error(`Failed to create: ${error instanceof Error ? error.message : 'Unknown error'}`)
-                      }
-                    }
-                  }}
-                  className="flex items-center gap-2"
-                >
-                  <FileText className="h-4 w-4" />
-                  Create New Post
-                </Button>
-              </div>
-
-              {/* Blog Posts List */}
-              <ScrollArea className="h-[calc(100vh-500px)]">
-                <div className="space-y-4">
-                  {filteredBlogPosts.map((post: any) => (
-                    <BlogPostEditor
-                      key={post._id}
-                      post={post}
-                      onSave={(updates) => handleSaveBlogPost(post._id, updates)}
-                      onDelete={() => handleDeleteBlogPost(post._id)}
-                      onPublish={post.status === 'draft' ? () => handlePublishBlogPost(post._id) : undefined}
-                      authorId={currentUserId}
-                    />
-                  ))}
-                </div>
-              </ScrollArea>
-
-              {filteredBlogPosts.length === 0 && (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">No blog posts found</p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    {blogPosts?.length === 0 ? 'Create your first blog post using the "Create New Post" button above' : 'Try adjusting your filters'}
-                  </p>
-                </div>
-              )}
+              <BlogPostsTab
+                blogPosts={blogPosts || []}
+                currentUserId={currentUserId}
+                updateBlogPost={mutations.updateBlogPost}
+                deleteBlogPost={mutations.deleteBlogPost}
+                publishBlogPost={mutations.publishBlogPost}
+                createBlogPost={mutations.createBlogPost}
+              />
             </TabsContent>
 
             <TabsContent value="testing">
@@ -901,6 +169,6 @@ export default function AdminPage() {
         />
       )}
     </div>
-  );
+  )
 }
 

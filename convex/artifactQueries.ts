@@ -8,6 +8,7 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { api } from "./_generated/api";
+import { Id } from "./_generated/dataModel";
 
 /**
  * Get artifacts for a project
@@ -19,15 +20,62 @@ export const getProjectArtifacts = query({
     userId: v.string(),
   },
   handler: async (ctx, args) => {
+    // ✅ FIX: Validate userId first
+    if (!args.userId || typeof args.userId !== 'string' || args.userId.trim().length === 0) {
+      throw new Error("Invalid userId: userId must be a non-empty string");
+    }
+    
+    // Normalize userId (trim whitespace for consistent comparison)
+    const normalizedUserId = args.userId.trim();
+    
     // ✅ FIX BLOCKER 3: Check project permission (owner or collaborator)
+    // First check if project exists and user owns it (fast path)
+    const project = await ctx.db.get(args.projectId);
+    if (!project) {
+      throw new Error("Project not found");
+    }
+    
+    // Normalize project.userId for comparison
+    const normalizedProjectUserId = project.userId?.trim() || project.userId;
+    
+    // Fast path: User owns the project
+    if (normalizedProjectUserId === normalizedUserId) {
+      return await ctx.db
+        .query("artifacts")
+        .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+        .order("desc")
+        .collect();
+    }
+    
+    // Check if user is a collaborator
+    const isCollaborator = project.collaborators?.some(
+      c => (c.userId?.trim() || c.userId) === normalizedUserId
+    );
+    if (isCollaborator) {
+      return await ctx.db
+        .query("artifacts")
+        .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+        .order("desc")
+        .collect();
+    }
+    
+    // Fallback: Check shared access via permission helper
     const permission = await ctx.runQuery(api.contentAccessHelpers.getUserContentPermission, {
-      userId: args.userId,
+      userId: normalizedUserId,
       contentType: "project",
       contentId: args.projectId,
     });
     
     if (!permission) {
-      throw new Error("Access denied: You don't have permission to view this project");
+      // Enhanced error message for debugging
+      console.error("Access denied for artifact query:", {
+        projectId: args.projectId,
+        requestedUserId: normalizedUserId,
+        projectUserId: normalizedProjectUserId,
+        hasCollaborators: !!project.collaborators?.length,
+        collaboratorCount: project.collaborators?.length || 0,
+      });
+      throw new Error(`Access denied: You don't have permission to view this project. Project owner: ${normalizedProjectUserId}, Requested user: ${normalizedUserId}`);
     }
     
     return await ctx.db
@@ -173,7 +221,8 @@ export const queryArtifacts = query({
         : filters.widgetId;
       
       // ✅ FIX BLOCKER 3: Check widget/project permission
-      const widget = await ctx.db.get(widgetId);
+      // Cast widgetId to Id<"widgets"> to properly narrow the return type
+      const widget = await ctx.db.get(widgetId as Id<"widgets">);
       if (!widget) {
         throw new Error("Widget not found");
       }

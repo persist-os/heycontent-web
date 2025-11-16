@@ -1,157 +1,95 @@
-import React, { useState, useEffect } from 'react'
-import { Search, Brain, Sparkles, Database, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react'
+import React from 'react'
+import { Sparkles, ChevronDown, ChevronUp } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { T } from '@/components/translation'
+import type { Message } from '@/app/types/chat'
+import { ThinkingLoadingIndicator } from './ThinkingLoadingIndicator'
 
-interface ThinkingStep {
-  id: string
-  message: string
-  isCompleted: boolean
-  isActive: boolean
+interface ThinkingState {
+  shouldShow: boolean
+  showLoadingIndicator: boolean
+  showExpandableList: boolean
+  a2aMessages: Message[]
+  isLoading: boolean
 }
 
 interface HorizontalProgressiveThinkingProps {
-  onComplete?: () => void
-  isCompleted?: boolean
+  thinkingState?: ThinkingState
 }
 
 export const HorizontalProgressiveThinking: React.FC<HorizontalProgressiveThinkingProps> = ({ 
-  onComplete,
-  isCompleted = false
+  thinkingState,
 }) => {
-  const [steps, setSteps] = useState<ThinkingStep[]>([])
-  const [isThinkingExpanded, setIsThinkingExpanded] = useState(false)
+  // ONLY state: user expansion toggle (user interaction, not derived)
+  // MUST be called before any early returns (React Hook rules)
+  const [internalExpanded, setInternalExpanded] = React.useState(true)
 
-  // Hardcoded thinking steps that show at spaced intervals
-  const thinkingSteps = [
-    "Understanding what you need",
-    "Looking through our past conversations...",
-    "Finding what's most relevant",
-    "Putting my thoughts together"
-  ]
+  // Simple toggle handler (defined before early returns)
+  const handleToggle = React.useCallback(() => {
+    setInternalExpanded(prev => !prev)
+  }, [])
 
-  // Auto-open dropdown when generation starts, auto-close when complete
-  useEffect(() => {
-    if (steps.length > 0 && !isCompleted) {
-      setIsThinkingExpanded(true)
-    } else if (isCompleted) {
-      setIsThinkingExpanded(false)
-    }
-  }, [steps.length, isCompleted])
-
-  // Initialize and progress through steps at spaced intervals
-  useEffect(() => {
-    if (steps.length === 0 && !isCompleted) {
-      // Start with just the first step
-      setSteps([{
-        id: 'step-0',
-        message: thinkingSteps[0],
-        isCompleted: false,
-        isActive: true
-      }])
-
-      // Add remaining steps progressively
-      const intervals: NodeJS.Timeout[] = []
-      for (let i = 1; i < thinkingSteps.length; i++) {
-        const timeout = setTimeout(() => {
-          setSteps(prev => {
-            const newStep: ThinkingStep = {
-              id: `step-${i}`,
-              message: thinkingSteps[i],
-              isCompleted: false,
-              isActive: true
-            }
-            
-            // Mark previous step as completed and inactive
-            const updatedSteps = prev.map(step => ({
-              ...step,
-              isCompleted: true,
-              isActive: false
-            }))
-            
-            return [...updatedSteps, newStep]
-          })
-        }, i * 2500)
-        intervals.push(timeout)
-      }
-
-      return () => intervals.forEach(clearTimeout)
-    }
-  }, [isCompleted])
-
-  // Mark all steps as completed when finished
-  useEffect(() => {
-    if (isCompleted) {
-      setSteps(prev => prev.map(step => ({
-        ...step,
-        isCompleted: true,
-        isActive: false
-      })))
-      
-      onComplete?.()
-    }
-  }, [isCompleted, onComplete])
-
-  const getStepIcon = (isActive: boolean, isCompleted: boolean) => {
-    if (isCompleted) {
-      return <CheckCircle className="w-4 h-4 text-primary" />
-    }
-    
-    if (isActive) {
-      return <Sparkles className="w-4 h-4 text-primary animate-spin" />
-    }
-    
-    return <Sparkles className="w-4 h-4 text-primary" />
-  }
-
-  // Don't show if no steps and not completed
-  if (steps.length === 0 && !isCompleted) {
+  // Use thinkingState from Convex query
+  if (!thinkingState || !thinkingState.shouldShow) {
     return null
   }
 
+  // Show loading indicator when loading and no messages
+  if (thinkingState.showLoadingIndicator) {
+    return (
+      <div className="mb-3 bg-transparent">
+        <ThinkingLoadingIndicator />
+      </div>
+    )
+  }
+
+  // Show expandable list when there are A2A messages
+  if (!thinkingState.showExpandableList) {
+    return null
+  }
+
+  const hasMessages = thinkingState.a2aMessages && thinkingState.a2aMessages.length > 0
+
   return (
-    <div className="mb-3">
+    <div className="mb-3 bg-transparent">
       <button 
-        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        onClick={() => setIsThinkingExpanded(!isThinkingExpanded)}
+        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors bg-transparent border-none p-0"
+        onClick={handleToggle}
       >
-        <Sparkles className="w-4 h-4 text-primary" />
+        <Sparkles className={`w-4 h-4 text-primary ${thinkingState.isLoading ? 'animate-spin' : ''}`} />
         <span>
-          {isCompleted ? (
-            <T context="thinking_process.show_process">Show thinking process</T>
-          ) : (
-            <T context="thinking_process.loading">Thinking...</T>
-          )}
+          <T context="thinking_process.loading">Thinking...</T>
         </span>
-        {isThinkingExpanded ? 
+        {internalExpanded ? 
           <ChevronUp className="w-3 h-3" /> : 
           <ChevronDown className="w-3 h-3" />
         }
       </button>
 
       <AnimatePresence>
-        {isThinkingExpanded && (
+        {internalExpanded && hasMessages && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="overflow-hidden mt-2"
+            className="overflow-hidden mt-2 bg-transparent"
           >
-            <div className="space-y-2">
-              {/* Thinking Steps */}
-              {steps.length > 0 && (
-                <div className="space-y-1">
-                  {steps.map((step) => (
-                    <div key={step.id} className="flex items-center gap-2 text-sm">
-                      {getStepIcon(step.isActive, step.isCompleted)}
+            {/* Scrollable container for A2A messages - max-height with overflow */}
+            <div className="max-h-64 overflow-y-auto space-y-2 pr-2 bg-transparent">
+              <div className="space-y-1 bg-transparent">
+                {thinkingState.a2aMessages.map((message, index) => {
+                  const isLast = index === thinkingState.a2aMessages.length - 1
+                  return (
+                    <div key={message.id || `a2a-${index}`} className="flex items-center gap-2 text-sm bg-transparent">
+                      <Sparkles className={`w-4 h-4 text-primary ${thinkingState.isLoading && isLast ? 'animate-spin' : ''}`} />
                       <span className="text-foreground">
-                        <T context="thinking_process">{step.message}</T>
+                        {message.content || message.chat_response || 'Processing...'}
                       </span>
                     </div>
-                  ))}
-                </div>
-              )}
+                  )
+                })}
+              </div>
             </div>
           </motion.div>
         )}

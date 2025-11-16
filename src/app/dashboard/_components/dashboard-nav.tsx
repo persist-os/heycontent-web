@@ -3,7 +3,7 @@
 import React, { memo, useCallback, useMemo, useEffect, useState, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  FileText, Shield, Zap, Sparkles, Radio, Home, PenTool
+  FileText, Shield, Zap, Sparkles, Radio, Home, PenTool, Mail
 } from 'lucide-react'
 import { useSidebar } from '@/app/context/sidebar-context'
 import { getApiKey } from '@/app/lib/api-helpers'
@@ -42,15 +42,6 @@ const navItems = [
   //   dataAttr: 'data-briefing-room-link',
   //   category: 'explore',
   // },
-  {
-    id: 'constellations',
-    label: 'Constellations',
-    description: 'Collaborative spaces that evolve',
-    icon: Zap,
-    href: '/dashboard/living-projects',
-    dataAttr: 'data-living-projects-link',
-    category: 'create',
-  },
   {
     id: 'notes',
     label: 'Files',
@@ -166,6 +157,15 @@ export const DashboardNav = memo(function DashboardNav() {
         icon: Shield,
         href: '/admin',
         dataAttr: 'data-admin-link',
+        category: 'system',
+      },
+      {
+        id: 'admin-emails',
+        label: 'Email Campaigns',
+        description: 'Draft and send emails to users',
+        icon: Mail,
+        href: '/admin/emails',
+        dataAttr: 'data-admin-emails-link',
         category: 'system',
       }
     ] : []),
@@ -347,9 +347,6 @@ export const DashboardNav = memo(function DashboardNav() {
       case 'briefing-room':
         // This tab is active for briefing room routes
         return pathname.startsWith('/dashboard/briefing_room');
-      case 'constellations':
-        // This tab is active for constellation/living projects routes
-        return pathname.startsWith('/dashboard/living-projects');
       case 'thinking-lab':
         // This tab is active for thinking lab routes
         return pathname.startsWith('/dashboard/thinking_lab');
@@ -357,6 +354,7 @@ export const DashboardNav = memo(function DashboardNav() {
       case 'notes':
       case 'admin':
       case 'blogger':
+      case 'admin-emails':
         // These tabs are only active on their exact pages, not sub-pages
         return pathname === item.href;
       default:

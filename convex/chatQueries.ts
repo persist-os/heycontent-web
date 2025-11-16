@@ -373,3 +373,142 @@ export const getRecentMessages = query({
         }
 });
 
+/**
+ * Get conversation with complete state (messages + thinking state)
+ * 
+ * Single source of truth for all conversation state computation.
+ * Eliminates need for React hooks to manage local state.
+ * 
+ * Returns:
+ * - conversation: Conversation object
+ * - messages: User-facing messages (filtered)
+ * - thinkingState: Complete thinking state object
+ */
+export const getConversationWithState = query({
+  args: {
+    userId: v.string(),
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx, args) => {
+    // 1. Fetch conversation (with permission check - reuse getConversation pattern)
+    const doc = await ctx.db.get(args.conversationId);
+    if (!doc) {
+      return null;
+    }
+
+    // Type check to ensure it's a conversation document
+    if (!('userId' in doc) || !('messages' in doc)) {
+      return null;
+    }
+
+    const conversation = doc as any;
+
+    // Check ownership or project collaborator access
+    const isOwner = conversation.userId === args.userId;
+    if (!isOwner && conversation.projectId) {
+      const permission = await ctx.runQuery(api.contentAccessHelpers.getUserContentPermission, {
+        userId: args.userId,
+        contentType: "project",
+        contentId: conversation.projectId,
+      });
+      if (!permission) {
+        return null;
+      }
+    } else if (!isOwner) {
+      return null;
+    }
+
+    // 2. Fetch messages
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_conversation", (q) => q.eq("conversationId", args.conversationId))
+      .order("asc")
+      .collect();
+
+    // Filter out soft-deleted messages
+    const activeMessages = messages.filter(msg => !msg.deletedAt);
+
+    // 3. Fetch A2A notes
+    const a2aNotes = await ctx.db
+      .query("a2a_notes")
+      .withIndex("by_conversation", (q) => q.eq("conversationId", args.conversationId))
+      .order("asc")
+      .collect();
+
+    // 4. Filter messages into categories
+    // A2A message types: 'a2a_announcement', 'widget_agent_announcement', 'widget_introduction', 'artifact_created', 'widget_status'
+    const A2A_MESSAGE_TYPES = ['a2a_announcement', 'widget_agent_announcement', 'widget_introduction', 'artifact_created', 'widget_status'];
+    
+    const userFacingMessages = activeMessages.filter(msg => {
+      // Messages without contentType are regular chat - always user-facing
+      if (!msg.contentType) {
+        return true;
+      }
+      // If message has contentType, check if it's A2A
+      return !A2A_MESSAGE_TYPES.includes(msg.contentType as string);
+    });
+
+    const a2aFromMessages = activeMessages
+      .filter(msg => A2A_MESSAGE_TYPES.includes(msg.contentType as string))
+      .map(msg => ({
+        _id: msg._id,
+        content: msg.content,
+        role: msg.role,
+        timestamp: msg.timestamp || 0,
+        a2aMetadata: msg.a2aMetadata || {},
+        contentType: msg.contentType,
+      }));
+
+    // 5. Convert A2A notes to message format (avoid duplicates with messages)
+    const a2aFromNotes = a2aNotes
+      .filter(note => {
+        // Skip notes already posted as messages (check by agentId and timestamp)
+        const noteTimestamp = note.createdAt;
+        return !a2aFromMessages.some(msg => {
+          const msgAgentId = msg.a2aMetadata?.agentId;
+          const msgTimestamp = msg.timestamp || 0;
+          return msgAgentId === note.agentId && Math.abs(msgTimestamp - noteTimestamp) < 5000;
+        });
+      })
+      .map(note => ({
+        _id: note._id,
+        content: note.report?.summary || '',
+        role: 'assistant' as const,
+        timestamp: note.createdAt,
+        a2aMetadata: {
+          agentId: note.agentId,
+          report: note.report,
+        },
+        contentType: 'a2a_announcement' as const,
+      }));
+
+    // Merge all A2A sources and sort by timestamp
+    const allA2A = [...a2aFromMessages, ...a2aFromNotes]
+      .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+    // 6. Compute thinking state (ALL logic in Convex)
+    const hasUserMessage = userFacingMessages.some(msg => msg.role === 'user');
+    
+    // Check if waiting for response (last message is user, no assistant response yet)
+    const lastMessage = userFacingMessages[userFacingMessages.length - 1];
+    const isLoading = lastMessage?.role === 'user'; // Simple: if last message is user, we're waiting
+
+    // Compute thinking state
+    const shouldShow = hasUserMessage && (allA2A.length > 0 || isLoading);
+    const showLoadingIndicator = shouldShow && isLoading && allA2A.length === 0;
+    const showExpandableList = shouldShow && allA2A.length > 0;
+
+    return {
+      conversation,
+      messages: userFacingMessages,
+      thinkingState: {
+        shouldShow,
+        showLoadingIndicator,
+        showExpandableList,
+        a2aMessages: allA2A,
+        isLoading,
+      },
+    };
+  },
+});
+

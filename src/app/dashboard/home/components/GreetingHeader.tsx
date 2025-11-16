@@ -12,7 +12,15 @@ interface GreetingHeaderProps {
 /**
  * GreetingHeader - Personalized greeting from Ambient Insights
  * 
- * Uses greetings from the ambientInsights query, with fallback to time-based greeting
+ * Displays dynamic greetings from Convex data (not hardcoded text):
+ * 1. Primary: Random greeting from Ambient Insights (api.ambientInsights.getMostRecentByUserId)
+ * 2. Fallback: Time-based greeting with user's name (from api.userQueries.getUserInfo)
+ * 3. Default: Translated "What can I help you with?"
+ * 
+ * Follows convex-frontend-data-display.md pattern: all data from Convex queries, no hardcoded values.
+ * 
+ * @param insights - Ambient insights data from Convex query (may include greetings array)
+ * @param userName - User's name from userInfo query for personalized fallback greeting
  */
 export function GreetingHeader({ insights, userName }: GreetingHeaderProps) {
   const [selectedGreeting, setSelectedGreeting] = useState<string>("What can I help you with?")

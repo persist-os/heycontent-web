@@ -45,11 +45,12 @@ export function useGalleryItems(props: UseGalleryItemsProps | string) {
   const effectiveProjectId = conversation?.projectId || projectId
   
   // Fetch BOTH artifacts AND widgets using effective projectId
+  // ✅ FIX: Ensure userId is a valid non-empty string before calling query
   const artifacts = useQuery(
     api.artifactQueries.getProjectArtifacts,
-    effectiveProjectId && userId ? { 
+    effectiveProjectId && userId && typeof userId === 'string' && userId.trim().length > 0 ? { 
       projectId: effectiveProjectId as Id<'projects'>,
-      userId
+      userId: userId.trim()  // Normalize userId (trim whitespace)
     } : 'skip'
   )
   

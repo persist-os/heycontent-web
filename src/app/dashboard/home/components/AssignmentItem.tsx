@@ -36,12 +36,11 @@ interface AssignmentItemProps {
 }
 
 /**
- * AssignmentItem - Individual assignment card with progress tracking
+ * AssignmentItem - Individual assignment card
  * 
  * Displays:
  * - Assignment title & timestamp
  * - Tags and metadata (artifacts/widgets counts)
- * - Progress bar
  * - Action buttons (Open Gallery, Open Conversation, etc.)
  * - ✅ Permission indicators (badge, border style, lock icon)
  */
@@ -134,14 +133,6 @@ export function AssignmentItem({ project, userId }: AssignmentItemProps) {
     if (hours < 24) return <T context="time.relative.hours">{hours} hours ago</T>
     if (days < 7) return <T context="time.relative.days">{days} days ago</T>
     return new Date(project.updatedAt || project.createdAt).toLocaleDateString()
-  }, [project])
-
-  // Calculate progress (based on content count for now)
-  const progress = useMemo(() => {
-    const total = project.totalContent || 0
-    if (total === 0) return 5
-    // Simple heuristic: 10 items = 100% progress
-    return Math.min(Math.floor((total / 10) * 100), 100)
   }, [project])
 
   // Handle pause/resume
@@ -237,22 +228,6 @@ export function AssignmentItem({ project, userId }: AssignmentItemProps) {
               {widgets.length}
             </Badge>
           )}
-      </div>
-      
-      {/* Progress Section */}
-        <div className="space-y-2 pt-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground"><T context="dashboard.home.assignments.item.progress.label">Progress</T></span>
-            <span className="text-foreground font-semibold">{progress}%</span>
-        </div>
-        
-          {/* Progress Bar - More Subtle */}
-          <div className="w-full h-1 bg-muted/40 rounded-full overflow-hidden relative">
-          <div 
-              className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary/50 via-primary/60 to-primary-dark/60 transition-all duration-700 ease-out"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
       </div>
       
         {/* Action Buttons - Cleaner */}

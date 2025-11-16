@@ -15,7 +15,7 @@ export function useProjects(userId: string | undefined) {
   // Queries - Using the correct query names from projectsQueries.ts
   const projects = useQuery(
     api.projectsQueries.getByUser,
-    userId ? { userId } : "skip"
+    userId ? { userId, limit: 10000 } : "skip"
   );
 
   // Mutations - Using atomic initialization for project creation

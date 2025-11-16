@@ -13,12 +13,18 @@ import { AssignmentsSection } from './AssignmentsSection'
  * HomeScreen - New Dashboard Homepage
  * 
  * Primary landing page displaying:
- * - Personalized greeting from Ambient Insights
+ * - Personalized greeting from Ambient Insights (via GreetingHeader)
  * - HomepageChat for starting conversations
  * - Recent artifacts from artifacts table
  * - Active assignments (projects in progress)
  * 
  * NOTE: Assignments and conversations are now the same thing - projects serve both purposes
+ * 
+ * Data Flow (per convex-frontend-data-display.md):
+ * - All data comes from Convex queries (useQuery hooks in this component)
+ * - Queries are centralized here (ONE per data type)
+ * - Data is passed down to child components as props
+ * - No hardcoded data - all values come from Convex
  */
 export function HomeScreen() {
   const [userId, setUserId] = useState<string | null>(null)
@@ -43,6 +49,7 @@ export function HomeScreen() {
   }
 
   // Centralized Convex queries (ONE per data type)
+  // Pattern: convex-frontend-data-display.md - queries in components, not stores
   const userInfo = useQuery(
     api.userQueries.getUserInfo,
     userId ? { userId } : 'skip'

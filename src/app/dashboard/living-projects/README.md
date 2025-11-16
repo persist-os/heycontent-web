@@ -16,16 +16,7 @@ Living Projects treats each project as a unique entity with its own personality,
 - **AmbientFingerprintCanvas** *(in chat/components)*: Visual constellation mapping of discovered fingerprint fields
 - **useProjectContext** *(in chat/hooks)*: Hook for managing project data and content integration
 
-#### 🌌 **Constellation View**
-
-- **ConstellationView**: Main canvas for exploring project relationships and connections
-- **useConstellationLayout**: Force-directed layout algorithm for project positioning
-- **usePanZoom**: Smooth pan and zoom functionality with gesture support
-- **ConnectionLines**: Visual connections between related projects
-
 #### 🧩 **Widget Ecosystem**
-
-- **ConstellationCanvas**: Main widget constellation view with pan/zoom
 - **FloatingWidgetCard**: Individual widget cards with dynamic sizing
 - **WidgetGenerationLoader**: Loading states during AI widget generation
 - **WidgetDetailsPanel**: Detailed widget information and interactions
@@ -33,16 +24,12 @@ Living Projects treats each project as a unique entity with its own personality,
 
 #### 🎨 **UI Components**
 
-- **ProjectStar**: Interactive project nodes in constellation view
-- **ConstellationControls**: Navigation and zoom controls
-- **ConstellationMinimap**: Overview navigation with project clusters
-
 ## 📁 Directory Structure
 
 ```
 living-projects/
 ├── README.md                    # This file - System overview
-├── page.tsx                     # Main constellation page
+├── page.tsx                     # Main living projects page
 ├── [projectId]/
 │   ├── page.tsx                # Individual project view
 │   └── components/
@@ -55,22 +42,13 @@ living-projects/
 │       ├── utils/
 │       │   └── widgetStyling.ts      # Widget theme and styling utilities
 │       └── widgets/
-│           ├── ConstellationCanvas.tsx # Main widget constellation view
 │           ├── FloatingWidgetCard.tsx  # Individual widget rendering
 │           ├── WidgetDetailsPanel.tsx  # Widget detail view
 │           └── WidgetGenerationLoader.tsx # Generation loading state
 ├── components/
-│   ├── ConstellationView.tsx     # Main project constellation interface
-│   ├── ConnectionLines.tsx       # Project relationship lines
-│   ├── ConstellationControls.tsx # Navigation controls
-│   ├── ConstellationMinimap.tsx  # Overview minimap
 │   ├── CreateProjectModal.tsx    # New project creation
 │   ├── LoadingState.tsx          # Loading UI
-│   └── widgets/
-│       └── ConstellationTransition.tsx # Transition animations
 └── hooks/
-   ├── useConstellationLayout.ts # Layout algorithms
-   ├── usePanZoom.ts           # Pan/zoom functionality
    └── useProjectConnections.ts # Project relationships
 ```
 
@@ -119,12 +97,12 @@ const response = await fetchWithApiKey(`/api/projects/${projectId}/generate-widg
 ### 5. Widget Display
 
 ```tsx
-// ConstellationCanvas renders AI-generated widgets
-<ConstellationCanvas
-  widgets={projectWidgets.widgets}
-  onWidgetClick={handleWidgetClick}
-  onWidgetHover={handleWidgetHover}
-/>
+// Widgets are displayed in grid view
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  {projectWidgets.widgets.map(widget => (
+    <WidgetCard key={widget._id} widget={widget} />
+  ))}
+</div>
 ```
 
 ## 🔗 Chat System Integration
@@ -152,7 +130,7 @@ const handleProjectClick = (project: Project) => {
 
 ### State Synchronization
 - Project context flows from chat to living projects
-- Fingerprint completion triggers constellation transition
+- Fingerprint completion triggers project view transition
 - Real-time updates sync between chat and project views
 
 ## 🎨 Design Philosophy
@@ -169,7 +147,7 @@ const handleProjectClick = (project: Project) => {
 - **Discovery-First**: Projects evolve through conversation rather than forms
 - **Progressive Disclosure**: Information revealed gradually as needed
 - **Seamless Transitions**: Smooth animations between different states
-- **Multi-Scale Navigation**: Zoom from constellation overview to project detail
+- **Grid-Based Navigation**: Clear project organization in grid layout
 
 ## 🔧 Technical Implementation
 
@@ -194,21 +172,6 @@ const { projectContext, isLoading, error, contentSummary } = useProjectContext(
 )
 ```
 
-#### useConstellationLayout
-
-```tsx
-const layout = useConstellationLayout(projects)
-// Returns positioned projects with connection data
-```
-
-#### usePanZoom
-
-```tsx
-const { transform, containerRef, zoomIn, zoomOut, resetView } = usePanZoom(
-  canvasWidth,
-  canvasHeight
-)
-```
 
 ### State Management
 
@@ -222,10 +185,10 @@ const { transform, containerRef, zoomIn, zoomOut, resetView } = usePanZoom(
 ### Basic Usage
 
 ```tsx
-import { ConstellationView } from './components/ConstellationView'
+import { ProjectViewScreen } from './[projectId]/components/ProjectViewScreen'
 
 function LivingProjectsPage() {
-  return <ConstellationView />
+  return <ProjectViewScreen projectId={projectId} />
 }
 ```
 
@@ -242,9 +205,9 @@ function ProjectSetup({ projectId }) {
 ### Widget Integration
 
 ```tsx
-import { ConstellationCanvas } from './[projectId]/components/widgets/ConstellationCanvas'
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
+import { WidgetCard } from './[projectId]/components/widgets/FloatingWidgetCard'
 
 function ProjectDashboard({ projectId }) {
   const projectWidgets = useQuery(
@@ -253,11 +216,11 @@ function ProjectDashboard({ projectId }) {
   )
   
   return (
-    <ConstellationCanvas
-      widgets={projectWidgets?.widgets || []}
-      onWidgetClick={(widget) => console.log('Clicked:', widget)}
-      onWidgetHover={(widgetId) => console.log('Hovered:', widgetId)}
-    />
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {projectWidgets?.widgets.map(widget => (
+        <WidgetCard key={widget._id} widget={widget} />
+      ))}
+    </div>
   )
 }
 ```
@@ -333,13 +296,12 @@ Theme classes are centralized in `widgetStyling.ts`:
 - **Professional**: Blue/indigo gradients for business projects
 - **Creative**: Purple/pink gradients for artistic projects
 
-### Constellation Layout
+### Grid Layout
 
-- **Force-directed positioning** for natural widget relationships
+- **Responsive grid** for organized widget display
 - **Virtual rendering** for performance with many widgets
-- **Zoom-responsive detail** showing more content at higher zoom levels
-- **Pan and zoom** with smooth gesture support
-- **Connection visualization** showing widget relationships
+- **Adaptive columns** based on screen size
+- **Card-based organization** for clear widget presentation
 
 ## 🔮 Future Evolution
 
@@ -356,7 +318,7 @@ Theme classes are centralized in `widgetStyling.ts`:
 - **Project lineage tracking** showing evolution over time
 - **Cross-project insights** identifying patterns across work
 - **Automated milestone detection** from conversation patterns
-- **Team constellation views** for collaborative project management
+- **Team collaboration views** for collaborative project management
 
 ## 🧪 Development
 
@@ -384,7 +346,7 @@ npm test -- --testPathPattern=layout
 
 - **Modular Design**: Each component can be used independently
 - **Type Safety**: Full TypeScript coverage with strict typing
-- **Performance**: Virtual rendering for large project constellations
+- **Performance**: Virtual rendering for large project lists
 - **Accessibility**: Full keyboard navigation and screen reader support
 
 ## 🔗 System Dependencies
@@ -422,12 +384,11 @@ The living projects system is designed to be extensible:
 
 ### Common Issues
 
-- **Layout not updating**: Check `useConstellationLayout` dependencies
 - **Widgets not loading**: Verify fingerprint data structure
 - **Performance issues**: Enable React DevTools Profiler
+- **Grid layout issues**: Check responsive breakpoints
 
 ### Debug Tools
 
-- **Constellation Debug View**: Shows layout calculations
 - **Widget Recommendation Log**: Traces recommendation decisions
 - **Performance Monitor**: Tracks render times and memory usage

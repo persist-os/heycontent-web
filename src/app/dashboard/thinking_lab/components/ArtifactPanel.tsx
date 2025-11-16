@@ -70,6 +70,16 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     } : "skip"
   )
 
+  // Reverse artifacts array so newest appear at the bottom
+  // Query returns newest first (desc order), so we reverse to show oldest first (newest at bottom)
+  // MUST be called before any conditional returns to follow Rules of Hooks
+  const reversedArtifacts = React.useMemo(() => {
+    if (!artifacts || artifacts.length === 0) {
+      return []
+    }
+    return [...artifacts].reverse()
+  }, [artifacts])
+
   // Loading state: waiting for conversation or artifacts
   if (conversationId && userId && conversation === undefined) {
     return (
@@ -143,21 +153,16 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
               variant="outline"
               size="sm"
               onClick={() => {
-                // Open gallery with first artifact, or just open gallery if no artifacts
-                const firstArtifactId = artifacts[0]?._id
-                if (firstArtifactId) {
-                  router.push(`/dashboard/living-projects/${effectiveProjectId}/gallery?id=${firstArtifactId}`)
-                } else {
-                  router.push(`/dashboard/living-projects/${effectiveProjectId}/gallery`)
-                }
+                // Open assignment page
+                router.push(`/dashboard/living-projects/${effectiveProjectId}/assignment`)
               }}
             >
               <ExternalLink className="w-4 h-4 mr-2" />
-              <T context="button.artifact.panel.open.gallery">Open in Unified View</T>
+              <T context="button.artifact.panel.open.gallery">Open in Assignment View</T>
             </Button>
           )}
         </div>
-        {artifacts.map((artifact: Artifact) => (
+        {reversedArtifacts.map((artifact: Artifact) => (
           <EditableArtifactRenderer 
             key={artifact._id}
             artifact={artifact}

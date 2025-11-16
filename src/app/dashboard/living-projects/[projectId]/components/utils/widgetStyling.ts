@@ -2,7 +2,7 @@
  * WIDGET STYLING UTILITIES
  * 
  * Centralized styling functions for consistent widget and project appearance
- * across constellation views.
+ * across project views.
  */
 
 /**
@@ -94,7 +94,7 @@ export function getProjectStatus(project: {
 }
 
 /**
- * Card size dimensions for constellation positioning
+ * Card size dimensions for widget positioning
  */
 export interface CardDimensions {
   width: number

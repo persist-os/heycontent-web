@@ -9,6 +9,7 @@ import AccountTab from './tabs/AccountTab'
 import DataTab from './tabs/DataTab'
 import FriendsTab from './tabs/FriendsTab'
 import ConnectionsTab from './tabs/ConnectionsTab'
+import EmailPreferencesTab from './tabs/EmailPreferencesTab'
 import { handleSignOut } from './utils'
 import SubscriptionOverview from './tabs/subscription/subscription-overview'
 import { getFirebaseAuth } from '@/app/lib/firebase'
@@ -43,7 +44,7 @@ const SettingsScreen = () => {
     // 0) Session flag set before navigating to /settings
     try {
       const stored = window.sessionStorage.getItem('settingsActiveTab')
-      if (stored && ['account', 'friends', 'subscription', 'notifications', 'integrations', 'ai-preferences', 'data', 'imports', 'connections'].includes(stored)) {
+      if (stored && ['account', 'friends', 'subscription', 'notifications', 'integrations', 'ai-preferences', 'data', 'imports', 'connections', 'email'].includes(stored)) {
         setActiveTab(stored)
         window.sessionStorage.removeItem('settingsActiveTab')
         return
@@ -52,14 +53,14 @@ const SettingsScreen = () => {
 
     // 1) Prefer hash routing e.g. /settings#subscription
     const hash = (window.location.hash || '').replace('#', '')
-    if (['account', 'friends', 'subscription', 'notifications', 'integrations', 'ai-preferences', 'data', 'imports', 'connections'].includes(hash)) {
+    if (['account', 'friends', 'subscription', 'notifications', 'integrations', 'ai-preferences', 'data', 'imports', 'connections', 'email'].includes(hash)) {
       setActiveTab(hash)
       return
     }
     // 2) Fallback to tab query parameter e.g. /settings?tab=subscription
     const urlParams = new URLSearchParams(window.location.search)
     const tabParam = urlParams.get('tab')
-    if (tabParam && ['account', 'friends', 'subscription', 'notifications', 'integrations', 'ai-preferences', 'data', 'imports', 'connections'].includes(tabParam)) {
+    if (tabParam && ['account', 'friends', 'subscription', 'notifications', 'integrations', 'ai-preferences', 'data', 'imports', 'connections', 'email'].includes(tabParam)) {
       setActiveTab(tabParam)
       return
     }
@@ -156,7 +157,8 @@ const SettingsScreen = () => {
               { id: 'subscription', label: 'Subscription', description: 'Billing and plan details' },
               { id: 'connections', label: 'Connections', description: 'Platform integrations' },
               { id: 'imports', label: 'Imports', description: 'Import external data' },
-              { id: 'data', label: 'Privacy', description: 'Security and data management' }
+              { id: 'data', label: 'Privacy', description: 'Security and data management' },
+              { id: 'email', label: 'Email', description: 'Email preferences and notifications' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -287,6 +289,12 @@ const SettingsScreen = () => {
           {activeTab === 'data' && (
             <div className="space-y-8">
               <DataTab />
+            </div>
+          )}
+
+          {activeTab === 'email' && (
+            <div className="space-y-8">
+              <EmailPreferencesTab />
             </div>
           )}
         </div>

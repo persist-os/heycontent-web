@@ -163,7 +163,7 @@ export function NoteMeta({ note, onUpdate, onTitleChange, onTagsChange, onEditin
                   key={tag}
                   onClick={() => !isReadOnly && removeTag(tag)}
                   disabled={isReadOnly}
-                  className="group/tag inline-flex items-center gap-1 px-2.5 py-1 text-xs text-[hsl(var(--notepad-icon))] hover:text-foreground bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded-md border border-[hsl(var(--notepad-border))] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="group/tag inline-flex items-center gap-1 px-2.5 py-1 text-xs text-foreground hover:text-foreground bg-muted dark:bg-muted/80 hover:bg-muted/80 dark:hover:bg-muted rounded-md border border-border dark:border-border/60 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   title={isReadOnly ? readonlyText : `Remove "${tag}"`}
                 >
                   <span className="font-medium whitespace-nowrap">{tag}</span>
