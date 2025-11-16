@@ -24,12 +24,23 @@ import { useAutoScroll } from '../../hooks/useAutoScroll'
 import ChatMessagesList from './components/ChatMessagesList'
 import { AmbientInsights } from '@/app/dashboard/ambient_insights/AmbientInsights'
 import { WidgetPrompts } from '../../components/WidgetPrompts'
-import { deriveChatState } from '../../utils/deriveChatState'
 import type { Message } from '@/app/types/chat'
 import { T } from '@/components/translation/T'
 
+interface ThinkingState {
+  shouldShow: boolean
+  showLoadingIndicator: boolean
+  showExpandableList: boolean
+  a2aMessages: Message[]
+  isLoading: boolean
+}
+
 interface ChatPanelProps {
   messages: Message[]
+  conversationData?: {
+    messages: Message[]
+    thinkingState?: ThinkingState
+  }
   onInputPopulate: (text: string) => void
   onQuoteToNotepad: (text: string) => void
   widgetOutputId?: string
@@ -40,12 +51,12 @@ interface ChatPanelProps {
   sendMessage: (content: string) => void
   startNewConversation: () => void
   isLoading: boolean
-  isStreaming?: boolean  // NEW: Track streaming state to show thinking
   error?: string
 }
 
 export const ChatPanel = React.memo<ChatPanelProps>(({ 
   messages, 
+  conversationData,
   onInputPopulate, 
   onQuoteToNotepad, 
   widgetOutputId, 
@@ -56,16 +67,19 @@ export const ChatPanel = React.memo<ChatPanelProps>(({
   sendMessage,
   startNewConversation,
   isLoading,
-  isStreaming = false,
   error
 }) => {
   const authData = useOptimizedAuth()
   
-  // Single source of truth for chat state derivation
-  const chatState = deriveChatState(messages, isStreaming, isLoading)
+  // Extract thinkingState from conversationData (from Convex query)
+  const thinkingState = conversationData?.thinkingState
+  
+  // Use messages prop (which includes optimistic updates) - conversationData.messages is raw Convex data
+  // The messages prop is already merged with optimistic messages in LabCompositions
+  const displayMessages = messages
   
   // Auto-scroll when messages change
-  const scrollRef = useAutoScroll([messages])
+  const scrollRef = useAutoScroll([displayMessages])
 
   // Simple handlers (no useCallback needed - stable functions)
   const handleSuggestionClick = (suggestion: any, onSendMessage: (text: string) => void) => {
@@ -82,7 +96,7 @@ export const ChatPanel = React.memo<ChatPanelProps>(({
 
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden">
-      {messages.length > 0 ? (
+      {displayMessages.length > 0 ? (
         <>
           {/* Header with New Conversation Button and Restore Notepad Button - Minimal Figma Style */}
           <div className="flex justify-between items-center h-16 flex-shrink-0 px-4 bg-background">
@@ -129,7 +143,8 @@ export const ChatPanel = React.memo<ChatPanelProps>(({
                   {/* User-facing messages - chat responses, preflight questions, etc. */}
                   {/* Thinking component is now IN-LINE, rendered inside ChatMessagesList */}
                   <ChatMessagesList
-                    messages={chatState.userFacingMessages}
+                    messages={displayMessages}
+                    conversationData={conversationData}
                     referencedMessage={null}
                     handleMessageReference={() => {}}
                     handleReferenceClick={() => {}}
@@ -142,11 +157,10 @@ export const ChatPanel = React.memo<ChatPanelProps>(({
                     notepadOpen={true}
                     onQuoteToNotepad={onQuoteToNotepad}
                     onContentClick={() => {}}
-                    shouldShowThinking={chatState.shouldShowThinking}
-                    a2aMessages={chatState.a2aMessages}
-                    isStreaming={isStreaming}
-                    isLoading={isLoading}
-                    hasFinalArtifact={chatState.hasFinalArtifact}
+                    shouldShowThinking={thinkingState?.shouldShow}
+                    a2aMessages={thinkingState?.a2aMessages}
+                    isLoading={thinkingState?.isLoading ?? isLoading}
+                    hasFinalArtifact={false}
                   />
                   
                   {/* Scroll anchor */}

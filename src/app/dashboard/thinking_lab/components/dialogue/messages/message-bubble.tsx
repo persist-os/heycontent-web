@@ -3,7 +3,6 @@
 import type { Message } from '@/app/types/chat'
 import { Quote } from 'lucide-react'
 import { MarkdownRenderer } from './MarkdownRenderer'
-import { HorizontalProgressiveThinking } from '../components/HorizontalProgressiveThinking'
 import { CopyButton } from '@/components/ui/copy-button'
 import React from 'react'
 import { ContentRenderer } from './ContentRenderer'
@@ -144,15 +143,8 @@ export function MessageBubble({
               relative w-full min-w-0
             `}
           >
-            {/* Thinking indicator for typing messages */}
-            {message.status === 'typing' && !message.content ? (
-              // Show thinking indicator while loading (only if no content)
-              <div className="relative min-h-[60px]">
-                <div className="flex items-center">
-                  <HorizontalProgressiveThinking />
-                </div>
-              </div>
-            ) : (
+            {/* Message content - thinking indicator is now handled at ChatMessagesList level */}
+            {(
               <>
                 {/* Coordination badge for A2A messages */}
                 {isCoordination && (

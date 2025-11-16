@@ -55,19 +55,17 @@ export function deriveThinkingSteps(
  * Derive completion state from data (no state, pure computation)
  * CRITICAL: Thinking persists until final artifact is created
  * 
- * Completion = not streaming AND not loading AND (has final artifact OR no artifacts expected)
+ * Completion = not loading AND (has final artifact OR no artifacts expected)
  */
 export function deriveThinkingCompletion(
-  isStreaming: boolean,
   isLoading: boolean,
   hasFinalArtifact: boolean = false  // Track if final artifact is created
 ): boolean {
-  // Not complete if: streaming, loading, or no final artifact yet
-  // If hasFinalArtifact is false and we're not streaming/loading, assume complete (no artifacts expected)
-  if (isStreaming || isLoading) return false
+  // Not complete if loading
+  if (isLoading) return false
   // If we're tracking artifacts, wait for final artifact
-  // Otherwise, complete when not streaming/loading
-  return true  // Simplified: complete when not streaming/loading (artifact tracking can be added later)
+  // Otherwise, complete when not loading
+  return true  // Simplified: complete when not loading (artifact tracking can be added later)
 }
 
 /**

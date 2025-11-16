@@ -130,6 +130,12 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     )
   }
 
+  // Reverse artifacts array so newest appear at the bottom
+  // Query returns newest first (desc order), so we reverse to show oldest first (newest at bottom)
+  const reversedArtifacts = React.useMemo(() => {
+    return [...artifacts].reverse()
+  }, [artifacts])
+
   // Display artifacts using existing ArtifactRenderer
   return (
     <div className={`h-full overflow-y-auto p-4 bg-background ${className}`}>
@@ -152,7 +158,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
             </Button>
           )}
         </div>
-        {artifacts.map((artifact: Artifact) => (
+        {reversedArtifacts.map((artifact: Artifact) => (
           <EditableArtifactRenderer 
             key={artifact._id}
             artifact={artifact}

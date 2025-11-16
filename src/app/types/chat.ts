@@ -30,8 +30,8 @@ export interface FileAttachment {
 
 export interface Message {
   id: string;
-  content: string;
-  role: 'user' | 'assistant' | 'system';
+  content: string | null;
+  role: 'user' | 'assistant' | 'system' | 'thinking';
   timestamp: string;
   referencedMessage?: {
     id: string;
@@ -44,7 +44,7 @@ export interface Message {
   searchStatus?: string;
   statusHistory?: string[]; // Array of all status updates for progressive thinking
   fileAttachments?: FileAttachment[]; // File attachments for this message
-  contentType?: 'text' | 'family_question' | 'family_update' | 'preflight_questions' | 'widget_coordination' | 'artifact_created' | 'a2a_announcement' | 'widget_agent_announcement' | 'widget_introduction' | 'widget_status'; // Message content type
+  contentType?: 'text' | 'family_question' | 'family_update' | 'preflight_questions' | 'widget_coordination' | 'artifact_created' | 'a2a_announcement' | 'widget_agent_announcement' | 'widget_introduction' | 'widget_status' | 'thinking'; // Message content type
   decisionId?: string;  // Model selection decision ID (for feedback loop)
   contextDecisionId?: string;  // Context enrichment decision ID (for feedback loop)
   metadata?: {

@@ -1,25 +1,19 @@
 'use client'
 
-import React, { memo, useCallback, useState, useMemo } from 'react'
+import React, { memo, useCallback, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Compass,
-  Bell,
   Folder,
   Plus,
-  CheckCircle,
-  FileText,
-  MessageSquare,
-  Sparkles,
 } from 'lucide-react'
 import { useSidebar } from '@/app/context/sidebar-context'
 import { useAuth } from '@/app/context/auth-context'
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Badge } from '@/components/ui/badge'
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
+import { NotificationsPopover } from '@/components/notifications/NotificationsPopover'
 
 export const GlobalNav = memo(function GlobalNav() {
   const pathname = usePathname()
@@ -80,110 +74,6 @@ export const GlobalNav = memo(function GlobalNav() {
     router.push('/settings')
   }, [router])
 
-  // Get notification route from A2A note
-  const getNotificationRoute = useCallback((note: any) => {
-    const report = note.report || {}
-    const metadata = report.metadata || {}
-    
-    // Artifact completed → gallery
-    const artifactId = metadata.artifact_id || metadata.artifactId || report.artifact_id
-    if (artifactId && note.projectId) {
-      return `/dashboard/living-projects/${note.projectId}/gallery?id=${artifactId}`
-    }
-    
-    // Widget completed → gallery
-    const widgetId = metadata.widget_id || metadata.widgetId || report.widget_id
-    if (widgetId && note.projectId) {
-      return `/dashboard/living-projects/${note.projectId}/gallery?id=${widgetId}`
-    }
-    
-    // Conversation update → thinking lab
-    if (note.conversationId) {
-      return `/dashboard/thinking_lab?chatId=${note.conversationId}`
-    }
-    
-    // Default: project view
-    if (note.projectId) {
-      return `/dashboard/living-projects/${note.projectId}`
-    }
-    
-    return null
-  }, [])
-  
-  // Format notification text from A2A note
-  const formatNotificationText = useCallback((note: any) => {
-    const report = note.report || {}
-    const agentId = note.agentId || report.agent_id || "orchestrator"
-    const announcement = report.announcement || report.summary
-    
-    // Try to extract meaningful text
-    if (announcement) {
-      return announcement
-    }
-    
-    // Check for artifact/widget completion
-    const metadata = report.metadata || {}
-    if (metadata.artifact_id || metadata.artifactId) {
-      return "Artifact completed"
-    }
-    if (metadata.widget_id || metadata.widgetId) {
-      return "Widget completed"
-    }
-    
-    // Default based on agent
-    if (agentId === "orchestrator") {
-      return "Orchestration update"
-    }
-    
-    return "New update"
-  }, [])
-  
-  // Get notification icon
-  const getNotificationIcon = useCallback((note: any) => {
-    const report = note.report || {}
-    const metadata = report.metadata || {}
-    
-    if (metadata.artifact_id || metadata.artifactId || report.artifact_id) {
-      return FileText
-    }
-    if (metadata.widget_id || metadata.widgetId || report.widget_id) {
-      return Sparkles
-    }
-    if (note.conversationId) {
-      return MessageSquare
-    }
-    return CheckCircle
-  }, [])
-  
-  // Format relative time
-  const formatRelativeTime = useCallback((timestamp: number) => {
-    const now = Date.now()
-    const diff = now - timestamp
-    const minutes = Math.floor(diff / 60000)
-    const hours = Math.floor(diff / 3600000)
-    const days = Math.floor(diff / 86400000)
-    
-    if (minutes < 1) return "Just now"
-    if (minutes < 60) return `${minutes}m ago`
-    if (hours < 24) return `${hours}h ago`
-    if (days < 7) return `${days}d ago`
-    return new Date(timestamp).toLocaleDateString()
-  }, [])
-  
-  // Handle notification click
-  const handleNotificationClick = useCallback((note: any) => {
-    const route = getNotificationRoute(note)
-    if (route) {
-      router.push(route)
-      setShowNotifications(false)
-    }
-  }, [router, getNotificationRoute])
-  
-  // Check if we have notifications
-  const hasNotifications = useMemo(() => {
-    return (a2aNotes?.length || 0) > 0
-  }, [a2aNotes])
-
   // Check if current path matches
   const isNotesActive = pathname.startsWith('/dashboard/notes')
   const isSettingsActive = pathname.startsWith('/settings')
@@ -214,81 +104,11 @@ export const GlobalNav = memo(function GlobalNav() {
         {/* Navigation Icons */}
         <div className="flex flex-col gap-2 md:gap-3 items-center">
           {/* Notifications */}
-          <Popover open={showNotifications} onOpenChange={setShowNotifications}>
-            <PopoverTrigger asChild>
-              <button
-                className="relative w-9 h-9 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-colors hover:bg-background/10 dark:hover:bg-background/10 hover:bg-[hsl(var(--muted))] min-w-[36px] min-h-[36px] md:min-w-[40px] md:min-h-[40px]"
-                aria-label="Notifications"
-              >
-                <Bell className="w-5 h-5 md:w-6 md:h-6 text-[#EEF1FE] dark:text-[#EEF1FE] text-[hsl(var(--foreground))]" />
-                {hasNotifications && (
-                  <div className="absolute top-[20%] right-[20%] w-2 h-2 bg-[#FF5449] rounded-full" />
-                )}
-              </button>
-            </PopoverTrigger>
-            <PopoverContent 
-              className="w-80 p-0" 
-              align="start"
-              side="right"
-            >
-              <div className="flex flex-col">
-                {/* Header */}
-                <div className="px-4 py-3 border-b">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-sm">Notifications</h3>
-                    {hasNotifications && (
-                      <Badge variant="default" className="text-xs">
-                        {a2aNotes?.length || 0}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Notifications List */}
-                <div className="max-h-96 overflow-y-auto">
-                  {!a2aNotes || a2aNotes.length === 0 ? (
-                    <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                      No notifications
-                    </div>
-                  ) : (
-                    <div className="divide-y">
-                      {a2aNotes.map((note) => {
-                        const Icon = getNotificationIcon(note)
-                        const text = formatNotificationText(note)
-                        const route = getNotificationRoute(note)
-                        
-                        return (
-                          <button
-                            key={note._id}
-                            onClick={() => handleNotificationClick(note)}
-                            disabled={!route}
-                            className={cn(
-                              "w-full px-4 py-3 text-left hover:bg-muted/50 transition-colors",
-                              !route && "opacity-50 cursor-not-allowed"
-                            )}
-                          >
-                            <div className="flex items-start gap-3">
-                              <div className="mt-0.5 flex-shrink-0">
-                                <Icon className="w-4 h-4 text-muted-foreground" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-foreground line-clamp-2">
-                                  {text}
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  {formatRelativeTime(note.createdAt)}
-                                </p>
-                              </div>
-                            </div>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
+          <NotificationsPopover
+            a2aNotes={a2aNotes}
+            open={showNotifications}
+            onOpenChange={setShowNotifications}
+          />
 
           {/* Folder/Files */}
           <button

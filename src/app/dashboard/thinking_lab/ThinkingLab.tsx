@@ -14,7 +14,7 @@ import { FullThinkingLab, type LabCompositionProps } from './compositions/LabCom
 
 interface ThinkingLabProps extends LabCompositionProps {
     // Clean, purposeful props only
-    chatId?: string
+    conversationId?: string
     noteId?: string
     askQuery?: string
     contentContext?: any
@@ -22,7 +22,7 @@ interface ThinkingLabProps extends LabCompositionProps {
 }
 
 function ThinkingLab({
-                         chatId,
+                         conversationId,
                          noteId,
                          askQuery,
                          contentContext,
@@ -31,7 +31,7 @@ function ThinkingLab({
     return (
         <FullThinkingLab
             className={className}
-            chatId={chatId}
+            conversationId={conversationId}
             noteId={noteId}
             askQuery={askQuery}
             contentContext={contentContext}

@@ -73,14 +73,8 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   // Only show ambient content when there are no messages
   const showAmbientContent = showAmbient && !currentContext;
   
-  // Check if last assistant message has questions - if so, allow input even if orchestrator is running
-  const lastAssistantMessage = messages
-    .filter(msg => msg.role === 'assistant')
-    .slice(-1)[0];
-  const hasQuestionsAsked = lastAssistantMessage?.hasQuestions === true;
-  
-  // Allow input when questions are asked, even if orchestrator is running
-  const shouldDisableInput = !isAuthenticated || isLoading || (isOrchestratorRunning && !hasQuestionsAsked);
+  // Only disable input if not authenticated - allow sending messages at any time
+  const shouldDisableInput = !isAuthenticated;
   
   return (
     <div className={`bg-background ${showAmbientContent ? 'h-full flex flex-col' : ''}`}>
@@ -114,7 +108,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
           <ChatInput
             inputRef={inputRef}
             onSend={handleSendMessage}
-            isLoading={isLoading || !isAuthenticated}
+            isLoading={false}
             disabled={shouldDisableInput}
             referencedMessage={referencedMessage}
             onClearReference={handleClearReference}

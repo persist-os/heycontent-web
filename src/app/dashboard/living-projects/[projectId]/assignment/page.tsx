@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { useQuery, useMutation } from 'convex/react'
+import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { Button } from '@/components/ui/button'
@@ -12,8 +12,6 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { 
   MessageSquare, 
-  Pause, 
-  ArrowRight, 
   ExternalLink,
   ArrowUpRight,
   ChevronUp,
@@ -32,7 +30,6 @@ function AssignmentPageContent() {
   const router = useRouter()
   const projectId = params.projectId as string
   const [userId, setUserId] = useState<string | null>(null)
-  const [isPausing, setIsPausing] = useState(false)
 
   // Get user ID
   useEffect(() => {
@@ -81,10 +78,7 @@ function AssignmentPageContent() {
     [galleryItems]
   )
 
-  // Pause mutation
-  const pauseAssignment = useMutation(api.projectsMutations.toggleArchive)
-
-  // Fetch A2A notes for status updates and time estimates (no limit - show all)
+  // Fetch A2A notes for status updates (no limit - show all)
   const a2aNotes = useQuery(
     api.a2aQueries.getLatestA2ANotesPublic,
     projectId ? {
@@ -100,48 +94,6 @@ function AssignmentPageContent() {
     return Math.round((completed / assignmentStatus.widgets.length) * 100)
   }, [assignmentStatus])
 
-  // Calculate time left from A2A notes or widget execution times
-  const timeLeft = useMemo(() => {
-    if (!a2aNotes || a2aNotes.length === 0) {
-      // Fallback: Estimate from widget statuses
-      if (!assignmentStatus?.widgets || assignmentStatus.widgets.length === 0) {
-        return 'Calculating...'
-      }
-      const pending = assignmentStatus.widgets.filter((w: any) => w.status === 'pending' || w.status === 'in_progress').length
-      if (pending === 0) {
-        return 'Almost done'
-      }
-      // Rough estimate: 5 minutes per widget
-      const estimatedMinutes = pending * 5
-      return `${estimatedMinutes} min left`
-    }
-
-    // Try to extract time estimate from A2A notes
-    for (const note of a2aNotes) {
-      const report = note.report || {}
-      if (report.timeEstimate || report.estimatedCompletion || report.estimated_time_minutes) {
-        const minutes = report.estimated_time_minutes || report.timeEstimate || 
-          (report.estimatedCompletion ? Math.max(0, Math.floor((report.estimatedCompletion - Date.now()) / 60000)) : null)
-        if (minutes !== null && minutes > 0) {
-          if (minutes < 5) return 'Almost done'
-          return `${minutes} min left`
-        }
-      }
-    }
-
-    // Fallback: Estimate from widget statuses
-    if (assignmentStatus?.widgets) {
-      const pending = assignmentStatus.widgets.filter((w: any) => w.status === 'pending' || w.status === 'in_progress').length
-      if (pending === 0) {
-        return 'Almost done'
-      }
-      const estimatedMinutes = pending * 5
-      return `${estimatedMinutes} min left`
-    }
-
-    return 'Calculating...'
-  }, [a2aNotes, assignmentStatus])
-
   // Get project conversation for "Discuss In Chat"
   const projectConversation = useQuery(
     api.chatQueries.getProjectScopedConversation,
@@ -150,22 +102,6 @@ function AssignmentPageContent() {
       userId: project.userId
     } : 'skip'
   )
-
-  // Handle pause
-  const handlePause = async () => {
-    if (!projectId || !userId) return
-    setIsPausing(true)
-    try {
-      await pauseAssignment({
-        projectId: projectId as Id<'projects'>,
-        userId: userId,
-      })
-    } catch (error) {
-      console.error('Failed to pause assignment:', error)
-    } finally {
-      setIsPausing(false)
-    }
-  }
 
   // Handle open gallery for artifact/widget
   const handleOpenGallery = (itemId: string, itemType: 'artifact' | 'widget') => {
@@ -229,10 +165,10 @@ function AssignmentPageContent() {
             {/* Discuss In Chat Button */}
             <Button
               onClick={handleDiscussInChat}
-              className="bg-[hsl(var(--assignment-primary-blue))] text-[hsl(var(--assignment-primary-blue-text))] hover:bg-[hsl(var(--assignment-primary-blue))]/90 px-6 py-3 h-auto rounded-lg"
+              className="bg-[hsl(var(--assignment-primary-blue))] text-[hsl(var(--assignment-primary-blue-text))] hover:bg-[hsl(var(--assignment-primary-blue))]/90 px-4 py-2 h-auto rounded-lg"
             >
-              <MessageSquare className="w-6 h-6 mr-2" />
-              <span className="text-base">Discuss In Chat</span>
+              <MessageSquare className="w-4 h-4 mr-2" />
+              <span className="text-sm">Discuss In Chat</span>
             </Button>
           </div>
 
@@ -252,38 +188,10 @@ function AssignmentPageContent() {
           
           <Card className="bg-[hsl(var(--assignment-surface-container))] border-none rounded-xl p-5">
             <div className="flex flex-col gap-[10px]">
-              {/* Progress Bar and Controls */}
-              <div className="flex items-center justify-between gap-8">
-                <div className="flex items-center gap-6 flex-1">
-                  {/* Progress Bar */}
-                  <div className="flex-1 max-w-[824px]">
-                    <Progress 
-                      value={progress} 
-                      className="h-3 bg-[hsl(var(--assignment-outline))]"
-                    />
-                  </div>
-                  
-                  {/* Time Left */}
-                  <span className="text-base font-semibold text-[hsl(var(--assignment-text-subtle))] whitespace-nowrap">
-                    {timeLeft}
-                  </span>
-                </div>
-
-                {/* Pause Button */}
-                <Button
-                  onClick={handlePause}
-                  disabled={isPausing}
-                  variant="ghost"
-                  className="text-[hsl(var(--assignment-error))] hover:bg-transparent hover:text-[hsl(var(--assignment-error))]/80 px-4 py-2 h-auto"
-                >
-                  <Pause className="w-6 h-6 mr-2" />
-                  <span className="text-sm font-semibold">Pause</span>
-                </Button>
-              </div>
 
               {/* Task List */}
               <Card className="bg-[hsl(var(--assignment-bg))] border-none rounded-xl p-4 mt-2">
-                <div className="flex items-end justify-between">
+                <div className="flex items-end">
                   {/* Task List */}
                   <div className="flex flex-col gap-[5px] flex-1">
                     {taskWidgets.length === 0 ? (
@@ -329,15 +237,6 @@ function AssignmentPageContent() {
                       })
                     )}
                   </div>
-
-                  {/* See Progress Button */}
-                  <Button
-                    onClick={() => router.push(`/dashboard/living-projects/${projectId}`)}
-                    className="bg-[hsl(var(--assignment-accent-orange))] text-[hsl(var(--assignment-accent-orange-text))] hover:bg-[hsl(var(--assignment-accent-orange))]/90 px-4 py-2 h-auto rounded-xl"
-                  >
-                    <span className="text-sm font-semibold mr-2">See Progress</span>
-                    <ArrowRight className="w-6 h-6" />
-                  </Button>
                 </div>
               </Card>
 
