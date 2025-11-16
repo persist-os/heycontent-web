@@ -2,13 +2,13 @@
 
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { DashboardNav } from './_components/dashboard-nav';
+import { GlobalNav } from './_components/global-nav';
 import { useAuth } from '@/app/context/auth-context';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSidebar } from '@/app/context/sidebar-context';
 import { useSubscriptionCheck } from '@/app/hooks/useSubscriptionCheck';
 import { getApiKey } from '@/app/lib/api-helpers';
 import { useApiKeyMonitor } from '@/app/hooks/useApiKeyMonitor';
-import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import UpgradeModal from '@/app/settings/tabs/subscription/upgrade-modal';
 import { useContentContextActions } from '@/store/content-context-store';
@@ -17,6 +17,7 @@ import { useUsernameRequired } from '@/hooks/useUsernameRequired';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useUpgradeFlow } from '@/app/hooks/useUpgradeFlow';
+import { OmnipresentBackButton } from '@/components/ui/omnipresent-back-button';
 
 // Pages that don't require a subscription
 const PUBLIC_PATHS = [
@@ -171,7 +172,13 @@ export default function DashboardLayout({
 
   return (
     <div className="relative flex min-h-screen">
-      {/* Backdrop overlay */}
+      {/* Global Navigation Sidebar */}
+      <GlobalNav />
+      
+      {/* Omnipresent Back Button - appears on every screen */}
+      <OmnipresentBackButton />
+      
+      {/* Backdrop overlay for command palette */}
       {isExpanded && (
         <div 
           className="fixed inset-0 bg-black/50 z-30"
@@ -180,27 +187,11 @@ export default function DashboardLayout({
         />
       )}
       
+      {/* Command Palette Modal */}
       <DashboardNav />
       
-      {/* Floating Command Palette Trigger */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="fixed top-4 left-4 z-[60] group p-3"
-        aria-label="Open command palette"
-        title="Open command palette (⌘K)"
-      >
-        <div className="relative">
-          {/* Subtle glow effect */}
-          <div className="absolute inset-0 bg-primary/20 blur-md rounded-lg opacity-40 group-hover:opacity-60 transition-all duration-200" />
-
-          {/* Button content */}
-          <div className="relative w-10 h-10 rounded-lg bg-primary/15 backdrop-blur-sm border border-border/30 flex items-center justify-center transition-all duration-200 hover:bg-primary/20 hover:border-border/50">
-            <Menu className="w-5 h-5 text-primary/60" />
-          </div>
-        </div>
-      </button>
-      
-      <main className="flex-1 overflow-y-auto overflow-x-hidden">
+      {/* Main Content Area - offset for sidebar */}
+      <main className="flex-1 overflow-y-auto overflow-x-hidden ml-16">
         {children}
       </main>
       

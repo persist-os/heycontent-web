@@ -935,18 +935,18 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
             </Button>
           </div>
           
-          {/* Open in Unified View Button */}
+          {/* Open in Assignment View Button */}
           {effectiveProjectId && currentWidget && (
             <div className="pt-4 border-t border-border/20 mt-4">
               <Button
                 variant="outline"
                 className="w-full"
                 onClick={() => {
-                  router.push(`/dashboard/living-projects/${effectiveProjectId}/gallery?id=${currentWidget._id}`)
+                  router.push(`/dashboard/living-projects/${effectiveProjectId}/assignment`)
                 }}
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
-                Open in Unified View
+                Open in Assignment View
               </Button>
             </div>
           )}

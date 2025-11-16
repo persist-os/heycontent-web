@@ -63,8 +63,8 @@ export function GallerySidebar({
             : 'border-purple-500/50'
           
           const typeBadgeGradient = isArtifact
-            ? 'bg-gradient-to-r from-blue-500/30 to-cyan-500/30 text-blue-700 dark:text-blue-300'
-            : 'bg-gradient-to-r from-purple-500/30 to-indigo-500/30 text-purple-700 dark:text-purple-300'
+            ? 'bg-primary/50 text-foreground dark:bg-primary/40 dark:text-foreground border border-primary/30 dark:border-primary/40'
+            : 'bg-accent/50 text-foreground dark:bg-accent/40 dark:text-foreground border border-accent/30 dark:border-accent/40'
           
           // Left accent bar gradient
           const accentBar = isArtifact

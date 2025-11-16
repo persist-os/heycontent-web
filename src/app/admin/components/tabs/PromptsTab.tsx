@@ -139,7 +139,7 @@ export function PromptsTab({ prompts, updatePrompt, deletePrompt }: PromptsTabPr
                         <Badge variant="outline">{prompt.type}</Badge>
                         <Badge variant="outline">{prompt.scope}</Badge>
                         {prompt.scopeId && (
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge variant="outline" className="text-xs">
                             {prompt.scopeId.slice(0, 8)}...
                           </Badge>
                         )}
@@ -171,7 +171,7 @@ export function PromptsTab({ prompts, updatePrompt, deletePrompt }: PromptsTabPr
 
                   <div className="flex flex-wrap gap-2 mb-4">
                     {prompt.tags.map((tag: string, i: number) => (
-                      <Badge key={i} variant="secondary">
+                      <Badge key={i} variant="outline">
                         {tag}
                       </Badge>
                     ))}

@@ -36,6 +36,8 @@ interface ChatInputAreaProps {
   userId?: string;
   activeThreadId?: string;
   onThreadSelect?: (threadId: string) => void;
+  // Question handling - allow input when questions are asked
+  messages?: Message[];
 }
 
 const ChatInputArea: React.FC<ChatInputAreaProps> = ({
@@ -65,10 +67,14 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   onToggleNotepadInMessages,
   userId,
   activeThreadId,
-  onThreadSelect
+  onThreadSelect,
+  messages = []
 }) => {
   // Only show ambient content when there are no messages
   const showAmbientContent = showAmbient && !currentContext;
+  
+  // Only disable input if not authenticated - allow sending messages at any time
+  const shouldDisableInput = !isAuthenticated;
   
   return (
     <div className={`bg-background ${showAmbientContent ? 'h-full flex flex-col' : ''}`}>
@@ -102,8 +108,8 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
           <ChatInput
             inputRef={inputRef}
             onSend={handleSendMessage}
-            isLoading={isLoading || !isAuthenticated}
-            disabled={!isAuthenticated || isLoading || isOrchestratorRunning}
+            isLoading={false}
+            disabled={shouldDisableInput}
             referencedMessage={referencedMessage}
             onClearReference={handleClearReference}
             hasContext={!!currentContext}

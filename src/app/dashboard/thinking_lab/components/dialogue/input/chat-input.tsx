@@ -207,10 +207,10 @@ export function ChatInput({
 
   // Auto-focus effect
   useEffect(() => {
-    if (autoFocus && textareaRef.current && !isLoading) {
+    if (autoFocus && textareaRef.current) {
       textareaRef.current.focus()
     }
-  }, [autoFocus, isLoading, referencedMessage, textareaRef])
+  }, [autoFocus, referencedMessage, textareaRef])
 
   // Format relative time helper
   const formatRelativeTime = (timestamp?: number): string => {
@@ -265,7 +265,7 @@ export function ChatInput({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     
-    if ((currentInput.trim() || fileAttachments.length > 0) && !isLoading && currentInput.length <= maxLength) {
+    if ((currentInput.trim() || fileAttachments.length > 0) && currentInput.length <= maxLength) {
       const message = currentInput.trim()
       track('chat_message_sent', { message_length: message.length })
       onSend(message, fileAttachments.length > 0 ? fileAttachments : undefined)
@@ -293,7 +293,7 @@ export function ChatInput({
       } else {
         // Send message with Enter
         e.preventDefault()
-        if ((!currentInput.trim() && fileAttachments.length === 0) || isLoading || characterCount >= maxLength) return
+        if ((!currentInput.trim() && fileAttachments.length === 0) || characterCount >= maxLength) return
         
         const message = currentInput.trim()
         track('chat_message_sent', { message_length: message.length })
@@ -563,7 +563,7 @@ export function ChatInput({
                 [&::-webkit-scrollbar-corner]:bg-transparent
                 [scrollbar-width:thin]
                 [scrollbar-color:hsl(var(--border))_transparent]"
-                disabled={isLoading || disabled}
+                disabled={disabled}
                 onKeyDown={handleKeyDown}
                 maxLength={maxLength}
                 data-chat-input
@@ -586,7 +586,6 @@ export function ChatInput({
                   aria-label={selectFilesLabel}
                 />
                 {/* Character count */}
-                {!isLoading && (
                   <div className={`text-xs
                     ${isAtLimit ? 'text-destructive font-medium' : ''}
                     ${isNearLimit && !isAtLimit ? 'text-warning font-medium' : 'text-muted-foreground'}
@@ -594,13 +593,12 @@ export function ChatInput({
                   `}>
                     {characterCount.toLocaleString()}/{maxLength.toLocaleString()}
                   </div>
-                )}
                 
                 {/* File attachment button */}
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    disabled={isLoading || disabled || isUploading}
+                    disabled={disabled || isUploading}
                     className="w-11 h-11 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     aria-label={attachFilesLabel}
                   >
@@ -616,7 +614,7 @@ export function ChatInput({
                   <button
                     type="button"
                     onClick={() => onToggleNotepadInMessages(!includeNotepadInMessages)}
-                    disabled={isLoading || disabled}
+                    disabled={disabled}
                     className={`w-11 h-11 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed relative ${
                       includeNotepadInMessages 
                         ? 'text-foreground' 
@@ -643,7 +641,7 @@ export function ChatInput({
                     <DropdownMenuTrigger asChild>
                       <button
                         type="button"
-                        disabled={isLoading || disabled}
+                        disabled={disabled}
                         className="w-11 h-11 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Switch threads"
                       >
@@ -722,18 +720,14 @@ export function ChatInput({
                 <button
                   type="submit"
                   aria-label={sendMessageLabel}
-                  disabled={isLoading || (!currentInput.trim() && fileAttachments.length === 0) || isAtLimit || disabled}
+                  disabled={(!currentInput.trim() && fileAttachments.length === 0) || isAtLimit || disabled}
                   className={`w-11 h-11 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                    isLoading || (!currentInput.trim() && fileAttachments.length === 0) || isAtLimit || disabled
+                    (!currentInput.trim() && fileAttachments.length === 0) || isAtLimit || disabled
                       ? 'text-muted-foreground cursor-not-allowed' 
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  {isLoading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
                     <Send className="w-5 h-5" />
-                  )}
                 </button>
               </div>
             </div>

@@ -239,7 +239,7 @@ export function UnifiedGalleryView({
   // Empty state
   if (items.length === 0) {
     return (
-      <div className="fixed inset-0 bg-background">
+      <div className="fixed inset-0 left-16 bg-background">
         <div className="flex items-center justify-center h-full px-4">
           <div className="text-center space-y-4 max-w-md w-full">
             <h2 className={cn(
@@ -285,8 +285,8 @@ export function UnifiedGalleryView({
     : 'border-purple-500/20'
   
   const typeBadgeGradient = isArtifact
-    ? 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-600 dark:text-blue-400'
-    : 'bg-gradient-to-r from-purple-500/20 to-indigo-500/20 text-purple-600 dark:text-purple-400'
+    ? 'bg-primary/50 text-foreground dark:bg-primary/40 dark:text-foreground border border-primary/30 dark:border-primary/40'
+    : 'bg-accent/50 text-foreground dark:bg-accent/40 dark:text-foreground border border-accent/30 dark:border-accent/40'
   
   // Render current item based on its type
   const renderCurrentItem = () => {
@@ -345,7 +345,7 @@ export function UnifiedGalleryView({
   
   return (
     <TooltipProvider>
-      <div className="fixed inset-0 bg-background flex flex-col">
+      <div className="fixed inset-0 left-16 bg-background flex flex-col">
         {/* Collaborators Modal */}
         {projectId && project && (
           <ProjectCollaboratorsModal
@@ -370,16 +370,19 @@ export function UnifiedGalleryView({
               "flex items-center justify-between",
               isMobile ? "flex-col gap-3" : "flex-row"
             )}>
-              {/* Left: Title & Type Badge */}
+              {/* Left: Empty space for back button (omnipresent back button handles navigation) */}
+              <div className="w-20" /> {/* Spacer for back button */}
+              
+              {/* Center: Title & Type Badge */}
               <div className={cn(
                 "flex items-center gap-2 sm:gap-4",
-                isMobile ? "w-full justify-between" : ""
+                isMobile ? "w-full justify-center" : "flex-1 justify-center"
               )}>
                 <h1 className={cn(
                   "font-semibold text-foreground",
                   isMobile ? "text-lg" : "text-xl"
                 )}>
-                  <T context="gallery.title">Project Gallery</T>
+                  <T context="gallery.title">Assignment Gallery</T>
                 </h1>
                 <Badge 
                   variant="outline" 
@@ -401,7 +404,7 @@ export function UnifiedGalleryView({
               {/* Right: Collaboration & Actions */}
               <div className={cn(
                 "flex items-center gap-2 sm:gap-3",
-                isMobile ? "w-full justify-between flex-wrap" : ""
+                isMobile ? "w-full justify-end flex-wrap" : ""
               )}>
                 {/* Collaboration Features - Show when in project context */}
                 {projectId && currentUserId && (
@@ -447,21 +450,6 @@ export function UnifiedGalleryView({
                   ) : (
                     <T context="button.gallery.show.list">Show List</T>
                   )}
-                </Button>
-                
-                {/* Back to Thinking Lab */}
-                <Button
-                  onClick={onClose}
-                  variant="outline"
-                  className={cn(
-                    "backdrop-blur-sm border-0",
-                    isMobile ? "min-h-[44px] px-4" : "",
-                    isArtifact 
-                      ? "bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400" 
-                      : "bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400"
-                  )}
-                >
-                  <T context="button.gallery.back.to.thinking_lab">Back to Thinking Lab</T>
                 </Button>
               </div>
             </div>

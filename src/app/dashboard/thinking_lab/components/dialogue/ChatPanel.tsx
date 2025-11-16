@@ -3,6 +3,18 @@
  * 
  * Handles chat rendering with loading states, error states, and empty states.
  * Reuses existing components and hooks for consistency.
+ * 
+ * **Figma Design Alignment (2025-01-25):**
+ * - Updated to match Figma design system specifications (node-id: 1592-1147)
+ * - Spacing: Uses Figma spacing tokens (12px padding, 8px gaps, 16px header height)
+ * - Colors: Uses semantic CSS variables matching Figma dark theme (N10 background, N100 text)
+ * - Layout: Max-width 744px for message area (matches Figma specification)
+ * - Border radius: 8px for buttons (corner-radius/8), 12px for containers (corner-radius/12)
+ * 
+ * **Component Tree:**
+ * - Renders ChatMessagesList → MessageBubble for message display
+ * - Renders ChatInputArea → ChatInput for input field
+ * - Note: Child components (MessageBubble, ChatInput) may need separate styling updates
  */
 
 import React from 'react'
@@ -12,12 +24,23 @@ import { useAutoScroll } from '../../hooks/useAutoScroll'
 import ChatMessagesList from './components/ChatMessagesList'
 import { AmbientInsights } from '@/app/dashboard/ambient_insights/AmbientInsights'
 import { WidgetPrompts } from '../../components/WidgetPrompts'
-import { deriveChatState } from '../../utils/deriveChatState'
 import type { Message } from '@/app/types/chat'
 import { T } from '@/components/translation/T'
 
+interface ThinkingState {
+  shouldShow: boolean
+  showLoadingIndicator: boolean
+  showExpandableList: boolean
+  a2aMessages: Message[]
+  isLoading: boolean
+}
+
 interface ChatPanelProps {
   messages: Message[]
+  conversationData?: {
+    messages: Message[]
+    thinkingState?: ThinkingState
+  }
   onInputPopulate: (text: string) => void
   onQuoteToNotepad: (text: string) => void
   widgetOutputId?: string
@@ -28,12 +51,12 @@ interface ChatPanelProps {
   sendMessage: (content: string) => void
   startNewConversation: () => void
   isLoading: boolean
-  isStreaming?: boolean  // NEW: Track streaming state to show thinking
   error?: string
 }
 
 export const ChatPanel = React.memo<ChatPanelProps>(({ 
   messages, 
+  conversationData,
   onInputPopulate, 
   onQuoteToNotepad, 
   widgetOutputId, 
@@ -44,16 +67,19 @@ export const ChatPanel = React.memo<ChatPanelProps>(({
   sendMessage,
   startNewConversation,
   isLoading,
-  isStreaming = false,
   error
 }) => {
   const authData = useOptimizedAuth()
   
-  // Single source of truth for chat state derivation
-  const chatState = deriveChatState(messages, isStreaming, isLoading)
+  // Extract thinkingState from conversationData (from Convex query)
+  const thinkingState = conversationData?.thinkingState
+  
+  // Use messages prop (which includes optimistic updates) - conversationData.messages is raw Convex data
+  // The messages prop is already merged with optimistic messages in LabCompositions
+  const displayMessages = messages
   
   // Auto-scroll when messages change
-  const scrollRef = useAutoScroll([messages])
+  const scrollRef = useAutoScroll([displayMessages])
 
   // Simple handlers (no useCallback needed - stable functions)
   const handleSuggestionClick = (suggestion: any, onSendMessage: (text: string) => void) => {
@@ -70,16 +96,16 @@ export const ChatPanel = React.memo<ChatPanelProps>(({
 
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden">
-      {messages.length > 0 ? (
+      {displayMessages.length > 0 ? (
         <>
-          {/* Header with New Conversation Button and Restore Notepad Button */}
-          <div className="flex justify-between items-center h-24 border-b border-border/30 flex-shrink-0 px-6 bg-background">
+          {/* Header with New Conversation Button and Restore Notepad Button - Minimal Figma Style */}
+          <div className="flex justify-between items-center h-16 flex-shrink-0 px-4 bg-background">
             <div></div>
             
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <button
                 onClick={startNewConversation}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-200"
+                className="text-sm font-normal text-muted-foreground hover:text-foreground transition-colors duration-200 px-2 py-1 rounded-[8px] hover:bg-muted/20"
               >
                 New conversation
               </button>
@@ -88,7 +114,7 @@ export const ChatPanel = React.memo<ChatPanelProps>(({
               {onCloseChat && (
                 <button
                   onClick={onCloseChat}
-                  className="flex items-center justify-center w-8 h-8 text-muted-foreground hover:text-foreground hover:bg-muted/40 rounded-lg transition-all duration-200"
+                  className="flex items-center justify-center w-8 h-8 text-muted-foreground hover:text-foreground hover:bg-muted/20 rounded-[8px] transition-all duration-200"
                   title="Close chat"
                 >
                   <X className="w-4 h-4" />
@@ -99,7 +125,7 @@ export const ChatPanel = React.memo<ChatPanelProps>(({
               {isFullScreen && onRestoreNotepad && (
                 <button
                   onClick={onRestoreNotepad}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/40 rounded-lg transition-all duration-200"
+                  className="flex items-center gap-2 px-2 py-1 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/20 rounded-[8px] transition-all duration-200"
                   title="Restore notepad"
                 >
                   <PanelRight className="w-4 h-4" />
@@ -109,15 +135,16 @@ export const ChatPanel = React.memo<ChatPanelProps>(({
             </div>
           </div>
 
-          {/* Messages Area - takes remaining space */}
+          {/* Messages Area - takes remaining space - Figma spacing */}
           <div className="flex-1 overflow-hidden">
             <div className="h-full overflow-y-auto scrollbar-hide">
-              <div className="p-4 sm:p-6 pl-12 sm:pl-12">
-                <div className="max-w-4xl mx-auto space-y-6">
+              <div className="px-3 py-3">
+                <div className="max-w-[744px] mx-auto space-y-4">
                   {/* User-facing messages - chat responses, preflight questions, etc. */}
                   {/* Thinking component is now IN-LINE, rendered inside ChatMessagesList */}
                   <ChatMessagesList
-                    messages={chatState.userFacingMessages}
+                    messages={displayMessages}
+                    conversationData={conversationData}
                     referencedMessage={null}
                     handleMessageReference={() => {}}
                     handleReferenceClick={() => {}}
@@ -130,11 +157,10 @@ export const ChatPanel = React.memo<ChatPanelProps>(({
                     notepadOpen={true}
                     onQuoteToNotepad={onQuoteToNotepad}
                     onContentClick={() => {}}
-                    shouldShowThinking={chatState.shouldShowThinking}
-                    a2aMessages={chatState.a2aMessages}
-                    isStreaming={isStreaming}
-                    isLoading={isLoading}
-                    hasFinalArtifact={chatState.hasFinalArtifact}
+                    shouldShowThinking={thinkingState?.shouldShow}
+                    a2aMessages={thinkingState?.a2aMessages}
+                    isLoading={thinkingState?.isLoading ?? isLoading}
+                    hasFinalArtifact={false}
                   />
                   
                   {/* Scroll anchor */}
@@ -174,18 +200,18 @@ export const ChatPanel = React.memo<ChatPanelProps>(({
           </div>
         </div>
       ) : (
-        /* Empty state - show widget prompts or ambient insights */
+        /* Empty state - show widget prompts or ambient insights - Figma style */
         <div className="h-full flex flex-col bg-background">
-          {/* Header with Close Chat Button */}
-          <div className="flex justify-between items-center h-24 border-b border-border/30 flex-shrink-0 px-6 bg-background">
+          {/* Header with Close Chat Button - Minimal Figma Style */}
+          <div className="flex justify-between items-center h-16 flex-shrink-0 px-4 bg-background">
             <div></div>
             
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               {/* Close Chat Button - subtle X icon */}
               {onCloseChat && (
                 <button
                   onClick={onCloseChat}
-                  className="flex items-center justify-center w-8 h-8 text-muted-foreground hover:text-foreground hover:bg-muted/40 rounded-lg transition-all duration-200"
+                  className="flex items-center justify-center w-8 h-8 text-muted-foreground hover:text-foreground hover:bg-muted/20 rounded-[8px] transition-all duration-200"
                   title="Close chat"
                 >
                   <X className="w-4 h-4" />
@@ -196,7 +222,7 @@ export const ChatPanel = React.memo<ChatPanelProps>(({
               {isFullScreen && onRestoreNotepad && (
                 <button
                   onClick={onRestoreNotepad}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/40 rounded-lg transition-all duration-200"
+                  className="flex items-center gap-2 px-2 py-1 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/20 rounded-[8px] transition-all duration-200"
                   title="Restore notepad"
                 >
                   <PanelRight className="w-4 h-4" />
@@ -206,7 +232,7 @@ export const ChatPanel = React.memo<ChatPanelProps>(({
             </div>
           </div>
 
-          <div className="flex-1 px-6 py-4">
+          <div className="flex-1 px-3 py-3">
             {widgetOutputId && authData.user?.uid ? (
               <WidgetPrompts
                 key={widgetOutputId}

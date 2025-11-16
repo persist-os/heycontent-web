@@ -18,7 +18,6 @@ import { ContextIndicator } from '../components/ContextIndicator'
 import { ChatPanel } from '../components/dialogue/ChatPanel'
 import { FloatingActionButtons } from '../components/dialogue/FloatingActionButtons'
 import ChatInputArea from '../components/dialogue/input/ChatInputArea'
-import { useMessageList } from '../hooks/useMessageList'
 import { useConversationState } from '../hooks/useConversationState'
 import { useOptimizedAuth } from '../components/notepad/hooks/useOptimizedAuth'
 import { NotepadProvider, useNotepadContext } from '../contexts/NotepadContext'
@@ -31,6 +30,7 @@ import { PanelMobileView } from '../components/mobile/PanelMobileView'
 import { ProjectCollaboratorsModal } from '@/components/projects/ProjectCollaboratorsModal'
 import { usePanelModeSelection } from '@/hooks/usePanelModeSelection'
 import type { Id } from '@/convex/_generated/dataModel'
+import { Skeleton } from '@/components/ui/skeleton'
 
 // =============================================================================
 // PANEL COMPONENTS
@@ -76,7 +76,7 @@ NotepadPanel.displayName = 'NotepadPanel'
 
 export interface LabCompositionProps {
   className?: string
-  chatId?: string
+  conversationId?: string
   noteId?: string
   askQuery?: string
   contentContext?: any
@@ -88,7 +88,7 @@ export interface LabCompositionProps {
 // Internal component that uses the notepad context
 function FullThinkingLabInternal({
   className,
-  chatId,
+  conversationId: initialConversationId,
   noteId,
   askQuery,
   contentContext,
@@ -101,9 +101,6 @@ function FullThinkingLabInternal({
   const userId = user?.uid
   const router = useRouter()
   const searchParams = useSearchParams()
-  
-  // Panel mode selection (URL state hook)
-  const { panelMode, setPanelMode } = usePanelModeSelection('notepad')
   
   // Mobile detection
   const isMobile = useIsMobile()
@@ -136,36 +133,58 @@ function FullThinkingLabInternal({
     } : 'skip'
   )
   
+  // Check if project has widgets to determine default panel mode
+  const hasWidgets = useQuery(
+    api.projectWidgetsQueries.hasWidgets,
+    projectId && userId ? {
+      projectId: projectId as Id<'projects'>,
+      userId,
+    } : 'skip'
+  )
+  
+  // Panel mode selection (URL state hook)
+  // Default to widgets if project has widgets, otherwise notepad
+  // Only use widgets default if we have a definitive answer (hasWidgets === true)
+  // If query is still loading (undefined) or false, default to notepad
+  const { panelMode, setPanelMode } = usePanelModeSelection(
+    hasWidgets === true ? 'widgets' : 'notepad'
+  )
+  
   // Determine current view for presence
   const currentView = panelMode === 'notepad' ? 'notepad' 
     : panelMode === 'artifacts' ? 'artifacts'
     : panelMode === 'widgets' ? 'widgets'
     : 'chat'
   
-  // Use the conversation state hook with notepad context getter
+  // Use the conversation state hook with notepad context getter (for functions only)
   const {
     conversationId,
-    isStreaming,
-    streamingContent,
     optimisticMessages,
-    currentStreamingId,
     currentStatus,
     error,
-    messages,
     suggestions,
     quotedContent,
     inputValue,
     isOrchestratorRunning,
     sendMessage,
     startNewConversation,
-    clearStreamingContent,
     setError,
     setStatus,
     handleInputPopulate,
     handleQuoteToNotepad,
     clearQuotedContent,
     setInputValue
-  } = useConversationState(userId, projectId, widgetId, widgetOutputId, notepadContext.getNotepadContent, chatId)
+  } = useConversationState(userId, projectId, widgetId, widgetOutputId, notepadContext.getNotepadContent, initialConversationId)
+
+  // Use new Convex query for state (replaces messages from useConversationState)
+  const conversationData = useQuery(
+    api.chatQueries.getConversationWithState,
+    conversationId && userId ? { userId, conversationId: conversationId as Id<"conversations"> } : "skip"
+  )
+
+  // Extract messages and thinkingState from query result
+  const messages = conversationData?.messages || []
+  const thinkingState = conversationData?.thinkingState
 
   // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
   // Input ref
@@ -174,23 +193,59 @@ function FullThinkingLabInternal({
   // Thread navigation handlers
   const handleThreadSelect = React.useCallback((threadId: string) => {
     const params = new URLSearchParams()
-    params.set('chatId', threadId)
+    params.set('conversationId', threadId)
     if (projectId) params.set('projectId', projectId)
     router.push(`/dashboard/thinking_lab?${params.toString()}`)
   }, [router, projectId])
   
-  const handleNewThread = React.useCallback(() => {
-    router.push('/dashboard/thinking_lab')
-  }, [router])
+  // Wrapper that clears both state and URL - used by ChatPanel "New conversation" button
+  const handleStartNewConversation = React.useCallback(() => {
+    // Clear conversation state first
+    startNewConversation()
+    // Then clear URL parameter (preserve projectId, widgetId, widgetOutputId if present)
+    const params = new URLSearchParams()
+    if (projectId) params.set('projectId', projectId)
+    if (widgetId) params.set('widgetId', widgetId)
+    if (widgetOutputId) params.set('widgetOutputId', widgetOutputId)
+    // Remove conversationId from URL - this ensures old conversation doesn't reload
+    const newUrl = params.toString() ? `/dashboard/thinking_lab?${params.toString()}` : '/dashboard/thinking_lab'
+    router.push(newUrl)
+  }, [router, startNewConversation, projectId, widgetId, widgetOutputId])
 
-  // Use existing useMessageList hook with clean props
-  const messageList = useMessageList({
-    convexMessages: messages,
-    optimisticMessages,
-    streamingContent,
-    currentStreamingId,
-    isStreaming
-  })
+  const handleNewThread = React.useCallback(() => {
+    // Clear conversation state first
+    startNewConversation()
+    // Then clear URL parameter
+    router.push('/dashboard/thinking_lab')
+  }, [router, startNewConversation])
+
+  // Merge optimistic messages with Convex messages
+  // Note: Optimistic updates are handled client-side for immediate feedback
+  // Future: Consider moving to Convex for true single source of truth
+  const messageList = React.useMemo(() => {
+    const list = [...messages]
+    
+    // Add optimistic user messages
+    optimisticMessages.forEach(optMsg => {
+      if (optMsg.role === 'user' && !list.some(msg => msg.content === optMsg.content && msg.role === 'user')) {
+        list.push({
+          id: optMsg.id,
+          content: optMsg.content,
+          role: optMsg.role,
+          timestamp: optMsg.timestamp.toString(),
+          chat_response: optMsg.content,
+          status: 'sent',
+        } as any)
+      }
+    })
+    
+    // Sort by timestamp
+    return list.sort((a, b) => {
+      const timeA = typeof a.timestamp === 'string' ? parseInt(a.timestamp) : a.timestamp
+      const timeB = typeof b.timestamp === 'string' ? parseInt(b.timestamp) : b.timestamp
+      return timeA - timeB
+    })
+  }, [messages, optimisticMessages])
 
   // Resizable panes - ensure notepad is visible by default (60% chat, 40% notepad)
   const resizable = useResizablePanes(0.6)
@@ -212,7 +267,7 @@ function FullThinkingLabInternal({
       handleActionClick={sendMessage}
       handleSendMessage={sendMessage}
       inputRef={inputRef}
-      isLoading={isStreaming}
+      isLoading={false}
       isOrchestratorRunning={isOrchestratorRunning}
       referencedMessage={null}
       handleClearReference={() => {}}
@@ -227,21 +282,68 @@ function FullThinkingLabInternal({
       includeNotepadInMessages={notepadContext.includeInMessages}
       onToggleNotepadInMessages={notepadContext.setIncludeInMessages}
       userId={userId}
-      activeThreadId={chatId}
+      activeThreadId={conversationId}
       onThreadSelect={handleThreadSelect}
       isMobile={isMobile}
       activeTab="chat"
+      messages={messageList}
     />
-  ), [sendMessage, isStreaming, isOrchestratorRunning, inputValue, handleInputPopulate, quotedContent, clearQuotedContent, notepadContext.includeInMessages, notepadContext.setIncludeInMessages, userId, chatId, handleThreadSelect, isMobile])
+  ), [sendMessage, isOrchestratorRunning, inputValue, handleInputPopulate, quotedContent, clearQuotedContent, notepadContext.includeInMessages, notepadContext.setIncludeInMessages, userId, conversationId, handleThreadSelect, isMobile, messageList])
 
   // Show loading state while auth is initializing
   if (authLoading) {
     return (
-      <div className={`h-screen flex flex-col bg-background overflow-hidden ${className || ''}`}>
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading Thinking Lab...</p>
+      <div className={`h-screen flex flex-col bg-background overflow-hidden relative ${className || ''}`}>
+        {/* Glowing background orbs */}
+        <div className="absolute top-1/4 right-1/3 w-[500px] h-[500px] bg-gradient-to-br from-primary/[0.15] to-accent/[0.10] dark:from-primary/[0.08] dark:to-accent/[0.05] rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-1/3 left-1/4 w-[450px] h-[450px] bg-gradient-to-br from-accent/[0.12] to-primary/[0.08] dark:from-accent/[0.06] dark:to-primary/[0.04] rounded-full blur-3xl animate-pulse" style={{animationDelay: '1.5s'}} />
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-gradient-to-br from-primary/[0.10] to-accent/[0.08] dark:from-primary/[0.05] dark:to-accent/[0.04] rounded-full blur-3xl animate-pulse" style={{animationDelay: '3s'}} />
+        
+        <div className="flex flex-1 overflow-hidden relative z-10">
+          {/* Chat Panel Skeleton */}
+          <div className="flex-1 flex flex-col border-r border-border/40">
+            {/* Header skeleton */}
+            <div className="h-16 flex items-center justify-end px-4 border-b border-border/40">
+              <Skeleton className="h-8 w-8 rounded-md" />
+            </div>
+            
+            {/* Messages area skeleton */}
+            <div className="flex-1 overflow-hidden p-4">
+              <div className="max-w-[744px] mx-auto space-y-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="space-y-2">
+                    <Skeleton className="h-4 w-3/4 rounded" />
+                    <Skeleton className="h-4 w-full rounded" />
+                    <Skeleton className="h-4 w-5/6 rounded" />
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Input area skeleton */}
+            <div className="border-t border-border/40 p-4">
+              <Skeleton className="h-12 w-full rounded-md" />
+            </div>
+          </div>
+          
+          {/* Notepad Panel Skeleton */}
+          <div className="w-[40%] flex flex-col border-l border-border/40">
+            {/* Header skeleton */}
+            <div className="h-16 flex items-center gap-2 px-4 border-b border-border/40">
+              <Skeleton className="h-8 w-20 rounded-md" />
+              <Skeleton className="h-8 w-20 rounded-md" />
+              <Skeleton className="h-8 w-20 rounded-md" />
+            </div>
+            
+            {/* Content skeleton */}
+            <div className="flex-1 p-6 space-y-4">
+              <Skeleton className="h-6 w-1/2 rounded" />
+              <Skeleton className="h-4 w-full rounded" />
+              <Skeleton className="h-4 w-full rounded" />
+              <Skeleton className="h-4 w-3/4 rounded" />
+              <Skeleton className="h-4 w-full rounded" />
+              <Skeleton className="h-4 w-5/6 rounded" />
+            </div>
           </div>
         </div>
       </div>
@@ -265,9 +367,8 @@ function FullThinkingLabInternal({
               widgetOutputId={widgetOutputId}
               suggestions={suggestions}
               sendMessage={sendMessage}
-              startNewConversation={startNewConversation}
-              isLoading={isStreaming}
-              isStreaming={isStreaming}
+              startNewConversation={handleStartNewConversation}
+              isLoading={false}
               error={error}
               inputComponent={inputComponent}
             />
@@ -332,6 +433,7 @@ function FullThinkingLabInternal({
             <div className="flex-1 overflow-hidden">
               <ChatPanel 
                 messages={messageList}
+                conversationData={conversationData}
                 onInputPopulate={handleInputPopulate}
                 onQuoteToNotepad={handleQuoteToNotepad}
                 widgetOutputId={widgetOutputId}
@@ -340,9 +442,8 @@ function FullThinkingLabInternal({
                 onCloseChat={closeChat}
                 suggestions={suggestions}
                 sendMessage={sendMessage}
-                startNewConversation={startNewConversation}
-                isLoading={isStreaming}
-                isStreaming={isStreaming}
+                startNewConversation={handleStartNewConversation}
+                isLoading={false}
                 error={error}
               />
             </div>
@@ -363,7 +464,7 @@ function FullThinkingLabInternal({
                   className={`px-3 py-1 rounded text-sm transition-colors ${
                     panelMode === 'notepad'
                       ? 'bg-primary text-primary-foreground font-semibold'
-                      : 'hover:bg-accent text-muted-foreground'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   }`}
                 >
                   Notepad
@@ -373,7 +474,7 @@ function FullThinkingLabInternal({
                   className={`px-3 py-1 rounded text-sm transition-colors ${
                     panelMode === 'artifacts'
                       ? 'bg-primary text-primary-foreground font-semibold'
-                      : 'hover:bg-accent text-muted-foreground'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   }`}
                 >
                   Artifacts
@@ -383,7 +484,7 @@ function FullThinkingLabInternal({
                   className={`px-3 py-1 rounded text-sm transition-colors ${
                     panelMode === 'widgets'
                       ? 'bg-primary text-primary-foreground font-semibold'
-                      : 'hover:bg-accent text-muted-foreground'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   }`}
                 >
                   Widgets

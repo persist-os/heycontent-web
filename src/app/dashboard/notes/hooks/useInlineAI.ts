@@ -77,13 +77,13 @@ export function useInlineAI({
   // Helper to format email thread context for AI
   const getEmailThreadContext = (): string => {
     if (!emailThreadData) {
-      console.log('⚠️ [DEBUG] No email thread data available for AI context');
+      console.log('[DEBUG] No email thread data available for AI context');
       return '';
     }
     
     const { messages, subject, brandName, recipientEmail } = emailThreadData;
     
-    console.log('📧 [DEBUG] Formatting email context for AI:', {
+    console.log('[DEBUG] Formatting email context for AI:', {
       hasMessages: !!messages,
       messageCount: messages?.length || 0,
       firstMessageLength: messages?.[0]?.body?.length || 0,
@@ -111,8 +111,8 @@ export function useInlineAI({
     context += `- Respond to what they actually said, don't ask generic partnership questions\n`;
     context += `- Be contextual and specific to their email content\n\n`;
     
-    console.log('📝 [DEBUG] Final AI context length:', context.length);
-    console.log('📝 [DEBUG] Context preview:', context.substring(0, 400) + '...');
+    console.log('[DEBUG] Final AI context length:', context.length);
+    console.log('[DEBUG] Context preview:', context.substring(0, 400) + '...');
     
     return context;
   };
@@ -134,7 +134,7 @@ export function useInlineAI({
       // Combine content with email context for better AI responses
       const contextualContent = emailContext ? `${contentForAPI}${emailContext}` : contentForAPI;
 
-      console.log('🤖 [useInlineAI] Calling askAI with email context:', {
+      console.log('[useInlineAI] Calling askAI with email context:', {
         noteId,
         noteTitle,
         platform,
@@ -172,7 +172,7 @@ export function useInlineAI({
         throw new Error('AI request failed');
       }
 
-      console.log('✨ [useInlineAI] askAI response received:', {
+      console.log('[useInlineAI] askAI response received:', {
         success: data.success,
         continuationLength: data.continuation?.length || 0
       });
@@ -180,7 +180,7 @@ export function useInlineAI({
       return data.continuation;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to get AI response';
-      console.error('❌ [useInlineAI] askAI error:', errorMessage);
+      console.error('[useInlineAI] askAI error:', errorMessage);
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -205,7 +205,7 @@ export function useInlineAI({
       // Combine content with email context for better AI responses
       const contextualContent = emailContext ? `${contentForAPI}${emailContext}` : contentForAPI;
 
-      console.log('🧠 [useInlineAI] Calling requestAnalysis with email context:', {
+      console.log('[useInlineAI] Calling requestAnalysis with email context:', {
         noteId,
         noteTitle,
         platform,
@@ -243,7 +243,7 @@ export function useInlineAI({
         throw new Error('Analysis request failed');
       }
 
-      console.log('✨ [useInlineAI] requestAnalysis response received:', {
+      console.log('[useInlineAI] requestAnalysis response received:', {
         success: data.success,
         type: data.type,
         analysisLength: data.analysis?.length || 0
@@ -252,7 +252,7 @@ export function useInlineAI({
       return data.analysis;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to get analysis';
-      console.error('❌ [useInlineAI] requestAnalysis error:', errorMessage);
+      console.error('[useInlineAI] requestAnalysis error:', errorMessage);
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -277,7 +277,7 @@ export function useInlineAI({
       // Combine content with email context for better AI responses
       const contextualContent = emailContext ? `${contentForAPI}${emailContext}` : contentForAPI;
 
-      console.log('💡 [useInlineAI] Calling requestIdeas with email context:', {
+      console.log('[useInlineAI] Calling requestIdeas with email context:', {
         noteId,
         noteTitle,
         platform,
@@ -310,7 +310,7 @@ export function useInlineAI({
         throw new Error('Ideas request failed');
       }
 
-      console.log('✨ [useInlineAI] requestIdeas response received:', {
+      console.log('[useInlineAI] requestIdeas response received:', {
         success: data.success,
         ideasCount: data.ideas?.length || 0
       });
@@ -318,7 +318,7 @@ export function useInlineAI({
       return data.ideas.map(idea => idea.content);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to get ideas';
-      console.error('❌ [useInlineAI] requestIdeas error:', errorMessage);
+      console.error('[useInlineAI] requestIdeas error:', errorMessage);
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -333,4 +333,4 @@ export function useInlineAI({
     isLoading,
     error,
   };
-} 
+}

@@ -25,11 +25,16 @@ export default function ThinkingLabPage() {
   const searchParams = useSearchParams()
   
   const noteId = searchParams.get('noteId')
+  // Support both chatId (legacy) and conversationId for backward compatibility
   const chatId = searchParams.get('chatId')
+  const conversationId = searchParams.get('conversationId')
   const query = searchParams.get('query')
   const widgetOutputId = searchParams.get('widgetOutputId')
   const projectId = searchParams.get('projectId')
   const widgetId = searchParams.get('widgetId')
+  
+  // Use conversationId if provided, fallback to chatId for legacy support
+  const effectiveConversationId = conversationId || chatId || undefined
   
   // Initialize context container from URL params (survives refresh per tab)
   useEffect(() => {
@@ -50,7 +55,7 @@ export default function ThinkingLabPage() {
   
   return (
     <FullThinkingLab 
-      chatId={chatId || undefined}
+      conversationId={effectiveConversationId}
       noteId={noteId || undefined}
       askQuery={query || undefined}
       widgetOutputId={widgetOutputId || undefined}

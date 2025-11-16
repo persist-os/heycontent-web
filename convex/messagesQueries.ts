@@ -140,6 +140,26 @@ export const getUserRecentMessages = query({
 });
 
 /**
+ * Get all messages with file attachments for a user
+ * Used for file statistics and file browser across all conversations
+ */
+export const getUserMessagesWithFiles = query({
+  args: {
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_user_timestamp", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    return messages.filter(msg => 
+      msg.fileAttachments && msg.fileAttachments.length > 0 && !msg.deletedAt
+    );
+  },
+});
+
+/**
  * Check if conversation has been migrated
  * Used during migration to determine which data source to use
  */

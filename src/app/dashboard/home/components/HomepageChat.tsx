@@ -1,14 +1,13 @@
 'use client'
 
-import React, { useState, useEffect, startTransition } from 'react'
+import React, { useState, useEffect, startTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { useConversationState } from '@/app/dashboard/thinking_lab/hooks/useConversationState'
-import { useMessageList } from '@/app/dashboard/thinking_lab/hooks/useMessageList'
 import { ChatInputBox } from './ChatInputBox'
 import ChatMessagesList from '@/app/dashboard/thinking_lab/components/dialogue/components/ChatMessagesList'
-import { deriveChatState } from '@/app/dashboard/thinking_lab/utils/deriveChatState'
+import type { Id } from '@/convex/_generated/dataModel'
 import { Home, RotateCcw } from 'lucide-react'
 import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDialog'
 import { T } from '@/components/translation/T'
@@ -83,15 +82,10 @@ export function HomepageChat({
     } : 'skip'
   )
 
-  // REUSE: useConversationState hook - all chat logic
-  // Pass projectId when viewing project conversation
+  // Use conversationState hook for functions and optimistic updates
   const {
     conversationId,
-    isStreaming,
-    streamingContent,
     optimisticMessages,
-    currentStreamingId,
-    messages,
     sendMessage,
     startNewConversation,
   } = useConversationState(
@@ -103,18 +97,42 @@ export function HomepageChat({
     undefined  // no chatId (HomepageChat always creates new or uses project conversation)
   )
 
-  // REUSE: useMessageList hook - combines all message sources
-  const messageList = useMessageList({
-    convexMessages: messages,
-    optimisticMessages,
-    streamingContent,
-    currentStreamingId,
-    isStreaming
-  })
+  // Use new Convex query for state (replaces messages from useConversationState)
+  const conversationData = useQuery(
+    api.chatQueries.getConversationWithState,
+    conversationId && userId ? { userId, conversationId: conversationId as Id<"conversations"> } : "skip"
+  )
 
-  // Single source of truth for chat state derivation
-  const isLoading = isStreaming
-  const chatState = deriveChatState(messageList, isStreaming, isLoading)
+  // Extract messages and thinkingState from query result
+  const convexMessages = conversationData?.messages || []
+  const thinkingState = conversationData?.thinkingState
+  const isLoading = thinkingState?.isLoading ?? false
+
+  // Merge optimistic messages with Convex messages
+  const messages = React.useMemo(() => {
+    const list = [...convexMessages]
+    
+    // Add optimistic user messages
+    optimisticMessages.forEach(optMsg => {
+      if (optMsg.role === 'user' && !list.some(msg => msg.content === optMsg.content && msg.role === 'user')) {
+        list.push({
+          id: optMsg.id,
+          content: optMsg.content,
+          role: optMsg.role,
+          timestamp: optMsg.timestamp.toString(),
+          chat_response: optMsg.content,
+          status: 'sent',
+        } as any)
+      }
+    })
+    
+    // Sort by timestamp
+    return list.sort((a, b) => {
+      const timeA = typeof a.timestamp === 'string' ? parseInt(a.timestamp) : a.timestamp
+      const timeB = typeof b.timestamp === 'string' ? parseInt(b.timestamp) : b.timestamp
+      return timeA - timeB
+    })
+  }, [convexMessages, optimisticMessages])
 
   // Get AmbientInsights for pill display
   const convexInsights = useQuery(
@@ -153,13 +171,28 @@ export function HomepageChat({
     return []
   }, [convexInsights?._id, convexInsights?.data])
 
-  // Auto-redirect to Thinking Lab after first message stream completes
+  // Auto-redirect to Thinking Lab after first AI response completes
+  // Wait for: user message + AI response + not loading
   useEffect(() => {
-    if (conversationId && messageList.length > 0 && !isStreaming && !hasRedirectedRef.current) {
+    // Check if we have at least one user message and one assistant message
+    const hasUserMessage = messages.some((msg: any) => msg.role === 'user')
+    const hasAssistantMessage = messages.some((msg: any) => {
+      // Exclude A2A messages - we want the actual user-facing assistant response
+      const A2A_MESSAGE_TYPES = ['a2a_announcement', 'widget_agent_announcement', 'widget_introduction', 'artifact_created', 'widget_status']
+      return msg.role === 'assistant' && (!msg.contentType || !A2A_MESSAGE_TYPES.includes(msg.contentType))
+    })
+    
+    // Only redirect when:
+    // 1. We have a conversation
+    // 2. User has sent a message
+    // 3. AI has responded (assistant message exists)
+    // 4. Not currently loading (thinking/processing complete)
+    // 5. Haven't redirected yet
+    if (conversationId && hasUserMessage && hasAssistantMessage && !isLoading && !hasRedirectedRef.current) {
       hasRedirectedRef.current = true
       startTransition(() => {
         const params = new URLSearchParams()
-        params.set('chatId', conversationId)
+        params.set('conversationId', conversationId)
         if (activeProjectId) {
           params.set('projectId', activeProjectId)
         }
@@ -167,7 +200,7 @@ export function HomepageChat({
         router.push(`/dashboard/thinking_lab?${params.toString()}`)
       })
     }
-  }, [conversationId, messageList.length, isStreaming, activeProjectId, router])
+  }, [conversationId, messages, isLoading, activeProjectId, router])
 
   // Handle insight click - format message and send
   const handleInsightClick = async (insight: InsightWithOptionalIcon) => {
@@ -210,6 +243,11 @@ export function HomepageChat({
       
       // Clear local state - this will allow a fresh conversation to be created
       startNewConversation()
+      
+      // Clear URL parameter if present (redirect to thinking lab without chatId)
+      const params = new URLSearchParams()
+      if (activeProjectId) params.set('projectId', activeProjectId)
+      router.push(`/dashboard/thinking_lab${params.toString() ? `?${params.toString()}` : ''}`)
       
       // Close the dialog
       setShowResetDialog(false)
@@ -266,7 +304,7 @@ export function HomepageChat({
           )}
 
           {/* Messages Display - only show if messages exist */}
-          {messageList.length > 0 && (
+          {messages.length > 0 && (
             <div className="space-y-4 px-6 pt-6 pb-4">
               {/* Header */}
               <div className="flex items-center justify-between">
@@ -280,7 +318,8 @@ export function HomepageChat({
                 {/* User-facing messages - chat responses, preflight questions, etc. */}
                 {/* Thinking component is now IN-LINE, rendered inside ChatMessagesList */}
                 <ChatMessagesList
-                  messages={chatState.userFacingMessages}
+                  messages={messages}
+                  conversationData={conversationData}
                   referencedMessage={null}
                   handleMessageReference={() => {}}
                   handleReferenceClick={() => {}}
@@ -289,11 +328,10 @@ export function HomepageChat({
                   userId={userId ?? undefined}
                   handleSuggestionClick={handleSuggestionClick}
                   handleSendMessage={sendMessage}
-                  shouldShowThinking={chatState.shouldShowThinking}
-                  a2aMessages={chatState.a2aMessages}
-                  isStreaming={isStreaming}
+                  shouldShowThinking={thinkingState?.shouldShow}
+                  a2aMessages={thinkingState?.a2aMessages}
                   isLoading={isLoading}
-                  hasFinalArtifact={chatState.hasFinalArtifact}
+                  hasFinalArtifact={false}
                 />
               </div>
             </div>
@@ -304,7 +342,7 @@ export function HomepageChat({
             value={inputValue}
             onChange={setInputValue}
             onSend={handleSend}
-            isLoading={isStreaming}
+            isLoading={isLoading}
             conversationId={conversationId}
           />
         </div>

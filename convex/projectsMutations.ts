@@ -849,23 +849,31 @@ export const batchDeleteProjects = mutation({
       // Process deletions in chunk sequentially for consistency
       for (const projectId of chunk) {
         try {
-          // Validate project ownership
-          const project = await ctx.db.get(projectId) as any;
-          if (!project) {
-            throw new Error("Project not found");
-          }
-          
-          if (project.userId !== userId) {
-            throw new Error("Access denied: You don't own this project");
-          }
-          
-          await ctx.db.delete(projectId);
-          
-          chunkResults.push({
-            id: projectId,
-            success: true,
+          // Use deleteProject mutation for proper cascade deletion
+          // This ensures all related entities (conversations, cognitive fields, fingerprints, widgets, artifacts, messages) are deleted
+          const result = await ctx.runMutation(api.projectsMutations.deleteProject, {
+            projectId,
+            userId,
           });
-          chunkSuccessful++;
+          
+          if (result.success) {
+            chunkResults.push({
+              id: projectId,
+              success: true,
+            });
+            chunkSuccessful++;
+          } else {
+            // Cascade deletion had errors but may have partially succeeded
+            const errorMsg = result.summary?.errors?.length > 0
+              ? `Cascade deletion had errors: ${JSON.stringify(result.summary.errors)}`
+              : "Cascade deletion failed";
+            chunkResults.push({
+              id: projectId,
+              success: false,
+              error: errorMsg,
+            });
+            chunkFailed++;
+          }
           
         } catch (error) {
           chunkResults.push({

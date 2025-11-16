@@ -77,7 +77,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
         </h3>
         
         {/* Description with auto-scaling text */}
-        <div className="flex-1 min-h-0 mb-2 overflow-hidden">
+        <div className="flex-1 min-h-0 mb-2 overflow-auto">
           <AutoScalingText 
             text={description}
             maxFontSize={maxFontSize || (variant === 'compact' ? 22 : 24)}

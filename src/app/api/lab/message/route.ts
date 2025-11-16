@@ -105,43 +105,49 @@ export async function POST(request: Request) {
       chatRequestBody.conversation_type = conversation_type;
     }
 
-    console.log(`[${requestId}] Forwarding to streaming chat API:`, {
-      url: `${BACKEND_URL}/api/v1/chat/stream`,
+    console.log(`[${requestId}] Forwarding to non-streaming chat API:`, {
+      url: `${BACKEND_URL}/api/v1/chat/message`,
       user_id: authenticated_user_id,
       query_length: query.length,
       has_notepad_context: !!chatRequestBody.notepad_context,
       has_content_context: !!chatRequestBody.content_context
     });
 
-    // Forward to streaming chat endpoint
-    const response = await fetch(`${BACKEND_URL}/api/v1/chat/stream`, {
+    // Forward to non-streaming chat endpoint (returns JSON)
+    const response = await fetch(`${BACKEND_URL}/api/v1/chat/message`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'text/event-stream',
+        'Accept': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify(chatRequestBody)
     });
 
     if (!response.ok) {
-      console.error(`[${requestId}] Streaming chat API error: ${response.status}`);
+      console.error(`[${requestId}] Chat API error: ${response.status}`);
       const errorText = await response.text();
       return NextResponse.json({
-        error: 'Streaming Chat API Error',
+        error: 'Chat API Error',
         message: `Backend responded with status: ${response.status}`,
         details: errorText
       }, { status: response.status });
     }
 
-    // Return streaming response
-    return new Response(response.body, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-        'X-Accel-Buffering': 'no'
-      }
+    // Parse JSON response
+    const responseData = await response.json();
+    
+    // Extract data from backend response format
+    const result = responseData.success && responseData.data
+      ? responseData.data
+      : responseData;
+
+    // Return JSON response with session identifier and metadata
+    return NextResponse.json({
+      session_identifier: result.session_identifier || result.session_id || null,
+      conversationId: result.conversation_id || result.session_identifier || null,
+      suggestions: result.suggestions || [],
+      metadata: result.metadata || {}
     });
 
   } catch (error) {

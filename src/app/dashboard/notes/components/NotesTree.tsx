@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { FileText, Star, Trash2, CheckSquare, Square, X } from 'lucide-react';
 import { DndContext, DragOverlay } from '@dnd-kit/core';
 import { useRouter } from 'next/navigation';
-import { useCreateNote } from '../hooks/useCreateNote';
 import { useNotes } from '@/app/context/notes-context';
 import { useProjects } from '../hooks/useProjects';
 import { useFolders } from '../hooks/useFolders';
@@ -24,6 +23,11 @@ import { api } from '@/convex/_generated/api';
 import toast from 'react-hot-toast';
 import { useIsMobile } from '@/app/dashboard/thinking_lab/layouts/ResponsiveLayout';
 import { NotesTreeMobile } from './NotesTreeMobile';
+import { QuickEntryCard } from './QuickEntryCard';
+import { useQuickEntryStats } from '../hooks/useQuickEntryStats';
+import { RecentActivityTable } from './RecentActivityTable';
+import { uploadFile, type FileUploadResponse, getFileDisplayUrl } from '@/lib/file-upload';
+import { FilesView } from './FilesView';
 
 export function NotesTree({
   notes,
@@ -38,7 +42,7 @@ export function NotesTree({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['recent', 'projects', 'tags', 'important', 'shared', 'my-shared', 'user-folders']));
-  const [isCreatingNote, setIsCreatingNote] = useState(false);
+  const isCreatingNote = false; // No longer creating notes, just navigating
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
   const [isDeletingProject, setIsDeletingProject] = useState(false);
@@ -49,12 +53,15 @@ export function NotesTree({
   const [notesToBatchDelete, setNotesToBatchDelete] = useState<string[] | null>(null);
   const [isBatchDeleting, setIsBatchDeleting] = useState(false);
   const [isBatchDeletingNotes, setIsBatchDeletingNotes] = useState(false);
+  const [showFilesView, setShowFilesView] = useState(false);
   
   const router = useRouter();
-  const { createNote } = useCreateNote();
   const { updateNote, deleteNote } = useNotes();
   const { firebaseUser } = useAuth();
   const batchDeleteNotesMutation = useMutation(api.noteMutations.batchDeleteNotes);
+  const createFileMutation = useMutation(api.fileMutations.createFile);
+  const [isUploadingFiles, setIsUploadingFiles] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { 
     projects: hookProjects, 
@@ -73,6 +80,9 @@ export function NotesTree({
   
   // Use projects from props if provided, otherwise from hook
   const projects = propProjects || hookProjects;
+
+  // Get Quick Entry stats
+  const quickEntryStats = useQuickEntryStats();
 
   // Use custom hooks for tree structure and drag & drop
   const { treeStructure, sharedNotes, mySharedContent } = useNotesTreeStructure({
@@ -124,21 +134,9 @@ export function NotesTree({
     }
   }, [isSelectionMode]);
 
-  const handleCreateNote = useCallback(async () => {
-    setIsCreatingNote(true);
-    try {
-      const newNoteId = await createNote('', {
-        customType: selectedFilter === 'projects' ? undefined : (selectedFilter !== 'all' ? selectedFilter : undefined)
-      });
-      if (newNoteId) {
-        router.push(`/dashboard/thinking_lab?noteId=${newNoteId}`);
-      }
-    } catch (error) {
-      console.error('Failed to create note:', error);
-    } finally {
-      setIsCreatingNote(false);
-    }
-  }, [createNote, router, selectedFilter]);
+  const handleCreateNote = useCallback(() => {
+    router.push('/dashboard/thinking_lab');
+  }, [router]);
 
   const handleCreateProject = useCallback(() => {
     // Navigate to thinking lab - a new conversation will create a new project automatically
@@ -149,6 +147,70 @@ export function NotesTree({
     const folderId = await createFolder(name, description, parentFolderId, color);
     return folderId;
   }, [createFolder]);
+
+  // File upload handler
+  const handleFileUpload = useCallback(async (files: FileList | null) => {
+    if (!files || files.length === 0 || !firebaseUser?.uid) {
+      return;
+    }
+
+    setIsUploadingFiles(true);
+    const uploadPromises: Promise<FileUploadResponse>[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      uploadPromises.push(uploadFile(file, firebaseUser.uid));
+    }
+
+    try {
+      const uploadResults = await Promise.all(uploadPromises);
+      
+      // Create file records in Convex
+      const fileRecordPromises = uploadResults.map(async (result) => {
+        if (result.success && result.file_metadata) {
+          const fileUrl = getFileDisplayUrl(result.file_metadata.gcs_url);
+          return await createFileMutation({
+            userId: firebaseUser.uid!,
+            fileData: {
+              originalFilename: result.file_metadata.original_filename,
+              filename: result.file_metadata.file_id, // file_id is the final filename after conflict resolution
+              contentType: result.file_metadata.content_type,
+              fileSize: result.file_metadata.file_size,
+              gcsUrl: result.file_metadata.gcs_url,
+              fileUrl: fileUrl,
+              conversationId: undefined, // General files, not tied to conversation
+            },
+          });
+        }
+        return null;
+      });
+
+      await Promise.all(fileRecordPromises);
+      
+      toast.success(
+        <T context="toast.dashboard.notes.upload.success">
+          Successfully uploaded {uploadResults.length} file{uploadResults.length !== 1 ? 's' : ''}
+        </T>
+      );
+    } catch (error) {
+      console.error('File upload error:', error);
+      toast.error(
+        <T context="toast.dashboard.notes.upload.error">
+          Failed to upload files. Please try again.
+        </T>
+      );
+    } finally {
+      setIsUploadingFiles(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  }, [firebaseUser?.uid, createFileMutation]);
+
+  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    handleFileUpload(e.target.files);
+  }, [handleFileUpload]);
 
   const handleDeleteProject = useCallback(async (projectId: string) => {
     setProjectToDelete(projectId);
@@ -432,56 +494,56 @@ export function NotesTree({
           onCreateNote={handleCreateNote}
           onCreateProject={handleCreateProject}
           onCreateFolder={() => setShowCreateFolderModal(true)}
+          onUpload={() => {
+            fileInputRef.current?.click();
+          }}
           isCreatingNote={isCreatingNote}
           isCreatingProject={false}
           isCreatingFolder={isCreatingFolder}
           foldersCount={folders?.length}
           sharedNotesCount={sharedNotes?.length}
           mySharedContentCount={mySharedContent?.length}
-          isSelectionMode={isSelectionMode}
-          selectedProjectsCount={selectedProjects.size}
-          selectedNotesCount={selectedNotes.size}
-          onToggleSelectionMode={toggleSelectionMode}
-          onSelectAll={selectAllVisible}
-          onDeselectAll={deselectAll}
-          onBatchDelete={handleBatchDelete}
-          hasSelection={hasSelection}
         />
 
-        {/* Tree content */}
-        <div className="max-w-6xl mx-auto">
-          <div className="p-4 sm:p-6 pb-safe">
-            {treeStructure.length === 0 ? (
-              <div className="text-center py-12 sm:py-20">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-primary/10 via-accent/5 to-primary/5 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary/5">
-                  <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-primary/60" />
-                </div>
-                <h3 className="text-base sm:text-lg font-medium text-foreground mb-2">
-                  {searchTerm || selectedFilter !== 'all' ? (
-                    <T context="notes.empty.no-results">No notes found</T>
-                  ) : (
-                    <T context="notes.empty.no-notes">No notes yet</T>
-                  )}
-                </h3>
-                <p className="text-sm sm:text-base text-muted-foreground max-w-sm mx-auto px-4">
-                  {selectedFilter === 'shared' ? (
-                    <T context="notes.empty.no-shared">No notes have been shared with you yet</T>
-                  ) : selectedFilter === 'my-shared' ? (
-                    <T context="notes.empty.no-my-shared">You haven't shared any notes with others yet</T>
-                  ) : searchTerm || selectedFilter !== 'all' ? (
-                    <T context="notes.empty.adjust-filter">Try adjusting your search or filter criteria</T>
-                  ) : (
-                    <T context="notes.empty.get-started">Create your first note to get started with organizing your thoughts</T>
-                  )}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {treeStructure.map(node => renderTreeNode(node))}
-              </div>
-            )}
+        {/* Quick Entry Cards Section */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6">
+          <div className="flex flex-col sm:flex-row gap-5 mb-6">
+            <QuickEntryCard
+              type="widgets"
+              title={<T context="notes.quick_entry.widgets">Widgets</T>}
+              tokenUsed={quickEntryStats.widgets.tokenUsed}
+              fileCount={quickEntryStats.widgets.count}
+              onClick={() => router.push('/dashboard/widgets')}
+            />
+            <QuickEntryCard
+              type="artifacts"
+              title={<T context="notes.quick_entry.artifacts">Artifacts</T>}
+              tokenUsed={quickEntryStats.artifacts.tokenUsed}
+              fileCount={quickEntryStats.artifacts.count}
+              onClick={() => router.push('/dashboard/artifacts')}
+            />
+            <QuickEntryCard
+              type="assignments"
+              title={<T context="notes.quick_entry.assignments">Assignments</T>}
+              tokenUsed={quickEntryStats.assignments.tokenUsed}
+              fileCount={quickEntryStats.assignments.count}
+              onClick={() => router.push('/dashboard/assignments')}
+            />
+            <QuickEntryCard
+              type="uploaded-files"
+              title={<T context="notes.quick_entry.uploaded_files">Uploaded Files</T>}
+              mbUsed={quickEntryStats.uploadedFiles.mbUsed}
+              fileCount={quickEntryStats.uploadedFiles.count}
+              onClick={() => router.push('/dashboard/files')}
+            />
           </div>
         </div>
+
+        {/* Recent Activity Section */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6 pb-6">
+          <RecentActivityTable />
+        </div>
+
 
         {/* Create Folder Modal */}
         <CreateFolderModal
@@ -526,19 +588,31 @@ export function NotesTree({
               parts.push(`${noteCount} note${noteCount !== 1 ? 's' : ''}`);
             }
             return `Are you sure you want to delete ${parts.join(' and ')}? This action cannot be undone.`;
-          })()}
+          })() as string}
           descriptionContext="modal.delete_items_description"
           confirmText={(() => {
             const projectCount = projectsToBatchDelete?.length || 0;
             const noteCount = notesToBatchDelete?.length || 0;
             const total = projectCount + noteCount;
             return `Delete ${total} Item${total !== 1 ? 's' : ''}`;
-          })()}
+          })() as string}
           confirmContext="button.delete_items"
           cancelText="Cancel"
           cancelContext="button.cancel"
           variant="destructive"
           isLoading={isBatchDeleting || isBatchDeletingNotes}
+        />
+
+        {/* Hidden file input for uploads */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          onChange={handleFileInputChange}
+          className="hidden"
+          accept="image/*,.pdf,.doc,.docx,.txt,.csv,.xlsx,.xls,.zip,.rar"
+          disabled={isUploadingFiles}
+          aria-label="Upload files"
         />
       </div>
 

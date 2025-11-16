@@ -296,10 +296,10 @@ export const getProjectDetails = query({
  * Retrieve all projects for a user
  * 
  * Returns user's projects with summary data and content counts,
- * ordered by most recent first. Results are limited for performance.
+ * ordered by most recent first.
  * 
  * @param userId - User ID to retrieve projects for
- * @param limit - Maximum number of projects to return (capped at 100)
+ * @param limit - Optional maximum number of projects to return
  * @returns Array of project summaries with content counts
  */
 export const getByUser = query({
@@ -307,7 +307,7 @@ export const getByUser = query({
     userId: v.string(),
     limit: v.optional(v.number()),
   },
-  handler: async (ctx, { userId, limit = 50 }) => {
+  handler: async (ctx, { userId, limit }) => {
     // Get projects where user is owner (efficient with index)
     const ownedProjects = await ctx.db
       .query("projects")
@@ -339,13 +339,17 @@ export const getByUser = query({
       projectMap.set(project._id, project);
     });
     
-    // Convert to array, sort by updatedAt desc, and limit
+    // Convert to array, sort by updatedAt desc, and apply limit if provided
     const allUserProjects = Array.from(projectMap.values())
-      .sort((a, b) => b.updatedAt - a.updatedAt)
-      .slice(0, Math.min(limit, 100));
+      .sort((a, b) => b.updatedAt - a.updatedAt);
+    
+    let projectsToReturn = allUserProjects;
+    if (limit !== undefined) {
+      projectsToReturn = allUserProjects.slice(0, limit);
+    }
 
     // Return optimized list with summary data
-    return allUserProjects.map(project => ({
+    return projectsToReturn.map(project => ({
       _id: project._id,
       userId: project.userId,
       name: project.name,
