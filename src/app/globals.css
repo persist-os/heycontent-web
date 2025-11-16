@@ -119,6 +119,17 @@
     --assignment-outline-variant: 220 10% 62%; /* NV-62: #8F939F - Subtle border */
     --assignment-surface-bright: 0 0% 96%; /* N-96: #F5F5F5 - Bright surface */
     --assignment-on-surface-variant: 0 0% 10%; /* N-10: Dark text on light surface */
+
+    /* NotesTree Figma Design System Colors - Light Mode */
+    --notes-surface-dim: 0 0% 94%; /* N-94: #F0F0F0 - Light surface dim (equivalent to muted) */
+    --notes-surface-bright: 0 0% 96%; /* N-96: #F5F5F5 - Light surface bright (equivalent to card) */
+    --notes-on-surface-variant: 0 0% 10%; /* N-10: Dark text on light surface */
+    --notes-stroke-focus: 220 10% 75%; /* NV-75: #BFC4CC - Light mode border */
+    --notes-ghost-blue: 210 100% 50%; /* P-50: Medium blue for light mode borders */
+    --notes-ghost-accent: 38 100% 50%; /* T-50: Orange for light mode borders */
+    --notes-primary-hover: 210 100% 45%; /* Slightly darker blue for hover in light mode */
+    --notes-secondary-default: 38 100% 50%; /* T-50: Orange for light mode */
+    --notes-on-secondary: 0 0% 100%; /* White text on secondary in light mode */
   }
 
   .dark {
@@ -225,6 +236,17 @@
     --homepage-chat-border: 210 100% 78%; /* #65b5ff - rigel blue border */
     --homepage-chat-bg-base: 0 0% 28%; /* #474647 - fallback background */
     --assignment-primary-container: 210 100% 20%; /* #003355 - primary container */
+
+    /* NotesTree Figma Design System Colors */
+    --notes-surface-dim: 0 0% 19%; /* #313030 - Figma default/surface-dim (N20) */
+    --notes-surface-bright: 0 0% 28%; /* #474647 - Figma default/surface-bright (N30) */
+    --notes-on-surface-variant: 0 0% 94%; /* #eceffe - Figma default/on-surface-variant */
+    --notes-stroke-focus: 220 10% 68%; /* #adb1be - Figma Stroke/Focus */
+    --notes-ghost-blue: 210 100% 88%; /* #60b1fa - Figma Text +Icon/Ghost/Default/Default */
+    --notes-ghost-accent: 38 100% 50%; /* #f09700 - Figma Text +Icon/Ghost/Accent/Default */
+    --notes-primary-hover: 210 100% 85%; /* #cfe5ff - Figma BG/Primary/Default(Blue)/Hover */
+    --notes-secondary-default: 38 100% 56%; /* #ffb963 - Figma default/secondary */
+    --notes-on-secondary: 38 100% 14%; /* #472a00 - Figma default/on-secondary */
   }
 }
 

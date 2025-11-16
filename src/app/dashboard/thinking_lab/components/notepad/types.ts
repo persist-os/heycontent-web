@@ -98,7 +98,7 @@ export function buildNoteUpdate(changes: Partial<Note>, currentNote: Note): Note
 // Validation layer for NoteUpdate
 export function validateNoteUpdate(update: NoteUpdate, context: string): NoteUpdate {
   if (update.tags !== undefined && update.tags.length === 0) {
-    console.warn(`‚ö†Ô∏è Empty tags being sent from: ${context}`);
+    console.warn(`ö†Ô∏è Empty tags being sent from: ${context}`);
   }
   return update;
 }

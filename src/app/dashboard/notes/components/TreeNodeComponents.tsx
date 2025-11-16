@@ -328,7 +328,10 @@ export function TreeNodeRenderer({
         )}>
           <div 
             className={cn(
-              "flex items-center gap-3 py-3 sm:py-2 px-3 rounded-lg hover:bg-gradient-to-r hover:from-indigo-500/5 hover:via-transparent hover:to-transparent active:bg-indigo-500/10 transition-all cursor-pointer min-h-[48px] sm:min-h-0 group",
+              "flex items-center gap-3 py-3 sm:py-2 px-3 rounded-[8px] border-2 border-[hsl(var(--notes-stroke-focus))] transition-all cursor-pointer min-h-[48px] sm:min-h-0 group",
+              isExpanded 
+                ? "bg-[hsl(var(--notes-surface-bright))]" 
+                : "bg-[hsl(var(--notes-surface-dim))]",
               dragOverFolder === node.id && draggedNote && "bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/30 border-dashed shadow-sm shadow-primary/10"
             )}
             onClick={() => hasChildren && onToggleNode(node.id)}
@@ -351,7 +354,7 @@ export function TreeNodeRenderer({
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-foreground truncate">
+                <span className="text-h3 text-foreground truncate">
                   {node.title}
                 </span>
                 {node.count && node.count > 0 && (

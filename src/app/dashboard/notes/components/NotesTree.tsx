@@ -24,6 +24,9 @@ import { api } from '@/convex/_generated/api';
 import toast from 'react-hot-toast';
 import { useIsMobile } from '@/app/dashboard/thinking_lab/layouts/ResponsiveLayout';
 import { NotesTreeMobile } from './NotesTreeMobile';
+import { QuickEntryCard } from './QuickEntryCard';
+import { useQuickEntryStats } from '../hooks/useQuickEntryStats';
+import { RecentActivityTable } from './RecentActivityTable';
 
 export function NotesTree({
   notes,
@@ -73,6 +76,9 @@ export function NotesTree({
   
   // Use projects from props if provided, otherwise from hook
   const projects = propProjects || hookProjects;
+
+  // Get Quick Entry stats
+  const quickEntryStats = useQuickEntryStats();
 
   // Use custom hooks for tree structure and drag & drop
   const { treeStructure, sharedNotes, mySharedContent } = useNotesTreeStructure({
@@ -432,56 +438,53 @@ export function NotesTree({
           onCreateNote={handleCreateNote}
           onCreateProject={handleCreateProject}
           onCreateFolder={() => setShowCreateFolderModal(true)}
+          onUpload={() => {
+            // TODO: Implement file upload functionality
+            toast('File upload coming soon');
+          }}
           isCreatingNote={isCreatingNote}
           isCreatingProject={false}
           isCreatingFolder={isCreatingFolder}
           foldersCount={folders?.length}
           sharedNotesCount={sharedNotes?.length}
           mySharedContentCount={mySharedContent?.length}
-          isSelectionMode={isSelectionMode}
-          selectedProjectsCount={selectedProjects.size}
-          selectedNotesCount={selectedNotes.size}
-          onToggleSelectionMode={toggleSelectionMode}
-          onSelectAll={selectAllVisible}
-          onDeselectAll={deselectAll}
-          onBatchDelete={handleBatchDelete}
-          hasSelection={hasSelection}
         />
 
-        {/* Tree content */}
-        <div className="max-w-6xl mx-auto">
-          <div className="p-4 sm:p-6 pb-safe">
-            {treeStructure.length === 0 ? (
-              <div className="text-center py-12 sm:py-20">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-primary/10 via-accent/5 to-primary/5 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary/5">
-                  <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-primary/60" />
-                </div>
-                <h3 className="text-base sm:text-lg font-medium text-foreground mb-2">
-                  {searchTerm || selectedFilter !== 'all' ? (
-                    <T context="notes.empty.no-results">No notes found</T>
-                  ) : (
-                    <T context="notes.empty.no-notes">No notes yet</T>
-                  )}
-                </h3>
-                <p className="text-sm sm:text-base text-muted-foreground max-w-sm mx-auto px-4">
-                  {selectedFilter === 'shared' ? (
-                    <T context="notes.empty.no-shared">No notes have been shared with you yet</T>
-                  ) : selectedFilter === 'my-shared' ? (
-                    <T context="notes.empty.no-my-shared">You haven't shared any notes with others yet</T>
-                  ) : searchTerm || selectedFilter !== 'all' ? (
-                    <T context="notes.empty.adjust-filter">Try adjusting your search or filter criteria</T>
-                  ) : (
-                    <T context="notes.empty.get-started">Create your first note to get started with organizing your thoughts</T>
-                  )}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {treeStructure.map(node => renderTreeNode(node))}
-              </div>
-            )}
+        {/* Quick Entry Cards Section */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6">
+          <div className="flex flex-col sm:flex-row gap-5 mb-6">
+            <QuickEntryCard
+              type="chats"
+              title="Chats"
+              tokenUsed={quickEntryStats.chats.tokenUsed}
+              fileCount={quickEntryStats.chats.count}
+            />
+            <QuickEntryCard
+              type="artifacts"
+              title="Artifacts"
+              tokenUsed={quickEntryStats.artifacts.tokenUsed}
+              fileCount={quickEntryStats.artifacts.count}
+            />
+            <QuickEntryCard
+              type="assignments"
+              title="Assignments"
+              tokenUsed={quickEntryStats.assignments.tokenUsed}
+              fileCount={quickEntryStats.assignments.count}
+            />
+            <QuickEntryCard
+              type="uploaded-files"
+              title="Uploaded Files"
+              mbUsed={quickEntryStats.uploadedFiles.mbUsed}
+              fileCount={quickEntryStats.uploadedFiles.count}
+            />
           </div>
         </div>
+
+        {/* Recent Activity Section */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6 pb-6">
+          <RecentActivityTable />
+        </div>
+
 
         {/* Create Folder Modal */}
         <CreateFolderModal
