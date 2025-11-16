@@ -59,16 +59,24 @@ export function BaseCard({
       <div
         className={cn(
           "group relative overflow-hidden transition-all duration-300 ease-out",
-          "border-0 bg-card/50 backdrop-blur-sm",
-          "hover:scale-[1.02] hover:bg-card/80",
+          // Figma Design System: N20 background with rigel blue border
+          "bg-[hsl(var(--card-bg-n20))]",
+          "border-2 border-[hsl(var(--card-border-rigel))]",
+          "rounded-[12px]",
+          "hover:scale-[1.02]",
           !isOverlay && !isDragging && "cursor-pointer",
           // Drag states with subtle animations
           isDragging && "opacity-60 scale-95 blur-sm",
-          isOverlay && "shadow-2xl rotate-1 scale-105 bg-card border border-primary/30",
+          isOverlay && "shadow-2xl rotate-1 scale-105",
           className
         )}
         onClick={!isDragging && !isOverlay ? handleEdit : undefined}
       >
+        {/* Gradient overlay - Figma: from transparent to rigel blue at 30% opacity */}
+        <div className="absolute inset-0 bg-gradient-to-l from-transparent to-[hsl(var(--card-border-rigel)/0.3)] pointer-events-none rounded-[10px] z-0" />
+        
+        {/* Content wrapper with relative positioning to appear above gradient */}
+        <div className="relative z-10">
         {/* Subtle top accent line - sharing and AI status indicator */}
         <div className={cn(
           "h-px w-full transition-all duration-500",
@@ -143,14 +151,14 @@ export function BaseCard({
           </div>
         )}
 
-        {/* Card content with responsive spacing */}
-        <div className={cn("px-4 sm:px-6 py-3 sm:py-4", hasImages && "pt-2 sm:pt-3")}>
+        {/* Card content with responsive spacing - Figma: px-[36px] py-[8px] */}
+        <div className={cn("px-4 sm:px-9 py-2", hasImages && "pt-2")}>
           {children}
         </div>
 
-        {/* Tags with responsive styling */}
+        {/* Tags with responsive styling - Figma: gap-[20px] */}
         {note.tags && note.tags.length > 0 && (
-          <div className="px-4 sm:px-6 pb-3 sm:pb-4">
+          <div className="px-4 sm:px-9 pb-2">
             <div className="flex flex-wrap gap-1.5 sm:gap-2">
               {note.tags.slice(0, 4).map((tag, index) => (
                 <span 
@@ -201,8 +209,8 @@ export function BaseCard({
           </div>
         )}
 
-        {/* Date with responsive spacing and typography */}
-        <div className="px-4 sm:px-6 pb-3 sm:pb-4">
+        {/* Date with responsive spacing and typography - Figma: px-[36px] py-[8px] */}
+        <div className="px-4 sm:px-9 pb-2">
           <div className="h-px bg-gradient-to-r from-transparent via-border/30 to-transparent mb-2 sm:mb-3" />
           <div className="flex items-center justify-between text-xs text-muted-foreground/60">
             <span className="font-light">
@@ -226,6 +234,7 @@ export function BaseCard({
               </span>
             )}
           </div>
+        </div>
         </div>
       </div>
 

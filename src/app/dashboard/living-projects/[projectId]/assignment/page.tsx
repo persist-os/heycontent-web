@@ -6,33 +6,24 @@ import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
-import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
-import { 
-  MessageSquare, 
-  ExternalLink,
-  ArrowUpRight,
-  ChevronUp,
-  ChevronDown,
-  Sparkles,
-  Plus
-} from 'lucide-react'
+import { Card } from '@/components/ui/card'
+import { MessageSquare, Sparkles } from 'lucide-react'
 import { T } from '@/components/translation/T'
 import type { Id } from '@/convex/_generated/dataModel'
 import { useGalleryItems } from '@/hooks/useGalleryItems'
-import Link from 'next/link'
 import { formatDistanceToNow } from '../components/utils/dateFormatting'
-import { CheckCircle2 } from 'lucide-react'
-import { ContentAttachmentPanel } from '@/app/dashboard/living-projects/components/ContentAttachmentPanel'
+import { Breadcrumb } from '@/components/ui/breadcrumb'
+import { SectionHeader } from '@/components/ui/section-header'
+import { TaskList } from '@/components/ui/task-list'
+import { AssignmentArtifactCard } from '@/components/ui/assignment-artifact-card'
+import { FilesTable, type FileItem } from '@/components/ui/files-table'
+import { ContentCard, type ContentCardData } from '@/components/command-palette/ContentCard'
 
 function AssignmentPageContent() {
   const params = useParams()
   const router = useRouter()
   const projectId = params.projectId as string
   const [userId, setUserId] = useState<string | null>(null)
-  const [showProjectContentPanel, setShowProjectContentPanel] = useState(false)
 
   // Get user ID
   useEffect(() => {
@@ -137,6 +128,35 @@ function AssignmentPageContent() {
     }).slice(0, 5) // Limit to 5 most relevant
   }, [assignmentStatus])
 
+  // Transform taskWidgets to TaskList format
+  const tasks = useMemo(() => {
+    return taskWidgets.map((widget: any) => ({
+      id: widget.widget_id || String(widget._id || Math.random()),
+      label: widget.title || '',
+      status: widget.status === 'in_progress' ? 'active' as const : 
+              widget.status === 'completed' ? 'completed' as const :
+              widget.status === 'failed' ? 'failed' as const :
+              'pending' as const
+    }))
+  }, [taskWidgets])
+
+  // Transform galleryItems to FilesTable format
+  const fileItems = useMemo(() => {
+    return galleryItems.slice(0, 3).map((item) => ({
+      id: item._id,
+      name: item.title || '',
+      type: item.itemType || 'artifact',
+      lastOpened: item.updatedAt || item._creationTime || Date.now()
+    }))
+  }, [galleryItems])
+
+  // Breadcrumb items
+  const breadcrumbItems = useMemo(() => [
+    { label: 'Files', href: '/dashboard' },
+    { label: 'Assignments', href: '/dashboard/home' },
+    { label: project?.name || 'Untitled Assignment' }
+  ], [project])
+
   if (!project || !userId) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -154,31 +174,10 @@ function AssignmentPageContent() {
         {/* Breadcrumb and Header */}
         <div className="flex flex-col gap-5 mb-10">
           <div className="flex items-center justify-between py-3">
-            {/* Breadcrumb */}
-            <div className="flex items-center gap-1 text-[32px] font-extralight leading-[60px] tracking-[-0.96px] text-foreground">
-              <Link href="/dashboard" className="hover:underline cursor-pointer">
-                <T context="assignment.breadcrumb.files">Files</T>
-              </Link>
-              <span>/</span>
-              <Link href="/dashboard/home" className="hover:underline cursor-pointer">
-                <T context="assignment.breadcrumb.assignments">Assignments</T>
-              </Link>
-              <span>/</span>
-              <span className="text-foreground">{project.name || <T context="assignment.breadcrumb.untitled">Untitled Assignment</T>}</span>
-            </div>
+            <Breadcrumb items={breadcrumbItems} />
 
             {/* Action Buttons */}
             <div className="flex items-center gap-3">
-              {/* Add Content Button */}
-              <Button
-                onClick={() => setShowProjectContentPanel(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md font-medium"
-              >
-                <Plus className="w-4 h-4" />
-                <T context="button.add_content">Add Content</T>
-              </Button>
-              
-              {/* Discuss In Chat Button */}
               <Button
                 onClick={handleDiscussInChat}
                 className="bg-[hsl(var(--assignment-primary-blue))] text-[hsl(var(--assignment-primary-blue-text))] hover:bg-[hsl(var(--assignment-primary-blue))]/90 px-4 py-2 h-auto rounded-lg"
@@ -201,62 +200,13 @@ function AssignmentPageContent() {
 
         {/* Activity Section */}
         <div className="flex flex-col gap-5 mb-10">
-          <h2 className="text-2xl font-semibold leading-9 tracking-[-0.72px] text-foreground">
-            <T context="assignment.activity.title">Activity</T>
-          </h2>
+          <SectionHeader title="Activity" />
           
           <Card className="bg-[hsl(var(--assignment-surface-container))] border-none rounded-xl p-5">
             <div className="flex flex-col gap-[10px]">
-
               {/* Task List */}
               <Card className="bg-[hsl(var(--assignment-bg))] border-none rounded-xl p-4 mt-2">
-                <div className="flex items-end">
-                  {/* Task List */}
-                  <div className="flex flex-col gap-[5px] flex-1">
-                    {taskWidgets.length === 0 ? (
-                      <div className="flex items-center gap-3">
-                        <div className="w-3 h-3 rounded-full border-2 border-[hsl(var(--assignment-outline-variant))] flex-shrink-0" />
-                        <span className="text-base text-[hsl(var(--assignment-text-subtle))]">
-                          <T context="assignment.activity.no_tasks">No tasks yet</T>
-                        </span>
-                      </div>
-                    ) : (
-                      taskWidgets.map((widget: any, index: number) => {
-                        const isActive = widget.status === 'in_progress'
-                        const isCompleted = widget.status === 'completed'
-                        const isFailed = widget.status === 'failed'
-
-                        return (
-                          <React.Fragment key={widget.widget_id || index}>
-                            {index > 0 && (
-                              <div className="w-[2px] h-[22px] bg-[hsl(var(--assignment-outline-variant))] ml-[5px]" />
-                            )}
-                            <div className="flex items-center gap-3 mb-[5px] last:mb-0">
-                              {isCompleted ? (
-                                <CheckCircle2 className="w-3 h-3 text-green-500 flex-shrink-0" />
-                              ) : isFailed ? (
-                                <div className="w-3 h-3 rounded-full bg-red-500 flex-shrink-0" />
-                              ) : isActive ? (
-                                <div className="w-3 h-3 rounded-full bg-[hsl(var(--assignment-brand-orange))] flex-shrink-0" />
-                              ) : (
-                                <div className="w-3 h-3 rounded-full border-2 border-[hsl(var(--assignment-outline-variant))] flex-shrink-0" />
-                              )}
-                              <span className={`text-base ${
-                                isActive 
-                                  ? 'text-[hsl(var(--assignment-text-subtle))]' 
-                                  : isCompleted || isFailed
-                                  ? 'text-foreground'
-                                  : 'text-[hsl(var(--assignment-text-subtle))]'
-                              }`}>
-                                {widget.title || <T context="assignment.activity.unnamed_widget">Unnamed Widget</T>}
-                              </span>
-                            </div>
-                          </React.Fragment>
-                        )
-                      })
-                    )}
-                  </div>
-                </div>
+                <TaskList tasks={tasks} />
               </Card>
 
               {/* A2A Notes Status Updates - Display ALL notes */}
@@ -300,66 +250,17 @@ function AssignmentPageContent() {
 
         {/* Artifacts Section */}
         <div className="flex flex-col gap-5 mb-10">
-          <h2 className="text-2xl font-semibold leading-9 tracking-[-0.72px] text-foreground">
-            <T context="assignment.artifacts.title">Artifacts</T>
-          </h2>
+          <SectionHeader title="Artifacts" />
           
           <div className="flex items-center justify-between gap-6">
             {artifacts.slice(0, 3).map((artifact, index) => (
-              <Card
+              <AssignmentArtifactCard
                 key={artifact._id}
+                artifact={artifact}
+                widgetTitle={widgets.find(w => w._id === artifact.widgetId)?.title}
+                isHighlighted={index === 0}
                 onClick={() => handleOpenGallery(artifact._id, 'artifact')}
-                className={`relative w-[348px] h-[129px] cursor-pointer border-2 rounded-xl overflow-hidden transition-all ${
-                  index === 0
-                    ? 'bg-gradient-to-r from-transparent to-[hsl(var(--assignment-brand-orange))]/75 border-[hsl(var(--assignment-brand-orange))] opacity-75'
-                    : 'bg-[hsl(var(--assignment-bg))] border-[hsl(var(--assignment-outline))] opacity-75'
-                }`}
-              >
-                {/* Widget Icon - Top Right */}
-                <div className="absolute top-[9px] right-[9px] w-6 h-6">
-                  <Sparkles className="w-6 h-6 text-foreground" />
-                </div>
-                
-                <CardContent className="p-2 h-full flex flex-col justify-between">
-                  <div className="flex flex-col gap-1 pr-8">
-                    <h3 className="text-2xl font-semibold leading-9 tracking-[-0.72px] text-foreground line-clamp-1">
-                      {artifact.title || <T context="assignment.artifacts.artifact_name_fallback">artifact name</T>}
-                    </h3>
-                    <p className={`text-base leading-5 ${
-                      index === 0 ? 'text-foreground' : 'text-[hsl(var(--assignment-text-subtle))]'
-                    }`}>
-                      {widgets.find(w => w._id === artifact.widgetId)?.title || <T context="assignment.artifacts.widget_name_fallback">project/widget name as a tag</T>}
-                    </p>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="text-base text-foreground">
-                      {(() => {
-                        const artifactType = artifact.type || 'artifact'
-                        const formattedType = artifactType.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
-                        const updatedAt = artifact.updatedAt || artifact._creationTime || Date.now()
-                        const relativeTime = formatDistanceToNow(new Date(updatedAt), { addSuffix: true, short: true })
-                        return `${formattedType} • ${relativeTime}`
-                      })()}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="w-10 h-10"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleOpenGallery(artifact._id, 'artifact')
-                      }}
-                    >
-                      <ArrowUpRight className={`w-6 h-6 ${
-                        index === 0 
-                          ? 'text-[hsl(var(--assignment-accent-orange-text))]' 
-                          : 'text-[hsl(var(--assignment-outline))]'
-                      }`} />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              />
             ))}
             
             {/* Fill empty slots if less than 3 artifacts */}
@@ -372,89 +273,62 @@ function AssignmentPageContent() {
           </div>
         </div>
 
+        {/* Widgets Section */}
+        <div className="flex flex-col gap-5 mb-10">
+          <SectionHeader title="Widgets" />
+          
+          {widgets.length === 0 ? (
+            <Card className="bg-[hsl(var(--assignment-surface-container))] border-none rounded-xl p-5">
+              <p className="text-muted-foreground text-sm">
+                <T context="assignment.widgets.empty">No widgets yet</T>
+              </p>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {widgets.map((widget) => {
+                const widgetCardData: ContentCardData = {
+                  id: widget._id,
+                  type: 'widget',
+                  title: widget.title || 'Untitled Widget',
+                  description: widget.description || 'No description',
+                  metadata: {
+                    createdAt: widget._creationTime,
+                    updatedAt: widget.updatedAt,
+                    priority: (widget as any).priority,
+                    size: (widget as any).size,
+                    theme: (widget as any).theme
+                  }
+                }
+                
+                return (
+                  <ContentCard
+                    key={widget._id}
+                    content={widgetCardData}
+                    onClick={() => handleOpenGallery(widget._id, 'widget')}
+                    showMetadata={true}
+                    variant="default"
+                  />
+                )
+              })}
+            </div>
+          )}
+        </div>
+
         {/* Files Section */}
         <div className="flex flex-col gap-5">
-          <h2 className="text-2xl font-semibold leading-9 tracking-[-0.72px] text-foreground">
-            <T context="assignment.files.title">Files</T>
-          </h2>
+          <SectionHeader title="Files" />
           
-          <div className="flex flex-col">
-            {/* Table Header */}
-            <div className="flex items-center justify-between px-4 py-2 border-b border-[hsl(var(--assignment-outline-variant))]">
-              <div className="flex items-center gap-3 w-[400px]">
-                <Checkbox />
-                <span className="text-sm font-semibold text-[hsl(var(--assignment-on-surface-variant))]">
-                  <T context="assignment.files.table.name">Name</T>
-                </span>
-                <ChevronUp className="w-6 h-6 text-[hsl(var(--assignment-on-surface-variant))]" />
-              </div>
-              <div className="flex items-center gap-3 w-[120px]">
-                <span className="text-sm font-semibold text-[hsl(var(--assignment-on-surface-variant))]">
-                  <T context="assignment.files.table.type">Type</T>
-                </span>
-                <ChevronUp className="w-6 h-6 text-[hsl(var(--assignment-on-surface-variant))]" />
-              </div>
-              <div className="flex items-center gap-3 w-[300px]">
-                <span className="text-base text-foreground">
-                  <T context="assignment.files.table.last_opened">Last opened</T>
-                </span>
-                <ChevronUp className="w-6 h-6 text-[hsl(var(--assignment-on-surface-variant))]" />
-              </div>
-            </div>
-
-            {/* Table Rows */}
-            {galleryItems.slice(0, 3).map((item) => (
-              <div
-                key={item._id}
-                className="flex items-center justify-between px-4 py-2 bg-[hsl(var(--assignment-surface-container))] border-b border-[hsl(var(--assignment-outline-variant))] last:border-b-0"
-              >
-                <div className="flex items-center gap-3 w-[400px]">
-                  <Checkbox />
-                  <span className="text-sm font-semibold text-[hsl(var(--assignment-on-surface-variant))]">
-                    {item.title || <T context="assignment.files.untitled">Untitled</T>}
-                  </span>
-                </div>
-                <div className="w-[120px]">
-                  <span className="text-sm font-semibold text-[hsl(var(--assignment-on-surface-variant))]">
-                    {item.itemType === 'artifact' ? (
-                      <T context="assignment.files.type.artifact">Artifact</T>
-                    ) : item.itemType === 'widget' ? (
-                      <T context="assignment.files.type.widget">Widget</T>
-                    ) : (
-                      <T context="assignment.files.type.chat">Chat</T>
-                    )}
-                  </span>
-                </div>
-                <div className="w-[300px]">
-                  <span className="text-base text-foreground">
-                    {new Date(item.updatedAt).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: 'numeric',
-                      minute: '2-digit',
-                      hour12: true
-                    })}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+          <FilesTable
+            items={fileItems}
+            onItemClick={(item) => {
+              const galleryItem = galleryItems.find(gi => gi._id === item.id)
+              if (galleryItem) {
+                handleOpenGallery(item.id, galleryItem.itemType as 'artifact' | 'widget')
+              }
+            }}
+          />
         </div>
       </div>
-
-      {/* Project Content Management Panel */}
-      {userId && project && (
-        <ContentAttachmentPanel
-          projectId={projectId as Id<'projects'>}
-          userId={userId}
-          isOpen={showProjectContentPanel}
-          onClose={() => setShowProjectContentPanel(false)}
-          attachedNoteIds={project.noteIds || []}
-          attachedArtifactIds={project.artifactIds || []}
-          attachedStardustIds={project.stardustIds || []}
-          attachedShardIds={project.shardIds || []}
-        />
-      )}
     </div>
   )
 }

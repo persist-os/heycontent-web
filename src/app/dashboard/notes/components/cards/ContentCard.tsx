@@ -28,50 +28,6 @@ export function ContentCard({
     return hashtags.slice(0, 3);
   };
 
-  // Get card color based on note type or content
-  const getCardColor = () => {
-    if (note.type === 'content_script') {
-      return 'border-accent/30 hover:border-accent/50';
-    }
-    if (note.type === 'idea_bank') {
-      return 'border-red-500/30 hover:border-red-500/50';
-    }
-    if (note.title?.toLowerCase().includes('vlog')) {
-      return 'border-red-500/30 hover:border-red-500/50';
-    }
-    if (note.title?.toLowerCase().includes('inspiration') || note.title?.toLowerCase().includes('ootd')) {
-      return 'border-red-500/30 hover:border-red-500/50';
-    }
-    return 'border-accent/30 hover:border-accent/50';
-  };
-
-  // Get hover background class based on note type or content
-  const getHoverBgClass = () => {
-    if (note.type === 'content_script') {
-      return 'hover:bg-accent/10';
-    }
-    if (note.type === 'idea_bank') {
-      return 'hover:bg-red-500/10';
-    }
-    if (note.title?.toLowerCase().includes('vlog')) {
-      return 'hover:bg-red-500/10';
-    }
-    if (note.title?.toLowerCase().includes('inspiration') || note.title?.toLowerCase().includes('ootd')) {
-      return 'hover:bg-red-500/10';
-    }
-    return 'hover:bg-accent/10';
-  };
-
-  // Get icon color based on type
-  const getIconColor = () => {
-    if (note.type === 'content_script') {
-      return 'text-accent';
-    }
-    if (note.type === 'idea_bank') {
-      return 'text-red-600';
-    }
-    return 'text-accent';
-  };
 
   // Determine if this is a media-heavy content
   const hasMediaContent = note.content?.includes('visual') || 
@@ -86,53 +42,51 @@ export function ContentCard({
   return (
     <BaseCard
       note={note}
-      className={cn(
-        "relative",
-        // Subtle type-based accent on left edge
-        note.type === 'content_script' && "border-l-2 border-l-blue-400/40",
-        note.type === 'idea_bank' && "border-l-2 border-l-amber-400/40"
-      )}
       onEdit={onEdit}
       onDelete={onDelete}
       onToggleImportant={onToggleImportant}
       onShare={onShare}
     >
-      {/* Content with improved typography hierarchy */}
-      <div className="space-y-4">
-        {/* Title with breathing space */}
-        <div className="space-y-2">
-          <h3 className="text-lg font-light text-foreground leading-tight tracking-tight line-clamp-3">
+      {/* Content with Figma typography hierarchy */}
+      <div className="space-y-2">
+        {/* Title - Figma H2: 24px, SemiBold, line-height 36px, tracking -0.72px */}
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-[24px] font-semibold text-[hsl(var(--assignment-text-regular))] leading-[36px] tracking-[-0.72px] line-clamp-2 flex-1">
             {(note.title && note.title.trim()) || 'Untitled Idea'}
           </h3>
-          
-          {/* Content type indicator */}
-          <div className="flex items-center gap-2">
-            {hasMediaContent && (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground/70">
-                {note.title?.toLowerCase().includes('vlog') ? (
-                  <Video className="w-3 h-3" />
-                ) : (
-                  <Image className="w-3 h-3" />
-                )}
-                <span className="font-light">Media content</span>
-              </div>
-            )}
-            {note.type === 'content_script' && (
-              <span className="text-xs font-light text-blue-600/70 bg-blue-50/50 dark:bg-blue-950/20 px-2 py-0.5 rounded-md">
-                Script
-              </span>
-            )}
-            {note.type === 'idea_bank' && (
-              <span className="text-xs font-light text-amber-600/70 bg-amber-50/50 dark:bg-amber-950/20 px-2 py-0.5 rounded-md">
-                Idea
-              </span>
-            )}
-          </div>
+          {/* Timestamp - Figma H3: 16px, SemiBold, line-height 24px, tracking -0.48px */}
+          <span className="text-[16px] font-semibold text-[hsl(var(--assignment-text-subtle))] leading-[24px] tracking-[-0.48px] whitespace-nowrap">
+            {/* Will be populated by BaseCard date section */}
+          </span>
+        </div>
+        
+        {/* Content type indicator */}
+        <div className="flex items-center gap-2">
+          {hasMediaContent && (
+            <div className="flex items-center gap-1.5 text-xs text-[hsl(var(--assignment-text-subtle))]">
+              {note.title?.toLowerCase().includes('vlog') ? (
+                <Video className="w-3 h-3" />
+              ) : (
+                <Image className="w-3 h-3" />
+              )}
+              <span className="font-light">Media content</span>
+            </div>
+          )}
+          {note.type === 'content_script' && (
+            <span className="text-xs font-semibold text-[hsl(var(--assignment-primary-blue))] bg-[hsl(var(--assignment-primary-container))] px-2 py-0.5 rounded-[8px]">
+              Script
+            </span>
+          )}
+          {note.type === 'idea_bank' && (
+            <span className="text-xs font-semibold text-[hsl(var(--assignment-accent-orange))] bg-[hsl(var(--assignment-primary-container))] px-2 py-0.5 rounded-[8px]">
+              Idea
+            </span>
+          )}
         </div>
 
-        {/* Content preview with better typography */}
+        {/* Content preview - Figma Body/L: 16px, Regular, line-height 20px */}
         {contentForRendering && (
-          <div className="text-sm text-muted-foreground/80 leading-relaxed line-clamp-4 font-light">
+          <div className="text-[16px] font-normal text-[hsl(var(--assignment-text-subtle))] leading-[20px] line-clamp-4">
             <NoteContentRenderer 
               content={contentForRendering} 
               availableNotes={availableNotes}
@@ -140,13 +94,13 @@ export function ContentCard({
           </div>
         )}
 
-        {/* Hashtags with subtle styling */}
+        {/* Hashtags - Figma: gap-[20px], rounded-[8px] */}
         {hashtags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-5">
             {hashtags.map((hashtag, index) => (
               <span 
                 key={index} 
-                className="text-xs font-light text-primary/70 bg-primary/5 px-2 py-1 rounded-md"
+                className="text-[16px] font-semibold text-[hsl(var(--assignment-primary-blue))] leading-[24px] tracking-[-0.48px]"
               >
                 {hashtag}
               </span>
@@ -154,10 +108,10 @@ export function ContentCard({
           </div>
         )}
 
-        {/* OOTD media preview with elegant styling */}
+        {/* OOTD media preview - Figma styling */}
         {note.title?.toLowerCase().includes('ootd') && (
-          <div className="mt-4 h-20 bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-950/20 dark:to-orange-950/20 rounded-xl border border-amber-200/30 dark:border-amber-800/30 flex items-center justify-center">
-            <div className="flex items-center gap-2 text-amber-600/70">
+          <div className="mt-2 h-20 bg-[hsl(var(--assignment-surface-container))] rounded-[12px] border border-[hsl(var(--assignment-outline))] flex items-center justify-center">
+            <div className="flex items-center gap-2 text-[hsl(var(--assignment-text-subtle))]">
               <Image className="w-4 h-4" />
               <span className="text-xs font-light">Outfit inspiration</span>
             </div>
