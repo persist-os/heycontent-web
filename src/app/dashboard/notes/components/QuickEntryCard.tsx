@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { T } from '@/components/translation/T';
 
 export interface QuickEntryCardProps {
-  type: 'chats' | 'artifacts' | 'assignments' | 'uploaded-files';
+  type: 'chats' | 'artifacts' | 'assignments' | 'uploaded-files' | 'widgets';
   title: React.ReactNode;
   tokenUsed?: string;
   fileCount?: number;
@@ -19,6 +19,10 @@ export interface QuickEntryCardProps {
 const cardConfig = {
   chats: {
     iconSrc: '/icons/chat-left-text-fill.svg',
+    borderColor: 'border-[hsl(var(--notes-ghost-blue))]',
+  },
+  widgets: {
+    iconSrc: '/icons/artifact-widget.svg',
     borderColor: 'border-[hsl(var(--notes-ghost-blue))]',
   },
   artifacts: {

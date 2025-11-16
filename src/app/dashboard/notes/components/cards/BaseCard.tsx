@@ -78,8 +78,8 @@ export function BaseCard({
         )}
         onClick={!isDragging && !isOverlay ? handleEdit : undefined}
       >
-        {/* Widget Icon - Top Right */}
-        <div className="absolute top-[9px] left-[307px] w-6 h-6 z-20">
+        {/* Widget Icon - Top Right - Hide on hover when actions are shown */}
+        <div className="absolute top-[9px] right-[9px] w-6 h-6 z-20 group-hover:opacity-0 transition-opacity duration-300">
           <Image
             src="/icons/artifact-widget.svg"
             alt="Widget icon"
@@ -90,8 +90,9 @@ export function BaseCard({
         </div>
 
         {/* Floating actions - mobile-friendly with touch targets */}
+        {/* Hide widget icon on hover to show actions */}
         {!isOverlay && !isDragging && (
-          <div className="absolute top-[9px] right-[9px] opacity-0 group-hover:opacity-100 transition-all duration-300 delay-75 z-20">
+          <div className="absolute top-[9px] right-[9px] opacity-0 group-hover:opacity-100 transition-all duration-300 delay-75 z-30">
             <div className="flex items-center gap-1 sm:gap-2">
               <button
                 onClick={handleToggleImportant}
@@ -127,15 +128,15 @@ export function BaseCard({
         )}
         
         {/* Content wrapper with AssignmentArtifactCard layout */}
-        <div className="absolute left-[6px] top-[7px] px-[8px] py-0 w-[335px] h-[116px] flex flex-col gap-[16px] z-10">
+        <div className="absolute left-[6px] top-[7px] right-[41px] px-[8px] py-0 h-[116px] flex flex-col gap-[16px] z-10">
           {/* Title and subtitle section */}
-          <div className="flex flex-col gap-[4px]">
+          <div className="flex flex-col gap-[4px] min-w-0">
             {children}
           </div>
           
           {/* Metadata and action button */}
-          <div className="flex items-center justify-between">
-            <span className="text-[16px] font-normal leading-[20px] text-[hsl(var(--assignment-text-regular))] whitespace-nowrap">
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            <span className="text-[16px] font-normal leading-[20px] text-[hsl(var(--assignment-text-regular))] truncate min-w-0">
               {`${formattedType} • ${relativeTime}`}
             </span>
             <Button

@@ -137,6 +137,20 @@
     --response-options-button-bg: 0 0% 94%; /* N-94: #F0F0F0 - Light button background */
     --response-options-button-border: 210 100% 40%; /* P-40: #0066CC - Medium blue border */
     --response-options-button-text: 210 100% 40%; /* P-40: #0066CC - Medium blue text */
+
+    /* Files Page Colors - Light Mode (Blue/Orange with Gradient Emphasis) */
+    --file-bg: 0 0% 98%; /* N-98: #FAFAFA - Light background */
+    --file-text-regular: 0 0% 10%; /* N-10: #1A1A1A - Dark text for contrast */
+    --file-text-subtle: 220 10% 30%; /* NV-30: #4A525A - Muted text, readable */
+    --file-primary-blue: 210 100% 50%; /* Medium blue primary */
+    --file-primary-blue-text: 0 0% 100%; /* White text on primary */
+    --file-accent-orange: 38 100% 60%; /* Orange accent */
+    --file-accent-orange-text: 0 0% 100%; /* White text on accent */
+    --file-gradient-from: 210 100% 50% / 0.3; /* Blue gradient start with opacity */
+    --file-gradient-to: 38 100% 60% / 0.5; /* Orange gradient end with opacity */
+    --file-surface-container: 0 0% 94%; /* N-94: #F0F0F0 - Light surface container */
+    --file-outline: 220 10% 75%; /* NV-75: #BFC4CC - Border on light background */
+    --file-outline-variant: 220 10% 62%; /* NV-62: #8F939F - Subtle border */
   }
 
   .dark {
@@ -254,6 +268,20 @@
     --notes-primary-hover: 210 100% 85%; /* #cfe5ff - Figma BG/Primary/Default(Blue)/Hover */
     --notes-secondary-default: 38 100% 56%; /* #ffb963 - Figma default/secondary */
     --notes-on-secondary: 38 100% 14%; /* #472a00 - Figma default/on-secondary */
+
+    /* Files Page Colors - Dark Mode (Blue/Orange with Gradient Emphasis) */
+    --file-bg: 0 0% 11%; /* #1c1b1c - Figma Colors/Neutrals/N10 */
+    --file-text-regular: 0 0% 93%; /* #eef1fe - Figma Color/Regular */
+    --file-text-subtle: 220 10% 80%; /* #cccfdd - Figma Color/Subtle */
+    --file-primary-blue: 210 100% 70%; /* Brighter blue for dark mode */
+    --file-primary-blue-text: 0 0% 100%; /* White text on primary */
+    --file-accent-orange: 38 100% 70%; /* Brighter orange for dark mode */
+    --file-accent-orange-text: 0 0% 100%; /* White text on accent */
+    --file-gradient-from: 210 100% 70% / 0.4; /* Brighter blue gradient start with opacity */
+    --file-gradient-to: 38 100% 70% / 0.6; /* Brighter orange gradient end with opacity */
+    --file-surface-container: 0 0% 28%; /* #474647 - Figma Colors/Neutrals/N30 */
+    --file-outline: 220 10% 80%; /* #cccfdd - Figma default/outline */
+    --file-outline-variant: 220 10% 62%; /* #8f939f - Figma default/outline-variant */
 
     /* Response Options Component Colors - Dark Mode */
     --response-options-bg: 0 0% 28%; /* N-30: #474647 - Dark background */

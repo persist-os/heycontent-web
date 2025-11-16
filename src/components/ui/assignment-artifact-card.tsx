@@ -48,7 +48,7 @@ export function AssignmentArtifactCard({
       )}
     >
       {/* Widget Icon - Top Right */}
-      <div className="absolute top-[9px] left-[307px] w-6 h-6">
+      <div className="absolute top-[9px] right-[9px] w-6 h-6 z-10">
         <Image
           src="/icons/artifact-widget.svg"
           alt="Widget icon"
@@ -61,12 +61,12 @@ export function AssignmentArtifactCard({
         />
       </div>
       
-      <div className="absolute left-[6px] top-[7px] px-[8px] py-0 w-[335px] h-[116px] flex flex-col gap-[16px]">
-        <div className="flex flex-col gap-[4px]">
-          <h3 className="text-[24px] font-semibold leading-[36px] tracking-[-0.72px] text-[hsl(var(--assignment-text-regular))] line-clamp-1">
+      <div className="absolute left-[6px] top-[7px] right-[41px] px-[8px] py-0 h-[116px] flex flex-col gap-[16px]">
+        <div className="flex flex-col gap-[4px] min-w-0">
+          <h3 className="text-[24px] font-semibold leading-[36px] tracking-[-0.72px] text-[hsl(var(--assignment-text-regular))] line-clamp-1 overflow-hidden">
             {artifact.title || <T context="assignment.artifacts.artifact_name_fallback">artifact name</T>}
           </h3>
-          <p className={cn('text-[16px] font-normal leading-[20px]', {
+          <p className={cn('text-[16px] font-normal leading-[20px] line-clamp-1 overflow-hidden', {
             'text-[hsl(var(--assignment-text-regular))]': isHighlighted,
             'text-[hsl(var(--assignment-text-subtle))]': !isHighlighted
           })}>
@@ -74,8 +74,8 @@ export function AssignmentArtifactCard({
           </p>
         </div>
         
-        <div className="flex items-center justify-between">
-          <span className="text-[16px] font-normal leading-[20px] text-[hsl(var(--assignment-text-regular))] whitespace-nowrap">
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          <span className="text-[16px] font-normal leading-[20px] text-[hsl(var(--assignment-text-regular))] truncate min-w-0">
             {`${formattedType} • ${relativeTime}`}
           </span>
           <Button

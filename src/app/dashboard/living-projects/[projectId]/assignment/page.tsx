@@ -226,8 +226,8 @@ function AssignmentPageContent() {
 
   // Breadcrumb items
   const breadcrumbItems = useMemo(() => [
-    { label: 'Files', href: '/dashboard' },
-    { label: 'Assignments', href: '/dashboard/home' },
+    { label: 'Files', href: '/dashboard/notes' },
+    { label: 'Assignments', href: '/dashboard/assignments' },
     { label: project?.name || 'Untitled Assignment' }
   ], [project])
 

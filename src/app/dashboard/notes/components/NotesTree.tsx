@@ -27,6 +27,7 @@ import { QuickEntryCard } from './QuickEntryCard';
 import { useQuickEntryStats } from '../hooks/useQuickEntryStats';
 import { RecentActivityTable } from './RecentActivityTable';
 import { uploadFile, type FileUploadResponse, getFileDisplayUrl } from '@/lib/file-upload';
+import { FilesView } from './FilesView';
 
 export function NotesTree({
   notes,
@@ -52,6 +53,7 @@ export function NotesTree({
   const [notesToBatchDelete, setNotesToBatchDelete] = useState<string[] | null>(null);
   const [isBatchDeleting, setIsBatchDeleting] = useState(false);
   const [isBatchDeletingNotes, setIsBatchDeletingNotes] = useState(false);
+  const [showFilesView, setShowFilesView] = useState(false);
   
   const router = useRouter();
   const { updateNote, deleteNote } = useNotes();
@@ -507,28 +509,32 @@ export function NotesTree({
         <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6">
           <div className="flex flex-col sm:flex-row gap-5 mb-6">
             <QuickEntryCard
-              type="chats"
-              title={<T context="notes.quick_entry.chats">Chats</T>}
-              tokenUsed={quickEntryStats.chats.tokenUsed}
-              fileCount={quickEntryStats.chats.count}
+              type="widgets"
+              title={<T context="notes.quick_entry.widgets">Widgets</T>}
+              tokenUsed={quickEntryStats.widgets.tokenUsed}
+              fileCount={quickEntryStats.widgets.count}
+              onClick={() => router.push('/dashboard/widgets')}
             />
             <QuickEntryCard
               type="artifacts"
               title={<T context="notes.quick_entry.artifacts">Artifacts</T>}
               tokenUsed={quickEntryStats.artifacts.tokenUsed}
               fileCount={quickEntryStats.artifacts.count}
+              onClick={() => router.push('/dashboard/artifacts')}
             />
             <QuickEntryCard
               type="assignments"
               title={<T context="notes.quick_entry.assignments">Assignments</T>}
               tokenUsed={quickEntryStats.assignments.tokenUsed}
               fileCount={quickEntryStats.assignments.count}
+              onClick={() => router.push('/dashboard/assignments')}
             />
             <QuickEntryCard
               type="uploaded-files"
               title={<T context="notes.quick_entry.uploaded_files">Uploaded Files</T>}
               mbUsed={quickEntryStats.uploadedFiles.mbUsed}
               fileCount={quickEntryStats.uploadedFiles.count}
+              onClick={() => router.push('/dashboard/files')}
             />
           </div>
         </div>

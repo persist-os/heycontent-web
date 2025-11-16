@@ -48,12 +48,12 @@ export function ContentCard({
       onShare={onShare}
     >
       {/* Title - AssignmentArtifactCard style */}
-      <h3 className="text-[24px] font-semibold leading-[36px] tracking-[-0.72px] text-[hsl(var(--assignment-text-regular))] line-clamp-1">
+      <h3 className="text-[24px] font-semibold leading-[36px] tracking-[-0.72px] text-[hsl(var(--assignment-text-regular))] line-clamp-1 overflow-hidden">
         {(note.title && note.title.trim()) || 'Untitled Idea'}
       </h3>
       {/* Subtitle - Content preview */}
       {contentForRendering && (
-        <p className="text-[16px] font-normal leading-[20px] text-[hsl(var(--assignment-text-subtle))] line-clamp-1">
+        <p className="text-[16px] font-normal leading-[20px] text-[hsl(var(--assignment-text-subtle))] line-clamp-1 overflow-hidden">
           {contentForRendering}
         </p>
       )}

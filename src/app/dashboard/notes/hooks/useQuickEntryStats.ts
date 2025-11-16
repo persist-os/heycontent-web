@@ -10,6 +10,10 @@ export interface QuickEntryStats {
     count: number;
     tokenUsed?: string;
   };
+  widgets: {
+    count: number;
+    tokenUsed?: string;
+  };
   artifacts: {
     count: number;
     tokenUsed?: string;
@@ -39,6 +43,12 @@ export function useQuickEntryStats(): QuickEntryStats {
     userId ? { userId, limit: 1000 } : 'skip'
   );
 
+  // Get widgets count
+  const userWidgets = useQuery(
+    api.widgetsQueries.getUserWidgets,
+    userId ? { userId } : 'skip'
+  );
+
   // Get artifacts count
   const userArtifacts = useQuery(
     api.artifactQueries.getUserArtifacts,
@@ -56,11 +66,13 @@ export function useQuickEntryStats(): QuickEntryStats {
 
   const isLoading = 
     (userId && recentThreads === undefined) ||
+    (userId && userWidgets === undefined) ||
     (userId && userArtifacts === undefined) ||
     (userId && fileStats === undefined);
 
   // Calculate counts
   const chatsCount = recentThreads?.length || 0;
+  const widgetsCount = userWidgets?.length || 0;
   const artifactsCount = userArtifacts?.length || 0;
   const assignmentsCount = projects?.length || 0;
   
@@ -75,6 +87,10 @@ export function useQuickEntryStats(): QuickEntryStats {
   return {
     chats: {
       count: chatsCount,
+      tokenUsed: undefined, // Not tracked
+    },
+    widgets: {
+      count: widgetsCount,
       tokenUsed: undefined, // Not tracked
     },
     artifacts: {
