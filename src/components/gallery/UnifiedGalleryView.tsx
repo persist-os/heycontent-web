@@ -239,7 +239,7 @@ export function UnifiedGalleryView({
   // Empty state
   if (items.length === 0) {
     return (
-      <div className="fixed inset-0 bg-background">
+      <div className="fixed inset-0 left-16 bg-background">
         <div className="flex items-center justify-center h-full px-4">
           <div className="text-center space-y-4 max-w-md w-full">
             <h2 className={cn(
@@ -345,7 +345,7 @@ export function UnifiedGalleryView({
   
   return (
     <TooltipProvider>
-      <div className="fixed inset-0 bg-background flex flex-col">
+      <div className="fixed inset-0 left-16 bg-background flex flex-col">
         {/* Collaborators Modal */}
         {projectId && project && (
           <ProjectCollaboratorsModal

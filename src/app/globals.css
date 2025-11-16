@@ -96,18 +96,41 @@
     --widget-border: 199 89% 68%; /* Light sky border */
     --widget-text: 199 89% 35%; /* Medium dark sky text - readable contrast */
     --widget-glow: 199 89% 58%; /* Sky glow */
+
+    /* Homepage Chat Input Gradient - Light Mode */
+    --homepage-chat-gradient-from: 210 100% 78% / 0.25; /* rgba(101,181,255,0.25) - rigel blue at 25% opacity for better visibility in light mode */
+    --homepage-chat-gradient-to: 210 100% 78% / 0; /* rgba(101,181,255,0) - transparent */
+    --homepage-chat-border: 210 100% 78%; /* #65b5ff - rigel blue border */
+    --homepage-chat-bg-base: 0 0% 96%; /* N-96: #F5F5F5 - Light background for light mode */
+    --assignment-primary-container: 210 100% 20%; /* #003355 - primary container */
+
+    /* Figma Design System Assignment Page Colors - Light Mode */
+    --assignment-bg: 0 0% 98%; /* N-98: #FAFAFA - Light background */
+    --assignment-text-regular: 0 0% 10%; /* N-10: #1A1A1A - Dark text for contrast */
+    --assignment-text-subtle: 220 10% 30%; /* NV-30: #4A525A - Muted text, readable */
+    --assignment-primary-blue: 210 100% 40%; /* P-40: #0066CC - Navy blue for light mode */
+    --assignment-primary-blue-text: 0 0% 100%; /* White text on primary blue */
+    --assignment-accent-orange: 38 100% 50%; /* T-40: #FF9800 - Orange accent */
+    --assignment-accent-orange-text: 0 0% 100%; /* White text on accent */
+    --assignment-brand-orange: 38 100% 56%; /* #ffa312 - Brand orange (same in both modes) */
+    --assignment-error: 0 100% 40%; /* E-40: #CC0000 - Error red */
+    --assignment-surface-container: 0 0% 94%; /* N-94: #F0F0F0 - Light surface container */
+    --assignment-outline: 220 10% 75%; /* NV-75: #BFC4CC - Border on light background */
+    --assignment-outline-variant: 220 10% 62%; /* NV-62: #8F939F - Subtle border */
+    --assignment-surface-bright: 0 0% 96%; /* N-96: #F5F5F5 - Bright surface */
+    --assignment-on-surface-variant: 0 0% 10%; /* N-10: Dark text on light surface */
   }
 
   .dark {
-    /* Dark mode: Material Design 3 color system */
-    --background: 0 0% 6%; /* Surface N-6 - Dark neutral surface */
-    --foreground: 0 0% 90%; /* On Surface N-90 - Light text for high contrast */
+    /* Dark mode: Material Design 3 color system - Figma Design System Colors */
+    --background: 0 0% 11%; /* #1c1b1c - Figma Colors/Neutrals/N10 */
+    --foreground: 0 0% 93%; /* #eef1fe - Figma Color/Regular */
 
-    --card: 0 0% 10%; /* Surface Container Low N-10 - Card backgrounds */
-    --card-foreground: 0 0% 90%; /* On Surface N-90 - Light text on cards */
+    --card: 0 0% 11%; /* #1c1b1c - Figma Colors/Neutrals/N10 */
+    --card-foreground: 0 0% 93%; /* #eef1fe - Figma Color/Regular */
 
-    --popover: 0 0% 22%; /* Surface Container Highest N-22 - Elevated surfaces */
-    --popover-foreground: 0 0% 90%; /* On Surface N-90 - Light text */
+    --popover: 0 0% 28%; /* #474647 - Figma Colors/Neutrals/N30 */
+    --popover-foreground: 0 0% 93%; /* #eef1fe - Figma Color/Regular */
 
     /* Notepad-specific colors - clean neutral aesthetic - Dark mode */
     --notepad-bg: 220 13% 8%; /* Clean dark background - distinctly different from chat */
@@ -116,24 +139,40 @@
     --notepad-icon-hover: 220 10% 70%; /* Lighter gray on hover */
     --notepad-border: 220 10% 20%; /* Subtle dark border */
 
-    --primary: 210 100% 65%; /* Bright blue primary - visible on dark backgrounds */
-    --primary-foreground: 210 100% 20%; /* On Primary P-20 - Dark blue text on primary */
+    --primary: 210 100% 78%; /* #9acbff - Figma BG/Primary/Default(Blue)/Default */
+    --primary-foreground: 210 100% 24%; /* #004a79 - Figma Text +Icon/Primary/Default */
 
     --secondary: 220 15% 20%; /* Dark neutral secondary */
-    --secondary-foreground: 220 15% 90%; /* Light text on secondary */
+    --secondary-foreground: 220 15% 93%; /* #eef1fe - Light text on secondary */
 
-    --muted: 0 0% 12%; /* Surface Container N-12 - Muted backgrounds */
-    --muted-foreground: 220 10% 80%; /* On Surface Variant NV-80 - Muted text */
+    --muted: 0 0% 28%; /* #474647 - Figma Colors/Neutrals/N30 */
+    --muted-foreground: 220 10% 80%; /* #cccfdd - Figma Color/Subtle */
 
-    --accent: 210 100% 80%; /* Navy blue accent instead of orange */
-    --accent-foreground: 210 100% 20%; /* On Tertiary T-20 - Dark text on accent */
+    --accent: 38 100% 75%; /* #ffb963 - Figma BG/Primary/Accent(Orange)/Default */
+    --accent-foreground: 38 100% 20%; /* #663e00 - Figma Text +Icon/Primary/Accent */
 
-    --destructive: 0 100% 80%; /* Error E-80 - Bright red error */
-    --destructive-foreground: 0 100% 20%; /* On Error E-20 - Dark text */
+    --destructive: 0 100% 68%; /* #ff655b - Figma Colors/UI/E100 */
+    --destructive-foreground: 0 0% 100%; /* White text on error */
 
-    --border: 220 10% 30%; /* Outline Variant NV-30 - Subtle borders */
-    --input: 0 0% 12%; /* Surface Container N-12 - Input backgrounds */
-    --ring: 210 100% 65%; /* Bright blue focus rings - matches primary */
+    --border: 220 10% 80%; /* #cccfdd - Figma default/outline */
+    --input: 0 0% 28%; /* #474647 - Figma Colors/Neutrals/N30 */
+    --ring: 210 100% 78%; /* #9acbff - Bright blue focus rings - matches primary */
+
+    /* Figma Design System Assignment Page Colors */
+    --assignment-bg: 0 0% 11%; /* #1c1b1c - Figma Colors/Neutrals/N10 */
+    --assignment-text-regular: 0 0% 93%; /* #eef1fe - Figma Color/Regular */
+    --assignment-text-subtle: 220 10% 80%; /* #cccfdd - Figma Color/Subtle */
+    --assignment-primary-blue: 210 100% 78%; /* #9acbff - Figma BG/Primary/Default(Blue)/Default */
+    --assignment-primary-blue-text: 210 100% 24%; /* #004a79 - Figma Text +Icon/Primary/Default */
+    --assignment-accent-orange: 38 100% 75%; /* #ffb963 - Figma BG/Primary/Accent(Orange)/Default */
+    --assignment-accent-orange-text: 38 100% 20%; /* #663e00 - Figma Text +Icon/Primary/Accent */
+    --assignment-brand-orange: 38 100% 56%; /* #ffa312 - Figma Colors/Brand/aldebaran */
+    --assignment-error: 0 100% 68%; /* #ff655b - Figma Colors/UI/E100 */
+    --assignment-surface-container: 0 0% 28%; /* #474647 - Figma Colors/Neutrals/N30 */
+    --assignment-outline: 220 10% 80%; /* #cccfdd - Figma default/outline */
+    --assignment-outline-variant: 220 10% 62%; /* #8f939f - Figma default/outline-variant */
+    --assignment-surface-bright: 0 0% 28%; /* #474647 - Figma default/surface-bright */
+    --assignment-on-surface-variant: 0 0% 93%; /* #eceffe - Figma default/on-surface-variant */
 
     --chart-1: 210 100% 60%; /* Navy blue for dark mode */
     --chart-2: 210 100% 70%; /* Medium blue for dark mode */
@@ -179,6 +218,13 @@
     --widget-border: 199 89% 32%; /* Medium sky border */
     --widget-text: 199 89% 70%; /* Medium light sky text - softer than white, readable */
     --widget-glow: 199 89% 58%; /* Sky glow */
+
+    /* Homepage Chat Input Gradient - Dark Mode */
+    --homepage-chat-gradient-from: 210 100% 78% / 0.4; /* rgba(101,181,255,0.4) - slightly more opaque for visibility */
+    --homepage-chat-gradient-to: 210 100% 78% / 0; /* rgba(101,181,255,0) - transparent */
+    --homepage-chat-border: 210 100% 78%; /* #65b5ff - rigel blue border */
+    --homepage-chat-bg-base: 0 0% 28%; /* #474647 - fallback background */
+    --assignment-primary-container: 210 100% 20%; /* #003355 - primary container */
   }
 }
 
@@ -195,6 +241,69 @@
     @apply bg-background text-foreground;
     overflow-x: hidden;
     min-height: 100vh;
+    /* Root typography: DM Sans, Regular (400), 16px, line-height 20px */
+    font-family: var(--font-dm-sans), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 20px;
+    letter-spacing: 0;
+  }
+
+  /* Typography System - Figma Design System */
+  /* Display: 96px, ExtraLight (200), line-height 120px, tracking -2.88px */
+  .text-display {
+    font-size: 96px;
+    font-weight: 200;
+    line-height: 120px;
+    letter-spacing: -2.88px;
+  }
+
+  /* Heading 1: 32px, ExtraLight (200), line-height 60px, tracking -0.96px */
+  h1, .text-h1 {
+    font-size: 32px;
+    font-weight: 200;
+    line-height: 60px;
+    letter-spacing: -0.96px;
+  }
+
+  /* Heading 2: 24px, SemiBold (600), line-height 36px, tracking -0.72px */
+  h2, .text-h2 {
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 36px;
+    letter-spacing: -0.72px;
+  }
+
+  /* Heading 3/Subtitle: 16px, SemiBold (600), line-height 24px, tracking -0.48px */
+  h3, .text-h3, .text-subtitle {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 24px;
+    letter-spacing: -0.48px;
+  }
+
+  /* Body - L: 16px, Regular (400), line-height 20px */
+  .text-body-l {
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 20px;
+    letter-spacing: 0;
+  }
+
+  /* Body - M: 14px, SemiBold (600), line-height 21px, tracking -0.14px */
+  .text-body-m {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 21px;
+    letter-spacing: -0.14px;
+  }
+
+  /* Body - S: 12px, SemiBold (600), line-height normal (100%) */
+  .text-body-s {
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0;
   }
 
   /* ChatGPT-inspired font stack for chat interface */

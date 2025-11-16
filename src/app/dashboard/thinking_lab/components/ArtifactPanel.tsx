@@ -143,17 +143,12 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
               variant="outline"
               size="sm"
               onClick={() => {
-                // Open gallery with first artifact, or just open gallery if no artifacts
-                const firstArtifactId = artifacts[0]?._id
-                if (firstArtifactId) {
-                  router.push(`/dashboard/living-projects/${effectiveProjectId}/gallery?id=${firstArtifactId}`)
-                } else {
-                  router.push(`/dashboard/living-projects/${effectiveProjectId}/gallery`)
-                }
+                // Open assignment page
+                router.push(`/dashboard/living-projects/${effectiveProjectId}/assignment`)
               }}
             >
               <ExternalLink className="w-4 h-4 mr-2" />
-              <T context="button.artifact.panel.open.gallery">Open in Unified View</T>
+              <T context="button.artifact.panel.open.gallery">Open in Assignment View</T>
             </Button>
           )}
         </div>

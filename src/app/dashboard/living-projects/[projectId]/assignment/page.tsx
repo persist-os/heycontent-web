@@ -1,0 +1,485 @@
+'use client'
+
+import React, { useState, useEffect, useMemo } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '@/convex/_generated/api'
+import { getCurrentUserId } from '@/app/lib/api-helpers'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Progress } from '@/components/ui/progress'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { 
+  MessageSquare, 
+  Pause, 
+  ArrowRight, 
+  ExternalLink,
+  ArrowUpRight,
+  ChevronUp,
+  ChevronDown,
+  Sparkles
+} from 'lucide-react'
+import { T } from '@/components/translation/T'
+import type { Id } from '@/convex/_generated/dataModel'
+import { useGalleryItems } from '@/hooks/useGalleryItems'
+import Link from 'next/link'
+import { formatDistanceToNow } from '../components/utils/dateFormatting'
+import { CheckCircle2 } from 'lucide-react'
+
+function AssignmentPageContent() {
+  const params = useParams()
+  const router = useRouter()
+  const projectId = params.projectId as string
+  const [userId, setUserId] = useState<string | null>(null)
+  const [isPausing, setIsPausing] = useState(false)
+
+  // Get user ID
+  useEffect(() => {
+    const fetchUserId = async () => {
+      try {
+        const id = await getCurrentUserId()
+        setUserId(id)
+      } catch (error) {
+        console.error('Failed to get user ID:', error)
+      }
+    }
+    fetchUserId()
+  }, [])
+
+  // Fetch project data
+  const project = useQuery(
+    api.projectsQueries.getById,
+    projectId && userId ? {
+      projectId: projectId as Id<'projects'>,
+      userId: userId,
+    } : 'skip'
+  )
+
+  // Fetch assignment status
+  const assignmentStatus = useQuery(
+    api.backgroundJobs.getAssignmentStatus,
+    projectId && userId ? {
+      projectId: projectId as Id<'projects'>,
+      userId: userId,
+    } : 'skip'
+  )
+
+  // Fetch artifacts and widgets
+  const { items: galleryItems, isLoading: isLoadingItems } = useGalleryItems({
+    projectId: projectId,
+    userId: userId || undefined
+  })
+
+  // Separate artifacts and widgets
+  const artifacts = useMemo(() => 
+    galleryItems.filter(item => item.itemType === 'artifact'),
+    [galleryItems]
+  )
+  const widgets = useMemo(() => 
+    galleryItems.filter(item => item.itemType === 'widget'),
+    [galleryItems]
+  )
+
+  // Pause mutation
+  const pauseAssignment = useMutation(api.projectsMutations.toggleArchive)
+
+  // Fetch A2A notes for status updates and time estimates
+  const a2aNotes = useQuery(
+    api.a2aQueries.getLatestA2ANotesPublic,
+    projectId ? {
+      projectId: projectId,
+      limit: 20
+    } : 'skip'
+  )
+
+  // Calculate progress (based on widget completion)
+  const progress = useMemo(() => {
+    if (!assignmentStatus?.widgets || assignmentStatus.widgets.length === 0) return 0
+    const completed = assignmentStatus.widgets.filter((w: any) => w.status === 'completed').length
+    return Math.round((completed / assignmentStatus.widgets.length) * 100)
+  }, [assignmentStatus])
+
+  // Calculate time left from A2A notes or widget execution times
+  const timeLeft = useMemo(() => {
+    if (!a2aNotes || a2aNotes.length === 0) {
+      // Fallback: Estimate from widget statuses
+      if (!assignmentStatus?.widgets || assignmentStatus.widgets.length === 0) {
+        return 'Calculating...'
+      }
+      const pending = assignmentStatus.widgets.filter((w: any) => w.status === 'pending' || w.status === 'in_progress').length
+      if (pending === 0) {
+        return 'Almost done'
+      }
+      // Rough estimate: 5 minutes per widget
+      const estimatedMinutes = pending * 5
+      return `${estimatedMinutes} min left`
+    }
+
+    // Try to extract time estimate from A2A notes
+    for (const note of a2aNotes) {
+      const report = note.report || {}
+      if (report.timeEstimate || report.estimatedCompletion || report.estimated_time_minutes) {
+        const minutes = report.estimated_time_minutes || report.timeEstimate || 
+          (report.estimatedCompletion ? Math.max(0, Math.floor((report.estimatedCompletion - Date.now()) / 60000)) : null)
+        if (minutes !== null && minutes > 0) {
+          if (minutes < 5) return 'Almost done'
+          return `${minutes} min left`
+        }
+      }
+    }
+
+    // Fallback: Estimate from widget statuses
+    if (assignmentStatus?.widgets) {
+      const pending = assignmentStatus.widgets.filter((w: any) => w.status === 'pending' || w.status === 'in_progress').length
+      if (pending === 0) {
+        return 'Almost done'
+      }
+      const estimatedMinutes = pending * 5
+      return `${estimatedMinutes} min left`
+    }
+
+    return 'Calculating...'
+  }, [a2aNotes, assignmentStatus])
+
+  // Get project conversation for "Discuss In Chat"
+  const projectConversation = useQuery(
+    api.chatQueries.getProjectScopedConversation,
+    project?._id && project?.userId ? {
+      projectId: project._id,
+      userId: project.userId
+    } : 'skip'
+  )
+
+  // Handle pause
+  const handlePause = async () => {
+    if (!projectId || !userId) return
+    setIsPausing(true)
+    try {
+      await pauseAssignment({
+        projectId: projectId as Id<'projects'>,
+        userId: userId,
+      })
+    } catch (error) {
+      console.error('Failed to pause assignment:', error)
+    } finally {
+      setIsPausing(false)
+    }
+  }
+
+  // Handle open gallery for artifact/widget
+  const handleOpenGallery = (itemId: string, itemType: 'artifact' | 'widget') => {
+    router.push(`/dashboard/living-projects/${projectId}/gallery?id=${itemId}&type=${itemType}`)
+  }
+
+  // Handle discuss in chat
+  const handleDiscussInChat = () => {
+    if (projectConversation?._id) {
+      router.push(`/dashboard/thinking_lab?conversationId=${projectConversation._id}`)
+    } else if (projectId) {
+      router.push(`/dashboard/thinking_lab?projectId=${projectId}`)
+    }
+  }
+
+  // Map widgets to tasks, sorted by status priority
+  const taskWidgets = useMemo(() => {
+    if (!assignmentStatus?.widgets || assignmentStatus.widgets.length === 0) {
+      return []
+    }
+    // Sort: in_progress first, then pending, then completed
+    return [...assignmentStatus.widgets].sort((a: any, b: any) => {
+      const statusOrder: Record<string, number> = {
+        'in_progress': 0,
+        'pending': 1,
+        'completed': 2,
+        'failed': 3
+      }
+      return (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99)
+    }).slice(0, 5) // Limit to 5 most relevant
+  }, [assignmentStatus])
+
+  if (!project || !userId) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-muted-foreground">Loading assignment...</div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-[60px] max-w-[1128px]">
+        {/* Breadcrumb and Header */}
+        <div className="flex flex-col gap-5 mb-10">
+          <div className="flex items-center justify-between py-3">
+            {/* Breadcrumb */}
+            <div className="flex items-center gap-1 text-[32px] font-extralight leading-[60px] tracking-[-0.96px] text-foreground">
+              <Link href="/dashboard" className="hover:underline cursor-pointer">
+                Files
+              </Link>
+              <span>/</span>
+              <Link href="/dashboard/home" className="hover:underline cursor-pointer">
+                Assignments
+              </Link>
+              <span>/</span>
+              <span className="text-foreground">{project.name || 'Untitled Assignment'}</span>
+            </div>
+
+            {/* Discuss In Chat Button */}
+            <Button
+              onClick={handleDiscussInChat}
+              className="bg-[hsl(var(--assignment-primary-blue))] text-[hsl(var(--assignment-primary-blue-text))] hover:bg-[hsl(var(--assignment-primary-blue))]/90 px-6 py-3 h-auto rounded-lg"
+            >
+              <MessageSquare className="w-6 h-6 mr-2" />
+              <span className="text-base">Discuss In Chat</span>
+            </Button>
+          </div>
+
+          {/* Synopsis */}
+          {project.description && (
+            <p className="text-[18px] leading-normal text-foreground font-normal">
+              {project.description}
+            </p>
+          )}
+        </div>
+
+        {/* Activity Section */}
+        <div className="flex flex-col gap-5 mb-10">
+          <h2 className="text-2xl font-semibold leading-9 tracking-[-0.72px] text-foreground">
+            Activity
+          </h2>
+          
+          <Card className="bg-[hsl(var(--assignment-surface-container))] border-none rounded-xl p-5">
+            <div className="flex flex-col gap-[10px]">
+              {/* Progress Bar and Controls */}
+              <div className="flex items-center justify-between gap-8">
+                <div className="flex items-center gap-6 flex-1">
+                  {/* Progress Bar */}
+                  <div className="flex-1 max-w-[824px]">
+                    <Progress 
+                      value={progress} 
+                      className="h-3 bg-[hsl(var(--assignment-outline))]"
+                    />
+                  </div>
+                  
+                  {/* Time Left */}
+                  <span className="text-base font-semibold text-[hsl(var(--assignment-text-subtle))] whitespace-nowrap">
+                    {timeLeft}
+                  </span>
+                </div>
+
+                {/* Pause Button */}
+                <Button
+                  onClick={handlePause}
+                  disabled={isPausing}
+                  variant="ghost"
+                  className="text-[hsl(var(--assignment-error))] hover:bg-transparent hover:text-[hsl(var(--assignment-error))]/80 px-4 py-2 h-auto"
+                >
+                  <Pause className="w-6 h-6 mr-2" />
+                  <span className="text-sm font-semibold">Pause</span>
+                </Button>
+              </div>
+
+              {/* Task List */}
+              <Card className="bg-[hsl(var(--assignment-bg))] border-none rounded-xl p-4 mt-2">
+                <div className="flex items-end justify-between">
+                  {/* Task List */}
+                  <div className="flex flex-col gap-[5px] flex-1">
+                    {taskWidgets.length === 0 ? (
+                      <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 rounded-full border-2 border-[hsl(var(--assignment-outline-variant))] flex-shrink-0" />
+                        <span className="text-base text-[hsl(var(--assignment-text-subtle))]">
+                          No tasks yet
+                        </span>
+                      </div>
+                    ) : (
+                      taskWidgets.map((widget: any, index: number) => {
+                        const isActive = widget.status === 'in_progress'
+                        const isCompleted = widget.status === 'completed'
+                        const isFailed = widget.status === 'failed'
+
+                        return (
+                          <React.Fragment key={widget.widget_id || index}>
+                            {index > 0 && (
+                              <div className="w-[2px] h-[22px] bg-[hsl(var(--assignment-outline-variant))] ml-[5px]" />
+                            )}
+                            <div className="flex items-center gap-3 mb-[5px] last:mb-0">
+                              {isCompleted ? (
+                                <CheckCircle2 className="w-3 h-3 text-green-500 flex-shrink-0" />
+                              ) : isFailed ? (
+                                <div className="w-3 h-3 rounded-full bg-red-500 flex-shrink-0" />
+                              ) : isActive ? (
+                                <div className="w-3 h-3 rounded-full bg-[hsl(var(--assignment-brand-orange))] flex-shrink-0" />
+                              ) : (
+                                <div className="w-3 h-3 rounded-full border-2 border-[hsl(var(--assignment-outline-variant))] flex-shrink-0" />
+                              )}
+                              <span className={`text-base ${
+                                isActive 
+                                  ? 'text-[hsl(var(--assignment-text-subtle))]' 
+                                  : isCompleted || isFailed
+                                  ? 'text-foreground'
+                                  : 'text-[hsl(var(--assignment-text-subtle))]'
+                              }`}>
+                                {widget.title || 'Unnamed Widget'}
+                              </span>
+                            </div>
+                          </React.Fragment>
+                        )
+                      })
+                    )}
+                  </div>
+
+                  {/* See Progress Button */}
+                  <Button
+                    onClick={() => router.push(`/dashboard/living-projects/${projectId}`)}
+                    className="bg-[hsl(var(--assignment-accent-orange))] text-[hsl(var(--assignment-accent-orange-text))] hover:bg-[hsl(var(--assignment-accent-orange))]/90 px-4 py-2 h-auto rounded-xl"
+                  >
+                    <span className="text-sm font-semibold mr-2">See Progress</span>
+                    <ArrowRight className="w-6 h-6" />
+                  </Button>
+                </div>
+              </Card>
+            </div>
+          </Card>
+        </div>
+
+        {/* Artifacts Section */}
+        <div className="flex flex-col gap-5 mb-10">
+          <h2 className="text-2xl font-semibold leading-9 tracking-[-0.72px] text-foreground">
+            Artifacts
+          </h2>
+          
+          <div className="flex items-center justify-between gap-6">
+            {artifacts.slice(0, 3).map((artifact, index) => (
+              <Card
+                key={artifact._id}
+                onClick={() => handleOpenGallery(artifact._id, 'artifact')}
+                className={`relative w-[348px] h-[129px] cursor-pointer border-2 rounded-xl overflow-hidden transition-all ${
+                  index === 0
+                    ? 'bg-gradient-to-r from-transparent to-[hsl(var(--assignment-brand-orange))]/75 border-[hsl(var(--assignment-brand-orange))] opacity-75'
+                    : 'bg-[hsl(var(--assignment-bg))] border-[hsl(var(--assignment-outline))] opacity-75'
+                }`}
+              >
+                {/* Widget Icon - Top Right */}
+                <div className="absolute top-[9px] right-[9px] w-6 h-6">
+                  <Sparkles className="w-6 h-6 text-foreground" />
+                </div>
+                
+                <CardContent className="p-2 h-full flex flex-col justify-between">
+                  <div className="flex flex-col gap-1 pr-8">
+                    <h3 className="text-2xl font-semibold leading-9 tracking-[-0.72px] text-foreground line-clamp-1">
+                      {artifact.title || 'artifact name'}
+                    </h3>
+                    <p className={`text-base leading-5 ${
+                      index === 0 ? 'text-foreground' : 'text-[hsl(var(--assignment-text-subtle))]'
+                    }`}>
+                      {widgets.find(w => w._id === artifact.widgetId)?.title || 'project/widget name as a tag'}
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-base text-foreground">
+                      {(() => {
+                        const artifactType = artifact.type || 'artifact'
+                        const formattedType = artifactType.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
+                        const updatedAt = artifact.updatedAt || artifact._creationTime || Date.now()
+                        const relativeTime = formatDistanceToNow(new Date(updatedAt), { addSuffix: true, short: true })
+                        return `${formattedType} • ${relativeTime}`
+                      })()}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="w-10 h-10"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleOpenGallery(artifact._id, 'artifact')
+                      }}
+                    >
+                      <ArrowUpRight className={`w-6 h-6 ${
+                        index === 0 
+                          ? 'text-[hsl(var(--assignment-accent-orange-text))]' 
+                          : 'text-[hsl(var(--assignment-outline))]'
+                      }`} />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            
+            {/* Fill empty slots if less than 3 artifacts */}
+            {artifacts.length < 3 && Array.from({ length: 3 - artifacts.length }).map((_, i) => (
+              <Card
+                key={`empty-${i}`}
+                className="w-[348px] h-[129px] bg-[hsl(var(--assignment-bg))] border-2 border-[hsl(var(--assignment-outline))] opacity-75 rounded-xl"
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Files Section */}
+        <div className="flex flex-col gap-5">
+          <h2 className="text-2xl font-semibold leading-9 tracking-[-0.72px] text-foreground">
+            Files
+          </h2>
+          
+          <div className="flex flex-col">
+            {/* Table Header */}
+            <div className="flex items-center justify-between px-4 py-2 border-b border-[hsl(var(--assignment-outline-variant))]">
+              <div className="flex items-center gap-3 w-[400px]">
+                <Checkbox />
+                <span className="text-sm font-semibold text-[hsl(var(--assignment-on-surface-variant))]">Name</span>
+                <ChevronUp className="w-6 h-6 text-[hsl(var(--assignment-on-surface-variant))]" />
+              </div>
+              <div className="flex items-center gap-3 w-[120px]">
+                <span className="text-sm font-semibold text-[hsl(var(--assignment-on-surface-variant))]">Type</span>
+                <ChevronUp className="w-6 h-6 text-[hsl(var(--assignment-on-surface-variant))]" />
+              </div>
+              <div className="flex items-center gap-3 w-[300px]">
+                <span className="text-base text-foreground">Last opened</span>
+                <ChevronUp className="w-6 h-6 text-[hsl(var(--assignment-on-surface-variant))]" />
+              </div>
+            </div>
+
+            {/* Table Rows */}
+            {galleryItems.slice(0, 3).map((item) => (
+              <div
+                key={item._id}
+                className="flex items-center justify-between px-4 py-2 bg-[hsl(var(--assignment-surface-container))] border-b border-[hsl(var(--assignment-outline-variant))] last:border-b-0"
+              >
+                <div className="flex items-center gap-3 w-[400px]">
+                  <Checkbox />
+                  <span className="text-sm font-semibold text-[hsl(var(--assignment-on-surface-variant))]">
+                    {item.title || 'Untitled'}
+                  </span>
+                </div>
+                <div className="w-[120px]">
+                  <span className="text-sm font-semibold text-[hsl(var(--assignment-on-surface-variant))]">
+                    {item.itemType === 'artifact' ? 'Artifact' : item.itemType === 'widget' ? 'Widget' : 'Chat'}
+                  </span>
+                </div>
+                <div className="w-[300px]">
+                  <span className="text-base text-foreground">
+                    {new Date(item.updatedAt).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      hour12: true
+                    })}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function AssignmentPage() {
+  return <AssignmentPageContent />
+}
+

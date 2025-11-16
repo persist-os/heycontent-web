@@ -189,13 +189,13 @@ export const GlobalNav = memo(function GlobalNav() {
   const isSettingsActive = pathname.startsWith('/settings')
 
   return (
-    <div className="fixed left-0 top-0 bottom-0 w-16 bg-[#1C1B1C] flex flex-col items-center justify-between py-[60px] px-4 z-50">
+    <div className="fixed left-0 top-0 bottom-0 w-14 md:w-16 bg-[hsl(var(--background))] flex flex-col items-center justify-between py-[60px] px-3 md:px-4 z-50">
       {/* Top Section: Logo/Compass */}
-      <div className="flex flex-col items-center gap-6">
+      <div className="flex flex-col items-center gap-2 md:gap-6">
         {/* Compass/Logo Icon */}
         <button
           onClick={handleCompassClick}
-          className="relative group"
+          className="relative group min-w-[40px] min-h-[40px] md:min-w-[44px] md:min-h-[44px] flex items-center justify-center"
           aria-label="Open command palette"
           title="Open command palette (⌘K)"
         >
@@ -203,24 +203,24 @@ export const GlobalNav = memo(function GlobalNav() {
           <div className="absolute inset-0 bg-primary/20 blur-md rounded-xl opacity-0 group-hover:opacity-60 transition-opacity" />
           
           {/* Icon container with gradient border */}
-          <div className="relative w-11 h-11 rounded-xl bg-[#0B1018] backdrop-blur-[10px] border border-[rgba(154,203,255,0.88)] flex items-center justify-center transition-all duration-200 group-hover:border-[rgba(154,203,255,1)] overflow-hidden">
-            {/* Gradient background effect - subtle blue glow */}
-            <div className="absolute inset-0 rounded-xl opacity-30 bg-gradient-to-br from-[rgba(101,181,255,0.6)] via-[rgba(154,205,255,0.4)] to-transparent" />
+          <div className="relative w-10 h-10 md:w-11 md:h-11 rounded-xl dark:bg-[#0B1018] bg-[hsl(var(--card))] backdrop-blur-[10px] dark:border-[rgba(154,203,255,0.88)] border-[hsl(var(--border))] flex items-center justify-center transition-all duration-200 dark:group-hover:border-[rgba(154,203,255,1)] group-hover:border-[hsl(var(--border))] overflow-hidden shadow-sm">
+            {/* Gradient background effect - subtle blue glow (dark mode only) */}
+            <div className="absolute inset-0 rounded-xl opacity-0 dark:opacity-30 bg-gradient-to-br from-[rgba(101,181,255,0.6)] via-[rgba(154,205,255,0.4)] to-transparent" />
             {/* Compass icon */}
-            <Compass className="relative w-6 h-6 text-[#EEF1FE] rotate-90 z-10" />
+            <Compass className="relative w-5 h-5 md:w-6 md:h-6 text-[#EEF1FE] dark:text-[#EEF1FE] text-[hsl(var(--foreground))] rotate-90 z-10" />
           </div>
         </button>
 
         {/* Navigation Icons */}
-        <div className="flex flex-col gap-3 items-center">
+        <div className="flex flex-col gap-2 md:gap-3 items-center">
           {/* Notifications */}
           <Popover open={showNotifications} onOpenChange={setShowNotifications}>
             <PopoverTrigger asChild>
               <button
-                className="relative w-10 h-10 rounded-lg flex items-center justify-center transition-colors hover:bg-background/10"
+                className="relative w-9 h-9 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-colors hover:bg-background/10 dark:hover:bg-background/10 hover:bg-[hsl(var(--muted))] min-w-[36px] min-h-[36px] md:min-w-[40px] md:min-h-[40px]"
                 aria-label="Notifications"
               >
-                <Bell className="w-6 h-6 text-[#EEF1FE]" />
+                <Bell className="w-5 h-5 md:w-6 md:h-6 text-[#EEF1FE] dark:text-[#EEF1FE] text-[hsl(var(--foreground))]" />
                 {hasNotifications && (
                   <div className="absolute top-[20%] right-[20%] w-2 h-2 bg-[#FF5449] rounded-full" />
                 )}
@@ -294,27 +294,27 @@ export const GlobalNav = memo(function GlobalNav() {
           <button
             onClick={handleFolderClick}
             className={cn(
-              "relative w-10 h-10 rounded-lg flex items-center justify-center transition-colors",
+              "relative w-9 h-9 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-colors min-w-[36px] min-h-[36px] md:min-w-[40px] md:min-h-[40px]",
               isNotesActive 
-                ? "bg-background/20" 
-                : "hover:bg-background/10"
+                ? "bg-background/20 dark:bg-background/20 bg-[hsl(var(--muted))]" 
+                : "hover:bg-background/10 dark:hover:bg-background/10 hover:bg-[hsl(var(--muted))]"
             )}
             aria-label="Files"
           >
             <Folder className={cn(
-              "w-6 h-6",
-              isNotesActive ? "text-primary" : "text-[#EEF1FE]"
+              "w-5 h-5 md:w-6 md:h-6",
+              isNotesActive ? "text-primary" : "text-[#EEF1FE] dark:text-[#EEF1FE] text-[hsl(var(--foreground))]"
             )} />
           </button>
 
           {/* Plus/Create - Navigate to Thinking Lab */}
           <button
             onClick={handlePlusClick}
-            className="relative w-10 h-10 rounded-lg flex items-center justify-center transition-colors hover:bg-background/10"
+            className="relative w-9 h-9 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-colors hover:bg-background/10 dark:hover:bg-background/10 hover:bg-[hsl(var(--muted))] min-w-[36px] min-h-[36px] md:min-w-[40px] md:min-h-[40px]"
             aria-label="Thinking Lab"
             title="Thinking Lab"
           >
-            <Plus className="w-6 h-6 text-[#EEF1FE]" />
+            <Plus className="w-5 h-5 md:w-6 md:h-6 text-[#EEF1FE] dark:text-[#EEF1FE] text-[hsl(var(--foreground))]" />
           </button>
         </div>
       </div>
@@ -324,15 +324,15 @@ export const GlobalNav = memo(function GlobalNav() {
         <button
           onClick={handleProfileClick}
           className={cn(
-            "relative transition-opacity hover:opacity-80",
+            "relative transition-opacity hover:opacity-80 min-w-[40px] min-h-[40px] md:min-w-[44px] md:min-h-[44px] flex items-center justify-center",
             isSettingsActive && "opacity-100"
           )}
           aria-label="Profile & Settings"
         >
-          <Avatar className="w-11 h-11 border-2 border-[rgba(154,203,255,0.3)]">
+          <Avatar className="w-10 h-10 md:w-11 md:h-11 border-2 border-[rgba(154,203,255,0.3)] dark:border-[rgba(154,203,255,0.3)] border-[hsl(var(--border))]">
             <AvatarImage src={getUserPhoto()} />
             <AvatarFallback 
-              className="bg-[#C00011] text-[#EEF1FE] text-[32px] font-normal"
+              className="bg-[#C00011] text-[#EEF1FE] dark:text-[#EEF1FE] text-[hsl(var(--foreground))] text-[28px] md:text-[32px] font-normal"
             >
               {getUserInitial()}
             </AvatarFallback>

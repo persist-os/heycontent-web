@@ -1,6 +1,7 @@
 import React from 'react'
 import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
+import { DM_Sans } from 'next/font/google'
 import './globals.css'
 import { Providers } from './providers'
 import { headers } from 'next/headers'
@@ -8,6 +9,14 @@ import { Toaster } from 'react-hot-toast'
 import { InlineReplyProvider } from './context/inline-reply-context'
 import { TiptapEditorProvider } from './context/tiptap-editor-context'
 import { Analytics } from "@vercel/analytics/next"
+
+// DM Sans font with all required weights (200, 400, 600)
+const dmSans = DM_Sans({
+  subsets: ['latin'],
+  weight: ['200', '400', '600'],
+  variable: '--font-dm-sans',
+  display: 'swap',
+})
 
 const siteUrl = 'https://heycontext.co'
 const siteName = 'HeyContext'
@@ -264,7 +273,7 @@ export default async function RootLayout({
           gtag('config', 'AW-17670765753');
         `}
       </Script>
-      <body className="font-sans min-h-screen">
+      <body className={`${dmSans.variable} font-sans min-h-screen`}>
         <Providers>
           <InlineReplyProvider>
             <TiptapEditorProvider>
