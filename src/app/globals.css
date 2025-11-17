@@ -940,6 +940,7 @@ textarea:focus-visible {
   outline-offset: 2px;
 }
 
+
 /* Fix dropdown menu item hover readability */
 [data-highlighted] {
   color: hsl(var(--accent-foreground)) !important;
