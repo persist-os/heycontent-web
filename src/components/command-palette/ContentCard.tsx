@@ -11,7 +11,7 @@ import React from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowUpRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Card } from '@/components/ui/card'
+import { BaseCard } from '@/components/ui/base-card'
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
 import { formatDistanceToNow } from '@/app/dashboard/living-projects/[projectId]/components/utils/dateFormatting'
@@ -114,10 +114,11 @@ export function ContentCard({
   const metadata = getMetadataString()
 
   return (
-    <Card
+    <BaseCard
+      variant="content"
       onClick={handleClick}
       className={cn(
-        'relative w-[348px] h-[129px] cursor-pointer border-2 rounded-[12px] overflow-hidden transition-all opacity-75',
+        'relative w-[348px] h-[129px] cursor-pointer border-2 overflow-hidden transition-all opacity-75',
         'bg-[hsl(var(--assignment-bg))] border-[hsl(var(--assignment-stroke-focus))]',
         className
       )}
@@ -161,7 +162,7 @@ export function ContentCard({
           </div>
         )}
       </div>
-    </Card>
+    </BaseCard>
   )
 }
 

@@ -113,6 +113,32 @@ export function UnifiedGalleryView({
     onClose
   })
   
+  // Keyboard navigation support
+  // CRITICAL: Must come AFTER useGalleryNavigation hook to access hasPrev/hasNext
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Escape key: Close sidebar on mobile
+      if (e.key === 'Escape' && isMobile && sidebarOpen) {
+        setSidebarOpen(false)
+        return
+      }
+      
+      // Arrow keys: Navigate gallery (only when sidebar is closed or on desktop)
+      if (!sidebarOpen || !isMobile) {
+        if (e.key === 'ArrowLeft' && hasPrev) {
+          e.preventDefault()
+          goToPrev()
+        } else if (e.key === 'ArrowRight' && hasNext) {
+          e.preventDefault()
+          goToNext()
+        }
+      }
+    }
+    
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isMobile, sidebarOpen, hasPrev, hasNext, goToPrev, goToNext])
+  
   // Widget-specific data queries
   // WHY: Only fetch widget data when viewing a widget (not an artifact)
   const isArtifact = currentItem?.itemType === 'artifact'
@@ -239,7 +265,7 @@ export function UnifiedGalleryView({
   // Empty state
   if (items.length === 0) {
     return (
-      <div className="fixed inset-0 left-16 bg-background">
+      <div className="fixed inset-0 left-0 md:ml-14 bg-background z-0">
         <div className="flex items-center justify-center h-full px-4">
           <div className="text-center space-y-4 max-w-md w-full">
             <h2 className={cn(
@@ -254,7 +280,11 @@ export function UnifiedGalleryView({
             <Button 
               onClick={onClose} 
               variant="outline"
-              className={isMobile ? "min-h-[44px] w-full sm:w-auto" : ""}
+              className={cn(
+                "min-h-[44px] min-w-[44px]",
+                isMobile ? "w-full sm:w-auto" : ""
+              )}
+              aria-label="Go back to project"
             >
               <T context="button.back.to.project">Back to Project</T>
             </Button>
@@ -345,7 +375,7 @@ export function UnifiedGalleryView({
   
   return (
     <TooltipProvider>
-      <div className="fixed inset-0 left-16 bg-background flex flex-col">
+      <div className="fixed inset-0 left-0 md:ml-14 bg-background flex flex-col z-0">
         {/* Collaborators Modal */}
         {projectId && project && (
           <ProjectCollaboratorsModal
@@ -356,59 +386,61 @@ export function UnifiedGalleryView({
           />
         )}
         
-        {/* Header with gradient theme */}
+        {/* Header with gradient theme - Compact design */}
         <div className={cn(
           "border-b backdrop-blur-xl",
           headerGradient,
-          accentBorder
+          accentBorder,
+          // Mobile: Reduced top padding (60px instead of 80px) to avoid hamburger menu
+          "pt-[60px] md:pt-0"
         )}>
           <div className={cn(
-            "mx-auto px-4 py-3 sm:px-6 sm:py-4",
+            "mx-auto px-3 py-2 sm:px-4 sm:py-2.5",
             isMobile ? "w-full" : "max-w-[1800px]"
           )}>
             <div className={cn(
               "flex items-center justify-between",
-              isMobile ? "flex-col gap-3" : "flex-row"
+              isMobile ? "flex-row gap-2" : "flex-row"
             )}>
               {/* Left: Empty space for back button (omnipresent back button handles navigation) */}
-              <div className="w-20" /> {/* Spacer for back button */}
+              <div className={cn(isMobile ? "w-16" : "w-20")} /> {/* Compact spacer */}
               
-              {/* Center: Title & Type Badge */}
+              {/* Center: Title & Type Badge - Compact */}
               <div className={cn(
-                "flex items-center gap-2 sm:gap-4",
-                isMobile ? "w-full justify-center" : "flex-1 justify-center"
+                "flex items-center gap-1.5 sm:gap-2",
+                isMobile ? "flex-1 justify-center min-w-0" : "flex-1 justify-center"
               )}>
                 <h1 className={cn(
-                  "font-semibold text-foreground",
-                  isMobile ? "text-lg" : "text-xl"
+                  "font-semibold text-foreground truncate",
+                  isMobile ? "text-base" : "text-lg"
                 )}>
                   <T context="gallery.title">Assignment Gallery</T>
                 </h1>
                 <Badge 
                   variant="outline" 
                   className={cn(
-                    "px-2 py-1 sm:px-3 sm:py-1 font-medium border-0 text-xs sm:text-sm",
+                    "px-1.5 py-0.5 sm:px-2 sm:py-1 font-medium border-0 text-[10px] sm:text-xs shrink-0",
                     typeBadgeGradient
                   )}
                 >
                   {typeLabel}
                 </Badge>
                 <span className={cn(
-                  "text-muted-foreground",
-                  isMobile ? "text-xs" : "text-sm"
+                  "text-muted-foreground shrink-0",
+                  isMobile ? "text-[10px]" : "text-xs"
                 )}>
-                  {currentIndex + 1} <T context="gallery.pagination.of">of</T> {total}
+                  {currentIndex + 1}/{total}
                 </span>
               </div>
               
-              {/* Right: Collaboration & Actions */}
+              {/* Right: Collaboration & Actions - Compact */}
               <div className={cn(
-                "flex items-center gap-2 sm:gap-3",
-                isMobile ? "w-full justify-end flex-wrap" : ""
+                "flex items-center gap-1.5 sm:gap-2",
+                isMobile ? "shrink-0" : ""
               )}>
                 {/* Collaboration Features - Show when in project context */}
                 {projectId && currentUserId && (
-                  <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
                     {/* Presence Indicator */}
                     <ProjectPresenceIndicator
                       projectId={projectId as Id<'projects'>}
@@ -416,39 +448,44 @@ export function UnifiedGalleryView({
                       currentItemId={entityId || undefined}
                     />
                     
-                    {/* Share Button - Show if user has permission */}
+                    {/* Share Button - Show if user has permission - Icon only on mobile */}
                     {(userPermission === 'owner' || userPermission === 'editor') && (
                       <Button
                         variant="default"
-                        size={isMobile ? "sm" : "sm"}
+                        size="sm"
                         onClick={() => setShowCollaboratorsModal(true)}
                         className={cn(
-                          "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm flex items-center gap-2",
-                          isMobile ? "min-h-[44px] px-3" : "px-4"
+                          "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm",
+                          "min-h-[36px] min-w-[36px] sm:min-h-[40px] sm:min-w-[40px]",
+                          isMobile ? "px-2" : "px-3"
                         )}
                         title="Share project with collaborators"
+                        aria-label="Share project with collaborators"
                       >
-                        <Share2 className="h-4 w-4" />
-                        <span className={isMobile ? "hidden sm:inline" : ""}>Share</span>
+                        <Share2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
+                        <span className={isMobile ? "hidden" : "ml-1.5 text-xs"}>Share</span>
                       </Button>
                     )}
                   </div>
                 )}
                 
-                {/* Toggle Sidebar */}
+                {/* Toggle Sidebar - Compact */}
                 <Button
                   variant="ghost"
-                  size={isMobile ? "sm" : "sm"}
+                  size="sm"
                   onClick={() => setSidebarOpen(!sidebarOpen)}
                   className={cn(
                     "text-muted-foreground hover:text-foreground",
-                    isMobile ? "min-h-[44px] px-4" : ""
+                    "min-h-[36px] min-w-[36px] sm:min-h-[40px] sm:min-w-[40px]",
+                    isMobile ? "px-2 text-xs" : "px-2 text-xs"
                   )}
+                  aria-label={sidebarOpen ? "Hide sidebar list" : "Show sidebar list"}
+                  aria-expanded={sidebarOpen}
                 >
                   {sidebarOpen ? (
-                    <T context="button.gallery.hide.list">Hide List</T>
+                    <T context="button.gallery.hide.list">Hide</T>
                   ) : (
-                    <T context="button.gallery.show.list">Show List</T>
+                    <T context="button.gallery.show.list">List</T>
                   )}
                 </Button>
               </div>
@@ -464,15 +501,16 @@ export function UnifiedGalleryView({
               {/* Mobile: Backdrop overlay */}
               {isMobile && (
                 <div
-                  className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
+                  className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[70]"
                   onClick={() => setSidebarOpen(false)}
+                  aria-hidden="true"
                 />
               )}
               
               {/* Sidebar */}
               <div className={cn(
                 isMobile 
-                  ? "fixed left-0 top-0 bottom-0 z-50 w-80 max-w-[85vw] shadow-xl"
+                  ? "fixed left-0 top-0 bottom-0 z-[90] w-80 max-w-[85vw] shadow-xl"
                   : "relative"
               )}>
                 <GallerySidebar

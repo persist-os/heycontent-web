@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { BaseModal } from '@/components/ui/base-modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -156,16 +156,14 @@ export const ShareContentModal: React.FC<ShareContentModalProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Share2 className="w-5 h-5" />
-            Share {contentType === 'note' ? 'Note' : 'Project'}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-6">
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`Share ${contentType === 'note' ? 'Note' : 'Project'}`}
+      variant="share-content"
+      maxWidth="md"
+    >
+      <div className="space-y-6">
           {/* Content Info */}
           <div className="p-3 bg-muted rounded-lg">
             <p className="text-sm font-medium text-foreground truncate">
@@ -319,7 +317,6 @@ export const ShareContentModal: React.FC<ShareContentModalProps> = ({
             </div>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+    </BaseModal>
   );
 };

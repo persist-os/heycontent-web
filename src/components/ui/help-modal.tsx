@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { BaseModal } from '@/components/ui/base-modal';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -144,11 +144,14 @@ export function HelpModal({ open, onClose, pages }: HelpModalProps) {
   if (!currentPage) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md max-h-[85vh] overflow-hidden bg-card border">
-        <DialogTitle>
-          <span className="sr-only">{currentPage.title}</span>
-        </DialogTitle>
+    <BaseModal
+      isOpen={open}
+      onClose={onClose}
+      title={currentPage.title}
+      variant="help"
+      maxWidth="md"
+      className="max-h-[85vh] overflow-hidden"
+    >
         <div className="flex flex-col space-y-6 overflow-hidden">
           {/* Page content */}
           <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -232,7 +235,6 @@ export function HelpModal({ open, onClose, pages }: HelpModalProps) {
             </div>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+    </BaseModal>
   );
 } 

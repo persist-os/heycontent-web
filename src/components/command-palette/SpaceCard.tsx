@@ -1,7 +1,8 @@
 'use client'
 
-import { LucideIcon, ArrowRight } from 'lucide-react'
+import { LucideIcon } from 'lucide-react'
 import { T } from '@/components/translation'
+import { BaseCard } from '@/components/ui/base-card'
 import { cn } from '@/lib/utils'
 
 interface SpaceCardProps {
@@ -24,10 +25,11 @@ export function SpaceCard({
   dataAttr,
 }: SpaceCardProps) {
   return (
-    <button
+    <BaseCard
+      variant="space"
       onClick={onClick}
       className={cn(
-        "w-full flex flex-col gap-3 p-5 rounded-2xl transition-all duration-200 text-left group border",
+        "w-full flex flex-col gap-3 p-5 transition-all duration-200 text-left group",
         isActive && "bg-primary/10 border-primary/20",
         !isActive && "bg-muted/30 border-border/30 hover:bg-muted/50"
       )}
@@ -58,7 +60,7 @@ export function SpaceCard({
           <T context={`dashboard_nav.nav_item.${id}.description`}>{description}</T>
         </p>
       </div>
-    </button>
+    </BaseCard>
   );
 }
 

@@ -75,9 +75,21 @@ export function GallerySidebar({
             <div
               key={item._id}
               onClick={() => onSelectItem(index)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  onSelectItem(index)
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              aria-label={`${item.title}, ${item.itemType}, ${index + 1} of ${items.length}`}
+              aria-current={isActive ? 'true' : 'false'}
               className={cn(
                 "relative group cursor-pointer rounded-lg transition-all duration-300",
                 "border backdrop-blur-sm",
+                "min-h-[44px] min-w-[44px]",
+                "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
                 // Base state
                 !isActive && "bg-gradient-to-br",
                 !isActive && baseGradient,

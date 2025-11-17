@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { signInWithGoogle } from '@/app/lib/google-auth';
 import { T } from '@/components/translation';
 
@@ -60,24 +61,12 @@ export function GoogleSignInButton({
   };
 
   return (
-    <button
+    <Button
       type="button"
+      variant="google-signin"
       onClick={handleGoogleSignIn}
       disabled={isLoading}
-      className={`
-        w-full flex items-center justify-center gap-3 px-4 py-3 
-        bg-white dark:bg-gray-800 
-        border-2 border-gray-300 dark:border-gray-600
-        rounded-xl 
-        text-gray-700 dark:text-gray-200 
-        font-medium text-sm
-        hover:bg-gray-50 dark:hover:bg-gray-700
-        hover:border-gray-400 dark:hover:border-gray-500
-        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-        disabled:opacity-50 disabled:cursor-not-allowed
-        transition-all duration-200
-        ${className}
-      `}
+      className={className}
       aria-label={`Sign ${action === 'register' ? 'up' : 'in'} with Google`}
     >
       {isLoading ? (
@@ -99,7 +88,7 @@ export function GoogleSignInButton({
           </span>
         </>
       )}
-    </button>
+    </Button>
   );
 }
 

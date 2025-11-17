@@ -43,13 +43,16 @@ function UnsupportedLayout({ artifact }: { artifact: Artifact }) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-2 text-sm text-muted-foreground">
+        <div className="space-y-2 text-base md:text-sm text-muted-foreground">
           <p>This layout type is not yet supported.</p>
           <details className="mt-4">
-            <summary className="cursor-pointer hover:text-foreground">
+            <summary 
+              className="cursor-pointer hover:text-foreground min-h-[44px] flex items-center focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-sm px-2 -mx-2"
+              aria-label="Toggle artifact data model display"
+            >
               Show artifact data model
             </summary>
-            <pre className="mt-2 p-4 bg-muted/10 rounded-lg overflow-auto text-xs">
+            <pre className="mt-2 p-4 bg-muted/10 rounded-lg overflow-auto text-sm md:text-xs">
               {JSON.stringify(artifact.data_model, null, 2)}
             </pre>
           </details>
@@ -93,7 +96,7 @@ export function SchemaDrivenArtifactRenderer({
   if (!artifact) {
     return (
       <Card className="bg-card/50 backdrop-blur-sm border border-border/40">
-        <CardContent className="py-8 text-center text-sm text-muted-foreground">
+        <CardContent className="py-8 text-center text-base md:text-sm text-muted-foreground">
           No artifact data available
         </CardContent>
       </Card>
@@ -113,13 +116,16 @@ export function SchemaDrivenArtifactRenderer({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2 text-sm text-muted-foreground">
+          <div className="space-y-2 text-base md:text-sm text-muted-foreground">
             <p>Artifact is missing data_model.layout. Cannot render.</p>
             <details className="mt-4">
-              <summary className="cursor-pointer hover:text-foreground">
+              <summary 
+                className="cursor-pointer hover:text-foreground min-h-[44px] flex items-center focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-sm px-2 -mx-2"
+                aria-label="Toggle artifact data display"
+              >
                 Show artifact data
               </summary>
-              <pre className="mt-2 p-4 bg-muted/10 rounded-lg overflow-auto text-xs">
+              <pre className="mt-2 p-4 bg-muted/10 rounded-lg overflow-auto text-sm md:text-xs">
                 {JSON.stringify(artifact, null, 2)}
               </pre>
             </details>

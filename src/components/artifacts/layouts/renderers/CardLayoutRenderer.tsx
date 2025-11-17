@@ -11,10 +11,10 @@
 
 import React from 'react'
 import { ArtifactMetadata } from '@/types/artifacts'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
 import { Pencil, BarChart3 } from 'lucide-react'
-import { ArtifactVersionSelector } from '../../ArtifactVersionSelector'
+import { ArtifactCardHeader } from '../shared/ArtifactCardHeader'
+import { ArtifactCardFooter } from '../shared/ArtifactCardFooter'
 import { Id } from '@/convex/_generated/dataModel'
 
 interface MetricDefinition {
@@ -103,44 +103,21 @@ export function CardLayoutRenderer({
   }
 
   // Format timestamp for display
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    })
-  }
-
   // Get artifact type display name
   const artifactTypeDisplay = artifactType || 'Summary'
 
   return (
     <Card className="bg-card/50 backdrop-blur-sm border border-accent/20 hover:bg-card/80 transition-all duration-300">
-      <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-accent" />
-            <span className="text-sm font-medium text-foreground">{artifactTypeDisplay}</span>
-            {editable && (
-              <Pencil className="w-3 h-3 text-accent/60" />
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {editButton}
-            {artifactId && selectedVersion !== undefined && onVersionChange ? (
-              <ArtifactVersionSelector
-                artifactId={artifactId}
-                currentVersion={selectedVersion}
-                onVersionChange={onVersionChange}
-              />
-            ) : (
-              <Badge variant="outline" className="text-xs">
-                v{artifactMetadata.version}
-              </Badge>
-            )}
-          </div>
-        </div>
-      </CardHeader>
+      <ArtifactCardHeader
+        artifactTypeDisplay={artifactTypeDisplay}
+        editable={editable}
+        editButton={editButton}
+        artifactId={artifactId}
+        selectedVersion={selectedVersion}
+        onVersionChange={onVersionChange}
+        metadata={artifactMetadata}
+        icon={<BarChart3 className="w-4 h-4 text-accent" />}
+      />
 
       <CardContent className="space-y-4">
         {/* Key metrics grid */}
@@ -246,16 +223,7 @@ export function CardLayoutRenderer({
           </div>
         )}
 
-        {/* Metadata footer */}
-        <div className="flex items-center gap-2 text-xs text-muted-foreground/70 border-t border-border/20 pt-3 mt-4">
-          <Badge variant="outline" className="text-xs">
-            v{artifactMetadata.version}
-          </Badge>
-          <span>•</span>
-          <span>Updated {formatDate(artifactMetadata.lastUpdatedAt)}</span>
-          <span>•</span>
-          <span>Source: {artifactMetadata.lastUpdatedBy}</span>
-        </div>
+        <ArtifactCardFooter metadata={artifactMetadata} />
       </CardContent>
     </Card>
   )

@@ -18,15 +18,11 @@ export function HelpIconButton({
 }: HelpIconButtonProps) {
   return (
     <Button
-      variant={variant}
-      size="icon"
+      variant="help-icon"
+      size={size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : 'md'}
       onClick={onClick}
       className={cn(
-        "group text-muted-foreground transition-colors border border-border",
-        size === 'sm' && "h-8 w-8",
-        size === 'default' && "h-10 w-10",
-        size === 'lg' && "h-12 w-12",
-        "group-hover:border-black",
+        "group",
         className
       )}
       aria-label="Open help guide"

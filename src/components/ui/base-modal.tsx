@@ -22,7 +22,7 @@ export interface BaseModalProps {
   isLoading?: boolean
   loadingText?: string
   loadingContext?: string
-  variant?: 'default' | 'destructive'
+  variant?: 'default' | 'destructive' | 'confirmation' | 'feedback' | 'help' | 'delete' | 'project-execution-plan' | 'edit-shard' | 'create-folder' | 'edit-project' | 'full-analysis' | 'share-note' | 'share-content' | 'project-collaborators' | 'username-required' | 'email-composer' | 'image-gallery' | 'feedback-detail' | 'upgrade' | 'widget-settings' | 'spawn-widget' | 'quantity-change'
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'
   showGradient?: boolean
   className?: string
@@ -100,7 +100,7 @@ export function BaseModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className={`${maxWidthClass} border-border/30 ${className}`}>
+      <DialogContent className={`${maxWidthClass} w-[95vw] md:w-full border-border/30 bg-background/80 backdrop-blur-sm ${className}`}>
         {/* Optional gradient line at top */}
         {showGradient && (
           <div className="h-px bg-gradient-to-r from-primary/40 via-primary/20 to-transparent w-3/4 mb-6" />
@@ -142,9 +142,9 @@ export function BaseModal({
             {onCancel && (
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 onClick={handleClose}
-                className="flex-1 py-3 text-base border-border/50 hover:border-border hover:bg-muted/30 transition-all duration-300"
+                className="flex-1 min-h-[44px] py-3 text-base border-border/50 hover:border-border hover:bg-muted/30 transition-all duration-300"
                 disabled={isLoading}
               >
                 <T context={cancelContext}>{cancelText}</T>
@@ -153,9 +153,9 @@ export function BaseModal({
             {onConfirm && (
               <Button
                 type="button"
-                variant={variant === 'destructive' ? 'destructive' : 'default'}
+                variant={variant === 'destructive' || variant === 'delete' ? 'destructive' : 'default'}
                 onClick={onConfirm}
-                className={`flex-1 py-3 text-base transition-all duration-300 ${
+                className={`flex-1 min-h-[44px] py-3 text-base transition-all duration-300 ${
                   variant === 'default'
                     ? 'bg-foreground text-background hover:bg-foreground/90 hover:scale-[1.02]'
                     : ''

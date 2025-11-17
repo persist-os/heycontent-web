@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Edit3, Check } from 'lucide-react';
+import { Button } from './button';
 
 interface InputButtonProps {
   text: string;
@@ -29,17 +30,14 @@ export const InputButton: React.FC<InputButtonProps> = ({
   };
 
   return (
-    <button
+    <Button
+      variant="input"
+      size={size}
       onClick={(e) => {
         e.stopPropagation(); // Prevent event bubbling to parent buttons
         handleInputPopulate();
       }}
-      className={`
-        opacity-60 hover:opacity-100 transition-opacity duration-200 
-        p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700
-        ${populated ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}
-        ${className}
-      `}
+      className={className}
       title={populated ? 'Added to input!' : tooltipText}
       disabled={populated}
     >
@@ -53,6 +51,6 @@ export const InputButton: React.FC<InputButtonProps> = ({
           {populated ? 'Added' : 'Input'}
         </span>
       )}
-    </button>
+    </Button>
   );
 }; 
