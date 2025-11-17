@@ -7,6 +7,7 @@
 'use client'
 
 import React from 'react'
+import { BaseCard } from '@/components/ui/base-card'
 import { Button } from '@/components/ui/button'
 import { FileText, MessageSquare, Calendar, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react'
 import { useMutation } from 'convex/react'
@@ -64,15 +65,11 @@ export function WidgetOutputCard({
   const hasNote = output.noteId
 
   return (
-    <div className="
-      bg-card/50 backdrop-blur-sm
-      border border-border/40
-      rounded-2xl
-      hover:bg-card/80 hover:border-border/60 hover:shadow-lg hover:shadow-primary/5
-      transition-all duration-300
-      group
-    ">
-      <div className="p-6">
+    <BaseCard
+      variant="widget-output"
+      title={getRelativeTime(output.createdAt)}
+      className="group"
+    >
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 space-y-4">
             {/* Header */}
@@ -266,8 +263,7 @@ export function WidgetOutputCard({
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </BaseCard>
   )
 }
 

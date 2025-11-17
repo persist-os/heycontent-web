@@ -277,18 +277,18 @@ function AssignmentPageContent() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-[60px] max-w-[1128px]">
-        {/* Breadcrumb and Header */}
-        <div className="flex flex-col gap-5 mb-10">
-          <div className="flex items-center justify-between py-3">
+      {/* Main Content - Responsive padding: Layout handles mobile top padding */}
+      <div className="container mx-auto px-4 pt-4 pb-8 md:py-[60px] max-w-[1128px]">
+        {/* Breadcrumb and Header - Responsive layout: Stack on mobile, row on desktop */}
+        <div className="flex flex-col gap-5 mb-6 md:mb-10">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-0 py-2 md:py-3">
             <Breadcrumb items={breadcrumbItems} />
 
-            {/* Action Buttons */}
-            <div className="flex items-center gap-3">
+            {/* Action Buttons - Full width on mobile, auto on desktop */}
+            <div className="flex items-center gap-3 w-full md:w-auto">
               <Button
                 onClick={handleDiscussInChat}
-                className="bg-[hsl(var(--assignment-primary-blue))] text-[hsl(var(--assignment-primary-blue-text))] hover:bg-[hsl(var(--assignment-primary-blue))]/90 px-4 py-2 h-auto rounded-lg"
+                className="bg-[hsl(var(--assignment-primary-blue))] text-[hsl(var(--assignment-primary-blue-text))] hover:bg-[hsl(var(--assignment-primary-blue))]/90 px-4 py-2 h-auto rounded-lg min-h-[44px] md:min-h-0 w-full md:w-auto"
               >
                 <MessageSquare className="w-4 h-4 mr-2" />
                 <span className="text-sm">
@@ -357,10 +357,11 @@ function AssignmentPageContent() {
         </div>
 
         {/* Artifacts Section */}
-        <div className="flex flex-col gap-5 mb-10">
+        <div className="flex flex-col gap-5 mb-6 md:mb-10">
           <SectionHeader title="Artifacts" />
           
-          <div className="flex items-center justify-between gap-6">
+          {/* Responsive layout: Stack on mobile, row on desktop */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-6">
             {artifactItems.slice(0, 3).map((artifact, index) => (
               <AssignmentArtifactCard
                 key={artifact._id}
@@ -371,18 +372,18 @@ function AssignmentPageContent() {
               />
             ))}
             
-            {/* Fill empty slots if less than 3 artifacts */}
+            {/* Fill empty slots if less than 3 artifacts - Responsive width */}
             {artifactItems.length < 3 && Array.from({ length: 3 - artifactItems.length }).map((_, i) => (
               <Card
                 key={`empty-${i}`}
-                className="w-[348px] h-[129px] bg-[hsl(var(--assignment-bg))] border-2 border-[hsl(var(--assignment-outline))] opacity-75 rounded-xl"
+                className="w-full md:w-[348px] h-[129px] bg-[hsl(var(--assignment-bg))] border-2 border-[hsl(var(--assignment-outline))] opacity-75 rounded-xl"
               />
             ))}
           </div>
         </div>
 
         {/* Widgets Section */}
-        <div className="flex flex-col gap-5 mb-10">
+        <div className="flex flex-col gap-5 mb-6 md:mb-10">
           <SectionHeader title="Widgets" />
           
           {widgetItems.length === 0 ? (
@@ -392,7 +393,7 @@ function AssignmentPageContent() {
               </p>
             </Card>
           ) : (
-            <div className="flex items-center justify-between gap-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-6">
               {widgetItems.slice(0, 3).map((widget, index) => (
                 <AssignmentArtifactCard
                   key={widget._id}
@@ -410,11 +411,11 @@ function AssignmentPageContent() {
                 />
               ))}
               
-              {/* Fill empty slots if less than 3 widgets */}
+              {/* Fill empty slots if less than 3 widgets - Responsive width */}
               {widgetItems.length < 3 && Array.from({ length: 3 - widgetItems.length }).map((_, i) => (
                 <Card
                   key={`empty-${i}`}
-                  className="w-[348px] h-[129px] bg-[hsl(var(--assignment-bg))] border-2 border-[hsl(var(--assignment-stroke-focus))] opacity-75 rounded-[12px]"
+                  className="w-full md:w-[348px] h-[129px] bg-[hsl(var(--assignment-bg))] border-2 border-[hsl(var(--assignment-stroke-focus))] opacity-75 rounded-[12px]"
                 />
               ))}
             </div>

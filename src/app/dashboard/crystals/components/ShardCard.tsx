@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { BaseCard } from '@/components/ui/base-card';
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import {
@@ -46,7 +47,7 @@ export const ShardCard: React.FC<ShardCardProps> = ({ shard, showActions = true 
     // Convex will automatically invalidate and refresh the query
   };
   return (
-    <div className="border border-border/50 rounded-xl p-4 space-y-3">
+    <BaseCard variant="shard" className="p-4 space-y-3">
       {shard.exact_quote && (
         <blockquote className="text-sm text-foreground italic border-l-2 border-blue-400/60 pl-3 leading-relaxed">
           "{shard.exact_quote}"
@@ -143,6 +144,6 @@ export const ShardCard: React.FC<ShardCardProps> = ({ shard, showActions = true 
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </BaseCard>
   );
 };

@@ -33,7 +33,7 @@ export function DeleteProjectModal({
       confirmContext="button.delete_project"
       cancelText="Cancel"
       cancelContext="button.cancel"
-      variant="destructive"
+      variant="delete"
       isLoading={isDeleting}
       loadingText="Deleting..."
       loadingContext="button.deleting"

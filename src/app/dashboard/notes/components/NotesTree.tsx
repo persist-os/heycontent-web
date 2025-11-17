@@ -1,15 +1,16 @@
 'use client';
 
 import React, { useState, useCallback, useRef } from 'react';
-import { FileText, Star, Trash2, CheckSquare, Square, X } from 'lucide-react';
+import { FileText, Star, Trash2, CheckSquare, Square, X, Folder, Palette } from 'lucide-react';
 import { DndContext, DragOverlay } from '@dnd-kit/core';
 import { useRouter } from 'next/navigation';
 import { useNotes } from '@/app/context/notes-context';
 import { useProjects } from '../hooks/useProjects';
 import { useFolders } from '../hooks/useFolders';
 import { useAuth } from '@/app/context/auth-context';
-import { CreateFolderModal } from './folders/CreateFolderModal';
-import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { BaseModal } from '@/components/ui/base-modal';
+import { Input } from '@/components/ui/input';
+import { useTranslation } from '@/hooks/useTranslation';
 import { NotesTreeProps, FilterType } from './NotesTree.types';
 import { NotesTreeHeader } from './NotesTreeHeader';
 import { TreeNodeRenderer } from './TreeNodeComponents';
@@ -51,6 +52,11 @@ export function NotesTree({
   const [isBatchDeleting, setIsBatchDeleting] = useState(false);
   const [isBatchDeletingNotes, setIsBatchDeletingNotes] = useState(false);
   const [showFilesView, setShowFilesView] = useState(false);
+  
+  // Create folder form state
+  const [folderName, setFolderName] = useState('');
+  const [folderDescription, setFolderDescription] = useState('');
+  const [folderColor, setFolderColor] = useState('#3B82F6'); // Default primary blue
   
   const router = useRouter();
   const { updateNote, deleteNote } = useNotes();
@@ -144,6 +150,38 @@ export function NotesTree({
     const folderId = await createFolder(name, description, parentFolderId, color);
     return folderId;
   }, [createFolder]);
+
+  // Create folder form handlers
+  const handleCreateFolderSubmit = useCallback(async () => {
+    if (!folderName.trim() || !firebaseUser?.uid) return;
+    
+    try {
+      await handleCreateFolder(folderName.trim(), folderDescription.trim() || undefined, undefined, folderColor);
+      setFolderName('');
+      setFolderDescription('');
+      setFolderColor('#3B82F6');
+      setShowCreateFolderModal(false);
+    } catch (error) {
+      console.error('Failed to create folder:', error);
+    }
+  }, [folderName, folderDescription, folderColor, handleCreateFolder, firebaseUser?.uid]);
+
+  const handleCreateFolderCancel = useCallback(() => {
+    setFolderName('');
+    setFolderDescription('');
+    setFolderColor('#3B82F6');
+    setShowCreateFolderModal(false);
+  }, []);
+
+  const { text: folderNamePlaceholder } = useTranslation('Enter folder name...', {
+    sourceLang: 'en',
+    context: 'folders.placeholder.name'
+  });
+  
+  const { text: descriptionPlaceholder } = useTranslation('Add a description...', {
+    sourceLang: 'en',
+    context: 'folders.placeholder.description'
+  });
 
   // File upload handler
   const handleFileUpload = useCallback(async (files: FileList | null) => {
@@ -528,18 +566,100 @@ export function NotesTree({
 
 
         {/* Create Folder Modal */}
-        <CreateFolderModal
+        <BaseModal
           isOpen={showCreateFolderModal}
-          onClose={() => setShowCreateFolderModal(false)}
-          onCreateFolder={handleCreateFolder}
-          isCreating={isCreatingFolder}
-        />
+          onClose={handleCreateFolderCancel}
+          onConfirm={handleCreateFolderSubmit}
+          onCancel={handleCreateFolderCancel}
+          title="Create New Folder"
+          titleContext="folders.create.title"
+          variant="create-folder"
+          confirmText="Create Folder"
+          confirmContext="button.create-folder"
+          cancelText="Cancel"
+          cancelContext="button.cancel"
+          isLoading={isCreatingFolder}
+          loadingText="Creating..."
+          loadingContext="button.creating"
+          maxWidth="md"
+        >
+          <form onSubmit={(e) => { e.preventDefault(); handleCreateFolderSubmit(); }} className="space-y-4">
+            <div>
+              <label htmlFor="folder-name" className="block text-sm font-medium text-foreground/90 mb-2">
+                <T context="folders.label.name">Folder Name</T> *
+              </label>
+              <Input
+                id="folder-name"
+                type="text"
+                value={folderName}
+                onChange={(e) => setFolderName(e.target.value)}
+                placeholder={folderNamePlaceholder}
+                className="w-full"
+                autoFocus
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="folder-description" className="block text-sm font-medium text-foreground/90 mb-2">
+                <T context="folders.label.description">Description (optional)</T>
+              </label>
+              <textarea
+                id="folder-description"
+                value={folderDescription}
+                onChange={(e) => setFolderDescription(e.target.value)}
+                placeholder={descriptionPlaceholder}
+                rows={3}
+                className="w-full px-3 py-3 bg-background border border-border/50 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/60 resize-none transition-colors duration-300 min-h-[80px]"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="folder-color" className="block text-sm font-medium text-foreground/90 mb-3">
+                <Palette className="w-4 h-4 inline mr-2" />
+                <T context="folders.label.color">Folder Color</T>
+              </label>
+              <div className="flex items-center gap-4">
+                {/* Color preview with folder icon */}
+                {/* eslint-disable-next-line react/forbid-dom-props, react/no-unknown-property */}
+                <div 
+                  className="w-16 h-16 rounded-lg border-2 border-border flex items-center justify-center transition-all duration-200 hover:scale-105"
+                  // @ts-ignore - Dynamic color styling required
+                  style={{ backgroundColor: folderColor }}
+                >
+                  <Folder className="w-8 h-8 text-white drop-shadow-md" />
+                </div>
+                
+                {/* Color picker input */}
+                <div className="flex-1 space-y-2">
+                  <input
+                    id="folder-color"
+                    type="color"
+                    value={folderColor}
+                    onChange={(e) => setFolderColor(e.target.value)}
+                    className="w-full h-12 rounded-lg border-2 border-border/50 cursor-pointer hover:border-primary/60 transition-colors duration-300"
+                    title="Choose folder color"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setFolderColor('#3B82F6')}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    title="Reset to default color"
+                  >
+                    <T context="folders.reset-color">Reset to default</T>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </BaseModal>
 
         {/* Delete Project Confirmation Modal */}
-        <ConfirmationModal
+        <BaseModal
           isOpen={projectToDelete !== null}
           onClose={cancelDeleteProject}
           onConfirm={confirmDeleteProject}
+          onCancel={cancelDeleteProject}
           title="Delete Project"
           titleContext="modal.delete_project_title"
           description={`Are you sure you want to delete "${projects.find(p => p._id === projectToDelete)?.name || 'this project'}"? This action cannot be undone.`}
@@ -550,13 +670,16 @@ export function NotesTree({
           cancelContext="button.cancel"
           variant="destructive"
           isLoading={isDeletingProject}
-        />
+        >
+          <div />
+        </BaseModal>
 
         {/* Batch Delete Confirmation Modal - Handles both projects and notes */}
-        <ConfirmationModal
+        <BaseModal
           isOpen={(projectsToBatchDelete !== null && projectsToBatchDelete.length > 0) || (notesToBatchDelete !== null && notesToBatchDelete.length > 0)}
           onClose={cancelBatchDelete}
           onConfirm={confirmBatchDelete}
+          onCancel={cancelBatchDelete}
           title="Delete Items"
           titleContext="modal.delete_items_title"
           description={(() => {
@@ -583,7 +706,9 @@ export function NotesTree({
           cancelContext="button.cancel"
           variant="destructive"
           isLoading={isBatchDeleting || isBatchDeletingNotes}
-        />
+        >
+          <div />
+        </BaseModal>
 
         {/* Hidden file input for uploads */}
         <input

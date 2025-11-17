@@ -191,7 +191,7 @@ export default function DashboardLayout({
       <DashboardNav />
       
       {/* Main Content Area - offset for sidebar */}
-      <main className="flex-1 overflow-y-auto overflow-x-hidden ml-0 md:ml-14">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden pt-[60px] md:pt-0 ml-0 md:ml-14">
         {children}
       </main>
       

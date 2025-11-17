@@ -6,7 +6,7 @@ import { api } from '@/convex/_generated/api'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { SearchBar } from '@/components/ui/search-bar'
-import { WidgetCard } from '@/components/ui/widget-card'
+import { BaseCard } from '@/components/ui/base-card'
 import { formatDistanceToNow } from '@/app/dashboard/living-projects/[projectId]/components/utils/dateFormatting'
 
 /**
@@ -125,11 +125,11 @@ export default function WidgetsPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--assignment-bg))] relative size-full">
-      {/* Main Content - Matches Figma: left margin 156px, top 56px */}
-      <div className="absolute content-stretch flex flex-col gap-[20px] items-start left-[156px] top-[56px] w-[1124px]">
-        {/* Breadcrumb */}
-        <div className="content-stretch flex font-['DM_Sans'] font-extralight gap-[4px] items-center leading-[0] relative shrink-0 text-[hsl(var(--assignment-text-regular))] text-[32px] tracking-[-0.96px] whitespace-nowrap [font-variation-settings:'opsz'_14]">
+    <div className="min-h-screen bg-[hsl(var(--assignment-bg))] relative size-full px-4 md:px-0">
+      {/* Main Content - Layout handles navigation spacing automatically */}
+      <div className="w-full md:w-[1124px] mx-auto">
+        {/* Breadcrumb - Responsive typography */}
+        <div className="content-stretch flex font-['DM_Sans'] font-extralight gap-[4px] items-center leading-[0] relative shrink-0 text-[hsl(var(--assignment-text-regular))] text-xl md:text-[32px] tracking-[-0.96px] whitespace-nowrap [font-variation-settings:'opsz'_14]">
           <Breadcrumb items={breadcrumbItems} />
         </div>
 
@@ -139,7 +139,7 @@ export default function WidgetsPage() {
         </div>
 
         {/* Widget Cards */}
-        <div className="content-stretch flex flex-col gap-[12px] items-start relative shrink-0 w-full">
+        <div className="content-stretch flex flex-col gap-[12px] items-start relative shrink-0 w-full mt-4 md:mt-0">
           {widgets === undefined ? (
             // Loading state
             <div className="text-[hsl(var(--assignment-text-subtle))]">Loading widgets...</div>
@@ -149,18 +149,27 @@ export default function WidgetsPage() {
               {searchTerm ? 'No widgets found' : 'No widgets yet'}
             </div>
           ) : (
-            widgetCards.map((widget) => (
-              <WidgetCard
-                key={widget.widgetId}
-                title={widget.title}
-                timestamp={widget.timestamp}
-                summary={widget.summary}
-                path={widget.path}
-                tag={widget.tag}
-                widgetId={widget.widgetId}
-                projectId={widget.projectId}
-              />
-            ))
+            widgetCards.map((widget) => {
+              const handleClick = () => {
+                if (widget.projectId && widget.widgetId) {
+                  window.location.href = `/dashboard/living-projects/${widget.projectId}/gallery?id=${widget.widgetId}&type=widget`
+                } else if (widget.projectId) {
+                  window.location.href = `/dashboard/living-projects/${widget.projectId}/assignment`
+                }
+              }
+              return (
+                <BaseCard
+                  key={widget.widgetId}
+                  variant="widget"
+                  title={widget.title}
+                  timestamp={widget.timestamp}
+                  summary={widget.summary}
+                  path={widget.path}
+                  tag={widget.tag}
+                  onClick={handleClick}
+                />
+              )
+            })
           )}
         </div>
       </div>

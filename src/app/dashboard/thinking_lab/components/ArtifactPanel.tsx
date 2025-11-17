@@ -81,12 +81,13 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   }, [artifacts])
 
   // Loading state: waiting for conversation or artifacts
+  // Mobile optimization: Ensure readable text sizes
   if (conversationId && userId && conversation === undefined) {
     return (
       <div className={`h-full flex items-center justify-center p-6 ${className}`}>
         <div className="text-center text-muted-foreground">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
-          <p className="text-sm">
+          <div className="animate-spin rounded-full h-8 w-8 md:h-6 md:w-6 border-b-2 border-primary mx-auto mb-2"></div>
+          <p className="text-base md:text-sm">
             <T context="artifact.panel.loading">Loading artifacts...</T>
           </p>
         </div>
@@ -99,8 +100,8 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     return (
       <div className={`h-full flex items-center justify-center p-6 ${className}`}>
         <div className="text-center text-muted-foreground">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
-          <p className="text-sm">
+          <div className="animate-spin rounded-full h-8 w-8 md:h-6 md:w-6 border-b-2 border-primary mx-auto mb-2"></div>
+          <p className="text-base md:text-sm">
             <T context="artifact.panel.loading">Loading artifacts...</T>
           </p>
         </div>
@@ -109,14 +110,15 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   }
 
   // Empty state: no projectId/conversationId provided
+  // Mobile optimization: Responsive typography
   if (!effectiveProjectId) {
     return (
       <div className={`h-full flex items-center justify-center p-6 ${className}`}>
         <div className="text-center text-muted-foreground">
-          <p className="text-lg">
+          <p className="text-xl md:text-lg">
             <T context="artifact.panel.empty.no.context.title">No project context</T>
           </p>
-          <p className="text-sm mt-2">
+          <p className="text-base md:text-sm mt-2">
             <T context="artifact.panel.empty.no.context.description">Select a conversation or project to view artifacts</T>
           </p>
         </div>
@@ -125,14 +127,15 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   }
 
   // Empty state: no artifacts yet
+  // Mobile optimization: Responsive typography
   if (!artifacts || artifacts.length === 0) {
     return (
       <div className={`h-full flex items-center justify-center p-6 ${className}`}>
         <div className="text-center text-muted-foreground">
-          <p className="text-lg">
+          <p className="text-xl md:text-lg">
             <T context="artifact.panel.empty.no.artifacts.title">No artifacts yet</T>
           </p>
-          <p className="text-sm mt-2">
+          <p className="text-base md:text-sm mt-2">
             <T context="artifact.panel.empty.no.artifacts.description">Artifacts will appear here as widgets work in the background</T>
           </p>
         </div>
@@ -144,8 +147,8 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   return (
     <div className={`h-full overflow-y-auto p-4 bg-background ${className}`}>
       <div className="space-y-4">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-foreground">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-0 mb-4">
+          <h3 className="text-base md:text-lg font-semibold text-foreground">
             <T context="artifact.panel.title">Project Artifacts</T> ({artifacts.length})
           </h3>
           {effectiveProjectId && artifacts.length > 0 && (
@@ -156,6 +159,8 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                 // Open assignment page
                 router.push(`/dashboard/living-projects/${effectiveProjectId}/assignment`)
               }}
+              className="min-h-[44px] min-w-[44px] w-full md:w-auto"
+              aria-label="Open artifacts in assignment view"
             >
               <ExternalLink className="w-4 h-4 mr-2" />
               <T context="button.artifact.panel.open.gallery">Open in Assignment View</T>

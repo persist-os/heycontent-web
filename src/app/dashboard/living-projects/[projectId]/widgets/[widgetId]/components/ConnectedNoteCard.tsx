@@ -7,6 +7,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import { BaseCard } from '@/components/ui/base-card'
 import { Button } from '@/components/ui/button'
 import { truncateContent } from '../utils'
 import type { ConnectedNote } from '../types'
@@ -32,28 +33,14 @@ export function ConnectedNoteCard({ note, onNoteClick }: ConnectedNoteCardProps)
   }
 
   return (
-    <div
-      className="
-        bg-card/50 backdrop-blur-sm
-        border border-border/40
-        rounded-2xl
-        hover:bg-card/80 hover:border-border/60 hover:shadow-lg hover:shadow-primary/5
-        transition-all duration-300
-        cursor-pointer group
-      "
+    <BaseCard
+      variant="connected-note"
+      title={note.title || 'Untitled Note'}
+      summary={truncateContent(note.content || '', 200)}
       onClick={() => onNoteClick(note._id)}
+      className="cursor-pointer group"
     >
-      <div className="p-6 space-y-4">
-        {/* Title and Preview */}
-        <div className="space-y-3">
-          <h3 className="text-xl font-light tracking-tight text-foreground group-hover:text-foreground transition-colors">
-            <T context="widget.note_title">{note.title || 'Untitled Note'}</T>
-          </h3>
-          
-          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
-            {truncateContent(note.content || '', 200)}
-          </p>
-        </div>
+      <div className="space-y-4">
 
         {/* Metadata Toggle */}
         <div className="flex items-center justify-between pt-3 border-t border-border/30">
@@ -141,7 +128,7 @@ export function ConnectedNoteCard({ note, onNoteClick }: ConnectedNoteCardProps)
           </div>
         )}
       </div>
-    </div>
+    </BaseCard>
   )
 }
 

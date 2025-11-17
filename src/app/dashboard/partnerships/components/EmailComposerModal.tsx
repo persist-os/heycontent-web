@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { BaseModal } from '@/components/ui/base-modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -293,22 +293,22 @@ export function EmailComposerModal({
   const hasRequiredFields = toEmail.trim() && isEmailValid;
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-5xl max-h-[95vh] flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle>Compose Email</DialogTitle>
-          <DialogDescription>
-            Enter recipient details and compose your email with AI assistance
-          </DialogDescription>
-        </DialogHeader>
-
-        <div 
-          className="flex-1 overflow-y-auto flex flex-col space-y-4 pr-1 [&::-webkit-scrollbar]:hidden" 
-          style={{
-            scrollbarWidth: 'none', /* Firefox */
-            msOverflowStyle: 'none', /* Internet Explorer 10+ */
-          }}
-        >
+    <BaseModal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Compose Email"
+      description="Enter recipient details and compose your email with AI assistance"
+      variant="email-composer"
+      maxWidth="2xl"
+      className="max-h-[95vh] flex flex-col"
+    >
+      <div 
+        className="flex-1 overflow-y-auto flex flex-col space-y-4 pr-1 [&::-webkit-scrollbar]:hidden" 
+        style={{
+          scrollbarWidth: 'none', /* Firefox */
+          msOverflowStyle: 'none', /* Internet Explorer 10+ */
+        }}
+      >
           {/* Status Messages */}
           {(operationState.message || operationState.error) && (
             <div className="flex-shrink-0 p-3 rounded-md border">
@@ -403,7 +403,6 @@ export function EmailComposerModal({
             />
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+    </BaseModal>
   );
 } 

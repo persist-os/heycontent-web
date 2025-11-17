@@ -54,21 +54,21 @@ export default function FilesPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--file-bg))] relative size-full">
-      {/* Main Content - Matches assignments page: left margin 156px, top 56px */}
-      <div className="absolute content-stretch flex flex-col gap-[20px] items-start left-[156px] top-[56px]">
-        {/* Breadcrumb */}
-        <div className="content-stretch flex font-['DM_Sans'] font-extralight gap-[4px] items-center leading-[0] relative shrink-0 text-[hsl(var(--file-text-regular))] text-[32px] tracking-[-0.96px] whitespace-nowrap [font-variation-settings:'opsz'_14]">
+    <div className="min-h-screen bg-[hsl(var(--file-bg))] relative size-full px-4 md:px-0">
+      {/* Main Content - Layout handles navigation spacing automatically */}
+      <div className="w-full md:w-[1124px] mx-auto">
+        {/* Breadcrumb - Responsive typography */}
+        <div className="content-stretch flex font-['DM_Sans'] font-extralight gap-[4px] items-center leading-[0] relative shrink-0 text-[hsl(var(--file-text-regular))] text-xl md:text-[32px] tracking-[-0.96px] whitespace-nowrap [font-variation-settings:'opsz'_14]">
           <Breadcrumb items={breadcrumbItems} />
         </div>
 
         {/* Search Bar */}
-        <div className="box-border content-stretch flex flex-col gap-[10px] items-start px-0 py-[8px] relative shrink-0 w-[1124px]">
+        <div className="box-border content-stretch flex flex-col gap-[10px] items-start px-0 py-[8px] relative shrink-0 w-full">
           <SearchBar value={searchTerm} onChange={setSearchTerm} placeholder="What are you looking for?" />
         </div>
 
         {/* File Content */}
-        <div className="content-stretch flex flex-wrap gap-4 items-start relative shrink-0 w-[1124px] mt-4">
+        <div className="content-stretch flex flex-wrap gap-4 items-start relative shrink-0 w-full mt-4">
           {files === undefined ? (
             // Loading state
             <div className="text-[hsl(var(--file-text-subtle))]">Loading files...</div>

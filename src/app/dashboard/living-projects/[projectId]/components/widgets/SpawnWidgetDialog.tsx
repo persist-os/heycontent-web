@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState } from 'react'
-import { X, Sparkles, Loader2 } from 'lucide-react'
+import { Sparkles, Loader2 } from 'lucide-react'
+import { BaseModal } from '@/components/ui/base-modal'
 import { generateWidget, type WidgetGenerationRequest } from '@/lib/services/widgetService'
 import { T } from '@/components/translation/T'
 
@@ -54,38 +55,27 @@ export function SpawnWidgetDialog({
     }
   }
 
-  if (!isOpen) return null
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-      <div className="relative w-full max-w-2xl bg-card border border-border rounded-xl shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Sparkles className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold">
-                <T context="spawn_widget.title">Spawn Widget Family</T>
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                <T context="spawn_widget.subtitle">Describe the widget family you want to create</T>
-              </p>
-            </div>
-          </div>
-				  <button
-					title="Close"
-            onClick={onClose}
-            className="p-2 hover:bg-muted rounded-lg transition-colors"
-            disabled={isGenerating}
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6 space-y-4">
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      onConfirm={handleGenerate}
+      onCancel={onClose}
+      title="Spawn Widget Family"
+      titleContext="spawn_widget.title"
+      description="Describe the widget family you want to create"
+      descriptionContext="spawn_widget.subtitle"
+      confirmText="Generate Widget Family"
+      confirmContext="spawn_widget.button.generate"
+      cancelText="Cancel"
+      cancelContext="spawn_widget.button.cancel"
+      variant="spawn-widget"
+      isLoading={isGenerating}
+      loadingText="Generating..."
+      loadingContext="spawn_widget.button.generating"
+      maxWidth="2xl"
+    >
+      <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-2">
               <T context="spawn_widget.label">Widget Family Description</T>
@@ -131,37 +121,7 @@ export function SpawnWidgetDialog({
               </li>
             </ul>
           </div>
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-6 border-t border-border">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium hover:bg-muted rounded-lg transition-colors"
-            disabled={isGenerating}
-          >
-            <T context="spawn_widget.button.cancel">Cancel</T>
-          </button>
-          <button
-            onClick={handleGenerate}
-            disabled={isGenerating || !description.trim()}
-            className="flex items-center gap-2 px-6 py-2 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <T context="spawn_widget.button.generating">Generating...</T>
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4" />
-                <T context="spawn_widget.button.generate">Generate Widget Family</T>
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
+    </BaseModal>
   )
 }
 

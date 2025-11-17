@@ -6,7 +6,7 @@ import { api } from '@/convex/_generated/api'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { SearchBar } from '@/components/ui/search-bar'
-import { AssignmentCard } from '@/components/ui/assignment-card'
+import { BaseCard } from '@/components/ui/base-card'
 import { formatDistanceToNow } from '@/app/dashboard/living-projects/[projectId]/components/utils/dateFormatting'
 
 /**
@@ -54,15 +54,22 @@ function AssignmentCardWithMessage({ assignment, userId }: { assignment: any, us
   // Use message preview in summary if available, otherwise use original summary
   const summary = messagePreview || assignment.summary
 
+  const handleClick = () => {
+    if (assignment.projectId) {
+      window.location.href = `/dashboard/living-projects/${assignment.projectId}/assignment`
+    }
+  }
+
   return (
-    <AssignmentCard
+    <BaseCard
+      variant={assignment.isActive ? "assignment" : "default"}
       title={assignment.title}
       timestamp={assignment.timestamp}
       summary={summary}
       path={assignment.path}
       tag={assignment.tag}
-      isActive={assignment.isActive}
-      projectId={assignment.projectId}
+      onClick={handleClick}
+      className={!assignment.isActive ? "bg-[hsl(var(--notes-surface-dim))] border-2 border-[hsl(var(--notes-surface-dim))]" : undefined}
     />
   )
 }
@@ -163,27 +170,29 @@ export default function AssignmentsPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--assignment-bg))] relative size-full">
-      {/* Main Content - Matches Figma: left margin 156px, top 56px */}
-      <div className="absolute content-stretch flex flex-col gap-[20px] items-start left-[156px] top-[56px]">
-        {/* Breadcrumb */}
-        <div className="content-stretch flex font-['DM_Sans'] font-extralight gap-[4px] items-center leading-[0] relative shrink-0 text-[hsl(var(--assignment-text-regular))] text-[32px] tracking-[-0.96px] whitespace-nowrap [font-variation-settings:'opsz'_14]">
+    <div className="min-h-screen bg-[hsl(var(--assignment-bg))] relative size-full px-4 md:px-0">
+      {/* Main Content - Layout handles navigation spacing automatically */}
+      <div className="w-full md:w-[1124px] mx-auto">
+        {/* Breadcrumb - Responsive typography */}
+        <div className="content-stretch flex items-center relative shrink-0 w-full">
           <Breadcrumb items={breadcrumbItems} />
         </div>
 
         {/* Search Bar */}
-        <div className="box-border content-stretch flex flex-col gap-[10px] items-start px-0 py-[8px] relative shrink-0 w-[1124px]">
+        <div className="box-border content-stretch flex flex-col gap-2 md:gap-[10px] items-start px-0 py-2 md:py-[8px] relative shrink-0 w-full">
           <SearchBar value={searchTerm} onChange={setSearchTerm} />
         </div>
 
         {/* Assignment Cards */}
-        <div className="content-stretch flex flex-col gap-[16px] items-start relative shrink-0 w-[1124px]">
+        <div className="content-stretch flex flex-col gap-4 md:gap-[16px] items-start relative shrink-0 w-full mt-2 md:mt-0">
           {projects === undefined ? (
-            // Loading state
-            <div className="text-[hsl(var(--assignment-text-subtle))]">Loading assignments...</div>
+            // Loading state - Responsive typography
+            <div className="text-[hsl(var(--assignment-text-subtle))] text-sm md:text-base py-4 md:py-0">
+              Loading assignments...
+            </div>
           ) : assignments.length === 0 ? (
-            // Empty state
-            <div className="text-[hsl(var(--assignment-text-subtle))]">
+            // Empty state - Responsive typography
+            <div className="text-[hsl(var(--assignment-text-subtle))] text-sm md:text-base py-4 md:py-0">
               {searchTerm ? 'No assignments found' : 'No assignments yet'}
             </div>
           ) : (

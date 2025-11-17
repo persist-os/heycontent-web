@@ -52,7 +52,7 @@ export function ProjectExecutionPlanModal({
       confirmContext="button.execute_plan"
       cancelText="Cancel"
       cancelContext="button.cancel"
-      variant="default"
+      variant="project-execution-plan"
       isLoading={isExecuting}
       loadingText="Executing..."
       loadingContext="button.executing"

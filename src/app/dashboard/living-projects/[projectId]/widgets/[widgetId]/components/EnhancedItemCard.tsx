@@ -3,6 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Tag, Type, Package, Star, Sparkles, Gem, ChevronDown, ChevronUp } from 'lucide-react';
+import { BaseCard } from '@/components/ui/base-card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ContentItem, NoteMetadata, ShardMetadata } from './types/contentAttachment';
@@ -27,10 +28,15 @@ export function EnhancedItemCard({
 
   return (
     <motion.div
-      className="border border-border/40 rounded-2xl p-5 hover:bg-muted/20 hover:border-border/60 transition-all duration-200 group"
       whileHover={{ scale: 1.01 }}
       whileTap={{ scale: 0.99 }}
     >
+      <BaseCard
+        variant="enhanced-item"
+        title={item.title}
+        summary={item.preview}
+        className="group"
+      >
       <div className="flex items-start gap-4">
         <div className="w-12 h-12 rounded-2xl bg-muted/30 flex items-center justify-center flex-shrink-0 group-hover:bg-muted/50 transition-colors">
           <Icon className="w-6 h-6 text-muted-foreground group-hover:text-foreground transition-colors" />
@@ -39,13 +45,6 @@ export function EnhancedItemCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <h4 className={`font-medium text-foreground group-hover:text-foreground transition-colors ${item.type === 'shard' ? 'line-clamp-2' : 'truncate'}`}>
-                {item.title}
-              </h4>
-              <p className={`text-sm text-muted-foreground/70 line-clamp-2 mt-1 font-light`}>
-                {item.preview}
-              </p>
-              
               {/* Metadata Row */}
               <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground/60">
                 <div className="flex items-center gap-1">
@@ -208,7 +207,7 @@ export function EnhancedItemCard({
             </div>
           </div>
         </div>
-      </div>
+      </BaseCard>
     </motion.div>
   );
 }
