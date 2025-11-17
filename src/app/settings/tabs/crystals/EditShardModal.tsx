@@ -1,12 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { BaseModal } from '@/components/ui/base-modal';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -59,13 +52,20 @@ export const EditShardModal: React.FC<EditShardModalProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>Edit Shard</DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-4 py-4">
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Edit Shard"
+      variant="edit-shard"
+      maxWidth="lg"
+      onConfirm={handleSave}
+      onCancel={onClose}
+      confirmText="Save Changes"
+      cancelText="Cancel"
+      isLoading={isLoading}
+      loadingText="Saving..."
+    >
+      <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="exact_quote">Quote</Label>
             <Textarea
@@ -144,16 +144,6 @@ export const EditShardModal: React.FC<EditShardModalProps> = ({
             />
           </div>
         </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isLoading}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={isLoading}>
-            {isLoading ? 'Saving...' : 'Save Changes'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </BaseModal>
   );
 };
