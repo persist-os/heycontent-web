@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -33,6 +33,17 @@ export function OmnipresentBackButton({
 }: OmnipresentBackButtonProps) {
   const router = useRouter()
   const pathname = usePathname()
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   // Hide on home/dashboard root pages (no back button needed)
   const shouldHide = pathname === '/dashboard' || 
@@ -54,7 +65,8 @@ export function OmnipresentBackButton({
 
   return (
     <div className={cn(
-      "fixed top-4 left-20 z-50", // left-20 accounts for GlobalNav sidebar (64px = 16 * 4)
+      "fixed top-4 z-[100]", // z-[100] matches hamburger menu, highest priority
+      isMobile ? "left-16" : "left-20", // Mobile: 64px (accounts for hamburger), Desktop: 80px (accounts for sidebar)
       className
     )}>
       <Button

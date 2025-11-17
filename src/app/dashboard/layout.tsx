@@ -181,7 +181,7 @@ export default function DashboardLayout({
       {/* Backdrop overlay for command palette */}
       {isExpanded && (
         <div 
-          className="fixed inset-0 bg-black/50 z-30"
+          className="fixed inset-0 bg-black/50 z-[70]"
           onClick={() => setIsExpanded(false)}
           aria-hidden="true"
         />
@@ -191,7 +191,7 @@ export default function DashboardLayout({
       <DashboardNav />
       
       {/* Main Content Area - offset for sidebar */}
-      <main className="flex-1 overflow-y-auto overflow-x-hidden ml-16">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden ml-0 md:ml-14">
         {children}
       </main>
       

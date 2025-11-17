@@ -380,19 +380,21 @@ export const DashboardNav = memo(function DashboardNav() {
       {/* Backdrop with blur effect */}
       {isExpanded && (
         <div 
-          className="fixed inset-0 bg-background/80 backdrop-blur-md z-40 transition-all duration-300"
+          className="fixed inset-0 bg-background/80 backdrop-blur-md z-[70] transition-all duration-300"
           onClick={() => setIsExpanded(false)}
         />
       )}
 
       {/* Floating Command Palette */}
       <div className={cn(
-        "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 transition-all duration-500 ease-out",
+        "fixed z-[80] transition-all duration-500 ease-out",
+        // Mobile: top-4, full width
+        "top-4 left-1/2 -translate-x-1/2 md:top-1/2 md:-translate-y-1/2",
         isExpanded 
           ? "opacity-100 scale-100" 
           : "opacity-0 scale-95 pointer-events-none"
       )}>
-        <div className="w-[90vw] max-w-2xl bg-card/95 backdrop-blur-2xl border border-border/50 rounded-3xl shadow-2xl shadow-primary/10 overflow-hidden">
+        <div className="w-[95vw] md:w-[90vw] md:max-w-2xl bg-card/95 backdrop-blur-2xl border border-border/50 rounded-3xl shadow-2xl shadow-primary/10 overflow-hidden">
           
           {/* Header */}
           <CommandPaletteHeader
