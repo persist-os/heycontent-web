@@ -29,6 +29,7 @@ import { ChatMobileView } from '../components/mobile/ChatMobileView'
 import { PanelMobileView } from '../components/mobile/PanelMobileView'
 import { ProjectCollaboratorsModal } from '@/components/projects/ProjectCollaboratorsModal'
 import { usePanelModeSelection } from '@/hooks/usePanelModeSelection'
+import { PanelModeSwitcher } from '@/components/ui/PanelModeSwitcher'
 import type { Id } from '@/convex/_generated/dataModel'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -456,39 +457,13 @@ function FullThinkingLabInternal({
 
           {/* Right Panel (Notepad or Artifacts) */}
           <div style={resizable.styles.rightPanelStyle} className="flex flex-col h-full overflow-hidden">
-            {/* Panel Mode Toggle - Only visible when panel is expanded */}
+            {/* Panel Mode Switcher - Only visible when panel is expanded */}
             {resizable.state.splitRatio === 1 ? null : (
-              <div className="border-b border-border/20 p-2 flex gap-2 bg-card/50 backdrop-blur-sm flex-shrink-0 min-w-[200px]">
-                <button
-                  onClick={() => setPanelMode('notepad')}
-                  className={`px-3 py-1 rounded text-sm transition-colors ${
-                    panelMode === 'notepad'
-                      ? 'bg-primary text-primary-foreground font-semibold'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                  }`}
-                >
-                  Notepad
-                </button>
-                <button
-                  onClick={() => setPanelMode('artifacts')}
-                  className={`px-3 py-1 rounded text-sm transition-colors ${
-                    panelMode === 'artifacts'
-                      ? 'bg-primary text-primary-foreground font-semibold'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                  }`}
-                >
-                  Artifacts
-                </button>
-                <button
-                  onClick={() => setPanelMode('widgets')}
-                  className={`px-3 py-1 rounded text-sm transition-colors ${
-                    panelMode === 'widgets'
-                      ? 'bg-primary text-primary-foreground font-semibold'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                  }`}
-                >
-                  Widgets
-                </button>
+              <div className="border-b border-border/20 p-2 bg-card/50 backdrop-blur-sm flex-shrink-0 flex justify-end">
+                <PanelModeSwitcher
+                  mode={panelMode}
+                  onModeChange={setPanelMode}
+                />
               </div>
             )}
             
