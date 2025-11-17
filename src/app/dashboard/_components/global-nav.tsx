@@ -17,6 +17,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { NotificationsPopover } from '@/components/notifications/NotificationsPopover'
+import { T } from '@/components/translation'
+import { useTranslation } from '@/hooks/useTranslation'
 
 export const GlobalNav = memo(function GlobalNav() {
   const pathname = usePathname()
@@ -103,6 +105,14 @@ export const GlobalNav = memo(function GlobalNav() {
     }
   }, [router, isMobile])
   
+  // Handle notifications open/close - close mobile sidebar when opening
+  const handleNotificationsChange = useCallback((open: boolean) => {
+    setShowNotifications(open)
+    if (open && isMobile) {
+      setIsMobileSidebarOpen(false)
+    }
+  }, [isMobile])
+  
   // Handle hamburger menu toggle
   const handleHamburgerToggle = useCallback(() => {
     setIsMobileSidebarOpen(prev => !prev)
@@ -117,6 +127,26 @@ export const GlobalNav = memo(function GlobalNav() {
   const isNotesActive = pathname.startsWith('/dashboard/notes')
   const isSettingsActive = pathname.startsWith('/settings')
 
+  // Translated strings for aria-labels and text
+  const { text: commandPaletteAriaLabel } = useTranslation('Open command palette', {
+    context: 'aria.command_palette'
+  })
+  const { text: notificationsAriaLabel } = useTranslation('Notifications', {
+    context: 'aria.notifications'
+  })
+  const { text: filesAriaLabel } = useTranslation('Files', {
+    context: 'aria.files'
+  })
+  const { text: thinkingLabAriaLabel } = useTranslation('Thinking Lab', {
+    context: 'aria.thinking_lab'
+  })
+  const { text: profileSettingsAriaLabel } = useTranslation('Profile & Settings', {
+    context: 'aria.profile_settings'
+  })
+  const { text: toggleNavAriaLabel } = useTranslation('Toggle navigation menu', {
+    context: 'aria.toggle_nav'
+  })
+
   return (
     <>
       {/* Mobile: Hamburger Menu Button */}
@@ -124,7 +154,7 @@ export const GlobalNav = memo(function GlobalNav() {
         <button
           onClick={handleHamburgerToggle}
           className="fixed top-4 left-4 z-[100] w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg bg-card border border-border hover:bg-muted transition-colors md:hidden shadow-lg"
-          aria-label="Toggle navigation menu"
+          aria-label={toggleNavAriaLabel}
         >
           {isMobileSidebarOpen ? (
             <X className="w-5 h-5 text-foreground" />
@@ -157,28 +187,31 @@ export const GlobalNav = memo(function GlobalNav() {
             <button
               onClick={handleCompassClick}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted transition-colors text-left"
-              aria-label="Open command palette"
+              aria-label={commandPaletteAriaLabel}
             >
               <Compass className="w-5 h-5 text-foreground rotate-90" />
-              <span className="text-sm font-medium text-foreground">Command Palette</span>
+              <span className="text-sm font-medium text-foreground">
+                <T context="nav.command_palette">Command Palette</T>
+              </span>
             </button>
 
             {/* Notifications */}
-            <div className="relative [&_button]:hidden">
-              <NotificationsPopover
-                a2aNotes={a2aNotes}
-                open={showNotifications}
-                onOpenChange={setShowNotifications}
-              />
-              <button
-                onClick={() => setShowNotifications(!showNotifications)}
-                className="!flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted transition-colors text-left w-full"
-                aria-label="Notifications"
-              >
-                <Bell className="w-5 h-5 text-foreground" />
-                <span className="text-sm font-medium text-foreground">Notifications</span>
-              </button>
-            </div>
+            <NotificationsPopover
+              a2aNotes={a2aNotes}
+              open={showNotifications}
+              onOpenChange={handleNotificationsChange}
+              trigger={
+                <button
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted transition-colors text-left w-full min-h-[44px]"
+                  aria-label={notificationsAriaLabel}
+                >
+                  <Bell className="w-5 h-5 text-foreground" />
+                  <span className="text-sm font-medium text-foreground">
+                    <T context="nav.notifications">Notifications</T>
+                  </span>
+                </button>
+              }
+            />
 
             {/* Folder/Files */}
             <button
@@ -187,7 +220,7 @@ export const GlobalNav = memo(function GlobalNav() {
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted transition-colors text-left",
                 isNotesActive && "bg-muted"
               )}
-              aria-label="Files"
+              aria-label={filesAriaLabel}
             >
               <Folder className={cn(
                 "w-5 h-5",
@@ -196,17 +229,21 @@ export const GlobalNav = memo(function GlobalNav() {
               <span className={cn(
                 "text-sm font-medium",
                 isNotesActive ? "text-primary" : "text-foreground"
-              )}>Files</span>
+              )}>
+                <T context="nav.files">Files</T>
+              </span>
             </button>
 
             {/* Plus/Thinking Lab */}
             <button
               onClick={handlePlusClick}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted transition-colors text-left"
-              aria-label="Thinking Lab"
+              aria-label={thinkingLabAriaLabel}
             >
               <Plus className="w-5 h-5 text-foreground" />
-              <span className="text-sm font-medium text-foreground">Thinking Lab</span>
+              <span className="text-sm font-medium text-foreground">
+                <T context="nav.thinking_lab">Thinking Lab</T>
+              </span>
             </button>
 
             {/* Divider */}
@@ -219,7 +256,7 @@ export const GlobalNav = memo(function GlobalNav() {
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted transition-colors text-left",
                 isSettingsActive && "bg-muted"
               )}
-              aria-label="Profile & Settings"
+              aria-label={profileSettingsAriaLabel}
             >
               <Avatar className="w-5 h-5 border border-border">
                 <AvatarImage src={getUserPhoto()} />
@@ -230,7 +267,9 @@ export const GlobalNav = memo(function GlobalNav() {
               <span className={cn(
                 "text-sm font-medium",
                 isSettingsActive ? "text-primary" : "text-foreground"
-              )}>Settings</span>
+              )}>
+                <T context="nav.settings">Settings</T>
+              </span>
             </button>
           </div>
         </div>
@@ -246,8 +285,8 @@ export const GlobalNav = memo(function GlobalNav() {
         <button
           onClick={handleCompassClick}
           className="relative group min-w-[40px] min-h-[40px] md:min-w-[44px] md:min-h-[44px] flex items-center justify-center"
-          aria-label="Open command palette"
-          title="Open command palette (⌘K)"
+          aria-label={commandPaletteAriaLabel}
+          title={`${commandPaletteAriaLabel} (⌘K)`}
         >
           {/* Glow effect */}
           <div className="absolute inset-0 bg-primary/20 blur-md rounded-xl opacity-0 group-hover:opacity-60 transition-opacity" />
@@ -279,7 +318,7 @@ export const GlobalNav = memo(function GlobalNav() {
                 ? "bg-muted" 
                 : "hover:bg-muted"
             )}
-            aria-label="Files"
+            aria-label={filesAriaLabel}
           >
             <Folder className={cn(
               "w-5 h-5 md:w-6 md:h-6",
@@ -291,8 +330,8 @@ export const GlobalNav = memo(function GlobalNav() {
           <button
             onClick={handlePlusClick}
             className="relative w-9 h-9 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-colors hover:bg-muted min-w-[36px] min-h-[36px] md:min-w-[40px] md:min-h-[40px]"
-            aria-label="Thinking Lab"
-            title="Thinking Lab"
+            aria-label={thinkingLabAriaLabel}
+            title={thinkingLabAriaLabel}
           >
             <Plus className="w-5 h-5 md:w-6 md:h-6 text-foreground" />
           </button>
@@ -307,7 +346,7 @@ export const GlobalNav = memo(function GlobalNav() {
             "relative transition-opacity hover:opacity-80 min-w-[40px] min-h-[40px] md:min-w-[44px] md:min-h-[44px] flex items-center justify-center",
             isSettingsActive && "opacity-100"
           )}
-          aria-label="Profile & Settings"
+          aria-label={profileSettingsAriaLabel}
         >
           <Avatar className="w-10 h-10 md:w-11 md:h-11 border-2 border-border">
             <AvatarImage src={getUserPhoto()} />
