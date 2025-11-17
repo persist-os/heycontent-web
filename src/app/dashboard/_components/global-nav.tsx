@@ -1,11 +1,14 @@
 'use client'
 
-import React, { memo, useCallback, useState } from 'react'
+import React, { memo, useCallback, useState, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Compass,
   Folder,
   Plus,
+  Menu,
+  X,
+  Bell,
 } from 'lucide-react'
 import { useSidebar } from '@/app/context/sidebar-context'
 import { useAuth } from '@/app/context/auth-context'
@@ -20,6 +23,20 @@ export const GlobalNav = memo(function GlobalNav() {
   const router = useRouter()
   const { setIsExpanded } = useSidebar()
   const { firebaseUser } = useAuth()
+  
+  // Mobile sidebar state
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
   
   // Get user data for avatar
   const userData = useQuery(
@@ -57,29 +74,172 @@ export const GlobalNav = memo(function GlobalNav() {
   // Handle compass icon click - opens command palette
   const handleCompassClick = useCallback(() => {
     setIsExpanded(true)
-  }, [setIsExpanded])
+    if (isMobile) {
+      setIsMobileSidebarOpen(false)
+    }
+  }, [setIsExpanded, isMobile])
 
   // Handle folder icon click - navigates to Files/Notes
   const handleFolderClick = useCallback(() => {
     router.push('/dashboard/notes')
-  }, [router])
+    if (isMobile) {
+      setIsMobileSidebarOpen(false)
+    }
+  }, [router, isMobile])
 
   // Handle plus icon click - navigates to Thinking Lab
   const handlePlusClick = useCallback(() => {
     router.push('/dashboard/thinking_lab')
-  }, [router])
+    if (isMobile) {
+      setIsMobileSidebarOpen(false)
+    }
+  }, [router, isMobile])
 
   // Handle profile click - navigate to settings
   const handleProfileClick = useCallback(() => {
     router.push('/settings')
-  }, [router])
+    if (isMobile) {
+      setIsMobileSidebarOpen(false)
+    }
+  }, [router, isMobile])
+  
+  // Handle hamburger menu toggle
+  const handleHamburgerToggle = useCallback(() => {
+    setIsMobileSidebarOpen(prev => !prev)
+  }, [])
+  
+  // Close mobile sidebar when clicking backdrop
+  const handleBackdropClick = useCallback(() => {
+    setIsMobileSidebarOpen(false)
+  }, [])
 
   // Check if current path matches
   const isNotesActive = pathname.startsWith('/dashboard/notes')
   const isSettingsActive = pathname.startsWith('/settings')
 
   return (
-    <div className="fixed left-0 top-0 bottom-0 w-14 md:w-16 bg-[hsl(var(--background))] flex flex-col items-center justify-between py-[60px] px-3 md:px-4 z-50">
+    <>
+      {/* Mobile: Hamburger Menu Button */}
+      {isMobile && (
+        <button
+          onClick={handleHamburgerToggle}
+          className="fixed top-4 left-4 z-[100] w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg bg-card border border-border hover:bg-muted transition-colors md:hidden shadow-lg"
+          aria-label="Toggle navigation menu"
+        >
+          {isMobileSidebarOpen ? (
+            <X className="w-5 h-5 text-foreground" />
+          ) : (
+            <Menu className="w-5 h-5 text-foreground" />
+          )}
+        </button>
+      )}
+      
+      {/* Mobile: Backdrop Overlay */}
+      {isMobile && isMobileSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-background/60 backdrop-blur-sm z-[70] md:hidden"
+          onClick={handleBackdropClick}
+          aria-hidden="true"
+        />
+      )}
+      
+      {/* Mobile: Compact Dropdown Menu */}
+      {isMobile && isMobileSidebarOpen && (
+        <div
+          className={cn(
+            "fixed top-16 left-4 z-[90] w-48 bg-card border border-border rounded-xl shadow-2xl backdrop-blur-md overflow-hidden",
+            "animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
+            "md:hidden"
+          )}
+        >
+          <div className="flex flex-col p-2 gap-1">
+            {/* Compass/Command Palette */}
+            <button
+              onClick={handleCompassClick}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted transition-colors text-left"
+              aria-label="Open command palette"
+            >
+              <Compass className="w-5 h-5 text-foreground rotate-90" />
+              <span className="text-sm font-medium text-foreground">Command Palette</span>
+            </button>
+
+            {/* Notifications */}
+            <div className="relative [&_button]:hidden">
+              <NotificationsPopover
+                a2aNotes={a2aNotes}
+                open={showNotifications}
+                onOpenChange={setShowNotifications}
+              />
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="!flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted transition-colors text-left w-full"
+                aria-label="Notifications"
+              >
+                <Bell className="w-5 h-5 text-foreground" />
+                <span className="text-sm font-medium text-foreground">Notifications</span>
+              </button>
+            </div>
+
+            {/* Folder/Files */}
+            <button
+              onClick={handleFolderClick}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted transition-colors text-left",
+                isNotesActive && "bg-muted"
+              )}
+              aria-label="Files"
+            >
+              <Folder className={cn(
+                "w-5 h-5",
+                isNotesActive ? "text-primary" : "text-foreground"
+              )} />
+              <span className={cn(
+                "text-sm font-medium",
+                isNotesActive ? "text-primary" : "text-foreground"
+              )}>Files</span>
+            </button>
+
+            {/* Plus/Thinking Lab */}
+            <button
+              onClick={handlePlusClick}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted transition-colors text-left"
+              aria-label="Thinking Lab"
+            >
+              <Plus className="w-5 h-5 text-foreground" />
+              <span className="text-sm font-medium text-foreground">Thinking Lab</span>
+            </button>
+
+            {/* Divider */}
+            <div className="h-px bg-border my-1" />
+
+            {/* Profile/Settings */}
+            <button
+              onClick={handleProfileClick}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted transition-colors text-left",
+                isSettingsActive && "bg-muted"
+              )}
+              aria-label="Profile & Settings"
+            >
+              <Avatar className="w-5 h-5 border border-border">
+                <AvatarImage src={getUserPhoto()} />
+                <AvatarFallback className="bg-[#C00011] text-foreground text-xs">
+                  {getUserInitial()}
+                </AvatarFallback>
+              </Avatar>
+              <span className={cn(
+                "text-sm font-medium",
+                isSettingsActive ? "text-primary" : "text-foreground"
+              )}>Settings</span>
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {/* Sidebar - Fixed on desktop only */}
+      <div className={cn(
+        "hidden md:flex fixed left-0 top-0 bottom-0 flex-col items-center justify-between py-[60px] bg-background border-r border-border z-[90] w-14 px-3 md:px-4"
+      )}>
       {/* Top Section: Logo/Compass */}
       <div className="flex flex-col items-center gap-2 md:gap-6">
         {/* Compass/Logo Icon */}
@@ -93,11 +253,11 @@ export const GlobalNav = memo(function GlobalNav() {
           <div className="absolute inset-0 bg-primary/20 blur-md rounded-xl opacity-0 group-hover:opacity-60 transition-opacity" />
           
           {/* Icon container with gradient border */}
-          <div className="relative w-10 h-10 md:w-11 md:h-11 rounded-xl dark:bg-[#0B1018] bg-[hsl(var(--card))] backdrop-blur-[10px] dark:border-[rgba(154,203,255,0.88)] border-[hsl(var(--border))] flex items-center justify-center transition-all duration-200 dark:group-hover:border-[rgba(154,203,255,1)] group-hover:border-[hsl(var(--border))] overflow-hidden shadow-sm">
+          <div className="relative w-10 h-10 md:w-11 md:h-11 rounded-xl bg-card backdrop-blur-[10px] border-border flex items-center justify-center transition-all duration-200 hover:border-primary overflow-hidden shadow-sm">
             {/* Gradient background effect - subtle blue glow (dark mode only) */}
             <div className="absolute inset-0 rounded-xl opacity-0 dark:opacity-30 bg-gradient-to-br from-[rgba(101,181,255,0.6)] via-[rgba(154,205,255,0.4)] to-transparent" />
             {/* Compass icon */}
-            <Compass className="relative w-5 h-5 md:w-6 md:h-6 text-[#EEF1FE] dark:text-[#EEF1FE] text-[hsl(var(--foreground))] rotate-90 z-10" />
+            <Compass className="relative w-5 h-5 md:w-6 md:h-6 text-foreground rotate-90 z-10" />
           </div>
         </button>
 
@@ -116,25 +276,25 @@ export const GlobalNav = memo(function GlobalNav() {
             className={cn(
               "relative w-9 h-9 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-colors min-w-[36px] min-h-[36px] md:min-w-[40px] md:min-h-[40px]",
               isNotesActive 
-                ? "bg-background/20 dark:bg-background/20 bg-[hsl(var(--muted))]" 
-                : "hover:bg-background/10 dark:hover:bg-background/10 hover:bg-[hsl(var(--muted))]"
+                ? "bg-muted" 
+                : "hover:bg-muted"
             )}
             aria-label="Files"
           >
             <Folder className={cn(
               "w-5 h-5 md:w-6 md:h-6",
-              isNotesActive ? "text-primary" : "text-[#EEF1FE] dark:text-[#EEF1FE] text-[hsl(var(--foreground))]"
+              isNotesActive ? "text-primary" : "text-foreground"
             )} />
           </button>
 
           {/* Plus/Create - Navigate to Thinking Lab */}
           <button
             onClick={handlePlusClick}
-            className="relative w-9 h-9 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-colors hover:bg-background/10 dark:hover:bg-background/10 hover:bg-[hsl(var(--muted))] min-w-[36px] min-h-[36px] md:min-w-[40px] md:min-h-[40px]"
+            className="relative w-9 h-9 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-colors hover:bg-muted min-w-[36px] min-h-[36px] md:min-w-[40px] md:min-h-[40px]"
             aria-label="Thinking Lab"
             title="Thinking Lab"
           >
-            <Plus className="w-5 h-5 md:w-6 md:h-6 text-[#EEF1FE] dark:text-[#EEF1FE] text-[hsl(var(--foreground))]" />
+            <Plus className="w-5 h-5 md:w-6 md:h-6 text-foreground" />
           </button>
         </div>
       </div>
@@ -149,16 +309,17 @@ export const GlobalNav = memo(function GlobalNav() {
           )}
           aria-label="Profile & Settings"
         >
-          <Avatar className="w-10 h-10 md:w-11 md:h-11 border-2 border-[rgba(154,203,255,0.3)] dark:border-[rgba(154,203,255,0.3)] border-[hsl(var(--border))]">
+          <Avatar className="w-10 h-10 md:w-11 md:h-11 border-2 border-border">
             <AvatarImage src={getUserPhoto()} />
             <AvatarFallback 
-              className="bg-[#C00011] text-[#EEF1FE] dark:text-[#EEF1FE] text-[hsl(var(--foreground))] text-[28px] md:text-[32px] font-normal"
+              className="bg-[#C00011] text-foreground text-[28px] md:text-[32px] font-normal"
             >
               {getUserInitial()}
             </AvatarFallback>
           </Avatar>
         </button>
       </div>
-    </div>
+      </div>
+    </>
   )
 })

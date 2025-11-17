@@ -21,8 +21,6 @@ import { Button } from '@/components/ui/button';
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import toast from 'react-hot-toast';
-import { useIsMobile } from '@/app/dashboard/thinking_lab/layouts/ResponsiveLayout';
-import { NotesTreeMobile } from './NotesTreeMobile';
 import { QuickEntryCard } from './QuickEntryCard';
 import { useQuickEntryStats } from '../hooks/useQuickEntryStats';
 import { RecentActivityTable } from './RecentActivityTable';
@@ -38,7 +36,6 @@ export function NotesTree({
   onUpdateNote,
   isLoading
 }: NotesTreeProps) {
-  const isMobile = useIsMobile();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['recent', 'projects', 'tags', 'important', 'shared', 'my-shared', 'user-folders']));
@@ -444,21 +441,6 @@ export function NotesTree({
       </div>
     );
   }, [expandedNodes, toggleNode, router, searchTerm, dragOverFolder, draggedNote, handleDeleteProject, isDeletingProject, projectToDelete, isSelectionMode, selectedProjects, selectedNotes, toggleProjectSelection, toggleNoteSelection]);
-
-  // Render mobile version if on mobile (after all hooks are called)
-  if (isMobile) {
-    return (
-      <NotesTreeMobile
-        notes={notes}
-        projects={propProjects}
-        onEditNote={onEditNote}
-        onDeleteNote={onDeleteNote}
-        onToggleImportant={onToggleImportant}
-        onUpdateNote={onUpdateNote}
-        isLoading={isLoading}
-      />
-    );
-  }
 
   if (isLoading) {
     return (
