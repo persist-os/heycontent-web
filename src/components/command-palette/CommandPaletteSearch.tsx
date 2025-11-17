@@ -22,7 +22,7 @@ export const CommandPaletteSearch = forwardRef<HTMLInputElement, CommandPaletteS
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={onKeyDown}
-          className="w-full pl-14 pr-4 py-3.5 bg-muted/40 border border-border/40 rounded-xl text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-muted/50 focus:border-primary/30 transition-all font-light"
+          className="w-full pl-14 pr-4 py-3.5 min-h-[44px] bg-muted/40 border border-border/40 rounded-xl text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-muted/50 focus:border-primary/30 transition-all font-light"
         />
       </div>
     );

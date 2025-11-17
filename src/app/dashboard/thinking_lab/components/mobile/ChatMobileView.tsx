@@ -29,6 +29,7 @@ export function ChatMobileView({
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Messages - Scrollable */}
+      {/* Safe area handled by MobileBottomNav's safe-area-inset-bottom class */}
       <div className="flex-1 overflow-y-auto">
         <ChatPanel 
           messages={messageList}
