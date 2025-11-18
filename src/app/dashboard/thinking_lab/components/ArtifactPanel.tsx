@@ -70,14 +70,41 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     } : "skip"
   )
 
-  // Reverse artifacts array so newest appear at the bottom
-  // Query returns newest first (desc order), so we reverse to show oldest first (newest at bottom)
+  // Priority mapping (1 = highest priority, appears first)
+  // Based on workflow importance: plans first, then timelines, then action items
+  const ARTIFACT_PRIORITY: Record<string, number> = {
+    'report': 1,           // Plans and strategic documents (highest priority)
+    'timeline': 2,         // Chronological milestones
+    'structured_list': 3,  // Action items and tasks
+    'tracker': 4,          // Progress tracking
+    'summary': 5,          // Key metrics
+    'analysis': 6,         // Data insights
+    'email': 7            // Communication artifacts (lowest priority)
+  }
+
+  const getPriority = (artifactType: string): number => {
+    return ARTIFACT_PRIORITY[artifactType] || 999 // Unknown types go to bottom
+  }
+
+  // Sort artifacts by priority first, then chronologically within same priority
+  // Priority: reports → timelines → to-do lists → trackers → summaries → analysis → emails
+  // Within same priority: oldest first (ascending createdAt)
   // MUST be called before any conditional returns to follow Rules of Hooks
-  const reversedArtifacts = React.useMemo(() => {
+  const sortedArtifacts = React.useMemo(() => {
     if (!artifacts || artifacts.length === 0) {
       return []
     }
-    return [...artifacts].reverse()
+    
+    return [...artifacts].sort((a, b) => {
+      // First: Sort by priority (ascending - lower number = higher priority)
+      const priorityDiff = getPriority(a.type) - getPriority(b.type)
+      if (priorityDiff !== 0) {
+        return priorityDiff
+      }
+      
+      // Second: Within same priority, sort by creation time (ascending - oldest first)
+      return a.createdAt - b.createdAt
+    })
   }, [artifacts])
 
   // Loading state: waiting for conversation or artifacts
@@ -167,7 +194,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
             </Button>
           )}
         </div>
-        {reversedArtifacts.map((artifact: Artifact) => (
+        {sortedArtifacts.map((artifact: Artifact) => (
           <EditableArtifactRenderer 
             key={artifact._id}
             artifact={artifact}
