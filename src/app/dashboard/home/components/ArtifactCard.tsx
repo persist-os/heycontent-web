@@ -1,10 +1,9 @@
 'use client'
 
 import React from 'react'
-import { ArrowUpRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { BaseCard } from '@/components/ui/base-card'
-import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
 interface ArtifactCardProps {
@@ -59,60 +58,55 @@ export function ArtifactCard({ artifact }: ArtifactCardProps) {
   })()
 
   return (
-    <BaseCard
-      variant="artifact"
+    <div
       onClick={handleClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          handleClick()
+        }
+      }}
       className={cn(
         "group relative flex-shrink-0",
         "w-full max-w-[calc(100vw-2rem)]", // Mobile: full width with padding
         "md:w-72", // Desktop: preserve 288px
-        "h-40",
-        "bg-gradient-to-br from-blue-500/10 via-cyan-500/8 to-blue-500/5",
-        "border border-blue-500/20",
         "cursor-pointer transition-all duration-300",
-        "hover:bg-blue-500/15 hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/10",
-        "backdrop-blur-sm overflow-hidden"
+        "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
       )}
+      tabIndex={0}
+      role="button"
+      aria-label={`View artifact: ${artifactTitle}`}
     >
-      <div className="p-5 h-full flex flex-col justify-between relative">
-      
-        {/* Arrow icon (top-right) */}
-        <div className="absolute top-4 right-4 z-10">
-          <ArrowUpRight className="w-4 h-4 text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors" />
-        </div>
-        
-        {/* Top: Artifact name */}
-        <div className="pr-8">
-          <h3 className="text-base font-semibold text-foreground line-clamp-2 leading-tight">
-            {artifactTitle}
-          </h3>
-        </div>
-        
-        {/* Bottom: Tags and metadata */}
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-wrap items-center gap-1.5 min-w-0">
-            {artifact.tags && artifact.tags.length > 0 ? (
-              <Badge
-                variant="outline"
-                className="bg-blue-500/20 border-blue-500/30 text-blue-600 dark:text-blue-400 text-xs px-2 py-0.5 truncate max-w-[140px] md:max-w-full"
-              >
-                {artifact.tags[0]}
-              </Badge>
-            ) : (
-              <Badge
-                variant="outline"
-                className="bg-muted/40 border-border/40 text-muted-foreground text-xs px-2 py-0.5 truncate max-w-[120px] md:max-w-full"
-              >
-                v{artifact.metadata?.version || 1}
-              </Badge>
-            )}
+      <BaseCard
+        variant="artifact"
+        className={cn(
+          "h-40",
+          "bg-gradient-to-br from-blue-500/10 via-cyan-500/8 to-blue-500/5",
+          "border border-blue-500/20",
+          "transition-all duration-300",
+          "group-hover:bg-blue-500/15 group-hover:border-blue-500/30 group-hover:shadow-lg group-hover:shadow-blue-500/10",
+          "backdrop-blur-sm overflow-hidden"
+        )}
+      >
+        <div className="p-5 h-full flex flex-col justify-between relative">
+          
+          {/* Top: Artifact name */}
+          <div>
+            <h3 className="text-base font-semibold text-foreground line-clamp-2 leading-tight">
+              {artifactTitle}
+            </h3>
           </div>
-          <span className="text-xs text-muted-foreground md:whitespace-nowrap">
-            {relativeTime}
-          </span>
+          
+          {/* Bottom: Time on left, arrow on right */}
+          <div className="flex items-end justify-between w-full">
+            <span className="text-xs text-muted-foreground">
+              {relativeTime}
+            </span>
+            <ArrowRight className="w-5 h-5 text-foreground/60 group-hover:text-foreground transition-colors flex-shrink-0" />
+          </div>
+          
         </div>
-        
-      </div>
-    </BaseCard>
+      </BaseCard>
+    </div>
   )
 }

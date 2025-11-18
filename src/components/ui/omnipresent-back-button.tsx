@@ -65,7 +65,7 @@ export function OmnipresentBackButton({
 
   return (
     <div className={cn(
-      "fixed top-4 z-[100]", // z-[100] matches hamburger menu, highest priority
+      "fixed top-2 z-[100]", // z-[100] matches hamburger menu, highest priority - moved higher from top-4
       isMobile ? "left-16" : "left-20", // Mobile: 64px (accounts for hamburger), Desktop: 80px (accounts for sidebar)
       className
     )}>
