@@ -11,11 +11,11 @@
 
 import React from 'react'
 import { FieldDefinition, ArtifactMetadata } from '@/types/artifacts'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
 import { Pencil } from 'lucide-react'
 import { FieldEditor } from '../../editors/FieldEditor'
-import { ArtifactVersionSelector } from '../../ArtifactVersionSelector'
+import { ArtifactCardHeader } from '../shared/ArtifactCardHeader'
+import { ArtifactCardFooter } from '../shared/ArtifactCardFooter'
 import { Id } from '@/convex/_generated/dataModel'
 
 interface TableLayoutRendererProps {
@@ -94,31 +94,16 @@ export function TableLayoutRenderer({
 
   return (
     <Card className="bg-card/50 backdrop-blur-sm border border-primary/20 hover:bg-card/80 transition-all duration-300">
-      <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-primary" />
-            <span className="text-sm font-medium text-foreground">{artifactTypeDisplay}</span>
-            {editable && (
-              <Pencil className="w-3 h-3 text-primary/60" />
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {editButton}
-            {artifactId && selectedVersion !== undefined && onVersionChange ? (
-              <ArtifactVersionSelector
-                artifactId={artifactId}
-                currentVersion={selectedVersion}
-                onVersionChange={onVersionChange}
-              />
-            ) : (
-              <Badge variant="outline" className="text-xs">
-                v{artifactMetadata.version}
-              </Badge>
-            )}
-          </div>
-        </div>
-      </CardHeader>
+      <ArtifactCardHeader
+        artifactTypeDisplay={artifactTypeDisplay}
+        editable={editable}
+        editButton={editButton}
+        artifactId={artifactId}
+        selectedVersion={selectedVersion}
+        onVersionChange={onVersionChange}
+        metadata={artifactMetadata}
+        icon={<div className="w-2 h-2 rounded-full bg-primary" />}
+      />
       
       <CardContent>
         {tableData.length === 0 ? (
@@ -176,12 +161,7 @@ export function TableLayoutRenderer({
           </div>
         )}
 
-        {/* Metadata Footer */}
-        <div className="flex items-center gap-2 text-xs text-muted-foreground/70 border-t border-border/20 pt-3 mt-4">
-          <span>Updated {new Date(artifactMetadata.lastUpdatedAt).toLocaleTimeString()}</span>
-          <span>•</span>
-          <span>Source: Widget {artifactMetadata.lastUpdatedBy.slice(-4)}</span>
-        </div>
+        <ArtifactCardFooter metadata={artifactMetadata} />
       </CardContent>
     </Card>
   )

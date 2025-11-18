@@ -10,7 +10,7 @@
 import React from 'react'
 import { Artifact } from '@/types/artifacts'
 import { EditableArtifactRenderer } from '@/components/artifacts/EditableArtifactRenderer'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { BaseCard } from '@/components/ui/base-card'
 import { Badge } from '@/components/ui/badge'
 import { 
   FileText, 
@@ -116,9 +116,12 @@ export function ArtifactDisplayCard({
   const updatedBy = artifact.metadata?.lastUpdatedBy || 'system'
 
   return (
-    <Card className="bg-card/50 backdrop-blur-sm border border-border/40 hover:bg-card/80 transition-all duration-300">
+    <BaseCard
+      variant="artifact-display"
+      className="bg-card/50 backdrop-blur-sm border border-border/40 hover:bg-card/80 transition-all duration-300"
+    >
       {/* Header: Title + Type badge + metadata */}
-      <CardHeader className="p-4 pb-3 border-b border-border/20">
+      <div className="p-4 pb-3 border-b border-border/20">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-base font-semibold text-foreground flex-1 pr-2">
             {artifactTitle}
@@ -133,16 +136,16 @@ export function ArtifactDisplayCard({
           <span>•</span>
           <span>{formatTimestamp(lastUpdated)}</span>
         </div>
-      </CardHeader>
+      </div>
 
       {/* Content: Rendered artifact */}
-      <CardContent className="p-6">
+      <div className="p-6">
         <EditableArtifactRenderer 
           artifact={artifact}
           userId={userId}
           editable={editable}
         />
-      </CardContent>
+      </div>
 
       {/* Footer: Source attribution */}
       {widgetTitle && (
@@ -155,7 +158,7 @@ export function ArtifactDisplayCard({
           </div>
         </div>
       )}
-    </Card>
+    </BaseCard>
   )
 }
 

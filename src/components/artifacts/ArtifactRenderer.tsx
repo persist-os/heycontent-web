@@ -126,13 +126,16 @@ function UnsupportedArtifact({ artifact }: { artifact: Artifact }) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-2 text-sm text-muted-foreground">
+        <div className="space-y-2 text-base md:text-sm text-muted-foreground">
           <p>This artifact type is not yet supported.</p>
           <details className="mt-4">
-            <summary className="cursor-pointer hover:text-foreground">
+            <summary 
+              className="cursor-pointer hover:text-foreground min-h-[44px] flex items-center focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-sm px-2 -mx-2"
+              aria-label="Toggle artifact data model display"
+            >
               Show artifact data model
             </summary>
-            <pre className="mt-2 p-4 bg-muted/10 rounded-lg overflow-auto text-xs">
+            <pre className="mt-2 p-4 bg-muted/10 rounded-lg overflow-auto text-sm md:text-xs">
               {JSON.stringify(artifact.data_model, null, 2)}
             </pre>
           </details>
@@ -165,7 +168,7 @@ function InvalidArtifactStructure({ artifact, errors }: { artifact: Artifact; er
             <p className="text-sm font-medium text-yellow-600 dark:text-yellow-400 mb-2">
               Invalid artifact structure detected
             </p>
-            <ul className="list-disc list-inside text-xs text-yellow-700 dark:text-yellow-300 space-y-1">
+            <ul className="list-disc list-inside text-sm md:text-xs text-yellow-700 dark:text-yellow-300 space-y-1">
               {errors.map((error, idx) => (
                 <li key={idx}>{error}</li>
               ))}
@@ -173,10 +176,13 @@ function InvalidArtifactStructure({ artifact, errors }: { artifact: Artifact; er
           </div>
           
           <details className="mt-4">
-            <summary className="cursor-pointer hover:text-foreground text-sm font-medium">
+            <summary 
+              className="cursor-pointer hover:text-foreground text-base md:text-sm font-medium min-h-[44px] flex items-center focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-sm px-2 -mx-2"
+              aria-label="Toggle raw JSON data display"
+            >
               View Raw JSON Data
             </summary>
-            <pre className="mt-2 p-4 bg-muted/10 rounded-lg overflow-auto text-xs max-h-[400px]">
+            <pre className="mt-2 p-4 bg-muted/10 rounded-lg overflow-auto text-sm md:text-xs max-h-[400px]">
               {JSON.stringify(artifact, null, 2)}
             </pre>
           </details>
@@ -204,7 +210,7 @@ export function ArtifactRenderer({
   if (!artifact) {
     return (
       <Card className="bg-card/50 backdrop-blur-sm border border-border/40">
-        <CardContent className="py-8 text-center text-sm text-muted-foreground">
+        <CardContent className="py-8 text-center text-base md:text-sm text-muted-foreground">
           No artifact data available
         </CardContent>
       </Card>

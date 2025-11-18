@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Button } from '../../../components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../../components/ui/card';
+import { BaseCard } from '../../../components/ui/base-card';
 import { Badge } from '../../../components/ui/badge';
 import { Check } from 'lucide-react';
 import { T } from '@/components/translation';
@@ -35,7 +35,10 @@ export function PricingCard({
   const displaySubtext = showAnnual && annualPrice ? '/year' : priceSubtext;
 
   return (
-    <Card className={`relative flex flex-col ${popular ? 'border-primary shadow-xl scale-105' : ''}`}>
+    <BaseCard
+      variant="pricing"
+      className={`relative flex flex-col ${popular ? 'border-primary shadow-xl scale-105' : ''}`}
+    >
       {popular && (
         <div className="absolute -top-4 left-0 right-0 flex justify-center">
           <Badge className="bg-primary text-primary-foreground px-4 py-1">
@@ -44,10 +47,10 @@ export function PricingCard({
         </div>
       )}
       
-      <CardHeader className="text-center pb-8 pt-6">
-        <CardTitle className="text-2xl font-bold">
+      <div className="text-center pb-8 pt-6">
+        <h3 className="text-2xl font-bold">
           <T context={`pricingCard.${name.toLowerCase()}.name`}>{name}</T>
-        </CardTitle>
+        </h3>
         <div className="mt-4">
           <span className="text-5xl font-bold">{displayPrice}</span>
           {displaySubtext && (
@@ -56,12 +59,12 @@ export function PricingCard({
             </span>
           )}
         </div>
-        <CardDescription className="mt-4 text-base">
+        <p className="mt-4 text-base text-muted-foreground">
           <T context={`pricingCard.${name.toLowerCase()}.description`}>{description}</T>
-        </CardDescription>
-      </CardHeader>
+        </p>
+      </div>
       
-      <CardContent className="flex-grow">
+      <div className="flex-grow px-6">
         <ul className="space-y-3">
           {features.map((feature, index) => (
             <li key={index} className="flex items-start gap-3">
@@ -72,9 +75,9 @@ export function PricingCard({
             </li>
           ))}
         </ul>
-      </CardContent>
+      </div>
       
-      <CardFooter>
+      <div className="px-6 pb-6">
         <Link href={ctaLink} className="w-full">
           <Button 
             size="lg" 
@@ -84,7 +87,7 @@ export function PricingCard({
             <T context={`pricingCard.${name.toLowerCase()}.cta`}>{ctaText}</T>
           </Button>
         </Link>
-      </CardFooter>
-    </Card>
+      </div>
+    </BaseCard>
   );
 }

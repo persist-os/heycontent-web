@@ -8,6 +8,7 @@ import {
 import { loadStripe } from '@stripe/stripe-js'
 import { useAuth } from '@/app/context/auth-context'
 import { getApiKey } from '@/app/lib/api-helpers'
+import { BaseCard } from '@/components/ui/base-card'
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -86,53 +87,59 @@ export default function CheckoutCard({ planId, onClose, returnUrl }: Props) {
   // Render loading state
   if (loading) {
     return (
-      <div className="p-6 flex justify-center items-center">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-      </div>
+      <BaseCard variant="checkout">
+        <div className="p-6 flex justify-center items-center">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+        </div>
+      </BaseCard>
     )
   }
 
   // Render error state
   if (error) {
     return (
-      <div className="p-6 text-red-500">
-        <p>Error: {error}</p>
-        {onClose && (
-          <Button variant="outline" onClick={onClose} className="mt-4">
-            Close
-          </Button>
-        )}
-      </div>
+      <BaseCard variant="checkout">
+        <div className="p-6 text-red-500">
+          <p>Error: {error}</p>
+          {onClose && (
+            <Button variant="outline" onClick={onClose} className="mt-4 min-h-[44px]">
+              Close
+            </Button>
+          )}
+        </div>
+      </BaseCard>
     )
   }
 
   // Render checkout
   return (
-    <div className="relative w-full" ref={checkoutRef}>
-      {onClose && (
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="absolute top-2 right-2 z-20" 
-          onClick={onClose}
-          aria-label="Close"
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      )}
-      <div 
-        id="checkout" 
-        className="w-full min-h-[400px] sm:min-h-[500px] max-h-[80vh] sm:max-h-[85vh] overflow-auto rounded-lg stripe-embedded-checkout stripe-checkout-container"
-      >
-        {clientSecret && (
-          <EmbeddedCheckoutProvider
-            stripe={stripePromise}
-            options={{ clientSecret }}
+    <BaseCard variant="checkout">
+      <div className="relative w-full" ref={checkoutRef}>
+        {onClose && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="absolute top-2 right-2 z-20 min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0" 
+            onClick={onClose}
+            aria-label="Close"
           >
-            <EmbeddedCheckout className="w-full" />
-          </EmbeddedCheckoutProvider>
+            <X className="h-4 w-4" />
+          </Button>
         )}
+        <div 
+          id="checkout" 
+          className="w-full min-h-[400px] sm:min-h-[500px] max-h-[80vh] sm:max-h-[85vh] overflow-auto rounded-lg stripe-embedded-checkout stripe-checkout-container"
+        >
+          {clientSecret && (
+            <EmbeddedCheckoutProvider
+              stripe={stripePromise}
+              options={{ clientSecret }}
+            >
+              <EmbeddedCheckout className="w-full" />
+            </EmbeddedCheckoutProvider>
+          )}
+        </div>
       </div>
-    </div>
+    </BaseCard>
   )
 }

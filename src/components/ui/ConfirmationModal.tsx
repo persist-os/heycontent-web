@@ -1,15 +1,5 @@
 import * as React from 'react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from './alert-dialog';
-import { Button } from './button';
+import { BaseModal } from './base-modal';
 import { useLanguagePreference, useTranslation } from '@/hooks/useTranslation';
 
 export interface ConfirmationModalProps {
@@ -90,30 +80,25 @@ export function ConfirmationModal({
   const finalCancelText = cancelContext ? translatedCancelText : cancelText;
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <AlertDialogContent className={className}>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{finalTitle}</AlertDialogTitle>
-          <AlertDialogDescription>{finalDescription}</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel asChild>
-            <Button variant="outline" disabled={isLoading}>
-              {finalCancelText}
-            </Button>
-          </AlertDialogCancel>
-          <AlertDialogAction asChild>
-            <Button
-              variant={variant === 'destructive' ? 'destructive' : 'default'}
-              onClick={handleConfirm}
-              disabled={isLoading}
-              className={variant === 'destructive' ? 'bg-destructive text-white hover:bg-destructive/90 dark:text-white' : ''}
-            >
-              {isLoading ? confirmingText : finalConfirmText}
-            </Button>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      onConfirm={handleConfirm}
+      onCancel={onClose}
+      title={finalTitle}
+      titleContext={titleContext}
+      description={finalDescription}
+      descriptionContext={descriptionContext}
+      confirmText={finalConfirmText}
+      confirmContext={confirmContext}
+      cancelText={finalCancelText}
+      cancelContext={cancelContext}
+      variant={variant === 'destructive' ? 'destructive' : 'confirmation'}
+      isLoading={isLoading}
+      loadingText={confirmingText}
+      className={className}
+    >
+      {/* BaseModal handles all content */}
+    </BaseModal>
   );
 }

@@ -1,4 +1,4 @@
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { BaseCard } from '@/components/ui/base-card';
 import React from 'react';
 
 interface RecentUsageEventsCardProps {
@@ -6,11 +6,7 @@ interface RecentUsageEventsCardProps {
 }
 
 export const RecentUsageEventsCard: React.FC<RecentUsageEventsCardProps> = ({ usageEvents }) => (
-  <Card>
-    <CardHeader>
-      <CardTitle>Recent usage</CardTitle>
-    </CardHeader>
-    <CardContent>
+  <BaseCard variant="recent-usage" title="Recent usage">
       <details>
         <summary className="cursor-pointer select-none text-sm font-medium flex items-center justify-between">
           Routes
@@ -56,6 +52,5 @@ export const RecentUsageEventsCard: React.FC<RecentUsageEventsCardProps> = ({ us
           </table>
         </div>
       </details>
-    </CardContent>
-  </Card>
+  </BaseCard>
 );

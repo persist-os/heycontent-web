@@ -670,6 +670,11 @@
     animation: spin 1s linear infinite;
   }
 
+  /* Custom easing function for bounce-spring animations */
+  .ease-bounce-spring {
+    transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
   /* Chat-specific utility classes for blue accents */
   .chat-button-primary {
     @apply bg-blue-600 text-white hover:bg-blue-700 transition-colors;
@@ -939,6 +944,7 @@ textarea:focus-visible {
   outline: 2px solid hsl(220 15% 25%);
   outline-offset: 2px;
 }
+
 
 /* Fix dropdown menu item hover readability */
 [data-highlighted] {

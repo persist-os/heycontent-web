@@ -1,5 +1,6 @@
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { BaseCard } from '@/components/ui/base-card';
 import { LucideIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface AdminStatsCardProps {
   label: string;
@@ -11,20 +12,20 @@ interface AdminStatsCardProps {
 
 export function AdminStatsCard({ label, value, icon: Icon, onClick, active }: AdminStatsCardProps) {
   return (
-    <Card
-      className={`transition-all cursor-pointer hover:shadow-md ${
-        active ? 'ring-2 ring-primary' : ''
-      }`}
+    <BaseCard
+      variant="admin-stats"
+      title={label}
       onClick={onClick}
+      className={cn(
+        "transition-all cursor-pointer hover:shadow-md",
+        active ? 'ring-2 ring-primary' : ''
+      )}
     >
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{label}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
-      </CardHeader>
-      <CardContent>
+      <div className="flex items-center justify-between mt-3">
         <div className="text-2xl font-bold">{value}</div>
-      </CardContent>
-    </Card>
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </div>
+    </BaseCard>
   );
 }
 

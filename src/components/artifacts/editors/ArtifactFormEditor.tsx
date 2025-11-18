@@ -44,9 +44,13 @@ export function ArtifactFormEditor({
   // Render JSON view component (reusable across all layouts)
   // Must be defined before any early returns
   const renderJsonView = React.useCallback(() => (
-    <Collapsible open={showJson} onOpenChange={setShowJson} className="mt-4">
+    <Collapsible open={showJson} onOpenChange={setShowJson} className="mt-4 w-full">
       <CollapsibleTrigger asChild>
-        <Button variant="outline" className="w-full justify-between">
+        <Button 
+          variant="outline" 
+          className="w-full justify-between min-h-[44px]"
+          aria-label="Toggle JSON view"
+        >
           <div className="flex items-center gap-2">
             <Code className="w-4 h-4" />
             <span>View JSON (Read-only)</span>
@@ -55,8 +59,8 @@ export function ArtifactFormEditor({
         </Button>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="mt-2 p-4 bg-muted/30 rounded-lg border border-border/20">
-          <pre className="text-xs font-mono overflow-x-auto max-h-[300px] overflow-y-auto break-words whitespace-pre-wrap">
+        <div className="mt-2 p-2 md:p-4 bg-muted/30 rounded-lg border border-border/20 w-full max-w-full overflow-hidden">
+          <pre className="text-xs md:text-sm font-mono max-h-[300px] overflow-y-auto break-all whitespace-pre-wrap overflow-wrap-anywhere">
             {jsonString}
           </pre>
         </div>
@@ -132,9 +136,10 @@ export function ArtifactFormEditor({
                   variant="ghost"
                   size="sm"
                   onClick={() => removeArrayItem([], rowIdx)}
-                  className="h-6 px-2 text-xs"
+                  className="min-h-[44px] min-w-[44px] px-3 text-sm md:text-xs"
+                  aria-label={`Delete row ${rowIdx + 1}`}
                 >
-                  <Trash2 className="w-3 h-3" />
+                  <Trash2 className="w-4 h-4 md:w-3 md:h-3" />
                 </Button>
               </div>
               
@@ -187,7 +192,8 @@ export function ArtifactFormEditor({
               })
               addArrayItem([], template)
             }}
-            className="w-full"
+            className="w-full min-h-[44px]"
+            aria-label="Add new row"
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Row
@@ -221,9 +227,10 @@ export function ArtifactFormEditor({
                   variant="ghost"
                   size="sm"
                   onClick={() => removeArrayItem(['events'], idx)}
-                  className="h-6 px-2 text-xs"
+                  className="min-h-[44px] min-w-[44px] px-3 text-sm md:text-xs"
+                  aria-label={`Delete event ${idx + 1}`}
                 >
-                  <Trash2 className="w-3 h-3" />
+                  <Trash2 className="w-4 h-4 md:w-3 md:h-3" />
                 </Button>
               </div>
               
@@ -264,7 +271,8 @@ export function ArtifactFormEditor({
               title: '',
               description: ''
             })}
-            className="w-full"
+            className="w-full min-h-[44px]"
+            aria-label="Add new event"
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Event
@@ -310,9 +318,10 @@ export function ArtifactFormEditor({
                     variant="ghost"
                     size="sm"
                     onClick={() => removeArrayItem(['sections'], idx)}
-                    className="h-6 px-2 text-xs"
+                    className="min-h-[44px] min-w-[44px] px-3 text-sm md:text-xs"
+                    aria-label={`Delete section ${idx + 1}`}
                   >
-                    <Trash2 className="w-3 h-3" />
+                    <Trash2 className="w-4 h-4 md:w-3 md:h-3" />
                   </Button>
                 </div>
                 
@@ -343,7 +352,8 @@ export function ArtifactFormEditor({
                 title: '',
                 content: ''
               })}
-              className="w-full"
+              className="w-full min-h-[44px]"
+              aria-label="Add new section"
             >
               <Plus className="w-4 h-4 mr-2" />
               Add Section
@@ -378,9 +388,10 @@ export function ArtifactFormEditor({
                   variant="ghost"
                   size="sm"
                   onClick={() => removeArrayItem(['insights'], idx)}
-                  className="h-6 px-2 text-xs"
+                  className="min-h-[44px] min-w-[44px] px-3 text-sm md:text-xs"
+                  aria-label={`Delete insight ${idx + 1}`}
                 >
-                  <Trash2 className="w-3 h-3" />
+                  <Trash2 className="w-4 h-4 md:w-3 md:h-3" />
                 </Button>
               </div>
               
@@ -429,7 +440,8 @@ export function ArtifactFormEditor({
               description: '',
               impact: 'medium'
             })}
-            className="w-full"
+            className="w-full min-h-[44px]"
+            aria-label="Add new insight"
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Insight
@@ -540,9 +552,10 @@ export function ArtifactFormEditor({
                   variant="ghost"
                   size="sm"
                   onClick={() => removeArrayItem(['entries'], idx)}
-                  className="h-6 px-2 text-xs"
+                  className="min-h-[44px] min-w-[44px] px-3 text-sm md:text-xs"
+                  aria-label={`Delete entry ${idx + 1}`}
                 >
-                  <Trash2 className="w-3 h-3" />
+                  <Trash2 className="w-4 h-4 md:w-3 md:h-3" />
                 </Button>
               </div>
               
@@ -625,7 +638,8 @@ export function ArtifactFormEditor({
                 note: ''
               })
             }}
-            className="w-full"
+            className="w-full min-h-[44px]"
+            aria-label="Add new entry"
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Entry

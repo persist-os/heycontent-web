@@ -30,18 +30,25 @@ export function ArtifactVersionSelector({
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-sm text-muted-foreground">Version:</span>
+    <div className="flex items-center gap-1 md:gap-2">
+      <span className="hidden md:inline text-sm text-muted-foreground">Version:</span>
       <Select
         value={currentVersion.toString()}
         onValueChange={(value) => onVersionChange(parseInt(value))}
       >
-        <SelectTrigger className="w-[120px]">
+        <SelectTrigger 
+          className="w-[90px] md:w-[120px] min-h-[44px] text-xs md:text-sm"
+          aria-label="Select artifact version"
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
           {versions.map((version) => (
-            <SelectItem key={version._id} value={version.versionNumber.toString()}>
+            <SelectItem 
+              key={version._id} 
+              value={version.versionNumber.toString()}
+              className="min-h-[44px] text-xs md:text-sm"
+            >
               v{version.versionNumber}
               {version.isLatest && " (latest)"}
             </SelectItem>

@@ -109,16 +109,20 @@ export function EditableArtifactRenderer({
   // This ensures optimistic updates are reflected immediately
   
   // Create edit button element to pass to CardHeader
+  // Mobile optimization: Icon-only on mobile, text on desktop
   const editButton = editable ? (
     <Button
       variant="outline"
       size="sm"
       onClick={handleOpenEditModal}
-      className="h-7 px-2 text-xs gap-1.5"
+      className="min-h-[44px] min-w-[44px] px-2 md:px-3 gap-1.5"
+      aria-label="Edit entire artifact"
       title="Edit entire artifact"
     >
-      <Edit className="w-3 h-3" />
-      <T context="button.artifact.edit">Edit Artifact</T>
+      <Edit className="w-3.5 h-3.5 md:w-4 md:h-4" />
+      <span className="hidden md:inline">
+        <T context="button.artifact.edit">Edit Artifact</T>
+      </span>
     </Button>
   ) : null
 
@@ -135,8 +139,9 @@ export function EditableArtifactRenderer({
       />
 
       {/* Edit Artifact Modal */}
+      {/* Mobile optimization: Full-width on mobile, centered on desktop */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
+      <DialogContent className="w-[95vw] md:max-w-4xl max-h-[90vh] overflow-y-auto top-4 md:top-[50%] translate-y-0 md:-translate-y-1/2">
           <DialogHeader>
             <DialogTitle>
               <T context="dialog.artifact.edit.title">Edit Artifact</T>
@@ -147,7 +152,7 @@ export function EditableArtifactRenderer({
           </DialogHeader>
           
           <div className="space-y-4">
-@            <ArtifactFormEditor
+            <ArtifactFormEditor
               artifact={artifact}
               onSave={handleSaveEdit}
               onCancel={handleCancelEdit}
@@ -156,18 +161,28 @@ export function EditableArtifactRenderer({
               setFormData={setFormData}
             />
             
-            <div className="text-xs text-muted-foreground border-t border-border/20 pt-3">
+            <div className="text-sm md:text-xs text-muted-foreground border-t border-border/20 pt-3">
               <p>• Version: {artifact.metadata?.version || 1}</p>
               <p>• Changes will create version {(artifact.metadata?.version || 1) + 1}</p>
             </div>
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={handleCancelEdit}>
+            <Button 
+              variant="outline" 
+              onClick={handleCancelEdit}
+              className="min-h-[44px] min-w-[44px]"
+              aria-label="Cancel editing"
+            >
               <X className="w-4 h-4 mr-2" />
               Cancel
             </Button>
-            <Button onClick={handleSaveEdit} disabled={editor.isSaving}>
+            <Button 
+              onClick={handleSaveEdit} 
+              disabled={editor.isSaving}
+              className="min-h-[44px] min-w-[44px]"
+              aria-label="Save changes"
+            >
               <Save className="w-4 h-4 mr-2" />
               {editor.isSaving ? 'Saving...' : 'Save Changes'}
             </Button>

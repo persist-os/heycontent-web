@@ -6,7 +6,7 @@ import { api } from '@/convex/_generated/api'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { SearchBar } from '@/components/ui/search-bar'
-import { ArtifactCard } from '@/components/ui/artifact-card'
+import { BaseCard } from '@/components/ui/base-card'
 import { formatDistanceToNow } from '@/app/dashboard/living-projects/[projectId]/components/utils/dateFormatting'
 
 /**
@@ -121,11 +121,11 @@ export default function ArtifactsPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--assignment-bg))] relative size-full">
-      {/* Main Content - Matches Figma: left margin 160px, top 60px */}
-      <div className="absolute content-stretch flex flex-col gap-[20px] items-start left-[160px] top-[60px] w-[1124px]">
-        {/* Breadcrumb */}
-        <div className="content-stretch flex font-['DM_Sans'] font-extralight gap-[4px] items-center leading-[0] relative shrink-0 text-[hsl(var(--assignment-text-regular))] text-[32px] tracking-[-0.96px] whitespace-nowrap [font-variation-settings:'opsz'_14]">
+    <div className="min-h-screen bg-[hsl(var(--assignment-bg))] relative size-full px-4 md:px-0">
+      {/* Main Content - Layout handles navigation spacing automatically */}
+      <div className="w-full md:w-[1124px] mx-auto">
+        {/* Breadcrumb - Responsive typography */}
+        <div className="content-stretch flex font-['DM_Sans'] font-extralight gap-[4px] items-center leading-[0] relative shrink-0 text-[hsl(var(--assignment-text-regular))] text-xl md:text-[32px] tracking-[-0.96px] whitespace-nowrap [font-variation-settings:'opsz'_14]">
           <Breadcrumb items={breadcrumbItems} />
         </div>
 
@@ -134,28 +134,35 @@ export default function ArtifactsPage() {
           <SearchBar value={searchTerm} onChange={setSearchTerm} />
         </div>
 
-        {/* Artifact Cards - 2-column grid (matches Figma) */}
-        <div className="box-border gap-[20px] grid grid-cols-2 grid-rows-auto px-0 py-[8px] relative shrink-0 w-full">
+        {/* Artifact Cards - Responsive grid: 1 column mobile, 2 columns desktop */}
+        <div className="box-border gap-[20px] grid grid-cols-1 md:grid-cols-2 grid-rows-auto px-0 py-[8px] relative shrink-0 w-full mt-4 md:mt-0">
           {artifacts === undefined ? (
             // Loading state
-            <div className="col-span-2 text-[hsl(var(--assignment-text-subtle))]">Loading artifacts...</div>
+            <div className="col-span-1 md:col-span-2 text-[hsl(var(--assignment-text-subtle))]">Loading artifacts...</div>
           ) : artifactCards.length === 0 ? (
             // Empty state
-            <div className="col-span-2 text-[hsl(var(--assignment-text-subtle))]">
+            <div className="col-span-1 md:col-span-2 text-[hsl(var(--assignment-text-subtle))]">
               {searchTerm ? 'No artifacts found' : 'No artifacts yet'}
             </div>
           ) : (
-            artifactCards.map((artifact) => (
-              <ArtifactCard
-                key={artifact.artifactId}
-                title={artifact.title}
-                timestamp={artifact.timestamp}
-                summary={artifact.summary}
-                tag={artifact.tag}
-                artifactId={artifact.artifactId}
-                projectId={artifact.projectId}
-              />
-            ))
+            artifactCards.map((artifact) => {
+              const handleClick = () => {
+                if (artifact.projectId && artifact.artifactId) {
+                  window.location.href = `/dashboard/living-projects/${artifact.projectId}/gallery?id=${artifact.artifactId}`
+                }
+              }
+              return (
+                <BaseCard
+                  key={artifact.artifactId}
+                  variant="artifact"
+                  title={artifact.title}
+                  timestamp={artifact.timestamp}
+                  summary={artifact.summary}
+                  tag={artifact.tag}
+                  onClick={handleClick}
+                />
+              )
+            })
           )}
         </div>
       </div>

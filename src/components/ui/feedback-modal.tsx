@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { BaseModal } from '@/components/ui/base-modal';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -165,14 +165,15 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
   const getCurrentConfig = () => feedbackTypeConfig[feedbackType];
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <MessageSquare className="w-5 h-5" />
-            <T context="feedback.title">Give Feedback</T>
-          </DialogTitle>
-        </DialogHeader>
+    <BaseModal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Give Feedback"
+      titleContext="feedback.title"
+      variant="feedback"
+      maxWidth="2xl"
+      className="max-h-[90vh] overflow-y-auto"
+    >
 
         <div className="space-y-6">
           {/* Feedback Type Selection */}
@@ -347,7 +348,6 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
             </Button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+    </BaseModal>
   );
 } 

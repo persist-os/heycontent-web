@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { BaseModal } from '@/components/ui/base-modal';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/app/context/auth-context";
@@ -177,14 +177,16 @@ export default function UpgradeModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className={showCheckout ? "max-w-4xl w-[95vw] max-h-[95vh] overflow-auto" : "max-w-5xl max-h-[90vh] overflow-auto"}>
-        <DialogHeader>
-          <DialogTitle>Choose Your Plan</DialogTitle>
-          <DialogDescription>
-            Select a plan that best fits your needs. All plans include pay-as-you-go API usage after included limits.
-          </DialogDescription>
-        </DialogHeader>
+    <BaseModal
+      isOpen={open}
+      onClose={onClose}
+      title="Choose Your Plan"
+      description="Select a plan that best fits your needs. All plans include pay-as-you-go API usage after included limits."
+      variant="upgrade"
+      maxWidth={showCheckout ? "xl" : "2xl"}
+      showGradient={true}
+      className={showCheckout ? "max-h-[95vh] overflow-auto" : "max-h-[90vh] overflow-auto"}
+    >
         {showCheckout && selectedPlanId ? (
           <div className="flex flex-col items-center justify-center w-full min-h-[500px] md:min-h-[600px] p-2 sm:p-4">
             <div className="w-full">
@@ -314,17 +316,16 @@ export default function UpgradeModal({
                 );
               })}
             </div>
-            <DialogFooter className="mt-4">
+            <div className="mt-4">
               <div className="text-sm text-gray-500 text-center w-full">
                 Need more requests or have questions?{" "}
                 <a href="mailto:hello@persistos.co" className="text-primary hover:underline">
                   Contact our sales team
                 </a>
               </div>
-            </DialogFooter>
+            </div>
           </>
         )}
-      </DialogContent>
-    </Dialog>
+    </BaseModal>
   );
 }

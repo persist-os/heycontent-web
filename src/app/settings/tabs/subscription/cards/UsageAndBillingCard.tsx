@@ -1,4 +1,4 @@
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { BaseCard } from '@/components/ui/base-card';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import React from 'react';
@@ -23,11 +23,8 @@ export const UsageAndBillingCard: React.FC<UsageAndBillingCardProps> = ({ usage 
   const isOverLimit = overage > 0;
   
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle><T context="settings.subscription.usage.title">Usage & Billing</T></CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <BaseCard variant="usage" title="Usage & Billing">
+      <div className="space-y-4 mt-3">
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span className="font-medium"><T context="settings.subscription.usage.requests.label">Requests</T></span>
@@ -76,7 +73,7 @@ export const UsageAndBillingCard: React.FC<UsageAndBillingCardProps> = ({ usage 
             </div>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </BaseCard>
   );
 };

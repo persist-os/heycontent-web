@@ -9,6 +9,7 @@ import {
   Menu,
   X,
   Bell,
+  Home,
 } from 'lucide-react'
 import { useSidebar } from '@/app/context/sidebar-context'
 import { useAuth } from '@/app/context/auth-context'
@@ -81,6 +82,14 @@ export const GlobalNav = memo(function GlobalNav() {
     }
   }, [setIsExpanded, isMobile])
 
+  // Handle home icon click - navigates to Home
+  const handleHomeClick = useCallback(() => {
+    router.push('/dashboard/home')
+    if (isMobile) {
+      setIsMobileSidebarOpen(false)
+    }
+  }, [router, isMobile])
+
   // Handle folder icon click - navigates to Files/Notes
   const handleFolderClick = useCallback(() => {
     router.push('/dashboard/notes')
@@ -124,6 +133,7 @@ export const GlobalNav = memo(function GlobalNav() {
   }, [])
 
   // Check if current path matches
+  const isHomeActive = pathname === '/dashboard/home' || pathname === '/dashboard'
   const isNotesActive = pathname.startsWith('/dashboard/notes')
   const isSettingsActive = pathname.startsWith('/settings')
 
@@ -145,6 +155,9 @@ export const GlobalNav = memo(function GlobalNav() {
   })
   const { text: toggleNavAriaLabel } = useTranslation('Toggle navigation menu', {
     context: 'aria.toggle_nav'
+  })
+  const { text: homeAriaLabel } = useTranslation('Home', {
+    context: 'aria.home'
   })
 
   return (
@@ -178,7 +191,7 @@ export const GlobalNav = memo(function GlobalNav() {
         <div
           className={cn(
             "fixed top-16 left-4 z-[90] w-48 bg-card border border-border rounded-xl shadow-2xl backdrop-blur-md overflow-hidden",
-            "animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
+            "animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-300 ease-bounce-spring",
             "md:hidden"
           )}
         >
@@ -212,6 +225,27 @@ export const GlobalNav = memo(function GlobalNav() {
                 </button>
               }
             />
+
+            {/* Home */}
+            <button
+              onClick={handleHomeClick}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted transition-colors text-left",
+                isHomeActive && "bg-muted"
+              )}
+              aria-label={homeAriaLabel}
+            >
+              <Home className={cn(
+                "w-5 h-5",
+                isHomeActive ? "text-primary" : "text-foreground"
+              )} />
+              <span className={cn(
+                "text-sm font-medium",
+                isHomeActive ? "text-primary" : "text-foreground"
+              )}>
+                <T context="nav.home">Home</T>
+              </span>
+            </button>
 
             {/* Folder/Files */}
             <button
@@ -308,6 +342,24 @@ export const GlobalNav = memo(function GlobalNav() {
             open={showNotifications}
             onOpenChange={setShowNotifications}
           />
+
+          {/* Home */}
+          <button
+            onClick={handleHomeClick}
+            className={cn(
+              "relative w-9 h-9 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-colors min-w-[36px] min-h-[36px] md:min-w-[40px] md:min-h-[40px]",
+              isHomeActive 
+                ? "bg-muted" 
+                : "hover:bg-muted"
+            )}
+            aria-label={homeAriaLabel}
+            title={homeAriaLabel}
+          >
+            <Home className={cn(
+              "w-5 h-5 md:w-6 md:h-6",
+              isHomeActive ? "text-primary" : "text-foreground"
+            )} />
+          </button>
 
           {/* Folder/Files */}
           <button

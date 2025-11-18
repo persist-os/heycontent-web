@@ -23,12 +23,12 @@ interface InsightPillsProps {
 }
 
 /**
- * InsightPills - Staggered pill/bubble display for AmbientInsights
+ * InsightPills - Horizontal scrolling pill/bubble display for AmbientInsights
  * 
  * Features:
- * - Staggered layout (alternating left/right alignment)
+ * - Horizontal scrollable layout (no wrapping)
  * - Traditional chat bubble aesthetic
- * - Mobile responsive (stacks vertically)
+ * - Mobile responsive (44px touch targets, horizontal scroll)
  * - Semantic colors only (no grays, no white)
  * - Reuses Badge component
  */
@@ -41,13 +41,15 @@ export function InsightPills({
   // Loading state: skeleton pills
   if (isLoading) {
     return (
-      <div className={cn("flex flex-wrap gap-2 px-6 justify-center", className)}>
-        {[0, 1, 2, 3, 4].map((index) => (
-          <div
-            key={index}
-            className="h-8 w-24 rounded-full bg-muted/20 border border-border/20 animate-pulse"
-          />
-        ))}
+      <div className={cn("flex gap-3 md:gap-2 px-4 md:px-6 overflow-x-auto scrollbar-hide", className)}>
+        <div className="flex gap-3 md:gap-2">
+          {[0, 1, 2, 3, 4].map((index) => (
+            <div
+              key={index}
+              className="h-11 md:h-8 w-24 flex-shrink-0 rounded-full bg-muted/20 border border-border/20 animate-pulse"
+            />
+          ))}
+        </div>
       </div>
     )
   }
@@ -58,32 +60,37 @@ export function InsightPills({
   }
 
   return (
-    <div className={cn("flex flex-wrap gap-2 px-6 justify-center", className)}>
-      {insights.map((insight) => (
-        <Badge
-          key={insight.id}
-          className={cn(
-            "rounded-full px-3 py-1.5",
-            "text-xs font-medium",
-            "bg-primary/10 border border-primary/20 text-foreground",
-            "hover:bg-primary/20 hover:border-primary/30",
-            "cursor-pointer transition-all duration-200",
-            "hover:shadow-sm"
-          )}
-          onClick={() => onInsightClick(insight)}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault()
-              onInsightClick(insight)
-            }
-          }}
-          aria-label={insight.title}
-        >
-          {insight.title}
-        </Badge>
-      ))}
+    <div className={cn("flex gap-3 md:gap-2 px-4 md:px-6 overflow-x-auto scrollbar-hide", className)}>
+      <div className="flex gap-3 md:gap-2">
+        {insights.map((insight) => (
+          <Badge
+            key={insight.id}
+            className={cn(
+              "rounded-full px-4 py-2 md:px-3 md:py-1.5",
+              "text-sm md:text-xs font-medium",
+              "min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0",
+              "bg-primary/10 border border-primary/20 text-foreground",
+              "hover:bg-primary/20 hover:border-primary/30",
+              "cursor-pointer transition-all duration-200",
+              "hover:shadow-sm",
+              "flex items-center justify-center",
+              "flex-shrink-0 whitespace-nowrap"
+            )}
+            onClick={() => onInsightClick(insight)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onInsightClick(insight)
+              }
+            }}
+            aria-label={insight.title}
+          >
+            {insight.title}
+          </Badge>
+        ))}
+      </div>
     </div>
   )
 }

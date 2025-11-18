@@ -181,7 +181,7 @@ export function AssignmentItem({ project, userId }: AssignmentItemProps) {
         "min-h-[320px] flex flex-col overflow-hidden",
         borderStyle // ✅ FIX BLOCKER 1: Apply border style based on permission
       )}
-      onClick={() => router.push(`/dashboard/living-projects/${project._id}`)}
+      onClick={() => router.push(`/dashboard/living-projects/${project._id}/assignment`)}
     >
       <div className="p-6 space-y-5 flex-1 flex flex-col">
       
@@ -237,7 +237,7 @@ export function AssignmentItem({ project, userId }: AssignmentItemProps) {
           size="sm"
             onClick={(e) => {
               e.stopPropagation()
-              router.push(`/dashboard/living-projects/${project._id}`)
+              router.push(`/dashboard/living-projects/${project._id}/assignment`)
             }}
             className="flex-1 h-8 text-xs font-medium"
         >

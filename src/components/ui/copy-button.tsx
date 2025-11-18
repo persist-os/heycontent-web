@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
+import { Button } from './button';
 import { useLanguagePreference, useTranslation } from '@/hooks/useTranslation';
 
 interface CopyButtonProps {
@@ -57,31 +58,27 @@ export const CopyButton: React.FC<CopyButtonProps> = ({
   };
 
   return (
-    <button
+    <Button
+      variant="copy"
+      size={size}
       onClick={(e) => {
         e.stopPropagation(); // Prevent event bubbling to parent buttons
         handleCopy();
       }}
-      className={`
-        inline-flex items-center gap-1.5 transition-all duration-200
-        ${sizeClasses[size]} ${variantClasses[variant]}
-        ${copied ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}
-        hover:text-gray-700 dark:hover:text-gray-300
-        ${className}
-      `}
+      className={className}
       title={copied ? copiedText : tooltipText}
       disabled={copied}
     >
       {copied ? (
-        <Check className={size === 'sm' ? 'w-4 h-4' : size === 'md' ? 'w-8 h-8' : 'w-9 h-9'} />
+        <Check className={size === 'sm' ? 'w-4 h-4' : size === 'md' ? 'w-5 h-5' : 'w-6 h-6'} />
       ) : (
-        <Copy className={size === 'sm' ? 'w-4 h-4' : size === 'md' ? 'w-8 h-8' : 'w-9 h-9'} />
+        <Copy className={size === 'sm' ? 'w-4 h-4' : size === 'md' ? 'w-5 h-5' : 'w-6 h-6'} />
       )}
       {showText && (
         <span className="text-xs font-medium">
           {copied ? copiedText : copyText}
         </span>
       )}
-    </button>
+    </Button>
   );
 }; 

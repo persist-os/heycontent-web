@@ -3,7 +3,7 @@
 import React from 'react'
 import { ArrowUpRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { Card } from '@/components/ui/card'
+import { BaseCard } from '@/components/ui/base-card'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
@@ -59,10 +59,14 @@ export function ArtifactCard({ artifact }: ArtifactCardProps) {
   })()
 
   return (
-    <Card
+    <BaseCard
+      variant="artifact"
       onClick={handleClick}
       className={cn(
-        "group relative flex-shrink-0 w-72 h-40",
+        "group relative flex-shrink-0",
+        "w-full max-w-[calc(100vw-2rem)]", // Mobile: full width with padding
+        "md:w-72", // Desktop: preserve 288px
+        "h-40",
         "bg-gradient-to-br from-blue-500/10 via-cyan-500/8 to-blue-500/5",
         "border border-blue-500/20",
         "cursor-pointer transition-all duration-300",
@@ -85,24 +89,30 @@ export function ArtifactCard({ artifact }: ArtifactCardProps) {
         </div>
         
         {/* Bottom: Tags and metadata */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5">
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-wrap items-center gap-1.5 min-w-0">
             {artifact.tags && artifact.tags.length > 0 ? (
-              <Badge variant="outline" className="bg-blue-500/20 border-blue-500/30 text-blue-600 dark:text-blue-400 text-xs px-2 py-0.5">
+              <Badge
+                variant="outline"
+                className="bg-blue-500/20 border-blue-500/30 text-blue-600 dark:text-blue-400 text-xs px-2 py-0.5 truncate max-w-[140px] md:max-w-full"
+              >
                 {artifact.tags[0]}
               </Badge>
             ) : (
-              <Badge variant="outline" className="bg-muted/40 border-border/40 text-muted-foreground text-xs px-2 py-0.5">
+              <Badge
+                variant="outline"
+                className="bg-muted/40 border-border/40 text-muted-foreground text-xs px-2 py-0.5 truncate max-w-[120px] md:max-w-full"
+              >
                 v{artifact.metadata?.version || 1}
               </Badge>
             )}
           </div>
-          <span className="text-xs text-muted-foreground whitespace-nowrap">
+          <span className="text-xs text-muted-foreground md:whitespace-nowrap">
             {relativeTime}
           </span>
         </div>
         
       </div>
-    </Card>
+    </BaseCard>
   )
 }
