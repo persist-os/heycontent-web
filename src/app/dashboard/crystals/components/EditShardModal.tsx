@@ -160,7 +160,6 @@ export const EditShardModal: React.FC<EditShardModalProps> = ({
             />
           </div>
         </div>
-      </div>
     </BaseModal>
   );
 };
