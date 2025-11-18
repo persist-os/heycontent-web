@@ -70,7 +70,7 @@ export function OmnipresentBackButton({
       className
     )}>
       <Button
-        variant="ghost"
+        variant="back"
         size="icon"
         onClick={handleBack}
         disabled={disabled}
@@ -84,7 +84,8 @@ export function OmnipresentBackButton({
           "text-[#eef1fe] dark:text-[#9acbff]",
           "hover:bg-[#0b1018]/90 dark:hover:bg-muted/50",
           "hover:border-[#60b1fa] dark:hover:border-[#60b1fa]",
-          "backdrop-blur-sm"
+          "backdrop-blur-sm",
+          className
         )}
         title="Go back"
         aria-label="Go back to previous page"

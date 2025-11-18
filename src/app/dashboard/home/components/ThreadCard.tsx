@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { BaseCard } from '@/components/ui/base-card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Home, FolderOpen, Clock } from 'lucide-react'
@@ -78,13 +79,13 @@ export function ThreadCard({ thread, onClick, onStatusChange }: ThreadCardProps)
   }
   
   return (
-    <button
+    <BaseCard
+      variant="thread"
       onClick={handleClick}
       className={cn(
-        "w-full sm:w-64 h-48 p-4 rounded-2xl border-l-4",
+        "w-full sm:w-64 h-48 p-4 border-l-4",
         "flex flex-col justify-between text-left",
         "transition-all hover:shadow-lg hover:scale-[1.02]",
-        "bg-card",
         isUnread && "bg-destructive/10 border-destructive ring-2 ring-destructive/20",
         isActive && !isUnread && "bg-primary/10 border-primary",
         !isActive && !isUnread && isMain && "border-accent/30",
@@ -152,7 +153,7 @@ export function ThreadCard({ thread, onClick, onStatusChange }: ThreadCardProps)
           </>
         )}
       </div>
-    </button>
+    </BaseCard>
   )
 }
 

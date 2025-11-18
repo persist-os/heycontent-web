@@ -1,4 +1,4 @@
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { BaseCard } from '@/components/ui/base-card';
 import { Button } from '@/components/ui/button';
 import React from 'react';
 import { User } from 'lucide-react';
@@ -81,11 +81,7 @@ export const AccountSubscriptionCard: React.FC<AccountSubscriptionCardProps> = (
   const isOnHighestPlan = plan?.name === 'Pro';
 
   return (
-    <Card className="w-full p-4 sm:p-6 rounded-xl shadow-md bg-card">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg sm:text-xl font-bold"><T context="settings.subscription.account.title">Account & Subscription</T></CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2">
+    <BaseCard variant="account-subscription" title="Account & Subscription">
         {/* User Information Section */}
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
@@ -155,7 +151,6 @@ export const AccountSubscriptionCard: React.FC<AccountSubscriptionCardProps> = (
             </>
           )}
         </div>
-      </CardContent>
-    </Card>
+    </BaseCard>
   );
 };

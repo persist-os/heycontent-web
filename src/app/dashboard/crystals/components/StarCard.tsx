@@ -8,6 +8,7 @@ import { Edit3, Trash2, Save, X, ExternalLink } from 'lucide-react';
 import { T } from '@/components/translation';
 import { useTranslation } from '@/hooks/useTranslation';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { BaseCard } from '@/components/ui/base-card';
 
 interface StarCardProps {
   project: {
@@ -127,7 +128,7 @@ export const StarCard: React.FC<StarCardProps> = ({ project }) => {
   };
 
   return (
-    <div className="border border-border/50 rounded-xl p-4 space-y-3">
+    <BaseCard variant="star" className="p-4 space-y-3">
       {/* Header */}
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-4">
@@ -339,7 +340,7 @@ export const StarCard: React.FC<StarCardProps> = ({ project }) => {
         cancelContext="button.cancel"
         variant="destructive"
       />
-    </div>
+    </BaseCard>
   );
 };
 

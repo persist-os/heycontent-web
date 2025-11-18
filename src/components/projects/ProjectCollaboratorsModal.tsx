@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Mail, UserPlus, Check, AlertCircle, Trash2, Users } from 'lucide-react';
+import { Mail, UserPlus, Check, AlertCircle, Trash2, Users } from 'lucide-react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import type { Id } from '@/convex/_generated/dataModel';
 import { getCurrentUserId } from '@/app/lib/api-helpers';
+import { BaseModal } from '@/components/ui/base-modal';
 import { cn } from '@/lib/utils';
 
 interface ProjectCollaboratorsModalProps {
@@ -182,29 +183,15 @@ export function ProjectCollaboratorsModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-background border border-border rounded-lg shadow-lg w-full max-w-md">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">
-              Share Project
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1 truncate">
-              {projectName}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-muted rounded-md transition-colors"
-            aria-label="Close share modal"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6 space-y-6">
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Share Project"
+      description={projectName}
+      variant="project-collaborators"
+      maxWidth="md"
+    >
+      <div className="space-y-6">
           {/* Role Selection */}
           {canInvite && (
             <>
@@ -353,8 +340,7 @@ export function ProjectCollaboratorsModal({
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </BaseModal>
   );
 }
 

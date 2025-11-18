@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useAuth } from '@/app/context/auth-context';
+import { BaseModal } from '@/components/ui/base-modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -98,17 +99,20 @@ export function UsernameRequiredModal({ isOpen, onUsernameSet }: UsernameRequire
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <div className="bg-background rounded-lg shadow-xl w-full max-w-md p-6 space-y-6">
-        <div className="text-center space-y-2">
-          <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-            <AlertCircle className="w-6 h-6 text-primary" />
-          </div>
-          <h2 className="text-2xl font-semibold">Choose Your Username</h2>
-          <p className="text-muted-foreground">
-            You need to set a username to continue using the app. This will be your unique identifier.
-          </p>
+    <BaseModal
+      isOpen={isOpen}
+      onClose={() => {}} // Prevent closing until username is set
+      title="Choose Your Username"
+      description="You need to set a username to continue using the app. This will be your unique identifier."
+      variant="username-required"
+      maxWidth="md"
+      showGradient={false}
+    >
+      <div className="text-center space-y-2 mb-6">
+        <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+          <AlertCircle className="w-6 h-6 text-primary" />
         </div>
+      </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -174,7 +178,6 @@ export function UsernameRequiredModal({ isOpen, onUsernameSet }: UsernameRequire
             Your username cannot be changed later, so choose carefully!
           </p>
         </div>
-      </div>
-    </div>
+    </BaseModal>
   );
 }

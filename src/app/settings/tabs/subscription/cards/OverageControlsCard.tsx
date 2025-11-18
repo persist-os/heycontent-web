@@ -1,4 +1,4 @@
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { BaseCard } from '@/components/ui/base-card';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Edit3, X, Check } from 'lucide-react';
@@ -67,24 +67,21 @@ export const OverageControlsCard: React.FC<OverageControlsCardProps> = ({
   };
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base"><T context="settings.subscription.overage.title">Extra requests</T></CardTitle>
-          {!isEditing && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleEdit}
-              className="h-8 w-8 p-0"
-              disabled={saving}
-            >
-              <Edit3 className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <BaseCard variant="overage" title="Extra requests">
+      <div className="flex items-center justify-between mb-3">
+        {!isEditing && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleEdit}
+            className="h-8 w-8 p-0 min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
+            disabled={saving}
+          >
+            <Edit3 className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+      <div className="space-y-4 mt-3">
         {isEditing ? (
           // Edit Mode
           <>
@@ -167,7 +164,7 @@ export const OverageControlsCard: React.FC<OverageControlsCardProps> = ({
             </div>
           </>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </BaseCard>
   );
 };

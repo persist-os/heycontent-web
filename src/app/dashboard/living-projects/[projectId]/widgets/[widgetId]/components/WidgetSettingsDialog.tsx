@@ -11,14 +11,7 @@ import React, { useState } from 'react'
 import { useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { Id } from '@/convex/_generated/dataModel'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from '@/components/ui/dialog'
+import { BaseModal } from '@/components/ui/base-modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -133,14 +126,25 @@ export function WidgetSettingsDialog({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleCancel}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Widget Settings</DialogTitle>
-          <DialogDescription>
-            Configure widget behavior and appearance
-          </DialogDescription>
-        </DialogHeader>
+    <BaseModal
+      isOpen={isOpen}
+      onClose={handleCancel}
+      onConfirm={handleSave}
+      onCancel={handleCancel}
+      title="Widget Settings"
+      titleContext="modal.widget_settings_title"
+      description="Configure widget behavior and appearance"
+      descriptionContext="modal.widget_settings_description"
+      confirmText="Save Changes"
+      confirmContext="button.save_changes"
+      cancelText="Cancel"
+      cancelContext="button.cancel"
+      variant="widget-settings"
+      isLoading={isSaving}
+      loadingText="Saving..."
+      loadingContext="button.saving"
+      maxWidth="2xl"
+    >
 
         <div className="space-y-6 py-4">
           {/* Title */}
@@ -252,24 +256,7 @@ export function WidgetSettingsDialog({
             </div>
           </div>
         </div>
-
-        <DialogFooter>
-          <Button variant="ghost" onClick={handleCancel} disabled={isSaving}>
-            <T context="button.cancel">Cancel</T>
-          </Button>
-          <Button onClick={handleSave} disabled={isSaving || !title.trim()}>
-            {isSaving ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                <T context="button.saving">Saving...</T>
-              </>
-            ) : (
-              <T context="button.save_changes">Save Changes</T>
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </BaseModal>
   )
 }
 

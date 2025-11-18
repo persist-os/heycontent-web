@@ -2,20 +2,20 @@
  * File upload utilities for chat file attachments.
  */
 
+/**
+ * File upload response matching Convex schema (flat structure, camelCase).
+ * Convex schema is SSOT - all layers must match.
+ */
 export interface FileUploadResponse {
   success: boolean;
-  file_url: string;
-  file_metadata: {
-    file_id: string; // Final filename after conflict resolution (used as filename)
-    original_filename: string;
-    filename?: string; // Optional: same as file_id if present
-    content_type: string;
-    file_size: number;
-    gcs_url: string;
-    uploaded_at: string;
-    user_id: string;
-    conversation_id?: string;
-  };
+  file_url: string;  // Keep for backward compatibility
+  fileUrl: string;  // Convex camelCase
+  originalFilename: string;  // Convex camelCase
+  filename: string;
+  contentType: string;  // Convex camelCase
+  fileSize: number;  // Convex camelCase
+  gcsUrl: string;  // Convex camelCase
+  conversationId?: string;  // Convex camelCase (optional)
 }
 
 export interface FileUploadError {

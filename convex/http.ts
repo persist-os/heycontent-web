@@ -6303,6 +6303,34 @@ app.post("/api/query/getEmailStats", async (c) => {
   }
 });
 
+// ============================================================================
+// FILES
+// ============================================================================
+
+/**
+ * POST /api/files/getProjectFiles
+ * Get files attached to a project
+ */
+app.post("/api/files/getProjectFiles", async (c) => {
+  const ctx = c.env;
+  const { projectId, userId } = await c.req.json();
+  
+  try {
+    const files = await ctx.runQuery(api.fileQueries.getProjectFiles, { 
+      projectId: projectId as any,
+      userId
+    });
+    return c.json({ success: true, data: files });
+  } catch (error: any) {
+    console.error("Failed to get project files:", error);
+    return c.json({ 
+      success: false, 
+      error: "Failed to get project files",
+      message: error.message || "Internal Server Error"
+    }, 500);
+  }
+});
+
 // Export the router (required by Convex)
 const router = new HttpRouterWithHono(app);
 export default router;

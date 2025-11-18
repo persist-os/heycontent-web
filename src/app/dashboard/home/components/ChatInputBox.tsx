@@ -131,7 +131,8 @@ export function ChatInputBox({ value, onChange, onSend, isLoading = false, conve
       {fileAttachments.length > 0 && (
         <div className="flex flex-wrap gap-2 px-6 pt-3">
           {fileAttachments.map((file, index) => {
-            const fileIcon = getFileTypeIcon(file.file_metadata.content_type)
+            // FileUploadResponse has flat structure (camelCase), not nested file_metadata
+            const fileIcon = getFileTypeIcon(file.contentType)
             return (
               <div
                 key={index}
@@ -139,10 +140,10 @@ export function ChatInputBox({ value, onChange, onSend, isLoading = false, conve
               >
                 <span className="text-base">{fileIcon}</span>
                 <span className="text-sm text-foreground max-w-[150px] truncate">
-                  {file.file_metadata.original_filename}
+                  {file.originalFilename}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {formatFileSize(file.file_metadata.file_size)}
+                  {formatFileSize(file.fileSize)}
                 </span>
                 <button
                   onClick={() => removeFileAttachment(index)}

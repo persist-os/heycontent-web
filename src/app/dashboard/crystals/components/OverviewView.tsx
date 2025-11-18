@@ -1,9 +1,8 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ConfidenceDistribution } from './ConfidenceDistribution';
-import { CrystalCard } from './CrystalCard';
 import { ShardCard } from './ShardCard';
-import { usePaginatedCrystals, usePaginatedShards } from './hooks';
+import { usePaginatedShards } from './hooks';
 import { CrystalStats, FormationStatus as FormationStatusType, FormationEligibility as FormationEligibilityType, ViewType } from './types';
 
 interface OverviewViewProps {
@@ -24,11 +23,9 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   onViewChange
 }) => {
   // Use paginated hooks to get fresh data for overview
-  const { crystals: paginatedCrystals } = usePaginatedCrystals(userId, 8);
   const { shards: paginatedShards } = usePaginatedShards(userId, 12);
   
-  // Use paginated data if available, fallback to props
-  const displayCrystals = paginatedCrystals.length > 0 ? paginatedCrystals : (recentCrystals || []);
+  // Use paginated data if available
   const displayShards = paginatedShards.slice(0, 6);
   
   return (
@@ -36,31 +33,6 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
       {/* Confidence Distribution */}
       {crystalStats && Object.keys(crystalStats.byConfidence).length > 0 && (
         <ConfidenceDistribution crystalStats={crystalStats} />
-      )}
-
-      {/* Recent Crystals */}
-      {displayCrystals.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="font-medium text-foreground">Recent Crystals</h4>
-              <p className="text-sm text-muted-foreground font-light">Your latest consolidated insights</p>
-            </div>
-            <Button
-              variant="ghost"
-              onClick={() => onViewChange('crystals')}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              View all
-            </Button>
-          </div>
-          
-          <div className="space-y-3">
-            {displayCrystals.slice(0, 5).map((crystal: any) => (
-              <CrystalCard key={crystal._id} crystal={crystal} isCompact />
-            ))}
-          </div>
-        </div>
       )}
 
       {/* Recent Shards */}
@@ -89,7 +61,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
       )}
 
       {/* Empty State */}
-      {displayCrystals.length === 0 && displayShards.length === 0 && (
+      {displayShards.length === 0 && (
         <div className="text-center py-12">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/20 flex items-center justify-center">
             <svg className="w-8 h-8 text-muted-foreground/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">

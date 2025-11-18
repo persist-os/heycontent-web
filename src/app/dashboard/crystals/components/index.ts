@@ -3,7 +3,6 @@ export * from './types';
 export * from './hooks';
 
 // Edit components
-export { EditCrystalModal } from './EditCrystalModal';
 export { EditShardModal } from './EditShardModal';
 
 // Formation components
@@ -16,7 +15,6 @@ export { StatsOverview } from './StatsOverview';
 export { ConfidenceDistribution } from './ConfidenceDistribution';
 
 // Content components
-export { CrystalCard } from './CrystalCard';
 export { ShardCard } from './ShardCard';
 export { StarCard } from './StarCard';
 

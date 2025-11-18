@@ -28,14 +28,11 @@ export function EnhancedHelpButton({
   
   return (
     <Button
-      variant={variant}
-      size="sm"
+      variant="enhanced-help"
+      size={size}
       onClick={onInteractiveTour}
       className={cn(
-        "group relative gap-2 text-muted-foreground transition-all duration-200 border border-border hover:border-primary/50 hover:bg-primary/5 hover:text-primary",
-        size === 'sm' && "h-8 px-3",
-        size === 'default' && "h-10 px-4",
-        size === 'lg' && "h-12 px-5",
+        "group relative gap-2",
         className
       )}
       aria-label="Start interactive tour"

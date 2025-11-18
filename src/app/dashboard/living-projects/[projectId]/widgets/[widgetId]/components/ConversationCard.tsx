@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { BaseCard } from '@/components/ui/base-card';
 import { Button } from '@/components/ui/button';
 
 interface ConversationCardProps {
@@ -29,30 +30,19 @@ export function ConversationCard({ conversation, onClick }: ConversationCardProp
   }
 
   return (
-    <div
-      className="
-        bg-card/50 backdrop-blur-sm
-        border border-border/40
-        rounded-2xl
-        hover:bg-card/80 hover:border-border/60 hover:shadow-lg hover:shadow-primary/5
-        transition-all duration-300
-        cursor-pointer group
-      "
+    <BaseCard
+      variant="conversation"
+      title={conversation.title || 'Untitled Conversation'}
       onClick={onClick}
+      className="cursor-pointer group"
     >
-      <div className="p-6 space-y-4">
-        {/* Title and Preview */}
-        <div className="space-y-3">
-          <h3 className="text-xl font-light tracking-tight text-foreground group-hover:text-foreground transition-colors">
-            {conversation.title || 'Untitled Conversation'}
-          </h3>
-          
-          {lastMessage && (
-            <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
-              {truncateContent(lastMessage.content, 200)}
-            </p>
-          )}
-        </div>
+      <div className="space-y-4">
+        {/* Preview */}
+        {lastMessage && (
+          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
+            {truncateContent(lastMessage.content, 200)}
+          </p>
+        )}
 
         {/* Metadata Toggle */}
         <div className="flex items-center justify-between pt-3 border-t border-border/30">
@@ -118,6 +108,6 @@ export function ConversationCard({ conversation, onClick }: ConversationCardProp
           </div>
         )}
       </div>
-    </div>
+    </BaseCard>
   );
 }

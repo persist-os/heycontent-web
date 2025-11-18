@@ -1,6 +1,6 @@
 'use client';
 
-import { Card } from '@/components/ui/card';
+import { BaseCard } from '@/components/ui/base-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Edit2, Trash2, Send } from 'lucide-react';
@@ -46,11 +46,13 @@ export function BlogPostCard({
   };
 
   return (
-    <Card className="p-6">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <h3 className="font-semibold text-lg text-foreground">{post.title}</h3>
+    <BaseCard variant="blog" className="p-4 md:p-6 [&>div]:p-0">
+      {/* Mobile: Stack | Desktop: Row - EXACT original layout */}
+      <div className="flex flex-col md:flex-row items-start md:items-start justify-between gap-4 md:gap-0 mb-4">
+        <div className="flex-1 w-full md:w-auto">
+          {/* Mobile: Stack badges | Desktop: Row - EXACT original */}
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <h3 className="font-semibold text-base md:text-lg text-foreground break-words">{post.title}</h3>
             <Badge className={statusColors[post.status]}>
               {post.status}
             </Badge>
@@ -61,36 +63,39 @@ export function BlogPostCard({
               </Badge>
             )}
           </div>
-          <p className="text-sm text-muted-foreground mb-2">{post.description}</p>
-          <div className="flex gap-4 text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground mb-2 break-words">{post.description}</p>
+          {/* Mobile: Stack metadata | Desktop: Row - EXACT original */}
+          <div className="flex flex-wrap gap-2 md:gap-4 text-xs md:text-sm text-muted-foreground">
             {post.authorName && (
               <>
                 <span>By {post.authorName}</span>
-                <span>•</span>
+                <span className="hidden md:inline">•</span>
               </>
             )}
-            <span>Slug: {post.slug}</span>
-            <span>•</span>
+            <span className="break-all">Slug: {post.slug}</span>
+            <span className="hidden md:inline">•</span>
             <span>{post.readTime}</span>
             {post.publishedAt && (
               <>
-                <span>•</span>
+                <span className="hidden md:inline">•</span>
                 <span>{new Date(post.publishedAt).toLocaleDateString()}</span>
               </>
             )}
             {!post.publishedAt && post.date && (
               <>
-                <span>•</span>
+                <span className="hidden md:inline">•</span>
                 <span>{post.date}</span>
               </>
             )}
           </div>
         </div>
-        <div className="flex gap-2">
+        {/* Mobile: Full width buttons | Desktop: Auto - EXACT original */}
+        <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
           <Button
             onClick={onEdit}
             variant="outline"
             size="sm"
+            className="min-h-[44px] md:min-h-0 w-full md:w-auto"
           >
             <Edit2 className="h-3 w-3 mr-1" />
             Edit
@@ -100,6 +105,7 @@ export function BlogPostCard({
               onClick={onPublish}
               variant="outline"
               size="sm"
+              className="min-h-[44px] md:min-h-0 w-full md:w-auto"
             >
               <Send className="h-3 w-3 mr-1" />
               Publish
@@ -109,7 +115,7 @@ export function BlogPostCard({
             onClick={onDelete}
             variant="outline"
             size="sm"
-            className="text-red-600 hover:text-red-700"
+            className="text-red-600 hover:text-red-700 min-h-[44px] md:min-h-0 w-full md:w-auto"
           >
             <Trash2 className="h-3 w-3 mr-1" />
             Delete
@@ -117,14 +123,14 @@ export function BlogPostCard({
         </div>
       </div>
 
-      <div className="bg-muted/30 rounded-lg p-4">
+      <div className="bg-muted/30 rounded-lg p-3 md:p-4">
         <div className="prose prose-sm max-w-none">
           <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw]}>
             {post.content.length > 500 ? post.content.substring(0, 500) + '...' : post.content}
           </ReactMarkdown>
         </div>
       </div>
-    </Card>
+    </BaseCard>
   );
 }
 

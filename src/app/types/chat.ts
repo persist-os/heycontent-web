@@ -19,13 +19,20 @@ export interface InteractiveResponse {
   contextualSuggestions?: string[];
 }
 
+/**
+ * File attachment matching Convex schema (flat structure, camelCase).
+ * Convex schema is SSOT - all layers must match.
+ */
 export interface FileAttachment {
-  file_url: string;
-  file_metadata: {
-    original_filename: string;
-    content_type: string;
-    file_size: number;
-  };
+  file_url: string;  // Keep for backward compatibility
+  fileUrl: string;  // Convex camelCase
+  originalFilename: string;  // Convex camelCase
+  filename: string;
+  contentType: string;  // Convex camelCase
+  fileSize: number;  // Convex camelCase
+  gcsUrl?: string;  // Convex camelCase (optional)
+  uploadedAt?: string;  // Convex camelCase (optional)
+  conversationId?: string;  // Convex camelCase (optional)
 }
 
 export interface Message {

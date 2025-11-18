@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import React from 'react';
+import { BaseModal } from '@/components/ui/base-modal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -158,11 +159,19 @@ export function FeedbackDetailModal({
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Feedback Details</DialogTitle>
-          </DialogHeader>
+      <BaseModal
+        isOpen={isOpen}
+        onClose={onClose}
+        title="Feedback Details"
+        variant="feedback-detail"
+        maxWidth="xl"
+        onConfirm={handleSave}
+        onCancel={onClose}
+        confirmText="Save Changes"
+        cancelText="Cancel"
+        isLoading={isSaving}
+        loadingText="Saving..."
+      >
 
           <div className="space-y-6">
             {/* Header */}
@@ -340,18 +349,9 @@ export function FeedbackDetailModal({
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 mt-4">
-                <Button variant="outline" onClick={onClose} disabled={isSaving}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSave} disabled={isSaving}>
-                  {isSaving ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </div>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+      </BaseModal>
 
       {/* Full-size image modal */}
       {selectedImage && (
