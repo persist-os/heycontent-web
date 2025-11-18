@@ -133,8 +133,14 @@ export function BaseCard({
       }}
       {...props}
     >
-      {/* Mobile: Left-aligned stack | Desktop: Right-aligned (items-end) */}
-      <div className="box-border content-stretch flex flex-col gap-3 md:gap-[8px] items-start md:items-end overflow-clip px-4 py-4 md:px-[36px] md:py-[8px] relative rounded-[inherit] w-full">
+      {/* Mobile: Left-aligned stack | Desktop: Right-aligned (items-end) unless custom children */}
+      <div className={cn(
+        "box-border content-stretch flex flex-col overflow-clip relative rounded-[inherit] w-full",
+        // Use items-start for space variant and when custom children are provided
+        (variant === 'space' || (children && !title && !summary)) 
+          ? "items-start gap-2 p-3" 
+          : "gap-3 md:gap-[8px] items-start md:items-end px-4 py-4 md:px-[36px] md:py-[8px]"
+      )}>
         {/* Title and Timestamp - Mobile: Stack | Desktop: Row */}
         {(title || timestamp) && (
           <div className="content-stretch flex flex-col md:flex-row font-['DM_Sans'] font-semibold gap-2 md:gap-[10px] md:h-[36px] items-start md:items-center justify-between md:justify-center leading-[0] relative shrink-0 w-full">
@@ -183,12 +189,17 @@ export function BaseCard({
 
         {/* Arrow Icon Button - Mobile: 44px touch target | Desktop: 40px x 40px */}
         {(onClick || href) && (
-          <div className="box-border content-stretch cursor-pointer flex gap-[10px] items-center md:items-end justify-center md:justify-end p-2 md:p-[8px] relative rounded-[8px] shrink-0 min-h-[44px] min-w-[44px] md:w-[40px] md:h-[40px] md:min-h-0 md:min-w-0 self-end md:self-auto">
-            <div className="overflow-clip relative shrink-0 size-5 md:size-[24px]">
-              <div className="absolute inset-[20.83%_16.67%]">
-                <ArrowRight className="w-5 h-5 md:w-6 md:h-6 text-foreground" />
-              </div>
-            </div>
+          <div className={cn(
+            "cursor-pointer flex items-center justify-center relative shrink-0",
+            // For space variant, position arrow at bottom right with minimal padding
+            variant === 'space' 
+              ? "absolute bottom-3 right-3 w-5 h-5" 
+              : "box-border content-stretch gap-[10px] p-2 md:p-[8px] rounded-[8px] min-h-[44px] min-w-[44px] md:w-[40px] md:h-[40px] md:min-h-0 md:min-w-0 self-end md:self-auto md:items-end md:justify-end"
+          )}>
+            <ArrowRight className={cn(
+              "text-foreground flex-shrink-0",
+              variant === 'space' ? "w-4 h-4" : "w-5 h-5 md:w-6 md:h-6"
+            )} />
           </div>
         )}
       </div>
