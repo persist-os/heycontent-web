@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { motion } from "framer-motion"
 import { Globe, Search } from "lucide-react"
 import { useSmartLanguage } from "@/hooks/useSmartLanguage"
 import { Button } from "@/components/ui/button"
@@ -55,25 +54,19 @@ export function LanguageToggle() {
   const currentLang = LANGUAGES.find(lang => lang.code === language) || LANGUAGES[0]
 
   return (
-    <motion.div
-      drag
-      dragMomentum={false}
-      whileTap={{ scale: 0.95, cursor: "grabbing" }}
-      className="cursor-grab"
-    >
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button 
-            variant="ghost" 
-            size="icon"
-            className="bg-muted/20 hover:bg-muted/40 border border-border/40 hover:border-border text-foreground"
-            title={`Current: ${currentLang.nativeName}`}
-          >
-            <Globe className="h-[1.2rem] w-[1.2rem] text-foreground" />
-            <span className="sr-only">Toggle language</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-[240px] max-h-[600px] flex flex-col">
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button 
+          variant="ghost" 
+          size="icon"
+          className="bg-muted/20 hover:bg-muted/40 border border-border/40 hover:border-border text-foreground"
+          title={`Current: ${currentLang.nativeName}`}
+        >
+          <Globe className="h-[1.2rem] w-[1.2rem] text-foreground" />
+          <span className="sr-only">Toggle language</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-[240px] max-h-[600px] flex flex-col z-[100]">
           <div className="px-2 py-2 sticky top-0 bg-background z-10 border-b">
             <div className="relative">
               <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -144,7 +137,6 @@ export function LanguageToggle() {
           </div>
         </DropdownMenuContent>
       </DropdownMenu>
-    </motion.div>
   )
 }
 
