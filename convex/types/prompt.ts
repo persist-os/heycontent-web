@@ -34,6 +34,7 @@ export const promptScopeValidator = v.union(
 export const promptSchemaFields = {
   // Core content
   content: v.string(),  // The actual prompt text
+  tool: v.optional(v.string()),  // Optional single tool name (granular, e.g., "send_email", "search_web")
   
   // Classification
   type: promptTypeValidator,

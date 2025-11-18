@@ -164,6 +164,9 @@ export const widgetSchemaFields = {
   // ✅ PHASE 2: Default artifact type for widget family
   defaultArtifactType: v.optional(widgetOutputArtifactTypeValidator),  // ✅ Default artifact type for agents without explicit type
   
+  // ✅ PHASE 3: Dynamic prompt for tool executor (built from conversation)
+  toolExecutorPrompt: v.optional(v.string()),  // Dynamic prompt stored in widget config
+  
   // Widget status (legacy field - kept for backward compatibility)
   // NOTE: Status can also be computed from actions table, but stored here for compatibility
   status: v.optional(widgetStatusValidator),
@@ -299,6 +302,8 @@ export const widgetBatchValidator = v.object({
   workflowStage: v.optional(widgetWorkflowStageValidator),
   // ✅ PHASE 2: Default artifact type for widget family
   defaultArtifactType: v.optional(widgetOutputArtifactTypeValidator),  // ✅ Default artifact type for agents without explicit type
+  // ✅ PHASE 3: Dynamic prompt for tool executor (built from conversation)
+  toolExecutorPrompt: v.optional(v.string()),  // Dynamic prompt stored in widget config
   // ✅ PHASE 2: Family Identity fields
   familyIdentity: v.optional(v.object({
     familyName: v.string(),
@@ -393,10 +398,12 @@ export const widgetUpdateValidator = v.object({
       can_track: v.optional(v.array(v.string())),
     })
   )),
-  // NOTE: Execution history is now tracked in actions table - do NOT include execution_history here
-  // NOTE: Status is now computed from actions table - do NOT include status here
-  lastRunAt: v.optional(v.number()),
-  lastRunStatus: v.optional(widgetRunStatusValidator),
+    // NOTE: Execution history is now tracked in actions table - do NOT include execution_history here
+    // NOTE: Status is now computed from actions table - do NOT include status here
+    lastRunAt: v.optional(v.number()),
+    lastRunStatus: v.optional(widgetRunStatusValidator),
+    // ✅ PHASE 3: Dynamic prompt for tool executor (built from conversation)
+    toolExecutorPrompt: v.optional(v.string()),  // Dynamic prompt stored in widget config
   // Scheduling fields (for recurring widget execution)
   scheduleEnabled: v.optional(v.boolean()),
   scheduleFrequency: v.optional(widgetScheduleFrequencyValidator),
@@ -733,6 +740,7 @@ export function widgetValidatorToDbSchema(
     familyIdentity?: any;
     agentRoster?: any;
     defaultArtifactType?: string;
+    toolExecutorPrompt?: string;
     capabilities?: any;
     // NOTE: execution_history is now tracked in actions table - do NOT include here
     inputRequirements?: string[];
@@ -775,6 +783,7 @@ export function widgetValidatorToDbSchema(
     familyIdentity: widget.familyIdentity,
     agentRoster: widget.agentRoster,
     defaultArtifactType: widget.defaultArtifactType,
+    toolExecutorPrompt: widget.toolExecutorPrompt,
     capabilities: widget.capabilities,
     // NOTE: execution_history is now tracked in actions table - do NOT include here
     inputRequirements: widget.inputRequirements,

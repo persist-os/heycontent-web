@@ -25,6 +25,7 @@ export const createPromptBlock = mutation({
     parentId: v.optional(v.id("prompts")),
     createdBy: v.string(),
     description: v.optional(v.string()),
+    tool: v.optional(v.string()),  // Optional single tool name (granular, e.g., "send_email", "search_web")
     // NO effectiveness, usageCount, successRate - handler initializes these
   },
   handler: async (ctx, args) => {
@@ -39,6 +40,7 @@ export const createPromptBlock = mutation({
       parentId: args.parentId,
       createdBy: args.createdBy,
       description: args.description,
+      tool: args.tool,  // Optional tool name
       // System metrics initialized by handler
       effectiveness: 1.0,  // Baseline effectiveness
       usageCount: 0,       // New block, no usage
