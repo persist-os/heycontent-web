@@ -86,20 +86,20 @@ export const AccountSubscriptionCard: React.FC<AccountSubscriptionCardProps> = (
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
             <User className="w-5 h-5 text-primary" />
-            <div>
-              <h3 className="font-semibold text-foreground">{user?.displayName || <T context="settings.subscription.account.user.default">User</T>}</h3>
-              <div className="text-sm text-muted-foreground break-all">{user?.email || <T context="settings.subscription.account.email.missing">No email provided</T>}</div>
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <h3 className="font-semibold text-foreground truncate">{user?.displayName || <T context="settings.subscription.account.user.default">User</T>}</h3>
+              <div className="text-sm text-muted-foreground break-words line-clamp-2 overflow-hidden">{user?.email || <T context="settings.subscription.account.email.missing">No email provided</T>}</div>
             </div>
           </div>
         </div>
         {/* Subscription Plan Information */}
-        <div className="mt-2 text-base">
+        <div className="mt-2 text-sm md:text-base overflow-hidden">
           <span className="font-semibold"><T context="settings.subscription.account.plan.label">Plan:</T></span>{' '}
           {isSubscribed ? (
             <>
-              {plan.name}
+              <span className="break-words">{plan.name}</span>
               {plan.price !== undefined && (
-                <span className="ml-2 text-muted-foreground">
+                <span className="ml-2 text-muted-foreground whitespace-nowrap">
                   {typeof plan.price === 'number'
                     ? `$${plan.price.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
                     : plan.price}

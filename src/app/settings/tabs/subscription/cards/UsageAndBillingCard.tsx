@@ -24,7 +24,7 @@ export const UsageAndBillingCard: React.FC<UsageAndBillingCardProps> = ({ usage 
   
   return (
     <BaseCard variant="usage" title="Usage & Billing">
-      <div className="space-y-4 mt-3">
+      <div className="space-y-4 mt-3 w-full overflow-hidden">
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span className="font-medium"><T context="settings.subscription.usage.requests.label">Requests</T></span>
@@ -47,8 +47,8 @@ export const UsageAndBillingCard: React.FC<UsageAndBillingCardProps> = ({ usage 
             />
           </div>
           
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>
+          <div className="flex flex-col text-xs text-muted-foreground text-left space-y-1 w-full min-w-0 overflow-hidden">
+            <span className="break-words">
               {isOverLimit ? (
                 <span className="text-red-600 font-medium">
                   <T context="settings.subscription.usage.overage">{overage.toLocaleString()} over limit (${(overage * 0.02).toFixed(2)})</T>
@@ -61,7 +61,7 @@ export const UsageAndBillingCard: React.FC<UsageAndBillingCardProps> = ({ usage 
                 <span>{included > 0 ? <T context="settings.subscription.usage.remaining">{included - total} requests remaining</T> : <T context="settings.subscription.usage.unlimited">Unlimited</T>}</span>
               )}
             </span>
-            <span>
+            <span className="break-words">
               {included > 0 ? <T context="settings.subscription.usage.percentage">{Math.round(usagePercentage)}% used</T> : <T context="settings.subscription.usage.no_limit">No limit</T>}
             </span>
           </div>

@@ -2,10 +2,16 @@
 
 import React, { useState } from 'react'
 import { AssignmentItem } from './AssignmentItem'
-import { ChevronDown, Plus, ArrowRight } from 'lucide-react'
+import { ChevronDown, Plus, ArrowRight, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
 import { T } from '@/components/translation/T'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 interface AssignmentsSectionProps {
   projects: any[] | undefined
@@ -48,21 +54,39 @@ export function AssignmentsSection({ projects, userId }: AssignmentsSectionProps
             {/* Sort dropdown */}
             <div className="flex items-center gap-2 text-sm">
               <span className="text-muted-foreground"><T context="dashboard.home.assignments.sort.label">Sort by</T></span>
-              <button
-                onClick={() => {
-                  setSortBy(prev => {
-                    if (prev === 'recent') return 'oldest'
-                    if (prev === 'oldest') return 'name'
-                    return 'recent'
-                  })
-                }}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/50 text-foreground transition-colors"
-              >
-                {sortBy === 'recent' && <T context="dashboard.home.assignments.sort.recent">Recent</T>}
-                {sortBy === 'oldest' && <T context="dashboard.home.assignments.sort.oldest">Oldest</T>}
-                {sortBy === 'name' && <T context="dashboard.home.assignments.sort.name">Name</T>}
-                <ChevronDown className="w-4 h-4" />
-              </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/50 text-foreground transition-colors">
+                    {sortBy === 'recent' && <T context="dashboard.home.assignments.sort.recent">Recent</T>}
+                    {sortBy === 'oldest' && <T context="dashboard.home.assignments.sort.oldest">Oldest</T>}
+                    {sortBy === 'name' && <T context="dashboard.home.assignments.sort.name">Name</T>}
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => setSortBy('recent')}
+                    className="cursor-pointer flex items-center justify-between gap-2"
+                  >
+                    <span><T context="dashboard.home.assignments.sort.recent">Recent</T></span>
+                    {sortBy === 'recent' && <Check className="w-4 h-4 text-primary" />}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setSortBy('oldest')}
+                    className="cursor-pointer flex items-center justify-between gap-2"
+                  >
+                    <span><T context="dashboard.home.assignments.sort.oldest">Oldest</T></span>
+                    {sortBy === 'oldest' && <Check className="w-4 h-4 text-primary" />}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setSortBy('name')}
+                    className="cursor-pointer flex items-center justify-between gap-2"
+                  >
+                    <span><T context="dashboard.home.assignments.sort.name">Name</T></span>
+                    {sortBy === 'name' && <Check className="w-4 h-4 text-primary" />}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             
             {/* Add button */}
@@ -102,22 +126,39 @@ export function AssignmentsSection({ projects, userId }: AssignmentsSectionProps
           {/* Sort dropdown */}
           <div className="flex items-center gap-2 text-sm">
             <span className="text-muted-foreground"><T context="dashboard.home.assignments.sort.label">Sort by</T></span>
-            <button
-              onClick={() => {
-                // Cycle through sort options
-                setSortBy(prev => {
-                  if (prev === 'recent') return 'oldest'
-                  if (prev === 'oldest') return 'name'
-                  return 'recent'
-                })
-              }}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/50 text-foreground transition-colors"
-            >
-              {sortBy === 'recent' && <T context="dashboard.home.assignments.sort.recent">Recent</T>}
-              {sortBy === 'oldest' && <T context="dashboard.home.assignments.sort.oldest">Oldest</T>}
-              {sortBy === 'name' && <T context="dashboard.home.assignments.sort.name">Name</T>}
-              <ChevronDown className="w-4 h-4" />
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/50 text-foreground transition-colors">
+                  {sortBy === 'recent' && <T context="dashboard.home.assignments.sort.recent">Recent</T>}
+                  {sortBy === 'oldest' && <T context="dashboard.home.assignments.sort.oldest">Oldest</T>}
+                  {sortBy === 'name' && <T context="dashboard.home.assignments.sort.name">Name</T>}
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => setSortBy('recent')}
+                  className="cursor-pointer flex items-center justify-between gap-2"
+                >
+                  <span><T context="dashboard.home.assignments.sort.recent">Recent</T></span>
+                  {sortBy === 'recent' && <Check className="w-4 h-4 text-primary" />}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setSortBy('oldest')}
+                  className="cursor-pointer flex items-center justify-between gap-2"
+                >
+                  <span><T context="dashboard.home.assignments.sort.oldest">Oldest</T></span>
+                  {sortBy === 'oldest' && <Check className="w-4 h-4 text-primary" />}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setSortBy('name')}
+                  className="cursor-pointer flex items-center justify-between gap-2"
+                >
+                  <span><T context="dashboard.home.assignments.sort.name">Name</T></span>
+                  {sortBy === 'name' && <Check className="w-4 h-4 text-primary" />}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           
           {/* Add button */}

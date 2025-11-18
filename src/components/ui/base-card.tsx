@@ -133,25 +133,27 @@ export function BaseCard({
       }}
       {...props}
     >
-      {/* Mobile: Left-aligned stack | Desktop: Right-aligned (items-end) unless custom children */}
+      {/* Mobile: Left-aligned stack | Desktop: Left-aligned for cards with custom children */}
       <div className={cn(
-        "box-border content-stretch flex flex-col overflow-clip relative rounded-[inherit] w-full",
-        // Use items-start for space variant and when custom children are provided
-        (variant === 'space' || (children && !title && !summary)) 
-          ? "items-start gap-2 p-3" 
-          : "gap-3 md:gap-[8px] items-start md:items-end px-4 py-4 md:px-[36px] md:py-[8px]"
+        "box-border content-stretch flex flex-col overflow-hidden relative rounded-[inherit] w-full",
+        // Use items-start for space variant and when custom children are provided (even with title)
+        (variant === 'space' || (children && (variant === 'overage' || variant === 'usage' || variant === 'recent-usage' || variant === 'account-subscription'))) 
+          ? "items-start gap-2 p-3 md:p-4" 
+          : (children && !title && !summary)
+          ? "items-start gap-2 p-3"
+          : "gap-3 md:gap-[8px] items-start md:items-end px-4 py-4 md:px-6 md:py-4"
       )}>
         {/* Title and Timestamp - Mobile: Stack | Desktop: Row */}
         {(title || timestamp) && (
-          <div className="content-stretch flex flex-col md:flex-row font-['DM_Sans'] font-semibold gap-2 md:gap-[10px] md:h-[36px] items-start md:items-center justify-between md:justify-center leading-[0] relative shrink-0 w-full">
+          <div className="content-stretch flex flex-col md:flex-row font-['DM_Sans'] font-semibold gap-2 md:gap-[10px] items-start md:items-center justify-between md:justify-center leading-[0] relative shrink-0 w-full overflow-hidden">
             {title && (
-              <div className="flex flex-[1_0_0] flex-col justify-center min-h-px min-w-0 relative shrink-0 text-lg md:text-[24px] tracking-[-0.36px] md:tracking-[-0.72px] text-foreground [font-variation-settings:'opsz'_14]">
-                <p className="leading-[1.4] md:leading-[36px] whitespace-pre-wrap break-words">{title}</p>
+              <div className="flex flex-[1_0_0] flex-col justify-center min-h-px min-w-0 relative shrink-0 overflow-hidden text-base md:text-lg tracking-[-0.36px] md:tracking-[-0.48px] text-foreground [font-variation-settings:'opsz'_14]">
+                <p className="leading-tight md:leading-snug line-clamp-2 break-words overflow-hidden text-ellipsis">{title}</p>
               </div>
             )}
             {timestamp && (
-              <div className="flex flex-col justify-center relative shrink-0 text-xs md:text-[16px] tracking-[-0.24px] md:tracking-[-0.48px] whitespace-nowrap [font-variation-settings:'opsz'_14] self-start md:self-auto">
-                <p className="leading-[1.4] md:leading-[24px] text-muted-foreground">{timestamp}</p>
+              <div className="flex flex-col justify-center relative shrink-0 text-xs md:text-sm tracking-[-0.24px] md:tracking-[-0.32px] whitespace-nowrap [font-variation-settings:'opsz'_14] self-start md:self-auto">
+                <p className="leading-normal text-muted-foreground">{timestamp}</p>
               </div>
             )}
           </div>
@@ -159,8 +161,8 @@ export function BaseCard({
 
         {/* Summary - Mobile: Full text | Desktop: Original layout */}
         {summary && (
-          <div className="flex flex-col font-['DM_Sans'] font-normal justify-center leading-[0] min-w-full relative shrink-0 text-muted-foreground text-sm md:text-[16px] w-full [font-variation-settings:'opsz'_14]">
-            <p className="leading-[1.5] md:leading-[20px] whitespace-pre-wrap break-words">{summary}</p>
+          <div className="flex flex-col font-['DM_Sans'] font-normal justify-center leading-[0] min-w-0 relative shrink-0 text-muted-foreground text-sm md:text-base w-full overflow-hidden [font-variation-settings:'opsz'_14]">
+            <p className="leading-normal md:leading-relaxed line-clamp-2 break-words overflow-hidden text-ellipsis">{summary}</p>
           </div>
         )}
 
@@ -169,14 +171,14 @@ export function BaseCard({
           <div className="content-stretch flex flex-wrap md:flex-nowrap h-auto md:h-[32px] items-center relative shrink-0 w-full">
             <div className="content-stretch flex flex-wrap md:flex-nowrap gap-2 md:gap-[20px] items-center relative shrink-0">
               {path && (
-                <div className="flex flex-col font-['DM_Sans'] font-semibold justify-center leading-[0] relative shrink-0 text-primary tracking-[-0.24px] md:tracking-[-0.48px] whitespace-nowrap [font-variation-settings:'opsz'_14]">
-                  <p className="font-['DM_Sans'] font-semibold leading-[1.4] md:leading-[24px] text-sm md:text-[16px]">{path}</p>
+                <div className="flex flex-col font-['DM_Sans'] font-semibold justify-center leading-[0] relative shrink-0 text-primary tracking-[-0.24px] md:tracking-[-0.32px] whitespace-nowrap overflow-hidden [font-variation-settings:'opsz'_14]">
+                  <p className="font-['DM_Sans'] font-semibold leading-normal text-sm md:text-base truncate">{path}</p>
                 </div>
               )}
               {tag && (
-                <div className="bg-primary/10 box-border content-stretch flex gap-[10px] items-center justify-center px-3 py-1.5 md:px-[8px] md:py-[4px] relative rounded-[8px] shrink-0 min-h-[28px] md:min-h-0">
-                  <div className="flex flex-col font-['DM_Sans'] font-semibold justify-center leading-[0] relative shrink-0 text-primary text-xs md:text-[16px] tracking-[-0.24px] md:tracking-[-0.48px] whitespace-nowrap [font-variation-settings:'opsz'_14]">
-                    <p className="leading-[1.4] md:leading-[24px]">{tag}</p>
+                <div className="bg-primary/10 box-border content-stretch flex gap-[10px] items-center justify-center px-3 py-1.5 md:px-[8px] md:py-[4px] relative rounded-[8px] shrink-0 min-h-[28px] md:min-h-0 overflow-hidden">
+                  <div className="flex flex-col font-['DM_Sans'] font-semibold justify-center leading-[0] relative shrink-0 text-primary text-xs md:text-sm tracking-[-0.24px] md:tracking-[-0.32px] whitespace-nowrap overflow-hidden [font-variation-settings:'opsz'_14]">
+                    <p className="leading-normal truncate">{tag}</p>
                   </div>
                 </div>
               )}
