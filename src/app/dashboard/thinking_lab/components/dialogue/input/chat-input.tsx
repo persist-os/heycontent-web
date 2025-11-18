@@ -432,7 +432,10 @@ export function ChatInput({
           <div className="w-full mb-2">
             <div className="flex flex-wrap gap-2">
               {fileAttachments.map((attachment, index) => {
-                const { content_type, original_filename, file_size } = attachment.file_metadata;
+                // FileUploadResponse has flat structure (camelCase), not nested file_metadata
+                const content_type = attachment.contentType;
+                const original_filename = attachment.originalFilename;
+                const file_size = attachment.fileSize;
                 const isImage = content_type.startsWith('image/');
                 const isVideo = content_type.startsWith('video/');
                 
@@ -447,7 +450,7 @@ export function ChatInput({
                       // Image preview
                       <div className="bg-muted/50 rounded-lg border border-border/50 overflow-hidden relative">
                         <img
-                          src={getFileDisplayUrl(attachment.file_url)}
+                          src={getFileDisplayUrl(attachment.fileUrl || attachment.file_url)}
                           alt={original_filename}
                           className="w-full h-24 object-cover"
                           onError={(e) => {
@@ -484,7 +487,7 @@ export function ChatInput({
                       // Video preview
                       <div className="bg-muted/50 rounded-lg border border-border/50 overflow-hidden">
                         <video
-                          src={getFileDisplayUrl(attachment.file_url)}
+                          src={getFileDisplayUrl(attachment.fileUrl || attachment.file_url)}
                           className="w-full h-24 object-cover"
                           preload="metadata"
                         />
