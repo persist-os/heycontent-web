@@ -22,7 +22,7 @@ const securityHeaders = [
       "img-src * blob: data:;",
       "connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://js.stripe.com https://api.stripe.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://va.vercel-scripts.com https://backend.hicontent.co http://backend.hicontent.co https://content-backend-staging-216038426364.us-central1.run.app http://127.0.0.1:8000 http://localhost:8000 https://us-central1-content-454219.cloudfunctions.net https://storage.googleapis.com https://*.googleapis.com https://*.gstatic.com https://apis.google.com https://accounts.google.com https://www.google.com;",
       "font-src 'self' data:;",
-      "frame-src https://js.stripe.com https://accounts.google.com https://*.firebaseapp.com https://www.googletagmanager.com;",
+      "frame-src 'self' https://js.stripe.com https://accounts.google.com https://*.firebaseapp.com https://www.googletagmanager.com;",
     ].join(' ')
   },
   {

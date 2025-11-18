@@ -191,7 +191,7 @@ export const GlobalNav = memo(function GlobalNav() {
         <div
           className={cn(
             "fixed top-16 left-4 z-[90] w-48 bg-card border border-border rounded-xl shadow-2xl backdrop-blur-md overflow-hidden",
-            "animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
+            "animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-300 ease-bounce-spring",
             "md:hidden"
           )}
         >

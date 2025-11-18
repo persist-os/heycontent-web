@@ -18,6 +18,7 @@ import { TaskList } from '@/components/ui/task-list'
 import { AssignmentArtifactCard } from '@/components/ui/assignment-artifact-card'
 import { FilesTable, type FileItem } from '@/components/ui/files-table'
 import { ContentCard, type ContentCardData } from '@/components/command-palette/ContentCard'
+import { ProjectFilesSection } from '@/app/dashboard/home/components/ProjectFilesSection'
 
 function AssignmentPageContent() {
   const params = useParams()
@@ -423,19 +424,12 @@ function AssignmentPageContent() {
         </div>
 
         {/* Files Section */}
-        <div className="flex flex-col gap-5">
-          <SectionHeader title="Files" />
-          
-          <FilesTable
-            items={fileItems}
-            onItemClick={(item) => {
-              const galleryItem = galleryItems.find(gi => gi._id === item.id)
-              if (galleryItem) {
-                handleOpenGallery(item.id, galleryItem.itemType as 'artifact' | 'widget')
-              }
-            }}
+        {projectId && userId && (
+          <ProjectFilesSection 
+            projectId={projectId as Id<'projects'>}
+            userId={userId}
           />
-        </div>
+        )}
       </div>
     </div>
   )

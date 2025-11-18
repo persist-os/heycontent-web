@@ -202,19 +202,28 @@ export function NotesTree({
       
       // Create file records in Convex
       const fileRecordPromises = uploadResults.map(async (result) => {
-        if (result.success && result.file_metadata) {
-          const fileUrl = getFileDisplayUrl(result.file_metadata.gcs_url);
+        if (result.success) {
+          // Use new flat structure (camelCase) - Convex schema is SSOT
+          const fileUrl = getFileDisplayUrl(result.gcsUrl || result.file_url);
+          
+          // Build fileData object - only include conversationId if defined
+          const fileData: any = {
+            originalFilename: result.originalFilename,
+            filename: result.filename,
+            contentType: result.contentType,
+            fileSize: result.fileSize,
+            gcsUrl: result.gcsUrl || result.file_url,
+            fileUrl: fileUrl,
+          };
+          
+          // Only include conversationId if it's defined (not undefined/null)
+          if (result.conversationId) {
+            fileData.conversationId = result.conversationId;
+          }
+          
           return await createFileMutation({
             userId: firebaseUser.uid!,
-            fileData: {
-              originalFilename: result.file_metadata.original_filename,
-              filename: result.file_metadata.file_id, // file_id is the final filename after conflict resolution
-              contentType: result.file_metadata.content_type,
-              fileSize: result.file_metadata.file_size,
-              gcsUrl: result.file_metadata.gcs_url,
-              fileUrl: fileUrl,
-              conversationId: undefined, // General files, not tied to conversation
-            },
+            fileData,
           });
         }
         return null;
