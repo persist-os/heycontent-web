@@ -68,20 +68,19 @@ export const OverageControlsCard: React.FC<OverageControlsCardProps> = ({
 
   return (
     <BaseCard variant="overage" title="Extra requests">
-      <div className="flex items-center justify-between mb-3">
+      <div className="relative">
         {!isEditing && (
           <Button
             variant="ghost"
             size="sm"
             onClick={handleEdit}
-            className="h-8 w-8 p-0 min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
+            className="absolute top-0 right-0 h-8 w-8 p-0 min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 flex-shrink-0 z-10"
             disabled={saving}
           >
             <Edit3 className="h-4 w-4" />
           </Button>
         )}
-      </div>
-      <div className="space-y-4 mt-3">
+        <div className="space-y-4 text-left w-full overflow-hidden pr-10">
         {isEditing ? (
           // Edit Mode
           <>
@@ -140,23 +139,23 @@ export const OverageControlsCard: React.FC<OverageControlsCardProps> = ({
         ) : (
           // View Mode
           <>
-            <div className="flex items-center gap-2">
-              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+            <div className="flex items-center gap-2 text-left w-full min-w-0 overflow-hidden">
+              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                 ubpEnabled ? 'bg-primary border-primary' : 'border-muted-foreground'
               }`}>
                 {ubpEnabled && <div className="w-2 h-2 bg-white rounded-full" />}
               </div>
-              <span className="text-sm">
+              <span className="text-sm text-left flex-1 min-w-0 break-words">
                 {ubpEnabled ? <T context="settings.subscription.overage.status.enabled">Extra requests are enabled</T> : <T context="settings.subscription.overage.status.disabled">Extra requests are disabled</T>}
               </span>
             </div>
             
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground"><T context="settings.subscription.overage.cap.label.short">Monthly spend cap:</T></span>
-              <span className="text-sm font-medium">${monthlyLimit}</span>
+            <div className="flex items-center gap-2 text-left w-full min-w-0 overflow-hidden">
+              <span className="text-sm text-muted-foreground whitespace-nowrap"><T context="settings.subscription.overage.cap.label.short">Monthly spend cap:</T></span>
+              <span className="text-sm font-medium whitespace-nowrap">${monthlyLimit}</span>
             </div>
 
-            <div className="text-xs text-muted-foreground">
+            <div className="text-xs text-muted-foreground text-left w-full min-w-0 break-words overflow-hidden">
               {ubpEnabled 
                 ? <T context="settings.subscription.overage.cap.description.with_amount">We'll stop charging for extra requests once you hit ${monthlyLimit}. Your base plan stays the same.</T>
                 : <T context="settings.subscription.overage.blocked.description">Extra requests will be blocked once you reach your plan limit.</T>
@@ -164,6 +163,7 @@ export const OverageControlsCard: React.FC<OverageControlsCardProps> = ({
             </div>
           </>
         )}
+        </div>
       </div>
     </BaseCard>
   );

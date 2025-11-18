@@ -7,15 +7,15 @@ interface RecentUsageEventsCardProps {
 
 export const RecentUsageEventsCard: React.FC<RecentUsageEventsCardProps> = ({ usageEvents }) => (
   <BaseCard variant="recent-usage" title="Recent usage">
-      <details>
-        <summary className="cursor-pointer select-none text-sm font-medium flex items-center justify-between">
+      <details className="w-full overflow-hidden">
+        <summary className="cursor-pointer select-none text-sm font-medium flex items-center justify-between py-2">
           Routes
           <span className="text-xs text-muted-foreground">{usageEvents.length}</span>
         </summary>
-        <div className="mt-3 overflow-x-auto">
+        <div className="mt-3 overflow-x-auto overflow-y-auto max-h-[400px] border border-border/50 rounded-md">
           <table className="min-w-full text-xs">
-            <thead>
-              <tr className="text-left text-muted-foreground">
+            <thead className="sticky top-0 bg-card z-10">
+              <tr className="text-left text-muted-foreground border-b border-border">
                 <th className="py-2 px-2">UTC Time</th>
                 <th className="py-2 px-2">Path</th>
                 <th className="py-2 px-2">Status</th>
@@ -30,8 +30,8 @@ export const RecentUsageEventsCard: React.FC<RecentUsageEventsCardProps> = ({ us
                 const rawPath = typeof event.path === 'string' ? event.path : '';
                 const displayPath = rawPath.replace(/^\/?api\/v1\//, '');
                 return (
-                  <tr key={event._id} className="border-b last:border-0">
-                    <td className="py-2 px-2">{
+                  <tr key={event._id} className="border-b last:border-0 hover:bg-muted/30">
+                    <td className="py-2 px-2 whitespace-nowrap">{
                       (() => {
                         let ts = event.timestamp;
                         if (typeof ts === 'number' && ts < 1e12) ts = ts * 1000;
@@ -42,9 +42,9 @@ export const RecentUsageEventsCard: React.FC<RecentUsageEventsCardProps> = ({ us
                         );
                       })()
                     }</td>
-                    <td className="py-2 px-2">{displayPath || '—'}</td>
-                    <td className="py-2 px-2">{event.status}</td>
-                    <td className="py-2 px-2">{event.qty}</td>
+                    <td className="py-2 px-2 max-w-[200px] truncate" title={displayPath || '—'}>{displayPath || '—'}</td>
+                    <td className="py-2 px-2 whitespace-nowrap">{event.status}</td>
+                    <td className="py-2 px-2 whitespace-nowrap">{event.qty}</td>
                   </tr>
                 );
               })}
