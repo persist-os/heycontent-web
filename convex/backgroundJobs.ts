@@ -257,6 +257,40 @@ export const updateStatus = mutation({
       throw new Error(`Job not found: ${args.jobId}`);
     }
     
+    // CRITICAL FIX: Idempotency check - skip if already in target status (Pattern 48: Optimistic Concurrency)
+    // WHY: Prevents unnecessary updates and reduces "Documents changed" errors from concurrent updates.
+    // Without this, multiple workers updating same job status caused conflicts every millisecond.
+    if (job.status === args.status) {
+      // Already in target status - check if other updates are needed
+      const needsUpdate = 
+        (args.workerId && job.workerId !== args.workerId) ||
+        (args.result && JSON.stringify(job.result) !== JSON.stringify(args.result)) ||
+        (args.error && job.error !== args.error);
+      
+      if (!needsUpdate) {
+        // No changes needed - idempotent operation
+        return { success: true, message: "Already in target status" };
+      }
+    }
+    
+    // CRITICAL FIX: Optimistic concurrency control (Pattern 48: Optimistic Concurrency Control)
+    // WHY: Re-query job to ensure we have latest version before patching. Prevents "Documents changed"
+    // errors when multiple workers update same job concurrently. Handles race conditions gracefully.
+    const currentJob = await ctx.db
+      .query("background_jobs")
+      .withIndex("by_job_id", (q) => q.eq("jobId", args.jobId))
+      .first();
+    
+    if (!currentJob) {
+      throw new Error(`Job not found: ${args.jobId}`);
+    }
+    
+    // Check if status changed since we first read it (optimistic concurrency)
+    if (currentJob.status !== job.status && currentJob.status === args.status) {
+      // Another worker already updated to target status - idempotent success
+      return { success: true, message: "Status already updated by another worker" };
+    }
+    
     const updates: any = {
       status: args.status,
     };
@@ -265,13 +299,13 @@ export const updateStatus = mutation({
       updates.workerId = args.workerId;
     }
     
-    if (args.status === "running" && !job.startedAt) {
+    if (args.status === "running" && !currentJob.startedAt) {
       updates.startedAt = Date.now();
     }
     
     if (args.status === "completed" || args.status === "failed") {
       updates.completedAt = Date.now();
-      updates.attempts = job.attempts + 1;
+      updates.attempts = (currentJob.attempts || 0) + 1;
     }
     
     if (args.result) {
@@ -282,7 +316,7 @@ export const updateStatus = mutation({
       updates.error = args.error;
     }
     
-    await ctx.db.patch(job._id, updates);
+    await ctx.db.patch(currentJob._id, updates);
     
     return { success: true };
   },
