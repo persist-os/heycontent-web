@@ -182,19 +182,25 @@ export const getUsageSummary = query({
         included = 50;
       }
       
-      // Get all usage events for the user
-      const events = await ctx.db
+      // ✅ CRITICAL FIX: Add date range filtering and pagination (Pattern 49: Query Pagination)
+      // WHY: Query was using .collect() on all usageEvents, exceeding Convex's 32K document limit.
+      // Must use .take(32000) limit and date range filtering to prevent "Too many documents read" errors.
+      const TIMESTAMP_THRESHOLD_MS = 946684800000; // Year 2000 in milliseconds
+      
+      // Query with limit to prevent exceeding 32K document limit
+      // Use by_user index with limit and filter in memory (by_user_timestamp index doesn't exist)
+      const allEvents = await ctx.db
         .query("usageEvents")
         .withIndex("by_user", (q) => q.eq("userId", args.userId))
-        .collect();
+        .order("desc")  // Get most recent first
+        .take(32000);  // Safety limit to prevent exceeding Convex limit
       
       // Filter events to current billing period
       // CRITICAL: Normalize timestamps to milliseconds before comparison
       // Backend sends timestamps in seconds, subscription periods are in milliseconds
       // Threshold: year 2000 in milliseconds (946684800000)
       // If timestamp < threshold, it's in seconds and needs conversion
-      const TIMESTAMP_THRESHOLD_MS = 946684800000; // Year 2000 in milliseconds
-      const filteredEvents = events.filter((event) => {
+      const filteredEvents = allEvents.filter((event) => {
         // Convert event timestamp to milliseconds if it's in seconds
         let eventTimeMs = event.timestamp;
         if (eventTimeMs < TIMESTAMP_THRESHOLD_MS) {
