@@ -164,6 +164,9 @@ export const batchCreateWidgets = mutation({
 /**
  * Update a single widget by Convex ID
  * Much more efficient than updating array elements
+ * 
+ * Handles concurrent updates gracefully with retry logic and exponential backoff.
+ * Follows Pattern 4: Atomicity & Thread Safety for concurrent mutation scenarios.
  */
 export const updateWidget = mutation({
   args: updateWidgetArgsValidator,
@@ -171,22 +174,51 @@ export const updateWidget = mutation({
     success: v.boolean(),
   }),
   handler: async (ctx, { widgetId, userId, updates }) => {
-    const widget = await ctx.db.get(widgetId);
-    if (!widget) {
-      throw new Error("Widget not found");
+    const maxRetries = 3;
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        // ✅ Read latest version (each retry gets fresh data)
+        const widget = await ctx.db.get(widgetId);
+        if (!widget) {
+          throw new Error("Widget not found");
+        }
+
+        // ✅ Validate ownership (re-check on each retry)
+        if (widget.userId !== userId) {
+          throw new Error("Access denied: You don't own this widget");
+        }
+
+        // ✅ Merge updates atomically (preserve existing fields, apply new updates)
+        const mergedUpdates = {
+          ...updates,
+          updatedAt: Date.now(),
+        };
+
+        // ✅ Patch with latest data (atomic operation)
+        await ctx.db.patch(widgetId, mergedUpdates);
+
+        return { success: true };
+      } catch (error: any) {
+        // Check if this is a Convex conflict error
+        if (
+          error.message?.includes("changed while this mutation") &&
+          attempt < maxRetries - 1
+        ) {
+          // ✅ Exponential backoff: 50ms, 100ms, 200ms
+          const delayMs = 50 * Math.pow(2, attempt);
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+          lastError = error;
+          continue; // Retry
+        }
+        // Not a conflict or max retries reached - throw
+        throw error;
+      }
     }
 
-    // Validate ownership
-    if (widget.userId !== userId) {
-      throw new Error("Access denied: You don't own this widget");
-    }
-
-    await ctx.db.patch(widgetId, {
-      ...updates,
-      updatedAt: Date.now(),
-    });
-
-    return { success: true };
+    // Max retries exceeded
+    throw lastError || new Error("Failed to update widget after retries");
   },
 });
 
