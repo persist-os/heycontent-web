@@ -17,7 +17,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { StarRating } from '@/components/ui/star-rating'
-import { WidgetScheduleControls } from '@/app/dashboard/living-projects/[projectId]/components/widgets/WidgetScheduleControls'
+// import { WidgetScheduleControls } from '@/app/dashboard/living-projects/[projectId]/components/widgets/WidgetScheduleControls'
 import { EditableArtifactRenderer } from '@/components/artifacts/EditableArtifactRenderer'
 import { formatTimeAgo, getWidgetJobStatus, getA2AActivityIcon } from '@/lib/widget-utils'
 import { BarChart3, Info, CheckCircle2, FileText, Circle, Lock } from 'lucide-react'
@@ -146,7 +146,7 @@ export function ProgressiveWidgetView({
             </div>
             
             {/* Widget Schedule Controls */}
-            {widgetId && projectId && (
+            {/* {widgetId && projectId && (
               <div className="mb-4">
                 <WidgetScheduleControls
                   widgetId={String(widgetId)}
@@ -161,7 +161,7 @@ export function ProgressiveWidgetView({
                   }}
                 />
               </div>
-            )}
+            )} */}
             
             {/* Current Activity */}
             {getCurrentActivity()}

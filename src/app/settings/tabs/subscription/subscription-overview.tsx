@@ -79,7 +79,7 @@ export default function SubscriptionOverview() {
 
   const mutateOverageSettings = useMutation(api.usageEvents.updateOverageSettings);
   
-  // Update usage summary when convex data changes
+  // Update usage summary and events from Convex (single source of truth)
   useEffect(() => {
     if (convexUsageSummary) {
       setUsageSummary({
@@ -88,7 +88,10 @@ export default function SubscriptionOverview() {
         overage: convexUsageSummary.overage || 0
       });
     }
-  }, [convexUsageSummary]);
+    if (convexUsageEvents) {
+      setUsageEvents(convexUsageEvents);
+    }
+  }, [convexUsageSummary, convexUsageEvents]);
 
   // Overage controls state - Initialize with null to avoid showing defaults before Convex data loads
   const [ubpEnabled, setUbpEnabled] = useState<boolean | null>(null);
@@ -238,11 +241,7 @@ export default function SubscriptionOverview() {
       };
       
       setCurrentSubscription(mappedSubscription);
-      
-      // Update usageSummary.included to match the plan's includedRequests
-      if (planIncludedRequests !== undefined) {
-        setUsageSummary(prev => ({ ...prev, included: planIncludedRequests }));
-      }
+      // NOTE: Don't overwrite usageSummary.included here - convexUsageSummary is the single source of truth
       return;
     }
     
@@ -318,16 +317,8 @@ export default function SubscriptionOverview() {
       mappedSubscription.plan.price = status.price;
     }
     setCurrentSubscription(mappedSubscription);
-    if (planIncludedRequests !== undefined) {
-      setUsageSummary(prev => ({ ...prev, included: planIncludedRequests }));
-    }
+    // NOTE: Don't overwrite usageSummary.included here - convexUsageSummary is the single source of truth
   }, [convexSubscription, plans, status]);
-
-  // Update usage state from Convex
-  useEffect(() => {
-    if (convexUsageSummary) setUsageSummary(convexUsageSummary);
-    if (convexUsageEvents) setUsageEvents(convexUsageEvents);
-  }, [convexUsageSummary, convexUsageEvents]);
 
   // Checkout state
   const [showCheckout, setShowCheckout] = useState<boolean>(false);

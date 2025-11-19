@@ -39,7 +39,7 @@ import { api } from '@/convex/_generated/api'
 import { getCurrentUserId } from '@/app/lib/api-helpers'
 import { T } from '@/components/translation/T'
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal'
-import { WidgetScheduleControls } from '../WidgetScheduleControls'
+// import { WidgetScheduleControls } from '../WidgetScheduleControls'
 import { EditableArtifactRenderer } from '@/components/artifacts/EditableArtifactRenderer'
 
 /**
@@ -152,7 +152,7 @@ export const OverviewTab = ({ item, itemType, config, projectId }: TabContentPro
       )}
 
       {/* Widget-specific: Schedule Info */}
-      {itemType === 'widget' && (
+      {/* {itemType === 'widget' && (
         <div>
           <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
             <Clock className="w-4 h-4" />
@@ -203,7 +203,7 @@ export const OverviewTab = ({ item, itemType, config, projectId }: TabContentPro
             )}
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Crystal-specific: Supporting Evidence */}
       {itemType === 'crystal' && item.supporting_quotes && item.supporting_quotes.length > 0 && (

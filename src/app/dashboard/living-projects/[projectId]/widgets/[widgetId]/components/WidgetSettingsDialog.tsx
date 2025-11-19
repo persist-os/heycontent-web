@@ -211,7 +211,7 @@ export function WidgetSettingsDialog({
           {/* Toggle Switches */}
           <div className="space-y-4 pt-4 border-t border-border">
             {/* Schedule Enabled */}
-            <div className="flex items-center justify-between">
+            {/* <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label htmlFor="schedule">Schedule Enabled</Label>
                 <p className="text-xs text-muted-foreground">
@@ -223,7 +223,7 @@ export function WidgetSettingsDialog({
                 checked={scheduleEnabled}
                 onCheckedChange={setScheduleEnabled}
               />
-            </div>
+            </div> */}
 
             {/* Interactive */}
             <div className="flex items-center justify-between">

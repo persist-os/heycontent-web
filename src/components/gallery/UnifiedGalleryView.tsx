@@ -30,7 +30,7 @@ import { EditableArtifactRenderer } from '@/components/artifacts/EditableArtifac
 import { cn } from '@/lib/utils'
 import { Loader2 } from 'lucide-react'
 import { StarRating } from '@/components/ui/star-rating'
-import { WidgetScheduleControls } from '@/app/dashboard/living-projects/[projectId]/components/widgets/WidgetScheduleControls'
+// import { WidgetScheduleControls } from '@/app/dashboard/living-projects/[projectId]/components/widgets/WidgetScheduleControls'
 import { useAdminAuth } from '@/app/lib/admin-auth'
 import { ProgressiveWidgetView } from './ProgressiveWidgetView'
 import { T } from '@/components/translation/T'

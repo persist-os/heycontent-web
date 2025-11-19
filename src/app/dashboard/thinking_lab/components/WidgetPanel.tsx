@@ -27,7 +27,7 @@ import { ExternalLink, BarChart3, Info, Plus } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
-import { WidgetScheduleControls } from '@/app/dashboard/living-projects/[projectId]/components/widgets/WidgetScheduleControls'
+// import { WidgetScheduleControls } from '@/app/dashboard/living-projects/[projectId]/components/widgets/WidgetScheduleControls'
 import { useAdminAuth } from '@/app/lib/admin-auth'
 import { formatTimeAgo } from '@/lib/widget-utils'
 import { StatusBadge } from '@/components/ui/status-badge'
@@ -226,7 +226,7 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
               </p>
               
               {/* Widget Schedule Controls */}
-              {effectiveProjectId && currentWidget._id && (
+              {/* {effectiveProjectId && currentWidget._id && (
                 <div className="mb-4">
                   <WidgetScheduleControls
                     widgetId={String(currentWidget._id)}
@@ -242,7 +242,7 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
                     }}
                   />
                 </div>
-              )}
+              )} */}
             </div>
           </Card>
           
