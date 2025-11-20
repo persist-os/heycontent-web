@@ -1321,11 +1321,11 @@ app.post("/api/users/:id/usage/log", async (c) => {
     ...(requestId && { requestId }),
   };
   
-  // Log the event (always succeeds - analytics)
-  await ctx.runMutation(api.usageEvents.logUsageEvent, eventData);
+  // Log the event (idempotency handled in mutation - returns duplicate flag)
+  const logResult = await ctx.runMutation(api.usageEvents.logUsageEvent, eventData);
   
-  // Update subscription (non-blocking - skip for system user)
-  if (userId !== "system") {
+  // Update subscription (non-blocking - skip for system user and duplicates)
+  if (userId !== "system" && !logResult.duplicate) {
     try {
       await ctx.runMutation(api.usageEvents.updateUserUsage, { 
         userId, 
@@ -1343,16 +1343,8 @@ app.post("/api/users/:id/usage/log", async (c) => {
     }
   }
   
-  return c.json({ success: true });
-});
-
-// Check if usage event exists (idempotency check)
-app.post("/api/usageEvents/checkUsageEventExists", async (c) => {
-  const ctx = c.env;
-  const { requestId } = await c.req.json();
-  if (!requestId) return c.json({ success: false, error: "Missing requestId" }, 400);
-  const exists = await ctx.runQuery(api.usageEvents.checkUsageEventExists, { requestId });
-  return c.json({ success: true, exists });
+  // Return mutation result (includes success, duplicate, eventId)
+  return c.json(logResult);
 });
 
 // Get usage summary for a user

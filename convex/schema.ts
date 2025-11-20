@@ -219,7 +219,8 @@ export default defineSchema({
   .index("by_user", ["userId"])
   .index("by_timestamp", ["timestamp"])
   .index("by_endpoint", ["endpoint"])
-  .index("by_status", ["status"]),
+  .index("by_status", ["status"])
+  .index("by_requestId", ["requestId"]),
 
   // Agno Telemetry
   agnoRunEvents: defineTable(agnoRunEventSchemaFields)
