@@ -22,6 +22,16 @@ import { getPriceInfo } from "./priceConfig";
  * 
  * Records detailed information about each API request including endpoint,
  * method, status, and user context for analytics and billing purposes.
+ * 
+ * **Idempotency:** Uses hybrid upsert pattern (PT:4) - query + insert in single atomic mutation.
+ * If `requestId` provided, checks for existing event using indexed query (by_requestId index).
+ * Returns duplicate flag if event already exists (idempotent success).
+ * Handles concurrent insert conflicts with try-catch (queries again on conflict).
+ * 
+ * **Why:** Eliminates separate check query + insert mutation (2 operations) that creates race condition window.
+ * Single atomic mutation handles idempotency internally. Uses indexed query to prevent 32K document limit errors.
+ * 
+ * **Pattern:** PT:4 (Hybrid Upsert Pattern for Idempotency)
  */
 export const logUsageEvent = mutation({
   args: {
@@ -52,28 +62,41 @@ export const logUsageEvent = mutation({
       timestamp: args.timestamp || Date.now(),
     };
     
-    await ctx.db.insert("usageEvents", eventData);
-  },
-});
-
-/**
- * Check if a usage event with the given requestId already exists (idempotency check).
- * Returns true if exists, false otherwise.
- * 
- * BRUTAL IDEMPOTENCY: Prevents duplicate usage logs from retries or recursive calls.
- */
-export const checkUsageEventExists = query({
-  args: {
-    requestId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    // Use filter query (no index needed for idempotency check)
-    const existing = await ctx.db
-      .query("usageEvents")
-      .filter((q) => q.eq(q.field("requestId"), args.requestId))
-      .first();
+    // Hybrid upsert pattern: Query first, then insert if not exists
+    // CRITICAL: Uses indexed query (by_requestId) to prevent 32K limit error
+    if (args.requestId) {
+      const existing = await ctx.db
+        .query("usageEvents")
+        .withIndex("by_requestId", (q) => q.eq("requestId", args.requestId))
+        .first();
+      
+      if (existing) {
+        // Already exists - idempotent success
+        return { success: true, duplicate: true, eventId: existing._id };
+      }
+    }
     
-    return existing !== null;
+    // Insert new event with conflict handling
+    try {
+      const eventId = await ctx.db.insert("usageEvents", eventData);
+      return { success: true, duplicate: false, eventId };
+    } catch (error: any) {
+      // Handle concurrent insert conflicts
+      // If another mutation inserted the same requestId, query again and return existing
+      if (args.requestId) {
+        const existing = await ctx.db
+          .query("usageEvents")
+          .withIndex("by_requestId", (q) => q.eq("requestId", args.requestId))
+          .first();
+        
+        if (existing) {
+          // Concurrent insert succeeded - return existing (idempotent success)
+          return { success: true, duplicate: true, eventId: existing._id };
+        }
+      }
+      // Re-throw if not a duplicate conflict
+      throw error;
+    }
   },
 });
 
