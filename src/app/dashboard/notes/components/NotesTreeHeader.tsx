@@ -1,9 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Search, Plus, FolderPlus, Folder, Users, Share2, FileText, Star, Clock, Upload } from 'lucide-react';
+import { Search, Plus, Folder, Upload } from 'lucide-react';
 import { FilterType } from './NotesTree.types';
-import { cn } from '@/lib/utils';
 import { T } from '@/components/translation';
 import { useTranslation } from '@/hooks/useTranslation';
 
@@ -24,15 +23,6 @@ export interface NotesTreeHeaderProps {
   mySharedContentCount?: number;
 }
 
-const filterOptions = [
-  { key: 'all' as const, label: 'All', icon: FileText },
-  { key: 'important' as const, label: 'Starred', icon: Star },
-  { key: 'recent' as const, label: 'Recent', icon: Clock },
-  { key: 'folders' as const, label: 'Folders', icon: Folder },
-  { key: 'projects' as const, label: 'Projects', icon: FolderPlus },
-  { key: 'shared' as const, label: 'Shared with me', icon: Users },
-  { key: 'my-shared' as const, label: 'My shared', icon: Share2 }
-];
 
 export function NotesTreeHeader({
   searchTerm,
@@ -82,19 +72,6 @@ export function NotesTreeHeader({
               <span className="hidden sm:inline"><T context="button.new-folder">New Folder</T></span>
               <span className="sm:hidden"><T context="button.folder">Folder</T></span>
             </button>
-            <button
-              onClick={onCreateProject}
-              disabled={isCreatingProject}
-              className="flex items-center justify-center gap-1.5 sm:gap-2 border border-primary/20 hover:bg-primary/5 hover:border-primary/30 text-foreground px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-all disabled:opacity-50 text-xs sm:text-sm font-medium min-h-[40px] sm:min-h-0"
-            >
-              {isCreatingProject ? (
-                <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 border-2 border-foreground/30 border-t-foreground rounded-full animate-spin" />
-              ) : (
-                <FolderPlus className="w-4 h-4 sm:w-5 sm:h-5" />
-              )}
-              <span className="hidden sm:inline"><T context="button.new-project">New Project</T></span>
-              <span className="sm:hidden"><T context="button.project">Project</T></span>
-            </button>
             {onUpload && (
               <button
                 onClick={onUpload}
@@ -132,75 +109,6 @@ export function NotesTreeHeader({
               onChange={(e) => onSearchChange(e.target.value)}
               className="w-full pl-10 pr-4 py-2 sm:py-2.5 bg-[hsl(var(--notes-surface-dim))] border border-[hsl(var(--notes-stroke-focus))] rounded-[12px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[hsl(var(--notes-ghost-blue))] transition-all text-sm sm:text-sm"
             />
-          </div>
-        </div>
-        
-        {/* Filter Buttons - Horizontal scroll on mobile */}
-        <div className="overflow-x-auto scrollbar-hide -mx-4 sm:mx-0 px-4 sm:px-0">
-          <div className="flex items-center gap-1.5 sm:gap-2 pb-1 sm:pb-2 min-w-max">
-            {filterOptions.map(({ key, label, icon: Icon }) => {
-              const count = key === 'folders' ? foldersCount : 
-                          key === 'shared' ? sharedNotesCount : 
-                          key === 'my-shared' ? mySharedContentCount : 
-                          undefined;
-              
-              const gradientClasses = selectedFilter === key 
-                ? key === 'important' ? "bg-gradient-to-r from-amber-500 to-amber-400 text-white shadow-md shadow-amber-500/30" :
-                  key === 'recent' ? "bg-gradient-to-r from-orange-500 to-orange-400 text-white shadow-md shadow-orange-500/30" :
-                  key === 'folders' ? "bg-gradient-to-r from-indigo-500 to-indigo-400 text-white shadow-md shadow-indigo-500/30" :
-                  key === 'projects' ? "bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-md shadow-blue-500/30" :
-                  key === 'shared' ? "bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-md shadow-blue-500/30" :
-                  key === 'my-shared' ? "bg-gradient-to-r from-green-500 to-green-400 text-white shadow-md shadow-green-500/30" :
-                  "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-md shadow-primary/20"
-                : "text-muted-foreground hover:text-foreground";
-              
-              const hoverClasses = selectedFilter !== key 
-                ? key === 'important' ? "hover:bg-amber-500/5 hover:border-amber-500/20" :
-                  key === 'recent' ? "hover:bg-orange-500/5 hover:border-orange-500/20" :
-                  key === 'folders' ? "hover:bg-indigo-500/5 hover:border-indigo-500/20" :
-                  key === 'projects' ? "hover:bg-blue-500/5 hover:border-blue-500/20" :
-                  key === 'shared' ? "hover:bg-blue-500/5 hover:border-blue-500/20" :
-                  key === 'my-shared' ? "hover:bg-green-500/5 hover:border-green-500/20" :
-                  "hover:bg-primary/5 hover:border-primary/20"
-                : "";
-              
-              return (
-                <button
-                  key={key}
-                  onClick={() => onFilterChange(key)}
-                  className={cn(
-                    "flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all relative whitespace-nowrap min-h-[40px] sm:min-h-0",
-                    selectedFilter !== key && "border border-border/50",
-                    gradientClasses,
-                    hoverClasses
-                  )}
-                >
-                  <Icon className={cn("w-4 h-4 flex-shrink-0", key === 'projects' && "w-5 h-5")} />
-                  <span className="hidden sm:inline">
-                    <T context={`notes.filter.${key}`}>{label}</T>
-                  </span>
-                  <span className="sm:hidden">
-                    {key === 'all' ? <T context="notes.filter.all">All</T> : 
-                     key === 'important' ? <T context="notes.filter.starred">Starred</T> :
-                     key === 'recent' ? <T context="notes.filter.recent">Recent</T> :
-                     key === 'folders' ? <T context="notes.filter.folders">Folders</T> :
-                     key === 'projects' ? <T context="notes.filter.projects">Projects</T> :
-                     key === 'shared' ? <T context="notes.filter.shared">Shared</T> :
-                     <T context="notes.filter.my-shared">My Shared</T>}
-                  </span>
-                  {count && count > 0 && (
-                    <span className={cn(
-                      "text-xs px-1.5 py-0.5 rounded-full font-medium flex-shrink-0",
-                      selectedFilter === key
-                        ? "bg-white/20 text-white"
-                        : "bg-muted/50 text-muted-foreground"
-                    )}>
-                      {count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
           </div>
         </div>
       </div>
