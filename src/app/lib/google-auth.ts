@@ -21,6 +21,18 @@ interface GoogleSignInResult {
 /**
  * Handles Google Sign-In flow with Firebase and backend authentication.
  * Supports both login and registration flows.
+ * 
+ * NOTE: The app name and logo shown in the Google sign-in popup are configured
+ * in the Google Cloud Console OAuth consent screen, not in this code.
+ * 
+ * To update the app name and logo:
+ * 1. Go to Google Cloud Console (https://console.cloud.google.com/)
+ * 2. Select your Firebase project
+ * 3. Navigate to: APIs & Services > OAuth consent screen
+ * 4. Update:
+ *    - App name: "HeyContext" (not "HeyContent")
+ *    - App logo: Upload /public/icons/Heycontext.png
+ * 5. Save and wait for changes to propagate (may take a few minutes)
  */
 export async function signInWithGoogle(
   options: GoogleSignInOptions = {}
