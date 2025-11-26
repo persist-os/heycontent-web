@@ -171,6 +171,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, reason }) => {
           <GoogleSignInButton 
             action="login"
             onError={handleGoogleSignInError}
+            className="w-full"
           />
 
           {/* Divider */}
