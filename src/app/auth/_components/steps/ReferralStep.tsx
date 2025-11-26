@@ -52,6 +52,7 @@ export const ReferralStep: React.FC<ReferralStepProps & { onGoogleSignInError?: 
                 referredBy: referredById || undefined
               }}
               onError={onGoogleSignInError}
+              className="w-full"
             />
           </div>
 
