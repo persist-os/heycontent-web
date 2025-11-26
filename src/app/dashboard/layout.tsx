@@ -203,8 +203,8 @@ export default function DashboardLayout({
         isOpen={showUsernameModal}
         onUsernameSet={() => {
           setShowUsernameModal(false);
-          // Optionally refresh the page or trigger a re-fetch of user data
-          window.location.reload();
+          // Redirect to home page after username is set
+          window.location.href = '/dashboard';
         }}
       />
 
