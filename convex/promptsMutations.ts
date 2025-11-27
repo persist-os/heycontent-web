@@ -28,6 +28,42 @@ export const createPromptBlock = mutation({
     // NO effectiveness, usageCount, successRate - handler initializes these
   },
   handler: async (ctx, args) => {
+    // ✅ PATTERN 50: Prompt Versioning - Check for existing active prompt with same scope + scopeId + operation
+    // Operation is in tags array (e.g., "information_check", "planning", "generation", "validation")
+    // Find operation tag from args.tags (it's one of the known operation types)
+    const operationTags = ["information_check", "planning", "generation", "validation", "execution", "review"];
+    const operationTag = args.tags.find(tag => operationTags.includes(tag));
+    
+    if (operationTag && args.scopeId) {
+      // Query existing prompts with same scope + scopeId
+      let existingPrompts;
+      if (args.scopeId) {
+        existingPrompts = await ctx.db
+          .query("prompts")
+          .withIndex("by_scope", (q) =>
+            q.eq("scope", args.scope).eq("scopeId", args.scopeId)
+          )
+          .collect();
+      } else {
+        existingPrompts = await ctx.db
+          .query("prompts")
+          .withIndex("by_scope", (q) => q.eq("scope", args.scope))
+          .collect();
+      }
+      
+      // Filter by tags containing the operation and isActive: true
+      const matchingActivePrompts = existingPrompts.filter((prompt) => {
+        const hasOperation = prompt.tags.includes(operationTag);
+        const isActive = prompt.isActive !== false; // Default to true for existing prompts without isActive
+        return hasOperation && isActive;
+      });
+      
+      // Mark old active prompts as inactive
+      for (const oldPrompt of matchingActivePrompts) {
+        await ctx.db.patch(oldPrompt._id, { isActive: false });
+      }
+    }
+    
     const promptId = await ctx.db.insert("prompts", {
       // Business data from args
       content: args.content,
@@ -43,6 +79,7 @@ export const createPromptBlock = mutation({
       effectiveness: 1.0,  // Baseline effectiveness
       usageCount: 0,       // New block, no usage
       successRate: 1.0,    // Start optimistic
+      isActive: true,      // New prompt is active
     });
 
     return promptId;
@@ -148,6 +185,7 @@ export const forkPromptBlock = mutation({
       parentId: args.parentId,
       createdBy: args.createdBy,
       description: args.description ?? `Fork of ${parent.version}`,
+      isActive: true, // New fork is active
     });
 
     return childId;
@@ -165,6 +203,34 @@ export const deletePromptBlock = mutation({
     await ctx.db.delete(args.promptId);
 
     return { success: true };
+  },
+});
+
+/**
+ * One-time migration: Mark all existing prompts as active
+ * Run this once after deploying the isActive field to set default value
+ */
+export const migratePromptsToActive = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // Get all prompts
+    const allPrompts = await ctx.db.query("prompts").collect();
+    
+    let migratedCount = 0;
+    for (const prompt of allPrompts) {
+      // Only update prompts that don't have isActive set (undefined or null)
+      if (prompt.isActive === undefined || prompt.isActive === null) {
+        await ctx.db.patch(prompt._id, { isActive: true });
+        migratedCount++;
+      }
+    }
+    
+    return {
+      success: true,
+      totalPrompts: allPrompts.length,
+      migratedCount,
+      message: `Migrated ${migratedCount} prompts to isActive: true`,
+    };
   },
 });
 
@@ -196,6 +262,7 @@ export const batchCreatePromptBlocks = mutation({
         effectiveness: 1.0,
         usageCount: 0,
         successRate: 1.0,
+        isActive: true, // New batch prompts are active
       });
 
       promptIds.push(promptId);

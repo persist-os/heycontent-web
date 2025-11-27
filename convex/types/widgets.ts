@@ -121,6 +121,7 @@ export const widgetSchemaFields = {
     responsibilities: v.array(v.string()),
     spawnCondition: v.string(),
     artifactType: v.optional(v.string()),  // ✅ Artifact type this agent generates
+    toolName: v.optional(v.string()),  // ✅ PHASE 3: Agent-level tool override (overrides family tool if specified)
   }))),
   
   // ❌ NO artifact relationships here - widgets discover artifacts at runtime
@@ -161,6 +162,9 @@ export const widgetSchemaFields = {
   
   // ✅ PHASE 2: Default artifact type for widget family
   defaultArtifactType: v.optional(widgetOutputArtifactTypeValidator),  // ✅ Default artifact type for agents without explicit type
+  
+  // ✅ PHASE 3: Tool assignment (persistent tool assignment)
+  assignedTool: v.optional(v.string()),  // Tool assigned to this widget family (e.g., "GmailTools")
   
   // Widget status (legacy field - kept for backward compatibility)
   // NOTE: Status can also be computed from actions table, but stored here for compatibility
@@ -297,6 +301,8 @@ export const widgetBatchValidator = v.object({
   workflowStage: v.optional(widgetWorkflowStageValidator),
   // ✅ PHASE 2: Default artifact type for widget family
   defaultArtifactType: v.optional(widgetOutputArtifactTypeValidator),  // ✅ Default artifact type for agents without explicit type
+  // ✅ PHASE 3: Tool assignment (persistent tool assignment)
+  assignedTool: v.optional(v.string()),  // Tool assigned to this widget family (e.g., "GmailTools")
   // ✅ PHASE 2: Family Identity fields
   familyIdentity: v.optional(v.object({
     familyName: v.string(),
@@ -312,6 +318,7 @@ export const widgetBatchValidator = v.object({
     responsibilities: v.array(v.string()),
     spawnCondition: v.string(),
     artifactType: v.optional(v.string()),  // ✅ Artifact type this agent generates
+    toolName: v.optional(v.string()),  // ✅ PHASE 3: Agent-level tool override (overrides family tool if specified)
   }))),
   // Scheduling fields (for recurring widget execution)
   scheduleEnabled: v.optional(v.boolean()),
@@ -666,6 +673,7 @@ export interface Widget {
   dependency_hints?: WidgetDependencyHints;
   execution_profile?: WidgetExecutionProfile;
   workflow_stage?: WidgetWorkflowStage;
+  assignedTool?: string;  // ✅ PHASE 3: Tool assigned to widget family (e.g., "GmailTools")
   // NOTE: status is now computed from actions table - do NOT include here
   createdAt: number;
   updatedAt: number;
@@ -729,6 +737,7 @@ export function widgetValidatorToDbSchema(
     familyIdentity?: any;
     agentRoster?: any;
     defaultArtifactType?: string;
+    assignedTool?: string;  // ✅ PHASE 3: Tool assignment
     capabilities?: any;
     // NOTE: execution_history is now tracked in actions table - do NOT include here
     inputRequirements?: string[];
@@ -771,6 +780,7 @@ export function widgetValidatorToDbSchema(
     familyIdentity: widget.familyIdentity,
     agentRoster: widget.agentRoster,
     defaultArtifactType: widget.defaultArtifactType,
+    assignedTool: widget.assignedTool,  // ✅ PHASE 3: Tool assignment
     capabilities: widget.capabilities,
     // NOTE: execution_history is now tracked in actions table - do NOT include here
     inputRequirements: widget.inputRequirements,

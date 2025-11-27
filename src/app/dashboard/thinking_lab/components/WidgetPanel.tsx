@@ -23,7 +23,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ExternalLink, BarChart3, Info, Plus } from 'lucide-react'
+import { ExternalLink, BarChart3, Info, Plus, Play } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
@@ -31,6 +31,7 @@ import remarkBreaks from 'remark-breaks'
 import { useAdminAuth } from '@/app/lib/admin-auth'
 import { formatTimeAgo } from '@/lib/widget-utils'
 import { StatusBadge } from '@/components/ui/status-badge'
+import { runWidget } from '@/lib/services/widgetService'
 import type { InsightEntry } from '../../../../../convex/types/assignmentFingerprint'
 
 interface WidgetPanelProps {
@@ -137,8 +138,42 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
     confidence: 0.8
   })
   
+  // Rerun button state
+  const [isRerunning, setIsRerunning] = useState(false)
+  const [rerunError, setRerunError] = useState<string | null>(null)
+  
   // Mutation for adding insights
   const addInsight = useMutation(api.assignmentFingerprintMutations.mutateAssignmentFingerprint)
+  
+  // Handle widget rerun
+  const handleRerun = async () => {
+    if (!currentWidget?._id || !effectiveProjectId || isRerunning) return
+    
+    setIsRerunning(true)
+    setRerunError(null)
+    
+    try {
+      await runWidget({
+        widgetId: String(currentWidget._id),
+        projectId: effectiveProjectId
+      })
+      // Success - widget will update via Convex reactivity
+      console.log('[WidgetPanel] Widget rerun successful')
+    } catch (error: any) {
+      console.error('[WidgetPanel] Widget rerun failed:', error)
+      
+      // Handle 429 rate limit/cooldown errors with user-friendly message
+      // Backend returns detail in errorData.detail, which widgetService includes in error.message
+      if (error.message?.includes('429') || error.message?.includes('Rate limit') || error.message?.includes('cooldown') || error.message?.includes('Cooldown')) {
+        // Error.message already contains the detail from backend (e.g., "Rate limit exceeded. Retry after 300 seconds.")
+        setRerunError(error.message || 'Rate limit exceeded. Please wait before rerunning.')
+      } else {
+        setRerunError(error.message || 'Failed to rerun widget. Please try again.')
+      }
+    } finally {
+      setIsRerunning(false)
+    }
+  }
 
   // Loading state - waiting for conversation or widgets
   const isLoadingConversation = !projectId && conversationId && conversation === undefined
@@ -218,8 +253,35 @@ export const WidgetPanel: React.FC<WidgetPanelProps> = ({
                           : 'idle'} 
                     size="sm"
                   />
+                  {effectiveProjectId && currentWidget._id && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleRerun}
+                      disabled={isRerunning || currentWidget.lastRunStatus === 'running'}
+                      className="min-h-[44px] min-w-[44px]"
+                    >
+                      {isRerunning ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                          Running...
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-4 h-4 mr-2" />
+                          Rerun
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </div>
               </div>
+              
+              {rerunError && (
+                <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                  <p className="text-sm text-destructive">{rerunError}</p>
+                </div>
+              )}
               
               <p className="text-muted-foreground text-lg mb-4">
                 {currentWidget.familyIdentity?.mission || currentWidget.description || 'Helps you manage your project'}
