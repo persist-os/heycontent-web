@@ -63,9 +63,12 @@ export const queryPromptsByScope = query({
         }
         return q.eq("scope", args.scope);
       })
-      .take(limit);
+      .collect();
 
-    return prompts;
+    // ✅ PATTERN 50: Prompt Versioning - Filter by isActive: true (only return active prompts)
+    const activePrompts = prompts.filter((p) => p.isActive !== false); // Default to true for existing prompts without isActive
+
+    return activePrompts.slice(0, limit);
   },
 });
 
@@ -177,8 +180,11 @@ export const queryPromptsByScopeAndTags = query({
         .collect();
     }
 
+    // ✅ PATTERN 50: Prompt Versioning - Filter by isActive: true (only return active prompts)
+    const activePrompts = scopePrompts.filter((p) => p.isActive !== false); // Default to true for existing prompts without isActive
+
     // Filter by tags (must match at least one tag)
-    const matchingPrompts = scopePrompts.filter((prompt) => {
+    const matchingPrompts = activePrompts.filter((prompt) => {
       return args.tags.some((tag) => prompt.tags.includes(tag));
     });
 

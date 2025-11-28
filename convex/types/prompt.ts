@@ -54,6 +54,9 @@ export const promptSchemaFields = {
   version: v.string(),  // "1.0.0"
   parentId: v.optional(v.id("prompts")),  // For forked/evolved prompts
   
+  // Versioning (active/inactive)
+  isActive: v.boolean(),  // True for active prompt, false for historical
+  
   // Metadata
   createdBy: v.string(),
   description: v.optional(v.string()),
