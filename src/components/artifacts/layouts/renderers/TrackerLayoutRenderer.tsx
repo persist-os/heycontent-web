@@ -10,7 +10,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { ArtifactMetadata } from '@/types/artifacts'
+import { ArtifactMetadata, Artifact } from '@/types/artifacts'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -56,6 +56,7 @@ interface TrackerLayoutRendererProps {
   artifactId?: Id<'artifacts'>
   selectedVersion?: number
   onVersionChange?: (version: number) => void
+  artifact?: Artifact
 }
 
 export function TrackerLayoutRenderer({
@@ -68,7 +69,8 @@ export function TrackerLayoutRenderer({
   editButton,
   artifactId,
   selectedVersion,
-  onVersionChange
+  onVersionChange,
+  artifact
 }: TrackerLayoutRendererProps) {
   // 🔴 CRITICAL FIX (TASK 3.1): Defensive data extraction - check multiple possible field names
   // Handle common mismatches: data.entries OR data.trackingEntries OR data.data.entries
@@ -207,6 +209,7 @@ export function TrackerLayoutRenderer({
         onVersionChange={onVersionChange}
         metadata={artifactMetadata}
         icon={<div className="w-2 h-2 rounded-full bg-muted-foreground" />}
+        artifact={artifact}
       />
       
       <CardContent className="space-y-6">

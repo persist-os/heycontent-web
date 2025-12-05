@@ -17,6 +17,9 @@ import { Pencil, FileText, Check, X, Eye } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
+import { RichLinkPreview, URL_PATTERN } from '../RichLinkPreview'
+import { ActionsAndLinksRenderer } from '../ActionsAndLinksRenderer'
+import { UniversalArtifactActionBar } from '../UniversalArtifactActionBar'
 
 export function ReportLayout({ 
   artifact,
@@ -101,8 +104,8 @@ export function ReportLayout({
 
   return (
     <Card className="bg-card/50 backdrop-blur-sm border border-border/40 hover:bg-card/80 transition-all duration-300">
-      <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <FileText className="w-4 h-4 text-muted-foreground" />
             <span className="text-sm font-medium text-foreground">Report</span>
@@ -120,6 +123,8 @@ export function ReportLayout({
             </Badge>
           </div>
         </div>
+        {/* Action Bar - Integrated in CardHeader */}
+        <UniversalArtifactActionBar artifact={artifact} />
       </CardHeader>
 
       <CardContent className="space-y-6">
@@ -178,7 +183,17 @@ export function ReportLayout({
                   <div className="border-t border-border/20 pt-3">
                     <p className="text-xs text-muted-foreground mb-2">Preview:</p>
                     <div className="prose prose-sm max-w-none break-words text-muted-foreground bg-muted/10 p-3 rounded-md">
-                      <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                      <ReactMarkdown 
+                        remarkPlugins={[remarkGfm, remarkBreaks]}
+                        components={{
+                          a: ({ href, children }) => {
+                            if (href && href.startsWith('http')) {
+                              return <RichLinkPreview url={href}>{children}</RichLinkPreview>
+                            }
+                            return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
+                          }
+                        }}
+                      >
                         {editValue}
                       </ReactMarkdown>
                     </div>
@@ -187,7 +202,17 @@ export function ReportLayout({
               ) : (
                 /* Display mode */
                 <div className="prose prose-sm max-w-none break-words text-muted-foreground">
-                  <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                  <ReactMarkdown 
+                    remarkPlugins={[remarkGfm, remarkBreaks]}
+                    components={{
+                      a: ({ href, children }) => {
+                        if (href && href.startsWith('http')) {
+                          return <RichLinkPreview url={href}>{children}</RichLinkPreview>
+                        }
+                        return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
+                      }
+                    }}
+                  >
                     {section?.content || ''}
                   </ReactMarkdown>
                 </div>
@@ -197,11 +222,27 @@ export function ReportLayout({
         ) : (
           /* Single markdown content */
           <div className="prose prose-sm max-w-none break-words text-muted-foreground">
-            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+            <ReactMarkdown 
+              remarkPlugins={[remarkGfm, remarkBreaks]}
+              components={{
+                a: ({ href, children }) => {
+                  if (href && href.startsWith('http')) {
+                    return <RichLinkPreview url={href}>{children}</RichLinkPreview>
+                  }
+                  return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
+                }
+              }}
+            >
               {data?.markdown || ''}
             </ReactMarkdown>
           </div>
         )}
+
+        {/* Actions and Links (artifact-level) */}
+        <ActionsAndLinksRenderer
+          actions={data?.actions}
+          links={data?.links}
+        />
 
         {/* Metadata footer */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground/70 border-t border-border/20 pt-3 mt-4">

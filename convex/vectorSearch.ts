@@ -107,9 +107,140 @@ function truncateQueryToFit(queryText: string, maxBytes: number): string {
 }
 
 /**
- * Hybrid search that combines vector similarity with keyword matching (no quotas)
+ * BM25 Tokenization
+ * Splits text on whitespace, lowercases, removes punctuation
  */
-export const hybridSearchContent = action({
+function tokenize(text: string): string[] {
+  if (!text || typeof text !== 'string') {
+    return [];
+  }
+  
+  // Remove punctuation, lowercase, split on whitespace
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ') // Replace punctuation with space
+    .split(/\s+/) // Split on whitespace
+    .filter(token => token.length > 0); // Remove empty tokens
+}
+
+/**
+ * Calculate term frequency (TF) for a term in a document
+ */
+function calculateTermFrequency(term: string, tokens: string[]): number {
+  let count = 0;
+  for (const token of tokens) {
+    if (token === term) {
+      count++;
+    }
+  }
+  return count;
+}
+
+/**
+ * Calculate inverse document frequency (IDF) for a term across corpus
+ */
+function calculateIDF(term: string, allDocTokens: string[][]): number {
+  let documentsContainingTerm = 0;
+  for (const docTokens of allDocTokens) {
+    if (docTokens.includes(term)) {
+      documentsContainingTerm++;
+    }
+  }
+  
+  if (documentsContainingTerm === 0) {
+    return 0; // Term not found in any document
+  }
+  
+  const totalDocuments = allDocTokens.length;
+  // IDF = log((N - n + 0.5) / (n + 0.5))
+  // Where N = total documents, n = documents containing term
+  // Using standard BM25 IDF formula
+  return Math.log((totalDocuments - documentsContainingTerm + 0.5) / (documentsContainingTerm + 0.5));
+}
+
+/**
+ * Calculate BM25 score for a document
+ * BM25 formula: score = IDF * (TF * (k1 + 1)) / (TF + k1 * (1 - b + b * (docLength / avgDocLength)))
+ * Default params: k1=1.5, b=0.75 (standard BM25 parameters)
+ */
+function calculateBM25Score(
+  queryTokens: string[],
+  docTokens: string[],
+  allDocTokens: string[][],
+  k1: number = 1.5,
+  b: number = 0.75
+): number {
+  if (queryTokens.length === 0 || docTokens.length === 0) {
+    return 0;
+  }
+  
+  // Calculate average document length
+  const totalLength = allDocTokens.reduce((sum, tokens) => sum + tokens.length, 0);
+  const avgDocLength = totalLength / allDocTokens.length;
+  
+  // Calculate BM25 score for each query term and sum
+  let totalScore = 0;
+  const docLength = docTokens.length;
+  
+  for (const queryTerm of queryTokens) {
+    // Calculate TF for this term in this document
+    const tf = calculateTermFrequency(queryTerm, docTokens);
+    
+    if (tf === 0) {
+      continue; // Term not in document, skip
+    }
+    
+    // Calculate IDF for this term
+    const idf = calculateIDF(queryTerm, allDocTokens);
+    
+    if (idf === 0) {
+      continue; // Term not in corpus, skip
+    }
+    
+    // BM25 formula
+    const numerator = tf * (k1 + 1);
+    const denominator = tf + k1 * (1 - b + b * (docLength / avgDocLength));
+    const termScore = idf * (numerator / denominator);
+    
+    totalScore += termScore;
+  }
+  
+  return totalScore;
+}
+
+/**
+ * Normalize BM25 score to 0-1 range for combination with embedding scores
+ * Uses min-max normalization with fallback
+ */
+function normalizeBM25Score(bm25Score: number, allBM25Scores: number[]): number {
+  if (allBM25Scores.length === 0 || bm25Score === 0) {
+    return 0;
+  }
+  
+  const minScore = Math.min(...allBM25Scores);
+  const maxScore = Math.max(...allBM25Scores);
+  
+  if (maxScore === minScore) {
+    // All scores are the same, return 0.5 (neutral)
+    return 0.5;
+  }
+  
+  // Normalize to 0-1 range
+  return (bm25Score - minScore) / (maxScore - minScore);
+}
+
+/**
+ * True hybrid search that combines BM25 keyword matching with embedding similarity.
+ * 
+ * Features:
+ * - BM25 algorithm for exact term matching, acronyms, and proper nouns
+ * - Embedding similarity for semantic understanding
+ * - Intelligent scoring: final_score = 0.7 * embedding_score + 0.3 * bm25_score (default)
+ * - Handles edge cases: exact terms, acronyms, proper nouns (BM25) + natural language (embeddings)
+ * 
+ * This is the true hybrid retrieval system (BM25 + embeddings), not just vector search.
+ */
+export const trueHybridSearch = action({
   args: {
     userId: v.string(),
     query: v.string(),
@@ -213,40 +344,47 @@ export const hybridSearchContent = action({
                 contentTypes: args.contentTypes
               });
               
-              // Calculate similarities (reuse existing logic)
-              const similarities = userEmbeddings.map((doc) => {
+              // Tokenize query for BM25
+              const queryTokens = tokenize(args.query);
+              
+              // Tokenize all documents for BM25 (combine title + content)
+              const allDocTokens: string[][] = userEmbeddings.map(doc => {
+                const combinedText = `${doc.title || ''} ${doc.content || ''}`;
+                return tokenize(combinedText);
+              });
+              
+              // Calculate embedding similarities and BM25 scores
+              const results = userEmbeddings.map((doc, index) => {
                 try {
-                  if (!doc.embedding || !Array.isArray(doc.embedding) || doc.embedding.length !== queryEmbedding.length) {
-                    return {
-                      contentId: doc.contentId,
-                      contentType: doc.contentType,
-                      title: doc.title,
-                      content: doc.content,
-                      embedding: doc.embedding,
-                      score: 0,
-                    };
-                  }
+                  let embeddingScore = 0;
                   
-                  // Cosine similarity calculation
-                  let dotProduct = 0;
-                  let normA = 0;
-                  let normB = 0;
-                  
-                  for (let i = 0; i < queryEmbedding.length; i++) {
-                    const queryVal = queryEmbedding[i];
-                    const docVal = doc.embedding[i];
+                  // Calculate embedding similarity if valid
+                  if (doc.embedding && Array.isArray(doc.embedding) && doc.embedding.length === queryEmbedding.length) {
+                    // Cosine similarity calculation
+                    let dotProduct = 0;
+                    let normA = 0;
+                    let normB = 0;
                     
-                    if (typeof queryVal !== 'number' || typeof docVal !== 'number' || isNaN(queryVal) || isNaN(docVal)) {
-                      continue;
+                    for (let i = 0; i < queryEmbedding.length; i++) {
+                      const queryVal = queryEmbedding[i];
+                      const docVal = doc.embedding[i];
+                      
+                      if (typeof queryVal !== 'number' || typeof docVal !== 'number' || isNaN(queryVal) || isNaN(docVal)) {
+                        continue;
+                      }
+                      
+                      dotProduct += queryVal * docVal;
+                      normA += queryVal * queryVal;
+                      normB += docVal * docVal;
                     }
                     
-                    dotProduct += queryVal * docVal;
-                    normA += queryVal * queryVal;
-                    normB += docVal * docVal;
+                    const score = dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+                    embeddingScore = isNaN(score) || !isFinite(score) ? 0 : score;
                   }
                   
-                  const score = dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
-                  const finalScore = isNaN(score) || !isFinite(score) ? 0 : score;
+                  // Calculate BM25 score
+                  const docTokens = allDocTokens[index];
+                  const bm25Score = calculateBM25Score(queryTokens, docTokens, allDocTokens);
                   
                   return {
                     contentId: doc.contentId,
@@ -254,7 +392,9 @@ export const hybridSearchContent = action({
                     title: doc.title,
                     content: doc.content,
                     embedding: doc.embedding,
-                    score: finalScore,
+                    embeddingScore,
+                    bm25Score,
+                    docTokens,
                   };
                 } catch (error) {
                   return {
@@ -263,20 +403,39 @@ export const hybridSearchContent = action({
                     title: doc.title,
                     content: doc.content,
                     embedding: doc.embedding,
-                    score: 0,
+                    embeddingScore: 0,
+                    bm25Score: 0,
+                    docTokens: [],
                   };
                 }
               });
+              
+              // Normalize BM25 scores to 0-1 range
+              const allBM25Scores = results.map(r => r.bm25Score);
+              const normalizedResults = results.map(r => ({
+                ...r,
+                normalizedBM25Score: normalizeBM25Score(r.bm25Score, allBM25Scores),
+              }));
+              
+              // Combine scores: final_score = 0.7 * embedding_score + 0.3 * bm25_score
+              const combinedResults = normalizedResults.map(r => ({
+                contentId: r.contentId,
+                contentType: r.contentType,
+                title: r.title,
+                content: r.content,
+                embedding: r.embedding,
+                score: 0.7 * r.embeddingScore + 0.3 * r.normalizedBM25Score,
+              }));
 
-              // Apply similarity threshold and sort by score
+              // Apply similarity threshold and sort by combined score
               const minThreshold = args.minSimilarity || 0.35;
-              const filteredSimilarities = similarities
+              const filteredResults = combinedResults
                 .filter(item => item.score >= minThreshold)
                 .sort((a, b) => b.score - a.score);
               
               // Return top results up to limit
               const limit = args.limit || 50;
-              return filteredSimilarities.slice(0, limit);
+              return filteredResults.slice(0, limit);
             }
           }
           
@@ -301,40 +460,47 @@ export const hybridSearchContent = action({
         contentTypes: args.contentTypes
       });
       
-      // Calculate similarities
-      const similarities = userEmbeddings.map((doc) => {
+      // Tokenize query for BM25
+      const queryTokens = tokenize(args.query);
+      
+      // Tokenize all documents for BM25 (combine title + content)
+      const allDocTokens: string[][] = userEmbeddings.map(doc => {
+        const combinedText = `${doc.title || ''} ${doc.content || ''}`;
+        return tokenize(combinedText);
+      });
+      
+      // Calculate embedding similarities and BM25 scores
+      const results = userEmbeddings.map((doc, index) => {
         try {
-          if (!doc.embedding || !Array.isArray(doc.embedding) || doc.embedding.length !== queryEmbedding.length) {
-            return {
-              contentId: doc.contentId,
-              contentType: doc.contentType,
-              title: doc.title,
-              content: doc.content,
-              embedding: doc.embedding,
-              score: 0,
-            };
-          }
+          let embeddingScore = 0;
           
-          // Cosine similarity calculation
-          let dotProduct = 0;
-          let normA = 0;
-          let normB = 0;
-          
-          for (let i = 0; i < queryEmbedding.length; i++) {
-            const queryVal = queryEmbedding[i];
-            const docVal = doc.embedding[i];
+          // Calculate embedding similarity if valid
+          if (doc.embedding && Array.isArray(doc.embedding) && doc.embedding.length === queryEmbedding.length) {
+            // Cosine similarity calculation
+            let dotProduct = 0;
+            let normA = 0;
+            let normB = 0;
             
-            if (typeof queryVal !== 'number' || typeof docVal !== 'number' || isNaN(queryVal) || isNaN(docVal)) {
-              continue;
+            for (let i = 0; i < queryEmbedding.length; i++) {
+              const queryVal = queryEmbedding[i];
+              const docVal = doc.embedding[i];
+              
+              if (typeof queryVal !== 'number' || typeof docVal !== 'number' || isNaN(queryVal) || isNaN(docVal)) {
+                continue;
+              }
+              
+              dotProduct += queryVal * docVal;
+              normA += queryVal * queryVal;
+              normB += docVal * docVal;
             }
             
-            dotProduct += queryVal * docVal;
-            normA += queryVal * queryVal;
-            normB += docVal * docVal;
+            const score = dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+            embeddingScore = isNaN(score) || !isFinite(score) ? 0 : score;
           }
           
-          const score = dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
-          const finalScore = isNaN(score) || !isFinite(score) ? 0 : score;
+          // Calculate BM25 score
+          const docTokens = allDocTokens[index];
+          const bm25Score = calculateBM25Score(queryTokens, docTokens, allDocTokens);
           
           return {
             contentId: doc.contentId,
@@ -342,7 +508,9 @@ export const hybridSearchContent = action({
             title: doc.title,
             content: doc.content,
             embedding: doc.embedding,
-            score: finalScore,
+            embeddingScore,
+            bm25Score,
+            docTokens,
           };
         } catch (error) {
           return {
@@ -351,20 +519,39 @@ export const hybridSearchContent = action({
             title: doc.title,
             content: doc.content,
             embedding: doc.embedding,
-            score: 0,
+            embeddingScore: 0,
+            bm25Score: 0,
+            docTokens: [],
           };
         }
       });
+      
+      // Normalize BM25 scores to 0-1 range
+      const allBM25Scores = results.map(r => r.bm25Score);
+      const normalizedResults = results.map(r => ({
+        ...r,
+        normalizedBM25Score: normalizeBM25Score(r.bm25Score, allBM25Scores),
+      }));
+      
+      // Combine scores: final_score = 0.7 * embedding_score + 0.3 * bm25_score
+      const combinedResults = normalizedResults.map(r => ({
+        contentId: r.contentId,
+        contentType: r.contentType,
+        title: r.title,
+        content: r.content,
+        embedding: r.embedding,
+        score: 0.7 * r.embeddingScore + 0.3 * r.normalizedBM25Score,
+      }));
 
-      // Apply similarity threshold and sort by score
+      // Apply similarity threshold and sort by combined score
       const minThreshold = args.minSimilarity || 0.35;
-      const filteredSimilarities = similarities
+      const filteredResults = combinedResults
         .filter(item => item.score >= minThreshold)
         .sort((a, b) => b.score - a.score);
       
       // Return top results up to limit
       const limit = args.limit || 50;
-      return filteredSimilarities.slice(0, limit);
+      return filteredResults.slice(0, limit);
       
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);

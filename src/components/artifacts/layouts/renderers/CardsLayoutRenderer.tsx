@@ -10,7 +10,7 @@
 'use client'
 
 import React from 'react'
-import { FieldDefinition, ArtifactMetadata } from '@/types/artifacts'
+import { FieldDefinition, ArtifactMetadata, Artifact } from '@/types/artifacts'
 import { Card, CardContent } from '@/components/ui/card'
 import { ArtifactCardHeader } from '../shared/ArtifactCardHeader'
 import { ArtifactCardFooter } from '../shared/ArtifactCardFooter'
@@ -32,6 +32,7 @@ interface CardsLayoutRendererProps {
   artifactId?: Id<'artifacts'>
   selectedVersion?: number
   onVersionChange?: (version: number) => void
+  artifact?: Artifact
 }
 
 export function CardsLayoutRenderer({
@@ -44,7 +45,8 @@ export function CardsLayoutRenderer({
   editButton,
   artifactId,
   selectedVersion,
-  onVersionChange
+  onVersionChange,
+  artifact
 }: CardsLayoutRendererProps) {
   // Defensive: ensure all required properties exist
   const fields = Array.isArray(data_model?.fields) ? data_model.fields : []
@@ -78,6 +80,7 @@ export function CardsLayoutRenderer({
         onVersionChange={onVersionChange}
         metadata={artifactMetadata}
         icon={<div className="w-2 h-2 rounded-full bg-primary" />}
+        artifact={artifact}
       />
       
       <CardContent>

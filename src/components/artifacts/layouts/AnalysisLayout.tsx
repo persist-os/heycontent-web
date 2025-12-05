@@ -14,6 +14,8 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Pencil, Lightbulb, AlertCircle, Info, BarChart as BarChartIcon } from 'lucide-react'
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { ActionsAndLinksRenderer } from '../ActionsAndLinksRenderer'
+import { UniversalArtifactActionBar } from '../UniversalArtifactActionBar'
 
 export function AnalysisLayout({ 
   artifact,
@@ -63,8 +65,8 @@ export function AnalysisLayout({
 
   return (
     <Card className="bg-card/50 backdrop-blur-sm border border-primary/20 hover:bg-card/80 transition-all duration-300">
-      <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Lightbulb className="w-4 h-4 text-primary" />
             <span className="text-sm font-medium text-foreground">Analysis</span>
@@ -79,6 +81,8 @@ export function AnalysisLayout({
             </Badge>
           </div>
         </div>
+        {/* Action Bar - Integrated in CardHeader */}
+        <UniversalArtifactActionBar artifact={artifact} />
       </CardHeader>
 
       <CardContent className="space-y-6">
@@ -113,6 +117,12 @@ export function AnalysisLayout({
                         <p className="text-sm text-muted-foreground">
                           {insight.description}
                         </p>
+                        {/* Per-insight actions/links */}
+                        <ActionsAndLinksRenderer
+                          actions={insight.actions}
+                          links={insight.links}
+                          variant="compact"
+                        />
                       </div>
                     </div>
                   </div>
@@ -121,6 +131,12 @@ export function AnalysisLayout({
             </div>
           </div>
         ))}
+
+        {/* Artifact-level actions/links */}
+        <ActionsAndLinksRenderer
+          actions={data?.actions}
+          links={data?.links}
+        />
 
         {/* Chart visualization */}
         {data_model?.showCharts && data?.chartData && Array.isArray(data.chartData) && data.chartData.length > 0 && (

@@ -27,6 +27,26 @@ export interface ArtifactMetadata {
 }
 
 /**
+ * Action definition for interactive artifacts
+ * Actions render as clickable buttons (semantic colors, 44px touch targets)
+ */
+export interface ArtifactAction {
+  type: 'get_directions' | 'call' | 'email' | 'open_url' | 'copy_to_clipboard'
+  url: string  // URL for action (Google Maps directions, tel:, mailto:, etc.)
+  label?: string  // Optional button label (defaults to action type)
+}
+
+/**
+ * Link definition for interactive artifacts
+ * Links render as clickable links (semantic colors)
+ */
+export interface ArtifactLink {
+  type: 'website' | 'phone' | 'email' | 'directions' | 'menu'
+  url: string  // URL for link
+  label: string  // Link text
+}
+
+/**
  * Field definition for structured lists
  */
 export interface FieldDefinition {
@@ -61,7 +81,11 @@ export interface StructuredListArtifact {
     groupBy?: string
     sortBy?: string
   }
-  data: Array<Record<string, any>>
+  data: Array<Record<string, any> & {
+    // Interactive artifact support (optional, backward compatible)
+    actions?: ArtifactAction[]  // Actions render as buttons
+    links?: ArtifactLink[]      // Links render as clickable links
+  }>
   metadata: ArtifactMetadata
   tags?: string[]
   // Convex IDs
@@ -94,7 +118,12 @@ export interface TimelineArtifact {
       title: string
       description?: string
       metadata?: Record<string, any>
+      actions?: ArtifactAction[]  // Optional actions per event
+      links?: ArtifactLink[]      // Optional links per event
     }>
+    // Optional artifact-level actions/links
+    actions?: ArtifactAction[]
+    links?: ArtifactLink[]
   }
   metadata: ArtifactMetadata
   tags?: string[]
@@ -131,7 +160,12 @@ export interface TrackerArtifact {
       timestamp: number
       values: Record<string, number | string>  // Key-value pairs matching tracker keys
       note?: string  // Optional note about this update
+      actions?: ArtifactAction[]  // Optional actions per entry
+      links?: ArtifactLink[]      // Optional links per entry
     }>
+    // Optional artifact-level actions/links
+    actions?: ArtifactAction[]
+    links?: ArtifactLink[]
   }
   metadata: ArtifactMetadata
   tags?: string[]
@@ -166,7 +200,12 @@ export interface ReportArtifact {
       id: string
       title: string
       content: string
+      actions?: ArtifactAction[]  // Optional actions per section
+      links?: ArtifactLink[]      // Optional links per section
     }>
+    // Optional artifact-level actions/links
+    actions?: ArtifactAction[]
+    links?: ArtifactLink[]
   }
   metadata: ArtifactMetadata
   tags?: string[]
@@ -201,8 +240,13 @@ export interface AnalysisArtifact {
       metric?: string
       value?: string
       category?: string
+      actions?: ArtifactAction[]  // Optional actions per insight
+      links?: ArtifactLink[]      // Optional links per insight
     }>
     chartData?: Record<string, any>
+    // Optional artifact-level actions/links
+    actions?: ArtifactAction[]
+    links?: ArtifactLink[]
   }
   metadata: ArtifactMetadata
   tags?: string[]
@@ -235,6 +279,9 @@ export interface SummaryArtifact {
   data: {
     keyMetrics: Record<string, any>
     summaryText?: string
+    // Optional artifact-level actions/links
+    actions?: ArtifactAction[]
+    links?: ArtifactLink[]
   }
   metadata: ArtifactMetadata
   tags?: string[]
@@ -273,6 +320,9 @@ export interface EmailArtifact {
       timestamp: number
       snippet?: string
     }>
+    // Optional artifact-level actions/links (e.g., send email, forward, reply)
+    actions?: ArtifactAction[]
+    links?: ArtifactLink[]
     // NOTE: Status, sendHistory, and scheduledSends are now tracked in actions table
     // Query actions table for send history and computed status
   }

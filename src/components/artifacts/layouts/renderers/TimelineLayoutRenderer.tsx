@@ -10,7 +10,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { EventTypeDefinition, ArtifactMetadata } from '@/types/artifacts'
+import { EventTypeDefinition, ArtifactMetadata, Artifact } from '@/types/artifacts'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -45,6 +45,7 @@ interface TimelineLayoutRendererProps {
   artifactId?: Id<'artifacts'>
   selectedVersion?: number
   onVersionChange?: (version: number) => void
+  artifact?: Artifact
 }
 
 // Icon mapping for common event types
@@ -75,7 +76,8 @@ export function TimelineLayoutRenderer({
   editButton,
   artifactId,
   selectedVersion,
-  onVersionChange
+  onVersionChange,
+  artifact
 }: TimelineLayoutRendererProps) {
   // 🔴 CRITICAL FIX (TASK 3.1): Defensive data extraction - check multiple possible field names
   // Handle common mismatches: data.events OR data.timelineEvents OR data.data.events
@@ -204,6 +206,7 @@ export function TimelineLayoutRenderer({
         onVersionChange={onVersionChange}
         metadata={artifactMetadata}
         icon={<div className="w-2 h-2 rounded-full bg-accent" />}
+        artifact={artifact}
       />
       
       <CardContent>

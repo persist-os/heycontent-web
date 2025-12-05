@@ -15,8 +15,9 @@ import { CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Pencil } from 'lucide-react'
 import { ArtifactVersionSelector } from '../../ArtifactVersionSelector'
-import { ArtifactMetadata } from '@/types/artifacts'
+import { ArtifactMetadata, Artifact } from '@/types/artifacts'
 import { Id } from '@/convex/_generated/dataModel'
+import { UniversalArtifactActionBar } from '../../UniversalArtifactActionBar'
 
 interface ArtifactCardHeaderProps {
   /** Artifact type display name (e.g., "Analysis", "Summary") */
@@ -39,6 +40,8 @@ interface ArtifactCardHeaderProps {
   secondaryIcon?: React.ReactNode
   /** Optional className for icon container */
   iconClassName?: string
+  /** Artifact object (for action bar) */
+  artifact?: Artifact
 }
 
 /**
@@ -59,7 +62,8 @@ export function ArtifactCardHeader({
   metadata,
   icon,
   secondaryIcon,
-  iconClassName = ''
+  iconClassName = '',
+  artifact
 }: ArtifactCardHeaderProps) {
   const artifactMetadata = metadata || {
     version: 1,
@@ -68,8 +72,8 @@ export function ArtifactCardHeader({
   }
 
   return (
-    <CardHeader className="pb-4">
-      <div className="flex items-center justify-between flex-wrap gap-1 md:gap-2">
+    <CardHeader className="pb-2">
+      <div className="flex items-center justify-between flex-wrap gap-1 md:gap-2 mb-2">
         {/* Left: Icon + Type Display */}
         <div className="flex items-center gap-2">
           {icon && (
@@ -104,6 +108,8 @@ export function ArtifactCardHeader({
           )}
         </div>
       </div>
+      {/* Action Bar - Integrated in CardHeader */}
+      {artifact && <UniversalArtifactActionBar artifact={artifact} />}
     </CardHeader>
   )
 }

@@ -2702,7 +2702,7 @@ app.post("/api/formation/mutate", async (c) => {
 });
 
 
-// POST /api/vectorSearch/action - Direct action endpoint (calls hybridSearchContent or operations)
+// POST /api/vectorSearch/action - Direct action endpoint (calls trueHybridSearch or operations)
 app.post("/api/vectorSearch/action", async (c) => {
   try {
     const requestBody = await c.req.json();
@@ -2730,12 +2730,12 @@ app.post("/api/vectorSearch/action", async (c) => {
       });
     }
     
-    // Handle similarity_search operation (default to hybridSearchContent)
+    // Handle similarity_search operation (default to trueHybridSearch)
     if (!query) {
       return c.json({ error: "query is required for similarity search" }, 400);
     }
     
-    const results = await c.env.runAction(api.vectorSearch.hybridSearchContent, {
+    const results = await c.env.runAction(api.vectorSearch.trueHybridSearch, {
       userId,
       query,
       contentTypes: contentTypes || ["note", "cognitive_field", "conversation", "shard", "stardust"],
@@ -2803,7 +2803,7 @@ app.post("/api/vectorSearch/similaritySearch", async (c) => {
       }, 400);
     }
     
-    const results = await c.env.runAction(api.vectorSearch.hybridSearchContent, {
+    const results = await c.env.runAction(api.vectorSearch.trueHybridSearch, {
       userId,
       query,
       contentTypes: contentTypes || ["note", "cognitive_field", "conversation", "shard", "stardust"],
