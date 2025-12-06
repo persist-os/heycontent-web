@@ -4074,6 +4074,43 @@ app.post("/api/artifacts/query", async (c) => {
 });
 
 /**
+ * POST /api/artifacts/queryByFingerprint
+ * Query artifacts by fingerprint (PHASE 2: Deduplication)
+ * Finds existing artifacts with same content fingerprint
+ */
+app.post("/api/artifacts/queryByFingerprint", async (c) => {
+  try {
+    const ctx = c.env;
+    const { fingerprint, artifactType, projectId, userId } = await c.req.json();
+    
+    if (!fingerprint || !artifactType || !projectId || !userId) {
+      return c.json({
+        success: false,
+        error: "Missing required fields: fingerprint, artifactType, projectId, userId"
+      }, 400);
+    }
+    
+    const artifacts = await ctx.runQuery(api.artifactQueries.getArtifactsByFingerprint, {
+      fingerprint,
+      artifactType,
+      projectId: projectId as any,
+      userId
+    });
+    
+    return c.json({
+      success: true,
+      data: artifacts
+    });
+  } catch (error: any) {
+    console.error("[QUERY_BY_FINGERPRINT] Error:", error);
+    return c.json({
+      success: false,
+      error: error.message || "Failed to query artifacts by fingerprint"
+    }, 500);
+  }
+});
+
+/**
  * GET /api/artifacts/:artifactId/versions
  * Get all versions for an artifact
  */

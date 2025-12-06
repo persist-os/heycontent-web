@@ -14,6 +14,7 @@ import { FieldDefinition, ArtifactMetadata, Artifact } from '@/types/artifacts'
 import { Card, CardContent } from '@/components/ui/card'
 import { ArtifactCardHeader } from '../shared/ArtifactCardHeader'
 import { ArtifactCardFooter } from '../shared/ArtifactCardFooter'
+import { FieldEditor } from '../../editors/FieldEditor'
 import { Id } from '@/convex/_generated/dataModel'
 
 interface CardsLayoutRendererProps {
