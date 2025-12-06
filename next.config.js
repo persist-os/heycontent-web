@@ -120,9 +120,6 @@ const nextConfig = {
     ],
   },
   
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -131,6 +128,9 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
   },
+  
+  // Turbopack configuration (Next.js 16 uses Turbopack by default)
+  turbopack: {},
   
   webpack: (config, { isServer }) => {
     config.resolve.fallback = {
