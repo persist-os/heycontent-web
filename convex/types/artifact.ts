@@ -44,7 +44,14 @@ export const artifactSchemaFields = {
       userId: v.optional(v.string()),       // Optional: widget edits don't have userId
       editSource: v.optional(v.union(v.literal("widget"), v.literal("user"))),  // NEW: Track edit source
       changes: v.string()                   // JSON string
-    })))
+    }))),
+    qualityMetrics: v.optional(v.object({   // PHASE 5: Quality metrics tracking
+      qualityScore: v.number(),            // Overall quality score (0-100)
+      completeness: v.number(),             // Completeness metric (0-100)
+      usefulness: v.number(),              // Usefulness metric (0-100)
+      accuracy: v.number(),                 // Accuracy metric (0-100)
+      timestamp: v.number()                 // When metrics were calculated
+    }))
   }),
   
   // BACKEND-SET RELATIONSHIPS (Convex IDs)
@@ -52,6 +59,9 @@ export const artifactSchemaFields = {
   widgetId: v.optional(v.id("widgets")),    // Optional: project-level artifacts may not be linked to a widget
   conversationId: v.optional(v.id("conversations")),
   userId: v.string(),                       // Firebase UID (not Convex ID)
+  
+  // QUALITY GATE FIELDS (PHASE 2: Deduplication)
+  fingerprint: v.optional(v.string()),      // Content fingerprint for deduplication (hash of data + type)
   
   // CONVEX AUTO-GENERATED
   createdAt: v.number(),
@@ -69,6 +79,13 @@ export const artifactMetadataValidator = v.object({
   version: v.number(),
   lastUpdatedBy: v.string(),
   editSource: v.optional(v.union(v.literal("widget"), v.literal("user"))),
+  qualityMetrics: v.optional(v.object({   // PHASE 5: Quality metrics tracking
+    qualityScore: v.number(),
+    completeness: v.number(),
+    usefulness: v.number(),
+    accuracy: v.number(),
+    timestamp: v.number()
+  }))
 });
 
 /**
@@ -89,6 +106,7 @@ export const artifactCreateValidator = v.object({
   widgetId: v.optional(v.id("widgets")),  // Optional: project-level artifacts may not link to a widget
   conversationId: v.optional(v.id("conversations")),  // Optional: conversation-level artifacts
   userId: v.string(),
+  fingerprint: v.optional(v.string()),  // Content fingerprint for deduplication (PHASE 2)
 });
 
 /**
@@ -104,6 +122,13 @@ export const artifactUpdateValidator = v.object({
   editSource: v.optional(v.union(v.literal("widget"), v.literal("user"))),  // Track edit source
   expectedVersion: v.optional(v.number()),  // Optimistic concurrency control
   skipVersion: v.optional(v.boolean()),  // Skip version creation (e.g., for sends, not content edits)
+  qualityMetrics: v.optional(v.object({   // PHASE 5: Quality metrics tracking
+    qualityScore: v.number(),
+    completeness: v.number(),
+    usefulness: v.number(),
+    accuracy: v.number(),
+    timestamp: v.number()
+  }))
 });
 
 /**

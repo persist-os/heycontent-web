@@ -13,6 +13,8 @@ import { TrackerArtifact, LayoutProps } from '@/types/artifacts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { ActionsAndLinksRenderer } from '../ActionsAndLinksRenderer'
+import { UniversalArtifactActionBar } from '../UniversalArtifactActionBar'
 
 export function TrackerLayout({ 
   artifact,
@@ -87,8 +89,8 @@ export function TrackerLayout({
 
   return (
     <Card className="bg-card/50 backdrop-blur-sm border border-border/40 hover:bg-card/80 transition-all duration-300">
-      <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between mb-2">
           <CardTitle className="text-sm font-medium">Progress Tracker</CardTitle>
           <div className="flex items-center gap-2">
             {editButton}
@@ -97,6 +99,8 @@ export function TrackerLayout({
             </Badge>
           </div>
         </div>
+        {/* Action Bar - Integrated in CardHeader */}
+        <UniversalArtifactActionBar artifact={artifact} />
       </CardHeader>
       
       <CardContent>
@@ -189,10 +193,23 @@ export function TrackerLayout({
                     {entry.note}
                   </p>
                 )}
+                
+                {/* Per-entry actions/links */}
+                <ActionsAndLinksRenderer
+                  actions={entry.actions}
+                  links={entry.links}
+                  variant="compact"
+                />
               </div>
             ))}
           </div>
         )}
+        
+        {/* Artifact-level actions/links */}
+        <ActionsAndLinksRenderer
+          actions={data?.actions}
+          links={data?.links}
+        />
         
         {sortedEntries.length === 0 && (
           <div className="text-center py-8 text-sm text-muted-foreground">

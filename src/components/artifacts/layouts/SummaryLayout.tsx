@@ -12,6 +12,8 @@ import { SummaryArtifact, LayoutProps } from '@/types/artifacts'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Pencil, BarChart3 } from 'lucide-react'
+import { ActionsAndLinksRenderer } from '../ActionsAndLinksRenderer'
+import { UniversalArtifactActionBar } from '../UniversalArtifactActionBar'
 
 export function SummaryLayout({ 
   artifact,
@@ -55,8 +57,8 @@ export function SummaryLayout({
 
   return (
     <Card className="bg-card/50 backdrop-blur-sm border border-accent/20 hover:bg-card/80 transition-all duration-300">
-      <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <BarChart3 className="w-4 h-4 text-accent" />
             <span className="text-sm font-medium text-foreground">Summary</span>
@@ -71,6 +73,8 @@ export function SummaryLayout({
             </Badge>
           </div>
         </div>
+        {/* Action Bar - Integrated in CardHeader */}
+        <UniversalArtifactActionBar artifact={artifact} />
       </CardHeader>
 
       <CardContent className="space-y-4">
@@ -102,6 +106,12 @@ export function SummaryLayout({
             </p>
           </div>
         )}
+
+        {/* Actions and Links (artifact-level) */}
+        <ActionsAndLinksRenderer
+          actions={data?.actions}
+          links={data?.links}
+        />
 
         {/* Metadata footer */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground/70 border-t border-border/20 pt-3 mt-4">

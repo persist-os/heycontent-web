@@ -22,6 +22,7 @@ import { SummaryLayout } from './layouts/SummaryLayout'
 import { EmailLayout } from './layouts/EmailLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { UniversalArtifactActionBar } from './UniversalArtifactActionBar'
 
 /**
  * Validate artifact data structure matches expected schema

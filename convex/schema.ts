@@ -345,7 +345,8 @@ export default defineSchema({
   artifacts: defineTable(artifactSchemaFields)
     .index("by_project", ["projectId"])
     .index("by_widget", ["widgetId"])
-    .index("by_user", ["userId"]),
+    .index("by_user", ["userId"])
+    .index("by_fingerprint", ["fingerprint"]),  // PHASE 2: Deduplication
 
   // Artifact Versions - Version history for artifacts (preserves all historical versions)
   artifact_versions: defineTable(artifactVersionSchemaFields)

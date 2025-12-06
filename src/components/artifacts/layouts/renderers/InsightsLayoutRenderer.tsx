@@ -10,7 +10,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { ArtifactMetadata } from '@/types/artifacts'
+import { ArtifactMetadata, Artifact } from '@/types/artifacts'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -50,6 +50,7 @@ interface InsightsLayoutRendererProps {
   artifactId?: Id<'artifacts'>
   selectedVersion?: number
   onVersionChange?: (version: number) => void
+  artifact?: Artifact
 }
 
 export function InsightsLayoutRenderer({
@@ -62,7 +63,8 @@ export function InsightsLayoutRenderer({
   editButton,
   artifactId,
   selectedVersion,
-  onVersionChange
+  onVersionChange,
+  artifact
 }: InsightsLayoutRendererProps) {
   // 🔴 CRITICAL FIX (TASK 3.1): Defensive data extraction - check multiple possible field names
   // Handle common mismatches: data.insights OR data.data.insights
@@ -163,6 +165,7 @@ export function InsightsLayoutRenderer({
         onVersionChange={onVersionChange}
         metadata={artifactMetadata}
         icon={<Lightbulb className="w-4 h-4 text-primary" />}
+        artifact={artifact}
       />
 
       <CardContent className="space-y-6">

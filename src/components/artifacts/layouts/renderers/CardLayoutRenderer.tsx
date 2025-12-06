@@ -10,7 +10,7 @@
 'use client'
 
 import React from 'react'
-import { ArtifactMetadata } from '@/types/artifacts'
+import { ArtifactMetadata, Artifact } from '@/types/artifacts'
 import { Card, CardContent } from '@/components/ui/card'
 import { Pencil, BarChart3 } from 'lucide-react'
 import { ArtifactCardHeader } from '../shared/ArtifactCardHeader'
@@ -41,6 +41,7 @@ interface CardLayoutRendererProps {
   artifactId?: Id<'artifacts'>
   selectedVersion?: number
   onVersionChange?: (version: number) => void
+  artifact?: Artifact
 }
 
 export function CardLayoutRenderer({
@@ -53,7 +54,8 @@ export function CardLayoutRenderer({
   editButton,
   artifactId,
   selectedVersion,
-  onVersionChange
+  onVersionChange,
+  artifact
 }: CardLayoutRendererProps) {
   // 🔴 CRITICAL FIX (TASK 3.1): Defensive data extraction - check multiple possible field names
   // Handle common mismatches: data.keyMetrics OR data.metrics OR data.data.keyMetrics
@@ -117,6 +119,7 @@ export function CardLayoutRenderer({
         onVersionChange={onVersionChange}
         metadata={artifactMetadata}
         icon={<BarChart3 className="w-4 h-4 text-accent" />}
+        artifact={artifact}
       />
 
       <CardContent className="space-y-4">

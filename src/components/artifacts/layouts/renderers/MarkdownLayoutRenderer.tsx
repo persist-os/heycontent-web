@@ -10,7 +10,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { ArtifactMetadata } from '@/types/artifacts'
+import { ArtifactMetadata, Artifact } from '@/types/artifacts'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { FileText, Pencil, Eye, Check, X } from 'lucide-react'
@@ -51,6 +51,7 @@ interface MarkdownLayoutRendererProps {
   artifactId?: Id<'artifacts'>
   selectedVersion?: number
   onVersionChange?: (version: number) => void
+  artifact?: Artifact
 }
 
 export function MarkdownLayoutRenderer({
@@ -63,7 +64,8 @@ export function MarkdownLayoutRenderer({
   editButton,
   artifactId,
   selectedVersion,
-  onVersionChange
+  onVersionChange,
+  artifact
 }: MarkdownLayoutRendererProps) {
   // Defensive: ensure all required properties exist
   const rawSections = Array.isArray(data?.sections) ? data.sections : []
@@ -207,6 +209,7 @@ export function MarkdownLayoutRenderer({
         metadata={artifactMetadata}
         icon={<FileText className="w-4 h-4 text-muted-foreground" />}
         secondaryIcon={isEditing ? <Eye className="w-3 h-3 text-primary" /> : undefined}
+        artifact={artifact}
       />
 
       <CardContent className="space-y-6">

@@ -33,6 +33,7 @@ export const createArtifact = mutation({
         lastUpdatedBy: args.metadata.lastUpdatedBy,
         lastUpdatedAt: now,
         editSource: args.metadata.editSource || "widget",  // Default to "widget" for backward compatibility
+        qualityMetrics: args.metadata.qualityMetrics || undefined,  // PHASE 5: Quality metrics tracking
       },
       projectId: args.projectId,
       widgetId: args.widgetId,
@@ -192,6 +193,7 @@ export const updateArtifact = mutation({
         lastUpdatedAt: now,
         editSource: editSource,  // Track edit source
         editHistory: [...editHistory, newEditEntry].slice(-50),  // Keep last 50 edits
+        qualityMetrics: args.qualityMetrics || existing.metadata?.qualityMetrics,  // PHASE 5: Update quality metrics if provided
       };
       
       await ctx.db.patch(args.artifactId, updates);
@@ -220,6 +222,7 @@ export const updateArtifact = mutation({
         lastUpdatedBy: args.updatedBy,
         lastUpdatedAt: now,
         editSource: editSource,
+        qualityMetrics: args.qualityMetrics || existing.metadata?.qualityMetrics,  // PHASE 5: Update quality metrics if provided
       };
       
       await ctx.db.patch(args.artifactId, updates);

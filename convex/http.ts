@@ -2702,7 +2702,7 @@ app.post("/api/formation/mutate", async (c) => {
 });
 
 
-// POST /api/vectorSearch/action - Direct action endpoint (calls hybridSearchContent or operations)
+// POST /api/vectorSearch/action - Direct action endpoint (calls trueHybridSearch or operations)
 app.post("/api/vectorSearch/action", async (c) => {
   try {
     const requestBody = await c.req.json();
@@ -2730,12 +2730,12 @@ app.post("/api/vectorSearch/action", async (c) => {
       });
     }
     
-    // Handle similarity_search operation (default to hybridSearchContent)
+    // Handle similarity_search operation (default to trueHybridSearch)
     if (!query) {
       return c.json({ error: "query is required for similarity search" }, 400);
     }
     
-    const results = await c.env.runAction(api.vectorSearch.hybridSearchContent, {
+    const results = await c.env.runAction(api.vectorSearch.trueHybridSearch, {
       userId,
       query,
       contentTypes: contentTypes || ["note", "cognitive_field", "conversation", "shard", "stardust"],
@@ -2803,7 +2803,7 @@ app.post("/api/vectorSearch/similaritySearch", async (c) => {
       }, 400);
     }
     
-    const results = await c.env.runAction(api.vectorSearch.hybridSearchContent, {
+    const results = await c.env.runAction(api.vectorSearch.trueHybridSearch, {
       userId,
       query,
       contentTypes: contentTypes || ["note", "cognitive_field", "conversation", "shard", "stardust"],
@@ -4069,6 +4069,43 @@ app.post("/api/artifacts/query", async (c) => {
     return c.json({
       success: false,
       error: error.message || "Failed to query artifacts"
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/artifacts/queryByFingerprint
+ * Query artifacts by fingerprint (PHASE 2: Deduplication)
+ * Finds existing artifacts with same content fingerprint
+ */
+app.post("/api/artifacts/queryByFingerprint", async (c) => {
+  try {
+    const ctx = c.env;
+    const { fingerprint, artifactType, projectId, userId } = await c.req.json();
+    
+    if (!fingerprint || !artifactType || !projectId || !userId) {
+      return c.json({
+        success: false,
+        error: "Missing required fields: fingerprint, artifactType, projectId, userId"
+      }, 400);
+    }
+    
+    const artifacts = await ctx.runQuery(api.artifactQueries.getArtifactsByFingerprint, {
+      fingerprint,
+      artifactType,
+      projectId: projectId as any,
+      userId
+    });
+    
+    return c.json({
+      success: true,
+      data: artifacts
+    });
+  } catch (error: any) {
+    console.error("[QUERY_BY_FINGERPRINT] Error:", error);
+    return c.json({
+      success: false,
+      error: error.message || "Failed to query artifacts by fingerprint"
     }, 500);
   }
 });
