@@ -9,6 +9,7 @@ import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { api } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
+import { artifactTypeValidator } from "./types/artifact";
 
 /**
  * Get artifacts for a project
@@ -184,6 +185,45 @@ export const getUserArtifacts = query({
     }
     
     return await query.collect();
+  },
+});
+
+/**
+ * Query artifacts by fingerprint (PHASE 2: Deduplication)
+ * Finds existing artifacts with same content fingerprint
+ */
+export const getArtifactsByFingerprint = query({
+  args: {
+    fingerprint: v.string(),
+    artifactType: artifactTypeValidator,
+    projectId: v.id("projects"),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // ✅ FIX BLOCKER 3: Check project permission
+    const permission = await ctx.runQuery(api.contentAccessHelpers.getUserContentPermission, {
+      userId: args.userId,
+      contentType: "project",
+      contentId: args.projectId,
+    });
+    
+    if (!permission) {
+      throw new Error("Access denied: You don't have permission to view this project");
+    }
+    
+    // Query artifacts by fingerprint and type
+    const artifacts = await ctx.db
+      .query("artifacts")
+      .withIndex("by_fingerprint", (q) => q.eq("fingerprint", args.fingerprint))
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("type"), args.artifactType),
+          q.eq(q.field("projectId"), args.projectId)
+        )
+      )
+      .collect();
+    
+    return artifacts;
   },
 });
 

@@ -79,8 +79,8 @@ export const vectorSearchCrystals = action({
     },
     handler: async (ctx, { userId, query, limit, minSimilarity }) => {
         try {
-            // Use the hybrid search system to find relevant crystal embeddings
-            const searchResults = await ctx.runAction(api.vectorSearch.hybridSearchContent, {
+            // Use the true hybrid search system (BM25 + embeddings) to find relevant crystal embeddings
+            const searchResults = await ctx.runAction(api.vectorSearch.trueHybridSearch, {
                 userId,
                 query,
                 limit: limit || 10,

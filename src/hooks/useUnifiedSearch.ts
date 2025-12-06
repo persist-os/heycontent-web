@@ -81,8 +81,8 @@ export function useUnifiedSearch({ enabled }: UseUnifiedSearchProps) {
     enabled && userId ? { userId, limit: 200 } : 'skip'
   );
 
-  // Vector search action
-  const vectorSearch = useAction(api.vectorSearch.hybridSearchContent);
+  // True hybrid search action (BM25 + embeddings)
+  const vectorSearch = useAction(api.vectorSearch.trueHybridSearch);
 
   // Keyword search (instant)
   const keywordSearchResults = useCallback(() => {

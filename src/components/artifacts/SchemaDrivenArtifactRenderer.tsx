@@ -172,6 +172,7 @@ export function SchemaDrivenArtifactRenderer({
           artifactId={artifactId as Id<'artifacts'> | undefined}
           selectedVersion={selectedVersion}
           onVersionChange={selectVersion}
+          artifact={displayArtifact}
         />
       )
     
@@ -188,6 +189,7 @@ export function SchemaDrivenArtifactRenderer({
           artifactId={artifactId as Id<'artifacts'> | undefined}
           selectedVersion={selectedVersion}
           onVersionChange={selectVersion}
+          artifact={displayArtifact}
         />
       )
     
@@ -204,6 +206,7 @@ export function SchemaDrivenArtifactRenderer({
           artifactId={artifactId as Id<'artifacts'> | undefined}
           selectedVersion={selectedVersion}
           onVersionChange={selectVersion}
+          artifact={displayArtifact}
         />
       )
     
@@ -220,6 +223,7 @@ export function SchemaDrivenArtifactRenderer({
           artifactId={artifactId as Id<'artifacts'> | undefined}
           selectedVersion={selectedVersion}
           onVersionChange={selectVersion}
+          artifact={displayArtifact}
         />
       )
     
@@ -236,6 +240,7 @@ export function SchemaDrivenArtifactRenderer({
           artifactId={artifactId as Id<'artifacts'> | undefined}
           selectedVersion={selectedVersion}
           onVersionChange={selectVersion}
+          artifact={displayArtifact}
         />
       )
     
@@ -252,6 +257,7 @@ export function SchemaDrivenArtifactRenderer({
           artifactId={artifactId as Id<'artifacts'> | undefined}
           selectedVersion={selectedVersion}
           onVersionChange={selectVersion}
+          artifact={displayArtifact}
         />
       )
     
@@ -268,6 +274,7 @@ export function SchemaDrivenArtifactRenderer({
           artifactId={artifactId as Id<'artifacts'> | undefined}
           selectedVersion={selectedVersion}
           onVersionChange={selectVersion}
+          artifact={displayArtifact}
         />
       )
     
@@ -282,7 +289,9 @@ export function SchemaDrivenArtifactRenderer({
       )
     
     default:
-      return <UnsupportedLayout artifact={displayArtifact} />
+      return (
+        <UnsupportedLayout artifact={displayArtifact} />
+      )
   }
 }
 
