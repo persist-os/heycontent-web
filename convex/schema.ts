@@ -18,6 +18,7 @@ import { crystalShardSchemaFields, shardStatusValidator, shardRecencyWeightValid
 import { stardustSchemaFields } from "./types/stardust";
 import { crystalCacheSchemaFields } from "./types/crystalCache";
 import { crystalFormationRunSchemaFields } from "./types/crystalFormationRun";
+import { crystalSystemSchemaFields } from "./types/crystalSystem";
 
 // Cognitive Field System
 import { cognitiveFieldSchemaFields } from "./types/cognitiveField";
@@ -395,6 +396,13 @@ export default defineSchema({
   .index("by_type", ["cacheType"])
   .index("by_expiration", ["expiresAt"])
   .index("by_access", ["lastAccessed"]),
+
+  // Crystal OS Systems - Persistent system state for learning/evolution
+  crystalSystems: defineTable(crystalSystemSchemaFields)
+  .index("by_systemKey", ["systemKey"])
+  .index("by_user", ["userId"])
+  .index("by_agentType", ["agentType"])
+  .index("by_user_agent", ["userId", "agentType"]),
 
   crystal_shards: defineTable(crystalShardSchemaFields)
       .index("by_user", ["userId"])

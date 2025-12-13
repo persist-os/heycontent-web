@@ -6333,6 +6333,48 @@ app.post("/api/query/getEmailStats", async (c) => {
 });
 
 // ============================================================================
+// CRYSTAL OS SYSTEM ROUTES (Phase 5)
+// ============================================================================
+
+/**
+ * GET /api/crystalSystems/getSystem?systemKey=...
+ * Get Crystal OS system by system key
+ */
+app.get("/api/crystalSystems/getSystem", async (c) => {
+  try {
+    const ctx = c.env;
+    const systemKey = c.req.query("systemKey");
+    if (!systemKey) {
+      return c.json({ success: false, error: "systemKey query parameter required" }, 400);
+    }
+    const system = await ctx.runQuery(api.crystalSystemsQueries.getSystem, { systemKey });
+    return c.json({ success: true, data: system });
+  } catch (error: any) {
+    console.error("[CRYSTAL_OS] Get system error:", error);
+    return c.json({ success: false, error: error.message || "Failed to get system" }, 500);
+  }
+});
+
+/**
+ * POST /api/crystalSystems/saveSystem
+ * Save or update Crystal OS system
+ */
+app.post("/api/crystalSystems/saveSystem", async (c) => {
+  try {
+    const ctx = c.env;
+    const { systemKey, systemData } = await c.req.json();
+    const systemId = await ctx.runMutation(api.crystalSystemsMutations.saveSystem, {
+      systemKey,
+      systemData,
+    });
+    return c.json({ success: true, data: systemId });
+  } catch (error: any) {
+    console.error("[CRYSTAL_OS] Save system error:", error);
+    return c.json({ success: false, error: error.message || "Failed to save system" }, 500);
+  }
+});
+
+// ============================================================================
 // FILES
 // ============================================================================
 
