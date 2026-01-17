@@ -11,7 +11,19 @@ import { ConvexProvider, ConvexReactClient } from 'convex/react'
 import { trackPageview } from '@/lib/analytics'
 import { LanguageDetectionWrapper } from '@/components/translation/LanguageDetectionWrapper'
 
-const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
+// Only create Convex client if URL is configured
+const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL
+const convex = convexUrl ? new ConvexReactClient(convexUrl) : null
+
+// Wrapper component that conditionally provides Convex
+function ConvexWrapper({ children }: { children: ReactNode }) {
+  if (convex) {
+    return <ConvexProvider client={convex}>{children}</ConvexProvider>
+  }
+  // When Convex is not configured, render children without the provider
+  // This allows the app to run in a limited mode for development/preview
+  return <>{children}</>
+}
 
 export function Providers({ children }: { children: ReactNode }) {
   const pathname = usePathname()
@@ -26,7 +38,7 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <ConvexProvider client={convex}>
+      <ConvexWrapper>
         <AuthProvider>
           <LanguageProvider>
             <LanguageDetectionWrapper>
@@ -38,7 +50,7 @@ export function Providers({ children }: { children: ReactNode }) {
             </LanguageDetectionWrapper>
           </LanguageProvider>
         </AuthProvider>
-      </ConvexProvider>
+      </ConvexWrapper>
     </ThemeProvider>
   )
 }
