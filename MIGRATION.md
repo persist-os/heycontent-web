@@ -1,6 +1,6 @@
 # Database Migration Guide
 
-This document describes the database cleanup migration for HeyContent.
+This document describes the database cleanup migration for HeyContext.
 
 ## Quick Start
 

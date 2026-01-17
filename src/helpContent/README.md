@@ -1,4 +1,4 @@
-# HeyContent Help System
+# HeyContext Help System
 
 ## 📋 Overview
 This directory is available for future help content implementation. The previous interactive tour system has been completely removed as requested.

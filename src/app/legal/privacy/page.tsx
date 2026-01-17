@@ -124,7 +124,7 @@ export default function Privacy() {
           <ul className="space-y-2 ml-6">
             <li>To provide and maintain HeyContext, including to monitor usage and improve the Service.</li>
             <li>To manage your account and provide you with access to features.</li>
-            <li>To contact you with updates or information related to HeyContent.</li>
+            <li>To contact you with updates or information related to HeyContext.</li>
             <li>To provide you with personalized AI responses that learn from your conversations.</li>
             <li>To facilitate secure authentication with Google, with your consent.</li>
             <li>To comply with legal obligations.</li>

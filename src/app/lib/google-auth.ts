@@ -30,7 +30,7 @@ interface GoogleSignInResult {
  * 2. Select your Firebase project
  * 3. Navigate to: APIs & Services > OAuth consent screen
  * 4. Update:
- *    - App name: "HeyContext" (not "HeyContent")
+ *    - App name: "HeyContext" (not "HeyContext")
  *    - App logo: Upload /public/icons/Heycontext.png
  * 5. Save and wait for changes to propagate (may take a few minutes)
  */

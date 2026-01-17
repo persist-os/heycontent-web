@@ -7,7 +7,7 @@ export async function GET() {
       <svg width="1024" height="1024" xmlns="http://www.w3.org/2000/svg">
         <rect width="1024" height="1024" fill="#4F46E5"/>
         <text x="512" y="512" font-family="Arial" font-size="200" fill="white" text-anchor="middle" dominant-baseline="middle">
-          HeyContent
+          HeyContext
         </text>
       </svg>
     `;

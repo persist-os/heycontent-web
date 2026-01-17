@@ -1,18 +1,18 @@
 # Authentication Rules
 
-This document outlines the authentication and authorization architecture for the HeyContent web application. The system is designed to provide seamless and secure access for both interactive user sessions and programmatic API requests.
+This document outlines the authentication and authorization architecture for the HeyContext web application. The system is designed to provide seamless and secure access for both interactive user sessions and programmatic API requests.
 
 ---
 
 ## 1. Core Principles
 
 1.  **Dual Credential System**: The application uses two types of credentials:
-    -   **Firebase ID Tokens**: Short-lived JWTs issued by Firebase upon login. Their only purpose is to authenticate the user's session to generate or refresh a long-lived HeyContent API key.
-    -   **HeyContent API Keys**: Long-lived, custom-formatted API keys that are used to authenticate all subsequent API requests from the client.
+    -   **Firebase ID Tokens**: Short-lived JWTs issued by Firebase upon login. Their only purpose is to authenticate the user's session to generate or refresh a long-lived HeyContext API key.
+    -   **HeyContext API Keys**: Long-lived, custom-formatted API keys that are used to authenticate all subsequent API requests from the client.
 
 2.  **Client-Side Abstraction**: All logic for retrieving and refreshing the API key is handled by the `getApiKey()` function in `src/app/lib/api-helpers.ts`. Components and services should **never** manage API keys directly.
 
-3.  **Server-Side Trust**: The server trusts the HeyContent API Key as the primary method of authentication for ongoing requests after the initial session is established.
+3.  **Server-Side Trust**: The server trusts the HeyContext API Key as the primary method of authentication for ongoing requests after the initial session is established.
 
 ---
 
@@ -20,8 +20,8 @@ This document outlines the authentication and authorization architecture for the
 
 ### Key Format
 
-The HeyContent API key follows a strict format: `heycontent_<userId>_<random_string>`
--   `heycontent_`: A static prefix.
+The HeyContext API key follows a strict format: `heycontext_<userId>_<random_string>`
+-   `heycontext_`: A static prefix.
 -   `<userId>`: The user's unique Firebase UID. This is critical for validation.
 -   `<random_string>`: A securely generated random string from the backend.
 
@@ -32,12 +32,12 @@ The entire lifecycle is managed by `getApiKey()` in `src/app/lib/api-helpers.ts`
 1.  **Request**: When a client-side function needs to make an authenticated request, it calls `getApiKey()`.
 2.  **Retrieval**: The function first attempts to retrieve the key from a browser cookie named `apiKey`.
 3.  **Validation**: If a key exists in the cookie, it is validated:
-    -   **Format Check**: It ensures the key starts with `heycontent_`.
+    -   **Format Check**: It ensures the key starts with `heycontext_`.
     -   **User Match**: It extracts the `<userId>` from the key and compares it against the currently logged-in Firebase user's ID. If they do not match, the key is considered invalid and discarded.
 4.  **Automatic Refresh**: If no valid key is found in the cookie (either because it's missing, expired, or belongs to a different user), the function automatically performs a refresh:
     -   It obtains a fresh Firebase `idToken` for the current user.
     -   It sends this `idToken` to the `/api/auth/key` endpoint.
-    -   This endpoint proxies the request to the secure backend, which validates the `idToken` and returns a new, valid HeyContent API key.
+    -   This endpoint proxies the request to the secure backend, which validates the `idToken` and returns a new, valid HeyContext API key.
 5.  **Storage**: Upon receiving a new key, `getApiKey()` stores it in the `apiKey` cookie with a 7-day expiration.
 6.  **Return**: The function returns the valid API key.
 

@@ -130,7 +130,7 @@ export function NoteCard({
     // Check for tips content patterns
     if (title.includes('tips') || 
         title.includes('advice') ||
-        title.includes('heycontent') ||
+        title.includes('heycontext') ||
         title.includes('guide') ||
         content.includes('tip:') ||
         content.match(/^[-*•]\s.*tip/mi) ||

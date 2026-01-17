@@ -18,7 +18,7 @@ Enhance note cards with visual image previews to improve content discovery and u
 - **Increased Engagement**: Visual content catches attention and encourages interaction
 - **Content Organization**: Users can better organize and categorize visual notes
 - **Workflow Efficiency**: Streamlined process for managing notes with multiple images
-- **Platform Differentiation**: Rich visual previews set HeyContent apart from text-only note apps
+- **Platform Differentiation**: Rich visual previews set HeyContext apart from text-only note apps
 
 ---
 
@@ -143,7 +143,7 @@ Enhance note cards with visual image previews to improve content discovery and u
 ### **Visual Hierarchy**
 - **Subtle Integration**: Previews enhance but don't overwhelm note content
 - **Consistent Spacing**: Proper padding and margins for clean appearance
-- **Brand Alignment**: Follows HeyContent design system and colors
+- **Brand Alignment**: Follows HeyContext design system and colors
 
 ### **User Control**
 - **Non-Intrusive**: Auto-cycling doesn't distract from other tasks

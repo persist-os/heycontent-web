@@ -113,8 +113,8 @@ export async function GET(
 
     let userId: string | null = null;
 
-    // Check if this is a custom API key (starts with 'heycontent_')
-    if (token.startsWith('heycontent_')) {
+    // Check if this is a custom API key (starts with 'heycontext_')
+    if (token.startsWith('heycontext_')) {
       console.log(`[${requestId}] Detected custom API key format`);
       const validation = validateApiKey(token);
       if (validation.isValid && validation.userId) {

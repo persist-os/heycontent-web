@@ -94,7 +94,7 @@ const SettingsScreen = () => {
               <div className="space-y-4">
                 <div className="flex items-baseline gap-3">
                   <h2 className="text-2xl font-light tracking-tight text-foreground">
-                    <T context="heading.welcome">Welcome to HeyContent</T>
+                    <T context="heading.welcome">Welcome to HeyContext</T>
                   </h2>
                   <span className="text-lg text-muted-foreground">✨</span>
                 </div>

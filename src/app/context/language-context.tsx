@@ -25,14 +25,14 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const { firebaseUser } = useAuth();
   const userId = firebaseUser?.uid;
-  
-  // Auth user preferences from Convex
+
+  // Auth user preferences from Convex (will return undefined if backend not connected)
   const userPreferences = useQuery(
     api.userQueries.getUserPreferences,
     userId ? { userId } : 'skip'
   );
   const updatePreferences = useMutation(api.userMutations.updateUserPreferences);
-  
+
   // Guest user state
   const [guestLanguage, setGuestLanguage] = useState<string>('en');
   const [source, setSource] = useState<LanguageSource>('default');
@@ -42,7 +42,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     if (firebaseUser) return; // Skip if authenticated
 
     const stored = getStoredLanguage();
-    
+
     if (stored) {
       // Use stored preference
       setGuestLanguage(stored.lang);
@@ -52,7 +52,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       const detected = detectBrowserLanguage();
       setGuestLanguage(detected);
       setSource(detected === 'en' ? 'default' : 'auto');
-      
+
       // Save auto-detected language (only if not English)
       if (detected !== 'en') {
         setStoredLanguage(detected, 'auto');
@@ -77,12 +77,17 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     async (newLanguage: string) => {
       if (firebaseUser && userId) {
         // Authenticated user - save to Convex + localStorage
-        await updatePreferences({
-          userId,
-          preferences: {
-            language: newLanguage,
-          },
-        });
+        try {
+          await updatePreferences({
+            userId,
+            preferences: {
+              language: newLanguage,
+            },
+          });
+        } catch (e) {
+          // Convex may not be connected, fall back to localStorage only
+          console.warn('Could not save language to backend:', e);
+        }
         setStoredLanguage(newLanguage, 'manual');
         setGuestLanguage(newLanguage); // Update local state immediately for responsiveness
         setSource('auth');

@@ -44,6 +44,8 @@ export function middleware(request: NextRequest) {
   // If it's a public route, allow access
   const local = isLocalhost(request);
 
+  // CSP connect-src - uses wildcards for Convex and Cloud Run
+  // Configure specific domains via environment variables if needed
   const connectSrc = [
     "'self'",
     "https://js.stripe.com",
@@ -52,28 +54,23 @@ export function middleware(request: NextRequest) {
     "https://identitytoolkit.googleapis.com",
     "https://va.vercel-scripts.com",
     "https://securetoken.googleapis.com",
-    "wss://benevolent-basilisk-784.convex.cloud",
-    "https://benevolent-basilisk-784.convex.cloud",
-    "wss://whimsical-clownfish-162.convex.cloud",
-    "https://whimsical-clownfish-162.convex.cloud",
-    "wss://lovely-koala-465.convex.cloud",
-    "https://lovely-koala-465.convex.cloud",
-    "https://combative-lark-727.convex.cloud",
-    "wss://combative-lark-727.convex.cloud",
-    "https://backend.hicontent.co",
-    "http://backend.hicontent.co",
-    "https://content-backend-216038426364.us-central1.run.app",
-    "https://content-backend-216038426364.us-east1.run.app",
-    "https://content-backend-216038426364.us-west1.run.app",
-    "https://content-backend-staging-216038426364.us-central1.run.app",
+    // Convex - allow all Convex cloud domains
+    "wss://*.convex.cloud",
+    "https://*.convex.cloud",
+    // Backend - configure via NEXT_PUBLIC_BACKEND_URL
+    process.env.NEXT_PUBLIC_BACKEND_URL || "",
+    // Cloud Run backends - use wildcard pattern
+    "https://*.run.app",
+    // Local development
     "http://127.0.0.1:8000",
     "http://localhost:8000",
-    "https://us-central1-content-454219.cloudfunctions.net",
+    // Google Cloud Functions - use wildcard
+    "https://*.cloudfunctions.net",
     "https://storage.googleapis.com",
     "https://*.googleapis.com",
     "https://*.gstatic.com",
     "https://www.google.com",
-  ];
+  ].filter(Boolean);
  
   const CSP = [
     "default-src 'self'",
