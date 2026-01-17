@@ -1,6 +1,6 @@
  'use client'
 
-import { ReactNode, useEffect } from 'react'
+import { ReactNode, useEffect, createContext, useContext } from 'react'
 import { usePathname } from 'next/navigation'
 import { ThemeProvider } from 'next-themes'
 import { AuthProvider } from './context/auth-context'
@@ -15,14 +15,26 @@ import { LanguageDetectionWrapper } from '@/components/translation/LanguageDetec
 const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL
 const convex = convexUrl ? new ConvexReactClient(convexUrl) : null
 
+// Context to check if Convex is available
+export const ConvexConfiguredContext = createContext<boolean>(false)
+export const useConvexConfigured = () => useContext(ConvexConfiguredContext)
+
 // Wrapper component that conditionally provides Convex
 function ConvexWrapper({ children }: { children: ReactNode }) {
   if (convex) {
-    return <ConvexProvider client={convex}>{children}</ConvexProvider>
+    return (
+      <ConvexConfiguredContext.Provider value={true}>
+        <ConvexProvider client={convex}>{children}</ConvexProvider>
+      </ConvexConfiguredContext.Provider>
+    )
   }
   // When Convex is not configured, render children without the provider
   // This allows the app to run in a limited mode for development/preview
-  return <>{children}</>
+  return (
+    <ConvexConfiguredContext.Provider value={false}>
+      {children}
+    </ConvexConfiguredContext.Provider>
+  )
 }
 
 export function Providers({ children }: { children: ReactNode }) {

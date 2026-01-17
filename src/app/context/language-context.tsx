@@ -9,6 +9,7 @@ import {
   getStoredLanguage,
   setStoredLanguage,
 } from '@/lib/language-utils';
+import { useConvexConfigured } from '../providers';
 
 export type LanguageSource = 'auth' | 'manual' | 'auto' | 'default';
 
@@ -22,17 +23,18 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export function LanguageProvider({ children }: { children: ReactNode }) {
+// Provider that uses Convex for authenticated users
+function LanguageProviderWithConvex({ children }: { children: ReactNode }) {
   const { firebaseUser } = useAuth();
   const userId = firebaseUser?.uid;
-  
+
   // Auth user preferences from Convex
   const userPreferences = useQuery(
     api.userQueries.getUserPreferences,
     userId ? { userId } : 'skip'
   );
   const updatePreferences = useMutation(api.userMutations.updateUserPreferences);
-  
+
   // Guest user state
   const [guestLanguage, setGuestLanguage] = useState<string>('en');
   const [source, setSource] = useState<LanguageSource>('default');
@@ -42,7 +44,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     if (firebaseUser) return; // Skip if authenticated
 
     const stored = getStoredLanguage();
-    
+
     if (stored) {
       // Use stored preference
       setGuestLanguage(stored.lang);
@@ -52,7 +54,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       const detected = detectBrowserLanguage();
       setGuestLanguage(detected);
       setSource(detected === 'en' ? 'default' : 'auto');
-      
+
       // Save auto-detected language (only if not English)
       if (detected !== 'en') {
         setStoredLanguage(detected, 'auto');
@@ -109,6 +111,61 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       {children}
     </LanguageContext.Provider>
   );
+}
+
+// Fallback provider when Convex is not configured
+function LanguageProviderFallback({ children }: { children: ReactNode }) {
+  const [language, setLanguageState] = useState<string>('en');
+  const [source, setSource] = useState<LanguageSource>('default');
+
+  // Initialize language on mount
+  useEffect(() => {
+    const stored = getStoredLanguage();
+
+    if (stored) {
+      setLanguageState(stored.lang);
+      setSource(stored.source === 'manual' ? 'manual' : 'auto');
+    } else {
+      const detected = detectBrowserLanguage();
+      setLanguageState(detected);
+      setSource(detected === 'en' ? 'default' : 'auto');
+
+      if (detected !== 'en') {
+        setStoredLanguage(detected, 'auto');
+      }
+    }
+  }, []);
+
+  const setLanguage = useCallback(async (newLanguage: string) => {
+    setLanguageState(newLanguage);
+    setSource('manual');
+    setStoredLanguage(newLanguage, 'manual');
+  }, []);
+
+  const contextValue: LanguageContextType = {
+    language,
+    setLanguage,
+    source,
+    isAutoDetected: source === 'auto',
+    isLoading: false,
+  };
+
+  return (
+    <LanguageContext.Provider value={contextValue}>
+      {children}
+    </LanguageContext.Provider>
+  );
+}
+
+// Main provider that chooses implementation based on Convex availability
+export function LanguageProvider({ children }: { children: ReactNode }) {
+  const isConvexConfigured = useConvexConfigured();
+
+  if (isConvexConfigured) {
+    return <LanguageProviderWithConvex>{children}</LanguageProviderWithConvex>;
+  }
+
+  return <LanguageProviderFallback>{children}</LanguageProviderFallback>;
 }
 
 export function useLanguageContext() {
