@@ -11,31 +11,16 @@ import { ConvexProvider, ConvexReactClient } from 'convex/react'
 import { trackPageview } from '@/lib/analytics'
 import { LanguageDetectionWrapper } from '@/components/translation/LanguageDetectionWrapper'
 
-// Only create Convex client if URL is configured
-const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL
-const convex = convexUrl ? new ConvexReactClient(convexUrl) : null
+// Create Convex client - use placeholder URL if not configured
+// This allows the app to start; Convex operations will fail gracefully
+const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL || 'https://placeholder.convex.cloud'
+const convex = new ConvexReactClient(convexUrl)
 
-// Context to check if Convex is available
+// Context to check if Convex is properly configured (not placeholder)
 export const ConvexConfiguredContext = createContext<boolean>(false)
 export const useConvexConfigured = () => useContext(ConvexConfiguredContext)
 
-// Wrapper component that conditionally provides Convex
-function ConvexWrapper({ children }: { children: ReactNode }) {
-  if (convex) {
-    return (
-      <ConvexConfiguredContext.Provider value={true}>
-        <ConvexProvider client={convex}>{children}</ConvexProvider>
-      </ConvexConfiguredContext.Provider>
-    )
-  }
-  // When Convex is not configured, render children without the provider
-  // This allows the app to run in a limited mode for development/preview
-  return (
-    <ConvexConfiguredContext.Provider value={false}>
-      {children}
-    </ConvexConfiguredContext.Provider>
-  )
-}
+const isConvexConfigured = !!process.env.NEXT_PUBLIC_CONVEX_URL
 
 export function Providers({ children }: { children: ReactNode }) {
   const pathname = usePathname()
@@ -50,19 +35,21 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <ConvexWrapper>
-        <AuthProvider>
-          <LanguageProvider>
-            <LanguageDetectionWrapper>
-              <SidebarProvider>
-                <NotesProvider>
-                  {children}
-                </NotesProvider>
-              </SidebarProvider>
-            </LanguageDetectionWrapper>
-          </LanguageProvider>
-        </AuthProvider>
-      </ConvexWrapper>
+      <ConvexConfiguredContext.Provider value={isConvexConfigured}>
+        <ConvexProvider client={convex}>
+          <AuthProvider>
+            <LanguageProvider>
+              <LanguageDetectionWrapper>
+                <SidebarProvider>
+                  <NotesProvider>
+                    {children}
+                  </NotesProvider>
+                </SidebarProvider>
+              </LanguageDetectionWrapper>
+            </LanguageProvider>
+          </AuthProvider>
+        </ConvexProvider>
+      </ConvexConfiguredContext.Provider>
     </ThemeProvider>
   )
 }
