@@ -60,8 +60,8 @@ export function useThemeColors(): ThemeColors {
       accentBorder: isDark ? 'hsl(var(--accent))' : 'hsl(var(--accent))',
       
       // State colors
-      success: isDark ? 'hsl(var(--heycontent-green))' : 'hsl(var(--heycontent-green))',
-      warning: isDark ? 'hsl(var(--heycontent-yellow))' : 'hsl(var(--heycontent-yellow))',
+      success: isDark ? 'hsl(var(--heycontext-green))' : 'hsl(var(--heycontext-green))',
+      warning: isDark ? 'hsl(var(--heycontext-yellow))' : 'hsl(var(--heycontext-yellow))',
       error: 'hsl(var(--destructive))',
       info: isDark ? 'hsl(221, 83%, 53%)' : 'hsl(221, 83%, 53%)',
       

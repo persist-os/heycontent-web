@@ -9,16 +9,16 @@ interface LogoProps {
 
 export function Logo({ className = '', size = 'medium', disableLink = false }: LogoProps) {
   const logoMap = {
-    small: '/hey-content-small-square.svg',
-    medium: '/hey-content-medium-square.svg',
-    large: '/hey-content-large-square.svg'
+    small: '/heycontext-small-square.svg',
+    medium: '/heycontext-medium-square.svg',
+    large: '/heycontext-large-square.svg'
   }
 
   const logoImage = (
     <div className="rounded-lg bg-background border border-border p-1 shadow-sm">
       <Image
         src={logoMap[size]}
-        alt="HeyContent Logo"
+        alt="HeyContext Logo"
         width={size === 'small' ? 24 : size === 'medium' ? 32 : 48}
         height={size === 'small' ? 24 : size === 'medium' ? 32 : 48}
         className="transition-transform duration-300 hover:scale-105"

@@ -94,7 +94,7 @@ const EmailPreferencesTab: React.FC = () => {
             <p className="text-xs text-muted-foreground leading-relaxed">
               {emailUnsubscribed
                 ? 'You are currently unsubscribed from all emails. Toggle to receive emails again.'
-                : 'Receive important updates, notifications, and communications from HeyContent.'}
+                : 'Receive important updates, notifications, and communications from HeyContext.'}
             </p>
           </div>
           <Switch

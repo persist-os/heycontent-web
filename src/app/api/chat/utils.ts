@@ -7,11 +7,11 @@ export function getBearerToken(request: Request): string | null {
   return authHeader.substring(7);
 }
 
-// Helper to extract userId from heycontent API key: 'heycontent_userid_suffix'
+// Helper to extract userId from heycontext API key: 'heycontext_userid_suffix'
 export function getUserIdFromApiKey(apiKey: string): string | null {
-  // Example: 'heycontent_12345_abcd'
+  // Example: 'heycontext_12345_abcd'
   const parts = apiKey.split('_');
-  if (parts.length >= 3 && parts[0] === 'heycontent') {
+  if (parts.length >= 3 && parts[0] === 'heycontext') {
     return parts[1];
   }
   return null;

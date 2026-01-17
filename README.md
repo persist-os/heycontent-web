@@ -35,7 +35,7 @@ HeyContext solves the fundamental problem of AI assistants that don't remember o
 ## Project Structure
 
 ```
-heycontent-web/
+heycontext-web/
 ├── src/app/                    # Next.js app directory (App Router)
 │   ├── dashboard/              # Main application dashboard
 │   │   ├── thinking_lab/       # Primary AI interface with persistent memory
@@ -111,7 +111,7 @@ The Convex database includes comprehensive tables for:
 1. **Clone the repository**
    ```bash
    git clone [repository-url]
-   cd heycontent-web
+   cd heycontext-web
    ```
 
 2. **Install dependencies**

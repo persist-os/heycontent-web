@@ -5,20 +5,20 @@ export function ColorThemeDemo() {
   // Core brand colors
   const brandColors = [
     { 
-      name: 'HeyContent Yellow (Primary)', 
-      class: 'bg-heycontent-yellow text-black', 
+      name: 'HeyContext Yellow (Primary)', 
+      class: 'bg-heycontext-yellow text-black', 
       hex: '#FFDF39',
       usage: 'Primary accent, buttons, highlights'
     },
     { 
       name: 'Purple (Secondary)', 
-      class: 'bg-heycontent-purple text-white', 
+      class: 'bg-heycontext-purple text-white', 
       hex: '#9046FF',
       usage: 'Secondary accent, creative elements'
     },
     { 
       name: 'Green (Success)', 
-      class: 'bg-heycontent-green text-black', 
+      class: 'bg-heycontext-green text-black', 
       hex: '#45E290',
       usage: 'Success states, positive actions'
     },
@@ -39,7 +39,7 @@ export function ColorThemeDemo() {
     { 
       name: 'Primary', 
       class: 'bg-primary text-primary-foreground', 
-      description: 'Primary actions (HeyContent Yellow)'
+      description: 'Primary actions (HeyContext Yellow)'
     },
     { 
       name: 'Secondary', 
@@ -54,24 +54,24 @@ export function ColorThemeDemo() {
     { 
       name: 'Accent', 
       class: 'bg-accent text-accent-foreground', 
-      description: 'Accent elements (HeyContent Yellow)'
+      description: 'Accent elements (HeyContext Yellow)'
     }
   ];
 
   const lightDarkColors = [
     { 
       name: 'Light Yellow', 
-      class: 'bg-heycontent-light-yellow text-foreground', 
+      class: 'bg-heycontext-light-yellow text-foreground', 
       description: 'Light tint for yellow backgrounds'
     },
     { 
       name: 'Light Purple', 
-      class: 'bg-heycontent-light-purple text-foreground', 
+      class: 'bg-heycontext-light-purple text-foreground', 
       description: 'Light tint for purple backgrounds'
     },
     { 
       name: 'Light Green', 
-      class: 'bg-heycontent-light-green text-foreground', 
+      class: 'bg-heycontext-light-green text-foreground', 
       description: 'Light tint for green backgrounds'
     }
   ];
@@ -80,7 +80,7 @@ export function ColorThemeDemo() {
     <div className="p-6 max-w-6xl mx-auto bg-background text-foreground">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold">HeyContent Design System</h1>
+          <h1 className="text-3xl font-bold">HeyContext Design System</h1>
           <p className="text-muted-foreground mt-2">
             Comprehensive theming with #202020 dark mode and semantic color tokens
           </p>
@@ -96,7 +96,7 @@ export function ColorThemeDemo() {
             <h3 className="font-medium text-primary mb-2">Light Mode</h3>
             <ul className="space-y-1 text-muted-foreground">
               <li>• Background: Pure white (#FFFFFF)</li>
-              <li>• Primary: HeyContent Yellow (#FFDF39)</li>
+              <li>• Primary: HeyContext Yellow (#FFDF39)</li>
               <li>• Clean, bright aesthetics</li>
             </ul>
           </div>
@@ -210,7 +210,7 @@ export function ColorThemeDemo() {
             <h3 className="font-medium text-green-600 dark:text-green-400 mb-2">✓ Do</h3>
             <ul className="space-y-1 text-muted-foreground">
               <li>• Use semantic color tokens (bg-background, text-foreground)</li>
-              <li>• Use HeyContent Yellow (#FFDF39) for primary actions</li>
+              <li>• Use HeyContext Yellow (#FFDF39) for primary actions</li>
               <li>• Ensure #202020 background in dark mode</li>
               <li>• Test in both light and dark themes</li>
             </ul>

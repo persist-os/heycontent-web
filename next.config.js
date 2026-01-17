@@ -20,7 +20,7 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com https://www.googletagmanager.com https://apis.google.com https://accounts.google.com https://googleads.g.doubleclick.net;",
       "style-src 'self' 'unsafe-inline';",
       "img-src * blob: data:;",
-      "connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://js.stripe.com https://api.stripe.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://va.vercel-scripts.com https://backend.hicontent.co http://backend.hicontent.co https://content-backend-staging-216038426364.us-central1.run.app http://127.0.0.1:8000 http://localhost:8000 https://us-central1-content-454219.cloudfunctions.net https://storage.googleapis.com https://*.googleapis.com https://*.gstatic.com https://apis.google.com https://accounts.google.com https://www.google.com;",
+      "connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://js.stripe.com https://api.stripe.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://va.vercel-scripts.com https://*.run.app http://127.0.0.1:8000 http://localhost:8000 https://*.cloudfunctions.net https://storage.googleapis.com https://*.googleapis.com https://*.gstatic.com https://apis.google.com https://accounts.google.com https://www.google.com;",
       "font-src 'self' data:;",
       "frame-src 'self' https://js.stripe.com https://accounts.google.com https://*.firebaseapp.com https://www.googletagmanager.com;",
     ].join(' ')
@@ -71,7 +71,7 @@ const nextConfig = {
       '*.firebaseio.com',
       '*.convex.cloud',
       'convex.domains',
-      'heycontent-web-216038426364.us-central1.run.app',
+      '*.run.app',
       'i.ytimg.com',
       'img.youtube.com',
       'scontent-ord5-2.cdninstagram.com', // Instagram CDN

@@ -34,7 +34,7 @@ jobs:
           
           # Check if the production site is accessible
           for i in {1..15}; do
-            if curl -f -s https://heycontent-web-divertissement-ai.vercel.app > /dev/null; then
+            if curl -f -s https://heycontext-web-divertissement-ai.vercel.app > /dev/null; then
               echo "✅ Production site is accessible"
               echo "HEALTH_STATUS=success" >> $GITHUB_ENV
               break
@@ -56,7 +56,7 @@ jobs:
           echo "🧪 Running production smoke tests..."
           
           # Basic HTTP status check
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://heycontent-web-divertissement-ai.vercel.app)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://heycontext-web-divertissement-ai.vercel.app)
           
           if [ $STATUS -eq 200 ]; then
             echo "✅ Production site returns 200 OK"
@@ -70,7 +70,7 @@ jobs:
           echo "🔍 Checking essential pages..."
           
           # Home page
-          if curl -f -s https://heycontent-web-divertissement-ai.vercel.app > /dev/null; then
+          if curl -f -s https://heycontext-web-divertissement-ai.vercel.app > /dev/null; then
             echo "✅ Homepage accessible"
           else
             echo "❌ Homepage failed"
@@ -78,7 +78,7 @@ jobs:
           fi
           
           # Login page (allow redirects, just check it doesn't 500)
-          LOGIN_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://heycontent-web-divertissement-ai.vercel.app/sign-in)
+          LOGIN_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://heycontext-web-divertissement-ai.vercel.app/sign-in)
           if [ $LOGIN_STATUS -lt 500 ]; then
             echo "✅ Login page accessible (status: $LOGIN_STATUS)"
           else
@@ -183,8 +183,8 @@ jobs:
             **Emergency Response Checklist:**
             
             **Phase 1: Assessment (0-15 minutes)**
-            - [ ] Check [Vercel production deployment](https://vercel.com/divertissement-ai/heycontent-web/deployments)
-            - [ ] Test production site: https://heycontent-web-divertissement-ai.vercel.app
+            - [ ] Check [Vercel production deployment](https://vercel.com/divertissement-ai/heycontext-web/deployments)
+            - [ ] Test production site: https://heycontext-web-divertissement-ai.vercel.app
             - [ ] Review [workflow failure logs](${context.payload.repository.html_url}/actions/runs/${context.runId})
             - [ ] Determine if site is accessible to users
             - [ ] Assess severity and user impact
@@ -284,7 +284,7 @@ jobs:
             
             **Status**: ✅ Live in production
             **Health Check**: ✅ All systems operational  
-            **Production URL**: https://heycontent-web-divertissement-ai.vercel.app
+            **Production URL**: https://heycontext-web-divertissement-ai.vercel.app
             
             **Deployment Summary:**
             - **Quality Gates**: Passed by @ariaxhan ✅
@@ -293,9 +293,9 @@ jobs:
             - **Dev Sync**: Completed ✅
             
             **Production Links:**
-            - [🌐 Live Site](https://heycontent-web-divertissement-ai.vercel.app)
-            - [🔐 Login Page](https://heycontent-web-divertissement-ai.vercel.app/sign-in)
-            - [📊 Dashboard](https://heycontent-web-divertissement-ai.vercel.app/dashboard)
+            - [🌐 Live Site](https://heycontext-web-divertissement-ai.vercel.app)
+            - [🔐 Login Page](https://heycontext-web-divertissement-ai.vercel.app/sign-in)
+            - [📊 Dashboard](https://heycontext-web-divertissement-ai.vercel.app/dashboard)
             
             **Pipeline Status**: Complete ✅ - Ready for next development cycle
             

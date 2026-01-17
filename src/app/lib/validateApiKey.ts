@@ -7,16 +7,16 @@ interface ValidationResult {
 
 /**
  * Validates an API key and extracts the user ID
- * Handles both custom API keys (heycontent_userId_hash) and Firebase tokens
+ * Handles both custom API keys (heycontext_userId_hash) and Firebase tokens
  */
 export function validateApiKey(apiKey: string): ValidationResult {
   try {
-    // Check if it's a custom API key format: heycontent_userId_hash
-    if (apiKey.startsWith('heycontent_')) {
+    // Check if it's a custom API key format: heycontext_userId_hash
+    if (apiKey.startsWith('heycontext_')) {
       const parts = apiKey.split('_');
       if (parts.length >= 3) {
         // Extract userId from the custom API key
-        // Format: heycontent_userId_hash
+        // Format: heycontext_userId_hash
         const userId = parts[1];
         if (userId && userId.length > 0) {
           return { isValid: true, userId };
@@ -41,7 +41,7 @@ export function validateApiKey(apiKey: string): ValidationResult {
 export async function getUserIdFromToken(token: string): Promise<string | null> {
   try {
     // Check if it's a custom API key format first
-    if (token.startsWith('heycontent_')) {
+    if (token.startsWith('heycontext_')) {
       const validation = validateApiKey(token);
       return validation.isValid ? validation.userId : null;
     }

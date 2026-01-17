@@ -101,7 +101,7 @@ export function getCurrentUserIdSync(): string | null {
     }
     if (!keyValue) return null;
     const parts = keyValue.split('_');
-    if (parts.length >= 3 && parts[0] === 'heycontent') {
+    if (parts.length >= 3 && parts[0] === 'heycontext') {
       const userId = parts[1];
       return userId && userId.length > 0 ? userId : null;
     }
@@ -166,9 +166,9 @@ export async function getApiKey(): Promise<string | null> {
       let keyUserId = null, firebaseUserId = null;
       
       if (isValid && auth.currentUser) {
-        // Extract userId from the API key (assuming format: heycontent_<userId>_...)
+        // Extract userId from the API key (assuming format: heycontext_<userId>_...)
         const keyParts = apiKey.split('_');
-        if (keyParts.length >= 3 && keyParts[0] === 'heycontent') {
+        if (keyParts.length >= 3 && keyParts[0] === 'heycontext') {
           keyUserId = keyParts[1];
           firebaseUserId = auth.currentUser.uid;
           userMatches = keyUserId === firebaseUserId;
@@ -185,7 +185,7 @@ export async function getApiKey(): Promise<string | null> {
         if (user) {
           // Re-check user matching after waiting
           const keyParts = apiKey.split('_');
-          if (keyParts.length >= 3 && keyParts[0] === 'heycontent') {
+          if (keyParts.length >= 3 && keyParts[0] === 'heycontext') {
             const keyUserId = keyParts[1];
             const firebaseUserId = user.uid;
             if (keyUserId === firebaseUserId) {
@@ -231,7 +231,7 @@ export async function getApiKey(): Promise<string | null> {
           if (!apiKeyValue && data.data && typeof data.data.key === 'string') {
             apiKeyValue = data.data.key;
           }
-          if (typeof apiKeyValue === 'string' && apiKeyValue.startsWith('heycontent_') && !apiKeyValue.endsWith('_temporary')) {
+          if (typeof apiKeyValue === 'string' && apiKeyValue.startsWith('heycontext_') && !apiKeyValue.endsWith('_temporary')) {
             Cookies.set('apiKey', JSON.stringify(apiKeyValue), { expires: 7, sameSite: 'Lax', secure: process.env.NODE_ENV === 'production', path: '/' });
             return apiKeyValue;
           } else {
@@ -281,7 +281,7 @@ export async function getCurrentUserId(): Promise<string> {
   // Enhanced cookie extraction with validation
   const extractUserIdFromKey = (value: string): string | null => {
     const parts = value.split('_');
-    if (parts.length >= 3 && parts[0] === 'heycontent') {
+    if (parts.length >= 3 && parts[0] === 'heycontext') {
       const userId = parts[1];
       // Validate userId format (should be non-empty string)
       return userId && userId.length > 0 ? userId : null;

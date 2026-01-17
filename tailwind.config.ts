@@ -88,7 +88,7 @@ const config = {
   				DEFAULT: 'hsl(var(--card))',
   				foreground: 'hsl(var(--card-foreground))'
   			},
-  			heycontent: {
+  			heycontext: {
   				yellow: '#FFDF39',
   				purple: '#9046FF',
   				green: '#45E290',

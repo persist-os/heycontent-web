@@ -9,7 +9,7 @@ export default function RegisterPage() {
 
   const onRegisterSuccess = (apiKey: string) => {
     router.push('/dashboard?welcome=true');
-    toast.success('Registration successful! Welcome to HeyContent.');
+    toast.success('Registration successful! Welcome to HeyContext.');
   };
 
   return <RegisterScreen onSuccess={onRegisterSuccess} />;

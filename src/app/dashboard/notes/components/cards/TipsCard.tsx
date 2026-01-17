@@ -47,9 +47,9 @@ export function TipsCard({
 
   const tips = parseTips(note.content || '');
 
-  // Determine if this is a HeyContent tip or general tip
-  const isHeyContentTip = note.title?.toLowerCase().includes('heycontent') || 
-                          note.content?.toLowerCase().includes('heycontent');
+  // Determine if this is a HeyContext tip or general tip
+  const isHeyContextTip = note.title?.toLowerCase().includes('heycontext') || 
+                          note.content?.toLowerCase().includes('heycontext');
 
   return (
     <BaseCard
@@ -62,9 +62,9 @@ export function TipsCard({
       onShare={onShare}
     >
       <div className="p-4">
-        {/* Header with HeyContent icon */}
+        {/* Header with HeyContext icon */}
         <div className="flex items-center gap-2 mb-3">
-          {isHeyContentTip ? (
+          {isHeyContextTip ? (
             <div className="w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center">
               <span className="text-xs font-bold text-white">HC</span>
             </div>
@@ -103,12 +103,12 @@ export function TipsCard({
         </div>
 
         {/* Footer with category or source */}
-        {isHeyContentTip && (
+        {isHeyContextTip && (
           <div className="mt-3 pt-2 border-t border-border">
             <div className="flex items-center gap-1">
               <CheckCircle className="w-3 h-3 text-yellow-600" />
               <span className="text-xs text-muted-foreground">
-                <T context="tips.heycontent_brand">HeyContent Tips</T>
+                <T context="tips.heycontext_brand">HeyContext Tips</T>
               </span>
             </div>
           </div>

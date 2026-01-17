@@ -109,7 +109,7 @@ Endpoints:
 Uses Google Gemini Flash for fast, cost-effective translations.
 
 ### 3. Convex Schema
-**File**: `heycontent-web/convex/schema.ts`
+**File**: `heycontext-web/convex/schema.ts`
 
 **translations** table:
 - `sourceText` + `sourceTextHash` - Original text

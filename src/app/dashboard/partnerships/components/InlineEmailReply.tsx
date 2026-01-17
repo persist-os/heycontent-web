@@ -70,7 +70,7 @@ export function InlineEmailReply({
   brandName,
   composeMode = false, // Default to reply mode for backward compatibility
   emailContext,
-  themeColor = '#FFDF39', // Default to HeyContent Yellow
+  themeColor = '#FFDF39', // Default to HeyContext Yellow
   emailThreadData
 }: InlineEmailReplyProps) {
   const [content, setContent] = useState(initialContent || '');

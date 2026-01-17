@@ -27,8 +27,8 @@ export async function POST(
     // Get user ID from token (handles both API keys and Firebase tokens)
     let userId = null
 
-    // Check if this is a custom API key (starts with 'heycontent_')
-    if (idToken.startsWith('heycontent_')) {
+    // Check if this is a custom API key (starts with 'heycontext_')
+    if (idToken.startsWith('heycontext_')) {
       console.log('Detected custom API key format')
       const validation = validateApiKey(idToken)
       if (validation.isValid && validation.userId) {

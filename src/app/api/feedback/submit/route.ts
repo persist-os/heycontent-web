@@ -170,7 +170,7 @@ async function sendToDiscord(feedback: {
       }
     ],
     footer: {
-      text: 'HeyContent Feedback System'
+      text: 'HeyContext Feedback System'
     },
     timestamp: new Date(feedback.timestamp).toISOString()
   };

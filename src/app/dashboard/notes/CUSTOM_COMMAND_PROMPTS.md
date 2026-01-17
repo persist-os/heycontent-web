@@ -227,32 +227,32 @@ const prompts = [
 
 ### Files Modified
 
-1. **`heycontent-web/convex/schema.ts`**
+1. **`heycontext-web/convex/schema.ts`**
    - Added `customCommandPrompts` field to `ambientInsights` table
 
-2. **`heycontent-web/convex/ambientInsights.ts`**
+2. **`heycontext-web/convex/ambientInsights.ts`**
    - Added `CustomCommandPrompt` interface
    - Added `getCustomCommandPrompts` query
    - Added `updateCustomCommandPrompts` mutation
 
-3. **`heycontent-web/convex/http.ts`**
+3. **`heycontext-web/convex/http.ts`**
    - Added GET `/api/users/:id/custom-command-prompts` endpoint
    - Added POST `/api/users/:id/custom-command-prompts` endpoint
 
-4. **`heycontent-web/src/app/dashboard/notes/components/InlineCommandPalette.tsx`**
+4. **`heycontext-web/src/app/dashboard/notes/components/InlineCommandPalette.tsx`**
    - Added `useQuery` to fetch custom prompts
    - Updated `getAllCommands()` to merge custom prompts with defaults
    - Custom prompts display with Sparkles icon
 
-5. **`heycontent-web/src/app/dashboard/notes/utils/custom-prompts-examples.ts`** (new file)
+5. **`heycontext-web/src/app/dashboard/notes/utils/custom-prompts-examples.ts`** (new file)
    - Example prompt sets for different user types
    - Helper function to add custom prompts
 
 ## Related Documentation
 
 - **Inline Writing Agent Instructions**: `backend/app/prompts/smart_notes_inline/instructions.txt`
-- **Command Configs**: `heycontent-web/src/app/dashboard/notes/utils/command-configs.ts`
-- **Refinement Configs**: `heycontent-web/src/app/dashboard/notes/utils/refinement-configs.ts`
+- **Command Configs**: `heycontext-web/src/app/dashboard/notes/utils/command-configs.ts`
+- **Refinement Configs**: `heycontext-web/src/app/dashboard/notes/utils/refinement-configs.ts`
 
 ## Questions?
 

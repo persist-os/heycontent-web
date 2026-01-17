@@ -1,13 +1,13 @@
 #!/bin/bash
 set -e
 
-# Set your Google Cloud project ID
-PROJECT_ID="content-454219"
-SERVICE_NAME="heycontent-web"
-REGION="us-central1"
+# Configuration - set via environment variables or defaults
+PROJECT_ID="${GCP_PROJECT_ID:-your-gcp-project-id}"
+SERVICE_NAME="${CLOUD_RUN_SERVICE_NAME:-heycontext-web}"
+REGION="${GCP_REGION:-us-central1}"
 
 # Convex deployment configuration
-CONVEX_DOMAIN="heycontent-web-216038426364.us-central1.run.app"
+CONVEX_DOMAIN="${CONVEX_CLOUD_DOMAIN:-your-convex-domain.convex.cloud}"
 
 # Check if custom domain is verified
 echo "🔍 Checking Convex custom domain status..."

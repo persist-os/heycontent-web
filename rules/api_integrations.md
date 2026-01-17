@@ -1,6 +1,6 @@
 # API Integration Rules
 
-This document outlines the architecture and conventions for integrating third-party services (e.g., Gmail, YouTube, Instagram) into the HeyContent application.
+This document outlines the architecture and conventions for integrating third-party services (e.g., Gmail, YouTube, Instagram) into the HeyContext application.
 
 ---
 
@@ -28,13 +28,13 @@ Adding a new integration (e.g., "NewService") must follow this standard flow and
 -   **Responsibilities**: This route is responsible for:
     1.  Receiving the temporary `authorization_code` from the service.
     2.  Exchanging the `code` for an `access_token` and a `refresh_token`. This must be done on the server to protect the application's `client_secret`.
-    3.  Securely storing the tokens, associating them with the logged-in HeyContent user.
+    3.  Securely storing the tokens, associating them with the logged-in HeyContext user.
 
 ### Step 3: API Interaction
 
 -   Once tokens are stored, the application can make API calls on behalf of the user.
 -   **Convention**: All API interactions for a service must be encapsulated in their own API routes within a dedicated directory: `src/app/api/social/newservice/`.
--   **Example**: To fetch analytics, create an endpoint at `/api/social/newservice/analyze/route.ts`. This route retrieves the user's stored tokens, makes the request to the third-party API, and returns the data to the HeyContent frontend.
+-   **Example**: To fetch analytics, create an endpoint at `/api/social/newservice/analyze/route.ts`. This route retrieves the user's stored tokens, makes the request to the third-party API, and returns the data to the HeyContext frontend.
 
 ### Step 4: Token Refresh
 
