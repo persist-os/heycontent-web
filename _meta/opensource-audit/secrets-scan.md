@@ -1,3 +1,9 @@
+---
+type: note
+status: active
+created: 2026-01-17
+---
+
 # Secrets and Sensitive Information Scan Report
 
 **Repository:** heycontent-web

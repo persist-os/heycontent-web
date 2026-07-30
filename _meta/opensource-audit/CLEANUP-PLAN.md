@@ -1,3 +1,9 @@
+---
+type: note
+status: active
+created: 2026-01-17
+---
+
 # Open Source Cleanup Plan: heycontent → heycontext
 
 **Date:** 2026-01-17

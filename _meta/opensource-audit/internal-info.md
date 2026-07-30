@@ -1,3 +1,9 @@
+---
+type: note
+status: active
+created: 2026-01-17
+---
+
 # Internal/Private Information Audit
 
 **Date:** 2026-01-17

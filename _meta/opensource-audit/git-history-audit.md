@@ -1,3 +1,9 @@
+---
+type: note
+status: active
+created: 2026-01-17
+---
+
 # Git History Security Audit Report
 
 **Repository:** heycontent-web
